@@ -35,6 +35,8 @@
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 
 namespace CBR {
 
@@ -45,6 +47,8 @@ namespace CBR {
  */
 template<typename PacketType>
 class QueueRouterElement : public UpstreamElementFixed<PacketType, 1>, public DownstreamElementFixed<PacketType, 1> {
+    typedef boost::mutex mutex;
+    typedef boost::unique_lock<mutex> unique_lock;
 public:
     typedef std::tr1::function<uint32(PacketType*)> SizeFunctor;
 
@@ -69,6 +73,9 @@ public:
         assert(port == 0);
 
         uint32 sz = mSizeFunctor(pkt);
+
+        unique_lock guard(mMutex);
+
         uint32 new_size = mSize + sz;
         if (new_size > mMaxSize) {
             // drop
@@ -88,6 +95,8 @@ public:
     virtual PacketType* pull(uint32 port) {
         assert(port == 0);
 
+        unique_lock guard(mMutex);
+
         if (mPackets.empty())
             return NULL;
 
@@ -100,8 +109,9 @@ public:
 
 private:
     typedef std::queue<PacketType*> PacketQueue;
+    boost::mutex mMutex;
     PacketQueue mPackets;
-    SizeFunctor mSizeFunctor;
+    const SizeFunctor mSizeFunctor;
     uint32 mMaxSize;
     uint32 mSize;
 }; // class QueueRouterElement

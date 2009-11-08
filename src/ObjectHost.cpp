@@ -49,26 +49,37 @@ using namespace Sirikata::Network;
 
 namespace CBR {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, OptionSet* streamOptions, ServerID sid)
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid)
  : server(sid),
-   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(ctx->ioService,streamOptions)),
+   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
+   connecting(false),
    queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
-   rateLimiter(1024*1024),
-   streamTx(socket, ctx->mainStrand, Duration::milliseconds((int64)0))
+   streamTx(socket, ioStrand, Duration::milliseconds((int64)0))
 {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
 
-    connecting = false;
-
     queue.connect(0, &streamTx, 0);
+    streamTx.run();
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
     delete socket;
 }
 
-ObjectHost::ObjectInfo::ObjectInfo()
+bool ObjectHost::SpaceNodeConnection::push(ObjectMessage* msg) {
+    return queue.push(msg);
+}
+
+void ObjectHost::SpaceNodeConnection::shutdown() {
+    streamTx.shutdown();
+    socket->close();
+}
+
+
+
+// ObjectInfo Implementation
+ObjectHost::ObjectConnections::ObjectInfo::ObjectInfo()
  : object(NULL),
    connectingTo(0),
    connectedTo(0),
@@ -77,7 +88,7 @@ ObjectHost::ObjectInfo::ObjectInfo()
 {
 }
 
-ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
+ObjectHost::ObjectConnections::ObjectInfo::ObjectInfo(Object* obj)
  : object(obj),
    connectingTo(0),
    connectedTo(0),
@@ -87,9 +98,167 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
 }
 
 
+
+// ObjectConnections Implementation
+
+ObjectHost::ObjectConnections::ObjectConnections()
+ : mLastRRObject(UUID::null())
+{
+}
+
+void ObjectHost::ObjectConnections::add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
+    // Make sure we have this object's info stored
+    ObjectInfoMap::iterator it = mObjectInfo.find(obj->uuid());
+    assert (it == mObjectInfo.end());
+    it = mObjectInfo.insert( ObjectInfoMap::value_type( obj->uuid(), ObjectInfo(obj) ) ).first;
+    ObjectInfo& obj_info = it->second;
+    obj_info.connectingInfo = ci;
+    obj_info.connectedCB = connect_cb;
+    obj_info.migratedCB = migrate_cb;
+}
+
+ObjectHost::ConnectingInfo& ObjectHost::ObjectConnections::connectingTo(const UUID& objid, ServerID connecting_to) {
+    mObjectInfo[objid].connectingTo = connecting_to;
+    return mObjectInfo[objid].connectingInfo;
+}
+
+void ObjectHost::ObjectConnections::startMigration(const UUID& objid, ServerID migrating_to) {
+    mObjectInfo[objid].migratingTo = migrating_to;
+
+    // Update object indices
+    std::vector<UUID>& objects = mObjectServerMap[mObjectInfo[objid].connectedTo];
+    std::vector<UUID>::iterator where = std::find(objects.begin(), objects.end(), objid);
+    if (where != objects.end()) {
+        objects.erase(where);
+    }
+
+    // Notify the object
+    mObjectInfo[objid].migratedCB(migrating_to);
+}
+
+ObjectHost::ConnectedCallback& ObjectHost::ObjectConnections::getConnectCallback(const UUID& objid) {
+    return mObjectInfo[objid].connectedCB;
+}
+
+void ObjectHost::ObjectConnections::handleConnectSuccess(const UUID& obj) {
+    if (mObjectInfo[obj].connectingTo != NullServerID) { // We were connecting to a server
+        ServerID connectedTo = mObjectInfo[obj].connectingTo;
+        OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
+        mObjectInfo[obj].connectedTo = connectedTo;
+        mObjectInfo[obj].connectingTo = NullServerID;
+        mObjectServerMap[connectedTo].push_back(obj);
+        mObjectInfo[obj].connectedCB(connectedTo);
+    }
+    else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
+        ServerID migratedTo = mObjectInfo[obj].migratingTo;
+        OH_LOG(debug,"Successfully migrated " << obj.toString() << " to space node " << migratedTo);
+        mObjectInfo[obj].connectedTo = migratedTo;
+        mObjectInfo[obj].migratingTo = NullServerID;
+        mObjectServerMap[migratedTo].push_back(obj);
+    }
+    else { // What were we doing?
+        OH_LOG(error,"Got connection response with no outstanding requests.");
+    }
+}
+
+void ObjectHost::ObjectConnections::handleConnectError(const UUID& objid) {
+    mObjectInfo[objid].connectingTo = NullServerID;
+    mObjectInfo[objid].connectedCB(NullServerID);
+}
+
+void ObjectHost::ObjectConnections::remove(const UUID& objid) {
+    // Update object indices
+    std::vector<UUID>& objects = mObjectServerMap[mObjectInfo[objid].connectedTo];
+    std::vector<UUID>::iterator where = std::find(objects.begin(), objects.end(), objid);
+    if (where != objects.end()) {
+        objects.erase(where);
+    }
+
+    // Remove from main object set
+    mObjectInfo.erase(objid);
+}
+
+Object* ObjectHost::ObjectConnections::object(const UUID& obj_id) {
+    return mObjectInfo[obj_id].object;
+}
+
+ServerID ObjectHost::ObjectConnections::getConnectedServer(const UUID& obj_id, bool allow_connecting) {
+    // FIXME getConnectedServer during migrations?
+
+    ServerID dest_server = mObjectInfo[obj_id].connectedTo;
+
+    if (dest_server == NullServerID && allow_connecting)
+        dest_server = mObjectInfo[obj_id].connectingTo;
+
+    return dest_server;
+}
+
+Object* ObjectHost::ObjectConnections::roundRobinObject(ServerID whichServer, bool null_if_disconnected) {
+    if (mObjectInfo.size()==0) return NULL;
+    UUID myrand(mLastRRObject);
+    ObjectInfoMap::iterator i=mObjectInfo.end();
+    if (whichServer==NullServerID){
+        i=mObjectInfo.find(myrand);
+        if (i!=mObjectInfo.end()) ++i;
+        if (i==mObjectInfo.end()) i=mObjectInfo.begin();
+    }else {
+        std::vector<UUID> *osm=&mObjectServerMap[whichServer];
+        ++mLastRRIndex;
+        if (mLastRRIndex>=osm->size()) {
+            mLastRRIndex=0;
+        }
+        if (osm->size()) {
+            i=mObjectInfo.find((*osm)[mLastRRIndex]);
+        }
+    }
+    if (i!=mObjectInfo.end()) {
+        mLastRRObject=i->first;
+        return ( i->second.connectedTo == NullServerID ? NULL : i->second.object );
+    }
+    return NULL;
+}
+
+Object* ObjectHost::ObjectConnections::randomObject(bool null_if_disconnected) {
+    if (mObjectServerMap.size()==0) return NULL;
+    int iteratorLevel=rand()%mObjectServerMap.size();
+    ObjectServerMap::iterator i=mObjectServerMap.begin();
+    for (int index=0;index<iteratorLevel;++index,++i) {
+    }
+    std::vector<UUID> *uuidMap=&i->second;
+    if (uuidMap->size()) {
+        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
+        if (i!=mObjectInfo.end())
+            return ( i->second.connectedTo == NullServerID ? NULL : i->second.object );
+    }
+    return NULL;
+}
+
+Object* ObjectHost::ObjectConnections::randomObject(ServerID whichServer, bool null_if_disconnected) {
+    if (whichServer==NullServerID) return randomObject(null_if_disconnected);
+    ObjectServerMap::iterator i=mObjectServerMap.find(whichServer);
+    if (i==mObjectServerMap.end())
+        return NULL;
+    std::vector<UUID> *uuidMap=&i->second;
+    if (uuidMap->size()) {
+        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
+        if (i!=mObjectInfo.end())
+            return ( i->second.connectedTo == NullServerID ? NULL : i->second.object );
+    }
+    return NULL;
+}
+
+
+
+
+// ObjectHost Implementation
+
 ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap)
- : PollingService(ctx->mainStrand),
+ : Service(),
    mContext( ctx ),
+   mIOService( IOServiceFactory::makeIOService() ),
+   mIOStrand( mIOService->createStrand() ),
+   mIOWork(NULL),
+   mIOThread(NULL),
    mServerIDMap(sidmap)
 {
     static Sirikata::PluginManager sPluginManager;
@@ -97,70 +266,104 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace
 
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
 
-    mProfiler = mContext->profiler->addStage("Object Host Tick");
+    mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&ObjectHost::generatePings, this), Duration::milliseconds((int64)1));
 
-    mLastRRObject=UUID::null();
     mPingId=0;
     mContext->objectHost = this;
+}
+
+
+ObjectHost::~ObjectHost() {
+    // Close all connections
+    for (ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
+        SpaceNodeConnection* conn = it->second;
+        delete conn;
+    }
+    mConnections.clear();
+
+    delete mPingPoller;
+    delete mIOStrand;
+    IOServiceFactory::destroyIOService(mIOService);
 }
 
 const ObjectHostContext* ObjectHost::context() const {
     return mContext;
 }
 
+void ObjectHost::start() {
+    mPingPoller->start();
+
+    mIOWork = new IOWork( mIOService, "ObjectHost Work" );
+    mIOThread = new Thread( std::tr1::bind(&IOService::run, mIOService) );
+}
+
+void ObjectHost::stop() {
+    delete mIOWork;
+    mIOWork = NULL;
+    // Stop processing of all connections
+    for (ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
+        SpaceNodeConnection* conn = it->second;
+        conn->shutdown();
+    }
+    mIOThread->join();
+    delete mIOThread;
+    mIOThread = NULL;
+
+    mPingPoller->stop();
+}
+
 void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     TimedMotionVector3f init_loc = obj->location();
     BoundingSphere3f init_bounds = obj->bounds();
+
     openConnection(obj, init_loc, init_bounds, true, init_sa, connect_cb, migrate_cb);
 }
 
 void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     TimedMotionVector3f init_loc = obj->location();
     BoundingSphere3f init_bounds = obj->bounds();
+
     openConnection(obj, init_loc, init_bounds, false, SolidAngle::Max, connect_cb, migrate_cb);
 }
 
 void ObjectHost::disconnect(Object* obj) {
-    UUID obj_id = obj->uuid();
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    UUID objid = obj->uuid();
 
     // Construct and send disconnect message.  This has to happen first so we still have
     // connection information so we know where to send the disconnect
     CBR::Protocol::Session::Container session_msg;
     CBR::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
-    disconnect_msg.set_object(obj_id);
+    disconnect_msg.set_object(objid);
     disconnect_msg.set_reason("Quit");
 
     send(mContext->time,
-        obj, OBJECT_PORT_SESSION,
+        objid, OBJECT_PORT_SESSION,
         UUID::null(), OBJECT_PORT_SESSION,
         serializePBJMessage(session_msg)
     );
     // FIXME do something on failure
 
-
-    // Update object indices
-    std::vector<UUID>& objects = mObjectServerMap[mObjectInfo[obj_id].connectedTo];
-    objects.erase(std::find(objects.begin(),objects.end(),obj_id));
-
-    // Remove from main object set
-    mObjectInfo.erase(obj_id);
+    mObjectConnections.remove(objid);
 }
 
 void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     using std::tr1::placeholders::_1;
 
-    // Make sure we have this object's info stored
-    ObjectInfoMap::iterator it = mObjectInfo.find(obj->uuid());
-    if (it == mObjectInfo.end()) {
-        it = mObjectInfo.insert( ObjectInfoMap::value_type( obj->uuid(), ObjectInfo(obj) ) ).first;
-    }
-    ObjectInfo& obj_info = it->second;
-    obj_info.connecting.loc = init_loc;
-    obj_info.connecting.bounds = init_bounds;
-    obj_info.connecting.regQuery = regQuery;
-    obj_info.connecting.queryAngle = init_sa;
-    obj_info.connecting.cb = connect_cb;
-    obj_info.migratedCB = migrate_cb;
+    ConnectingInfo ci;
+    ci.loc = init_loc;
+    ci.bounds = init_bounds;
+    ci.regQuery = regQuery;
+    ci.queryAngle = init_sa;
+
+    mObjectConnections.add(obj, ci, connect_cb, migrate_cb);
 
     // Get a connection to request
     getAnySpaceConnection(
@@ -176,27 +379,29 @@ void ObjectHost::retryOpenConnection(const UUID&uuid,ServerID sid) {
     );
 }
 void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
         // FIXME disconnect? retry?
-        mObjectInfo[uuid].connecting.cb(NullServerID);
+        mObjectConnections.getConnectCallback(uuid)(NullServerID);
         return;
     }
 
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
-    mObjectInfo[uuid].connectingTo = conn->server;
+    ConnectingInfo ci = mObjectConnections.connectingTo(uuid, conn->server);
 
     CBR::Protocol::Session::Container session_msg;
     CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     connect_msg.set_type(CBR::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(uuid);
     CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
-    loc.set_t( mObjectInfo[uuid].connecting.loc.updateTime() );
-    loc.set_position( mObjectInfo[uuid].connecting.loc.position() );
-    loc.set_velocity( mObjectInfo[uuid].connecting.loc.velocity() );
-    connect_msg.set_bounds( mObjectInfo[uuid].connecting.bounds );
-    if (mObjectInfo[uuid].connecting.regQuery)
-        connect_msg.set_query_angle( mObjectInfo[uuid].connecting.queryAngle.asFloat() );
+    loc.set_t( ci.loc.updateTime() );
+    loc.set_position( ci.loc.position() );
+    loc.set_velocity( ci.loc.velocity() );
+    connect_msg.set_bounds( ci.bounds );
+    if (ci.regQuery)
+        connect_msg.set_query_angle( ci.queryAngle.asFloat() );
 
     if (!send(mContext->time,
               uuid, OBJECT_PORT_SESSION,
@@ -210,22 +415,13 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
 
 
 void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     using std::tr1::placeholders::_1;
 
     OH_LOG(insane,"Starting migration of " << obj_id.toString() << " to " << sid);
 
-    mObjectInfo[obj_id].migratingTo = sid;
-
-    // Update object indices
-    std::vector<UUID>*objects=&mObjectServerMap[mObjectInfo[obj_id].connectedTo];
-    std::vector<UUID>::iterator where=std::find(objects->begin(),objects->end(),obj_id);
-    //assert(where!=objects->end());
-    if (where!=objects->end()) {
-        objects->erase(where);
-    }
-
-    // Notify the object
-    mObjectInfo[obj_id].migratedCB(sid);
+    mObjectConnections.startMigration(obj_id, sid);
 
     // Get or start the connection we need to start this migration
     getSpaceConnection(
@@ -236,6 +432,7 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
 
 void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, SpaceNodeConnection* conn) {
     using std::tr1::placeholders::_1;
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't open connection to server " << sid << " for migration of object " << obj_id.toString());
@@ -271,26 +468,23 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
 }
 
 
-ServerID ObjectHost::getConnectedServer(const UUID& obj_id, bool allow_connecting) {
-    // FIXME getConnectedServer during migrations?
-
-    ServerID dest_server = mObjectInfo[obj_id].connectedTo;
-
-    if (dest_server == NullServerID && allow_connecting)
-        dest_server = mObjectInfo[obj_id].connectingTo;
-
-    return dest_server;
-}
-
 bool ObjectHost::send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
-    // FIXME getConnectedServer during migrations?
-    return send(t,src->uuid(), src_port, dest, dest_port, payload, getConnectedServer(src->uuid()));
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    return send(t, src->uuid(), src_port, dest, dest_port, payload);
 }
 
 bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     if (dest_server == NullServerID) {
-        OH_LOG(error,"Tried to send message when not connected.");
-        return false;
+        // Try looking it up
+        dest_server = mObjectConnections.getConnectedServer(src);
+        // And if we still don't have something, give up
+        if (dest_server == NullServerID) {
+            OH_LOG(error,"Tried to send message when not connected.");
+            return false;
+        }
     }
 
     ServerConnectionMap::iterator it = mConnections.find(dest_server);
@@ -303,9 +497,11 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     // FIXME would be nice not to have to do this alloc/dealloc
     ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
     mContext->trace()->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
-    return conn->queue.push( obj_msg );
+    return conn->push( obj_msg );
 }
+
 void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     CBR::Protocol::Object::Ping ping_msg;
     Time t=mContext->time;
@@ -321,89 +517,34 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     ping_msg.set_dat6(0);
     ping_msg.set_dat7(0);
     ping_msg.set_dat8(0);
-    ServerID destServer=getConnectedServer(src->uuid());
+    ServerID destServer = mObjectConnections.getConnectedServer(src->uuid());
+
     if (destServer!=NullServerID) {
         send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
     }
 }
-Object*ObjectHost::roundRobinObject(ServerID whichServer) {
-    if (mObjectInfo.size()==0) return NULL;
-    UUID myrand(mLastRRObject);
-    ObjectInfoMap::iterator i=mObjectInfo.end();
-    if (whichServer==NullServerID){
-        i=mObjectInfo.find(myrand);
-        if (i!=mObjectInfo.end()) ++i;
-        if (i==mObjectInfo.end()) i=mObjectInfo.begin();
-    }else {
-        std::vector<UUID> *osm=&mObjectServerMap[whichServer];
-        ++mLastRRIndex;
-        if (mLastRRIndex>=osm->size()) {
-            mLastRRIndex=0;
-        }
-        if (osm->size()) {
-            i=mObjectInfo.find((*osm)[mLastRRIndex]);
-        }
-    }
-    if (i!=mObjectInfo.end()) {
-        mLastRRObject=i->first;
-        return i->second.object;
-    }
-    return NULL;
-}
-Object* ObjectHost::randomObject () {
-    if (mObjectServerMap.size()==0) return NULL;
-    int iteratorLevel=rand()%mObjectServerMap.size();
-    ObjectServerMap::iterator i=mObjectServerMap.begin();
-    for (int index=0;index<iteratorLevel;++index,++i) {
-    }
-    std::vector<UUID> *uuidMap=&i->second;
-    if (uuidMap->size()) {
-        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
-        if (i!=mObjectInfo.end())
-            return i->second.object;
-    }
-    return NULL;
-}
 
-Object* ObjectHost::randomObject (ServerID whichServer) {
-    if (whichServer==NullServerID) return randomObject();
-    ObjectServerMap::iterator i=mObjectServerMap.find(whichServer);
-    if (i==mObjectServerMap.end())
-        return NULL;
-    std::vector<UUID> *uuidMap=&i->second;
-    if (uuidMap->size()) {
-        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
-        if (i!=mObjectInfo.end())
-            return i->second.object;
-    }
-    return NULL;
-}
 void ObjectHost::randomPing(const Time&t) {
-    Object * a=randomObject();
-    Object * b=randomObject();
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    if (a&&b) {
-        if (a == NULL || b == NULL) return;
-        if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
-            mObjectInfo[b->uuid()].connectedTo == NullServerID)
-            return;
-        if (mObjectInfo[b->uuid()].connectedTo == mObjectInfo[a->uuid()].connectedTo)
-            return;
+    Object* a = mObjectConnections.randomObject(true);
+    Object* b = mObjectConnections.randomObject(true);
+
+    if (a != NULL && b != NULL)
         ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
-    }
 }
 
-void ObjectHost::poll() {
-    mProfiler->started();
+void ObjectHost::generatePings() {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     for (int i=0;i<100;++i)
         randomPing(mContext->time);
-
-    mProfiler->finished();
 }
 
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     // Check if we have any fully open connections we can already use
     if (!mConnections.empty()) {
         for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
@@ -426,6 +567,8 @@ void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
 }
 
 void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     // Check if we have the connection already
     ServerConnectionMap::iterator it = mConnections.find(sid);
     if (it != mConnections.end()) {
@@ -438,10 +581,12 @@ void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb)
 }
 
 void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    SpaceNodeConnection* conn = new SpaceNodeConnection(mContext, mStreamOptions, server);
+    SpaceNodeConnection* conn = new SpaceNodeConnection(mContext, mIOStrand, mStreamOptions, server);
     conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
 
@@ -450,9 +595,12 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     Address addy(convertAddress4ToSirikata(*addr));
     conn->socket->connect(addy,
         &Sirikata::Network::Stream::ignoreSubstreamCallback,
-        std::tr1::bind(&ObjectHost::handleSpaceConnection,
-            this,
-            _1, _2, server),
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&ObjectHost::handleSpaceConnection,
+                this,
+                _1, _2, server
+            )
+        ),
         std::tr1::bind(&ObjectHost::handleConnectionRead,
             this,
             conn,
@@ -467,6 +615,8 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
 void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
                                        const std::string&reason,
                                        ServerID sid) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     ServerConnectionMap::iterator conn_it = mConnections.find(sid);
     if (conn_it == mConnections.end())
         return;
@@ -497,12 +647,19 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::handleConnectionRead(Spa
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
 
-    handleServerMessage( conn, obj_msg );
+    // handleConnectionRead() could be called from any thread/strand. Everything that is not
+    // thread safe that could result from a new message needs to happen in the main strand,
+    // so just post the whole handler there.
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectHost::handleServerMessage, this, conn, obj_msg)
+    );
+
     return Sirikata::Network::Stream::AcceptedData;
 }
 
-
 void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     // As a special case, messages dealing with sessions are handled by the object host
     mContext->trace()->timestampMessage(mContext->time,msg->unique(),Trace::DESTROYED,msg->source_port(),msg->dest_port());
     if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
@@ -510,20 +667,23 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
         return;
     }
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
-
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
         mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
         //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
-
+        delete msg;
         return;
     }
 
     // Otherwise, by default, we just ship it to the correct object
-    mObjectInfo[ msg->dest_object() ].object->receiveMessage(msg);
+    Object* obj = mObjectConnections.object(msg->dest_object());
+    assert(obj != NULL);
+    obj->receiveMessage(msg);
 }
 
 void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
     using std::tr1::placeholders::_1;
 
     CBR::Protocol::Session::Container session_msg;
@@ -538,25 +698,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
         UUID obj = msg->dest_object();
 
         if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Success) {
-            if (mObjectInfo[obj].connectingTo != NullServerID) { // We were connecting to a server
-                ServerID connectedTo = mObjectInfo[obj].connectingTo;
-                OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
-                mObjectInfo[obj].connectedTo = connectedTo;
-                mObjectInfo[obj].connectingTo = NullServerID;
-                mObjectInfo[obj].connecting.cb(connectedTo);
-                mObjectInfo[obj].connecting.cb = NULL;
-                mObjectServerMap[connectedTo].push_back(obj);
-            }
-            else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
-                ServerID migratedTo = mObjectInfo[obj].migratingTo;
-                OH_LOG(debug,"Successfully migrated " << obj.toString() << " to space node " << migratedTo);
-                mObjectInfo[obj].connectedTo = migratedTo;
-                mObjectInfo[obj].migratingTo = NullServerID;
-                mObjectServerMap[migratedTo].push_back(obj);
-            }
-            else { // What were we doing?
-                OH_LOG(error,"Got connection response with no outstanding requests.");
-            }
+            mObjectConnections.handleConnectSuccess(obj);
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -566,13 +708,10 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
                 redirected,
                 std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj, _1)
             );
-
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Error) {
             OH_LOG(error,"Error connecting " << obj.toString() << " to space");
-            mObjectInfo[obj].connectingTo = NullServerID;
-            mObjectInfo[obj].connecting.cb(NullServerID);
-            mObjectInfo[obj].connecting.cb = NULL;
+            mObjectConnections.handleConnectError(obj);
         }
         else {
             OH_LOG(error,"Unknown connection response code: " << conn_resp.response());

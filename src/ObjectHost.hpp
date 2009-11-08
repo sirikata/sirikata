@@ -42,24 +42,31 @@
 #include "TimeProfiler.hpp"
 #include "Message.hpp"
 
+#include <sirikata/util/SerializationCheck.hpp>
+
 namespace CBR {
 
 class Object;
 class ServerIDMap;
 
-class ObjectHost : public PollingService {
+class ObjectHost : public Service {
 public:
+    typedef std::tr1::function<void(ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
-    typedef std::tr1::function<void(ServerID)> ConnectedCallback;
+    typedef SessionCallback ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
-    typedef std::tr1::function<void(ServerID)> MigratedCallback;
+    typedef SessionCallback MigratedCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
     ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap);
 
+    ~ObjectHost();
+
     const ObjectHostContext* context() const;
+
+    // NOTE: The public interface is only safe to access from the main strand.
 
     /** Connect the object to the space with the given starting parameters. */
     void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb, MigratedCallback migrated_cb);
@@ -69,20 +76,43 @@ public:
 
     bool send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 private:
+    // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
+    // reads and writes to the actual sockets are handled in mIOStrand. But that is all that is handled
+    // there. Since creating/connecting/disconnecting/destroying SpaceNodeConnections is cheap and relatively
+    // rare, we keep these in the main strand, allowing us to leave the SpaceNodeConnection map without a lock.
+    // Note that the SpaceNodeConnections may themselves be accessed from multiple threads.
+    //
+    // The data exchange between the strands happens in two places. When sending, it occurs in the connections
+    // queue, which is thread safe.  When receiving, it occurs by posting a handler for the parsed message
+    // to the main thread.
+    //
+    // Note that this means the majority of this class is executed in the main strand. Only reading and writing
+    // are separated out, which allows us to ensure the network will be serviced as fast as possible, but
+    // doesn't help if our limiting factor is the speed at which this input/output can be handled.
+    //
+    // Note also that this class does *not* handle multithreaded input -- currently all access of public
+    // methods should be performed from the main strand.
+
     struct SpaceNodeConnection;
+    struct ConnectingInfo;
 
-    /** Work for each iteration of PollingService. */
-    virtual void poll();
+    // Service Implementation
+    virtual void start();
+    virtual void stop();
 
-    // Utility method to lookup the ServerID an object is connected to
-    ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
 
     // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
     // The allow_connecting parameter allows you to use a connection over which the object is still opening
     // a connection.  This is safe since it can only be used by this class (since this is private), so it will
     // only be used to deal with session management.
-    bool send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server);
+    // If dest_server is NullServerID, then getConnectedServer is used to determine where to send the packet.
+    // This is used to possibly exchange data between the main and IO strands, so it acquires locks.
+    bool send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
+
+
+    // Periodically called to generate random ping messages
+    void generatePings();
 
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
@@ -128,76 +158,138 @@ private:
     void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
 
 
-
     /** Reading and writing handling for SpaceNodeConnections. */
-    // Handle async reading callbacks for this connection
+    // Note - because this requires a bool return, it could pop up in any thread, internally
+    // it ends up posting to whichever thread is most appropriate for the content
     Sirikata::Network::Stream::ReceivedResponse handleConnectionRead(SpaceNodeConnection* conn, Sirikata::Network::Chunk& chunk);
 
 
     /* Ping Utility Methods. */
     void ping(const Object *src, const UUID&dest, double distance=-0);
     void randomPing(const Time&t);
-    Object* randomObject();
-    Object* randomObject(ServerID whichServer);
-    Object * roundRobinObject(ServerID whichServer);
-    UUID mLastRRObject;
-    size_t mLastRRIndex;
 
     OptionSet* mStreamOptions;
 
 
+    // THREAD SAFE
+    // These may be accessed safely by any thread
+
     ObjectHostContext* mContext;
+
+    IOService* mIOService;
     IOStrand* mIOStrand;
+    IOWork* mIOWork;
+    Thread* mIOThread;
+
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
-    TimeProfiler::Stage* mProfiler;
+    Poller* mPingPoller;
+
+    Sirikata::SerializationCheck mSerialization;
+
+    // Main strand only
 
     // Connections to servers
     struct SpaceNodeConnection {
-        SpaceNodeConnection(ObjectHostContext* ctx, OptionSet *streamOptions, ServerID sid);
+        SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet *streamOptions, ServerID sid);
         ~SpaceNodeConnection();
 
+        // Thread Safe
         ServerID server;
         Sirikata::Network::Stream* socket;
 
-        std::vector<GotSpaceConnectionCallback> connectCallbacks;
+        bool push(ObjectMessage* msg);
 
-        QueueRouterElement<ObjectMessage> queue;
-        BandwidthShaper<ObjectMessage> rateLimiter;
-        StreamTxElement<ObjectMessage> streamTx;
+        void shutdown();
+
+        // Main Strand
+        std::vector<GotSpaceConnectionCallback> connectCallbacks;
         bool connecting;
+    private:
+        // IO Strand
+        QueueRouterElement<ObjectMessage> queue;
+        StreamTxElement<ObjectMessage> streamTx;
     };
+    // Only main strand accesses and manipulates the map, although other strand
+    // may access the SpaceNodeConnection*'s.
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;
 
-    // Objects connections
-    struct ObjectInfo {
-        ObjectInfo(Object* obj);
-        ObjectInfo(); // Don't use, necessary for std::map
 
-        Object* object;
-
-        // Info associated with opening connections
-        struct ConnectingInfo {
-            TimedMotionVector3f loc;
-            BoundingSphere3f bounds;
-            bool regQuery;
-            SolidAngle queryAngle;
-
-            ConnectedCallback cb;
-        };
-        ConnectingInfo connecting;
-        ServerID connectingTo;
-        // Server currently connected to
-        ServerID connectedTo;
-        // Server we're trying to migrate to
-        ServerID migratingTo;
-        MigratedCallback migratedCB;
+    // Info associated with opening connections
+    struct ConnectingInfo {
+        TimedMotionVector3f loc;
+        BoundingSphere3f bounds;
+        bool regQuery;
+        SolidAngle queryAngle;
     };
-    typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
-    ObjectServerMap mObjectServerMap;
-    typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
-    ObjectInfoMap mObjectInfo;
+
+
+    // Objects connections, maintains object connections and mapping
+    class ObjectConnections {
+    public:
+        ObjectConnections();
+
+        // Add the object, completely disconnected, to the index
+        void add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb, MigratedCallback migrate_cb);
+
+        // Mark the object as connecting to the given server
+        ConnectingInfo& connectingTo(const UUID& obj, ServerID connecting_to);
+
+        // Start a migration to a new server, return the MigratedCallback for the object
+        void startMigration(const UUID& objid, ServerID migrating_to);
+
+        WARN_UNUSED
+        ConnectedCallback& getConnectCallback(const UUID& objid);
+
+        void handleConnectSuccess(const UUID& obj);
+
+        void handleConnectError(const UUID& objid);
+
+        void remove(const UUID& obj);
+
+
+        // Get object for the object ID
+        Object* object(const UUID& obj_id);
+        // Lookup the server the object is connected to.  With allow_connecting, allows using
+        // the server currently being connected to, not just one where a session has been
+        // established
+        ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
+
+        // Select random objects uniformly, uniformly from server, using round robin
+        Object* randomObject(bool null_if_disconnected = false);
+        Object* randomObject(ServerID whichServer, bool null_if_disconnected = false);
+        Object* roundRobinObject(ServerID whichServer, bool null_if_disconnected = false);
+
+    private:
+        struct ObjectInfo {
+            ObjectInfo(Object* obj);
+            ObjectInfo(); // Don't use, necessary for std::map
+
+            Object* object;
+
+            ConnectingInfo connectingInfo;
+
+            // Server currently being connected to
+            ServerID connectingTo;
+            // Server currently connected to
+            ServerID connectedTo;
+            // Server we're trying to migrate to
+            ServerID migratingTo;
+
+            ConnectedCallback connectedCB;
+            MigratedCallback migratedCB;
+        };
+        typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
+        ObjectServerMap mObjectServerMap;
+        typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
+        ObjectInfoMap mObjectInfo;
+
+        UUID mLastRRObject;
+        size_t mLastRRIndex;
+    };
+    ObjectConnections mObjectConnections;
+
     uint64 mPingId;
 }; // class ObjectHost
 

@@ -49,6 +49,7 @@
 
 #include <sirikata/network/IOService.hpp>
 #include <sirikata/network/IOServiceFactory.hpp>
+#include <sirikata/network/IOWork.hpp>
 #include <sirikata/network/IOStrand.hpp>
 #include <sirikata/network/IOTimer.hpp>
 
@@ -102,6 +103,7 @@ typedef Sirikata::Task::DeltaTime Duration;
 
 typedef Sirikata::Network::IOService IOService;
 typedef Sirikata::Network::IOServiceFactory IOServiceFactory;
+typedef Sirikata::Network::IOWork IOWork;
 typedef Sirikata::Network::IOStrand IOStrand;
 typedef Sirikata::Network::IOTimer IOTimer;
 typedef Sirikata::Network::IOTimerPtr IOTimerPtr;

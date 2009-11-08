@@ -180,7 +180,6 @@ public:
     StreamTxElement(Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
      : mImpl( new Impl(this, strm, strand, max_rate) )
     {
-        mImpl->start();
     }
 
     ~StreamTxElement() {
@@ -192,6 +191,17 @@ public:
         return false;
     }
 
+    /** Start the polling process for this element.  Until this is called, the element will
+     *  not be active.  This allows you time to connect to other elements before processing
+     *  begins.
+     */
+    void run() {
+        mImpl->start();
+    }
+
+    void shutdown() {
+        mImpl->shutdown();
+    }
 private:
     ImplPtr mImpl;
 }; // class StreamTxElement
