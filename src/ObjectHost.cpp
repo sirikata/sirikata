@@ -460,7 +460,10 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
 void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
                                        const std::string&reason,
                                        ServerID sid) {
-     SpaceNodeConnection* conn = mConnections[sid];
+    ServerConnectionMap::iterator conn_it = mConnections.find(sid);
+    if (conn_it == mConnections.end())
+        return;
+    SpaceNodeConnection* conn = conn_it->second;
 
     OH_LOG(debug,"Handling space connection...");
     if (status!=Sirikata::Network::Stream::Connected) {
