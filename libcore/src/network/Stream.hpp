@@ -159,27 +159,6 @@ public:
         const ReceivedCallback& receivedCallback,
         const ReadySendCallback& readySendCallback)=0;
 
-    /** Specifies all callbacks for the stream.
-     *  \param addr remote endpoint to connect to
-     *  \param substreamCallback callback to invoke when new substreams are created, including the
-     *                           first stream that will result from this connection
-     *  \param connectionCallback callback to invoke on connection events
-     *  \param receivedCallback callback to invoke when a full message has been received
-     *  \param readySendCallback callback to invoke when the stream is able to send again after
-     *                           previously failing to accept a message
-     */
-    virtual void prepareOutboundConnection(
-        const SubstreamCallback &substreamCallback,
-        const ConnectionCallback &connectionCallback,
-        const ReceivedCallback&chunkReceivedCallback,
-        const ReadySendCallback&readySendCallback)=0;
-
-    /** Connect to the specified address.  Callbacks must already have been registered using
-     *  prepareOutboundConnection.
-     *  \param addr remote endpoint to connect to
-     */
-    virtual void connect(const Address& addr)=0;
-
     /** Create a new Stream of the same type as this stream.
      *  \returns a new Stream, completely independent of this one, of the same type and implementation.
      */

@@ -240,26 +240,6 @@ void TCPStream::connect(const Address&addy,
     socket->connect(addy,mNumSimultaneousSockets,mSendBufferSize);
 }
 
-void TCPStream::prepareOutboundConnection(
-                        const SubstreamCallback &substreamCallback,
-                        const ConnectionCallback &connectionCallback,
-                        const ReceivedCallback&bytesReceivedCallback,
-                        const ReadySendCallback&readySendCallback) {
-    MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
-    mSocket = socket;
-    *mSendStatus=0;
-    mID=StreamID(1);
-    socket->addCallbacks(getID(),new Callbacks(connectionCallback,
-                                                bytesReceivedCallback,
-                                                readySendCallback,
-                                                mSendStatus));
-    socket->prepareConnect(mNumSimultaneousSockets,mSendBufferSize);
-}
-void TCPStream::connect(const Address&addy) {
-    assert(mSocket);
-    mSocket->connect(addy,0,mSendBufferSize);
-}
-
 Stream*TCPStream::factory(){
     return new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
 }

@@ -175,23 +175,6 @@ public:
         const ConnectionCallback &connectionCallback,
         const ReceivedCallback&chunkReceivedCallback,
         const ReadySendCallback&readySend);
-    /**
-     * Will specify all callbacks for the first successful stream and allow this stream to be cloned
-     * The stream is immediately active and may have bytes sent on it immediately.
-     * A connectionCallback will be called as soon as connection has succeeded or failed
-     */
-    virtual void prepareOutboundConnection(
-        const SubstreamCallback &substreamCallback,
-        const ConnectionCallback &connectionCallback,
-        const ReceivedCallback&chunkReceivedCallback,
-        const ReadySendCallback&readySend);
-    /**
-     * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
-     * A connectionCallback specified in prepareConnection will be called as soon as connection has succeeded or failed
-     * must call prepareConnection prior to connect()
-     */
-    virtual void connect(
-        const Address& addy);
 
     static TCPStream* construct(Network::IOService*io, OptionSet*options) {
         return new TCPStream(*io,options);
