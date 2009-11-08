@@ -119,7 +119,7 @@ SubscriptionClient::SubscriptionClient(Network::IOService*service,const String&o
             mProtocolOptions[i->first]=Network::StreamFactory::getSingleton().getOptionParser(i->first)(i->second);
         }
     }
-    
+
 }
 SubscriptionClient::~SubscriptionClient(){
     delete mMapLock;
@@ -146,7 +146,7 @@ void SubscriptionClient::State::setStream(const std::tr1::shared_ptr<State> thus
                                            std::tr1::bind(&State::bytesReceived,
                                                           weak_thus,
                                                           _1),
-                                           &Network::Stream::ignoreReadySend));
+                                           &Network::Stream::ignoreReadySendCallback));
     thus->mStream=clonedStream;
     if (serializedStream.length()) {//if the message has any substance, send it
         thus->mStream->send(MemoryReference(serializedStream),Network::ReliableUnordered);
@@ -211,7 +211,7 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(const std::tr1::wea
 namespace {
 size_t sMaximumSubscriptionStateSize=1360;
 }
-bool SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&weak_thus,
+Network::Stream::ReceivedResponse SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&weak_thus,
                           const Network::Chunk&data) {
     std::tr1::shared_ptr<State> thus=weak_thus.lock();
     if (thus) {
@@ -236,7 +236,7 @@ bool SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&we
             thus->mLastDeliveredMessage.resize(0);
         }
     }
-    return true;
+    return Network::Stream::AcceptedData;
 }
 
 void SubscriptionClient::State::connectionCallback(const std::tr1::weak_ptr<State>&weak_thus,
@@ -333,14 +333,14 @@ std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
             if (*options==NULL) {
                 *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
             }
-            
+
             std::tr1::shared_ptr<Network::Stream> topLevelStream (Network::StreamFactory::getSingleton().getConstructor(protocol)(mService,*options));
 
             topLevelStream->connect(address,
                                     &Network::Stream::ignoreSubstreamCallback,
-                                    &Network::Stream::ignoreConnectionStatus,
-                                    &Network::Stream::ignoreBytesReceived,
-                                    &Network::Stream::ignoreReadySend);
+                                    &Network::Stream::ignoreConnectionCallback,
+                                    &Network::Stream::ignoreReceivedCallback,
+                                    &Network::Stream::ignoreReadySendCallback);
             std::tr1::shared_ptr<State> state(new State(subscription.update_period(),
                                                                   address,
                                                                   subscription.broadcast_name(),

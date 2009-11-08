@@ -84,12 +84,12 @@ void Server::subscriberStreamCallback(Network::Stream*newStream,Network::Stream:
         std::tr1::shared_ptr<std::tr1::shared_ptr<Stream> >indirectedStream(new std::tr1::shared_ptr<Stream>(newStreamPtr));
         cb(std::tr1::bind(&Server::subscriberConnectionCallback,indirectedStream,_1,_2),
            std::tr1::bind(&Server::subscriberBytesReceivedCallback,this,indirectedStream,_1),
-           &Network::Stream::ignoreReadySend);
+           &Network::Stream::ignoreReadySendCallback);
     }else {
         //tls stream deleted
     }
 }
-bool Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Network::Chunk&dat){
+Network::Stream::ReceivedResponse Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Network::Chunk&dat){
     Protocol::Subscribe subscriptionRequest;
     bool success=false;
     if (!dat.empty()&&subscriptionRequest.ParseFromArray(&dat[0],dat.size())&&subscriptionRequest.has_broadcast_name()) {
@@ -105,7 +105,7 @@ bool Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1
         }
         *stream=std::tr1::shared_ptr<Stream>();
     }
-    return true;
+    return Network::Stream::AcceptedData;
 }
 void Server::purgeWaitingSubscriberOnBroadcastIOService(const std::tr1::weak_ptr<Server> &weak_thus, const UUID&uuid, size_t which){
     std::tr1::shared_ptr<Server>thus=weak_thus.lock();
@@ -194,7 +194,7 @@ void Server::broadcastConnectionCallback(SubscriptionState*subscription,Network:
         delete subscription;
     }
 }
-bool Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Network::Chunk&chunk) {
+Network::Stream::ReceivedResponse Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Network::Chunk&chunk) {
     if (state->mEpoch==SubscriptionState::ReservedEpoch) {
         Protocol::Broadcast broadcastRegistration;
         if (!chunk.empty()&&broadcastRegistration.ParseFromArray(&chunk[0],chunk.size())&&broadcastRegistration.has_broadcast_name()) {
@@ -238,14 +238,14 @@ bool Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
             state->clearLastSentMessage();
         }
     }
-    return true;
+    return Network::Stream::AcceptedData;
 }
 void Server::broadcastStreamCallback(Network::Stream* stream,Network::Stream::SetCallbacks&cb) {
     if (stream ) {
         SubscriptionState*state=new SubscriptionState(stream);
         cb(std::tr1::bind(&Server::broadcastConnectionCallback,this,state,_1,_2),
            std::tr1::bind(&Server::broadcastBytesReceivedCallback,this,state,_1),
-           &Network::Stream::ignoreReadySend);
+           &Network::Stream::ignoreReadySendCallback);
     }else {
         //tls (top level stream) deleted
     }

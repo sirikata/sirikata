@@ -32,135 +32,233 @@
 
 #ifndef SIRIKATA_Stream_HPP__
 #define SIRIKATA_Stream_HPP__
+
 #include "Address.hpp"
+
 namespace Sirikata {
-/// Network contains Stream and TCPStream.
 namespace Network {
 
-
-///Codes indicating if packet sending should be reliable or not,and in order or not
+/// Indicates which combination of reliability and ordered-ness should be used.
 enum StreamReliability {
     Unreliable,
     ReliableUnordered,
     ReliableOrdered
 };
 
-
-/**
- * This is the stream interface by which applications will send packets to the world
- * Each protocol will provide a specific function similar to the connect and bind functions 
- * but with protocol-specific arguments (such as host, port)
- * As soon as connect is called, streams may be cloned or data may be sent across them
- * When the stream finds out whether a connection attempt failed or succeeded, 
- * it will call the connectionCallback
- * When the other side calls clone() the first side will receive a substreamCallback with the callback it provided on connect() or listen()
- * Once a stream is clone()d, it may outlast the parent stream and may receive further substream callbacks on the original substreamCallback provided
-
- * 
+/** Stream interface for network connections.
+ *
+ *  Streams are lightweight communication primitives, backed by a shared connection.
+ *  An individual stream is a reliable, ordered stream of arbitrarily sized messages.
+ *  The stream only returns full messages to the user.
+ *
+ *  Streams can be created or cloned efficiently and can start accepting data without
+ *  having to first go through a connection procedure. When substreams are created by
+ *  the remote endpoint, the user is notified via a callback.  Data can be sent from
+ *  any thread.  Data is received via a callback, but the user can pause callbacks if
+ *  they cannot handle the rate of callbacks provided by the Stream.
+ *
+ *  Note that substreams may outlast their parent streams.  In this case, further substream
+ *  callbacks are dispatched to the original callback.
  */
 class SIRIKATA_EXPORT Stream {
 protected:
     Stream(){}
 public:
-    ///The number of live streams on a single connection must fit into 30 bits. Streams will be reused when they are shutdown
-    typedef vuint32 StreamID ;
-    ///Callback codes indicating whether the socket has connected, had a connection rejected or got a sudden disconnection
+    class SetCallbacks;
+
+    virtual ~Stream(){};
+
+    /** Unique identifier for streams backed by the same connection.  Identifiers
+     *  are always less than 2^30 and are reused when streams are closed.
+     */
+    typedef vuint32 StreamID;
+
+    /// Specifies the current state of a connection.
     enum ConnectionStatus {
         Connected,
         ConnectionFailed,
         Disconnected
     };
-    ///Callback type for when a connection happens (or doesn't) Callees will receive a ConnectionStatus code indicating connection successful, rejected or a later disconnection event
-    typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
-    ///Callback type for when a full chunk of bytes are waiting on the stream. If false is returned, then the chunk is rejected and the stream becomes paused. Resume by calling readyRead() The chunk is mutable and may be destroyed by the called function
-    typedef std::tr1::function<bool(Chunk&)> BytesReceivedCallback;
-    ///Callback type for when a send has failed in the past, but now the stream is ready to accept more bytes
-    typedef std::tr1::function<void()> ReadySendCallback;
-    /**
-     *  This class is passed into any newSubstreamCallback functions so they may 
-     *  immediately setup callbacks for connetion events and possibly start sending immediate responses.     
+
+    /** Specifies whether the user accepted a chunk or wants the stream to retain ownership
+     *  and pause receive callbacks.
      */
-    class SetCallbacks : Noncopyable{
+    enum ReceivedResponse {
+        AcceptedData,
+        PauseReceive
+    };
+
+    /** Callback generated when the current state of the underlying connection changes.
+     *  The parameters are a ConnectionStatus indicating the event and a string specifying
+     *  the reason for the event, if any.
+     */
+    typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
+
+    /** Callback generated when a new substream is initiated by the remote endpoint.
+     *  The parameters are a pointer to the new Stream and a functor which allows the user
+     *  to set the callbacks for the new Stream.  The substream's callbacks may only be
+     *  set in this callback. The user may start sending on the stream as soon as the
+     *  callbacks have been set.
+     */
+    typedef std::tr1::function<void(Stream*,SetCallbacks&)> SubstreamCallback;
+
+    /** Callback generated when another chunk of data is ready. The chunk is an entire chunk
+     *  provided by the sender and will not be fragmented.
+     *
+     *  The return value provided by the user specifies whether they have accepted the data
+     *  or if the stream should retain ownership. If the stream retains ownership, receive
+     *  calbacks are paused and will not resume until the user callse readyRead().
+     *
+     *  The chunk is mutable.  It may be destroyed by the user during the callback, but if
+     *  it is, the user must be sure to return Accepted to indicate it has taken ownership.
+     */
+    typedef std::tr1::function<ReceivedResponse(Chunk&)> ReceivedCallback;
+
+    /** Callback generated when the previous send failed and the stream is now ready to accept
+     *  a message the same size as the message that caused the failure.
+     */
+    typedef std::tr1::function<void()> ReadySendCallback;
+
+    /** Functor which allows the user to set callbacks for the stream. */
+    class SetCallbacks : Noncopyable {
     public:
         virtual ~SetCallbacks(){}
         /**
-         * Function to be called from within a SubstreamCallback to set the callback functions 
+         * Function to be called from within a SubstreamCallback to set the callback functions
          * of a newly cloned or received stream. This allows bytes to be immediately sent off
          */
         virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
-                                const Stream::BytesReceivedCallback &bytesReceivedCallback,
+                                const Stream::ReceivedCallback &receivedCallback,
                                 const Stream::ReadySendCallback&readySendCallback)=0;
     };
-    /**
-     * The substreamCallback must call SetCallbacks' operator() to activate the stream
-     * Then it may send bytes asap
-     * it will get called with NULL as the last stream shuts down
-     */
-    typedef std::tr1::function<void(Stream*,SetCallbacks&)> SubstreamCallback;
-    ///Simple example function to ignore incoming streams. This is used when a socket is shutting down, or for convenience
-    static void ignoreSubstreamCallback(Stream * stream, SetCallbacks&);
-    ///Simple example function to ignore connection requests
-    static void ignoreConnectionStatus(ConnectionStatus status,const std::string&reason);
-    ///Simple example function to ignore incoming bytes on a connection
-    static bool ignoreBytesReceived(const Chunk&);
-    ///Simple example function to ignore a ready-to-send response
-    static void ignoreReadySend();
 
-    /**
-     * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
-     * The stream is immediately active and may have bytes sent on it immediately. 
-     * A connectionCallback will be called as soon as connection has succeeded or failed
+    /** Default SubstreamCallback which ignores the incoming stream. The stream is destroyed,
+     *  causing the remote endpoint to receive a disconnect.
+     */
+    static void ignoreSubstreamCallback(Stream * stream, SetCallbacks&);
+    /** Default ConnectionCallback which ignores the update. */
+    static void ignoreConnectionCallback(ConnectionStatus status,const std::string&reason);
+    /** Default ReceivedCallback which accepts, but ignores, the data. */
+    static ReceivedResponse ignoreReceivedCallback(const Chunk&);
+    /** Default ReadySendCallback which ignores the update. */
+    static void ignoreReadySendCallback();
+
+    /** Connect the the specified address and use the callbacks for the new stream.
+     *  \param addr remote endpoint to connect to
+     *  \param substreamCallback callback to invoke when new substreams are created, including the
+     *                           first stream that will result from this connection
+     *  \param connectionCallback callback to invoke on connection events
+     *  \param receivedCallback callback to invoke when a full message has been received
+     *  \param readySendCallback callback to invoke when the stream is able to send again after
+     *                           previously failing to accept a message
      */
     virtual void connect(
-        const Address& addy,
-        const SubstreamCallback &substreamCallback,
-        const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback,
-        const ReadySendCallback&readySendCallback)=0;
+        const Address& addr,
+        const SubstreamCallback& substreamCallback,
+        const ConnectionCallback& connectionCallback,
+        const ReceivedCallback& receivedCallback,
+        const ReadySendCallback& readySendCallback)=0;
 
-    /**
-     * Will specify all callbacks for the first successful stream and allow this stream to be cloned
-     * The stream is immediately active and may have bytes sent on it immediately. 
-     * A connectionCallback will be called as soon as connection has succeeded or failed
+    /** Specifies all callbacks for the stream.
+     *  \param addr remote endpoint to connect to
+     *  \param substreamCallback callback to invoke when new substreams are created, including the
+     *                           first stream that will result from this connection
+     *  \param connectionCallback callback to invoke on connection events
+     *  \param receivedCallback callback to invoke when a full message has been received
+     *  \param readySendCallback callback to invoke when the stream is able to send again after
+     *                           previously failing to accept a message
      */
     virtual void prepareOutboundConnection(
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReceivedCallback&chunkReceivedCallback,
         const ReadySendCallback&readySendCallback)=0;
-    /**
-     * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
-     * A connectionCallback specified in prepareConnection will be called as soon as connection has succeeded or failed
-     * must call prepareConnection prior to connect()
-     */
-    virtual void connect(
-        const Address& addy)=0;
 
-    ///Creates a stream of the same type as this stream
-    virtual Stream*factory()=0;
-    ///Makes this stream a clone of stream "s" if they are of the same type and immediately calls the callback 
+    /** Connect to the specified address.  Callbacks must already have been registered using
+     *  prepareOutboundConnection.
+     *  \param addr remote endpoint to connect to
+     */
+    virtual void connect(const Address& addr)=0;
+
+    /** Create a new Stream of the same type as this stream.
+     *  \returns a new Stream, completely independent of this one, of the same type and implementation.
+     */
+    virtual Stream* factory()=0;
+
+    /** Create a new substream backed by the same connection as this stream.
+     *  \param cb callback which is called during this method's invocation to allow the user to set
+     *            the callbacks on the new Stream
+     *  \returns a new Stream, or NULL if the Stream cannot be created
+     */
     virtual Stream* clone(const SubstreamCallback&cb)=0;
+    /** Create a new substream backed by the same connection as this stream.
+     *  \param connectionCallback callback to invoke on connection events
+     *  \param receivedCallback callback to invoke when messages are received
+     *  \param readySendCallback callback to invoke when the Stream is ready to accept more data to send
+     *  \returns a new Stream, or NULL if the Stream cannot be created
+     */
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
-                          const BytesReceivedCallback&chunkReceivedCallback,
+                          const ReceivedCallback&chunkReceivedCallback,
                           const ReadySendCallback&readySendCallback)=0;
-    ///tells the stream that downstream elements may accept further bytes after the stream has been paused
+
+    /** Indicate to the Stream that the user is ready to accept more received data.  This should be called
+     *  when the user is ready to receive more data after having returned PauseReceive from a
+     *  ReceivedCallback.
+     */
     virtual void readyRead()=0;
-    ///Tells the stream that send has been paused until the stream calls back a readySendCallback
-    virtual void pauseSend()=0;
-    virtual bool send(MemoryReference, StreamReliability)=0;
-    virtual bool send(MemoryReference, MemoryReference, StreamReliability)=0;
-    ///Send a chunk of data to the receiver
-    virtual bool send(const Chunk&data,StreamReliability)=0;
+
+    /* Request that the Stream call the ReadySendCallback specified by the user at stream creation when the
+     * Stream is able to send additional data.  This can be called after a call to send() fails so the user
+     * is notified when a message of the same size can be enqueued for sending. Calling this method
+     * guarantees the user will receive the callback, even if space became available between the failure
+     * of the send() call and the call to this method. Note that multiple requests may be handled by a
+     * single callback and the callback may be invoked inside this method.
+     */
+    virtual void requestReadySendCallback()=0;
+
+    /** Enqueue a message to be sent, using the specified level of reliability.
+     *  \param msg the message to send
+     *  \param reliability the reliability and ordering to send the message with
+     *  \returns true if the message was accepted, false if the send failed due to a lost connection or
+     *           insufficient queue space
+     */
+    virtual bool send(MemoryReference msg, StreamReliability reliability)=0;
+    /** Enqueue a message which is split in two pieces to be sent, using the specified level of reliability.
+     *  \param first_msg the first part of the message to send
+     *  \param second_msg the second part of the message to send
+     *  \param reliability the reliability and ordering to send the message with
+     *  \returns true if the message was accepted, false if the send failed due to a lost connection or
+     *           insufficient queue space
+     */
+    virtual bool send(MemoryReference first_msg, MemoryReference second_msg, StreamReliability reliability)=0;
+    /** Enqueue a message to be sent, using the specified level of reliability.
+     *  \param data the message to send
+     *  \param reliability the reliability and ordering to send the message with
+     *  \returns true if the message was accepted, false if the send failed due to a lost connection or
+     *           insufficient queue space
+     */
+    virtual bool send(const Chunk&data, StreamReliability reliability)=0;
+
+    /** Determine if a message of the specified size could be enqueued to be sent.
+     *  \returns true if a message of the specified size could be successfully enqueued
+     */
     virtual bool canSend(size_t dataSize)const=0;
 
-    ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+    /** Get the remote endpoint's address.
+     *  \returns the remote endpoint's address, or Address::null() if this Stream has not fully connected yet
+     */
     virtual Address getRemoteEndpoint() const=0;
-    ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+    /** Get the local endpoint's address.
+     *  \returns the local endpoint's address, or Address::null() if this Stream has not fully connected yet
+     */
     virtual Address getLocalEndpoint() const=0;
 
-    ///close this stream: if it is the last stream, close the connection as well
+    /** Close this Stream, notifying the remote endpoint.  If this is the last substream surviving from the
+     *  original Stream, the underlying connection is closed as well.
+     */
     virtual void close()=0;
-    virtual ~Stream(){};
 };
-} }
-#endif
+} // namespace Network
+} // namespace Sirikata
+
+#endif //SIRIKATA_Stream_HPP__

@@ -39,7 +39,7 @@ public:
     TCPSetCallbacks(MultiplexedSocket*ms,TCPStream *strm):mCallbacks(NULL),mStream(strm),mMultiSocket(ms) {
     }
     virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
-                            const Stream::BytesReceivedCallback &bytesReceivedCallback,
+                            const Stream::ReceivedCallback &bytesReceivedCallback,
                             const Stream::ReadySendCallback&readySendCallback){
         mCallbacks=new TCPStream::Callbacks(connectionCallback,
                                             bytesReceivedCallback,

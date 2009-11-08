@@ -117,13 +117,13 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
      *                                     or giving up and forwarding them to mSpace in the hopes
      *                                     that they may to a service or a forwader
      */
-    bool bytesReceivedCallback(Network::Stream*stream,const Network::Chunk&chunk);
+    Network::Stream::ReceivedResponse bytesReceivedCallback(Network::Stream*stream,const Network::Chunk&chunk);
     ///makes a Disconnection message for the Registration service in the event a connection should unexpectedly close
     void forgeDisconnectionMessage(const ObjectReference&ref);
     ///actually close a Stream connection to an object.
     void shutdownConnection(const ObjectReference&ref);
   public:
-    ObjectConnections(Network::StreamListener*listener,                      
+    ObjectConnections(Network::StreamListener*listener,
                       const Network::Address &listenAddress);
     ~ObjectConnections();
     ///If there's an active connection to a given object reference
@@ -137,7 +137,7 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     ///Processes a message destined for an Object referenced by either temporary (from registrationService) or permanent (from anyone else) ID in the header
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
-    
+
 };
 }
 #endif

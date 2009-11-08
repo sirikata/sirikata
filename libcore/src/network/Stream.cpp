@@ -32,17 +32,23 @@
 
 #include "util/Standard.hh"
 #include "Stream.hpp"
-namespace Sirikata { namespace Network {
+
+namespace Sirikata {
+namespace Network {
+
 void Stream::ignoreSubstreamCallback(Stream * stream, SetCallbacks&) {
     delete stream;
 }
-void Stream::ignoreConnectionStatus(Stream::ConnectionStatus status, const std::string&) {
-}
-bool Stream::ignoreBytesReceived(const Chunk&c) {
-    return true;
-}
-void Stream::ignoreReadySend() {
-    
+
+void Stream::ignoreConnectionCallback(Stream::ConnectionStatus status, const std::string&) {
 }
 
-} }
+Stream::ReceivedResponse Stream::ignoreReceivedCallback(const Chunk&c) {
+    return AcceptedData;
+}
+
+void Stream::ignoreReadySendCallback() {
+}
+
+} // namespace Network
+} // namespace Sirikata

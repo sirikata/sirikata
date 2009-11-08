@@ -56,7 +56,7 @@ void ProxBridge::newObjectStreamCallback(Network::Stream*newStream, Network::Str
         setCallbacks(
             std::tr1::bind(&ProxBridge::disconnectionCallback,this,stream,ref,_1,_2),
             std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1),
-            &Network::Stream::ignoreReadySend);
+            &Network::Stream::ignoreReadySendCallback);
     }else {
         //whole object host has disconnected;
     }
@@ -102,7 +102,7 @@ ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHa
                           updateDuration=new OptionValue("updateDuration","60ms",OptionValueType<Duration>(),"sets the ammt of time between proximity updates"),
                           streamlib=new OptionValue("protocol","",OptionValueType<String>(),"Sets the stream library to connect"),
                           streamoptions=new OptionValue("options","",OptionValueType<String>(),"Options for the created stream"),
-                           
+
 						  NULL);
     (mOptions=OptionSet::getOptions("proxbridge",this))->parse(options);
     mListener=Network::StreamListenerFactory::getSingleton()
@@ -459,7 +459,7 @@ void ProxBridge::delObj(const ObjectReference&source, const Sirikata::Protocol::
 }
 
 
-bool ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
+Network::Stream::ReceivedResponse ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                                  const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                  const Network::Chunk&data) {
     RoutableMessageHeader hdr;
@@ -499,7 +499,7 @@ bool ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
             }
         }
     }
-    return true;
+    return Network::Stream::AcceptedData;
 }
 void ProxBridge::disconnectionCallback(const std::tr1::shared_ptr<Network::Stream> &stream,
                                        const std::tr1::shared_ptr<std::vector<ObjectReference> >&refs,

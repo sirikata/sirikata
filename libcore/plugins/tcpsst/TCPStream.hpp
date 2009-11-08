@@ -136,11 +136,11 @@ public:
     class Callbacks:public Noncopyable {
     public:
         Stream::ConnectionCallback mConnectionCallback;
-        Stream::BytesReceivedCallback mBytesReceivedCallback;
+        Stream::ReceivedCallback mBytesReceivedCallback;
         Stream::ReadySendCallback mReadySendCallback;
         std::tr1::weak_ptr<AtomicValue<int> > mSendStatus;
         Callbacks(const Stream::ConnectionCallback &connectionCallback,
-                  const Stream::BytesReceivedCallback &bytesReceivedCallback,
+                  const Stream::ReceivedCallback &bytesReceivedCallback,
                   const Stream::ReadySendCallback &readySendCallback,
                   const std::tr1::weak_ptr<AtomicValue<int> >&sendStatus):
             mConnectionCallback(connectionCallback),
@@ -157,7 +157,7 @@ public:
     ///There is room on a downstream queue and futher sends should be retried
     virtual void readyRead();
     ///Send a readySendCallback notification when there is room on the send queue
-    virtual void pauseSend();
+    virtual void requestReadySendCallback();
     ///Implementation of send interface
     WARN_UNUSED
     virtual bool send(MemoryReference, StreamReliability);
@@ -173,7 +173,7 @@ public:
         const Address& addy,
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReceivedCallback&chunkReceivedCallback,
         const ReadySendCallback&readySend);
     /**
      * Will specify all callbacks for the first successful stream and allow this stream to be cloned
@@ -183,7 +183,7 @@ public:
     virtual void prepareOutboundConnection(
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReceivedCallback&chunkReceivedCallback,
         const ReadySendCallback&readySend);
     /**
      * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
@@ -200,7 +200,7 @@ public:
     virtual Stream* clone(const SubstreamCallback&cb);
     ///Creates a new substream on this connection. This is for when the callbacks do not require the Stream*
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
-                          const BytesReceivedCallback&chunkReceivedCallback,
+                          const ReceivedCallback&chunkReceivedCallback,
                           const ReadySendCallback&readySendCallback);
 
     ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()

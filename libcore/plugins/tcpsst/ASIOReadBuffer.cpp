@@ -46,7 +46,7 @@ void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::s
     parentSocket->getASIOSocketWrapper(mWhichBuffer).clearReadBuffer();
     delete this;
 }
-bool ASIOReadBuffer::processFullChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk){
+Network::Stream::ReceivedResponse ASIOReadBuffer::processFullChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk){
     return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
 }
 
@@ -70,7 +70,7 @@ void ASIOReadBuffer::ioReactorThreadResumeRead(MultiplexedSocketPtr&thus) {
         translateBuffer(thus);
         break;
       case PAUSED_NEW_CHUNK:
-        if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk)) {
+        if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk) == Stream::AcceptedData) {
             mNewChunk.resize(0);
             mBufferPos=0;
             readIntoFixedBuffer(thus);
@@ -130,7 +130,7 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
                 Chunk resultChunk;
                 Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
                 size_t vectorSize=resultChunk.size();
-                if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk)) {
+                if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk) == Stream::AcceptedData) {
                     chunkPos+=packetHeaderLength+packetLength.read();
                 }else {
                     assert(resultChunk.size()==vectorSize);//if the user rejects the packet they should not munge it
@@ -163,7 +163,7 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
             if (mBufferPos>=mNewChunk.size()){
                 size_t vectorSize=mNewChunk.size();
                 assert(mBufferPos==vectorSize);
-                if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk)) {
+                if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk) == Stream::AcceptedData) {
                     mNewChunk.resize(0);
                     mBufferPos=0;
                     readIntoFixedBuffer(thus);

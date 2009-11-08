@@ -120,7 +120,7 @@ public:
 };
 
 
- 
+
 HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     : mTracker(parent->getSpaceIO()),
       mInternalObjectReference(objectName) {
@@ -232,7 +232,7 @@ struct HostedObject::PrivateCallbacks {
         realThis->mObjectHost->getWorkQueue()->dequeueAll();
     }
 
-    static bool receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
+    static Network::Stream::ReceivedResponse receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
         HostedObjectPtr realThis (thus.lock());
 
         RoutableMessageHeader header;
@@ -251,11 +251,11 @@ struct HostedObject::PrivateCallbacks {
 
         if (!realThis) {
             SILOG(objecthost,error,"Received message for dead HostedObject. SpaceID = "<<sid<<"; DestObject = "<<header.destination_object());
-            return true;
+            return Network::Stream::AcceptedData;
         }
 
         realThis->processRoutableMessage(header, bodyData);
-        return true;
+        return Network::Stream::AcceptedData;
     }
 
     static void handlePersistenceResponse(
@@ -657,7 +657,9 @@ HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,
                              std::tr1::bind(&PrivateCallbacks::receivedRoutableMessage,
                                             getWeakPtr(),
                                             sid,
-                                            _1),&Network::Stream::ignoreReadySend)))).first;
+                                            _1),
+                             &Network::Stream::ignoreReadySendCallback)
+            ))).first;
     return iter->second;
 }
 
@@ -1154,7 +1156,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     LocRequest loc;
                     loc.SerializeToString(locRequest->body().add_message("LocRequest"));
 
-                  
+
                     locRequest->setTimeout(Duration::seconds(5.0));
                     locRequest->serializeSend();
                 }
@@ -1185,7 +1187,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
 const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
     static Duration nil(Duration::seconds(0));
     SpaceDataMap::iterator where=mSpaceData->find(space);
-    if (where!=mSpaceData->end()) 
+    if (where!=mSpaceData->end())
         return where->second.mSpaceConnection.getTopLevelStream()->getServerTimeOffset();
     return nil;
 }

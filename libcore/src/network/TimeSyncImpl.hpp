@@ -132,12 +132,12 @@ public:
 
         mSyncRound=0;
     }
-    static bool bytesReceived(const std::tr1::weak_ptr<TimeSyncImpl<WeakRef> >&weak_thus, const Network::Chunk&data) {
+    static Stream::ReceivedResponse bytesReceived(const std::tr1::weak_ptr<TimeSyncImpl<WeakRef> >&weak_thus, const Network::Chunk&data) {
         std::tr1::shared_ptr<TimeSyncImpl<WeakRef> >thus (weak_thus.lock());
         if (thus) {
             thus->internalBytesReceived(thus->mParent.lock(),data);
         }
-        return true;
+        return Stream::AcceptedData;
     }
     void go(const std::tr1::shared_ptr<TimeSyncImpl<WeakRef> >&thus, int numParallel, int numAverage, const Duration&delay, Network::Stream*topLevelStream){
         thus->mStream=topLevelStream;

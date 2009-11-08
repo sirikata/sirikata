@@ -66,7 +66,7 @@ void TCPStream::readyRead() {
                                               mID));
 }
 
-void TCPStream::pauseSend() {
+void TCPStream::requestReadySendCallback() {
     MultiplexedSocketPtr socket_copy = mSocket;
     if (socket_copy.get() == NULL) {
         SILOG(tcpsst,debug,"Called TCPStream::pauseSend() on closed stream." << getID().read());
@@ -227,7 +227,7 @@ TCPStream::TCPStream(IOService&io,unsigned char numSimultSockets,unsigned int se
 void TCPStream::connect(const Address&addy,
                         const SubstreamCallback &substreamCallback,
                         const ConnectionCallback &connectionCallback,
-                        const BytesReceivedCallback&bytesReceivedCallback,
+                        const ReceivedCallback&bytesReceivedCallback,
                         const ReadySendCallback&readySendCallback) {
     MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
     mSocket = socket;
@@ -243,7 +243,7 @@ void TCPStream::connect(const Address&addy,
 void TCPStream::prepareOutboundConnection(
                         const SubstreamCallback &substreamCallback,
                         const ConnectionCallback &connectionCallback,
-                        const BytesReceivedCallback&bytesReceivedCallback,
+                        const ReceivedCallback&bytesReceivedCallback,
                         const ReadySendCallback&readySendCallback) {
     MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
     mSocket = socket;
@@ -280,7 +280,7 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
 }
 
 Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
-                         const BytesReceivedCallback&chunkReceivedCallback,
+                         const ReceivedCallback&chunkReceivedCallback,
                          const ReadySendCallback&readySendCallback) {
     MultiplexedSocketPtr socket_copy = mSocket;
     if (socket_copy.get() == NULL) {

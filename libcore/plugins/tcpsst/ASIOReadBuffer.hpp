@@ -74,7 +74,7 @@ class ASIOReadBuffer {
      * \param newChunk is the chunk that was sent from the other side to this side and is ready for client processing (or server processing if sid==Stream::StreamID())
      * \returns whether the host can accept a packet into a lower queue
      */
-    bool processFullChunk(const MultiplexedSocketPtr &parentSocket,
+    Network::Stream::ReceivedResponse processFullChunk(const MultiplexedSocketPtr &parentSocket,
                           unsigned int whichSocket,
                           const Stream::StreamID& sid,
                           Chunk&newChunk);

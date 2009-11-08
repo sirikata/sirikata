@@ -62,12 +62,12 @@ class SIRIKATA_SUBSCRIPTION_EXPORT Server:public std::tr1::enable_shared_from_th
     unsigned int mMaxCachedMessageSize;
     void subscriberStreamCallback(Network::Stream*,Network::Stream::SetCallbacks&);
     static void purgeWaitingSubscriberOnBroadcastIOService(const std::tr1::weak_ptr<Server> &,const UUID&uuid, size_t which);
-    bool subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,const Network::Chunk&);
+    Network::Stream::ReceivedResponse subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,const Network::Chunk&);
     void subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Protocol::Subscribe&subscriptionRequest);
     static void subscriberConnectionCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,Network::Stream::ConnectionStatus,const std::string&reason);
     void broadcastConnectionCallback(SubscriptionState*,Network::Stream::ConnectionStatus,const std::string&reason);
     void broadcastStreamCallback(Network::Stream*,Network::Stream::SetCallbacks&);
-    bool broadcastBytesReceivedCallback(SubscriptionState*, const Network::Chunk&);
+    Network::Stream::ReceivedResponse broadcastBytesReceivedCallback(SubscriptionState*, const Network::Chunk&);
     static void poll(const std::tr1::weak_ptr<Server> &, const UUID&);
 public:
 

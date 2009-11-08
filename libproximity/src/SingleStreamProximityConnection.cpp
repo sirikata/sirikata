@@ -47,7 +47,7 @@ void connectionCallback(ProximityConnection* con, Network::Stream::ConnectionSta
     if (status!=Network::Stream::Connected)
         con->streamDisconnected();
 }
-bool readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
+Network::Stream::ReceivedResponse readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
                           MessageService** system,
                           const ObjectReference &object,
                           const Network::Chunk&chunk) {
@@ -61,7 +61,7 @@ bool readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
             sys->processMessage(hdr,body);
         }
     }
-    return true;
+    return Network::Stream::AcceptedData;
 }
 }
 
@@ -97,15 +97,15 @@ ProximityConnection* SingleStreamProximityConnection::create(Network::IOService*
         return new SingleStreamProximityConnection(address->as<Network::Address>(),*io,streamlib->as<String>(),streamoptions->as<String>());
     }
     return new SingleStreamProximityConnection(Network::Address(host->as<String>(),port->as<String>()),*io,streamlib->as<String>(),streamoptions->as<String>());
-                              
+
 }
 SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&io,const String&streamlib, const String&streamoptions):mParent(NULL),mConnectionStream(Network::StreamFactory::getSingleton().getConstructor(streamlib)(&io,Network::StreamFactory::getSingleton().getOptionParser(streamlib)(streamoptions))) {
         mConnectionStream->connect(addy,
                                    &Network::Stream::ignoreSubstreamCallback,
                                    std::tr1::bind(&connectionCallback,this,_1,_2),
-                                   &Network::Stream::ignoreBytesReceived,
-                                   &Network::Stream::ignoreReadySend);
-    
+                                   &Network::Stream::ignoreReceivedCallback,
+                                   &Network::Stream::ignoreReadySendCallback);
+
     }
 void SingleStreamProximityConnection::streamDisconnected() {
     SILOG(proximity,error,"Lost connection with proximity manager");
@@ -141,8 +141,9 @@ SingleStreamProximityConnection::~SingleStreamProximityConnection() {
 }
 void SingleStreamProximityConnection::constructObjectStream(const ObjectReference&obc) {
     mObjectStreams[obc]
-        = mConnectionStream->clone(&Network::Stream::ignoreConnectionStatus,
-                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1),&Network::Stream::ignoreReadySend);
+        = mConnectionStream->clone(&Network::Stream::ignoreConnectionCallback,
+                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1),
+            &Network::Stream::ignoreReadySendCallback);
 }
 void SingleStreamProximityConnection::deleteObjectStream(const ObjectReference&obc) {
     ObjectStreamMap::iterator where=mObjectStreams.find(obc);

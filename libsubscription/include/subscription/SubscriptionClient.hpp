@@ -118,7 +118,7 @@ protected:
               const UUID&uuid,
               SubscriptionClient *parent);
         void setStream(const std::tr1::shared_ptr<State>thus, const std::tr1::shared_ptr<Network::Stream>topLevelStream, const String&serialized_introduction=String());
-        static bool bytesReceived(const std::tr1::weak_ptr<State>&,
+        static Network::Stream::ReceivedResponse bytesReceived(const std::tr1::weak_ptr<State>&,
                                   const Network::Chunk&data);
         static void connectionCallback(const std::tr1::weak_ptr<State>&thus,
                                        const Network::Stream::ConnectionStatus,

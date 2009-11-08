@@ -65,11 +65,12 @@ void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConn
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     std::tr1::shared_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > sync(new Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >(thus,mIOService));
-    std::tr1::weak_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > weak_sync(sync); 
+    std::tr1::weak_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > weak_sync(sync);
     mTimeSync=sync;
     mTopLevelStream->prepareOutboundConnection(&Network::Stream::ignoreSubstreamCallback,
-                                               std::tr1::bind(&connectionStatus, thus,_1,_2),                                               
-                                               std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived,weak_sync,_1),&Network::Stream::ignoreReadySend);
+                                               std::tr1::bind(&connectionStatus, thus,_1,_2),
+                                               std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived,weak_sync,_1),
+        &Network::Stream::ignoreReadySendCallback);
     sync->setCallback(std::tr1::bind(&SpaceTimeOffsetManager::setSpaceTimeOffset,id,_1));
     sync->go(sync,3,6,Duration::seconds(10),mTopLevelStream);
     oh->spaceIDMap()->lookup(id,std::tr1::bind(&TopLevelSpaceConnection::connectToAddress,thus,oh,_1));
@@ -83,11 +84,12 @@ void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConn
     using std::tr1::placeholders::_2;
     std::tr1::shared_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > sync(new Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >(thus,mIOService));
     mTimeSync=sync;
-    std::tr1::weak_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > weak_sync(sync); 
+    std::tr1::weak_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > weak_sync(sync);
     mTopLevelStream->connect(addy,
                              &Network::Stream::ignoreSubstreamCallback,
-                             std::tr1::bind(&connectionStatus, thus,_1,_2),                                               
-                             std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived,weak_sync,_1),&Network::Stream::ignoreReadySend);
+                             std::tr1::bind(&connectionStatus, thus,_1,_2),
+                             std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived,weak_sync,_1),
+        &Network::Stream::ignoreReadySendCallback);
     sync->setCallback(std::tr1::bind(&SpaceTimeOffsetManager::setSpaceTimeOffset,id,_1));
     sync->go(sync,3,6,Duration::seconds(10),mTopLevelStream);
 }

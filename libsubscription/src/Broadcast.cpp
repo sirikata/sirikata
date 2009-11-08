@@ -71,9 +71,9 @@ public:
                                             Network::Stream::SetCallbacks&setCallbacks) {
         thus->mStream=stream;
         setCallbacks(std::tr1::bind(cb,thus,_1,_2),
-                     &Network::Stream::ignoreBytesReceived,
-                     &Network::Stream::ignoreReadySend);
-        
+                     &Network::Stream::ignoreReceivedCallback,
+                     &Network::Stream::ignoreReadySendCallback);
+
     }
     static void setBroadcastStreamCallbacksShared(const std::tr1::shared_ptr<Broadcast::BroadcastStream>&thus,
                                                   const std::tr1::function<void(const std::tr1::weak_ptr<Broadcast::BroadcastStream>&,
@@ -84,9 +84,9 @@ public:
         std::tr1::weak_ptr<Broadcast::BroadcastStream> bs(thus);
         thus->mStream=stream;
         setCallbacks(std::tr1::bind(cb,bs,_1,_2),
-                     &Network::Stream::ignoreBytesReceived,
-                     &Network::Stream::ignoreReadySend);
-    
+                     &Network::Stream::ignoreReceivedCallback,
+                     &Network::Stream::ignoreReadySendCallback);
+
     }
 };
 void Broadcast::initiateHandshake(Broadcast::BroadcastStream*stream,const Network::Address&addy,const UUID &name) {
@@ -100,13 +100,13 @@ void Broadcast::initiateHandshake(Broadcast::BroadcastStream*stream,const Networ
         SILOG(broadcast,error,"Cannot send memory reference to UUID "<<name.toString());
     }
 }
-std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroadcast(const Network::Address&addy, 
+std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroadcast(const Network::Address&addy,
                                                                                const UUID&name,
                                                                                const std::tr1::function<void(const std::tr1::weak_ptr<Broadcast::BroadcastStream>&,
-                                                                                                             Network::Stream::ConnectionStatus, 
+                                                                                                             Network::Stream::ConnectionStatus,
                                                                                                              const std::string&reason)>& cb) {
     std::tr1::shared_ptr<Broadcast::BroadcastStream> retval;
-    Network::Stream*newBroadcastStream=NULL;    
+    Network::Stream*newBroadcastStream=NULL;
     while(newBroadcastStream==NULL) {
         boost::lock_guard<boost::mutex>lok(*mUniqueLock);
         std::tr1::weak_ptr<Network::Stream>*weak_topLevelStream=&mTopLevelStreams[addy];
@@ -125,9 +125,9 @@ std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroad
             std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getConstructor(protocol)(mIOService,*options));
             (topLevelStream=tlstemp)->connect(addy,
                                               &Network::Stream::ignoreSubstreamCallback,
-                                              &Network::Stream::ignoreConnectionStatus,
-                                              &Network::Stream::ignoreBytesReceived,
-                                              &Network::Stream::ignoreReadySend);
+                                              &Network::Stream::ignoreConnectionCallback,
+                                              &Network::Stream::ignoreReceivedCallback,
+                                              &Network::Stream::ignoreReadySendCallback);
             *weak_topLevelStream=tlstemp;
         }
         std::tr1::shared_ptr<Broadcast::BroadcastStream> bs(new BroadcastStream(topLevelStream,NULL));
@@ -151,10 +151,10 @@ std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroad
         initiateHandshake(&*retval,addy,name);
     return retval;
 }
-Broadcast::BroadcastStream *Broadcast::establishBroadcast(const Network::Address&addy, 
+Broadcast::BroadcastStream *Broadcast::establishBroadcast(const Network::Address&addy,
                                                           const UUID&name,
                                                           const std::tr1::function<void(BroadcastStream*,
-                                                                                        Network::Stream::ConnectionStatus, 
+                                                                                        Network::Stream::ConnectionStatus,
                                                                                         const std::string&reason)>& cb) {
     Broadcast::BroadcastStream * retval=NULL;
     Network::Stream*newBroadcastStream=NULL;
@@ -175,7 +175,7 @@ Broadcast::BroadcastStream *Broadcast::establishBroadcast(const Network::Address
                 *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
             }
             std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getConstructor(protocol)(mIOService,*options));
-            (topLevelStream=tlstemp)->connect(addy,&Network::Stream::ignoreSubstreamCallback,&Network::Stream::ignoreConnectionStatus,&Network::Stream::ignoreBytesReceived,&Network::Stream::ignoreReadySend);
+            (topLevelStream=tlstemp)->connect(addy,&Network::Stream::ignoreSubstreamCallback,&Network::Stream::ignoreConnectionCallback,&Network::Stream::ignoreReceivedCallback,&Network::Stream::ignoreReadySendCallback);
             *weak_topLevelStream=tlstemp;
         }
         newBroadcastStream=topLevelStream->clone(std::tr1::bind(&BroadcastStreamCallbacks::setBroadcastStreamCallbacks,
