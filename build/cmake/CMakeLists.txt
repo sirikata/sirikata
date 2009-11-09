@@ -1292,8 +1292,10 @@ ADD_PLUGIN_TARGET(ogregraphics
                               ${OGRE_LIBRARIES} ${sdl_LIBRARIES} ${BERKELIUM_LIBRARIES} ${AWESOMIUM_LIBRARIES}
                               ${Boost_REGEX_LIBRARY_${UPPERCASE_BUILD_TYPE}}
                                ${PROTOCOLBUFFERS_LIBRARIES})
-  ADD_DEPENDENCIES(ogregraphics berkelium)
-  TARGET_LINK_LIBRARIES(ogregraphics -Lchrome debug liblibberkelium_d${DYLIB_EXT} optimized liblibberkelium${DYLIB_EXT} )
+  IF(NOT WIN32)
+    ADD_DEPENDENCIES(ogregraphics berkelium)
+    TARGET_LINK_LIBRARIES(ogregraphics -Lchrome debug liblibberkelium_d${DYLIB_EXT} optimized liblibberkelium${DYLIB_EXT} )
+  ENDIF()
   #IF(ISDEBUG)
   #  SET(BERKELIUM_LDFLAGS -llibberkelium_d)
   #ELSE()
