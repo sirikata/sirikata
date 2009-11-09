@@ -112,15 +112,17 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
-        WebView *mychromeWebView = createWebView("yahoo", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
-        mychromeWebView->loadURL("http://dunnbypaul.net/js_mouse/");
+        WebView *mychromeWebView = createWebView("google", 320, 240, OverlayPosition(RP_TOPLEFT), false, 70);
+        mychromeWebView->loadURL("http://google.com/");
         mychromeWebView->setTransparent(true);
+/*
         mychromeWebView = createWebView("xahoo", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
         mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
         mychromeWebView->setTransparent(true);
         mychromeWebView = createWebView("GoOGLE", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
-        mychromeWebView->loadURL("http://patrickhorn.dyndns.org/test.html");
+        mychromeWebView->loadURL(http://dunnbypaul.net/js_mouse/");
         mychromeWebView->setTransparent(false);
+*/
 #endif
 }
 
