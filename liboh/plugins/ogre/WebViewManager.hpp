@@ -43,7 +43,7 @@
 #include "WebCore.h"
 typedef Awesomium::JSArguments JSArguments;
 #else
-typedef std::vector<std::string> JSArguments;
+typedef std::vector<Sirikata::MemoryReference> JSArguments;
 namespace Awesomium {
   typedef ::JSArguments JSArguments;
   struct WebCore;

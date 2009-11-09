@@ -43,7 +43,7 @@ typedef std::vector<JSValue> JSArguments;
 }
 typedef Awesomium::JSArguments JSArguments;
 #else
-typedef std::vector<std::string> JSArguments;
+typedef std::vector<Sirikata::MemoryReference> JSArguments;
 #endif
 
 namespace Sirikata {

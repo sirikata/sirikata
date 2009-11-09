@@ -464,10 +464,10 @@ namespace Graphics {
 
 		void onRequestDrag(WebView* caller, const Awesomium::JSArguments& args);
 
-        void onAddressBarChanged(Berkelium::Window*, const std::string&);
-        void onStartLoading(Berkelium::Window*, const std::string&);
+        void onAddressBarChanged(Berkelium::Window*, const char*url, size_t urlLength);
+        void onStartLoading(Berkelium::Window*, const char* url, size_t urlLength);
         void onLoad(Berkelium::Window*);
-        void onLoadError(Berkelium::Window*, const std::string&);
+        void onLoadError(Berkelium::Window*, const char* error, size_t errorLength);
         void onPaint(Berkelium::Window*, const unsigned char*, const Berkelium::Rect&, int x, int y, const Berkelium::Rect&);
         void onBeforeUnload(Berkelium::Window*, bool*);
         void onCancelUnload(Berkelium::Window*);
@@ -476,20 +476,20 @@ namespace Graphics {
         void onUnresponsive(Berkelium::Window*);
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
 
-    void onChromeSend(Berkelium::Window *win, const std::string &msg, const std::vector<std::string> &str);
+        void onChromeSend(Berkelium::Window *win, WindowDelegate::Data msg, const WindowDelegate::Data*str, size_t numStr);
 
     /** Linux only. uses an OpenGL texture.
      * If not using OpenGL, each srcRect will get its own call to 'onPaint'
      * It should be possible to paint plugins directly onto the canvas.
      * If this is not possible, then plugins may be created as widgets with
      * a negative z-index (i.e. below anything else on the screen).
-     */
+     
     virtual void onPaintPluginTexture(
         Berkelium::Window *win,
         void* sourceGLTexture,
         const std::vector<Berkelium::Rect> srcRects, // relative to destRect
         const Berkelium::Rect &destRect);
-
+    */
     virtual void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
     virtual void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
     virtual void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h);

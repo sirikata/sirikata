@@ -334,7 +334,7 @@ void WebView::loadURL(const std::string& url)
 #ifdef HAVE_AWESOMIUM
 	webView->loadURL(url);
 #elif defined(HAVE_BERKELIUM)
-    webView->navigateTo(url);
+    webView->navigateTo(url.data(),url.length());
 #endif
 }
 
@@ -351,16 +351,21 @@ void WebView::loadFile(const std::string& file)
     } else {
         url = "file://"+WebViewManager::getSingleton().getBaseDir()+"/"+file;
     }
-    webView->navigateTo(url);
+    webView->navigateTo(url.data(),url.length());
 #endif
 }
-
+static std::string htmlPrepend("data:text/html;charset=utf-8,");
 void WebView::loadHTML(const std::string& html)
 {
 #ifdef HAVE_AWESOMIUM
 	webView->loadHTML(html);
 #elif defined(HAVE_BERKELIUM)
-    webView->navigateTo("data:text/html;charset=utf-8,"+html);
+    char * data= new char[htmlPrepend.length()+html.length()+1];
+    memcpy(data,htmlPrepend.data(),htmlPrepend.length());
+    memcpy(data+htmlPrepend.length(),html.data(),html.length());
+    data[htmlPrepend.length()+html.length()]=0;
+    webView->navigateTo(data,htmlPrepend.length()+html.length());
+    delete[] data;
 #endif
 }
 
@@ -371,8 +376,8 @@ void WebView::evaluateJS(const std::string& utf8js)
 #elif defined(HAVE_BERKELIUM)
 	wchar_t *outchars = new wchar_t[utf8js.size()+1];
 	size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
-	std::wstring widestr(outchars, len);
-    webView->executeJavascript(widestr);
+    webView->executeJavascript(outchars,len);
+    delete []outchars;
 #endif
 }
 
@@ -720,12 +725,13 @@ void WebView::injectTextEvent(std::string utf8) {
 #if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	wchar_t *outchars = new wchar_t[utf8.size()+1];
 	size_t len = mbstowcs(outchars, utf8.c_str(), utf8.size());
-	std::wstring widestr(outchars, len);
 #if defined(HAVE_AWESOMIUM)
+	std::wstring widestr(outchars, len);
 	webView->injectTextEvent(widestr);
 #elif defined(HAVE_BERKELIUM)
-	webView->textEvent(widestr);
+	webView->textEvent(outchars,len);    
 #endif
+    delete []outchars;
 #endif
 }
 
@@ -913,17 +919,17 @@ void WebView::onRequestDrag(WebView *caller, const Awesomium::JSArguments &args)
 
 
 ///////// Berkelium Callbacks...
-void WebView::onAddressBarChanged(Berkelium::Window*, const std::string&) {
-    SILOG(webview,debug,"onAddressBarChanged");
+void WebView::onAddressBarChanged(Berkelium::Window*, const char*newURL, size_t newURLLength) {
+    SILOG(webview,debug,"onAddressBarChanged"<<std::string(newURL,newURLLength));
 }
-void WebView::onStartLoading(Berkelium::Window*, const std::string&) {
-    SILOG(webview,debug,"onStartLoading");
+void WebView::onStartLoading(Berkelium::Window*, const char*newURL, size_t newURLLength) {
+    SILOG(webview,debug,"onStartLoading"<<std::string(newURL,newURLLength));
 }
 void WebView::onLoad(Berkelium::Window*) {
     SILOG(webview,debug,"onLoad");
 }
-void WebView::onLoadError(Berkelium::Window*, const std::string&) {
-    SILOG(webview,debug,"onLoadError");
+void WebView::onLoadError(Berkelium::Window*, const char* error, size_t errorLength) {
+    SILOG(webview,debug,"onLoadError"<<std::string(error,errorLength));
 }
 
 
@@ -1020,13 +1026,6 @@ void WebView::onUnresponsive(Berkelium::Window*) {
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     SILOG(webview,debug,"onCreatedWindow");
     delete newwin;
-}
-
-void WebView::onPaintPluginTexture(
-        Berkelium::Window *win,
-        void* sourceGLTexture,
-        const std::vector<Berkelium::Rect> srcRects, // relative to destRect
-        const Berkelium::Rect &destRect) {
 }
 
 void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
@@ -1150,12 +1149,17 @@ void WebView::onWidgetPaint(
     SILOG(webview,debug,"onWidgetPaint");
 }
 
-void WebView::onChromeSend(Berkelium::Window *win, const std::string &name, const std::vector<std::string> &args) {
+void WebView::onChromeSend(Berkelium::Window *win, const WindowDelegate::Data name, const WindowDelegate::Data*args, size_t numArgs) {
 #ifdef HAVE_BERKELIUM
-	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(name);
+    std::string nameStr(name.message,name.length);
+	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
 	if(i != delegateMap.end()) {
-		i->second(this, args);
+        std::vector<Sirikata::MemoryReference> argVector;
+        for (size_t j=0;j!=numArgs;++j) {
+            argVector.push_back(Sirikata::MemoryReference(args[j].message,args[j].length));
+        }
+		i->second(this, argVector);
 	}
 #endif
 }
