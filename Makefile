@@ -30,7 +30,7 @@ clean:
 DEPVC8REV=HEAD
 DEPVC9REV=6
 DEPOSXREV=15
-DEPSOURCE=152
+DEPSOURCE=3
 DEPARCHINDEP=6
 #========== Dependencies ===========
 
@@ -54,7 +54,7 @@ distributions:
 			fi \
 			;; \
 		*) \
-			svn co -r$(DEPSOURCE) http://sirikata.googlecode.com/svn/trunk/source dependencies \
+			svn co -r$(DEPSOURCE) http://sirikataunix.googlecode.com/svn/trunk dependencies \
 			;; \
 	esac ; \
 	svn co -r$(DEPARCHINDEP) http://sirikatamachindep.googlecode.com/svn/trunk/ dependencies/machindependencies
@@ -84,7 +84,7 @@ update-dependencies: distributions
 			cd dependencies && svn update -r$(DEPSOURCE) \
 			;; \
 	esac ; \
-	svn co -r$(DEPARCHINDEP) http://sirikatamachindep.googlecode.com/svn/trunk/ dependencies/machindependencies
+	svn co -r$(DEPARCHINDEP) http://sirikatamachindep.googlecode.com/svn/trunk/ machindependencies
 
 minimaldepends: update-dependencies
 	$(MAKE) -C dependencies minimaldepends $(*)
