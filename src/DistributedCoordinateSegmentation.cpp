@@ -262,18 +262,19 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
 
       sid = segRegion->mServer;
     }
-
-    it =  mLowerLevelTrees.find(bbox_hash);
-
-    if (it != mLowerLevelTrees.end()) {
-      segRegion = (*it).second->lookup(searchVec);
-
-      //printf("local lookup returned %d\n", segRegion->mServer);
-
-      sid = segRegion->mServer;
-    }
     else {
-      sid = 0;
+      it =  mLowerLevelTrees.find(bbox_hash);
+
+      if (it != mLowerLevelTrees.end()) {
+        segRegion = (*it).second->lookup(searchVec);
+
+        //printf("local lookup returned %d\n", segRegion->mServer);
+
+        sid = segRegion->mServer;
+      }
+      else {
+        sid = 0;
+      }
     }
   }
   else {
@@ -352,22 +353,43 @@ void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegi
 								   SegmentedRegion** sibling,
 								   SegmentedRegion** parent)
 {
-  int numLowerLevelTrees = rand() % mLowerLevelTrees.size();
-  int i=0;
-
-  for (std::map<String, SegmentedRegion*>::iterator it=mLowerLevelTrees.begin();
-       it != mLowerLevelTrees.end();
-       it++, i++)
-  {
-    if (i == numLowerLevelTrees) {
-
-      *randomLeaf = it->second->getRandomLeaf();
-
-      *sibling = it->second->getSibling(*randomLeaf);
-      *parent = it->second->getParent(*randomLeaf);
-
-      break;
-    }
+  if (mLowerLevelTrees.size() == 0) {
+    int numHigherLevelTrees = rand() % mHigherLevelTrees.size();
+    int i=0;
+    
+    for (std::map<String, SegmentedRegion*>::iterator it=mHigherLevelTrees.begin();
+	 it != mHigherLevelTrees.end();
+	 it++, i++)
+      {
+	if (i == numHigherLevelTrees) {
+	  
+	  *randomLeaf = it->second->getRandomLeaf();
+	  
+	  *sibling = it->second->getSibling(*randomLeaf);
+	  *parent = it->second->getParent(*randomLeaf);
+	  
+	  break;
+	}
+      }
+  }
+  else {
+    int numLowerLevelTrees = rand() % mLowerLevelTrees.size();
+    int i=0;
+    
+    for (std::map<String, SegmentedRegion*>::iterator it=mLowerLevelTrees.begin();
+	 it != mLowerLevelTrees.end();
+	 it++, i++)
+      {
+	if (i == numLowerLevelTrees) {
+	  
+	  *randomLeaf = it->second->getRandomLeaf();
+	  
+	  *sibling = it->second->getSibling(*randomLeaf);
+	  *parent = it->second->getParent(*randomLeaf);
+	  
+	  break;
+	}
+      }
   }
 }
 
