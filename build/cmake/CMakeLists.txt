@@ -533,13 +533,13 @@ ENDIF()
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
-
+SET(ENABLED_PLUGINS)
 # macro for adding a plugin
 MACRO(ADD_PLUGIN_TARGET)
   PARSE_ARGUMENTS(PLUGIN "SOURCES;TARGET_CXXFLAGS;TARGET_LDFLAGS;TARGET_LIBRARIES;LIBRARIES" "" ${ARGN})
 
   CAR(PLUGIN_NAME ${PLUGIN_DEFAULT_ARGS})
-
+  SET(ENABLED_PLUGINS ${PLUGIN_NAME} ${ENABLED_PLUGINS})
   ADD_LIBRARY(${PLUGIN_NAME} SHARED ${PLUGIN_SOURCES})
   IF(PLUGIN_TARGET_LIBRARIES)
     ADD_DEPENDENCIES(${PLUGIN_NAME} ${PLUGIN_TARGET_LIBRARIES})
@@ -1651,6 +1651,19 @@ IF(WIN32)
   INSTALL(DIRECTORY ${BERKELIUM_ROOT}/bin/ 
           FILE_PERMISSIONS ${EXEC_PERMS} 
           DESTINATION bin/ )
+ELSE()
+IF(APPLE)
+    IF(NOT CHROME_ROOT)
+      SET(CHROME_ROOT ${PLATFORM_LIBS}/ch/c)
+    ENDIF()
+    SET(CHROMIUM_FRAMEWORK Chromium\ Framework.framework)
+    SET(APPLE_PLUGIN_COMMANDS)
+    FOREACH (APPLE_PLUGIN ${ENABLED_PLUGINS})
+      SET(APPLE_PLUGIN_COMMANDS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib${APPLE_PLUGIN}_d${DYLIB_EXT} sirikata.app/Contents/MacOS/lib${APPLE_PLUGIN}_d${DYLIB_EXT} && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib${APPLE_PLUGIN}${DYLIB_EXT} sirikata.app/Contents/MacOS/lib${APPLE_PLUGIN}${DYLIB_EXT} ${APPLE_PLUGIN_COMMANDS})
+
+    ENDFOREACH()
+    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${TOP_LEVEL}/cdn.txt sirikata.app/Contents/MacOS/cdn.txt && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/scene.db sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
+ENDIF()
 ENDIF()
           
 ENDIF()
