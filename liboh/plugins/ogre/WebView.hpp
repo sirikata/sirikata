@@ -40,17 +40,22 @@
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
-#ifndef HAVE_AWESOMIUM
+#if !defined(HAVE_AWESOMIUM)
 namespace Awesomium {
-
-class WebViewListener {
-};
-class WebView {
-};
 struct JSValue;
 struct JSDelegate;
 typedef int FutureJSValue;
-
+#if !defined(HAVE_BERKELIUM)
+class WebViewListener {};
+class WebView {};
+#endif
+}
+#endif
+#ifndef HAVE_BERKELIUM
+namespace Berkelium {
+struct Rect {};
+struct Window;
+struct Widget;
 }
 #endif
 
@@ -59,13 +64,21 @@ namespace Graphics {
 
 	class WebView;
 
-	typedef std::tr1::function<void (WebView*, const Awesomium::JSArguments&)> JSDelegate;
+	typedef std::tr1::function<void (WebView*, const JSArguments&)> JSDelegate;
 
 	/**
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
-	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener, public Sirikata::WebViewListener, public Sirikata::ProxyObjectListener
+	class WebView
+        : public Ogre::ManualResourceLoader,
+#ifdef HAVE_BERKELIUM
+          public Berkelium::WindowDelegate,
+#else
+          public Awesomium::WebViewListener,
+#endif
+          public Sirikata::WebViewListener,
+          public Sirikata::ProxyObjectListener
 	{
 	public:
 
@@ -99,7 +112,7 @@ namespace Graphics {
 		*/
 		void evaluateJS(const std::string& javascript);
 
-		void evaluateJS(const std::string& javascript, const Awesomium::JSArguments& args);
+		void evaluateJS(const std::string& javascript, const JSArguments& args);
 
 		Awesomium::FutureJSValue evaluateJSWithResult(const std::string& javascript);
 
@@ -156,23 +169,6 @@ namespace Graphics {
 		*								(if ignoreTrans is true, of course). Default is 5% (0.05).
 		*/
 		void setIgnoreTransparent(bool ignoreTrans, float threshold = 0.05);
-
-		/**
-		* Masks the alpha channel of this WebView with that of a provided image.
-		*
-		* @param	maskFileName	The filename of the Alpha Mask Image. The Alpha Mask Image MUST have a
-		*							width greater than or equal to the WebView width and it MUST have a height
-		*							greater than or equal to the WebView height. Alpha Mask Images larger than
-		*							the WebView will not be stretched, instead WebView will take Alpha values starting
-		*							from the Top-Left corner of the Alpha Mask Image. To reset WebView to use no
-		*							Alpha Mask Image, simply provide an empty String ("").
-		*
-		* @param	groupName		The Resource Group to find the Alpha Mask Image filename.
-		*
-		* @throws	Ogre::Exception::ERR_INVALIDPARAMS	Throws this if the width or height of the Alpha Mask Image is
-		*												less than the width or height of the WebView it is applied to.
-		*/
-		void setMask(std::string maskFileName, std::string groupName = Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 
 		/**
 		* Adjusts the number of times per second this WebView may update.
@@ -233,9 +229,18 @@ namespace Graphics {
 		void show(bool fade, unsigned short fadeDurationMS = 300);
 
 		/**
-		* 'Focuses' this WebView by popping it to the front of all other WebViews. (not applicable to WebViews created as materials)
+		* Sends a focus message to this webView to highlight active form elements, etc.
 		*/
 		void focus();
+		/**
+		* Sends a 'blurs'/unfocus message to this webview, which causes form elements to become grayed out.
+		*/
+		void unfocus();
+
+		/**
+		* 'Raises' this WebView by popping it to the front of all other WebViews. (not applicable to WebViews created as materials)
+		*/
+		void raise();
 
 		/**
 		* Moves this WebView by relative amounts. (not applicable to WebViews created as materials or non-movable WebViews)
@@ -284,6 +289,11 @@ namespace Graphics {
 		* Returns the name of this WebView.
 		*/
 		std::string getName();
+
+		/**
+		* Returns the name of the Ogre::Material used internally by this WebView.
+		*/
+		std::string getViewTextureName();
 
 		/**
 		* Returns the name of the Ogre::Material used internally by this WebView.
@@ -370,7 +380,15 @@ namespace Graphics {
 		void resize(int width, int height);
 
 	protected:
+#ifdef HAVE_BERKELIUM
+		Berkelium::Window* webView;
+        Berkelium::Rect blitNewImage(Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
+                                              const unsigned char*srcBuffer, const Berkelium::Rect&rect,
+                                              int dx, int dy, const Berkelium::Rect&clipRect);
+        void compositeWidgets(Berkelium::Window*);
+#else
 		Awesomium::WebView* webView;
+#endif
 		std::string viewName;
 		unsigned short viewWidth;
 		unsigned short viewHeight;
@@ -392,6 +410,9 @@ namespace Graphics {
 		bool ignoringBounds;
 		bool okayToDelete;
 
+        Ogre::TexturePtr viewTexture;
+        Ogre::TexturePtr backingTexture;
+        std::map<Berkelium::Widget*,Ogre::TexturePtr>widgetTextures;
 		double fadeValue;
 		bool isFading;
 		double deltaFadePerMS;
@@ -442,6 +463,45 @@ namespace Graphics {
 		void onChangeKeyboardFocus(bool isFocused);
 
 		void onRequestDrag(WebView* caller, const Awesomium::JSArguments& args);
+
+        void onAddressBarChanged(Berkelium::Window*, const char*url, size_t urlLength);
+        void onStartLoading(Berkelium::Window*, const char* url, size_t urlLength);
+        void onLoad(Berkelium::Window*);
+        void onLoadError(Berkelium::Window*, const char* error, size_t errorLength);
+        void onPaint(Berkelium::Window*, const unsigned char*, const Berkelium::Rect&, int x, int y, const Berkelium::Rect&);
+        void onBeforeUnload(Berkelium::Window*, bool*);
+        void onCancelUnload(Berkelium::Window*);
+        void onCrashed(Berkelium::Window*);
+        void onResponsive(Berkelium::Window*);
+        void onUnresponsive(Berkelium::Window*);
+        void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
+
+        void onChromeSend(Berkelium::Window *win, WindowDelegate::Data msg, const WindowDelegate::Data*str, size_t numStr);
+
+    /** Linux only. uses an OpenGL texture.
+     * If not using OpenGL, each srcRect will get its own call to 'onPaint'
+     * It should be possible to paint plugins directly onto the canvas.
+     * If this is not possible, then plugins may be created as widgets with
+     * a negative z-index (i.e. below anything else on the screen).
+     
+    virtual void onPaintPluginTexture(
+        Berkelium::Window *win,
+        void* sourceGLTexture,
+        const std::vector<Berkelium::Rect> srcRects, // relative to destRect
+        const Berkelium::Rect &destRect);
+    */
+    virtual void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
+    virtual void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
+    virtual void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h);
+    virtual void onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y);
+    virtual void onWidgetPaint(
+        Berkelium::Window *win,
+        Berkelium::Widget *wid,
+        const unsigned char *sourceBuffer,
+        const Berkelium::Rect &rect,
+        int dx, int dy,
+        const Berkelium::Rect &scrollRect);
+
 	};
 
 }

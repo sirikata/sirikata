@@ -43,6 +43,16 @@ IF(NOT WIN32 AND NOT APPLE)
   SET(ISLINUX TRUE)
 ENDIF()
 
+IF(APPLE)
+  SET( DYLIB_EXT .dylib)
+ELSE()
+  IF(WIN32)
+    SET( DYLIB_EXT .dll)
+  ELSE()
+    SET( DYLIB_EXT .so)
+  ENDIF()
+ENDIF()
+
 IF(WIN32)
 ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
 SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
@@ -193,6 +203,7 @@ MESSAGE(STATUS "Using PLATFORM_LIBS=${PLATFORM_LIBS}")
 SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 SET(DISABLE_M32 FALSE)
 SET(FORCE_32BIT FALSE)
+SET(DISABLE_BERKELIUM FALSE)
 SET(DISABLE_AWESOMIUM FALSE)
 IF(WIN32)
   IF(sirikata_LDFLAGS)
@@ -420,13 +431,36 @@ IF(NOT SQLite3_ROOT)
     IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
       SET(SQLite3_ROOT ${PLATFORM_LIBS})
     ELSE()
-      SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
+      FOREACH (SQCHROMEPATH ${PLATFORM_LIBS}/chromium/chromium ${PLATFORM_LIBS}/chromium ${PLATFORM_LIBS}/ch/c)
+        IF(EXISTS ${SQCHROMEPATH}/src/third_party/sqlite/preprocessed)
+          IF(EXISTS ${SQCHROMEPATH}/src/out/Release/obj.target/third_party/sqlite)
+            SET(SQLite3_INCLUDE_DIRS ${SQCHROMEPATH}/src/third_party/sqlite/preprocessed)
+            SET(SQLite3_LIBRARY_DIRS ${SQCHROMEPATH}/src/out/Release/obj.target/third_party/sqlite)
+            FIND_LIBRARY(SQLite3_LIBRARIES
+                       NAMES sqlite3
+                       PATHS
+                       ${SQLite3_LIBRARY_DIRS}
+                       NO_DEFAULT_PATH)
+            IF(NOT SQLite3_LIBRARIES)
+              FIND_LIBRARY(SQLite3_LIBRARIES
+                   NAMES sqlite
+                   PATHS
+                   ${SQLite3_LIBRARY_DIRS}
+                   NO_DEFAULT_PATH)
+            ENDIF()
+            IF(SQLite3_LIBRARIES)
+              SET(SQLite3_FOUND TRUE)
+              MESSAGE(STATUS "SQLite found in chromium path ${SQLite3_LIBRARY_DIRS} Headers in ${SQLite3_INCLUDE_DIRS}")
+            ENDIF()
+          ENDIF()
+        ENDIF()
+      ENDFOREACH()
     ENDIF()
   ENDIF()
 ENDIF()
-
-SET(SQLite3_FIND_REQUIRED TRUE)
-FIND_PACKAGE(SQLite3)
+IF(NOT SQLite3_FOUND)
+  FIND_PACKAGE(SQLite3)
+ENDIF()
 
 #dependency: OpenCOLLADA
 IF(WIN32)
@@ -468,44 +502,49 @@ git submodule init
 git submodule update
 ")
 ENDIF()
-#dependency: awesomium
-IF(NOT AWESOMIUM_ROOT)
-  IF(EXISTS ${PLATFORM_LIBS}/awesomium_v1.01_sdk_msvc8)
-    SET(AWESOMIUM_ROOT ${PLATFORM_LIBS}/awesomium_v1.01_sdk_msvc8)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/awesomium_v1.01_sdk_msvc9)
-    SET(AWESOMIUM_ROOT ${PLATFORM_LIBS}/awesomium_v1.01_sdk_msvc9)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/installed-awesomium)
-    SET(AWESOMIUM_ROOT ${PLATFORM_LIBS}/installed-awesomium)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/awesomium)
-    SET(AWESOMIUM_ROOT ${PLATFORM_LIBS}/awesomium)
+
+
+IF(WIN32)
+#dependency: berkelium
+  IF(NOT BERKELIUM_ROOT)
+    SET(BERKELIUM_ROOT ${PLATFORM_LIBS}/berkelium)
   ENDIF()
-  IF(WIN32 AND AWESOMIUM_ROOT)
-    GET_FILENAME_COMPONENT(AWESOMIUM_ROOT ${AWESOMIUM_ROOT} ABSOLUTE)
+  GET_FILENAME_COMPONENT(BERKELIUM_ROOT ${BERKELIUM_ROOT} ABSOLUTE)
+  IF(NOT DISABLE_BERKELIUM)
+    FIND_PACKAGE(Berkelium)
+    IF(NOT BERKELIUM_FOUND)
+      SET(BERKELIUM_ROOT ${TOP_LEVEL}/externals/berkelium)
+      FIND_PACKAGE(Berkelium)
+    ENDIF()
   ENDIF()
-  IF(NOT AWESOMIUM_ROOT)
-    SET(AWESOMIUM_ROOT ${PLATFORM_LIBS})
-  ENDIF()
+  SET(BERKELIUM_TARGET_LIBRARIES)
+ELSE()
+  ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/berkelium ${CMAKE_CURRENT_BINARY_DIR}/chrome)
+  SET(BERKELIUM_FOUND TRUE)
+  SET(BERKELIUM_INCLUDE_DIRS ${TOP_LEVEL}/externals/berkelium/include)
+  SET(BERKELIUM_TARGET_LIBRARIES libberkelium)
+  SET(BERKELIUM_LIBRARIES)
+
 ENDIF()
 
-IF(NOT DISABLE_AWESOMIUM)
-  FIND_PACKAGE(AWESOMIUM)
-ENDIF()
+
+
 
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
-
+SET(ENABLED_PLUGINS)
 # macro for adding a plugin
 MACRO(ADD_PLUGIN_TARGET)
   PARSE_ARGUMENTS(PLUGIN "SOURCES;TARGET_CXXFLAGS;TARGET_LDFLAGS;TARGET_LIBRARIES;LIBRARIES" "" ${ARGN})
 
   CAR(PLUGIN_NAME ${PLUGIN_DEFAULT_ARGS})
-
+  SET(ENABLED_PLUGINS ${PLUGIN_NAME} ${ENABLED_PLUGINS})
   ADD_LIBRARY(${PLUGIN_NAME} SHARED ${PLUGIN_SOURCES})
   IF(PLUGIN_TARGET_LIBRARIES)
     ADD_DEPENDENCIES(${PLUGIN_NAME} ${PLUGIN_TARGET_LIBRARIES})
   ENDIF()
-  TARGET_LINK_LIBRARIES(${PLUGIN_NAME} ${PLUGIN_TARGET_LIBRARIES} ${PLUGIN_LIBRARIES})
+  TARGET_LINK_LIBRARIES(${PLUGIN_NAME} ${PLUGIN_LIBRARIES})
   IF(PLUGIN_TARGET_LDFLAGS)
     STRING(REGEX REPLACE ";" " " PLUGIN_TARGET_LDFLAGS  "${PLUGIN_TARGET_LDFLAGS}")  #FIXME does not deal with space-having ldflags
     SET_TARGET_PROPERTIES(${PLUGIN_NAME} PROPERTIES LINK_FLAGS ${PLUGIN_TARGET_LDFLAGS})
@@ -588,6 +627,9 @@ SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${MONO_INCLUDE_DIRS})
 ENDIF()
 IF(AWESOMIUM_FOUND)
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${AWESOMIUM_INCLUDE_DIRS})
+ENDIF()
+IF(BERKELIUM_FOUND)
+SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${BERKELIUM_INCLUDE_DIRS})
 ENDIF()
 
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${TOP_LEVEL}/externals/pbj/)
@@ -1138,6 +1180,11 @@ SET(SIRIKATA_CORE_LIBRARIES
     ${CURL_LIBRARIES}
     ${Boost_LIBRARIES} )
 
+IF(BERKELIUM_FOUND)
+  SET(BERKELIUM_CFLAGS -DHAVE_BERKELIUM)
+ELSE()
+  SET(BERKELIUM_CFLAGS "")
+ENDIF()
 IF(AWESOMIUM_FOUND)
   SET(AWESOMIUM_CFLAGS -DHAVE_AWESOMIUM)
 ELSE()
@@ -1149,7 +1196,7 @@ ENDIF()
 
 SET(FINAL_LINK_DIRS ${ANTLR_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 IF(OGRE_FOUND AND sdl_FOUND)
-SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${OGRE_LIBRARY_DIRS} ${sdl_LIBRARY_DIRS} ${AWESOMIUM_LIBRARY_DIRS})
+SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${OGRE_LIBRARY_DIRS} ${sdl_LIBRARY_DIRS} ${BERKELIUM_LIBRARY_DIRS} ${AWESOMIUM_LIBRARY_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/chrome)
 ENDIF()
 IF(MONO_FOUND)
 SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${MONO_LIBRARY_DIRS})
@@ -1225,6 +1272,7 @@ TARGET_LINK_LIBRARIES(${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_
 ADD_PLUGIN_TARGET(skeleton
                     SOURCES ${LIBCORE_PLUGIN_SKELETON_SOURCES}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 
 IF(SQLite3_FOUND)
@@ -1232,25 +1280,37 @@ ADD_PLUGIN_TARGET(sqlite
                     SOURCES ${LIBCORE_PLUGIN_SQLITE_SOURCES}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${SQLite3_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SQLite3_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} sqlite)
 ENDIF()
 
 ADD_PLUGIN_TARGET(tcpsst
                     SOURCES ${LIBCORE_PLUGIN_TCPSST_SOURCES}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
 
 IF(OGRE_FOUND AND sdl_FOUND)
 ADD_PLUGIN_TARGET(ogregraphics
                     SOURCES ${LIBOH_PLUGIN_OGREGRAPHICS_SOURCES}
-                    TARGET_CXXFLAGS ${OGRE_CFLAGS} ${sdl_CFLAGS} ${AWESOMIUM_CFLAGS}
-                    TARGET_LDFLAGS ${OGRE_LDFLAGS} ${sdl_LDFLAGS} ${AWESOMIUM_LDFLAGS} ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${OGRE_LIBRARIES} ${sdl_LIBRARIES} ${AWESOMIUM_LIBRARIES}
+                    TARGET_CXXFLAGS ${OGRE_CFLAGS} ${sdl_CFLAGS} ${BERKELIUM_CFLAGS} ${AWESOMIUM_CFLAGS}
+                    TARGET_LDFLAGS ${OGRE_LDFLAGS} ${sdl_LDFLAGS} ${AWESOMIUM_LDFLAGS} ${BERKELIUM_LDFLAGS} ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} ${BERKELIUM_TARGET_LIBRARIES}
+                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                              ${OGRE_LIBRARIES} ${sdl_LIBRARIES} ${BERKELIUM_LIBRARIES} ${AWESOMIUM_LIBRARIES}
                               ${Boost_REGEX_LIBRARY_${UPPERCASE_BUILD_TYPE}}
                                ${PROTOCOLBUFFERS_LIBRARIES})
+  IF(NOT WIN32)
+    ADD_DEPENDENCIES(ogregraphics berkelium)
+    TARGET_LINK_LIBRARIES(ogregraphics -Lchrome debug liblibberkelium_d${DYLIB_EXT} optimized liblibberkelium${DYLIB_EXT} )
+  ENDIF()
+  #IF(ISDEBUG)
+  #  SET(BERKELIUM_LDFLAGS -llibberkelium_d)
+  #ELSE()
+  #  SET(BERKELIUM_LDFLAGS -llibberkelium)
+  #ENDIF()
+
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} ogregraphics)
 ENDIF(OGRE_FOUND AND sdl_FOUND)
 
@@ -1261,7 +1321,7 @@ ADD_PLUGIN_TARGET(prox
                     TARGET_CXXFLAGS ${PROX_CFLAGS}
                     TARGET_LDFLAGS ${PROX_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${PROX_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
+                    LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROX_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox)
 ENDIF(PROX_FOUND)
 
@@ -1276,7 +1336,7 @@ ADD_PLUGIN_TARGET(bulletphysics
                     TARGET_CXXFLAGS ${bullet_CFLAGS}
                     TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${bullet_LIBRARIES})
+                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} bulletphysics)
 ENDIF()
 
@@ -1311,7 +1371,7 @@ ADD_PLUGIN_TARGET(monoscript
                     TARGET_CXXFLAGS ${MONO_CFLAGS}
                     TARGET_LDFLAGS ${MONO_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${MONO_LIBRARIES})
+                    LIBRARIES ${MONO_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
 ENDIF()
 
@@ -1328,7 +1388,7 @@ ADD_PLUGIN_TARGET(colladamodels
                     TARGET_CXXFLAGS ${COLLADA_CFLAGS}
                     TARGET_LDFLAGS ${COLLADA_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${COLLADA_LIBRARIES})
+                    LIBRARIES ${COLLADA_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 ENDIF(OpenCOLLADA_FOUND)
 
 #binaries
@@ -1539,25 +1599,26 @@ IF(OGRE_FOUND)
      ENDFOREACH()
 
   ENDIF()
-  IF(AWESOMIUM_ROOT)
-    IF(WIN32)
-      INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/
-              FILE_PERMISSIONS ${EXEC_PERMS}
-              DESTINATION bin/
-              PATTERN "*.a" EXCLUDE
-              PATTERN "*.la" EXCLUDE
-	      PATTERN "*.h" EXCLUDE
-	      PATTERN "*.lib" EXCLUDE
-              #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-              PATTERN "*.exe" EXCLUDE)
-    ELSE()
-      INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/lib/
-              FILE_PERMISSIONS ${EXEC_PERMS}
-              DESTINATION lib/
-              #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
+  IF(NOT DISABLE_AWESOMIUM)
+    IF(AWESOMIUM_ROOT)
+      IF(WIN32)
+        INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/
+                FILE_PERMISSIONS ${EXEC_PERMS}
+                DESTINATION bin/
+                PATTERN "*.a" EXCLUDE
+                PATTERN "*.la" EXCLUDE
+	        PATTERN "*.h" EXCLUDE
+                PATTERN "*.lib" EXCLUDE
+                #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+                PATTERN "*.exe" EXCLUDE)
+      ELSE()
+        INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/lib/
+                FILE_PERMISSIONS ${EXEC_PERMS}
+                DESTINATION lib/
+                #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+                PATTERN "*.exe" EXCLUDE)
+      ENDIF()
     ENDIF()
-
     # data for web views
     INSTALL(DIRECTORY ${TOP_LEVEL}/liboh/plugins/ogre/data/
       DESTINATION share/ogre/data/
@@ -1568,7 +1629,7 @@ ENDIF()
 #install boost
 IF(BOOST_ROOT)
   IF(WIN32)
-    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}installed-boost/lib)
+    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}/boost_1_37_0/bin ${PLATFORM_LIBS}/installed-boost/lib)
       IF(EXISTS ${Boost_LIBRARY_DIR})
       INSTALL(DIRECTORY ${Boost_LIBRARY_DIR}/
             FILE_PERMISSIONS ${EXEC_PERMS}
@@ -1593,6 +1654,33 @@ IF(BOOST_ROOT)
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ENDIF()
+ENDIF()
+
+#install berkelium
+IF(BERKELIUM_FOUND)
+IF(WIN32)  
+  INSTALL(DIRECTORY ${BERKELIUM_ROOT}/bin/ 
+          FILE_PERMISSIONS ${EXEC_PERMS} 
+          DESTINATION bin/ )
+ELSE()
+IF(APPLE)
+    IF(NOT CHROME_ROOT)
+      SET(CHROME_ROOT ${PLATFORM_LIBS}/ch/c)
+    ENDIF()
+    SET(CHROMIUM_FRAMEWORK Chromium\ Framework.framework)
+    SET(APPLE_PLUGIN_COMMANDS)
+    FOREACH (APPLE_PLUGIN ${ENABLED_PLUGINS})
+      SET(APPLE_PLUGIN_COMMANDS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib${APPLE_PLUGIN}_d${DYLIB_EXT} sirikata.app/Contents/MacOS/lib${APPLE_PLUGIN}_d${DYLIB_EXT} && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib${APPLE_PLUGIN}${DYLIB_EXT} sirikata.app/Contents/MacOS/lib${APPLE_PLUGIN}${DYLIB_EXT} ${APPLE_PLUGIN_COMMANDS})
+
+    ENDFOREACH()
+    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${TOP_LEVEL}/cdn.txt sirikata.app/Contents/MacOS/cdn.txt && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/scene.db sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
+ELSE()
+IF(NOT WIN32)
+ADD_CUSTOM_TARGET(berkelium.bin ALL COMMAND ln -sf chrome/berkelium && ln -sf chrome/berkelium berkelium.bin)
+ENDIF()
+ENDIF()
+ENDIF()
+          
 ENDIF()
 
 IF(MONO_FOUND)

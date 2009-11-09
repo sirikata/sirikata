@@ -41,11 +41,20 @@
 
 #ifdef HAVE_AWESOMIUM
 #include "WebCore.h"
+typedef Awesomium::JSArguments JSArguments;
 #else
+typedef std::vector<Sirikata::MemoryReference> JSArguments;
 namespace Awesomium {
-  struct JSArguments;
+  typedef ::JSArguments JSArguments;
   struct WebCore;
 }
+#endif
+
+#ifdef HAVE_BERKELIUM
+#include "berkelium/Berkelium.hpp"
+#include "berkelium/Widget.hpp"
+#include "berkelium/Window.hpp"
+#include "berkelium/WindowDelegate.hpp"
 #endif
 
 namespace Sirikata {
@@ -251,6 +260,10 @@ public:
     void navigate(NavigationAction action);
     void navigate(NavigationAction action, const String& arg);
 
+    const std::string &getBaseDir() const {
+        return baseDirectory;
+    }
+
 protected:
 	friend class WebView; // Our very close friend <3
 
@@ -271,6 +284,7 @@ protected:
 	Ogre::Timer tooltipTimer;
 	double lastTooltip, tooltipShowTime;
 	bool isDraggingFocusedWebView;
+    std::string baseDirectory;
 
 	bool focusWebView(int x, int y, WebView* selection = 0);
 	WebView* getTopWebView(int x, int y);
