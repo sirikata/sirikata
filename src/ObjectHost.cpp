@@ -183,7 +183,7 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
     mObjectInfo[obj_id].migratingTo = sid;
     std::vector<UUID>*objects=&mObjectServerMap[mObjectInfo[obj_id].connectedTo];
     std::vector<UUID>::iterator where=std::find(objects->begin(),objects->end(),obj_id);
-    assert(where!=objects->end());
+    //assert(where!=objects->end());
     if (where!=objects->end()) {
         objects->erase(where);
     }
