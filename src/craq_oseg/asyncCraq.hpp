@@ -20,7 +20,7 @@ namespace CBR
 class AsyncCraq
 {
 public:
-  AsyncCraq(SpaceContext* spc);
+  AsyncCraq(SpaceContext* spc, IOStrand* );
   ~AsyncCraq();
 
   enum AsyncCraqReqStatus{REQUEST_PROCESSED, REQUEST_NOT_PROCESSED};
@@ -38,7 +38,6 @@ public:
 
   int queueSize();
 
-  Timer mTimer;
   
 private:
   
@@ -62,6 +61,11 @@ private:
 
   void reInitializeNode(int s);
   void checkConnections(int s);
+
+  Timer mTimer;
+  SpaceContext* mContext;
+  IOStrand* mStrand;
+
   
 };
 

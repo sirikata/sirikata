@@ -17,8 +17,9 @@
 
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
+#include <boost/thread/mutex.hpp>
 
-
+#define CRAQ_INIT_WAIT_TIME 2000
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
@@ -33,6 +34,9 @@ namespace CBR
     int timeAdmitted;
   };
 
+
+
+  
   const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
   static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
 
@@ -59,10 +63,13 @@ namespace CBR
     int numLookingUpDebug;
     Timer mServiceTimer;
     Duration lastTimerDur;
-    //end for loggin.
+    //end for logging.
 
     std::map<std::string, UUID > mapDataKeyToUUID;
     std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
+    boost::mutex inTransOrLookup_m;
+
+    
     std::map<UUID,ServerID> mFinishedMoveOrLookup;
 
     struct TrackedSetResultsData
@@ -75,8 +82,9 @@ namespace CBR
     TrackedMessageMap trackingMessages;
 
     std::vector<UUID> mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
+    boost::mutex receivingObjects_m;
 
-
+    
     void iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
     void basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
 
@@ -96,10 +104,11 @@ namespace CBR
 
 
     //for lookups and sets
-    //    AsyncCraq craqDhtGet;
-    //    AsyncCraq craqDhtSet;
-    AsyncCraqHybrid craqDhtGet;
-    AsyncCraqHybrid craqDhtSet;
+    AsyncCraq craqDhtGet;
+    AsyncCraq craqDhtSet;
+
+
+    IOStrand* postingStrand;
     
 
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
@@ -136,11 +145,15 @@ namespace CBR
     std::vector<Message*> reTryKillConnMessage;
     //end redundant message vectors in case a send fails
 
+    void beginCraqLookup(const UUID& obj_id);
+    void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID);
+    
     virtual void poll();
 
-  public:
-    CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID);
 
+    
+  public:
+    CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
 
 
     virtual ~CraqObjectSegmentation();

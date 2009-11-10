@@ -12,6 +12,8 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
+
+    
     SpaceContext ctx(0, ios, mainStrand, Time::null(), Time::null(), &trace, Duration::seconds(0));
     TCPNetwork rn(&ctx, 65536, 1000000, 1000000);
     rn.listen(Address4(Sirikata::Network::Address("localhost", "6666")));

@@ -7,7 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include "Timer.hpp"
-
+#include <boost/thread/mutex.hpp>
 
 namespace CBR
 {
@@ -19,7 +19,6 @@ namespace CBR
 
   CraqCacheGood::~CraqCacheGood()
   {
-
   }
 
 
@@ -58,8 +57,10 @@ namespace CBR
 
   void CraqCacheGood::insert(const UUID& uuid, const ServerID& sID)
   {
+    mMutex.lock();
+    
     Duration currentDur = mTimer.elapsed();
-
+    
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
     if (idRecMapIter != idRecMap.end())
     {
@@ -125,10 +126,14 @@ namespace CBR
       idRecMap.insert(std::pair<UUID,CraqCacheRecord*>(uuid,rcdIDRecMap));
       maintain();
     }
+
+    mMutex.unlock();
   }
 
+  
   ServerID CraqCacheGood::get(const UUID& uuid)
   {
+    mMutex.lock();
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
 
     if (idRecMapIter != idRecMap.end())
@@ -136,9 +141,12 @@ namespace CBR
       //means that we have a record of the object
       if (satisfiesCacheAgeCondition(idRecMapIter->second->age))
       {
+        mMutex.unlock();
         return idRecMapIter->second->sID;
       }
     }
+
+    mMutex.unlock();
     return NullServerID;
   }
 

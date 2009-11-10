@@ -22,8 +22,10 @@ AsyncCraq::~AsyncCraq()
 
 
 //nothing to initialize
-AsyncCraq::AsyncCraq()
+AsyncCraq::AsyncCraq(SpaceContext* spx, IOStrand* str)
 {
+  mContext = spx;
+  mStrand  = str;
   mTimer.start();
 }
 
@@ -53,7 +55,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
       passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
+      mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
     }
   }
   else
@@ -80,7 +82,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
         whichRouterServingPrevious = whichRouterServing;
       }
       passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
+      mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
     }
   }
   
@@ -299,7 +301,7 @@ void AsyncCraq::reInitializeNode(int s)
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
     passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
+    mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
   }
   else
   {
@@ -315,7 +317,7 @@ void AsyncCraq::reInitializeNode(int s)
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         
     passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
+    mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
   }
 }
 

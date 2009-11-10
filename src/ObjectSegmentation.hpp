@@ -23,6 +23,7 @@ public:
 }; // class OSegListener
 
 
+  
 class ObjectSegmentation : public MessageRecipient, public PollingService
   {
 
@@ -34,14 +35,17 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     SpaceContext* mContext;
     TimeProfiler::Stage* mServiceStage;
     OSegListener* mListener;
+    IOStrand* oStrand;
+
     
   public:
 
 
-    ObjectSegmentation(SpaceContext* ctx)
-     : PollingService(ctx->osegStrand),
+    ObjectSegmentation(SpaceContext* ctx,IOStrand* o_strand)
+     : PollingService(o_strand),
        mContext(ctx),
-       mListener(NULL)
+       mListener(NULL),
+       oStrand(o_strand)
     {
         mServiceStage = mContext->profiler->addStage("OSeg");
     }

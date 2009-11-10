@@ -19,8 +19,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include "CraqCacheGood.hpp"
-
-
+#include <boost/thread/mutex.hpp>
 
 namespace CBR
 {
@@ -29,9 +28,12 @@ namespace CBR
   /*
     Basic constructor
   */
-  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID)
- : ObjectSegmentation(ctx),
-   mCSeg (cseg)
+  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to)
+ : ObjectSegmentation(ctx, o_strand),
+   mCSeg (cseg),
+   craqDhtGet(ctx, o_strand),
+   craqDhtSet(ctx, o_strand),
+   postingStrand(strand_to_post_to)
 {
 
     //registering with the dispatcher.  can now receive messages addressed to it.
@@ -55,8 +57,7 @@ namespace CBR
 
     std::map<UUID,ServerID> dummy;
 
-
-    iteratedWait(2000, getResults1, trackedSetResults1);
+    iteratedWait(CRAQ_INIT_WAIT_TIME, getResults1, trackedSetResults1);
     processCraqTrackedSetResults(trackedSetResults2, dummy);
 
     for (int t=0; t < (int)getResults1.size(); ++t)
@@ -123,6 +124,9 @@ namespace CBR
   */
   bool CraqObjectSegmentation::clearToMigrate(const UUID& obj_id)
   {
+    //set a mutex lock.
+
+    inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::iterator mInTransIter = mInTransitOrLookup.find(obj_id);
 
     bool migratingFromHere = false;
@@ -135,10 +139,13 @@ namespace CBR
         migratingFromHere = true;
       }
     }
-
+    inTransOrLookup_m.unlock();
+    
+    receivingObjects_m.lock();
     bool migratingToHere = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) != mReceivingObjects.end();
     //means that the object migrating to here has not yet received an acknowledge, and therefore shouldn't begin migrating again.
-
+    receivingObjects_m.unlock();
+    
     //clear to migrate only if migrating from here and migrating to here are false.
     return (!migratingFromHere) && (!migratingToHere);
   }
@@ -148,14 +155,21 @@ namespace CBR
   //this call returns true if the object is migrating from this server to another server, but hasn't yet received an ack message (which will disconnect the object connection.)
   bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id)
   {
+    inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::const_iterator iterInTransOrLookup = mInTransitOrLookup.find(obj_id);
 
     if (iterInTransOrLookup == mInTransitOrLookup.end())
+    {
+      inTransOrLookup_m.unlock();
       return false;
-
+    }
     if (iterInTransOrLookup->second.sID != CRAQ_OSEG_LOOKUP_SERVER_ID)
+    {
+      inTransOrLookup_m.unlock();
       return true;
+    }
 
+    inTransOrLookup_m.unlock();
     return false;
   }
 
@@ -232,12 +246,12 @@ namespace CBR
       return cacheReturn;
     }
 
-    may need to wrap.;
-    ctx->osegStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id));
+    //    may need to wrap.;
+    oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id));
     //    beginCraqLookup(obj_id);
 
     //note to self.
-    issue - do I need to ensure that nullserverid returns before begincraqlookup via some strange semantics? when I add in stranding?  May need to mutex lock the lookup call from outside of here.;
+    //    issue - do I need to ensure that nullserverid returns before begincraqlookup via some strange semantics? when I add in stranding?  May need to mutex lock the lookup call from outside of here.;
 
 
     return NullServerID;
@@ -245,7 +259,6 @@ namespace CBR
 
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id)
   {
-    may need to have a mutex lock begin here;
     
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
@@ -287,10 +300,6 @@ namespace CBR
     {
       ++numAlreadyLookingUp;
     }
-
-
-    //means that we have to perform an external craq lookup
-    return NullServerID;
 
   }
 
@@ -339,10 +348,12 @@ namespace CBR
       std::cout<<"\n\n Received an addObject\n\n";
 #endif
 
+      receivingObjects_m.lock();
       if (std::find(mReceivingObjects.begin(),mReceivingObjects.end(),obj_id) == mReceivingObjects.end())//shouldn't need to check if it already exists, but may as well.
       {
-        mReceivingObjects.push_back(obj_id);  //means that this object has been pushed to this server, but its migration isn't complete yte.
+        mReceivingObjects.push_back(obj_id);  //means that this object has been pushed to this server, but its migration isn't complete yet.
       }
+      receivingObjects_m.unlock();
 
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
@@ -443,7 +454,6 @@ namespace CBR
 
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {
-
       //genrateAcknowledgeMessage(uuid,sidto);  ...we may as well hold onto the object pointer then.
       if (trackedSetResults[s]->trackedMessage != 0) //if equals zero, meant that we weren't supposed to be tracking this message.
       {
@@ -465,6 +475,7 @@ namespace CBR
             updated[trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid()] = mContext->id();
           }
 
+          inTransOrLookup_m.lock();
           //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
           std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid());
 
@@ -477,9 +488,11 @@ namespace CBR
             mInTransitOrLookup.erase(inTransLookIter);
           }
           //finished deleting from mInTransitOrLookup
-
+          inTransOrLookup_m.unlock();
+          
 
           //remove this object from mReceivingObjects, indicating that this object can now be safely migrated from this server to another if need be.
+          receivingObjects_m.lock();
           std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid());
           if (recObjIter != mReceivingObjects.end())
           {
@@ -494,6 +507,8 @@ namespace CBR
           }
           //done removing from receivingObjects.
 
+          receivingObjects_m.unlock();
+          
 
 #ifdef CRAQ_DEBUG
           std::cout<<"\n\nbftm debug:  sending an acknowledge out from  "<<  mContext->id();
@@ -638,6 +653,8 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       updated[mapDataKeyToUUID[getResults[s]->idToString()]]  = getResults[s]->servID;
 
       UUID tmper = mapDataKeyToUUID[getResults[s]->idToString()];
+
+      inTransOrLookup_m.lock();
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
       //put the value in the cache
@@ -663,7 +680,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
         std::cout<<"\n\nbftm debug:  getting results for objects that we were not looking for.  Or object lookups that have been short-circuited by a trackedSet for obj id:  "  << getResults[s]->idToString()<<"\n\n";
 #endif
       }
-
+      inTransOrLookup_m.unlock();
       delete getResults[s];
     }
 
@@ -676,12 +693,17 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     if (mListener)
     {
       for(std::map<UUID,ServerID>::iterator it = updated.begin(); it != updated.end(); it++)
-        mListener->osegLookupCompleted( it->first, it->second );
+        postingStrand->post(boost::bind(&CraqObjectSegmentation::callOsegLookupCompleted, this, it->first, it->second));
     }
 
     mServiceStage->finished();
   }
 
+//should be called from inside of mainStrand->post.
+void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
+{
+  mListener->osegLookupCompleted( obj_id,sID);
+}
 
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
   {
@@ -759,9 +781,10 @@ void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg:
 
     std::map<UUID,TransLookup>::iterator inTransIt;
 
+
     mCraqCache.insert(obj_id, serv_from); //note: make sure that this is the right insert order.
 
-    
+    inTransOrLookup_m.lock();
     inTransIt = mInTransitOrLookup.find(obj_id);
     if (inTransIt != mInTransitOrLookup.end())
     {
@@ -773,7 +796,8 @@ void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg:
       //log reception of acknowled message
       mContext->trace()->objectAcknowledgeMigrate(mContext->time, obj_id,serv_from,mContext->id());
     }
-
+    inTransOrLookup_m.unlock();
+    
     //send a message to the server that object should now disconnect
     // FIXME is this really supposed to go to the same server? If so, there *must* be a better way to accomplish this
     CBR::Protocol::ObjConnKill::ObjConnKill kill_msg_contents;

@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+
 #include "Timer.hpp"
 #include "TimeSync.hpp"
 #include "TimeProfiler.hpp"
@@ -60,6 +62,8 @@
 #include "CraqObjectSegmentation.hpp"
 
 #include "ServerWeightCalculator.hpp"
+#include "SpaceContext.hpp"
+
 
 namespace {
 CBR::Network* gNetwork = NULL;
@@ -73,6 +77,7 @@ CBR::Time g_start_time( CBR::Time::null() );
 void *main_loop(void *);
 
 int main(int argc, char** argv) {
+  
     using namespace CBR;
 
     InitOptions();
@@ -98,13 +103,12 @@ int main(int argc, char** argv) {
 
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
-    IOStrand* osegStrand = ios->createStrand();
+
     
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    //    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, osegStrand, start_time, init_space_ctx_time, gTrace, duration);
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, osegStrand, start_time, init_space_ctx_time, gTrace, duration);
+    
+    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
 
-                                      
     gSpaceContext = space_context;
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
@@ -118,6 +122,9 @@ int main(int argc, char** argv) {
 
     sync.stop();
 
+
+
+    
     return 0;
 }
 void *main_loop(void *) {
@@ -201,41 +208,37 @@ void *main_loop(void *) {
 
     //Create OSeg
     std::string oseg_type=GetOption(OSEG)->as<String>();
-
+    IOStrand* osegStrand = space_context->ioService->createStrand();
     ObjectSegmentation* oseg = NULL;
     if (oseg_type == OSEG_OPTION_CRAQ)
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
 
-     std::vector<CraqInitializeArgs> craqArgsGet;
-     CraqInitializeArgs cInitArgs1;
+      std::vector<CraqInitializeArgs> craqArgsGet;
+      CraqInitializeArgs cInitArgs1;
 
-     cInitArgs1.ipAdd = "localhost";
-     //     cInitArgs1.port  =     "10299";
-     cInitArgs1.port  =     "10298";
-     craqArgsGet.push_back(cInitArgs1);
+      cInitArgs1.ipAdd = "localhost";
+      cInitArgs1.port  =     "10298";
+      craqArgsGet.push_back(cInitArgs1);
 
-     std::vector<CraqInitializeArgs> craqArgsSet;
-     CraqInitializeArgs cInitArgs2;
-     cInitArgs2.ipAdd = "localhost";
-     //     cInitArgs2.port  =     "10298";
-     cInitArgs2.port  =     "10498";
-     craqArgsSet.push_back(cInitArgs2);
+      std::vector<CraqInitializeArgs> craqArgsSet;
+      CraqInitializeArgs cInitArgs2;
+      cInitArgs2.ipAdd = "localhost";
+      cInitArgs2.port  =     "10299";
+      craqArgsSet.push_back(cInitArgs2);
 
 
+      std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
 
+      if (oseg_type.size() ==0)
+      {
+        std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
+        assert(false);
+      }
 
-     std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
-
-     if (oseg_type.size() ==0)
-     {
-       std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
-       assert(false);
-     }
-
-     std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
-     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0]);
+      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
+      oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0],osegStrand,space_context->mainStrand);
 
     }      //end craq approach
 
@@ -336,9 +339,10 @@ void *main_loop(void *) {
     gTrace = NULL;
 
     IOStrand* mainStrand = space_context->mainStrand;
-    IOStrand* osegStrand = space_context->osegStrand;
     IOService* ios = space_context->ioService;
 
+    delete osegStrand;
+    
     delete space_context;
     space_context = NULL;
 

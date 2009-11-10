@@ -1,7 +1,8 @@
 #include "asyncConnection.hpp"
 #include <iostream>
 #include <boost/bind.hpp>
-
+#include "../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR
 {
@@ -65,11 +66,12 @@ void AsyncConnection::tick(std::vector<CraqOperationResult*>&opResults_get, std:
 
 
 //void AsyncConnection::initialize( boost::asio::ip::tcp::socket* socket,    boost::asio::ip::tcp::resolver::iterator it)
-void AsyncConnection::initialize(boost::asio::ip::tcp::socket* socket, boost::asio::ip::tcp::resolver::iterator, SpaceContex* spc )
+void AsyncConnection::initialize(boost::asio::ip::tcp::socket* socket, boost::asio::ip::tcp::resolver::iterator it, SpaceContext* spc, IOStrand* strand )
 {
   mSocket =       socket;
   mReady  =   PROCESSING;
   ctx     =          spc;
+  mStrand =       strand;
   
   //need to run connection routine.
   mSocket->async_connect(*it, boost::bind(&AsyncConnection::connect_handler,this,_1));  //using that tcp socket for an asynchronous connection.
@@ -126,13 +128,14 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 boost::regex("\r\n"),
-                                ctx->osegStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
+                                mStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
+                                //                                ctx->osegStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
 
-  
-//  boost::asio::async_read_until((*mSocket),
-//                                (*sBuff),
-//                                boost::regex("\r\n"),
-//                                boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff));
+  //  
+  //  boost::asio::async_read_until((*mSocket),
+  //                                (*sBuff),
+  //                                boost::regex("\r\n"),
+  //                                boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff));
   
 
   //generating the query to write.
@@ -205,6 +208,13 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
     is >> tmpLine;
   }
 
+  //  ctx->osegStrand->wrap(boost::bind(&AsyncConnection::finish_read_handler_set,this,line,sBuff));
+  //  ctx->osegStrand->wrap(std::tr1::bind(&AsyncConnection::finish_read_handler_set,this,line,sBuff));
+  //  ctx->osegStrand->wrap(std::tr1::bind(&AsyncConnection::finish_read_handler_set,this));
+
+//void AsyncConnection::finish_read_handler_set(std::string line, boost::asio::streambuf* sBuff)
+
+  
   //process this line.
   if (line.find("STORED") != std::string::npos)
   {
@@ -269,7 +279,7 @@ bool AsyncConnection::get(CraqDataKey& dataToGet)
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
-                                ctx->osegStrand->wrap(boost::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff)));
+                                mStrand->wrap(boost::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff)));
 
   
   //  boost::asio::async_read_until((*mSocket),
