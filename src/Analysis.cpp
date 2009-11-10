@@ -2040,8 +2040,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
-  //processAfter is in seconds
-  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime, int processAfter)
+  void ObjectSegmentationProcessedRequestsAnalysis::printDataCSV(std::ostream &fileOut, bool sortedByTime, int processAfter)
   {
     double processAfterInMicro = processAfter* OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert seconds of processAfter to microseconds for comparison to time.raw().
     double totalLatency = 0;
@@ -2060,38 +2059,91 @@ LatencyAnalysis::~LatencyAnalysis() {
           fileOut <<sortedEvts[s].deltaTime<<",";
         }
       }
+    }
+    else
+    {
+      fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
+
+      for (int s= 0; s < (int) times.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:            "<<sID_processor[s]<<"\n";
+        fileOut<< "\tTime at:                    "<<times[s].raw()<<"\n";
+        fileOut<< "\tID Lookup:                  "<<obj_ids[s].toString()<<"\n";
+        fileOut<< "\tObject on:                  "<<sID_objectOn[s]<<"\n";
+        fileOut<< "\tObjects still in queue:     "<<stillInQueues[s]<<"\n";
+        fileOut<< "\tTime taken:                 "<<dTimes[s]<<"\n";
+
+
+        if (times[s].raw() > processAfterInMicro)
+        {
+          ++numCountedLatency;
+          totalLatency = totalLatency + (int) dTimes[s];
+
+          if ((int)dTimes[s] > maxLatency)
+          {
+            maxLatency = dTimes[s];
+          }
+        }
+      }
+
+
+
+      fileOut<<"\n\n************************************\n";
+      fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
+      fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
+      fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
+      fileOut<<"\n\n\n\nEND\n";
+    }
+  }
+
 
       
-//       fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
-//       fileOut << "\n\n Basic statistics:   "<< sortedEvts.size() <<"  \n\n";
+  
+  //processAfter is in seconds
+  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime, int processAfter)
+  {
+    double processAfterInMicro = processAfter* OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert seconds of processAfter to microseconds for comparison to time.raw().
+    double totalLatency = 0;
+    int maxLatency = 0;
+    double numCountedLatency  = 0;
 
-//       for (int s= 0; s < (int) sortedEvts.size(); ++s)
-//       {
-//         fileOut<< "\n\n********************************\n";
-//         fileOut<< "\tRegistered from:           "<<sortedEvts[s].mID_processor<<"\n";
-//         fileOut<< "\tTime at:                   "<<sortedEvts[s].time.raw()<<"\n";
-//         fileOut<< "\tID Lookup:                 "<<sortedEvts[s].mObjID.toString()<<"\n";
-//         fileOut<< "\tObject on:                 "<<sortedEvts[s].mID_objectOn<<"\n";
-//         fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].stillInQueue<<"\n";
-//         fileOut<< "\tTime taken:                "<<sortedEvts[s].deltaTime<<"\n";
+    if (sortedByTime)
+    {
+      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      convertToEvtsAndSort(sortedEvts);
+      
+      fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< sortedEvts.size() <<"  \n\n";
 
-//         if (sortedEvts[s].time.raw() > processAfterInMicro)
-//         {
-//           ++numCountedLatency;
-//           totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
+      for (int s= 0; s < (int) sortedEvts.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:           "<<sortedEvts[s].mID_processor<<"\n";
+        fileOut<< "\tTime at:                   "<<sortedEvts[s].time.raw()<<"\n";
+        fileOut<< "\tID Lookup:                 "<<sortedEvts[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObject on:                 "<<sortedEvts[s].mID_objectOn<<"\n";
+        fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].stillInQueue<<"\n";
+        fileOut<< "\tTime taken:                "<<sortedEvts[s].deltaTime<<"\n";
 
-//           if ((int)sortedEvts[s].deltaTime > maxLatency)
-//           {
-//             maxLatency = (int)sortedEvts[s].deltaTime;
-//           }
-//         }
-//       }
+        if (sortedEvts[s].time.raw() > processAfterInMicro)
+        {
+          ++numCountedLatency;
+          totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
 
-//      fileOut<<"\n\n************************************\n";
-//      fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
-//      fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
-//      fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
-//      fileOut<<"\n\n\n\nEND\n";
+          if ((int)sortedEvts[s].deltaTime > maxLatency)
+          {
+            maxLatency = (int)sortedEvts[s].deltaTime;
+          }
+        }
+      }
+
+     fileOut<<"\n\n************************************\n";
+     fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
+     fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
+     fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
+     fileOut<<"\n\n\n\nEND\n";
     }
     else
     {

@@ -497,6 +497,7 @@ private:
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime = true, int processedAfter =0);
+  void printDataCSV(std::ostream &fileOut, bool sortedByTime = true, int processAfter=0);
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
 

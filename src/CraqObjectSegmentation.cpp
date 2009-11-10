@@ -259,6 +259,7 @@ namespace CBR
 
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id)
   {
+
     
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
@@ -293,7 +294,8 @@ namespace CBR
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
       //tmpTransLookup.timeAdmitted = numServices;
-
+      std::cout<<"\n\nGot a craq lookup for object with id: "<<obj_id.toString()<<"\n\n";
+      
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
     }
     else
@@ -369,16 +371,13 @@ namespace CBR
       convert_obj_id_to_dht_key(obj_id,cdk);
 
       CraqDataSetGet cdSetGet(cdk, mContext->id() ,false,CraqDataSetGet::SET);
-      //      int trackID = craqDht.set(cdSetGet);
       int trackID = craqDhtSet.set(cdSetGet);
 
 
       if (std::find(mObjects.begin(), mObjects.end(), obj_id) == mObjects.end())
       {
         mObjects.push_back(obj_id);
-#ifdef CRAQ_DEBUG
         std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n";
-#endif
       }
 
     }
@@ -702,6 +701,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 //should be called from inside of mainStrand->post.
 void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
 {
+  std::cout<<"\n\nGot lookup:  "<<obj_id.toString()<<"\n\n";
   mListener->osegLookupCompleted( obj_id,sID);
 }
 

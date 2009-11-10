@@ -166,8 +166,14 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
 
 
   //creating callback for write function
-  mSocket->async_write_some(boost::asio::buffer(dsQuery,CRAQ_DATA_SET_SIZE -2),
-                            boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
+
+  async_write((*mSocket),
+              boost::asio::buffer(query),
+              boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
+
+  
+  //  mSocket->async_write_some(boost::asio::buffer(dsQuery,CRAQ_DATA_SET_SIZE -2),
+  //                            boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
 
 
   return true;
@@ -301,8 +307,12 @@ bool AsyncConnection::get(CraqDataKey& dataToGet)
 
 
   //sets write handler
-  mSocket->async_write_some(boost::asio::buffer(dkQuery,CRAQ_DATA_KEY_QUERY_SIZE-1),
-                            boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
+  async_write((*mSocket),
+              boost::asio::buffer(query),
+              boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
+  
+  //  mSocket->async_write_some(boost::asio::buffer(dkQuery,CRAQ_DATA_KEY_QUERY_SIZE-1),
+  //                            boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
 
 
   return true;
