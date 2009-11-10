@@ -341,7 +341,6 @@ void *main_loop(void *) {
     IOStrand* mainStrand = space_context->mainStrand;
     IOService* ios = space_context->ioService;
 
-    delete osegStrand;
     
     delete space_context;
     space_context = NULL;
