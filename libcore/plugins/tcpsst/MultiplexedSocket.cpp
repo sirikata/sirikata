@@ -264,7 +264,7 @@ MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vec
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
     for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
-        mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,ASIO_SEND_BUFFER_SIZE));
+        mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,max_send_buffer_size>ASIO_SEND_BUFFER_SIZE?max_send_buffer_size:ASIO_SEND_BUFFER_SIZE));
     }
 }
 void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID) {
@@ -441,7 +441,7 @@ void MultiplexedSocket::prepareConnect(unsigned int numSockets, size_t max_enque
     unsigned int oldSize=(unsigned int)mSockets.size();
     if (numSockets>mSockets.size()) {
         for (unsigned int i=oldSize;i<numSockets;++i) {
-            mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, ASIO_SEND_BUFFER_SIZE));
+            mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, max_enqueued_send_size>ASIO_SEND_BUFFER_SIZE?max_enqueued_send_size:ASIO_SEND_BUFFER_SIZE));
             mSockets.back().createSocket(getASIOService());
         }
     }
