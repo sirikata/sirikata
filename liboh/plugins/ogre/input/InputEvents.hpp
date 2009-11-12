@@ -36,16 +36,6 @@
 #include "InputDevice.hpp"
 #include "InputEventDescriptor.hpp"
 
-#ifdef HAVE_AWESOMIUM
-namespace Awesomium {
-class JSValue;
-typedef std::vector<JSValue> JSArguments;
-}
-typedef Awesomium::JSArguments JSArguments;
-#else
-typedef std::vector<Sirikata::MemoryReference> JSArguments;
-#endif
-
 namespace Sirikata {
 
 namespace Graphics {
@@ -469,11 +459,12 @@ class WebViewEvent : public InputEvent {
 public:
     static IdPair::Primary Id;
 
-    WebView* webview;
+    String webview;
     String name;
-    JSArguments* args; // The pointer here is annoying, but necessary to avoid having to include the defintion here, which in turn causes circular includes
+    std::vector<String> args; // The pointer here is annoying, but necessary to avoid having to include the defintion here, which in turn causes circular includes
 
-    WebViewEvent(WebView* wv, const String& name, const JSArguments& args);
+    WebViewEvent(const String &wvName, const String& name, const std::vector<String>& args);
+    WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& args);
     virtual ~WebViewEvent();
 
     virtual EventDescriptor getDescriptor() const;

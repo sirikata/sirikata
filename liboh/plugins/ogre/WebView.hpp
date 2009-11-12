@@ -40,22 +40,26 @@
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
-#if !defined(HAVE_AWESOMIUM)
+#ifndef HAVE_AWESOMIUM
 namespace Awesomium {
-struct JSValue;
-struct JSDelegate;
-typedef int FutureJSValue;
+  typedef Sirikata::JSArguments JSArguments;
+  struct JSValue;
+  struct JSDelegate;
+  typedef int FutureJSValue;
 #if !defined(HAVE_BERKELIUM)
-class WebViewListener {};
-class WebView {};
+  class WebViewListener {};
+  class WebView {};
 #endif
 }
 #endif
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
-struct Rect {};
-struct Window;
-struct Widget;
+  struct Rect {};
+  struct Window;
+  struct Widget;
+  struct WindowDelegate {
+    struct Data { char *message; int length; };
+  };
 }
 #endif
 
@@ -112,10 +116,11 @@ namespace Graphics {
 		*/
 		void evaluateJS(const std::string& javascript);
 
+#if 0
 		void evaluateJS(const std::string& javascript, const JSArguments& args);
 
 		Awesomium::FutureJSValue evaluateJSWithResult(const std::string& javascript);
-
+#endif
 		/**
 		* Sets a global 'Client' callback that can be invoked via Javascript from
 		* within all pages loaded into this WebView.

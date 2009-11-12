@@ -39,17 +39,6 @@
 #include "input/InputManager.hpp"
 #include <task/EventManager.hpp>
 
-#ifdef HAVE_AWESOMIUM
-#include "WebCore.h"
-typedef Awesomium::JSArguments JSArguments;
-#else
-typedef std::vector<Sirikata::MemoryReference> JSArguments;
-namespace Awesomium {
-  typedef ::JSArguments JSArguments;
-  struct WebCore;
-}
-#endif
-
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"
 #include "berkelium/Widget.hpp"
@@ -57,7 +46,19 @@ namespace Awesomium {
 #include "berkelium/WindowDelegate.hpp"
 #endif
 
+#ifdef HAVE_AWESOMIUM
+#include "WebCore.h"
+#else
+namespace Awesomium {
+  struct WebCore;
+}
+#endif
+
 namespace Sirikata {
+
+typedef Sirikata::DataReference<const char*> JSArgument;
+typedef std::vector<JSArgument> JSArguments;
+
 namespace Graphics {
 
 class WebView;
@@ -288,7 +289,7 @@ protected:
 
 	bool focusWebView(int x, int y, WebView* selection = 0);
 	WebView* getTopWebView(int x, int y);
-	void onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args);
+	void onResizeTooltip(WebView* WebView, const JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
 
@@ -306,7 +307,7 @@ protected:
      *    WebViewEvent.args = [some, other, args]
      *  Note that if the first argument is not a string, then no event will be generated.
      */
-    void onRaiseWebViewEvent(WebView* webview, const Awesomium::JSArguments& args);
+    void onRaiseWebViewEvent(WebView* webview, const JSArguments& args);
 public:
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMousePressed(Sirikata::Task::EventPtr evt);

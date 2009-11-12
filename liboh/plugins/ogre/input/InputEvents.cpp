@@ -32,7 +32,6 @@
 
 #include <util/Standard.hh>
 #include "InputEvents.hpp"
-#include "../WebView.hpp" // FIXME this is gross
 
 namespace Sirikata {
 namespace Input {
@@ -91,32 +90,33 @@ IdPair::Primary DragAndDropEvent::Id("DragAndDrop");
 
 IdPair::Primary WebViewEvent::Id("WebView");
 
-WebViewEvent::WebViewEvent(WebView* wv, const String& _name, const Awesomium::JSArguments& _args)
+WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std::vector<String>& _args)
  : InputEvent(InputDeviceWPtr(), IdPair(Id, _name)),
-   webview(wv),
+   webview(wvName),
    name(_name),
-   args(
-#ifdef HAVE_AWESOMIUM
-       new Awesomium::JSArguments(_args)
-#else
-       NULL
-#endif
-   )
+   args(_args)
 {
 }
 
+WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
+ : InputEvent(InputDeviceWPtr(), IdPair(Id,
+       jsargs.empty()?std::string():std::string(jsargs[0].data(), jsargs[0].length()))),
+   webview(wvName)
+{
+    if (jsargs.size() >= 1) {
+        name = std::string(jsargs[0].data(), jsargs[0].length());
+        args.reserve(jsargs.size()-1);
+        for (size_t i = 1; i < jsargs.size(); i++) {
+            args.push_back(std::string(jsargs[i].data(), jsargs[i].length()));
+        }
+    }
+}
+
 WebViewEvent::~WebViewEvent() {
-#ifdef HAVE_AWESOMIUM
-    delete args;
-#endif
 }
 
 EventDescriptor WebViewEvent::getDescriptor() const {
-#ifdef HAVE_AWESOMIUM
-    return EventDescriptor::Web(webview->getName(), name, args->size());
-#else
-    return EventDescriptor::Web(webview->getName(), name, -1);
-#endif
+    return EventDescriptor::Web(webview, name, args.size());
 }
 
 }

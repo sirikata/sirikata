@@ -31,7 +31,6 @@
  */
 
 #include "InputResponse.hpp"
-#include "WebView.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -285,13 +284,12 @@ StringInputResponse::StringInputResponse(ResponseCallback cb)
 }
 
 void StringInputResponse::invoke(WebViewEventPtr& wvevt) {
-#ifdef HAVE_AWESOMIUM
-    const Awesomium::JSArguments& args = *(wvevt->args);
-    assert(args.size() > 0);
-    assert(args[0].isString());
-
-    mCallback(args[0].toString());
-#endif
+    const std::vector<String>& args = wvevt->args;
+    if (args.size() > 0) {
+        mCallback(args[0]);
+    } else {
+        SILOG(input,fatal,"Empty args in StringInputResponse::invoke(WebViewEventPtr)");
+    }
 }
 
 InputResponse::InputEventDescriptorList StringInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {

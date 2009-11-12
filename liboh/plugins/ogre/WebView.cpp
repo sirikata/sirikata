@@ -381,6 +381,7 @@ void WebView::evaluateJS(const std::string& utf8js)
 #endif
 }
 
+#if 0
 void WebView::evaluateJS(const std::string& javascript, const Awesomium::JSArguments& args)
 {
 #if defined(HAVE_AWESOMIUM) // ||defined(HAVE_BERKELIUM)
@@ -423,6 +424,7 @@ Awesomium::FutureJSValue WebView::evaluateJSWithResult(const std::string& javasc
 	return 0;
 #endif
 }
+#endif
 
 void WebView::bind(const std::string& name, JSDelegate callback)
 {
@@ -870,10 +872,25 @@ void WebView::onFinishLoading()
 
 void WebView::onCallback(const std::string& name, const Awesomium::JSArguments& args)
 {
+#ifdef HAVE_AWESOMIUM
 	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(name);
 
-	if(i != delegateMap.end())
-		i->second(this, args);
+	if(i != delegateMap.end()) {
+        std::vector<std::string> tempStrings;
+        JSArguments argArray;
+        for (Awesomium::JSArguments::const_iterator iter = args.begin(); iter != args.end(); ++iter) {
+            std::string *thisArg;
+            if (iter->isString()) {
+                thisArg = &(args[i].toString());
+            } else {
+                tempStrings.push_back(args[i].toString());
+                thisArg = &tempStrings.back();
+            }
+            argArray.push_back(JSArgument(thisArg->data(), thisArg->length()));
+        }
+        i->second(this, args);
+    }
+#endif
 }
 
 void WebView::onReceiveTitle(const std::wstring& title)
@@ -1155,9 +1172,9 @@ void WebView::onChromeSend(Berkelium::Window *win, const WindowDelegate::Data na
 	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
 	if(i != delegateMap.end()) {
-        std::vector<Sirikata::MemoryReference> argVector;
+        JSArguments argVector;
         for (size_t j=0;j!=numArgs;++j) {
-            argVector.push_back(Sirikata::MemoryReference(args[j].message,args[j].length));
+            argVector.push_back(JSArgument(args[j].message,args[j].length));
         }
 		i->second(this, argVector);
 	}

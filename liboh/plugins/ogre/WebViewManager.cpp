@@ -546,13 +546,20 @@ void WebViewManager::setDefaultViewport(Ogre::Viewport* newViewport)
 	defaultViewport = newViewport;
 }
 
-void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args)
+void WebViewManager::onResizeTooltip(WebView* WebView, const JSArguments& args)
 {
-#if defined(HAVE_AWESOMIUM)
-    if(args.size() != 2 || !args[0].isInteger() || !args[1].isInteger())
+    if(args.size() != 2)
 		return;
 
-	tooltipWebView->resize(args[0].toInteger(), args[1].toInteger());
+    std::string xstr(args[0].data(), args[0].length());
+    std::string ystr(args[1].data(), args[1].length());
+    try {
+        tooltipWebView->resize(boost::lexical_cast<int>(xstr),
+                               boost::lexical_cast<int>(ystr));
+    } catch (boost::bad_lexical_cast blc) {
+        SILOG(webview,error,"resize tooltip called with arguments ["<<xstr<<","<<ystr<<"]");
+        return;
+    }
 	tooltipWebView->setPosition(OverlayPosition(mouseXPos, mouseYPos + 15));
 	//popViewToFront(view);
 
@@ -565,11 +572,12 @@ void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArgume
 	{
 		tooltipShowTime = tooltipTimer.getMilliseconds() + TIP_SHOW_DELAY;
 	}
-#endif
 }
 
 void WebViewManager::handleTooltip(WebView* tooltipParent, const std::wstring& tipText)
 {
+// FIXME: Only works for awesomium, doesn't handle utf-8, and has unsanitized javascript
+#if 0
 	if(tipText.length())
 	{
 		this->tooltipParent = tooltipParent;
@@ -584,6 +592,7 @@ void WebViewManager::handleTooltip(WebView* tooltipParent, const std::wstring& t
 		tooltipParent = 0;
 		tooltipWebView->hide(true);
 	}
+#endif
 }
 
 void WebViewManager::handleRequestDrag(WebView* caller)
@@ -712,28 +721,15 @@ void WebViewManager::navigate(NavigationAction action, const String& arg) {
 #endif //HAVE_AWESOMIUM
 }
 
-void WebViewManager::onRaiseWebViewEvent(WebView* webview, const Awesomium::JSArguments& args) {
-#ifdef HAVE_AWESOMIUM
+void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& args) {
     if (args.size() < 1) {
         SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
         return;
     }
 
-    if (!args[0].isString()) {
-        SILOG(ogre,error,"event() must be called with a string as the first argument.  It should take the form event(name, other, args, follow)");
-        return;
-    }
-
     if (!mInputManager) return;
 
-    // We've passed all the checks, just convert everything and we're good to go
-    String name = args[0].toString();
-
-    Awesomium::JSArguments event_args;
-    event_args.insert(event_args.begin(), args.begin() + 1, args.end());
-
-    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview, name, event_args) ));
-#endif
+    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
 }
 
 Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
