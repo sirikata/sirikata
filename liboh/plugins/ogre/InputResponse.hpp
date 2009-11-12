@@ -106,6 +106,7 @@ public:
 
     virtual void invoke(Input::ButtonPressedEventPtr& evt);
     virtual void invoke(Input::ButtonReleasedEventPtr& evt);
+    virtual void invoke(Input::WebViewEventPtr& evt);
 
     virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:

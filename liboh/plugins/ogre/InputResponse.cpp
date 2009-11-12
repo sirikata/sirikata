@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <boost/lexical_cast.hpp>
 #include "InputResponse.hpp"
 
 namespace Sirikata {
@@ -212,12 +213,29 @@ void FloatToggleInputResponse::invoke(Input::ButtonReleasedEventPtr& evt) {
     mCallback(mOffValue);
 }
 
+void FloatToggleInputResponse::invoke(Input::WebViewEventPtr& evt) {
+    if (evt->args.size() > 0) {
+        float arg = 0;
+        try {
+            arg = boost::lexical_cast<float>(evt->args[0]);
+        } catch (const boost::bad_lexical_cast &e) {
+            SILOG(input,warning,"FloatInputResponse::invoke(WebViewEventPtr) requires float arg");
+        }
+        mCallback(arg);
+    } else {
+        SILOG(input,warning,"FloatInputResponse::invoke(WebViewEventPtr) requires >= 1 arg");
+    }
+}
+
 InputResponse::InputEventDescriptorList FloatToggleInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
     InputEventDescriptorList result;
 
     if (descriptor.isKey()) {
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_PRESSED, descriptor.keyModifiers()));
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_RELEASED, descriptor.keyModifiers()));
+    }
+    if (descriptor.isWeb()) {
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), 1));
     }
 
     return result;
