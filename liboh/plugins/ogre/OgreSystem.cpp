@@ -214,9 +214,6 @@ public:
 
     }
     virtual bool requiresTextureFlipping() const{
-        if (&Ogre::RenderTexture::requiresTextureFlipping) {
-            return this->Ogre::RenderTexture::requiresTextureFlipping();
-        }
         return false;
     }
 };

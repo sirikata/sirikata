@@ -179,6 +179,7 @@
 #undef GetMessage
 #endif
 
+#include <stdint.h>
 #include <assert.h>
 #include <cstddef>
 #include <cstring>
