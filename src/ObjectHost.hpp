@@ -115,6 +115,7 @@ private:
     // Periodically called to generate random ping messages
     void generatePings();
 
+    void handleServerChunk(SpaceNodeConnection* conn, Sirikata::Network::Chunk* chunk);
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
     void handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg);

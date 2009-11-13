@@ -667,18 +667,26 @@ void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::Connecti
 }
 
 Sirikata::Network::Stream::ReceivedResponse ObjectHost::handleConnectionRead(SpaceNodeConnection* conn, Chunk& chunk) {
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-    bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
-    assert(parse_success == true);
+    Chunk* data = new Chunk();
+    data->swap(chunk);
 
     // handleConnectionRead() could be called from any thread/strand. Everything that is not
     // thread safe that could result from a new message needs to happen in the main strand,
     // so just post the whole handler there.
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectHost::handleServerMessage, this, conn, obj_msg)
+        std::tr1::bind(&ObjectHost::handleServerChunk, this, conn, data)
     );
 
     return Sirikata::Network::Stream::AcceptedData;
+}
+
+void ObjectHost::handleServerChunk(SpaceNodeConnection* conn, Sirikata::Network::Chunk* chunk) {
+    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    bool parse_success = obj_msg->ParseFromArray(chunk->data(), chunk->size());
+    assert(parse_success == true);
+    delete chunk;
+
+    handleServerMessage(conn, obj_msg);
 }
 
 void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg) {
