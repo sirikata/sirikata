@@ -532,7 +532,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
 
     // FIXME would be nice not to have to do this alloc/dealloc
     ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
-    mContext->trace()->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
+    mContext->trace()->timestampMessage(mContext->simTime(),obj_msg->unique(),Trace::CREATED,src_port, dest_port);
     return conn->push( obj_msg );
 }
 

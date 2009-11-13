@@ -120,7 +120,7 @@ void Forwarder::poll()
             if (!mServerMessageQueue->canSend(next_msg))
                 break;
 
-            //tryTimestampObjectMessage(mContext->trace(), mContext->time, next_msg, Trace::SPACE_OUTGOING_MESSAGE);
+            //tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), next_msg, Trace::SPACE_OUTGOING_MESSAGE);
 
 
             mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
@@ -204,7 +204,7 @@ void Forwarder::poll()
       );
 
       if (!accepted) {
-          mContext->trace()->timestampMessage(mContext->time,
+          mContext->trace()->timestampMessage(mContext->simTime(),
               msg->unique(),
               Trace::DROPPED,
               msg->source_port(),
@@ -218,11 +218,11 @@ void Forwarder::poll()
 //end what i think it should be replaced with
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    //tryTimestampObjectMessage(mContext->trace(), mContext->time, msg, Trace::DISPATCHED);
+    //tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), msg, Trace::DISPATCHED);
     MessageDispatcher::dispatchMessage(msg);
 }
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
-    //mContext->trace()->timestampMessage(mContext->time,msg.unique(),Trace::DISPATCHED,0,0);
+    //mContext->trace()->timestampMessage(mContext->simTime(),msg.unique(),Trace::DISPATCHED,0,0);
     MessageDispatcher::dispatchMessage(msg);
 }
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
@@ -238,7 +238,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 
 
 void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
-    tryTimestampObjectMessage(mContext->trace(), mContext->time, msg, Trace::FORWARDED);
+    tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), msg, Trace::FORWARDED);
 
     if (!forwarded_self_msg)
         mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
@@ -303,7 +303,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg, is_forward);
   if (!send_success) {
       delete svr_obj_msg;
-      mContext->trace()->timestampMessage(mContext->time,
+      mContext->trace()->timestampMessage(mContext->simTime(),
           obj_msg->unique(),
           Trace::DROPPED,
           obj_msg->source_port(),
