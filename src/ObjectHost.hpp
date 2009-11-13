@@ -293,6 +293,7 @@ private:
     };
     ObjectConnections mObjectConnections;
 
+    bool mShuttingDown;
     uint64 mPingId;
 }; // class ObjectHost
 

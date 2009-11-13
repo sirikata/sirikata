@@ -263,7 +263,8 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
    mIOThread(NULL),
-   mServerIDMap(sidmap)
+   mServerIDMap(sidmap),
+   mShuttingDown(false)
 {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
@@ -302,6 +303,8 @@ void ObjectHost::start() {
 }
 
 void ObjectHost::stop() {
+    mShuttingDown = true;
+
     delete mIOWork;
     mIOWork = NULL;
     // Stop processing of all connections
@@ -481,6 +484,9 @@ bool ObjectHost::send(const Time&t, const Object* src, const uint16 src_port, co
 bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
+    if (mShuttingDown)
+        return false;
+
     if (dest_server == NullServerID) {
         // Try looking it up
         dest_server = mObjectConnections.getConnectedServer(src);
@@ -553,6 +559,11 @@ void ObjectHost::generatePings() {
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
+    if (mShuttingDown) {
+        cb(NULL);
+        return;
+    }
+
     // Check if we have any fully open connections we can already use
     if (!mConnections.empty()) {
         for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
@@ -576,6 +587,11 @@ void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
 
 void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    if (mShuttingDown) {
+        cb(NULL);
+        return;
+    }
 
     // Check if we have the connection already
     ServerConnectionMap::iterator it = mConnections.find(sid);
