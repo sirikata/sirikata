@@ -123,6 +123,7 @@ public:
         OH_DEQUEUED,
         HIT_NETWORK,
         OH_DROPPED,
+        OH_RECEIVED,
         NUM_PATHS
     };
 

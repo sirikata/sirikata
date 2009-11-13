@@ -115,10 +115,9 @@ private:
     // Periodically called to generate random ping messages
     void generatePings();
 
-    void handleServerChunk(SpaceNodeConnection* conn, Sirikata::Network::Chunk* chunk);
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
-    void handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg);
+    void handleServerMessage(SpaceNodeConnection* conn);
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
     void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
@@ -160,12 +159,6 @@ private:
     void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
 
 
-    /** Reading and writing handling for SpaceNodeConnections. */
-    // Note - because this requires a bool return, it could pop up in any thread, internally
-    // it ends up posting to whichever thread is most appropriate for the content
-    Sirikata::Network::Stream::ReceivedResponse handleConnectionRead(SpaceNodeConnection* conn, Sirikata::Network::Chunk& chunk);
-
-
     /* Ping Utility Methods. */
     bool ping(const Object *src, const UUID&dest, double distance=-0);
     bool randomPing(const Time&t);
@@ -193,16 +186,27 @@ private:
 
     // Connections to servers
     struct SpaceNodeConnection {
-        SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet *streamOptions, ServerID sid);
+        typedef std::tr1::function<void(SpaceNodeConnection*)> ReceiveCallback;
+
+        SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet *streamOptions, ServerID sid, ReceiveCallback rcb);
         ~SpaceNodeConnection();
 
         // Thread Safe
+        ObjectHost* parent;
         ServerID server;
         Sirikata::Network::Stream* socket;
 
+        // Push a packet to be sent out
         bool push(ObjectMessage* msg);
 
+        // Pull a packet from the receive queue
+        Sirikata::Network::Chunk* pull();
+
         void shutdown();
+
+
+        // Callback for when the connection receives data
+        Sirikata::Network::Stream::ReceivedResponse handleRead(Sirikata::Network::Chunk& chunk);
 
         // Main Strand
         std::vector<GotSpaceConnectionCallback> connectCallbacks;
@@ -210,9 +214,13 @@ private:
 
         // IO Strand
         TracePacketElement<ObjectMessage> tag_enqueued;
-        QueueRouterElement<ObjectMessage> queue;
+        QueueRouterElement<ObjectMessage> send_queue;
         TracePacketElement<ObjectMessage> tag_dequeued;
         StreamTxElement<ObjectMessage> streamTx;
+
+        QueueRouterElement<Sirikata::Network::Chunk> receive_queue;
+
+        ReceiveCallback mReceiveCB;
     };
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
