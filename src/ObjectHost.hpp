@@ -165,8 +165,8 @@ private:
 
 
     /* Ping Utility Methods. */
-    void ping(const Object *src, const UUID&dest, double distance=-0);
-    void randomPing(const Time&t);
+    bool ping(const Object *src, const UUID&dest, double distance=-0);
+    bool randomPing(const Time&t);
 
     OptionSet* mStreamOptions;
 

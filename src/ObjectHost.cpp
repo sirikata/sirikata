@@ -500,7 +500,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     return conn->push( obj_msg );
 }
 
-void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
+bool ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     CBR::Protocol::Object::Ping ping_msg;
@@ -520,25 +520,29 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     ServerID destServer = mObjectConnections.getConnectedServer(src->uuid());
 
     if (destServer!=NullServerID) {
-        send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
+        return send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
     }
+    return false;
 }
 
-void ObjectHost::randomPing(const Time&t) {
+bool ObjectHost::randomPing(const Time&t) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     Object* a = mObjectConnections.randomObject(true);
     Object* b = mObjectConnections.randomObject(true);
 
     if (a != NULL && b != NULL)
-        ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
+        return ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
+
+    return false;
 }
 
 void ObjectHost::generatePings() {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    for (int i=0;i<100;++i)
-        randomPing(mContext->time);
+    for (int i=0;i<1000;++i)
+        if (!randomPing(mContext->time))
+            break;
 }
 
 
