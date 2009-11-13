@@ -628,8 +628,11 @@ void WebViewManager::navigate(NavigationAction action) {
     switch(action) {
 #if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
       case NavigateBack:
-//        focusedNonChromeWebView->webView->goToHistoryOffset(-1);
+      {
+        wchar_t* cmd = L"document.bgColor='green'; history.go(-1)";              /// make bgd green so we can see if back doesn't work
+        focusedNonChromeWebView->webView->executeJavascript(cmd, wcslen(cmd));
         std::cout << "FIXME: need to implement history in berkelium\n";
+      }
         break;
       case NavigateForward:
 //        focusedNonChromeWebView->webView->goToHistoryOffset(1);
