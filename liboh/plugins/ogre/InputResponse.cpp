@@ -214,6 +214,7 @@ void FloatToggleInputResponse::invoke(Input::ButtonReleasedEventPtr& evt) {
 }
 
 void FloatToggleInputResponse::invoke(Input::WebViewEventPtr& evt) {
+#ifdef HAVE_BERKELIUM
     if (evt->args.size() > 0) {
         float arg = 0;
         try {
@@ -225,6 +226,7 @@ void FloatToggleInputResponse::invoke(Input::WebViewEventPtr& evt) {
     } else {
         SILOG(input,warning,"FloatInputResponse::invoke(WebViewEventPtr) requires >= 1 arg");
     }
+#endif
 }
 
 InputResponse::InputEventDescriptorList FloatToggleInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {

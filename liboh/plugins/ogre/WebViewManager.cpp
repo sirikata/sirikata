@@ -112,9 +112,13 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
+        chromeWebView = createWebView("__chrome", 450, 200, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
+        chromeWebView->loadFile("../../../liboh/plugins/ogre/data/chrome/navbar.html");
+        
         WebView *mychromeWebView = createWebView("google", 320, 240, OverlayPosition(RP_TOPLEFT), false, 70);
         mychromeWebView->loadURL("http://google.com/");
         mychromeWebView->setTransparent(true);
+        mychromeWebView->focus();
 /*
         mychromeWebView = createWebView("xahoo", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
         mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
@@ -622,13 +626,15 @@ void WebViewManager::navigate(NavigationAction action) {
         return;
 
     switch(action) {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
       case NavigateBack:
-        focusedNonChromeWebView->webView->goToHistoryOffset(-1);
+//        focusedNonChromeWebView->webView->goToHistoryOffset(-1);
+        std::cout << "FIXME: need to implement history in berkelium\n";
         break;
       case NavigateForward:
-        focusedNonChromeWebView->webView->goToHistoryOffset(1);
-        break;
+//        focusedNonChromeWebView->webView->goToHistoryOffset(1);
+        std::cout << "FIXME: need to implement history in berkelium\n";
+      break;
 #endif
 #if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
       case NavigateRefresh:
@@ -722,6 +728,7 @@ void WebViewManager::navigate(NavigationAction action, const String& arg) {
 }
 
 void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& args) {
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
     if (args.size() < 1) {
         SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
         return;
@@ -729,7 +736,14 @@ void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& ar
 
     if (!mInputManager) return;
 
+    // We've passed all the checks, just convert everything and we're good to go
+//    String name = args[0].toString();
+    String name((char*)args[0].data(), args[0].size());
+    JSArguments event_args;
+    event_args.insert(event_args.begin(), args.begin() + 1, args.end());
+
     mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
+#endif
 }
 
 Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
