@@ -53,13 +53,17 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
  : server(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
    connecting(false),
+   tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED),
    queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
-   streamTx(socket, ioStrand, Duration::milliseconds((int64)0))
+   tag_dequeued(ctx, Trace::OH_DEQUEUED, Trace::OH_DROPPED),
+   streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0))
 {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
 
-    queue.connect(0, &streamTx, 0);
+    tag_enqueued.connect(0, &queue, 0);
+    queue.connect(0, &tag_dequeued, 0);
+    tag_dequeued.connect(0, &streamTx, 0);
     streamTx.run();
 }
 
@@ -68,7 +72,7 @@ ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
 }
 
 bool ObjectHost::SpaceNodeConnection::push(ObjectMessage* msg) {
-    return queue.push(msg);
+    return tag_enqueued.push(0,msg);
 }
 
 void ObjectHost::SpaceNodeConnection::shutdown() {
@@ -651,6 +655,13 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::handleConnectionRead(Spa
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
 
+    CBR::Protocol::Object::ObjectMessage* msg = obj_msg;
+    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+        CBR::Protocol::Object::Ping ping_msg;
+        ping_msg.ParseFromString(msg->payload());
+        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
+    }
+
     // handleConnectionRead() could be called from any thread/strand. Everything that is not
     // thread safe that could result from a new message needs to happen in the main strand,
     // so just post the whole handler there.
@@ -666,16 +677,14 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
 
     // As a special case, messages dealing with sessions are handled by the object host
     mContext->trace()->timestampMessage(mContext->time,msg->unique(),Trace::DESTROYED,msg->source_port(),msg->dest_port());
-    if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
-        handleSessionMessage(msg);
+
+    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+        delete msg;
         return;
     }
-    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
-        CBR::Protocol::Object::Ping ping_msg;
-        ping_msg.ParseFromString(msg->payload());
-        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
-        //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
-        delete msg;
+
+    if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
+        handleSessionMessage(msg);
         return;
     }
 

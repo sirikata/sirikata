@@ -281,7 +281,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           evt = cachedResponse_evt;
         }
         break;
-        
+
       case Trace::OSegShutdownEventTag:
         {
           OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
@@ -342,11 +342,11 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
           is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
           is.read( (char*)&obj_lookup_not_on_server_evt->mID_lookup, sizeof(obj_lookup_not_on_server_evt->mID_lookup) );
-          
+
           evt = obj_lookup_not_on_server_evt;
         }
         break;
-        
+
       case Trace::ObjectSegmentationProcessedRequestAnalysisTag:
         {
           ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
@@ -1192,6 +1192,9 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(DESTROYED);
         PACKETSTAGE(DROPPED);
         PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
+        PACKETSTAGE(HIT_NETWORK);
+        PACKETSTAGE(OH_ENQUEUED);
+        PACKETSTAGE(OH_DEQUEUED);
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
@@ -2098,7 +2101,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   void ObjectMigrationRoundTripAnalysis::printData(std::ostream &fileOut, int processedAfter)
   {
     double processedAfterInMicro = processedAfter*OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert to microseconds
-    
+
     std::sort(allRoundTripEvts.begin(), allRoundTripEvts.end(), compareEvts);
 
     fileOut << "\n\n*******************Begin Object Migration Round Trip Analysis*************\n\n\n";
@@ -2172,13 +2175,13 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
     double processedAfterInMicro = processAfter*OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert from seconds to microseconds
 
-    
+
     fileOut<<"\n\n*********************************\n";
     fileOut<<"\tNum tracked: "<<allTrackedSetResultsEvts.size()<<"\n\n\n\n";
 
     double averager = 0;
     double numProcessedAfter = 0;
-    
+
     for(int s=0;s < (int) allTrackedSetResultsEvts.size(); ++s)
     {
       fileOut<<"\n\n******************\n";
@@ -2311,9 +2314,9 @@ void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfte
 {
   double numProcessedAfter     = processAfter * OSEG_SECOND_TO_RAW_CONVERSION_FACTOR;
   double numCacheRespCataloged =                      0;
-  
+
   std::sort(allCacheResponseEvts.begin(), allCacheResponseEvts.end(), compareEvts);
-  
+
   fileOut << "\n\n*******************OSegCache Analysis*************\n\n\n";
   fileOut << "\n\n Basic statistics:   "<< allCacheResponseEvts.size() <<"  \n\n";
 
@@ -2329,7 +2332,7 @@ void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfte
     {
       ++numCacheRespCataloged;
     }
-    
+
   }
 
   fileOut<<"\n\n\n\n\n";
@@ -2388,7 +2391,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
         mObjectLookupNotOnServerVector.push_back(*oseg_lookup_not_on_server_evt);
         continue;
       }
-      
+
       delete evt;
     }
   }
@@ -2415,9 +2418,9 @@ void OSegCacheErrorAnalysis::buildObjectMap()
   //sort all vectors first
   std::sort(mMigrationVector.begin(), mMigrationVector.end(), compareRoundTripEvents);
   std::sort(mLookupVector.begin(), mLookupVector.end(), compareLookupProcessedEvents);
-  std::sort(mCacheResponseVector.begin(), mCacheResponseVector.end(), compareCacheResponseEvents); 
+  std::sort(mCacheResponseVector.begin(), mCacheResponseVector.end(), compareCacheResponseEvents);
 
-  
+
   //First read through all object migrations.
   std::vector< ObjectMigrationRoundTripEvent >::const_iterator migrationIterator;
 
@@ -2426,10 +2429,10 @@ void OSegCacheErrorAnalysis::buildObjectMap()
     ServerIDTimePair sidtime;
     sidtime.sID = migrationIterator->sID_migratingTo;
     sidtime.t   = migrationIterator->time;
-    
+
     mObjLoc[migrationIterator->obj_id].push_back(sidtime);
   }
-  
+
   //now, read through the lookup vector.  If an object does not exist in map, then put it in.
 
   std::vector<ObjectLookupProcessedEvent >::const_iterator lookupIterator;
@@ -2443,7 +2446,7 @@ void OSegCacheErrorAnalysis::buildObjectMap()
     if (mObjLoc.find(lookupIterator->mObjID) == mObjLoc.end())
     {
       //means that we don't have any record of the object yet.
-      mObjLoc[lookupIterator->mObjID].push_back(sidtime);   
+      mObjLoc[lookupIterator->mObjID].push_back(sidtime);
     }
   }
 }
@@ -2452,13 +2455,13 @@ void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterIn
 {
 
   buildObjectMap(); //populates mObjLoc
-  
+
   //initialize results struct
   res.missesCache  = 0;
   res.hitsCache    = 0;
   res.totalCache   = 0;
   res.totalLookups = 0;
-  
+
   //need to read through all the cached responses and see how many hits and misses there are.
   //
   std::vector< OSegCacheResponseEvent >::const_iterator  cacheResponseIterator;
@@ -2508,7 +2511,7 @@ bool OSegCacheErrorAnalysis::checkHit(const UUID& obj_ider, const Time& ter, con
   {
     locListIterator->sID; //serverID
     locListIterator->t;   //time
-    
+
     if (locListIterator->t.raw() > ter.raw())  //means that we returned the value sID before the migration occured.
     {
 
@@ -2545,7 +2548,7 @@ void OSegCacheErrorAnalysis::printData(std::ostream& fileOut , int processedAfte
   fileOut << "\tFrac of Lookups Cache Lookups Incorrect: " << ((double)res.missesCache)/((double)res.totalCache) <<"\n" ;
 
   fileOut <<"\n\n\nEND****";
-  
+
 }
 
 //simple destructor
@@ -2561,7 +2564,7 @@ OSegCacheErrorAnalysis::~OSegCacheErrorAnalysis()
 
 
 //end oseg analysis
-  
+
 
 
 

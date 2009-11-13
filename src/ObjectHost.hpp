@@ -38,6 +38,7 @@
 #include "QueueRouterElement.hpp"
 #include "BandwidthShaper.hpp"
 #include "StreamTxElement.hpp"
+#include "TracePacketElement.hpp"
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
 #include "Message.hpp"
@@ -207,7 +208,9 @@ private:
         bool connecting;
 
         // IO Strand
+        TracePacketElement<ObjectMessage> tag_enqueued;
         QueueRouterElement<ObjectMessage> queue;
+        TracePacketElement<ObjectMessage> tag_dequeued;
         StreamTxElement<ObjectMessage> streamTx;
     };
     // Only main strand accesses and manipulates the map, although other strand

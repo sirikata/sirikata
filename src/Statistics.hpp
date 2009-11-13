@@ -119,6 +119,10 @@ public:
         DELIVERED,
         DESTROYED,
         DROPPED,
+        OH_ENQUEUED,
+        OH_DEQUEUED,
+        HIT_NETWORK,
+        OH_DROPPED,
         NUM_PATHS
     };
 

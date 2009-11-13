@@ -37,6 +37,7 @@
 #include "RouterElement.hpp"
 #include <sirikata/network/Stream.hpp>
 #include <sirikata/network/IOStrandImpl.hpp>
+#include "Statistics.hpp"
 
 namespace CBR {
 
@@ -67,8 +68,9 @@ private:
          *  \param max_rate the maximum rate (minimum duration between polls) for
          *         polling for new packets to send
          */
-        Impl(StreamTxElement* parent, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
+        Impl(StreamTxElement* parent, Context* ctx, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
          : mParent(parent),
+           mContext(ctx),
            mStream(strm),
            mStrand(strand),
            mMaxRate(max_rate),
@@ -115,6 +117,16 @@ private:
                 mWaitingPacket = next_pkt;
                 mSerialized = data;
                 return false;
+            }
+
+            if (next_pkt->source_port() == OBJECT_PORT_PING && next_pkt->dest_port() == OBJECT_PORT_PING) {
+                mContext->trace()->timestampMessage(
+                    mContext->simTime(),
+                    next_pkt->unique(),
+                    Trace::HIT_NETWORK,
+                    next_pkt->source_port(),
+                    next_pkt->dest_port()
+                );
             }
 
             // Otherwise the packet was handled and we can clean up and continue
@@ -168,6 +180,7 @@ private:
         }
 
         StreamTxElement* mParent; // This is the one element which may not always be valid
+        Context* mContext;
         Sirikata::Network::Stream* mStream;
         IOStrand* mStrand;
         Duration mMaxRate;
@@ -184,8 +197,8 @@ public:
      *  \param max_rate the maximum rate (minimum duration between polls) for
      *         polling for new packets to send
      */
-    StreamTxElement(Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
-     : mImpl( new Impl(this, strm, strand, max_rate) )
+    StreamTxElement(Context* ctx, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
+     : mImpl( new Impl(this, ctx, strm, strand, max_rate) )
     {
     }
 

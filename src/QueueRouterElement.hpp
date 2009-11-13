@@ -74,18 +74,22 @@ public:
 
         uint32 sz = mSizeFunctor(pkt);
 
-        unique_lock guard(mMutex);
+        uint32 cur_size = mSize.read();
+        uint32 new_size = cur_size + sz;
 
-        uint32 new_size = mSize + sz;
         if (new_size > mMaxSize) {
             // drop
             delete pkt;
             return false;
         }
 
-        // else store
-        mSize = new_size;
-        mPackets.push(pkt);
+        {
+            unique_lock guard(mMutex);
+            // else store, must recompute since mSize may have changed
+            mSize += sz;
+            mPackets.push(pkt);
+        }
+
         return true;
     }
 
@@ -95,15 +99,24 @@ public:
     virtual PacketType* pull(uint32 port) {
         assert(port == 0);
 
-        unique_lock guard(mMutex);
+        uint32 cur_size = mSize.read();
 
-        if (mPackets.empty())
+        if (cur_size == 0)
             return NULL;
 
-        PacketType* pkt = mPackets.front();
-        mPackets.pop();
-        uint32 sz = mSizeFunctor(pkt);
-        mSize -= sz;
+        PacketType* pkt = NULL;
+        {
+            unique_lock guard(mMutex);
+
+            if (mPackets.empty())
+                return NULL;
+
+            pkt = mPackets.front();
+            mPackets.pop();
+            uint32 sz = mSizeFunctor(pkt);
+            mSize -= sz;
+        }
+
         return pkt;
     }
 
@@ -113,7 +126,7 @@ private:
     PacketQueue mPackets;
     const SizeFunctor mSizeFunctor;
     uint32 mMaxSize;
-    uint32 mSize;
+    Sirikata::AtomicValue<uint32> mSize;
 }; // class QueueRouterElement
 
 } // namespace CBR

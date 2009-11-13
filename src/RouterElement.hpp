@@ -226,9 +226,9 @@ protected:
             return true;
         }
 
-        void push(PacketType* pkt) {
+        bool push(PacketType* pkt) {
             assert(element != NULL);
-            element->push(port, pkt);
+            return element->push(port, pkt);
         }
 
         OutputElement* element;
