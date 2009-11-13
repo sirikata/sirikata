@@ -77,11 +77,18 @@ private:
            mWaitingPacket(NULL),
            mSerialized(NULL),
            mShutdown( false ),
-           mTimer( IOTimer::create(strand->service()) )
+           mTimer( IOTimer::create(strand->service()) ),
+           mIterationProfiler(NULL),
+           mWorkProfiler(NULL)
         {
+            mIterationProfiler = mContext->profiler->addStage("StreamTx Iteration");
+            mWorkProfiler = mContext->profiler->addStage("StreamTx Work");
         }
 
         ~Impl() {
+            delete mIterationProfiler;
+            delete mWorkProfiler;
+
             if (mWaitingPacket != NULL)
                 delete mWaitingPacket;
             if (mSerialized != NULL)
@@ -90,6 +97,7 @@ private:
 
         void start() {
             mTimer->setCallback( readySendCallback() );
+            mIterationProfiler->started();
             startPoll(this->shared_from_this());
         }
 
@@ -98,7 +106,7 @@ private:
         }
 
         ReadySendCallback readySendCallback() {
-            return mStrand->wrap( std::tr1::bind(&Impl::pullInput, this, this->shared_from_this()) );
+            return mStrand->wrap( std::tr1::bind(&Impl::doIter, this, this->shared_from_this()) );
         }
 
     private:
@@ -133,6 +141,16 @@ private:
             delete next_pkt;
             delete data;
             return true;
+        }
+
+        void doIter(ImplPtr me) {
+            mIterationProfiler->finished();
+            mWorkProfiler->started();
+
+            pullInput(me);
+
+            mIterationProfiler->started();
+            mWorkProfiler->finished();
         }
 
         // Attempts to pull input. Continues as long as a) input is available and
@@ -188,6 +206,8 @@ private:
         std::string* mSerialized;
         bool mShutdown;
         IOTimerPtr mTimer;
+        TimeProfiler::Stage* mIterationProfiler;
+        TimeProfiler::Stage* mWorkProfiler;
     };
 public:
     /** Create a stream transmit element which outputs to the specified stream,
