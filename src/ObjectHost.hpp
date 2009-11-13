@@ -205,7 +205,7 @@ private:
         // Main Strand
         std::vector<GotSpaceConnectionCallback> connectCallbacks;
         bool connecting;
-    private:
+
         // IO Strand
         QueueRouterElement<ObjectMessage> queue;
         StreamTxElement<ObjectMessage> streamTx;

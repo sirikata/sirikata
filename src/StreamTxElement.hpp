@@ -49,6 +49,12 @@ namespace CBR {
  */
 template<typename PacketType>
 class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
+public:
+    // Note: This isn't a great solution, but until we can set *only* the ReadySendCallback for the stream,
+    // we need to provide the code that gives us the stream and creates us a callback to register on our
+    // behalf
+    typedef std::tr1::function<void()> ReadySendCallback;
+private:
     class Impl;
     typedef std::tr1::shared_ptr<Impl> ImplPtr;
 
@@ -81,14 +87,16 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
         }
 
         void start() {
-            mTimer->setCallback(
-                mStrand->wrap( std::tr1::bind(&Impl::pullInput, this, this->shared_from_this()) )
-            );
+            mTimer->setCallback( readySendCallback() );
             startPoll(this->shared_from_this());
         }
 
         void shutdown() {
             mShutdown = true;
+        }
+
+        ReadySendCallback readySendCallback() {
+            return mStrand->wrap( std::tr1::bind(&Impl::pullInput, this, this->shared_from_this()) );
         }
 
     private:
@@ -147,8 +155,7 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
                 if (!sent) {
                     // FIXME currently we just turn on polling again because we don't
                     // have an easy way to set the stream ready callback.
-                    startPoll(me);
-                    //mStream->pauseSend();
+                    mStream->requestReadySendCallback();
                 }
             }
         }
@@ -201,6 +208,10 @@ public:
 
     void shutdown() {
         mImpl->shutdown();
+    }
+
+    ReadySendCallback readySendCallback() {
+        return mImpl->readySendCallback();
     }
 private:
     ImplPtr mImpl;

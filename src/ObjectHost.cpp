@@ -609,7 +609,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
             this,
             conn,
             _1),
-        &Sirikata::Network::Stream::ignoreReadySendCallback
+        conn->streamTx.readySendCallback()
     );
 
     OH_LOG(debug,"Trying to connect to " << addy.toString());
