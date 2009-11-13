@@ -671,13 +671,6 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::handleConnectionRead(Spa
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
 
-    CBR::Protocol::Object::ObjectMessage* msg = obj_msg;
-    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
-        CBR::Protocol::Object::Ping ping_msg;
-        ping_msg.ParseFromString(msg->payload());
-        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
-    }
-
     // handleConnectionRead() could be called from any thread/strand. Everything that is not
     // thread safe that could result from a new message needs to happen in the main strand,
     // so just post the whole handler there.
@@ -691,23 +684,29 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::handleConnectionRead(Spa
 void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    // As a special case, messages dealing with sessions are handled by the object host
-    mContext->trace()->timestampMessage(mContext->time,msg->unique(),Trace::DESTROYED,msg->source_port(),msg->dest_port());
+    // Record info to mark destruction at the end of this method since the msg will have been deleted
+    uint64 msg_uniq = msg->unique();
+    uint16 msg_src_port = msg->source_port();
+    uint16 msg_dst_port = msg->dest_port();
 
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+        CBR::Protocol::Object::Ping ping_msg;
+        ping_msg.ParseFromString(msg->payload());
+        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
         delete msg;
-        return;
     }
-
-    if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
+    // As a special case, messages dealing with sessions are handled by the object host
+    else if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
         handleSessionMessage(msg);
-        return;
+    }
+    else {
+        // Otherwise, by default, we just ship it to the correct object
+        Object* obj = mObjectConnections.object(msg->dest_object());
+        assert(obj != NULL);
+        obj->receiveMessage(msg);
     }
 
-    // Otherwise, by default, we just ship it to the correct object
-    Object* obj = mObjectConnections.object(msg->dest_object());
-    assert(obj != NULL);
-    obj->receiveMessage(msg);
+    mContext->trace()->timestampMessage(mContext->simTime(), msg_uniq, Trace::DESTROYED, msg_src_port, msg_dst_port);
 }
 
 void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {
