@@ -1,19 +1,26 @@
 <html>
     <b> Javascript Tests</b><br>
     click on the google pane to select it first, then come back here<br>
-    Type a fully-formed URL in the box and press "GO!"<br>
+    web controls:
+    <input type="button" value="<--" onClick="goBack()">
+    <input type="button" value="-->" onClick="goFwd()">
+    <br>
+    Type a fully-formed URL in the box and press
+    <button onClick='goURL()'>GO!</button>
     <input id='selectedURL' size=60 value="http://sirikata.com"> 
-    <button onClick='goURL()'>GO!</button><BR>
-    back button not working yet:
-    <INPUT type="button" value="web back" onClick="goBack()"><br>
-    move avatar forward:
-    <INPUT type="button" value="avatar fwd" onClick="avFwd()"><br>
-    stop avatar:
-    <INPUT type="button" value="avatar stop" onClick="avStop()">
+    <br>
+    avatar controls:
+    <input type="button" value="walk" onClick="avFwd()">
+    <input type="button" value="stop" onClick="avStop()">
+    <input type="button" value="left" onClick="avLeft()">
+    <input type="button" value="right" onClick="avRight()">
     <script type="text/javascript">
 	function goURL() {
 		var url=document.getElementById('selectedURL').value;
 		chrome.send("event",["navgo", url])
+	}
+	function goFwd() {
+		chrome.send("event",["navforward"])
 	}
 	function goBack() {
 		chrome.send("event",["navback"])
@@ -23,6 +30,12 @@
 	}
 	function avStop() {
 		chrome.send("event",["navmoveforward", "0"])
+	}
+	function avLeft() {
+		chrome.send("event",["navturnleft", "1"])
+	}
+	function avRight() {
+		chrome.send("event",["navturnright", "1"])
 	}
     </script>
 </html>

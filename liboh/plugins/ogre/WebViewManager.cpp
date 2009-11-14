@@ -625,36 +625,31 @@ void WebViewManager::navigate(NavigationAction action) {
     if (focusedNonChromeWebView == NULL)
         return;
 
-    switch(action) {
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
-      case NavigateBack:
-      {
-        wchar_t* cmd = L"document.bgColor='green'; history.go(-1)";              /// make bgd green so we can see if back doesn't work
-        focusedNonChromeWebView->webView->executeJavascript(cmd, wcslen(cmd));
-        std::cout << "FIXME: need to implement history in berkelium\n";
-      }
+    switch (action) {
+    #if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+    case NavigateBack:
+        focusedNonChromeWebView->evaluateJS("history.go(-1)");
         break;
-      case NavigateForward:
-//        focusedNonChromeWebView->webView->goToHistoryOffset(1);
-        std::cout << "FIXME: need to implement history in berkelium\n";
-      break;
-#endif
-#if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
-      case NavigateRefresh:
+    case NavigateForward:
+        focusedNonChromeWebView->evaluateJS("history.go(1)");
+        break;
+    #endif
+    #if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
+    case NavigateRefresh:
         focusedNonChromeWebView->webView->refresh();
-#elif defined(HAVE_AWESOMIUM)
-      case NavigateRefresh:
+    #elif defined(HAVE_AWESOMIUM)
+    case NavigateRefresh:
         SILOG(ogre,error,"FIXME: refresh() is disabled...");
         focusedNonChromeWebView->webView->goToHistoryOffset(0);
-#elif defined(HAVE_BERKELIUM)
-      case NavigateRefresh:
+    #elif defined(HAVE_BERKELIUM)
+    case NavigateRefresh:
         focusedNonChromeWebView->webView->refresh();
-#endif
+    #endif
         break;
-      case NavigateHome:
+    case NavigateHome:
         focusedNonChromeWebView->loadURL("http://www.google.com");
         break;
-      default:
+    default:
         SILOG(ogre,error,"Unknown navigation action from navigate(action).");
         break;
     }
