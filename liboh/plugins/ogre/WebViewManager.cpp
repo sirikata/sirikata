@@ -79,6 +79,17 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 
 {
     tooltipWebView = 0;
+#ifndef _WIN32
+    {
+        std::string ldLibraryPath (getenv("LD_LIBRARY_PATH"));
+        ldLibraryPath=baseDirectory+"/chrome:"
+#ifndef NDEBUG
+            "chrome:"
+#endif
+            +ldLibraryPath;
+        setenv("LD_LIBRARY_PATH",ldLibraryPath.c_str(),1);
+    }
+#endif
 #ifdef HAVE_AWESOMIUM
 	webCore = new Awesomium::WebCore(Awesomium::LOG_VERBOSE);
 	webCore->setBaseDirectory(getCurrentWorkingDirectory() + baseDirectory + "\\");
