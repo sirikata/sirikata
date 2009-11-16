@@ -273,9 +273,24 @@ void Forwarder::receiveMessage(Message* msg) {
     // Otherwise, either deliver or forward it, depending on whether the destination object is attached to this server
     ObjectConnection* conn = getObjectConnection(dest);
     if (conn != NULL) {
-        // This should probably have control via push back as well, i.e. should return bool and we should care what
-        // happens
-        conn->send(obj_msg);
+        // Record info for trace since msg may get deleted
+        uint64 msg_uniq = obj_msg->unique();
+        uint16 msg_src_port = obj_msg->source_port();
+        uint16 msg_dst_port = obj_msg->dest_port();
+
+        bool send_success = conn->send(obj_msg);
+
+        Trace::MessagePath path = send_success ? Trace::SPACE_TO_OH_ENQUEUED : Trace::DROPPED;
+        mContext->trace()->timestampMessage(
+            mContext->simTime(),
+            msg_uniq,
+            path,
+            msg_src_port,
+            msg_dst_port
+        );
+
+        if (!send_success)
+            delete obj_msg;
     }
     else
     {

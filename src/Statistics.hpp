@@ -124,6 +124,7 @@ public:
         HIT_NETWORK,
         OH_DROPPED,
         OH_RECEIVED,
+        SPACE_TO_OH_ENQUEUED,
         NUM_PATHS
     };
 

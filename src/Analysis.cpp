@@ -1196,6 +1196,7 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OH_ENQUEUED);
         PACKETSTAGE(OH_DEQUEUED);
         PACKETSTAGE(OH_RECEIVED);
+        PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
