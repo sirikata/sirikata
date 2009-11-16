@@ -298,8 +298,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
 
     mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&ObjectHost::generatePings, this), Duration::milliseconds((int64)1));
-
     mPingId=0;
+    mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
+
     mContext->objectHost = this;
 }
 
@@ -313,6 +314,8 @@ ObjectHost::~ObjectHost() {
     mConnections.clear();
 
     delete mPingPoller;
+    delete mPingProfiler;
+
     delete mIOStrand;
     IOServiceFactory::destroyIOService(mIOService);
 }
@@ -574,11 +577,15 @@ bool ObjectHost::randomPing(const Time&t) {
 }
 
 void ObjectHost::generatePings() {
+    mPingProfiler->started();
+
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     for (int i=0;i<1000;++i)
         if (!randomPing(mContext->time))
             break;
+
+    mPingProfiler->finished();
 }
 
 

@@ -34,7 +34,6 @@
 #define _CBR_OBJECT_HOST_HPP_
 
 #include "ObjectHostContext.hpp"
-#include "TimeProfiler.hpp"
 #include "QueueRouterElement.hpp"
 #include "BandwidthShaper.hpp"
 #include "StreamTxElement.hpp"
@@ -179,6 +178,7 @@ private:
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
     Poller* mPingPoller;
+    TimeProfiler::Stage* mPingProfiler;
 
     Sirikata::SerializationCheck mSerialization;
 
