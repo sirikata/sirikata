@@ -378,8 +378,7 @@ void ObjectHost::disconnect(Object* obj) {
     disconnect_msg.set_object(objid);
     disconnect_msg.set_reason("Quit");
 
-    send(mContext->time,
-        objid, OBJECT_PORT_SESSION,
+    send(objid, OBJECT_PORT_SESSION,
         UUID::null(), OBJECT_PORT_SESSION,
         serializePBJMessage(session_msg)
     );
@@ -439,8 +438,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     if (ci.regQuery)
         connect_msg.set_query_angle( ci.queryAngle.asFloat() );
 
-    if (!send(mContext->time,
-              uuid, OBJECT_PORT_SESSION,
+    if (!send(uuid, OBJECT_PORT_SESSION,
               UUID::null(), OBJECT_PORT_SESSION,
               serializePBJMessage(session_msg),
               conn->server
@@ -481,7 +479,6 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
     connect_msg.set_type(CBR::Protocol::Session::Connect::Migration);
     connect_msg.set_object(obj_id);
     if (!send(
-            mContext->time,
             obj_id, OBJECT_PORT_SESSION,
             UUID::null(), OBJECT_PORT_SESSION,
             serializePBJMessage(session_msg),
@@ -504,13 +501,13 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
 }
 
 
-bool ObjectHost::send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    return send(t, src->uuid(), src_port, dest, dest_port, payload);
+    return send(src->uuid(), src_port, dest, dest_port, payload);
 }
 
-bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
+bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (mShuttingDown)
@@ -539,11 +536,10 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     return conn->push( obj_msg );
 }
 
-bool ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
+bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double distance) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     CBR::Protocol::Object::Ping ping_msg;
-    Time t=mContext->time;
     ping_msg.set_ping(t);
     if (distance>=0)
         ping_msg.set_distance(distance);
@@ -559,19 +555,19 @@ bool ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     ServerID destServer = mObjectConnections.getConnectedServer(src->uuid());
 
     if (destServer!=NullServerID) {
-        return send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
+        return send(src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
     }
     return false;
 }
 
-bool ObjectHost::randomPing(const Time&t) {
+bool ObjectHost::randomPing(const Time& t) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     Object* a = mObjectConnections.randomObject(true);
     Object* b = mObjectConnections.randomObject(true);
 
     if (a != NULL && b != NULL)
-        return ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
+        return ping(t, a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
 
     return false;
 }
@@ -582,7 +578,7 @@ void ObjectHost::generatePings() {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     for (int i=0;i<1000;++i)
-        if (!randomPing(mContext->time))
+        if (!randomPing(mContext->simTime()))
             break;
 
     mPingProfiler->finished();
@@ -735,7 +731,7 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
+        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->simTime(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
         delete msg;
     }
     // As a special case, messages dealing with sessions are handled by the object host

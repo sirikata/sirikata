@@ -74,7 +74,7 @@ public:
     /** Disconnect the object from the space. */
     void disconnect(Object* obj);
 
-    bool send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
     // reads and writes to the actual sockets are handled in mIOStrand. But that is all that is handled
@@ -107,7 +107,7 @@ private:
     // only be used to deal with session management.
     // If dest_server is NullServerID, then getConnectedServer is used to determine where to send the packet.
     // This is used to possibly exchange data between the main and IO strands, so it acquires locks.
-    bool send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
+    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
 
 
@@ -159,8 +159,8 @@ private:
 
 
     /* Ping Utility Methods. */
-    bool ping(const Object *src, const UUID&dest, double distance=-0);
-    bool randomPing(const Time&t);
+    bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
+    bool randomPing(const Time& t);
 
     OptionSet* mStreamOptions;
 
