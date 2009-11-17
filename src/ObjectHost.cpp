@@ -300,6 +300,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace
     mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&ObjectHost::generatePings, this), Duration::milliseconds((int64)1));
     mPingId=0;
     mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
+    mHandleMessageProfiler = mContext->profiler->addStage("Handle Server Message");
 
     mContext->objectHost = this;
 }
@@ -315,6 +316,8 @@ ObjectHost::~ObjectHost() {
 
     delete mPingPoller;
     delete mPingProfiler;
+
+    delete mHandleMessageProfiler;
 
     delete mIOStrand;
     IOServiceFactory::destroyIOService(mIOService);
@@ -703,10 +706,14 @@ void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::Connecti
 }
 
 void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
+    mHandleMessageProfiler->started();
+
     // Pull it off the queue
     Sirikata::Network::Chunk* data = conn->pull();
-    if (data == NULL)
+    if (data == NULL) {
+        mHandleMessageProfiler->finished();
         return;
+    }
 
     // Parse
     ObjectMessage* msg = new ObjectMessage();
@@ -746,6 +753,8 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     }
 
     mContext->trace()->timestampMessage(mContext->simTime(), msg_uniq, Trace::DESTROYED, msg_src_port, msg_dst_port);
+
+    mHandleMessageProfiler->finished();
 }
 
 void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {

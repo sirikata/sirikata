@@ -179,6 +179,7 @@ private:
     Duration mSimDuration;
     Poller* mPingPoller;
     TimeProfiler::Stage* mPingProfiler;
+    TimeProfiler::Stage* mHandleMessageProfiler;
 
     Sirikata::SerializationCheck mSerialization;
 
