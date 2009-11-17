@@ -4,6 +4,7 @@
     web controls:
     <input type="button" value="<--" onClick="goBack()">
     <input type="button" value="-->" onClick="goFwd()">
+    <input type="button" value="new" onClick="newTab()">
     <br>
     Type a fully-formed URL in the box and press
     <button onClick='goURL()'>GO!</button>
@@ -24,6 +25,9 @@
 	}
 	function goBack() {
 		chrome.send("event",["navback"])
+	}
+	function newTab() {
+		chrome.send("event",["navnewtab"])
 	}
 	function avFwd() {
 		chrome.send("event",["navmoveforward", "1"])

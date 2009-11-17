@@ -628,8 +628,9 @@ void WebViewManager::navigate(NavigationAction action) {
         char buffer[256];
         sprintf(buffer, "spawned_%d", unique_id++);
         String unique_name(buffer);
-        WebView* newwebview = createWebView(unique_name, 250, 250, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
-        newwebview->setTransparent(true);
+        WebView* newwebview = createWebView(unique_name, 320, 240, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
+        newwebview->loadURL("http://sirikata.com/");
+//        newwebview->setTransparent(true);
         focusedNonChromeWebView = newwebview;
         return;
     }
