@@ -125,6 +125,8 @@ public:
         OH_DROPPED,
         OH_RECEIVED,
         SPACE_TO_OH_ENQUEUED,
+        OSEG_LOOKUP_STARTED,
+        OSEG_LOOKUP_FINISHED,
         NUM_PATHS
     };
 

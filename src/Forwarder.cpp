@@ -198,19 +198,23 @@ void Forwarder::poll()
   bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom)
   {
       UUID dest_obj = msg->dest_object();
+
+      uint64 msg_uniq = msg->unique();
+      uint16 msg_src_port = msg->source_port();
+      uint16 msg_dst_port = msg->dest_port();
+
       bool accepted = mOSegLookups->lookup(
           msg,
           boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, is_forward, forwardFrom)
       );
 
-      if (!accepted) {
-          mContext->trace()->timestampMessage(mContext->simTime(),
-              msg->unique(),
-              Trace::DROPPED,
-              msg->source_port(),
-              msg->dest_port(),
-              SERVER_PORT_OBJECT_MESSAGE_ROUTING);
-      }
+      Trace::MessagePath mp = (accepted ? Trace::OSEG_LOOKUP_STARTED : Trace::DROPPED);
+      mContext->trace()->timestampMessage(mContext->simTime(),
+          msg_uniq,
+          mp,
+          msg_src_port,
+          msg_dst_port
+      );
 
       return accepted;
   }
@@ -305,6 +309,14 @@ void Forwarder::receiveMessage(Message* msg) {
 
 bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, bool is_forward, ServerID forwardFrom)
 {
+    // Timestamp the message as having finished an OSeg Lookup
+    mContext->trace()->timestampMessage(mContext->simTime(),
+        obj_msg->unique(),
+        Trace::OSEG_LOOKUP_FINISHED,
+        obj_msg->source_port(),
+        obj_msg->dest_port()
+    );
+
   //send out all server updates associated with an object with this message:
   UUID obj_id =  obj_msg->dest_object();
 
