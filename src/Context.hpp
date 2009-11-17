@@ -60,6 +60,7 @@ public:
     {
         mIterationProfiler = profiler->addStage("Context Iteration");
         mIterationProfiler->started();
+        mWorkProfiler = profiler->addStage("Context Work");
     }
 
     ~Context() {
@@ -123,6 +124,7 @@ private:
     virtual void poll() {
 
         mIterationProfiler->finished();
+        mWorkProfiler->started();
 
         Duration elapsed = Timer::now() - epoch();
 
@@ -135,6 +137,7 @@ private:
         lastTime = time;
         time = Time::null() + elapsed;
 
+        mWorkProfiler->finished();
         mIterationProfiler->started();
     }
 
@@ -142,6 +145,7 @@ private:
     Duration mSimDuration;
     std::vector<Service*> mServices;
     TimeProfiler::Stage* mIterationProfiler;
+    TimeProfiler::Stage* mWorkProfiler;
 }; // class ObjectHostContext
 
 } // namespace CBR
