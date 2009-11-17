@@ -122,6 +122,8 @@ class ClusterBuild:
         if (ClusterRunSummaryCode(retcodes) == 0):
             # We have all the pieces we need
             return 'CC="/usr/bin/ccache /usr/bin/gcc" CXX="/usr/bin/ccache /usr/bin/g++"'
+
+        print 'Warning: Running without ccache!'
         return ""
 
     def build(self, build_type):
