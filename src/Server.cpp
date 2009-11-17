@@ -48,7 +48,9 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
-        std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
+        )
     );
 
     mMigrationTimer.start();

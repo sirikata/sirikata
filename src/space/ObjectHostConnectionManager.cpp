@@ -35,6 +35,8 @@
 #include "Message.hpp"
 #include <sirikata/network/IOService.hpp>
 #include <sirikata/network/IOServiceFactory.hpp>
+#include <sirikata/network/IOStrand.hpp>
+#include <sirikata/network/IOStrandImpl.hpp>
 #include <sirikata/network/StreamListenerFactory.hpp>
 #include <sirikata/util/PluginManager.hpp>
 #include "Statistics.hpp"
@@ -54,14 +56,27 @@ ObjectHostConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
+   mIOService( IOServiceFactory::makeIOService() ),
+   mIOStrand( mIOService->createStrand() ),
+   mIOWork(NULL),
+   mIOThread(NULL),
    mAcceptor(NULL),
    mMessageReceivedCallback(cb)
 {
+    mIOWork = new IOWork( mIOService, "ObjectHostConnectionManager Work" );
+    mIOThread = new Thread( std::tr1::bind(&IOService::run, mIOService) );
+
     listen(listen_addr);
 }
 
 ObjectHostConnectionManager::~ObjectHostConnectionManager() {
     delete mAcceptor;
+
+    if (mIOWork != NULL)
+        delete mIOWork;
+
+    delete mIOStrand;
+    IOServiceFactory::destroyIOService(mIOService);
 }
 
 
@@ -75,7 +90,6 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::getNewCon
 bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
     ObjectHostConnectionMap::iterator conn_it = mConnections.find(conn_id);
     if (conn_it == mConnections.end()) {
-
         SPACE_LOG(error,"Tried to send to unconnected object host.");
         return false;
     }
@@ -96,17 +110,23 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
 
+    String oh_stream_lib = GetOption("ohstreamlib")->as<String>();
+    String oh_stream_options = GetOption("ohstreamoptions")->as<String>();
+
     assert(mAcceptor == NULL);
     mAcceptor=Sirikata::Network::StreamListenerFactory::getSingleton()
-        .getConstructor(GetOption("ohstreamlib")->as<String>())
-          (mContext->ioService,
+        .getConstructor(oh_stream_lib)
+          (mIOService,
            Sirikata::Network::StreamListenerFactory::getSingleton()
-            .getOptionParser(GetOption("ohstreamlib")->as<String>())
-               (GetOption("ohstreamoptions")->as<String>()));
+              .getOptionParser(oh_stream_lib)
+               (oh_stream_options));
     Sirikata::Network::Address addr(convertAddress4ToSirikata(listen_addr));
     mAcceptor->listen(
         addr,
-        std::tr1::bind(&ObjectHostConnectionManager::handleNewConnection,this,_1,_2)
+        //mIOStrand->wrap(
+            std::tr1::bind(&ObjectHostConnectionManager::handleNewConnection,this,_1,_2)
+        //) // FIXME can't wrap here yet because of the SetCallbacks parameter -- it requires that we use it immediately
+        // and wrapping makes this impossible
     );
 }
 
@@ -114,11 +134,18 @@ void ObjectHostConnectionManager::shutdown() {
     // Shut down the listener
     mAcceptor->close();
 
-    // Close each connection
-    for(ObjectHostConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
-        ObjectHostConnection* conn = it->second;
-        conn->socket->close();
-    }
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectHostConnectionManager::closeAllConnections, this)
+    );
+
+    // Get rid of bogus work which ensures we keep the service running
+    delete mIOWork;
+    mIOWork = NULL;
+
+    // Wait for the other thread to finish operations
+    mIOThread->join();
+    delete mIOThread;
+    mIOThread = NULL;
 }
 
 void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream* str, Sirikata::Network::Stream::SetCallbacks& set_callbacks) {
@@ -134,29 +161,52 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
 
     // Add the new connection to our index, set read callbacks
     ObjectHostConnection* conn = new ObjectHostConnection(getNewConnectionID(), str);
-    mConnections[conn->id] = conn;
     set_callbacks(
         &Sirikata::Network::Stream::ignoreConnectionCallback,
         std::tr1::bind(&ObjectHostConnectionManager::handleConnectionRead,
             this,
             conn,
-            _1),
+            _1), // FIXME this should be wrapped by mIOStrand, but the return value is a problem
         &Sirikata::Network::Stream::ignoreReadySendCallback
+    );
+
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectHostConnectionManager::insertConnection, this, conn)
     );
 }
 
 Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk) {
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
+
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
-    mContext->trace()->timestampMessage(mContext->time,  obj_msg->unique(),Trace::HANDLE_OBJECT_HOST_MESSAGE,obj_msg->source_port(),obj_msg->dest_port(),  SERVER_PORT_OBJECT_MESSAGE_ROUTING);
-    handleObjectHostMessage(conn->id, obj_msg);
+
+    mContext->trace()->timestampMessage(
+        mContext->simTime(),
+        obj_msg->unique(),
+        Trace::HANDLE_OBJECT_HOST_MESSAGE,
+        obj_msg->source_port(),
+        obj_msg->dest_port(),
+        SERVER_PORT_OBJECT_MESSAGE_ROUTING
+    );
+
+    mMessageReceivedCallback(conn->id, obj_msg);
+
     return Sirikata::Network::Stream::AcceptedData;
 }
 
-void ObjectHostConnectionManager::handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
-    mMessageReceivedCallback(conn_id, msg);
+void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
+    mConnections[conn->id] = conn;
 }
+
+void ObjectHostConnectionManager::closeAllConnections() {
+    // Close each connection
+    for(ObjectHostConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
+        ObjectHostConnection* conn = it->second;
+        conn->socket->close();
+    }
+}
+
 
 } // namespace CBR

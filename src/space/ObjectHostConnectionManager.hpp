@@ -48,18 +48,29 @@ namespace CBR {
  */
 class ObjectHostConnectionManager {
 public:
-    typedef uint64 ConnectionID; // Used to identify the OH connection to the rest of the system
+    // Uniquely identifies an object host connection for the rest of the system.
+    typedef uint64 ConnectionID;
+
+    /** Callback generated when an object message is received over a connection.  This callback can be generated
+     *  from any strand -- use strand->wrap to ensure its handled in your strand.
+     */
     typedef std::tr1::function<void(const ConnectionID&, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
 
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
 
+    /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
     WARN_UNUSED
     bool send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
 
     void shutdown();
 private:
     SpaceContext* mContext;
+
+    IOService* mIOService; // FIXME we should be able to use main IOService, but need underlying connections to be stranded
+    IOStrand* mIOStrand;
+    IOWork* mIOWork;
+    Thread* mIOThread;
 
     Sirikata::Network::StreamListener* mAcceptor;
 
@@ -87,8 +98,10 @@ private:
     // Handle async reading callbacks for this connection
     Sirikata::Network::Stream::ReceivedResponse handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk);
 
-    /** Handle messages, either directly, e.g. for sessions, or by dispatching them. */
-    void handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+
+    // Utility methods which we can post to the main strand to ensure they operate safely.
+    void insertConnection(ObjectHostConnection* conn);
+    void closeAllConnections();
 };
 
 } // namespace CBR
