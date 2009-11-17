@@ -5,6 +5,7 @@
     <input type="button" value="<--" onClick="goBack()">
     <input type="button" value="-->" onClick="goFwd()">
     <input type="button" value="new" onClick="newTab()">
+    <input type="button" value="close" onClick="chrome.send('event',['navdel'])">
     <br>
     Type a fully-formed URL in the box and press
     <button onClick='goURL()'>GO!</button>

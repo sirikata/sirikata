@@ -621,8 +621,7 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 void WebViewManager::navigate(NavigationAction action) {
     // New tab is a special case: it doesn't require a previously focused web view
     // and doesn't strictly require awesomium
-    if (action == NavigateNewTab)
-    {
+    if (action == NavigateNewTab) {
         static uint32 unique_id = 0;
         // FIXME ghetto lexical cast because I'm not sure why we have our own version elsewhere
         char buffer[256];
@@ -639,28 +638,35 @@ void WebViewManager::navigate(NavigationAction action) {
         return;
 
     switch (action) {
-    #if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
     case NavigateBack:
         focusedNonChromeWebView->evaluateJS("history.go(-1)");
         break;
     case NavigateForward:
         focusedNonChromeWebView->evaluateJS("history.go(1)");
         break;
-    #endif
-    #if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
+#endif
+#if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
     case NavigateRefresh:
         focusedNonChromeWebView->webView->refresh();
-    #elif defined(HAVE_AWESOMIUM)
+#elif defined(HAVE_AWESOMIUM)
     case NavigateRefresh:
         SILOG(ogre,error,"FIXME: refresh() is disabled...");
         focusedNonChromeWebView->webView->goToHistoryOffset(0);
-    #elif defined(HAVE_BERKELIUM)
+#elif defined(HAVE_BERKELIUM)
     case NavigateRefresh:
         focusedNonChromeWebView->webView->refresh();
-    #endif
+#endif
         break;
     case NavigateHome:
         focusedNonChromeWebView->loadURL("http://www.google.com");
+        break;
+    case NavigateDelete:
+//        delete focusedNonChromeWebView;
+        /// this is bull -- delete is crashing
+        focusedNonChromeWebView->loadURL("");
+        focusedNonChromeWebView->setTransparent(true);
+        focusedNonChromeWebView=0;
         break;
     default:
         SILOG(ogre,error,"Unknown navigation action from navigate(action).");
