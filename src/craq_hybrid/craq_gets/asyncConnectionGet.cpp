@@ -465,6 +465,8 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
       assert(false);
     }
     
+    std::cout<<"\n\nThis is response:   "<<response<<"\n\n\n";
+
     
     keepChecking   =                            false;
 
