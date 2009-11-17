@@ -5,78 +5,183 @@
 #include "sirikata/network/StreamListenerFactory.hpp"
 #include "sirikata/network/StreamListener.hpp"
 #include "Options.hpp"
+
+#include "Message.hpp"
+#include "ServerIDMap.hpp"
+
 using namespace Sirikata::Network;
 using namespace Sirikata;
 
 namespace CBR {
+
 void noop(){}
-TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 incomingBandwidth, uint32 outgoingBandwidth)
- : Network(ctx)
+
+
+TCPNetwork::SendStream::SendStream(Sirikata::Network::Stream* stream)
+ : stream(stream),
+   connected(false)
 {
-    mIncomingBandwidth=incomingBandwidth;
-    mOutgoingBandwidth=outgoingBandwidth;
-    mIncomingBufferLength=incomingBufferLength;
-    mStreamPlugin=GetOption("spacestreamlib")->as<String>();
-    mPluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
-    mListenOptions=StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
-    mSendOptions=StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
-    mIOService=IOServiceFactory::makeIOService();
-    mIOService->post(Duration::seconds(60*60*24*365*68),&noop);
-    mListener=StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
-    mThread= new Thread(std::tr1::bind(&IOService::run,mIOService));
 }
 
 
-void TCPNetwork::newStreamCallback(Stream*newStream, Stream::SetCallbacks&setCallbacks) {
+TCPNetwork::TSQueue::TSQueue(TCPNetwork* parent, Sirikata::Network::Stream*strm)
+ : stream(strm),
+   front(NULL),
+   buffer(Sirikata::SizedPointerResourceMonitor(parent->mIncomingBufferLength)),
+   inserted(false),
+   paused(false)
+{
+}
+
+
+
+
+TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 incomingBandwidth, uint32 outgoingBandwidth)
+ : Network(ctx),
+   mIncomingBufferLength(incomingBufferLength),
+   mIncomingBandwidth(incomingBandwidth),
+   mOutgoingBandwidth(outgoingBandwidth)
+{
+    mStreamPlugin = GetOption("spacestreamlib")->as<String>();
+    mPluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
+
+    mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
+    mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
+
+    mIOService = IOServiceFactory::makeIOService();
+    mIOWork = new IOWork(mIOService, "TCPNetwork Work");
+    mThread = new Thread(std::tr1::bind(&IOService::run,mIOService));
+
+    mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
+}
+
+TCPNetwork::~TCPNetwork() {
+    delete mIOWork;
+    mIOWork = NULL;
+
+    mIOService->stop(); // FIXME forceful shutdown...
+
+    mThread->join();
+    delete mThread;
+
+    IOServiceFactory::destroyIOService(mIOService);
+    mIOService = NULL;
+}
+
+
+
+// IO Thread Methods
+
+void TCPNetwork::newStreamCallback(Stream* newStream, Stream::SetCallbacks&setCallbacks) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
     Address4 sourceAddress(newStream->getRemoteEndpoint());
     dbl_ptr_queue newitem(new std::tr1::shared_ptr<TSQueue>(new TSQueue(this,newStream)));
     weak_dbl_ptr_queue weak_newitem(newitem);
-    mNewReceiveBuffers.push(std::pair<Address4,dbl_ptr_queue>(sourceAddress,newitem));
-    //std::cout<<" Got new stream from "<<newStream->getRemoteEndpoint().toString()<<'\n';
-    setCallbacks(
-                 std::tr1::bind(&TCPNetwork::receivedConnectionCallback,this,weak_newitem,_1,_2),
-                 std::tr1::bind(&TCPNetwork::bytesReceivedCallback,this,weak_newitem,_1),
-                 &Stream::ignoreReadySendCallback);
 
+    setCallbacks(
+        std::tr1::bind(&TCPNetwork::receivedConnectionCallback,this,weak_newitem,_1,_2),
+        std::tr1::bind(&TCPNetwork::bytesReceivedCallback,this,weak_newitem,_1),
+        &Stream::ignoreReadySendCallback
+    );
+
+    mPendingReceiveBuffers[sourceAddress] = newitem;
 }
 
 
-void TCPNetwork::sendStreamConnectionCallback(const Address4&addy, const Sirikata::Network::Stream::ConnectionStatus status, const std::string&reason){
-    //std::cout<<" Got connection callback "<<status<<" with "<<reason<<'\n';
-    if (status!=Sirikata::Network::Stream::Connected) {
-        mDisconnectedStreams.push(addy);
-    }else {
-        mNewConnectedStreams.push(addy);
+void TCPNetwork::sendStreamConnectionCallback(const Address4& addr, const Sirikata::Network::Stream::ConnectionStatus status, const std::string&reason){
+    if (status == Sirikata::Network::Stream::Disconnected) {
+        mContext->mainStrand->post(
+            std::tr1::bind(&TCPNetwork::markSendDisconnected, this, addr)
+        );
+    }
+    else if (status == Sirikata::Network::Stream::Connected) {
+        mContext->mainStrand->post(
+            std::tr1::bind(&TCPNetwork::markSendConnected, this, addr)
+        );
+    }
+    else if (status == Sirikata::Network::Stream::ConnectionFailed) {
+        mContext->mainStrand->post(
+            std::tr1::bind(&TCPNetwork::markSendDisconnected, this, addr)
+        );
+    }
+    else {
+        SILOG(tcpnetwork,warning,"Unhandled send stream connection status: " << status << " -- " << reason);
     }
 }
-void TCPNetwork::readySendCallback(const Address4 &addy) {
+
+void TCPNetwork::readySendCallback(const Address4 &addr) {
     //not sure what to do here since we don't have the push/pull style notifications
 }
 
-bool TCPNetwork::canSend(const Address4&addy,uint32 size, bool reliable, bool ordered, int priority){
-    //std::cout<<"Can send "<<convertAddress4ToSirikata(addy).toString()<<" "<<size<<"?";
-    std::tr1::unordered_map<Address4,SendStream>::iterator where;
-    if ((where=mSendStreams.find(addy))==mSendStreams.end()) {
-        //std::cout<<"#t\n";
-        return true;
+Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue& weak_queue, Chunk&data){
+    dbl_ptr_queue queue(weak_queue.lock());
+    if (queue&&*queue){
+        if ((*queue)->inserted == false) {
+            // Remove from the list of pending connections
+            Address4 source_addr = (*queue)->stream->getRemoteEndpoint();
+            ReceiveMap::iterator it = mPendingReceiveBuffers.find(source_addr);
+            if (it == mPendingReceiveBuffers.end()) {
+                SILOG(tcpnetwork,error,"Address for connection not found in pending receive buffers"); // FIXME print addr
+            }
+            else {
+                mPendingReceiveBuffers.erase(it);
+            }
+
+            // Special case, we're receiving the header. This tells use who the remote side is.
+            CBR::Protocol::Server::ServerIntro intro;
+            bool parsed = parsePBJMessage(&intro, data);
+            assert(parsed);
+
+            Address4* remote_endpoint = mServerIDMap->lookupInternal( intro.id() );
+            assert(remote_endpoint != NULL);
+
+            mContext->mainStrand->post(
+                std::tr1::bind(&TCPNetwork::addNewStream,
+                    this,
+                    *remote_endpoint,
+                    queue
+                )
+            );
+
+            (*queue)->inserted = true;
+        }
+        else {
+            // Normal case, we can just handle the message
+            Chunk* tmp = new Chunk;
+            tmp->swap(data);
+            if (!(*queue)->buffer.push(tmp,false)) {
+                (*queue)->paused=true;
+                tmp->swap(data);
+                delete tmp;
+                return Sirikata::Network::Stream::PauseReceive;
+            }
+        }
     }
-    if (where->second.connected==false) {
-        processNewConnectionsOnMainThread();
-    }
-    if (where->second.connected&&where->second.stream->canSend(size)) {
-        //std::cout<<"yes\n";
-        return true;
-    }
-    //std::cout<<"#f\n";
-    return false;
+
+    return Sirikata::Network::Stream::AcceptedData;
 }
+
+void TCPNetwork::receivedConnectionCallback(const weak_dbl_ptr_queue&weak_queue, const Sirikata::Network::Stream::ConnectionStatus status, const std::string&reason){
+    dbl_ptr_queue queue(weak_queue.lock());
+    if (queue&&*queue){
+        if (status != Sirikata::Network::Stream::Connected) {
+            *queue=std::tr1::shared_ptr<TSQueue>();
+        }
+    }
+}
+
+
+// Main Thread/Strand Methods
+
+namespace {
+
 char toHex(unsigned char u) {
     if (u<=9) return '0'+u;
     return 'A'+(u-10);
 }
+
 void hexPrint(const char *name, const Chunk&data) {
     std::string str;
     str.resize(data.size()*2);
@@ -86,112 +191,122 @@ void hexPrint(const char *name, const Chunk&data) {
     }
     std::cout<< name<<' '<<str<<'\n';
 }
-void TCPNetwork::processNewConnectionsOnMainThread(){
-    Address4 newaddy;
-    while (mNewConnectedStreams.pop(newaddy)) {
-        std::tr1::unordered_map<Address4,SendStream>::iterator where=mSendStreams.find(newaddy);
-        if (where!=mSendStreams.end()) {
-            where->second.connected=true;
-        }
+
+} // namespace
+
+
+void TCPNetwork::markSendConnected(const Address4& addr) {
+    TCPStreamMap::iterator where = mSendStreams.find(addr);
+    if (where == mSendStreams.end())
+        return;
+
+    // The first message needs to be our introduction
+    CBR::Protocol::Server::ServerIntro intro;
+    intro.set_id(mContext->id());
+    std::string serializedIntro;
+    serializePBJMessage(&serializedIntro, intro);
+
+    where->second.stream->send(
+        MemoryReference(serializedIntro),
+        ReliableOrdered
+    );
+
+    // And after we're sure its sent, open things up for everybody else
+    where->second.connected = true;
+}
+
+void TCPNetwork::markSendDisconnected(const Address4& addr) {
+    // FIXME what should we do about this
+}
+
+void TCPNetwork::addNewStream(const Address4& remote_endpoint, dbl_ptr_queue source_queue) {
+    // Make sure the dbl_ptr is still valid
+    if (!source_queue || !(*source_queue)) {
+        return;
     }
 
+    assert(mReceiveBuffers.find(remote_endpoint) == mReceiveBuffers.end());
+    mReceiveBuffers[remote_endpoint] = source_queue;
 }
-bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, bool ordered, int priority) {
+
+TCPNetwork::ptr_queue TCPNetwork::getQueue(const Address4& addr){
+    std::tr1::unordered_map<Address4,dbl_ptr_queue>::iterator where = mReceiveBuffers.find(addr);
+    if (where == mReceiveBuffers.end())
+        return std::tr1::shared_ptr<TSQueue>();
+
+    if (!where->second) {
+        mReceiveBuffers.erase(where);
+        return std::tr1::shared_ptr<TSQueue>();
+    }
+
+    std::tr1::shared_ptr<TSQueue> retval(*where->second);
+    if (!retval) {
+        mReceiveBuffers.erase(where);
+        return std::tr1::shared_ptr<TSQueue>();
+    }
+
+    return retval;
+}
+
+
+bool TCPNetwork::canSend(const Address4& addr,uint32 size, bool reliable, bool ordered, int priority) {
+    TCPStreamMap::iterator where = mSendStreams.find(addr);
+    if (where == mSendStreams.end())
+        return true;
+
+    if (where->second.connected && where->second.stream->canSend(size))
+        return true;
+
+    return false;
+}
+
+bool TCPNetwork::send(const Address4&addr, const Chunk& data, bool reliable, bool ordered, int priority) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    std::tr1::unordered_map<Address4,SendStream>::iterator where;
-    if ((where=mSendStreams.find(addy))==mSendStreams.end()) {
-        mSendStreams.insert(std::pair<Address4,SendStream>(addy,SendStream(StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions))));
-        where=mSendStreams.find(addy);
+    TCPStreamMap::iterator where = mSendStreams.find(addr);
+    if (where == mSendStreams.end()) {
+        mSendStreams.insert(std::pair<Address4,SendStream>(
+                addr,
+                SendStream(StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions))
+            ));
+        where = mSendStreams.find(addr);
 
-        Stream::ConnectionCallback connectionCallback(std::tr1::bind(&TCPNetwork::sendStreamConnectionCallback,this,addy,_1,_2));
+        Stream::ConnectionCallback connectionCallback(std::tr1::bind(&TCPNetwork::sendStreamConnectionCallback,this,addr,_1,_2));
         Stream::SubstreamCallback sscb(&Stream::ignoreSubstreamCallback);
         Stream::ReceivedCallback br(&Stream::ignoreReceivedCallback);
-        Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback,this,addy));
-        //std::cout<< "Connecting to "<<convertAddress4ToSirikata(addy).toString()<<'\n';
-        where->second.stream->connect(convertAddress4ToSirikata(addy),
+        Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback,this,addr));
+        where->second.stream->connect(convertAddress4ToSirikata(addr),
                                sscb,
                                connectionCallback,
                                br,
                                readySendCallback);
     }
-    //std::cout<<"Send existing "<<convertAddress4ToSirikata(addy).toString()<<" "<<data.size()<<"\n";
-    if (where->second.connected==false) {
-        processNewConnectionsOnMainThread();
-    }
+
     if (where->second.connected &&
-        where->second.stream->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered)) {
-        //hexPrint("Sent",data);
+        //where->second.stream->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered)) {
+        where->second.stream->send(data,ReliableOrdered)) {
         return true;
     }else {
         return false;
     }
 }
+
 void TCPNetwork::listen(const Address4&as_server) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
+    mListenAddress = as_server;
     Address listenAddress(convertAddress4ToSirikata(as_server));
-    //std::cout<< "Listening on "<<listenAddress.toString()<<'\n';
     mListener->listen(Address(listenAddress.getHostName(),listenAddress.getService()),
                       std::tr1::bind(&TCPNetwork::newStreamCallback,this,_1,_2));
 }
+
 void TCPNetwork::init(void *(*x)(void*data)) {
     x(NULL);
 }
-TCPNetwork::~TCPNetwork() {
-    mIOService->stop();
-    mThread->join();
-    delete mThread;
-    IOServiceFactory::destroyIOService(mIOService);
-    mIOService=NULL;
-}
+
 void TCPNetwork::begin() {
-
-}
-static Address4 zeroPort(Address4 addy) {
-    addy.port=0;
-    return addy;
-}
-
-std::tr1::shared_ptr<TCPNetwork::TSQueue> TCPNetwork::getQueue(const Address4&addy){
-  get_queue:
-    std::tr1::unordered_map<Address4,dbl_ptr_queue>::iterator where=mReceiveBuffers.find(zeroPort(addy));
-    if (where!=mReceiveBuffers.end()) {
-        //std::cout<<"Found queue";
-        if (where->second) {
-            std::tr1::shared_ptr<TSQueue> retval(*where->second);
-            if (retval) {
-                //std::cout<<" active\n";
-                return retval;
-            }else {
-                //std::cout<<" inactive\n";
-                mReceiveBuffers.erase(where);
-                goto refresh_new_buffers;
-            }
-        }else {
-            //std::cout<<" vinactive\n";
-            mReceiveBuffers.erase(where);
-            goto refresh_new_buffers;
-        }
-    }else {
-        goto refresh_new_buffers;
-    }
-  refresh_new_buffers://why use goto..cus I'm curious if people read my code :-) I promise this is the only goto I've written since I got here...just making sure you pay attention
-    std::pair<Address4,dbl_ptr_queue> toPop;
-    bool found=false;
-    while (mNewReceiveBuffers.pop(toPop)) {
-        //std::cout<<"Pop found "<<convertAddress4ToSirikata(toPop.first).toString()<<'\n';
-        toPop.first=zeroPort(toPop.first);
-        mReceiveBuffers.insert(toPop);
-        if (toPop.first==zeroPort(addy)) {
-            //std::cout<<"Pop xxx\n";
-            found=true;
-        }
-    }
-    if (found) goto get_queue;
-    return std::tr1::shared_ptr<TSQueue>();
 }
 
 void TCPNetwork::reportQueueInfo() const {
@@ -200,75 +315,39 @@ void TCPNetwork::reportQueueInfo() const {
 Chunk* TCPNetwork::front(const Address4&from, uint32 max_size) {
     std::tr1::shared_ptr<TSQueue> front(getQueue(from));
     if (front) {
-        //std::cout<<"RetQ xfound\n";
         if (!front->front)  {
-
             Chunk **frontptr=&front->front;
             bool popped=front->buffer.pop(*frontptr);
-            //std::cout<<"RetQ xnof"<<popped<<"\n";
             if (front->paused) {
                 front->paused=false;
-                //std::cout<<convertAddress4ToSirikata(from).toString()<<" ready read\n";
                 front->stream->readyRead();
             }
         }
         if (front->front&&front->front->size()<=max_size) {
-            //std::cout<<"Returning "<<front->front->size()<<" bytes from "<<convertAddress4ToSirikata(from).toString()<<'\n';
             return front->front;
         }
     }
+
     return NULL;
 }
 
 Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
     std::tr1::shared_ptr<TSQueue> front(getQueue(from));
     if (front) {
-        //std::cout<<"RetQ found\n";
         if (!front->front) {
-
             bool popped=front->buffer.pop(front->front);
-            //std::cout<<"RetQ nof"<<popped<<"\n";
             if (front->paused) {
                 front->paused=false;
-                //std::cout<<convertAddress4ToSirikata(from).toString()<<" ready read\n";
                 front->stream->readyRead();
             }
         }
         if (front->front&&front->front->size()<=max_size) {
             Chunk * retval=front->front;
             front->front=NULL;
-            //std::cout<<"Returning "<<retval->size()<<" bytes from "<<convertAddress4ToSirikata(from).toString()<<'\n';
-            //hexPrint("Rcvd",*retval);
             return retval;
         }
     }
     return NULL;
 }
 
-Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue&weak_queue, Chunk&data){
-    dbl_ptr_queue queue(weak_queue.lock());
-    if (queue&&*queue){
-
-        Chunk * tmp=new Chunk;
-        tmp->swap(data);
-        //std::cout<<"Pushing "<<tmp->size()<<"to "<<(*queue)->stream->getRemoteEndpoint().toString()<<'\n';
-        if (!(*queue)->buffer.push(tmp,false)) {
-            (*queue)->paused=true;
-            //std::cout<<"Push fail of "<<data.size()<< "to "<<(*queue)->stream->getRemoteEndpoint().toString()<<'\n';
-            tmp->swap(data);
-            delete tmp;
-            return Sirikata::Network::Stream::PauseReceive;
-        }
-    }
-    return Sirikata::Network::Stream::AcceptedData;
-}
-void TCPNetwork::receivedConnectionCallback(const weak_dbl_ptr_queue&weak_queue, const Sirikata::Network::Stream::ConnectionStatus status, const std::string&reason){
-    //std::cout<<" Got recv cnx callback "<<status<<" with "<<reason<<'\n';
-    dbl_ptr_queue queue(weak_queue.lock());
-    if (queue&&*queue){
-        if (status!=Sirikata::Network::Stream::Connected) {
-            *queue=std::tr1::shared_ptr<TSQueue>();
-        }
-    }
-}
-}
+} // namespace Sirikata

@@ -44,3 +44,10 @@ message ServerMessage {
     optional uint64 id = 5;
     optional bytes payload = 6;
 }
+
+
+// Introduces one server to another.  Must be the first message sent over
+// the connection.
+message ServerIntro {
+    required uint64 id = 1;
+}

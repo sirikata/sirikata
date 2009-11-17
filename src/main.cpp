@@ -162,7 +162,7 @@ void *main_loop(void *) {
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     gTrace->setServerIDMap(server_id_map);
-
+    gNetwork->setServerIDMap(server_id_map);
 
 
     ServerMessageQueue* sq = NULL;

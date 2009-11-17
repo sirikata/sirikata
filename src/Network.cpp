@@ -5,7 +5,8 @@
 namespace CBR{
 
 Network::Network(SpaceContext* ctx)
- : mContext(ctx)
+ : mContext(ctx),
+   mServerIDMap(NULL)
 {
     mStatsPoller = new Poller(
        ctx->mainStrand,
@@ -24,6 +25,10 @@ void Network::start() {
 
 void Network::stop() {
     mStatsPoller->stop();
+}
+
+void Network::setServerIDMap(ServerIDMap* sidmap) {
+    mServerIDMap = sidmap;
 }
 
 }

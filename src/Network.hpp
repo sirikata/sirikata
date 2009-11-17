@@ -9,6 +9,8 @@
 
 namespace CBR {
 
+class ServerIDMap;
+
 class Network : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
@@ -27,6 +29,12 @@ public:
     virtual Chunk* front(const Address4& from, uint32 max_size)=0;
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
 
+
+    // ServerIDMap -- used for converting received server ID to a (ip,port) pair.  We have to do
+    // this because the remote side might just report 127.0.0.1 + its port.  FIXME We'd like to
+    // get rid of this or change this entire interface to just use ServerIDMap and ServerIDs.
+    void setServerIDMap(ServerIDMap* sidmap);
+
 protected:
     Network(SpaceContext* ctx);
 
@@ -37,6 +45,7 @@ protected:
     virtual void stop();
 
     SpaceContext* mContext;
+    ServerIDMap* mServerIDMap;
 private:
     Poller* mStatsPoller;
 };
