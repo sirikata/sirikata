@@ -5,7 +5,8 @@
 #include <queue>
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionSet.hpp"
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 #ifndef __ASYNC_CRAQ_SET_CLASS_H__
 #define __ASYNC_CRAQ_SET_CLASS_H__
@@ -18,9 +19,8 @@ namespace CBR
 class AsyncCraqSet
 {
 public:
-  AsyncCraqSet();
+  AsyncCraqSet(SpaceContext* con, IOStrand* str);
   ~AsyncCraqSet();
-  
 
   
   enum AsyncCraqReqStatus{REQUEST_PROCESSED, REQUEST_NOT_PROCESSED};
@@ -56,6 +56,9 @@ private:
 
   void reInitializeNode(int s);
   void checkConnections(int s);
+
+  SpaceContext* ctx;
+  IOStrand* mStrand;
   
 };
 

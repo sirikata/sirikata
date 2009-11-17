@@ -104,9 +104,11 @@ namespace CBR
 
 
     //for lookups and sets
-    AsyncCraq craqDhtGet;
-    AsyncCraq craqDhtSet;
-
+    //    AsyncCraq craqDhtGet;
+    //    AsyncCraq craqDhtSet;
+    AsyncCraqHybrid craqDhtGet;
+    AsyncCraqHybrid craqDhtSet;
+    
 
     IOStrand* postingStrand;
     

@@ -3,7 +3,8 @@
 
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 //#define ASYNC_CONNECTION_DEBUG
 
 namespace CBR
@@ -26,7 +27,7 @@ public:
   bool get(CraqDataKey dataToGet);
   
   ~AsyncConnectionSet();
-  AsyncConnectionSet();
+  AsyncConnectionSet(SpaceContext* , IOStrand*);
 
 
   int numStillProcessing();
@@ -47,7 +48,9 @@ private:
   };
   typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
-  
+
+  SpaceContext*   ctx;
+  IOStrand*   mStrand;
   
   
   ConnectionState mReady;

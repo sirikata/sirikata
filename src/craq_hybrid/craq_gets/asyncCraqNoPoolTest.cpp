@@ -84,7 +84,7 @@ namespace CBR
 
 void runLoad()
 {
-  AsyncCraqGet myReader1;
+  AsyncCraqGet myReader1(NULL,NULL);
   
   //declare craq args  
   std::vector<CraqInitializeArgs> craqArgs1;
@@ -208,7 +208,7 @@ void runLoad()
 void runUnLoad()
 {
   //declare reader
-  AsyncCraqGet myReader1;
+  AsyncCraqGet myReader1(NULL,NULL);
   
   
   //declare craq args  
@@ -317,7 +317,7 @@ void runUnLoad()
 void runMultiUnLoad(int numTimesLoad)
 {
   //declare reader
-  AsyncCraqGet myReader1;
+  AsyncCraqGet myReader1(NULL,NULL);
   
   
   //declare craq args  
@@ -452,7 +452,7 @@ void runMultiUnLoadSpeedMulti(int numTimesLoad)
 {
 
   //declare reader
-  AsyncCraqGet myReader1;
+  AsyncCraqGet myReader1(NULL,NULL);
   
   
   //declare craq args  
@@ -570,7 +570,7 @@ void runMultiUnLoadSpeed(int numTimesLoad)
 {
 
   //declare reader
-  AsyncCraqGet myReader1;
+  AsyncCraqGet myReader1(NULL,NULL);
   
   
   //declare craq args  

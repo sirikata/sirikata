@@ -47,7 +47,7 @@ namespace CBR
   
   void runLoad()
   {
-    AsyncCraqSet myReader1;
+    AsyncCraqSet myReader1(NULL,NULL);
   
   
     //Declare craq args  
@@ -148,7 +148,7 @@ namespace CBR
   void runUnLoad()
   {
     //declare reader
-    AsyncCraqSet myReader1;
+    AsyncCraqSet myReader1(NULL,NULL);
   
   
     //declare craq args  
@@ -258,7 +258,7 @@ namespace CBR
   void runMultiUnLoad(int numTimesLoad)
   {
     //declare reader
-    AsyncCraqSet myReader1;
+    AsyncCraqSet myReader1(NULL,NULL);
   
   
     //declare craq args  

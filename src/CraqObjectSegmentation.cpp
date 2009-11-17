@@ -445,11 +445,9 @@ namespace CBR
 
   void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated)
   {
-
-#ifdef CRAQ_DEBUG
     if (trackedSetResults.size() !=0)
       std::cout<<"\n\nbftm debug:  got this many trackedsetresults:   "<<trackedSetResults.size()<<"\n\n";
-#endif
+
 
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {

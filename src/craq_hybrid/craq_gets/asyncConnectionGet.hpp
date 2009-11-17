@@ -3,7 +3,8 @@
 
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR
 {
@@ -41,8 +42,7 @@ public:
   bool getMulti( CraqDataKey& dataToGet);
   
   ~AsyncConnectionGet();
-  AsyncConnectionGet();
-
+  AsyncConnectionGet(SpaceContext* con, IOStrand* str);
 
   int numStillProcessing();
   void printOutstanding();
@@ -139,6 +139,12 @@ private:
   //get handler
   void write_some_handler_get(  const boost::system::error_code& error, std::size_t bytes_transferred);
   void read_handler_get      (  const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
+
+
+  //***strand and context
+  SpaceContext* ctx;
+  IOStrand* mStrand;
+  
 };
 
 }

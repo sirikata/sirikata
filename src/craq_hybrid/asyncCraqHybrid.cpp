@@ -2,12 +2,18 @@
 #include "craq_sets/asyncCraqSet.hpp"
 #include "asyncCraqUtil.hpp"
 #include "asyncCraqHybrid.hpp"
+#include "../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 
 namespace CBR
 {
 
-AsyncCraqHybrid::AsyncCraqHybrid()
+AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, IOStrand* str)
+  : ctx(con),
+    mStrand(str),
+    aCraqGet(con,str),
+    aCraqSet(con,str)
 {
 
 }
@@ -51,7 +57,6 @@ void AsyncCraqHybrid::tick(std::vector<CraqOperationResult*>&allGetResults, std:
   std::vector<CraqOperationResult*> trackedSetResults2;
 
   aCraqSet.tick(getResults2,trackedSetResults2);
-
   
   allGetResults.insert(allGetResults.end(), getResults2.begin(), getResults2.end());
   allTrackedResults.insert(allTrackedResults.end(),trackedSetResults2.begin(), trackedSetResults2.end());

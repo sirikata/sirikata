@@ -3,13 +3,18 @@
 #include <boost/bind.hpp>
 #include <map>
 #include <utility>
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
+
 
 namespace CBR
 {
 
 
 //constructor
-AsyncConnectionSet::AsyncConnectionSet()
+AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str)
+  : ctx(con),
+    mStrand(str)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
  
@@ -97,9 +102,7 @@ void AsyncConnectionSet::connect_handler(const boost::system::error_code& error)
     return;
   }
 
-
   std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
-
   mReady = READY;
 
   //  set_generic_read_result_handler();
@@ -134,7 +137,6 @@ bool AsyncConnectionSet::set(CraqDataKey dataToSet, int  dataToSetTo, bool track
 
   allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this 
 
-  
   mReady = PROCESSING;
 
   //generating the query to write.
@@ -611,10 +613,6 @@ bool AsyncConnectionSet::parseValueValue(std::string response, std::string& data
 }
 
 
-
-
-
-
 void AsyncConnectionSet::processStoredValue(std::string dataKey)
 {
   //look through multimap to find
@@ -634,8 +632,9 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mOperationResultVector.push_back(cor);
+      //      mOperationResultVector.push_back(cor);
 
+      mOperationResultTrackedSetsVector.push_back(cor);
       
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter); //
@@ -647,7 +646,6 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
 
 bool AsyncConnectionSet::parseStoredValue(const std::string& response, std::string& dataKey)
 {
-
   size_t storedIndex = response.find(STREAM_CRAQ_STORED_RESP);
 
   if (storedIndex == std::string::npos)
@@ -663,7 +661,6 @@ bool AsyncConnectionSet::parseStoredValue(const std::string& response, std::stri
     return false;  //didn't read enough of the key header
 
   return true;
-  
 }
 
 
@@ -676,11 +673,16 @@ void AsyncConnectionSet::set_generic_stored_not_found_error_handler()
   const boost::regex reg ("Z\r\n");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
 
   //sets read handler
+  //  boost::asio::async_read_until((*mSocket),
+  //                                (*sBuff),
+  //                                reg,
+  //                                boost::bind(&AsyncConnectionSet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff));
+  //
+
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
-                                boost::bind(&AsyncConnectionSet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff));
-
+                                mStrand->wrap(boost::bind(&AsyncConnectionSet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
   
 }
 

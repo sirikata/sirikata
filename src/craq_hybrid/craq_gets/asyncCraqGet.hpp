@@ -6,7 +6,8 @@
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionGet.hpp"
 
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 #ifndef __ASYNC_CRAQ_GET_CLASS_H__
 #define __ASYNC_CRAQ_GET_CLASS_H__
@@ -18,7 +19,7 @@ namespace CBR
 class AsyncCraqGet
 {
 public:
-  AsyncCraqGet();
+  AsyncCraqGet(SpaceContext* ctx, IOStrand* str);
   ~AsyncCraqGet();
   
   int runReQuery();
@@ -62,6 +63,9 @@ private:
   void checkConnections(int s);
   void checkConnectionsMulti(int s);
 
+
+  SpaceContext* ctx;
+  IOStrand* mStrand;
   
 };
 

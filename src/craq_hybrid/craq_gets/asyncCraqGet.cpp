@@ -8,7 +8,8 @@
 
 #include "asyncConnectionGet.hpp"
 #include "../asyncCraqUtil.hpp"
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR
 {
@@ -41,7 +42,9 @@ AsyncCraqGet::~AsyncCraqGet()
   
 
 //nothing to initialize
-AsyncCraqGet::AsyncCraqGet()
+AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* str)
+  : ctx(con),
+    mStrand(str)
 {
 }
 
@@ -72,7 +75,7 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_GET; ++s)
   {
-    AsyncConnectionGet* tmpConn = new AsyncConnectionGet;
+    AsyncConnectionGet* tmpConn = new AsyncConnectionGet (ctx,mStrand);
     mConnections.push_back(tmpConn);
   }
 
@@ -153,22 +156,7 @@ int AsyncCraqGet::set(const CraqDataSetGet& dataToSet)
   mQueue.push(cdQuery);
   straightPoll();
   checkConnections(0);
-  //  usleep(1);
 
-  //  dataToSet.messageType = CraqDataSetGet::SET;
-
-  
-  //  if (dataToSet.trackMessage)
-  //  {
-  //    dataToSet.trackingID = mCurrentTrackNum;
-  //    ++mCurrentTrackNum;
-
-  //    mQueue.push(dataToSet);
-  //    return mCurrentTrackNum -1;
-  //  }
-  
-  //we got all the way through without finding a ready connection.  Need to add query to queue.
-  //  mQueue.push(dataToSet);
   return 0;
 }
 
@@ -208,20 +196,6 @@ int AsyncCraqGet::getMulti(CraqDataSetGet& dataToGet)
   mQueue.push(cdQuery);
   //  straightPoll();
   checkConnectionsMulti(0);
-  //  usleep(1);
-
-  
-  //force this to be a set message.
-  //  dataToGet.messageType = CraqDataSetGet::GET;
-  //we got all the way through without finding a ready connection.  Need to add query to queue.
-  //  mQueue.push(dataToGet);
-
-  //  straightPoll();
-  //bftm added here.
-  //  checkConnections(0);
-  //  usleep(1);
-  
-  
   return 0;
 }
 
@@ -230,23 +204,10 @@ int AsyncCraqGet::getMulti(CraqDataSetGet& dataToGet)
 int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
 {
   CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
-
   mQueue.push(cdQuery);
-  //  straightPoll();
+
+  
   checkConnections(0);
-  //  usleep(1);
-
-  
-  //force this to be a set message.
-  //  dataToGet.messageType = CraqDataSetGet::GET;
-  //we got all the way through without finding a ready connection.  Need to add query to queue.
-  //  mQueue.push(dataToGet);
-
-  //  straightPoll();
-  //bftm added here.
-  //  checkConnections(0);
-  //  usleep(1);
-  
   
   return 0;
 }
@@ -254,21 +215,12 @@ int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
 
 void AsyncCraqGet::straightPoll()
 {
-  //  static int numCalled = 0;
-
-  //  ++numCalled;
-
-  //  if (numCalled > 1000)
-  //  {
-    int numHandled = io_service.poll();
-
-    if (numHandled == 0)
-    {
-      io_service.reset();
-    }
-    //    numCalled = 0;
-    //  }
-
+  int numHandled = io_service.poll();
+  
+  if (numHandled == 0)
+  {
+    io_service.reset();
+  }
 }
 
 
@@ -303,15 +255,6 @@ void AsyncCraqGet::tick(std::vector<CraqOperationResult*>&getResults, std::vecto
 
     getResults.insert(getResults.end(), tickedMessages_getResults.begin(), tickedMessages_getResults.end());
     trackedSetResults.insert(trackedSetResults.end(),tickedMessages_trackedSetResults.begin(), tickedMessages_trackedSetResults.end());
-    
-    //    for (int t= 0; t < (int) tickedMessages_getResults.size(); ++t)
-//     {
-//       getResults.push_back(tickedMessages_getResults[t]);
-//     }
-//     for (int t= 0; t < (int) tickedMessages_trackedSetResults.size(); ++t)
-//     {
-//       trackedSetResults.push_back(tickedMessages_trackedSetResults[t]);
-//     }
 
     processErrorResults(tickedMessages_errorResults);
     
@@ -403,10 +346,7 @@ void AsyncCraqGet::checkConnections(int s)
   
   int numOperations = 0;
 
-  //  mConnections[s].ready();
 
-  
-  //  if (mConnections[s].ready() == AsyncConnectionTwo::READY)
   if (mConnections[s]->ready() == AsyncConnectionGet::READY)
   {
     if (mQueue.size() != 0)
@@ -431,7 +371,6 @@ void AsyncCraqGet::checkConnections(int s)
       delete cdSG;
     }
   }
-  //  else if (mConnections[s].ready() == AsyncConnectionTwo::NEED_NEW_SOCKET)
   else if (mConnections[s]->ready() == AsyncConnectionGet::NEED_NEW_SOCKET)
   {
     //need to create a new socket for the other
@@ -448,8 +387,6 @@ void AsyncCraqGet::checkConnectionsMulti(int s)
     return;
   
   int numOperations = 0;
-
-  //  mConnections[s].ready();
 
   
   //  if (mConnections[s].ready() == AsyncConnectionTwo::READY)

@@ -8,7 +8,8 @@
 
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionSet.hpp"
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR
 {
@@ -29,7 +30,9 @@ AsyncCraqSet::~AsyncCraqSet()
 
 
 //nothing to initialize
-AsyncCraqSet::AsyncCraqSet()
+AsyncCraqSet::AsyncCraqSet(SpaceContext* con, IOStrand* str)
+  :  ctx(con),
+     mStrand(str)
 {
 }
 
@@ -50,7 +53,7 @@ void AsyncCraqSet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_SET; ++s)
   {
-    AsyncConnectionSet* tmpConn = new AsyncConnectionSet;
+    AsyncConnectionSet* tmpConn = new AsyncConnectionSet(ctx,mStrand);
     mConnections.push_back(tmpConn);
   }
 

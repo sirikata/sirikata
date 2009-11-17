@@ -6,7 +6,8 @@
 #include <utility>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
-
+#include "../../SpaceContext.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 #define NUM_MULTI 1
 
@@ -14,7 +15,9 @@ namespace CBR
 {
 
 //constructor
-AsyncConnectionGet::AsyncConnectionGet()
+AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str)
+  : ctx(con),
+    mStrand(str)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
  
@@ -33,7 +36,6 @@ AsyncConnectionGet::~AsyncConnectionGet()
     mSocket->close();
     delete mSocket;
   }
-
 }
 
 
@@ -47,13 +49,11 @@ AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
 //servicing function.  gets results of all the operations that we were processing.
 void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets)
 {
-
   if (mPrevReadFrag.size() > 2000)
   {
     std::cout<<"\n\n\n\nHUGE mPrevReadFrag:  "<<mPrevReadFrag<<"\n\n";
     std::cout.flush();
   }
-
   
   if ((mOperationResultVector.size() !=0)||(mOperationResultErrorVector.size() !=0)||(mOperationResultTrackedSetsVector.size() !=0))
   {
@@ -76,7 +76,6 @@ void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, s
     mTimesBetweenResults = 0;
     */
   }
-
   
   
   if (mOperationResultVector.size() != 0)
@@ -159,8 +158,6 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 bool AsyncConnectionGet::getMulti(CraqDataKey& dataToGet)
 {
   static std::vector<IndividualQueryData*> tmpDataToGet;
-
-
     
   if (mReady != READY)
   {
@@ -905,10 +902,16 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
   mHandlerState = true;
   
   //sets read handler
+  //  boost::asio::async_read_until((*mSocket),
+  //                                (*sBuff),
+  //                                reg,
+  //                                boost::bind(&AsyncConnectionGet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff));
+
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
-                                boost::bind(&AsyncConnectionGet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff));
+                                mStrand->wrap(boost::bind(&AsyncConnectionGet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
+
 }
 
 
