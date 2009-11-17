@@ -81,7 +81,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
     tooltipWebView = 0;
 #ifndef _WIN32
     {
-        std::string ldLibraryPath (getenv("LD_LIBRARY_PATH"));
+        std::string ldLibraryPath;
+        ldLibraryPath = getenv("LD_LIBRARY_PATH")?getenv("LD_LIBRARY_PATH"):"";
         ldLibraryPath=baseDirectory+"/chrome:"
 #ifndef NDEBUG
             "chrome:"
