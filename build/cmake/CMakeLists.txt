@@ -289,7 +289,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/space/MigrationMonitor.cpp
-  ${CBR_SOURCE_DIR}/ObjectConnection.cpp
+  ${CBR_SOURCE_DIR}/space/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
