@@ -16,6 +16,8 @@
 
 #include "PollingService.hpp"
 
+#include "OSegLookupQueue.hpp"
+
 namespace CBR
 {
   class Object;
@@ -123,7 +125,7 @@ protected:
 private:
       // This version is provided if you already know which server the message should be sent to
     WARN_UNUSED
-    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false, ServerID forwardFrom = NullServerID);
+    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, bool is_forward=false, ServerID forwardFrom = NullServerID);
   public:
       bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
 

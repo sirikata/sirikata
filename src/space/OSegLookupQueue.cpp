@@ -84,7 +84,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
 
     // If we already have a server, handle the callback right away
     if (destServer != NullServerID) {
-        cb(msg, destServer);
+        cb(msg, destServer, ResolvedFromCache);
         return true;
     }
 
@@ -117,7 +117,7 @@ void OSegLookupQueue::handleLookupCompleted(const UUID& id, const ServerID& dest
     for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s) {
         const OSegLookup& lu = (iterQueueMap->second[s]);
         mTotalSize -= lu.msg->ByteSize();
-        lu.cb(lu.msg, dest);
+        lu.cb(lu.msg, dest, ResolvedFromServer);
     }
     mLookups.erase(iterQueueMap);
 }

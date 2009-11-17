@@ -203,18 +203,27 @@ void Forwarder::poll()
       uint16 msg_src_port = msg->source_port();
       uint16 msg_dst_port = msg->dest_port();
 
-      bool accepted = mOSegLookups->lookup(
-          msg,
-          boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, is_forward, forwardFrom)
-      );
-
-      Trace::MessagePath mp = (accepted ? Trace::OSEG_LOOKUP_STARTED : Trace::DROPPED);
       mContext->trace()->timestampMessage(mContext->simTime(),
           msg_uniq,
-          mp,
+          Trace::OSEG_LOOKUP_STARTED,
           msg_src_port,
           msg_dst_port
       );
+
+      bool accepted = mOSegLookups->lookup(
+          msg,
+          boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, is_forward, forwardFrom)
+      );
+
+
+      if (!accepted) {
+          mContext->trace()->timestampMessage(mContext->simTime(),
+              msg_uniq,
+              Trace::DROPPED,
+              msg_src_port,
+              msg_dst_port
+          );
+      }
 
       return accepted;
   }
@@ -307,12 +316,16 @@ void Forwarder::receiveMessage(Message* msg) {
 }
 
 
-bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, bool is_forward, ServerID forwardFrom)
+bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, bool is_forward, ServerID forwardFrom)
 {
+    Trace::MessagePath mp = (resolved_from == OSegLookupQueue::ResolvedFromCache)
+        ? Trace::OSEG_CACHE_LOOKUP_FINISHED
+        : Trace::OSEG_SERVER_LOOKUP_FINISHED;
+
     // Timestamp the message as having finished an OSeg Lookup
     mContext->trace()->timestampMessage(mContext->simTime(),
         obj_msg->unique(),
-        Trace::OSEG_LOOKUP_FINISHED,
+        mp,
         obj_msg->source_port(),
         obj_msg->dest_port()
     );

@@ -47,16 +47,22 @@ namespace CBR {
  */
 class OSegLookupQueue : public OSegListener {
 public:
+    enum ResolvedFrom {
+        ResolvedFromCache,
+        ResolvedFromServer
+    };
+
     /** Predicate which determines whether a message will be admitted for a destination object lookup.
      *  \param object the object the lookup is being performed on
      *  \param msg_size the size of the object submitted with the request
      *  \param cur_tot_size the current total size of messages in the queue
      */
     typedef std::tr1::function<bool(UUID, size_t, size_t)> PushPredicate;
-    /** Callback type for lookups, taking the message the lookup was performed on and the
-     *  ServerID the OSeg returned. If you need additional information it must be curried via bind().
+    /** Callback type for lookups, taking the message the lookup was performed on, the
+     *  ServerID the OSeg returned, and an enum indicating how the lookup was resolved.
+     *  If you need additional information it must be curried via bind().
      */
-    typedef std::tr1::function<void(CBR::Protocol::Object::ObjectMessage*, ServerID)> LookupCallback;
+    typedef std::tr1::function<void(CBR::Protocol::Object::ObjectMessage*, ServerID, ResolvedFrom)> LookupCallback;
 
 private:
     struct OSegLookup {

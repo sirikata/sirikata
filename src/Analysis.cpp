@@ -1198,7 +1198,8 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OH_RECEIVED);
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
-        PACKETSTAGE(OSEG_LOOKUP_FINISHED);
+        PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
+        PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
