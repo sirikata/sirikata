@@ -1,47 +1,116 @@
 <html>
-    <b> Javascript Tests</b><br>
-    click on the google pane to select it first, then come back here<br>
-    web controls:
-    <input type="button" value="<--" onClick="goBack()">
-    <input type="button" value="-->" onClick="goFwd()">
-    <input type="button" value="new" onClick="newTab()">
-    <input type="button" value="close" onClick="chrome.send('event',['navdel'])">
-    <br>
-    Type a fully-formed URL in the box and press
-    <button onClick='goURL()'>GO!</button>
-    <input id='selectedURL' size=60 value="http://sirikata.com"> 
-    <br>
-    avatar controls:
-    <input type="button" value="walk" onClick="avFwd()">
-    <input type="button" value="stop" onClick="avStop()">
-    <input type="button" value="left" onClick="avLeft()">
-    <input type="button" value="right" onClick="avRight()">
-    <script type="text/javascript">
-	function goURL() {
-		var url=document.getElementById('selectedURL').value;
-		chrome.send("event",["navgo", url])
-	}
-	function goFwd() {
-		chrome.send("event",["navforward"])
-	}
-	function goBack() {
-		chrome.send("event",["navback"])
-	}
-	function newTab() {
-		chrome.send("event",["navnewtab"])
-	}
-	function avFwd() {
-		chrome.send("event",["navmoveforward", "1"])
-	}
-	function avStop() {
-		chrome.send("event",["navmoveforward", "0"])
-	}
-	function avLeft() {
-		chrome.send("event",["navturnleft", "1"])
-	}
-	function avRight() {
-		chrome.send("event",["navturnright", "1"])
-	}
+  <head>
+    <style type="text/css">
+      body {
+      margin: 0px;
+      margin-top: 3px;
+      padding: 0px;
+      }
+
+      div {
+      float: left;
+      }
+
+      div.button {
+      height: 29px;
+      }
+
+      #back {
+      width: 29px;
+      }
+
+      #forward {
+      width: 28px;
+      }
+
+      #reload {
+      width: 31px;
+      }
+
+      div.addressbar {
+      float: right;
+      }
+
+      div.address {
+      padding-left: 6px;
+      width: 230px;
+      height: 30px;
+      }
+      input.address {
+      float: left;
+      width: 100%;
+      margin-top: 1px;
+      height: 27px;
+      border-width: 1px 0px 1px 1px;
+      border-color: #CCC;
+      border-style: solid;
+      }
+
+      #go {
+      float: left;
+      width: 30px;
+      }
+
+      #newtab {
+      height: 18px;
+      width: 28px;
+      margin-top: 6px;
+      }
+      #deltab {
+      height: 18px;
+      width: 28px;
+      margin-top: 6px;
+      }
+    </style>
+    <script language="javascript" type="text/javascript">
+      function setButtonImage(id, mode) {
+        var imgPath = "url(" + id + mode + ".png)";
+        document.getElementById(id).style.backgroundImage = imgPath;
+      }
+      function setButtonNormal(id) { setButtonImage(id, ""); }
+      function setButtonPressed(id) { setButtonImage(id, "_p"); }
+      function setButtonHover(id) { setButtonImage(id, "_h"); }
+      function setButtonDisabled(id) { setButtonImage(id, "_d"); }
+
+      function initButton(id) {
+        setButtonNormal(id);
+        var button = document.getElementById(id);
+        button.onmouseover = function() { setButtonHover(id); }
+        button.onmouseout = function() { setButtonNormal(id); }
+        button.onmousedown = function() { setButtonPressed(id); }
+        button.onmouseup = function() { setButtonNormal(id); }
+      }
+
+      function initButtons() {
+        initButton("back");
+        initButton("forward");
+        initButton("reload");
+        initButton("go");
+        initButton("newtab");
+        initButton("deltab");
+      }
+
+      function goAddress() {
+        var url=document.getElementById('addresstext').value;
+        chrome.send("event",["navgo", url])
+      }
+      function goBack() { chrome.send("event",["navback"]); }
+      function goForward() { chrome.send("event",["navforward"]); }
+      function goRefresh() { chrome.send("event",["navrefresh"]); }
+      function goNewTab() { chrome.send("event",["navnewtab"]); }
+      function goCloseTab() { chrome.send("event",["navdel"]); }
     </script>
+  </head>
+  <body onLoad="initButtons()">
+    <div class="button" id="back" onclick="goBack()"></div>
+    <div class="button" id="forward" onclick="goForward()"></div>
+    <div class="button" id="reload" onclick="goRefresh()"></div>
+    <div class"addressbar">
+      <div class="address"><input type="text" class="address" id="addresstext"></input></div>
+      <div class="button" id="go" onclick="goAddress()"></div>
+    </div>
+    <div class="button" id="newtab", onclick="goNewTab()"></div>
+    <div class="button" id="deltab", onclick="goCloseTab()"></div>
+  </body>
 </html>
 

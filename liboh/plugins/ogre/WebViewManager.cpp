@@ -124,13 +124,15 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
-        chromeWebView = createWebView("__chrome", 450, 200, OverlayPosition(RP_TOPRIGHT), false, 70, TIER_FRONT);
+        chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         chromeWebView->loadFile("../../../liboh/plugins/ogre/data/chrome/navbar.html");
         
-        WebView *mychromeWebView = createWebView("google", 320, 240, OverlayPosition(RP_TOPLEFT), false, 70);
+        /*
+        WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
         mychromeWebView->loadURL("http://google.com/");
         mychromeWebView->setTransparent(true);
         mychromeWebView->focus();
+        */
 /*
         mychromeWebView = createWebView("xahoo", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
         mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
