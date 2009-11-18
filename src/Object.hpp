@@ -36,7 +36,6 @@
 #include "Utility.hpp"
 #include "Message.hpp"
 #include "MotionPath.hpp"
-#include "ObjectHost.hpp"
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -83,6 +82,9 @@ private:
 
 typedef std::set<UUID> ObjectSet;
 
+class ObjectHostContext;
+class ObjectFactory;
+
 struct MaxDistUpdatePredicate {
     static float64 maxDist;
     bool operator()(const MotionVector3f& lhs, const MotionVector3f& rhs) const {
@@ -93,7 +95,7 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
+    Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
 
     ~Object();
 
@@ -135,7 +137,8 @@ private:
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)
     const UUID mID;
-    const ObjectHostContext* mContext;
+    const ObjectHostContext* const mContext;
+    ObjectFactory* const mObjectFactory;
 
     // LOCK PROTECTED:
     // These need to be accessed by multiple threads, protected by locks

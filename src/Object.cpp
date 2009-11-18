@@ -33,6 +33,8 @@
 #include "Object.hpp"
 #include "Message.hpp"
 #include "Random.hpp"
+#include "ObjectHostContext.hpp"
+#include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include "Statistics.hpp"
 #include <boost/bind.hpp>
@@ -43,9 +45,10 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 3.0;
 
-Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx)
+Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
    mContext(ctx),
+   mObjectFactory(obj_factory),
    mBounds(bnds),
    mLocation(motion->initial()),
    mMotion(motion),
@@ -59,7 +62,7 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
 
 Object::~Object() {
     disconnect();
-    mContext->objectFactory->notifyDestroyed(mID);
+    mObjectFactory->notifyDestroyed(mID);
 }
 
 void Object::addSubscriber(const UUID& sub) {

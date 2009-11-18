@@ -38,7 +38,6 @@
 
 namespace CBR {
 
-class ObjectFactory;
 class ObjectHost;
 
 typedef uint64 ObjectHostID;
@@ -48,15 +47,13 @@ public:
     ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Time& curtime, const Duration& simlen)
      : Context("Object Host", ios, strand, _trace, epoch, curtime, simlen),
        id(_id),
-       objectHost(NULL),
-       objectFactory(NULL)
+       objectHost(NULL)
     {
     }
 
 
     ObjectHostID id;
     ObjectHost* objectHost;
-    ObjectFactory* objectFactory;
 }; // class ObjectHostContext
 
 } // namespace CBR

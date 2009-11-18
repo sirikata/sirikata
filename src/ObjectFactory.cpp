@@ -68,7 +68,6 @@ ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region
    mContext(ctx),
    mLocalIDSource(0)
 {
-    mContext->objectFactory = this;
     mProfiler = mContext->profiler->addStage("Object Factory Tick");
     // Note: we do random second in order make sure they get later connect times
     generatePackObjects(region, duration);
@@ -280,7 +279,7 @@ Object* ObjectFactory::object(const UUID& id) {
     ObjectMap::iterator it = mObjects.find(id);
     if (it != mObjects.end()) return it->second;
 
-    Object* new_obj = new Object(id, motion(id), bounds(id), registerQuery(id), queryAngle(id), mContext);
+    Object* new_obj = new Object(this, id, motion(id), bounds(id), registerQuery(id), queryAngle(id), mContext);
     mObjects[id] = new_obj;
     return new_obj;
 }
