@@ -35,8 +35,8 @@
 
 #include "Utility.hpp"
 #include "Timer.hpp"
-#include "PollingService.hpp"
 #include "TimeProfiler.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 

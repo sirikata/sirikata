@@ -310,6 +310,7 @@ SET(CBR_SOURCES
 
 SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/Network.cpp
+  ${CBR_SOURCE_DIR}/oh/ObjectHostContext.cpp
   ${CBR_SOURCE_DIR}/oh/Object.cpp
   ${CBR_SOURCE_DIR}/oh/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
