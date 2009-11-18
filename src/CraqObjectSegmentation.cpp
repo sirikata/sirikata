@@ -174,6 +174,7 @@ namespace CBR
 
 
   //checks value against cache.
+  //should only be called from the "postingStrand"
   ServerID CraqObjectSegmentation::satisfiesCache(const UUID& obj_id)
   {
 
@@ -215,6 +216,7 @@ namespace CBR
 
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
+    Only called from postingStrand
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
@@ -245,21 +247,13 @@ namespace CBR
       return cacheReturn;
     }
 
-    //    may need to wrap.;
     oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id));
-    //    beginCraqLookup(obj_id);
-
-    //note to self.
-    //    issue - do I need to ensure that nullserverid returns before begincraqlookup via some strange semantics? when I add in stranding?  May need to mutex lock the lookup call from outside of here.;
-
 
     return NullServerID;
   }
 
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id)
   {
-
-    
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
@@ -278,9 +272,10 @@ namespace CBR
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
-      //      craqDht.get(cdSetGet); //calling the craqDht to do a get.
+
       craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
 
+      std::cout<<"\nCraq lookup for "<<obj_id.toString()<<"\n";
 
       mContext->trace()->objectSegmentationCraqLookupRequest(mContext->time, obj_id, mContext->id());
 
@@ -455,7 +450,10 @@ namespace CBR
           //add the value to the cache
           mCraqCache.insert(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid(), mContext->id());
 
-
+          
+          //          postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid(), mContext->id()
+          //            lkjs;
+          
           //add to mObjects the uuid associated with trackedMessage.
           mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid());
 
@@ -693,6 +691,8 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 //should be called from inside of mainStrand->post.
 void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
 {
+  std::cout<<"\nCraq response for "<<obj_id.toString()<<"\n";
+  
   mListener->osegLookupCompleted( obj_id,sID);
 }
 

@@ -142,6 +142,8 @@ namespace CBR
       if (satisfiesCacheAgeCondition(idRecMapIter->second->age))
       {
         mMutex.unlock();
+        std::cout<<"\n\nCache returning:   "<<idRecMapIter->second->sID<<"\n";
+        
         return idRecMapIter->second->sID;
       }
     }
