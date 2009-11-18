@@ -310,9 +310,9 @@ SET(CBR_SOURCES
 
 SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/Network.cpp
-  ${CBR_SOURCE_DIR}/Object.cpp
-  ${CBR_SOURCE_DIR}/ObjectFactory.cpp
-  ${CBR_SOURCE_DIR}/ObjectHost.cpp
+  ${CBR_SOURCE_DIR}/oh/Object.cpp
+  ${CBR_SOURCE_DIR}/oh/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
