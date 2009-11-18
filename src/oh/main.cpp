@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 
-    ObjectHost* obj_host = new ObjectHost(ctx, obj_factory, gTrace, server_id_map);
+    ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {

@@ -60,7 +60,7 @@ public:
     typedef SessionCallback MigratedCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
-    ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap);
+    ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap);
 
     ~ObjectHost();
 

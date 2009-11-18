@@ -33,7 +33,6 @@
 #include "ObjectHost.hpp"
 #include "Statistics.hpp"
 #include "Object.hpp"
-#include "ObjectFactory.hpp"
 #include "sirikata/network/StreamFactory.hpp"
 #include "sirikata/network/Stream.hpp"
 #include "sirikata/util/PluginManager.hpp"
@@ -282,7 +281,7 @@ Object* ObjectHost::ObjectConnections::randomObject(ServerID whichServer, bool n
 
 // ObjectHost Implementation
 
-ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap)
+ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap)
  : Service(),
    mContext( ctx ),
    mIOService( IOServiceFactory::makeIOService() ),
