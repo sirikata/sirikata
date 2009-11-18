@@ -4,7 +4,6 @@
 #include "Utility.hpp"
 #include "Statistics.hpp"
 #include "Message.hpp"
-#include "Object.hpp"
 #include "Statistics.hpp"
 #include "Timer.hpp"
 #include "ObjectSegmentation.hpp"

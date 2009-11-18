@@ -31,7 +31,6 @@
  */
 
 #include "ObjectConnection.hpp"
-#include "Object.hpp"
 #include "Message.hpp"
 #include "Statistics.hpp"
 
