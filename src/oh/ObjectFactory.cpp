@@ -40,9 +40,10 @@
 
 #include "OSegTestMotionPath.hpp"
 
-
 #include "Options.hpp"
 #include "Statistics.hpp"
+
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
@@ -64,11 +65,10 @@ static UUID packUUID(const uint64 packid) {
 }
 
 ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration)
- : PollingService(ctx->mainStrand),
+ : Service(),
    mContext(ctx),
    mLocalIDSource(0)
 {
-    mProfiler = mContext->profiler->addStage("Object Factory Tick");
     // Note: we do random second in order make sure they get later connect times
     generatePackObjects(region, duration);
     generateRandomObjects(region, duration);
@@ -134,6 +134,8 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         inputs->registerQuery = (randFloat() <= percent_queriers);
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
         inputs->connectAt = Duration::seconds(0.f);
+
+        inputs->startTimer = IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -249,11 +251,6 @@ SolidAngle ObjectFactory::queryAngle(const UUID& id) {
     return mInputs[id]->queryAngle;
 }
 
-bool ObjectFactory::isActive(const UUID& id) {
-    ObjectMap::iterator it = mObjects.find(id);
-    return (it != mObjects.end());
-}
-
 Object* ObjectFactory::object(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
 
@@ -265,25 +262,36 @@ Object* ObjectFactory::object(const UUID& id) {
     return new_obj;
 }
 
-void ObjectFactory::poll() {
-    mProfiler->started();
 
-    Time t = mContext->time;
-    for(ObjectIDSet::iterator it = mObjectIDs.begin(); it != mObjectIDs.end(); it++) {
-        // Active objects receive a tick
-        if (isActive(*it)) {
-            object(*it)->tick();
-            continue;
-        }
+void ObjectFactory::start() {
+    for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end(); it++) {
+        UUID objid = it->first;
+        ObjectInputs* inputs = it->second;
 
-        // Inactive objects are checked to see if they are ready to connect
-        if (mInputs[*it]->connectAt <= (t - Time::null())) {
-            Object* obj = object(*it);
-            obj->connect();
-        }
+        inputs->startTimer->wait(
+            inputs->connectAt,
+            mContext->mainStrand->wrap( std::tr1::bind(&ObjectFactory::handleObjectInit, this, objid) )
+        );
+    }
+}
+
+void ObjectFactory::handleObjectInit(const UUID& objid) {
+    Object* obj = object(objid);
+    obj->start();
+}
+
+void ObjectFactory::stop() {
+    // Stop the timers which start new objects
+    for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end(); it++) {
+        ObjectInputs* inputs = it->second;
+        inputs->startTimer->cancel();
     }
 
-    mProfiler->finished();
+    // Stop all objects
+    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+        Object* obj = it->second;
+        obj->stop();
+    }
 }
 
 void ObjectFactory::notifyDestroyed(const UUID& id) {

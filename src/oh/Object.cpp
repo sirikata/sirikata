@@ -56,7 +56,9 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mRegisterQuery(regQuery),
    mQueryAngle(queryAngle),
    mConnectedTo(0),
-   mMigrating(false)
+   mMigrating(false),
+   mQuitting(false),
+   mLocUpdateTimer( IOTimer::create(mContext->ioService) )
 {
 }
 
@@ -64,6 +66,64 @@ Object::~Object() {
     disconnect();
     mObjectFactory->notifyDestroyed(mID);
 }
+
+void Object::start() {
+    connect();
+}
+
+void Object::stop() {
+    mQuitting = true;
+    mLocUpdateTimer->cancel();
+}
+
+void Object::scheduleNextLocUpdate() {
+    const Time tnow = mContext->simTime();
+
+    TimedMotionVector3f curLoc = location();
+    const TimedMotionVector3f* update = mMotion->nextUpdate(tnow);
+    if (update != NULL) {
+        mLocUpdateTimer->wait(
+            update->time() - tnow,
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Object::handleNextLocUpdate, this, *update)
+            )
+        );
+    }
+}
+
+void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
+    if (mQuitting) {
+        disconnect();
+        return;
+    }
+
+    const Time tnow = mContext->simTime();
+
+    TimedMotionVector3f curLoc = up;
+    mLocation = curLoc;
+
+    if (!mMigrating && mLocationExtrapolator.needsUpdate(tnow, curLoc.extrapolate(tnow))) {
+        mLocationExtrapolator.updateValue(curLoc.time(), curLoc.value());
+
+        // Generate and send an update to Loc
+        CBR::Protocol::Loc::Container container;
+        CBR::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
+        CBR::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
+        requested_loc.set_t(curLoc.updateTime());
+        requested_loc.set_position(curLoc.position());
+        requested_loc.set_velocity(curLoc.velocity());
+        bool success = mContext->objectHost->send(
+            this, OBJECT_PORT_LOCATION,
+            UUID::null(), OBJECT_PORT_LOCATION,
+            serializePBJMessage(container)
+        );
+        // XXX FIXME do something on failure
+        mContext->trace()->objectGenLoc(tnow, mID, curLoc);
+    }
+
+    scheduleNextLocUpdate();
+}
+
 
 void Object::addSubscriber(const UUID& sub) {
     if (mSubscribers.find(sub) == mSubscribers.end())
@@ -74,11 +134,6 @@ void Object::removeSubscriber(const UUID& sub) {
     ObjectSet::iterator it = mSubscribers.find(sub);
     if (it != mSubscribers.end())
         mSubscribers.erase(it);
-}
-
-void Object::tick() {
-    if (connected() && !mMigrating)
-        checkPositionUpdate();
 }
 
 const TimedMotionVector3f Object::location() const {
@@ -101,14 +156,14 @@ void Object::connect() {
         mContext->objectHost->connect(
             this,
             mQueryAngle,
-            boost::bind(&Object::handleSpaceConnection, this, _1),
-            boost::bind(&Object::handleSpaceMigration, this, _1)
+            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
+            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) )
         );
     else
         mContext->objectHost->connect(
             this,
-            boost::bind(&Object::handleSpaceConnection, this, _1),
-            boost::bind(&Object::handleSpaceMigration, this, _1)
+            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
+            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) )
         );
 }
 
@@ -126,6 +181,11 @@ void Object::handleSpaceConnection(ServerID sid) {
 
     OBJ_LOG(insane,"Got space connection callback");
     mConnectedTo = sid;
+
+    // Start normal processing
+    mContext->mainStrand->post(
+        std::tr1::bind(&Object::scheduleNextLocUpdate, this)
+    );
 }
 
 void Object::handleSpaceMigration(ServerID sid) {
@@ -135,38 +195,6 @@ void Object::handleSpaceMigration(ServerID sid) {
 
 bool Object::connected() {
     return (mConnectedTo != NullServerID);
-}
-
-void Object::checkPositionUpdate() {
-    const Time& t = mContext->time;
-
-    TimedMotionVector3f curLoc = location();
-    const TimedMotionVector3f* update = mMotion->nextUpdate(curLoc.time());
-    while(update != NULL && update->time() <= t) {
-        curLoc = *update;
-        update = mMotion->nextUpdate(curLoc.time());
-    }
-
-    mLocation = curLoc;
-
-    if (mLocationExtrapolator.needsUpdate(t, curLoc.extrapolate(t))) {
-        mLocationExtrapolator.updateValue(curLoc.time(), curLoc.value());
-
-        // Generate and send an update to Loc
-        CBR::Protocol::Loc::Container container;
-        CBR::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
-        CBR::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
-        requested_loc.set_t(curLoc.updateTime());
-        requested_loc.set_position(curLoc.position());
-        requested_loc.set_velocity(curLoc.velocity());
-        bool success = mContext->objectHost->send(
-            this, OBJECT_PORT_LOCATION,
-            UUID::null(), OBJECT_PORT_LOCATION,
-            serializePBJMessage(container)
-        );
-        // XXX FIXME do something on failure
-        mContext->trace()->objectGenLoc(t, mID, curLoc);
-    }
 }
 
 void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {

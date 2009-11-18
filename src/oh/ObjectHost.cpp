@@ -747,8 +747,10 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     else {
         // Otherwise, by default, we just ship it to the correct object
         Object* obj = mObjectConnections.object(msg->dest_object());
-        assert(obj != NULL);
-        obj->receiveMessage(msg);
+        if (obj != NULL)
+            obj->receiveMessage(msg);
+        else
+            delete msg;
     }
 
     mContext->trace()->timestampMessage(mContext->simTime(), msg_uniq, Trace::DESTROYED, msg_src_port, msg_dst_port);

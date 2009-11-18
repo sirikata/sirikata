@@ -92,7 +92,7 @@ struct MaxDistUpdatePredicate {
     }
 };
 
-class Object {
+class Object : public Service {
 public:
     /** Standard constructor. */
     Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
@@ -106,18 +106,20 @@ public:
     const TimedMotionVector3f location() const;
     const BoundingSphere3f bounds() const;
 
-    void tick();
+    void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
+
+    virtual void start();
+    virtual void stop();
+private:
+    bool connected();
 
     // Initiate a connection
     void connect();
-
-    void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
-private:
-
-    bool connected();
-
     // Disconnects from the space if a connection has been established
     void disconnect();
+
+    void scheduleNextLocUpdate();
+    void handleNextLocUpdate(const TimedMotionVector3f& up);
 
     void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
@@ -125,8 +127,6 @@ private:
 
     void addSubscriber(const UUID& sub);
     void removeSubscriber(const UUID& sub);
-
-    void checkPositionUpdate();
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(ServerID sid);
@@ -155,6 +155,9 @@ private:
 
     ServerID mConnectedTo;
     bool mMigrating;
+    bool mQuitting;
+
+    IOTimerPtr mLocUpdateTimer;
 }; // class Object
 
 } // namespace CBR

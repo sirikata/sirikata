@@ -45,7 +45,7 @@ class ObjectHostContext;
  *  system.  Second, when requested, it should generate an Object for performing
  *  full simulation of the object on the local server.
  */
-class ObjectFactory : public PollingService {
+class ObjectFactory : public Service {
     typedef std::set<UUID> ObjectIDSet;
     struct ObjectInputs {
         uint32 localID;
@@ -54,6 +54,8 @@ class ObjectFactory : public PollingService {
         bool registerQuery;
         SolidAngle queryAngle;
         Duration connectAt;
+
+        IOTimerPtr startTimer;
     };
     typedef std::tr1::unordered_map<UUID, ObjectInputs*,UUID::Hasher> ObjectInputsMap;
     typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;
@@ -68,24 +70,24 @@ private:
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
 
-    virtual void poll();
+    virtual void start();
+    virtual void stop();
 
     void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);
     void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
     // Generates connection initiation times for all objects *after* they have been created
     void setConnectTimes();
 
+    void handleObjectInit(const UUID& objid);
+
     bool registerQuery(const UUID& id);
     SolidAngle queryAngle(const UUID& id);
 
-
-    bool isActive(const UUID& id);
 
     friend class Object;
     void notifyDestroyed(const UUID& id); // called by objects when they are destroyed
 
     ObjectHostContext* mContext;
-    TimeProfiler::Stage* mProfiler;
     uint32 mLocalIDSource;
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
