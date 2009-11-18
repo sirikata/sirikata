@@ -59,24 +59,15 @@ class ObjectFactory : public PollingService {
     typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;
 
 public:
-    typedef ObjectIDSet::iterator iterator;
-    typedef ObjectIDSet::const_iterator const_iterator;
-
     ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
 
-    iterator begin();
-    const_iterator begin() const;
-    iterator end();
-    const_iterator end() const;
+private:
+    Object* object(const UUID& id);
 
-    // NOTE: these is only public for analysis purposes
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
 
-    Object* object(const UUID& id);
-
-private:
     virtual void poll();
 
     void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);

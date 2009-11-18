@@ -225,22 +225,6 @@ void ObjectFactory::setConnectTimes() {
     }
 }
 
-ObjectFactory::iterator ObjectFactory::begin() {
-    return mObjectIDs.begin();
-}
-
-ObjectFactory::const_iterator ObjectFactory::begin() const {
-    return mObjectIDs.begin();
-}
-
-ObjectFactory::iterator ObjectFactory::end() {
-    return mObjectIDs.end();
-}
-
-ObjectFactory::const_iterator ObjectFactory::end() const {
-    return mObjectIDs.end();
-}
-
 MotionPath* ObjectFactory::motion(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
     assert( mInputs.find(id) != mInputs.end() );
@@ -285,7 +269,7 @@ void ObjectFactory::poll() {
     mProfiler->started();
 
     Time t = mContext->time;
-    for(iterator it = begin(); it != end(); it++) {
+    for(ObjectIDSet::iterator it = mObjectIDs.begin(); it != mObjectIDs.end(); it++) {
         // Active objects receive a tick
         if (isActive(*it)) {
             object(*it)->tick();
