@@ -31,6 +31,8 @@
  */
 
 #include "ObjectFactory.hpp"
+#include "ObjectHostContext.hpp"
+
 #include "RandomMotionPath.hpp"
 #include "Object.hpp"
 #include "Random.hpp"

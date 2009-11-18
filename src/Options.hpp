@@ -35,7 +35,7 @@
 
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
-#include "ObjectHostContext.hpp"
+#include "ObjectHostNetwork.hpp"
 
 #define CBR_MODULE "cbr"
 

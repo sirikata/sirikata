@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectHostContext.hpp
+ *  ObjectHostNetwork.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,34 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_HOST_CONTEXT_HPP_
-#define _CBR_OBJECT_HOST_CONTEXT_HPP_
-
-#include "Utility.hpp"
-#include "Context.hpp"
-#include "PollingService.hpp"
-#include "ObjectHostNetwork.hpp"
+#ifndef _CBR_OBJECT_HOST_NETWORK_HPP_
+#define _CBR_OBJECT_HOST_NETWORK_HPP_
 
 namespace CBR {
 
-class ObjectHost;
-
-class ObjectHostContext : public Context, public Service {
-public:
-    ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
-
-    ObjectHostID id;
-    ObjectHost* objectHost;
-private:
-    void handleSimFinished();
-    virtual void start();
-    void stopSimulation();
-    virtual void stop();
-
-    IOTimerPtr mFinishedTimer;
-}; // class ObjectHostContext
+typedef uint64 ObjectHostID;
 
 } // namespace CBR
 
-
-#endif //_CBR_OBJECT_HOST_CONTEXT_HPP_
+#endif //_CBR_OBJECT_HOST_NETWORK_HPP_
