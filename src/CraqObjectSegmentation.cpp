@@ -24,7 +24,6 @@
 namespace CBR
 {
 
-
   /*
     Basic constructor
   */
@@ -294,7 +293,6 @@ namespace CBR
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
       //tmpTransLookup.timeAdmitted = numServices;
-      std::cout<<"\n\nGot a craq lookup for object with id: "<<obj_id.toString()<<"\n\n";
       
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
     }
@@ -445,10 +443,6 @@ namespace CBR
 
   void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated)
   {
-    if (trackedSetResults.size() !=0)
-      std::cout<<"\n\nbftm debug:  got this many trackedsetresults:   "<<trackedSetResults.size()<<"\n\n";
-
-
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {
       //genrateAcknowledgeMessage(uuid,sidto);  ...we may as well hold onto the object pointer then.
@@ -699,7 +693,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 //should be called from inside of mainStrand->post.
 void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
 {
-  std::cout<<"\n\nGot lookup:  "<<obj_id.toString()<<"\n\n";
   mListener->osegLookupCompleted( obj_id,sID);
 }
 

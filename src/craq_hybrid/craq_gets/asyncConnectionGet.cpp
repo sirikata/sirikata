@@ -51,8 +51,9 @@ void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, s
 {
   if (mPrevReadFrag.size() > 2000)
   {
-    std::cout<<"\n\n\n\nHUGE mPrevReadFrag:  "<<mPrevReadFrag<<"\n\n";
+    std::cout<<"\n\n\n\nHUGE mPrevReadFrag in asyncConnectionGet:  "<<mPrevReadFrag<<"\n\n";
     std::cout.flush();
+    assert(false);
   }
   
   if ((mOperationResultVector.size() !=0)||(mOperationResultErrorVector.size() !=0)||(mOperationResultTrackedSetsVector.size() !=0))
@@ -199,26 +200,10 @@ bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& 
     query.append(dtg[s]->currentlySearchingFor); //this is the re
     query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
   }
-
-//   struct timeval before, after;
-//   gettimeofday(&before, NULL);
-
-  if (first)
-  {
-    std::cout<<"\n\n\n"<<query<<"\n\n\n";
-    first = false;
-  }
-  
   
   async_write((*mSocket),
               boost::asio::buffer(query),
               boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
-
-//   gettimeofday(&after, NULL);
-//   double timeTaken = after.tv_sec - before.tv_sec;
-//   timeTaken = timeTaken + (((double)(after.tv_usec - before.tv_usec))/1000000.0);
-//   mTimesTaken.push_back(timeTaken);
-
   
   return true;
 }
@@ -303,10 +288,6 @@ bool AsyncConnectionGet::set(CraqDataKey dataToSet, int  dataToSetTo, bool track
 //dummy handler for writing the set instruction.  (Essentially, if we run into an error from doing the write operation of a set, we know what to do.)
 void AsyncConnectionGet::write_some_handler_set(  const boost::system::error_code& error, std::size_t bytes_transferred)
 {
-  static int thisWrite = 0;
-
-  ++thisWrite;
-  std::cout<<"\nwritten:  "<<thisWrite<<"\n";
   if (error)
   {
     printf("\n\nin write_some_handler_set\n\n");
@@ -374,12 +355,11 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
   query += STREAM_DATA_KEY_SUFFIX; //bftm changed here.
   query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
 
-  StreamCraqDataKeyQuery dkQuery;
-  strncpy(dkQuery,query.c_str(), STREAM_CRAQ_DATA_KEY_QUERY_SIZE);
-    
   //sets write handler
-  mSocket->async_write_some(boost::asio::buffer(dkQuery,STREAM_CRAQ_DATA_KEY_QUERY_SIZE-1),
-                            boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+  async_write((*mSocket),
+              boost::asio::buffer(query),
+              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+
 
   return true;
 }
@@ -456,18 +436,6 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
   
   while(keepChecking)
   {
-    ++numChecking;
-
-    if (numChecking > 100)
-    {
-      std::cout<<"\n\nThis is response:  "<<response<<"\n\n\n";
-      std::cout.flush();
-      assert(false);
-    }
-    
-    std::cout<<"\n\nThis is response:   "<<response<<"\n\n\n";
-
-    
     keepChecking   =                            false;
 
     //checks to see if there are any responses to get queries with data (also processes);
@@ -560,8 +528,6 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
     {
       //means that the smallest next
       notFoundPhrase = suffixed.substr(suffixNotFoundIndex, smallestNext);
-
-      std::cout<<"\n\n\t\tSuffixed:  "<<suffixed<<"\n\n";
       
       suffixed = suffixed.substr(smallestNext);
 
@@ -642,8 +608,9 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(dataKey);
 
   MultiOutstandingQueries::iterator outQueriesIter;
+  outQueriesIter = eqRange.first;
 
-  for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+  while(outQueriesIter != eqRange.second)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET )
     {
@@ -661,7 +628,11 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 
 
       delete outQueriesIter->second;  //delete this from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter); //
+      allOutstandingQueries.erase(outQueriesIter++); //
+    }
+    else
+    {
+      outQueriesIter++;
     }
   }
 }
@@ -757,9 +728,8 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
   MultiOutstandingQueries::iterator outQueriesIter;
-
-
-  for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+  outQueriesIter = eqRange.first;
+  while(outQueriesIter != eqRange.second)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to 
     {
@@ -775,15 +745,14 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
       mOperationResultVector.push_back(cor);
 
       delete outQueriesIter->second;  //delete this from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter); //
-      
+      allOutstandingQueries.erase(outQueriesIter++); //
+    }
+    else
+    {
+      outQueriesIter++;
     }
   }
 }
-
-
-
-
 
 
 //VALUE|CRAQ KEY|SIZE|VALUE
@@ -808,9 +777,6 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
     return false;  //didn't read enough of the key header
 
   //*******Parse server id
-  
-  //next two characters are size
-
 
   if (STREAM_CRAQ_VALUE_RESP_SIZE + CRAQ_DATA_KEY_SIZE + STREAM_SIZE_SIZE_TAG_GET_RESPONSE > (int)response.size())
   {
@@ -845,8 +811,9 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
   MultiOutstandingQueries::iterator outQueriesIter;
+  outQueriesIter = eqRange.first;
 
-  for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+  while(outQueriesIter != eqRange.second)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to 
     {
@@ -862,8 +829,11 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 
       
       delete outQueriesIter->second;  //delete this from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter); //
-      
+      allOutstandingQueries.erase(outQueriesIter++); //
+    }
+    else
+    {
+      outQueriesIter++;
     }
   }
 }
@@ -930,7 +900,6 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
 
     if (mSocket == NULL)
       return;
-
     
     std::cout<<"\n\nTHIS UPPER ERROR\n\n";
     
@@ -952,13 +921,8 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
     is >> tmpLine;
   }
 
-  //  std::cout<<"\n\n\n\nResponse:    "<<response<<"\n\n\n\n";
-  mAllResponseCount += countInstancesOf("VALUE",response);
-  response = "";
 
-
-  bool anything = true;
-  //bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
+  bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
   
   delete sBuff;
 
@@ -1040,8 +1004,6 @@ bool AsyncConnectionGet::checkStored(std::string& response)
     std::string dataKey;
     if (parseStoredValue(storedPhrase, dataKey))
     {
-      //      std::cout<<"\n\nDebug: value stored.\n";
-      //      std::cout<<"\tdataKey: "<<dataKey<<"\n\n";
       returner = true;      
       processStoredValue(dataKey);
     }

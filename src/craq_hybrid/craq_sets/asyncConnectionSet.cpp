@@ -439,6 +439,37 @@ bool AsyncConnectionSet::parseValueNotFound(std::string response, std::string& d
 
 
 //takes the data key associated with a not found message, and loads it into operation result vector.
+// void AsyncConnectionSet::processValueNotFound(std::string dataKey)
+// {
+//   //look through multimap to find 
+//   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(dataKey);
+
+//   MultiOutstandingQueries::iterator outQueriesIter;
+
+//   for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+//   {
+//     if (outQueriesIter->second->gs == IndividualQueryData::GET )
+//     {
+//       //says that this is a get.
+//       CraqOperationResult* cor  = new CraqOperationResult(0,
+//                                                           outQueriesIter->second->currentlySearchingFor,
+//                                                           outQueriesIter->second->tracking_number,
+//                                                           true,
+//                                                           CraqOperationResult::GET,
+//                                                           false); //this is a not_found, means that we add 0 for the id found
+
+//       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
+      
+//       mOperationResultVector.push_back(cor); //loads this not found result into the results vector.
+
+
+//       delete outQueriesIter->second;  //delete this from a memory perspective
+//       allOutstandingQueries.erase(outQueriesIter); //
+//     }
+//   }
+// }
+
+
 void AsyncConnectionSet::processValueNotFound(std::string dataKey)
 {
   //look through multimap to find 
@@ -446,11 +477,11 @@ void AsyncConnectionSet::processValueNotFound(std::string dataKey)
 
   MultiOutstandingQueries::iterator outQueriesIter;
 
-  for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+  outQueriesIter = eqRange.first;
+  while(outQueriesIter != eqRange.second)
   {
-    if (outQueriesIter->second->gs == IndividualQueryData::GET )
+    if (outQueriesIter->second->gs == IndividualQueryData::GET)
     {
-      //says that this is a get.
       CraqOperationResult* cor  = new CraqOperationResult(0,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
@@ -462,14 +493,15 @@ void AsyncConnectionSet::processValueNotFound(std::string dataKey)
       
       mOperationResultVector.push_back(cor); //loads this not found result into the results vector.
 
-
       delete outQueriesIter->second;  //delete this from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter); //
+      allOutstandingQueries.erase(outQueriesIter++); //note the order of the ++ iterator is so that previous iterator gets erased.
+    }
+    else
+    {
+      ++outQueriesIter;
     }
   }
 }
-
-
 
 
 
@@ -533,6 +565,40 @@ bool AsyncConnectionSet::checkValue(std::string& response)
 
 
 //takes the string associated with the datakey of a value found message and inserts it into operation value found
+// void AsyncConnectionSet::processValueFound(std::string dataKey, int sID)
+// {
+//   //look through multimap to find
+//   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
+
+//   MultiOutstandingQueries::iterator outQueriesIter;
+
+
+//   for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+//   {
+//     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to 
+//     {
+      
+//       CraqOperationResult* cor  = new CraqOperationResult(sID,
+//                                                           outQueriesIter->second->currentlySearchingFor,
+//                                                           outQueriesIter->second->tracking_number,
+//                                                           true,
+//                                                           CraqOperationResult::GET,
+//                                                           false); //this is a not_found, means that we add 0 for the id found
+
+//       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
+//       mOperationResultVector.push_back(cor);
+
+//       delete outQueriesIter->second;  //delete this from a memory perspective
+//       allOutstandingQueries.erase(outQueriesIter); //
+
+
+//       need to change this erase sequence around with the ++ iterator at the end;
+      
+//     }
+//   }
+// }
+
+
 void AsyncConnectionSet::processValueFound(std::string dataKey, int sID)
 {
   //look through multimap to find
@@ -540,8 +606,9 @@ void AsyncConnectionSet::processValueFound(std::string dataKey, int sID)
 
   MultiOutstandingQueries::iterator outQueriesIter;
 
+  outQueriesIter =  eqRange.first;
 
-  for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+  while (outQueriesIter != eqRange.second)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to 
     {
@@ -557,11 +624,16 @@ void AsyncConnectionSet::processValueFound(std::string dataKey, int sID)
       mOperationResultVector.push_back(cor);
 
       delete outQueriesIter->second;  //delete this from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter); //
-      
+      allOutstandingQueries.erase(outQueriesIter++); //
+    }
+    else
+    {
+      outQueriesIter++;
     }
   }
 }
+
+
 
 
 //VALUE|CRAQ KEY|SIZE|VALUE
@@ -613,6 +685,37 @@ bool AsyncConnectionSet::parseValueValue(std::string response, std::string& data
 }
 
 
+// void AsyncConnectionSet::processStoredValue(std::string dataKey)
+// {
+//   //look through multimap to find
+//   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
+
+//   MultiOutstandingQueries::iterator outQueriesIter;
+
+//   for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+//   {
+//     if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to 
+//     {
+//       CraqOperationResult* cor  = new CraqOperationResult(outQueriesIter->second->currentlySettingTo,
+//                                                           outQueriesIter->second->currentlySearchingFor,
+//                                                           outQueriesIter->second->tracking_number,
+//                                                           true,
+//                                                           CraqOperationResult::SET,
+//                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
+
+//       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
+//       //      mOperationResultVector.push_back(cor);
+
+//       mOperationResultTrackedSetsVector.push_back(cor);
+      
+//       delete outQueriesIter->second;  //delete this from a memory perspective
+//       allOutstandingQueries.erase(outQueriesIter); //
+      
+//     }
+//   }
+// }
+
+
 void AsyncConnectionSet::processStoredValue(std::string dataKey)
 {
   //look through multimap to find
@@ -620,10 +723,12 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
 
   MultiOutstandingQueries::iterator outQueriesIter;
 
-  for(outQueriesIter = eqRange.first; outQueriesIter != eqRange.second; ++outQueriesIter)
+  outQueriesIter = eqRange.first;
+  while (outQueriesIter != eqRange.second)
   {
-    if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to 
+    if (outQueriesIter->second->gs == IndividualQueryData::SET)  //we only need to delete from multimap if it's a set response.
     {
+      
       CraqOperationResult* cor  = new CraqOperationResult(outQueriesIter->second->currentlySettingTo,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
@@ -632,16 +737,18 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      //      mOperationResultVector.push_back(cor);
-
       mOperationResultTrackedSetsVector.push_back(cor);
       
-      delete outQueriesIter->second;  //delete this from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter); //
-      
+      delete outQueriesIter->second;  //delete this query from a memory perspective
+      allOutstandingQueries.erase(outQueriesIter++); //note that this returns the value before 
+    }
+    else
+    {
+      ++outQueriesIter;
     }
   }
 }
+
 
 
 bool AsyncConnectionSet::parseStoredValue(const std::string& response, std::string& dataKey)
