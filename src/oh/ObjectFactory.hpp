@@ -74,9 +74,7 @@ public:
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
 
-#ifdef OH_BUILD // These should only ever be used by the object host
     Object* object(const UUID& id);
-#endif //OH_BUILD
 
 private:
     virtual void poll();

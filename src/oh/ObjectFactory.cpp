@@ -76,13 +76,11 @@ ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region
 }
 
 ObjectFactory::~ObjectFactory() {
-#ifdef OH_BUILD // should only need to clean these up on object host
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end();) {
         Object* obj = it->second;
         ++it;
         delete obj;
     }
-#endif //OH_BUILD
 
     for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end();) {
         ObjectInputs* inputs = it->second;
@@ -272,7 +270,6 @@ bool ObjectFactory::isActive(const UUID& id) {
     return (it != mObjects.end());
 }
 
-#ifdef OH_BUILD
 Object* ObjectFactory::object(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
 
@@ -283,10 +280,8 @@ Object* ObjectFactory::object(const UUID& id) {
     mObjects[id] = new_obj;
     return new_obj;
 }
-#endif //OH_BUILD
 
 void ObjectFactory::poll() {
-#ifdef OH_BUILD
     mProfiler->started();
 
     Time t = mContext->time;
@@ -305,7 +300,6 @@ void ObjectFactory::poll() {
     }
 
     mProfiler->finished();
-#endif //OH_BUILD
 }
 
 void ObjectFactory::notifyDestroyed(const UUID& id) {
