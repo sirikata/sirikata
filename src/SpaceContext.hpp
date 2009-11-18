@@ -49,14 +49,25 @@ class MockForwarder;
  *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
  *  from messages), and a Trace object.
  */
-class SpaceContext : public Context {
+class SpaceContext : public Context, public PollingService {
 public:
     SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
-     : Context("Space", ios, strand, _trace, epoch, curtime, duration),
+     : Context("Space", ios, strand, _trace, epoch, duration),
+       PollingService(strand),
+       lastTime(curtime),
+       time(curtime),
        mID(_id),
        mRouter(NULL),
        mDispatcher(NULL)
     {
+        mIterationProfiler = profiler->addStage("Context Iteration");
+        mIterationProfiler->started();
+        mWorkProfiler = profiler->addStage("Context Work");
+    }
+
+    ~SpaceContext() {
+        delete mIterationProfiler;
+        delete mWorkProfiler;
     }
 
     ServerID id() const {
@@ -75,7 +86,29 @@ public:
         lastTime = time;
         time = t;
     }
+
+    Time lastTime;
+    Time time;
 private:
+    virtual void poll() {
+        mIterationProfiler->finished();
+        mWorkProfiler->started();
+
+        Duration elapsed = sinceEpoch( Timer::now());
+
+        if (elapsed > mSimDuration) {
+            this->stop();
+            for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
+                (*it)->stop();
+        }
+
+        lastTime = time;
+        time = Time::null() + elapsed;
+
+        mWorkProfiler->finished();
+        mIterationProfiler->started();
+    }
+
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
 
@@ -83,6 +116,9 @@ private:
 
     Sirikata::AtomicValue<MessageRouter*> mRouter;
     Sirikata::AtomicValue<MessageDispatcher*> mDispatcher;
+
+    TimeProfiler::Stage* mIterationProfiler;
+    TimeProfiler::Stage* mWorkProfiler;
 }; // class SpaceContext
 
 } // namespace CBR

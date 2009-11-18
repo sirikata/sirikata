@@ -35,6 +35,7 @@
 
 #include "Utility.hpp"
 #include "Context.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
@@ -42,18 +43,47 @@ class ObjectHost;
 
 typedef uint64 ObjectHostID;
 
-class ObjectHostContext : public Context {
+class ObjectHostContext : public Context, public Service {
 public:
-    ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Time& curtime, const Duration& simlen)
-     : Context("Object Host", ios, strand, _trace, epoch, curtime, simlen),
+    ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
+     : Context("Object Host", ios, strand, _trace, epoch, simlen),
        id(_id),
-       objectHost(NULL)
+       objectHost(NULL),
+       mFinishedTimer( IOTimer::create(ios) )
     {
     }
 
 
     ObjectHostID id;
     ObjectHost* objectHost;
+
+private:
+    void handleSimFinished() {
+    }
+
+    virtual void start() {
+        Time t_now = simTime();
+        Time t_end = simTime(mSimDuration);
+        Duration wait_dur = t_end - t_now;
+        mFinishedTimer->wait(
+            wait_dur,
+            mainStrand->wrap(
+                std::tr1::bind(&ObjectHostContext::stopSimulation, this)
+            )
+        );
+    }
+
+    void stopSimulation() {
+        this->stop();
+        for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
+            (*it)->stop();
+    }
+
+    virtual void stop() {
+        mFinishedTimer.reset();
+    }
+
+    IOTimerPtr mFinishedTimer;
 }; // class ObjectHostContext
 
 } // namespace CBR

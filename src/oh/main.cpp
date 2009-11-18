@@ -79,12 +79,10 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    Time init_oh_ctx_time = Time::null() + (Timer::now() - start_time);
-
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
-    ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, gTrace, start_time, init_oh_ctx_time, duration);
+    ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, gTrace, start_time, duration);
 
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 

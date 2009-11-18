@@ -45,26 +45,19 @@ class Trace;
 /** Base class for Contexts, provides basic infrastructure such as IOServices,
  *  IOStrands, Trace, and timing information.
  */
-class Context : public PollingService {
+class Context {
 public:
-    Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Time& curtime, const Duration& simlen)
-     : PollingService(strand),
-       ioService(ios),
+    Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
+     : ioService(ios),
        mainStrand(strand),
-       lastTime(curtime),
-       time(curtime),
        profiler( new TimeProfiler(name) ),
        mTrace(_trace),
        mEpoch(epoch),
        mSimDuration(simlen)
     {
-        mIterationProfiler = profiler->addStage("Context Iteration");
-        mIterationProfiler->started();
-        mWorkProfiler = profiler->addStage("Context Work");
     }
 
     ~Context() {
-        delete mIterationProfiler;
     }
 
     Time epoch() const {
@@ -116,36 +109,13 @@ public:
 
     IOService* ioService;
     IOStrand* mainStrand;
-    Time lastTime;
-    Time time;
     TimeProfiler* profiler;
-private:
+protected:
     Trace* mTrace;
-    virtual void poll() {
-
-        mIterationProfiler->finished();
-        mWorkProfiler->started();
-
-        Duration elapsed = Timer::now() - epoch();
-
-        if (elapsed > mSimDuration) {
-            this->stop();
-            for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
-                (*it)->stop();
-        }
-
-        lastTime = time;
-        time = Time::null() + elapsed;
-
-        mWorkProfiler->finished();
-        mIterationProfiler->started();
-    }
 
     Sirikata::AtomicValue<Time> mEpoch;
     Duration mSimDuration;
     std::vector<Service*> mServices;
-    TimeProfiler::Stage* mIterationProfiler;
-    TimeProfiler::Stage* mWorkProfiler;
 }; // class ObjectHostContext
 
 } // namespace CBR

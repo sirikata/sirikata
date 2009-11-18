@@ -150,7 +150,7 @@ void Object::connect() {
         return;
     }
 
-    TimedMotionVector3f curMotion = mMotion->at(mContext->time);
+    TimedMotionVector3f curMotion = mMotion->at(mContext->simTime());
 
     if (mRegisterQuery)
         mContext->objectHost->connect(
@@ -232,7 +232,7 @@ void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
         mContext->trace()->objectLoc(
-            mContext->time,
+            mContext->simTime(),
             msg.dest_object(),
             update.object(),
             loc
@@ -254,7 +254,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
         mContext->trace()->prox(
-            mContext->time,
+            mContext->simTime(),
             msg.dest_object(),
             addition.object(),
             true,
@@ -275,7 +275,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 
         mContext->trace()->prox(
-            mContext->time,
+            mContext->simTime(),
             msg.dest_object(),
             removal.object(),
             false,
@@ -300,7 +300,7 @@ void Object::subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg
     assert(parse_success);
 
     mContext->trace()->subscription(
-        mContext->time,
+        mContext->simTime(),
         msg.dest_object(),
         msg.source_object(),
         (contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false
