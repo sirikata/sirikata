@@ -34,10 +34,11 @@
 #include "Statistics.hpp"
 #include "Options.hpp"
 #include "MotionPath.hpp"
-#include "ObjectFactory.hpp"
 #include "AnalysisEvents.hpp"
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
+#include "RecordedMotionPath.hpp"
+
 #include <algorithm>
 
 namespace CBR {
@@ -556,7 +557,7 @@ static bool event_matches_loc(ObjectEvent* evt) {
 #define APPARENT_ERROR 1
 
 // Return the average error in the approximation of an object over its observed period, sampled at the given rate.
-double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const {
+double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate) const {
     /* In this method we run through all the updates, tracking the real path along the way.
      * The main loop iterates over all the updates received, focusing on those dealing with
      * the specified target object.  We have 2 states we can be in
@@ -572,7 +573,7 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
 
     assert( observed(observer, seen) );
 
-    MotionPath* true_path = obj_factory->motion(seen);
+    MotionPath* true_path = new RecordedMotionPath( *(getEventList(seen)) );
     TimedMotionVector3f true_motion = true_path->initial();
     const TimedMotionVector3f* next_true_motion = true_path->nextUpdate(true_motion.time());
 
@@ -580,7 +581,7 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
     TimedMotionVector3f pred_motion;
 
 #if APPARENT_ERROR
-    MotionPath* observer_path = obj_factory->motion(observer);
+    MotionPath* observer_path = new RecordedMotionPath( *(getEventList(observer)) );
     TimedMotionVector3f observer_motion = observer_path->initial();
     const TimedMotionVector3f* next_observer_motion = observer_path->nextUpdate(observer_motion.time());
 #endif
@@ -652,17 +653,21 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
         }
     }
 
+    delete true_path;
+
     return (sample_count == 0) ? 0 : error_sum / sample_count;
 }
 
-double LocationErrorAnalysis::globalAverageError(const Duration& sampling_rate, ObjectFactory* obj_factory) const {
+double LocationErrorAnalysis::globalAverageError(const Duration& sampling_rate) const {
     double total_error = 0.0;
     uint32 total_pairs = 0;
-    for(ObjectFactory::iterator observer_it = obj_factory->begin(); observer_it != obj_factory->end(); observer_it++) {
-        for(ObjectFactory::iterator seen_it = obj_factory->begin(); seen_it != obj_factory->end(); seen_it++) {
-            if (*observer_it == *seen_it) continue;
-            if (observed(*observer_it, *seen_it)) {
-                double error = averageError(*observer_it, *seen_it, sampling_rate, obj_factory);
+    for(ObjectEventListMap::const_iterator observer_it = mEventLists.begin(); observer_it != mEventLists.end(); observer_it++) {
+        UUID observer = observer_it->first;
+        for(ObjectEventListMap::const_iterator seen_it = mEventLists.begin(); seen_it != mEventLists.end(); seen_it++) {
+            UUID seen = seen_it->first;
+            if (observer == seen) continue;
+            if (observed(observer, seen)) {
+                double error = averageError(observer, seen, sampling_rate);
                 total_error += error;
                 total_pairs++;
             }

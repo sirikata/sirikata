@@ -239,6 +239,8 @@ SET(CBR_PROTOCOL_DIR ${TOP_LEVEL}/protocol)
 INCLUDE_DIRECTORIES(BEFORE
         ${CBR_SOURCE_DIR}
         ${CBR_SOURCE_DIR}/space # FIXME Should go away, preferring to store space code there, or be moved to the cbr/space binaries specifically
+        ${CBR_SOURCE_DIR}/oh # FIXME Should go away, preferring to store oh code there, or be moved to the cbr/oh binaries specifically
+        ${CBR_SOURCE_DIR}/analysis # FIXME Should go away, preferring to store analysis code there, or be moved to the cbr/analysis binaries specifically
         ${CBR_PROTOCOL_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
@@ -326,7 +328,7 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
-  ${CBR_SOURCE_DIR}/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/analysis/main.cpp
 )

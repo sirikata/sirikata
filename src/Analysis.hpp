@@ -49,7 +49,6 @@ struct ServerDatagramReceivedEvent;
 struct ServerDatagramQueueInfoEvent;
 struct PacketEvent;
 struct PacketQueueInfoEvent;
-class ObjectFactory;
 
 /** Error of observed vs. true object locations over simulation period. */
 class LocationErrorAnalysis {
@@ -61,9 +60,9 @@ public:
     bool observed(const UUID& observer, const UUID& seen) const;
 
     // Return the average error in the approximation of an object over its observed period, sampled at the given rate.
-    double averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const;
+    double averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate) const;
     // Return the average error in object position approximation over all observers and observed objects, sampled at the given rate.
-    double globalAverageError(const Duration& sampling_rate, ObjectFactory* obj_factory) const;
+    double globalAverageError(const Duration& sampling_rate) const;
 protected:
     typedef std::vector<Event*> EventList;
     typedef std::map<UUID, EventList*> ObjectEventListMap;
@@ -286,7 +285,7 @@ private:
   //all of oseg analyses
 
   static const int OSEG_SECOND_TO_RAW_CONVERSION_FACTOR = 1000000;
-  
+
 class ObjectSegmentationAnalysis
 {
 
@@ -418,7 +417,7 @@ class OSegCacheResponseAnalysis
 private:
   std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
   static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
-  
+
 public:
   OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
   ~OSegCacheResponseAnalysis();
@@ -433,7 +432,7 @@ public:
 class OSegCacheErrorAnalysis
 {
 
-public: 
+public:
 
   struct ServerIDTimePair
   {
@@ -443,11 +442,11 @@ public:
     ServerIDTimePair()
       : t(Time::null())
     {
-    }      
-    
+    }
+
   };
 
-  
+
   struct Results
   {
     int missesCache;
@@ -456,9 +455,9 @@ public:
     int totalLookups;
   };
 
-  
-private:  
-  
+
+private:
+
   typedef std::vector<ServerIDTimePair> LocationList;
   typedef std::map<UUID, LocationList>  ObjectLocationMap;
 
@@ -480,10 +479,10 @@ private:
   static bool compareCacheResponseEvents(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
   static bool compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
   static bool compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
-  
+
 
   void analyzeMisses(Results& res);
-  
+
 public:
   OSegCacheErrorAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream& fileOut, int processAfter = 0);

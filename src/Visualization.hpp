@@ -4,14 +4,13 @@
 #include "AnalysisEvents.hpp"
 #include "CoordinateSegmentation.hpp"
 
-
 namespace CBR {
-class LocationService;
+class MotionPath;
 class CoordinateSegmentation;
+
 class LocationVisualization :public LocationErrorAnalysis {
     CoordinateSegmentation*mSeg;
     SpaceContext* mSpaceContext;
-    ObjectFactory*mFactory;
     UUID mObserver;
     static EventList* NullObservedEvents; // if we don't have an event list to use
     EventList* mObservedEvents;
@@ -26,13 +25,16 @@ class LocationVisualization :public LocationErrorAnalysis {
     std::vector<SegmentationChangeEvent*> mSegmentationChangeEvents;
     std::vector<SegmentationChangeEvent*>::iterator mSegmentationChangeIterator;
 
+    typedef std::tr1::unordered_map<UUID, MotionPath*, UUID::Hasher> MotionPathMap;
+    MotionPathMap mObjectMotions;
+
     void handleObjectEvent(const UUID& obj, bool add, const TimedMotionVector3f& loc);
     void handleLocEvent(const UUID& obj, const TimedMotionVector3f& loc);
 
     void displayError(const Duration& sampling_rate);
 public:
     void mainLoop();
-    LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, ObjectFactory*obj_factory, CoordinateSegmentation*cseg);
+    LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, CoordinateSegmentation*cseg);
     void displayError(const UUID&observer, const Duration& sampling_rate);
     void displayError(const ServerID&observer, const Duration& sampling_rate);
 

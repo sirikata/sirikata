@@ -34,9 +34,6 @@
 #include "TimeSync.hpp"
 #include "TimeProfiler.hpp"
 
-#include "Object.hpp"
-#include "ObjectFactory.hpp"
-
 #include "Options.hpp"
 #include "Statistics.hpp"
 #include "Analysis.hpp"
@@ -133,11 +130,6 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    // FIXME we shouldn't need to instantiate these for space, only needed for analysis
-    IOService* oh_ios = IOServiceFactory::makeIOService();
-    IOStrand* oh_mainStrand = oh_ios->createStrand();
-    ObjectHostContext* oh_ctx = new ObjectHostContext(0, oh_ios, oh_mainStrand, NULL, Time::null(), Time::null(), duration);
-    ObjectFactory* obj_factory = new ObjectFactory(oh_ctx, region, duration);
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
@@ -161,12 +153,12 @@ int main(int argc, char** argv) {
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
-        printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10), obj_factory));
+        printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10)));
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
         String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, space_context, obj_factory,cseg);
+        LocationVisualization lea(STATS_TRACE_FILE, nservers, space_context, cseg);
 
         if (vistype == "object")
             lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
@@ -435,8 +427,6 @@ int main(int argc, char** argv) {
 
     delete server_id_map;
     delete cseg;
-
-    delete obj_factory;
 
     delete forwarder;
 

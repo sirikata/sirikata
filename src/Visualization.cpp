@@ -1,8 +1,7 @@
 #include "Analysis.hpp"
 #include "Visualization.hpp"
 #include "CoordinateSegmentation.hpp"
-#include "ObjectFactory.hpp"
-#include "MotionPath.hpp"
+#include "RecordedMotionPath.hpp"
 #include "Options.hpp"
 #include <GL/glut.h>
 
@@ -140,14 +139,16 @@ void LocationVisualization::mainLoop() {
 
     glPointSize(2);
     glBegin(GL_POINTS);
-    for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
-        Vector3f pos = mFactory->motion(*it)->at(mSpaceContext->time).extrapolate(mSpaceContext->time).position();
-        if (*it==mObserver) {
+    for (MotionPathMap::iterator it = mObjectMotions.begin(); it != mObjectMotions.end(); ++it) {
+        UUID objid = it->first;
+        MotionPath* motion = it->second;
+        Vector3f pos = motion->at(mSpaceContext->time).extrapolate(mSpaceContext->time).position();
+        if (objid == mObserver) {
             glEnd();
             glColor3f(.125,.125,.125);
 /* FIXME this no longer makes sense since we're using solid angle queries
             glBegin(GL_LINE_STRIP);
-            float rad=mFactory->getProximityRadius(*it);
+            float rad=mFactory->getProximityRadius(objid);
             for (int i=0;i<180;++i) {
                 glVertex2f(pos.x+rad*cos(3.141526536*i/90),pos.y+rad*sin(3.141526536*i/90));
             }
@@ -157,9 +158,9 @@ void LocationVisualization::mainLoop() {
             glColor3f(1,0,0);
         }else {
             VisibilityMap::iterator where;
-            if ((where=mVisible.find(*it))==mVisible.end()) {
+            if ((where=mVisible.find(objid))==mVisible.end()) {
                 glColor3f(0,.5,0);
-                if ((where=mInvisible.find(*it))!=mInvisible.end()) {
+                if ((where=mInvisible.find(objid))!=mInvisible.end()) {
                     Vector3f twhere=where->second.extrapolate(mSpaceContext->time).position();
                     glColor3f(.25,0,0);
                     glVertex2f(twhere.x,twhere.y);
@@ -197,11 +198,10 @@ void main_loop() {
   sVis->mainLoop();
 
 }
-LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, ObjectFactory*factory, CoordinateSegmentation*cseg):
+LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, CoordinateSegmentation*cseg):
  LocationErrorAnalysis(opt_name,nservers),
  mSeg(cseg),
  mSpaceContext(space_context),
- mFactory(factory),
  mSamplingRate(Duration::milliseconds(30.0f))
 {
     // read in all our data
@@ -215,12 +215,21 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
 	    if ((sce=dynamic_cast<SegmentationChangeEvent*>(evt))) {
 	      mSegmentationChangeEvents.push_back(sce);
 	    }
+            else {
+                delete evt;
+            }
         }
     }
 
     printf("mSegmentationChangeEvents.size=%du\n", (int)mSegmentationChangeEvents.size());
 
     mSegmentationChangeIterator = mSegmentationChangeEvents.begin();
+
+    // Create map of per-object motion paths
+    for(ObjectEventListMap::iterator it = mEventLists.begin(); it != mEventLists.end(); it++) {
+        UUID objid = it->first;
+        mObjectMotions[objid] = new RecordedMotionPath( *(getEventList(objid)) );
+    }
 }
 
 // When we can't find an object/server event list to display use this so we can still
