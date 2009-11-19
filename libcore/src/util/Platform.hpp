@@ -178,8 +178,9 @@
 //need to get rid of GetMessage for protocol buffer compatibility
 #undef GetMessage
 #endif
-
+#ifndef _WIN32
 #include <stdint.h>
+#endif
 #include <assert.h>
 #include <cstddef>
 #include <cstring>
