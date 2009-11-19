@@ -70,7 +70,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
         assert ( core_plugin_refcount == 0 );
 
         if ( core_plugin_refcount == 0 )
-            ModelsSystemFactory::getSingleton ().unregisterConstructor ( name (), true );
+            ModelsSystemFactory::getSingleton ().unregisterConstructor ( "colladamodels" );
     }
 }
 
