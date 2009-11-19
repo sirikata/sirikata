@@ -39,7 +39,8 @@ namespace CBR {
 ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
  : mID(_id),
    mConnectionManager(conn_mgr),
-   mOHConnection(conn_id)
+   mOHConnection(conn_id),
+   mEnabled(false)
 {
 }
 
@@ -48,7 +49,21 @@ UUID ObjectConnection::id() const {
 }
 
 bool ObjectConnection::send(CBR::Protocol::Object::ObjectMessage* msg) {
+    if (!mEnabled) {
+        SILOG(objconn,error,"Tried to send before ObjectConnection was enabled.");
+        assert(false);
+        return false;
+    }
+
     return mConnectionManager->send(mOHConnection, msg);
+}
+
+void ObjectConnection::enable() {
+    mEnabled = true;
+}
+
+bool ObjectConnection::enabled() {
+    return mEnabled;
 }
 
 } // namespace CBR

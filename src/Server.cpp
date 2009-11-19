@@ -94,6 +94,16 @@ ObjectConnection* Server::getObjectConnection(const UUID& object_id) const {
     return NULL;
 }
 
+void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, CBR::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
+    bool sent = mObjectHostConnectionManager->send( conn, msg );
+    if (!sent) {
+        mContext->mainStrand->post(
+            retry_rate,
+            std::tr1::bind(&Server::sendSessionMessageWithRetry, this, conn, msg, retry_rate)
+        );
+    }
+}
+
 void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
     Trace * tr=mContext->trace();
     //tr->timestampMessage(mContext->time,obj_msg->unique(),Trace::HANDLE_OBJECT_HOST_MESSAGE,obj_msg->source_port(),obj_msg->dest_port());
@@ -160,7 +170,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     bool parse_success = session_msg.ParseFromString(msg.payload());
     assert(parse_success);
 
-
     // Connect or migrate messages
     if (session_msg.has_connect()) {
         if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Fresh)
@@ -174,10 +183,16 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
         else
             SILOG(space,error,"Unknown connection message type");
     }
+    else if (session_msg.has_connect_ack()) {
+        handleConnectAck(oh_conn_id, msg);
+    }
+    else if (session_msg.has_disconnect()) {
+        // FIXME handle disconnections
+    }
 
     // InitiateMigration messages
+    assert(!session_msg.has_connect_response());
     assert(!session_msg.has_init_migration());
-
 }
 void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* obj_response) {
     if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
@@ -281,7 +296,8 @@ void Server::finishAddObject(const UUID& obj_id)
     // Register proximity query
     if (sc.conn_msg.has_query_angle())
         mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()));
-    // Allow the forwarder to send to ship messages to this connection
+
+    // Stage the connection with the forwarder, but don't enable it until an ack is received
     mForwarder->addObjectConnection(obj_id, conn);
 
     // Send reply back indicating that the connection was successful
@@ -295,16 +311,14 @@ void Server::finishAddObject(const UUID& obj_id)
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-    if (!conn->send( obj_response )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
-    }
+    // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
+    sendSessionMessageWithRetry(conn->connID(), obj_response, Duration::seconds(0.05));
   }
   else
   {
     std::cout<<"\n\nNO stored connection data for obj:  "<<obj_id.toString()<<"   at time:  "<<mContext->time.raw()<<"\n\n";
   }
 }
-
 
 // Handle Migrate message from object
 //this is called by the receiving server.
@@ -330,6 +344,14 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
     //    handleMigration(migrate_msg.object());
 
 }
+
+void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container) {
+    UUID obj_id = container.source_object();
+
+    // Allow the forwarder to send to ship messages to this connection
+    mForwarder->enableObjectConnection(obj_id);
+}
+
 
 void Server::receiveMessage(Message* msg)
 {
@@ -451,7 +473,7 @@ void Server::handleMigration(const UUID& obj_id)
         }
     }
 
-    // Allow the forwarder to deliver to this connection
+    // Stage this connection with the forwarder, don't enable until ack is received
     mForwarder->addObjectConnection(obj_id, obj_conn);
 
 
@@ -471,9 +493,8 @@ void Server::handleMigration(const UUID& obj_id)
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-    if (!obj_conn->send( obj_response )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
-    }
+    // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
+    sendSessionMessageWithRetry(obj_conn->connID(), obj_response, Duration::seconds(0.05));
 }
 
 void Server::start() {
@@ -514,9 +535,9 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
                 obj_id, OBJECT_PORT_SESSION,
                 serializePBJMessage(session_msg)
             );
-            if (!obj_conn->send(init_migr_obj_msg)) { // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
-                mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,init_migr_obj_msg));
-            }
+            // Sent directly via object host connection manager because ObjectConnection is disappearing
+            sendSessionMessageWithRetry(obj_conn->connID(), init_migr_obj_msg, Duration::seconds(0.05));
+
             mOSeg->migrateObject(obj_id,new_server_id);
 
             // Send out the migrate message
@@ -684,10 +705,8 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
  //change the boolean value associated with object so that you know not to keep servicing the connection associated with this object in mMigratingConnections
    mMigratingConnections[obj_id].serviceConnection = false;
 
-
-    // Allow the forwarder to deliver to this connection
-    mForwarder->addObjectConnection(obj_id, obj_conn);
-
+   // Stage this connection with the forwarder, enabled when ack received
+   mForwarder->addObjectConnection(obj_id, obj_conn);
 
     // Clean out the two records from the migration maps
     mObjectsAwaitingMigration.erase(obj_map_it);
@@ -705,10 +724,8 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-    if (!obj_conn->send( obj_response )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
-    }
-
+    // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
+    sendSessionMessageWithRetry(obj_conn->connID(), obj_response, Duration::seconds(0.05));
 }
 
 

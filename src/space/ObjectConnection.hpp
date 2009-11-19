@@ -40,6 +40,7 @@
 namespace CBR {
 
 class Trace;
+class Server;
 
 /** Represents a connection a space has to an object.
  *  Only valid while a valid network connection to the object
@@ -55,10 +56,18 @@ public:
     WARN_UNUSED
     bool send(CBR::Protocol::Object::ObjectMessage* msg);
 
+    void enable();
+
+    bool enabled();
+
+protected:
+    friend class Server;
+    ObjectHostConnectionManager::ConnectionID connID() { return mOHConnection; };
 private:
     UUID mID;
     ObjectHostConnectionManager* mConnectionManager;
     ObjectHostConnectionManager::ConnectionID mOHConnection;
+    bool mEnabled;
 };
 
 } // namespace CBR

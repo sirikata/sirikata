@@ -169,7 +169,7 @@ ObjectHost::ConnectedCallback& ObjectHost::ObjectConnections::getConnectCallback
     return mObjectInfo[objid].connectedCB;
 }
 
-void ObjectHost::ObjectConnections::handleConnectSuccess(const UUID& obj) {
+ServerID ObjectHost::ObjectConnections::handleConnectSuccess(const UUID& obj) {
     if (mObjectInfo[obj].connectingTo != NullServerID) { // We were connecting to a server
         ServerID connectedTo = mObjectInfo[obj].connectingTo;
         OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
@@ -177,6 +177,7 @@ void ObjectHost::ObjectConnections::handleConnectSuccess(const UUID& obj) {
         mObjectInfo[obj].connectingTo = NullServerID;
         mObjectServerMap[connectedTo].push_back(obj);
         mObjectInfo[obj].connectedCB(connectedTo);
+        return connectedTo;
     }
     else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
         ServerID migratedTo = mObjectInfo[obj].migratingTo;
@@ -184,9 +185,11 @@ void ObjectHost::ObjectConnections::handleConnectSuccess(const UUID& obj) {
         mObjectInfo[obj].connectedTo = migratedTo;
         mObjectInfo[obj].migratingTo = NullServerID;
         mObjectServerMap[migratedTo].push_back(obj);
+        return migratedTo;
     }
     else { // What were we doing?
         OH_LOG(error,"Got connection response with no outstanding requests.");
+        return NullServerID;
     }
 }
 
@@ -538,6 +541,27 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     return conn->push( obj_msg );
 }
 
+void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, IOStrand* strand, const Duration& rate) {
+    bool sent = send(
+        src, src_port,
+        dest, dest_port,
+        payload,
+        dest_server);
+
+    if (!sent) {
+        strand->post(
+            rate,
+            std::tr1::bind(&ObjectHost::sendRetryingMessage, this,
+                src, src_port,
+                dest, dest_port,
+                payload,
+                dest_server,
+                strand, rate)
+        );
+    }
+}
+
+
 bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double distance) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -585,7 +609,6 @@ void ObjectHost::generatePings() {
 
     mPingProfiler->finished();
 }
-
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
@@ -775,7 +798,19 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
         UUID obj = msg->dest_object();
 
         if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Success) {
-            mObjectConnections.handleConnectSuccess(obj);
+            ServerID connected_to = mObjectConnections.handleConnectSuccess(obj);
+
+            // Send an ack so the server (our first conn or after migrating) can start sending data to us
+            CBR::Protocol::Session::Container ack_msg;
+            CBR::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
+            sendRetryingMessage(
+                obj, OBJECT_PORT_SESSION,
+                UUID::null(), OBJECT_PORT_SESSION,
+                serializePBJMessage(ack_msg),
+                connected_to,
+                mContext->mainStrand,
+                Duration::seconds(0.05)
+            );
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();

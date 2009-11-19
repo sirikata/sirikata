@@ -122,6 +122,10 @@ private:
     void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
     void retryOpenConnection(const UUID&uuid,ServerID sid);
 
+
+    // Utility method which keeps trying to resend a message
+    void sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, IOStrand* strand, const Duration& rate);
+
     /** SpaceNodeConnection initiation. */
 
     // Get an existing space connection or initiate a new one at random
@@ -255,7 +259,8 @@ private:
         WARN_UNUSED
         ConnectedCallback& getConnectCallback(const UUID& objid);
 
-        void handleConnectSuccess(const UUID& obj);
+        // Marks as connected and returns the server connected to
+        ServerID handleConnectSuccess(const UUID& obj);
 
         void handleConnectError(const UUID& objid);
 

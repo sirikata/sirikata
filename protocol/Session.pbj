@@ -69,6 +69,12 @@ message ConnectResponse {
     optional uint64 redirect = 2;
 }
 
+// Acknowledges that a successful connection response was receive.
+// Once the OH has sent this to the space, the space will start
+// delivering data.
+message ConnectAck {
+}
+
 // Message sent from space server to object host telling
 // it that it needs to migrate
 message InitiateMigration {
@@ -89,8 +95,9 @@ message Disconnect {
 message Container {
     optional Connect connect = 1;
     optional ConnectResponse connect_response = 2;
+    optional ConnectAck connect_ack = 3;
 
-    optional InitiateMigration init_migration = 3;
+    optional InitiateMigration init_migration = 4;
 
-    optional Disconnect disconnect = 4;
+    optional Disconnect disconnect = 5;
 }

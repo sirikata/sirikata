@@ -291,7 +291,12 @@ void Forwarder::receiveMessage(Message* msg) {
         uint16 msg_src_port = obj_msg->source_port();
         uint16 msg_dst_port = obj_msg->dest_port();
 
-        bool send_success = conn->send(obj_msg);
+        bool send_success = true;
+
+        if (!conn->enabled())
+            send_success = false;
+        else
+            send_success = conn->send(obj_msg);
 
         Trace::MessagePath path = send_success ? Trace::SPACE_TO_OH_ENQUEUED : Trace::DROPPED;
         mContext->trace()->timestampMessage(
@@ -398,6 +403,16 @@ void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn
   mObjectConnections[dest_obj] = uoc;
 }
 
+void Forwarder::enableObjectConnection(const UUID& dest_obj) {
+    ObjectConnection* conn = getObjectConnection(dest_obj);
+    if (conn == NULL) {
+        SILOG(forwarder,warn,"Tried to enable connection for unknown object.");
+        return;
+    }
+
+    conn->enable();
+}
+
 ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
     //    ObjectConnection* conn = mObjectConnections[dest_obj];
     UniqueObjConn uoc = mObjectConnections[dest_obj];
@@ -408,7 +423,6 @@ ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
 
 ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj) {
     ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
-    //    return (it == mObjectConnections.end()) ? NULL : it->second;
     return (it == mObjectConnections.end()) ? NULL : it->second.conn;
 }
 
@@ -416,7 +430,6 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj) {
 ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& ider )
 {
     ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
-    //    return (it == mObjectConnections.end()) ? NULL : it->second;
     if (it == mObjectConnections.end())
     {
       ider = 0;

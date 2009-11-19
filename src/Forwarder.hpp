@@ -132,6 +132,7 @@ private:
       void receiveMessage(Message* msg);
 
       void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
+    void enableObjectConnection(const UUID& dest_obj);
       ObjectConnection* removeObjectConnection(const UUID& dest_obj);
       ObjectConnection* getObjectConnection(const UUID& dest_obj);
       ObjectConnection* getObjectConnection(const UUID& dest_obj, uint64& uniqueconnid );

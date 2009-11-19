@@ -52,6 +52,11 @@ private:
     void trySendMigrationMessages();
 
 
+    // Send a session message directly to the object via the OH connection manager, bypassing any restrictions on
+    // the current state of the connection.  Keeps retrying until the message gets through.
+    void sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, CBR::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate);
+
+
     // Finds the ObjectConnection associated with the given object, returns NULL if the object isn't available.
     ObjectConnection* getObjectConnection(const UUID& object_id) const;
 
@@ -65,6 +70,9 @@ private:
     void retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* );
     void retryObjectMessage(const UUID& obj_id, CBR::Protocol::Object::ObjectMessage* );
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
+
+    // Handle connection ack message from object
+    void handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container);
 
     // Handle Migrate message from object
     void handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& migrate_msg);
