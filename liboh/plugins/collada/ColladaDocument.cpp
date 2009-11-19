@@ -54,7 +54,7 @@ ColladaDocument::ColladaDocument ( ColladaDocument const& rhs )
     
 }
 
-ColladaDocument::ColladaDocument& ColladaDocument::operator = ( ColladaDocument const& rhs )
+ColladaDocument& ColladaDocument::operator = ( ColladaDocument const& rhs )
 {
     assert((std::cout << "MCB: ColladaDocument::operator=() entered" << std::endl,true));
     return *this;

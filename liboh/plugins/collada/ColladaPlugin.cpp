@@ -41,11 +41,9 @@ static int core_plugin_refcount = 0;
 SIRIKATA_PLUGIN_EXPORT_C void init ()
 {
     using namespace Sirikata;
-    using namespace Sirikata::Models;
-
     if ( core_plugin_refcount == 0 )
         ModelsSystemFactory::getSingleton ().registerConstructor
-            ( "colladamodels", &Models::ColladaSystem::create, true );
+            ( "colladamodels" , &Models::ColladaSystem::create, true );
     
     ++core_plugin_refcount;
 }

@@ -51,7 +51,7 @@ ColladaAsset::ColladaAsset ( ColladaAsset const& rhs )
     
 }
 
-ColladaAsset::ColladaAsset& ColladaAsset::operator = ( ColladaAsset const& rhs )
+ColladaAsset& ColladaAsset::operator = ( ColladaAsset const& rhs )
 {
     assert((std::cout << "MCB: ColladaAsset::operator=() entered" << std::endl,true));
     return *this;
