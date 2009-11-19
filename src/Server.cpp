@@ -179,7 +179,13 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     assert(!session_msg.has_init_migration());
 
 }
+void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* obj_response) {
+    if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
+    }else {
 
+    }
+}
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
@@ -209,7 +215,9 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         );
 
         // Sent directly via object host connection manager because we don't have an ObjectConnection
-        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
+        if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
+            mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
+        }
         return;
     }
 
@@ -232,10 +240,11 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
 
         // Sent directly via object host connection manager because we don't have an ObjectConnection
-        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
+        if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
+            mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
+        }
         return;
     }
-
     // FIXME sanity check the new connection
     // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
@@ -286,7 +295,9 @@ void Server::finishAddObject(const UUID& obj_id)
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-    conn->send( obj_response );
+    if (!conn->send( obj_response )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
+    }
   }
   else
   {
@@ -359,7 +370,21 @@ void Server::receiveMessage(Message* msg)
 }
 
 
+void Server::retryObjectMessage(const UUID& obj_id, CBR::Protocol::Object::ObjectMessage* obj_response){
+    ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
+    if (obj_map_it == mObjectsAwaitingMigration.end())
+    {
+        return;
+    }
 
+    // Get the data from the two maps
+    ObjectConnection* obj_conn = obj_map_it->second;
+    if (!obj_conn->send( obj_response )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
+    }    else {
+
+    }
+}
 
 //handleMigration to this server.
 void Server::handleMigration(const UUID& obj_id)
@@ -446,7 +471,9 @@ void Server::handleMigration(const UUID& obj_id)
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-    obj_conn->send( obj_response );
+    if (!obj_conn->send( obj_response )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
+    }
 }
 
 void Server::start() {
@@ -487,8 +514,9 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
                 obj_id, OBJECT_PORT_SESSION,
                 serializePBJMessage(session_msg)
             );
-            obj_conn->send(init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
-
+            if (!obj_conn->send(init_migr_obj_msg)) { // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
+                mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,init_migr_obj_msg));
+            }
             mOSeg->migrateObject(obj_id,new_server_id);
 
             // Send out the migrate message
@@ -677,7 +705,9 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-    obj_conn->send( obj_response );
+    if (!obj_conn->send( obj_response )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
+    }
 
 }
 

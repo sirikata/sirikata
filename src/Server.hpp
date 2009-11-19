@@ -62,6 +62,8 @@ private:
     // Handle Session messages from an object
     void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& msg);
     // Handle Connect message from object
+    void retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* );
+    void retryObjectMessage(const UUID& obj_id, CBR::Protocol::Object::ObjectMessage* );
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
 
     // Handle Migrate message from object
