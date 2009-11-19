@@ -39,6 +39,8 @@ namespace CBR
   const int STREAM_CRAQ_NUM_CONNECTIONS_SET        = 30;
   const int STREAM_CRAQ_NUM_CONNECTIONS_GET        = 1;
 
+  const int STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS  = 60; //this is in ms
+  
 
   const char STREAM_CRAQ_READ_RESULT_UNTIL_REGEX[] = "YY\r\n";
   const char STREAM_CRAQ_READ_ERROR_RESULT_UNTIL_REGEX[] = "ERROR\r\n";

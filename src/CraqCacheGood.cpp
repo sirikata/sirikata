@@ -32,7 +32,6 @@ namespace CBR
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
       for (int s=0; (s < NUM_CRAQ_CACHE_REMOVE) && (tMapIter != timeRecMap.end()); ++s)
       {
-
         //remove the object from the map
         IDRecordMap::iterator idRecMapIterator =  idRecMap.find(tMapIter->second->obj_id);
         if (idRecMapIterator == idRecMap.end())
@@ -49,7 +48,6 @@ namespace CBR
 
         //delete the record from the multimap
         timeRecMap.erase(tMapIter++);
-
       }
     }
   }
@@ -57,8 +55,6 @@ namespace CBR
 
   void CraqCacheGood::insert(const UUID& uuid, const ServerID& sID)
   {
-    mMutex.lock();
-    
     Duration currentDur = mTimer.elapsed();
     
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
@@ -78,9 +74,8 @@ namespace CBR
       {
         //run through looking for the corresponding
         if(timeRecMapIter->second->obj_id.toString() == uuid.toString())
-        {
-          //found the object.
 
+        {
           //delete its entry
           delete timeRecMapIter->second;
           //remove the iterator
@@ -126,14 +121,11 @@ namespace CBR
       idRecMap.insert(std::pair<UUID,CraqCacheRecord*>(uuid,rcdIDRecMap));
       maintain();
     }
-
-    mMutex.unlock();
   }
 
   
   ServerID CraqCacheGood::get(const UUID& uuid)
   {
-    mMutex.lock();
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
 
     if (idRecMapIter != idRecMap.end())
@@ -141,23 +133,18 @@ namespace CBR
       //means that we have a record of the object
       if (satisfiesCacheAgeCondition(idRecMapIter->second->age))
       {
-        mMutex.unlock();
-        std::cout<<"\n\nCache returning:   "<<idRecMapIter->second->sID<<"\n";
-        
         return idRecMapIter->second->sID;
       }
     }
-
-    mMutex.unlock();
     return NullServerID;
   }
+
 
 //if inAge indicates that object is young enough, then return true.
 //otherwise, return false
 bool CraqCacheGood::satisfiesCacheAgeCondition(int inAge)
 {
   Duration currentDur = mTimer.elapsed();
-
   if (currentDur.toMilliseconds() - inAge > MAXIMUM_CRAQ_AGE)
   {
     return false;

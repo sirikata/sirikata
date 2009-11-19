@@ -30,6 +30,7 @@ public:
 
   boost::asio::io_service io_service;  //creates an io service
 
+  
   int set(const CraqDataSetGet& cdSet);
   int get(const CraqDataSetGet& cdGet);
 
@@ -45,6 +46,9 @@ public:
   int getRespCount();
   
 private:
+
+
+
   
   void processGetResults       (std::vector <CraqOperationResult*> & getRes);
   void processErrorResults     (std::vector <CraqOperationResult*> & errorRes);

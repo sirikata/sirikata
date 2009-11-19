@@ -7,7 +7,10 @@
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include "../../SpaceContext.hpp"
+#include "../../Timer.hpp"
+#include "../../ServerNetwork.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #define NUM_MULTI 1
 
@@ -15,12 +18,14 @@ namespace CBR
 {
 
 //constructor
-AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str)
+AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, boost::asio::io_service* iserve)
   : ctx(con),
-    mStrand(str)
+    mStrand(str),
+    m_io_service(iserve)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
- 
+
+  mTimer.start();
 }
 
 int AsyncConnectionGet::numStillProcessing()
@@ -29,8 +34,69 @@ int AsyncConnectionGet::numStillProcessing()
 }
 
 
+void AsyncConnectionGet::outputLargeOutstanding()
+{
+  MultiOutstandingQueries::iterator it;
+  mTimer.elapsed();
+  Duration dur = mTimer.elapsed();
+  
+  uint64 currentTime = dur.toMilliseconds();
+  
+  for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
+  {
+    double timeInQueue = ((double) currentTime) - ((double) it->second->time_admitted);
+
+    if (timeInQueue > 50)
+      std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"\n\n";
+    
+  }
+}
+
+bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& dtg)
+{
+  std::string query = "";
+
+  static bool first = true;
+  
+  for (int s=0; s < (int)dtg.size(); ++s)
+  {
+    query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
+    query.append(dtg[s]->currentlySearchingFor); //this is the re
+    query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
+  }
+  
+  async_write((*mSocket),
+              boost::asio::buffer(query),
+              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+  
+  return true;
+}
+
+
+//this function gets called whenever we haven't received a response to our query.  (Essentially, we just re-issue the query.)
+//it should be called wrapped inside of osegStrand because interfacing with outstandingqueries.
+void AsyncConnectionGet::queryTimedOutCallbackGet(IndividualQueryData* iqd)
+{
+  std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
+  
+  std::string query = "";
+  query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
+  query.append(iqd->currentlySearchingFor); //this is the re
+  query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
+
+
+  async_write((*mSocket),
+              boost::asio::buffer(query),
+              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+}
+
+
+
+
 AsyncConnectionGet::~AsyncConnectionGet()
 {
+  outputLargeOutstanding();
+  
   if (! NEED_NEW_SOCKET)
   {
     mSocket->close();
@@ -172,7 +238,12 @@ bool AsyncConnectionGet::getMulti(CraqDataKey& dataToGet)
   tmpString += STREAM_DATA_KEY_SUFFIX;
   strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
   iqd->gs = IndividualQueryData::GET;
+  iqd->deadline_timer = NULL;
+  
+  Duration dur = mTimer.elapsed();
+  iqd->time_admitted = dur.toMilliseconds();
 
+  
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
 
@@ -186,27 +257,6 @@ bool AsyncConnectionGet::getMulti(CraqDataKey& dataToGet)
 }
 
 
-
-//bool AsyncConnectionGet::getMultiQuery(const CraqDataKey& dataToGet)
-bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& dtg)
-{
-  std::string query = "";
-
-  static bool first = true;
-  
-  for (int s=0; s < (int)dtg.size(); ++s)
-  {
-    query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
-    query.append(dtg[s]->currentlySearchingFor); //this is the re
-    query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
-  }
-  
-  async_write((*mSocket),
-              boost::asio::buffer(query),
-              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
-  
-  return true;
-}
 
 
 void AsyncConnectionGet::printStatisticsTimesTaken()
@@ -243,6 +293,12 @@ bool AsyncConnectionGet::set(CraqDataKey dataToSet, int  dataToSetTo, bool track
     //  iqd->currentlySearchingFor  =                  dataToSet;
   iqd->currentlySettingTo     =                dataToSetTo;
   iqd->gs                     =   IndividualQueryData::SET;
+  iqd->deadline_timer         =                  NULL;
+
+  
+  Duration dur = mTimer.elapsed();
+  iqd->time_admitted          = dur.toMilliseconds();
+
   
   std::string index = dataToSet;
   index += STREAM_DATA_KEY_SUFFIX;
@@ -323,6 +379,7 @@ int AsyncConnectionGet::runReQuery()
 
 //datakey should have a null termination character.
 //public interface for the get command
+//called from inside of oseg_strand.
 bool AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 {
   if (mReady != READY)
@@ -338,9 +395,16 @@ bool AsyncConnectionGet::get(const CraqDataKey& dataToGet)
   strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
   iqd->gs = IndividualQueryData::GET;
 
+  Duration dur = mTimer.elapsed();
+  iqd->time_admitted = dur.toMilliseconds();
+  
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
 
+  iqd->deadline_timer  = new boost::asio::deadline_timer ((*m_io_service), boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
+
+  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, iqd)));
+  
   return getQuery(dataToGet);
 }
 
@@ -355,6 +419,8 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
   query += STREAM_DATA_KEY_SUFFIX; //bftm changed here.
   query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
 
+
+  
   //sets write handler
   async_write((*mSocket),
               boost::asio::buffer(query),
@@ -626,6 +692,12 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
       
       mOperationResultVector.push_back(cor); //loads this not found result into the results vector.
 
+      if (outQueriesIter->second->deadline_timer != NULL)
+      {
+        outQueriesIter->second->deadline_timer->cancel();
+        delete outQueriesIter->second->deadline_timer;
+      }
+      
 
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
@@ -744,6 +816,12 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
       mOperationResultVector.push_back(cor);
 
+      if (outQueriesIter->second->deadline_timer != NULL)
+      {
+        outQueriesIter->second->deadline_timer->cancel();
+        delete outQueriesIter->second->deadline_timer;
+      }
+      
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
     }
@@ -802,9 +880,6 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
 
 
 
-
-
-
 void AsyncConnectionGet::processStoredValue(std::string dataKey)
 {
   //look through multimap to find
@@ -826,6 +901,12 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
       mOperationResultVector.push_back(cor);
+
+      if (outQueriesIter->second->deadline_timer != NULL)
+      {
+        outQueriesIter->second->deadline_timer->cancel();
+        delete outQueriesIter->second->deadline_timer;
+      }
 
       
       delete outQueriesIter->second;  //delete this from a memory perspective

@@ -26,7 +26,7 @@ class ClusterSimSettings:
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '250s'
+        self.duration = '80s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.gaussian = False
@@ -69,7 +69,7 @@ class ClusterSimSettings:
         self.cseg_service_tcp_port = 6234;
         self.oseg = 'oseg_craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
-        self.oseg_analyze_after = '200' #Will perform oseg analysis after this many seconds of the run.
+        self.oseg_analyze_after = '50' #Will perform oseg analysis after this many seconds of the run.
 
         self.vis_mode = 'object'
         self.vis_seed = 1

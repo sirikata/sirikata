@@ -5,6 +5,7 @@
 #include "../asyncCraqUtil.hpp"
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include "../../Timer.hpp"
 
 namespace CBR
 {
@@ -24,6 +25,8 @@ private:
     int currentlySettingTo;
     bool is_tracking;
     int tracking_number;
+    uint64 time_admitted; //in milliseconds what time was when lookup was requested.
+    boost::asio::deadline_timer* deadline_timer;
   };
 
   
@@ -42,7 +45,7 @@ public:
   bool getMulti( CraqDataKey& dataToGet);
   
   ~AsyncConnectionGet();
-  AsyncConnectionGet(SpaceContext* con, IOStrand* str);
+  AsyncConnectionGet(SpaceContext* con, IOStrand* str, boost::asio::io_service* iserve);
 
   int numStillProcessing();
   void printOutstanding();
@@ -52,10 +55,11 @@ public:
   void printStatisticsTimesTaken();
 
   int getRespCount();
-
   
 private:
 
+  
+  
   int mAllResponseCount;
   
   std::vector<double> mTimesTaken;
@@ -67,7 +71,8 @@ private:
 
   bool getMultiQuery(const CraqDataKey& dataToGet);
   
-
+  void outputLargeOutstanding();
+  
   typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
   
@@ -76,6 +81,11 @@ private:
   ConnectionState mReady;
 
   bool getQuery(const CraqDataKey& dataToGet);
+
+
+  void queryTimedOutCallbackGet(IndividualQueryData* iqd);
+
+  
   
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
@@ -144,7 +154,8 @@ private:
   //***strand and context
   SpaceContext* ctx;
   IOStrand* mStrand;
-  
+  Timer mTimer;
+  boost::asio::io_service* m_io_service;  
 };
 
 }

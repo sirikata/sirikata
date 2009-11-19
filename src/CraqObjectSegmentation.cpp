@@ -275,7 +275,7 @@ namespace CBR
 
       craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
 
-      std::cout<<"\nCraq lookup for "<<obj_id.toString()<<"\n";
+      //      std::cout<<"\nCraq lookup for "<<obj_id.toString()<<"\n";
 
       mContext->trace()->objectSegmentationCraqLookupRequest(mContext->time, obj_id, mContext->id());
 
@@ -448,11 +448,10 @@ namespace CBR
           //means that we were tracking this message. and that we'll have to send an acknowledge
 
           //add the value to the cache
-          mCraqCache.insert(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid(), mContext->id());
-
+          //          mCraqCache.insert(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid(), mContext->id());
           
-          //          postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid(), mContext->id()
-          //            lkjs;
+          postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid(), mContext->id()));
+
           
           //add to mObjects the uuid associated with trackedMessage.
           mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid());
@@ -647,8 +646,10 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
       //put the value in the cache
-      mCraqCache.insert(tmper, getResults[s]->servID);
+      //      mCraqCache.insert(tmper, getResults[s]->servID);
+      postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, tmper, getResults[s]->servID));
 
+      
       if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
       {
         //log message stating that object was processed.
@@ -691,8 +692,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 //should be called from inside of mainStrand->post.
 void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
 {
-  std::cout<<"\nCraq response for "<<obj_id.toString()<<"\n";
-  
   mListener->osegLookupCompleted( obj_id,sID);
 }
 
@@ -741,7 +740,8 @@ void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg:
 #endif
 
 
-  mCraqCache.insert(update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on());
+  //  mCraqCache.insert(update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on());
+  postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on()));
 
 }
 
@@ -773,8 +773,9 @@ void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg:
     std::map<UUID,TransLookup>::iterator inTransIt;
 
 
-    mCraqCache.insert(obj_id, serv_from); //note: make sure that this is the right insert order.
-
+    //    mCraqCache.insert(obj_id, serv_from); //note: make sure that this is the right insert order.
+    postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, serv_from));
+    
     inTransOrLookup_m.lock();
     inTransIt = mInTransitOrLookup.find(obj_id);
     if (inTransIt != mInTransitOrLookup.end())

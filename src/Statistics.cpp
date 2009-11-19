@@ -134,7 +134,8 @@ const uint8 Trace::OSegShutdownEventTag;
 const uint8 Trace::ObjectGeneratedLocationTag;
 const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
-
+  //const uint8 Trace::OSegCraqGetConnnectionShutdownTag;
+  
 
 
 Trace::Trace(const String& filename)
@@ -535,6 +536,8 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   data.write(&num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet));
 #endif
 }
+
+
 
 
 void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj_id)

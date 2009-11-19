@@ -28,7 +28,6 @@ AsyncCraqGet::~AsyncCraqGet()
   
 }
 
-
   int AsyncCraqGet::getRespCount()
   {
     int returner = 0;
@@ -63,7 +62,6 @@ int AsyncCraqGet::runReQuery()
 
 void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 {
-  std::cout<<"\n\nbftm debug: asynccraqtwo initialize\n\n";
   
   mIpAddPort = ipAddPort;
   
@@ -75,7 +73,7 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_GET; ++s)
   {
-    AsyncConnectionGet* tmpConn = new AsyncConnectionGet (ctx,mStrand);
+    AsyncConnectionGet* tmpConn = new AsyncConnectionGet (ctx,mStrand, &io_service);
     mConnections.push_back(tmpConn);
   }
 
@@ -138,6 +136,9 @@ void AsyncCraqGet::runTestOfConnection()
 //assumes that we're already connected.
 int AsyncCraqGet::set(const CraqDataSetGet& dataToSet)
 {
+  std::cout<<"\n\nShould not be calling set from inside of asyncCraqGet\n\n";
+  assert(false);  
+  
   //force this to be a set message.
 
   CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToSet.dataKey,dataToSet.dataKeyValue,dataToSet.trackMessage,CraqDataSetGet::SET);
@@ -194,11 +195,11 @@ int AsyncCraqGet::getMulti(CraqDataSetGet& dataToGet)
   CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
 
   mQueue.push(cdQuery);
-  //  straightPoll();
-  checkConnectionsMulti(0);
+
+  int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
+  checkConnectionsMulti(rand_connection);
   return 0;
 }
-
 
   
 int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
@@ -206,9 +207,8 @@ int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
   CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
   mQueue.push(cdQuery);
 
-  
-  checkConnections(0);
-  
+  int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
+  checkConnections(rand_connection);
   return 0;
 }
 
@@ -218,9 +218,7 @@ void AsyncCraqGet::straightPoll()
   int numHandled = io_service.poll();
   
   if (numHandled == 0)
-  {
     io_service.reset();
-  }
 }
 
 

@@ -38,23 +38,14 @@ namespace CBR
 
     typedef std::multimap<int,CraqCacheRecord*> TimeRecordMap;
     TimeRecordMap timeRecMap;
-<<<<<<< HEAD:src/CraqCacheGood.hpp
-
-
-=======
     IOStrand* mStrand;
-    
->>>>>>> Removed the "ugly" space context passing of osegStrand.  Also, put mutexes around craq cache good.:src/CraqCacheGood.hpp
+
     Timer mTimer;
     void maintain();
     bool satisfiesCacheAgeCondition(int inAge);
 
-<<<<<<< HEAD:src/CraqCacheGood.hpp
-
-=======
     boost::mutex mMutex;
-    
->>>>>>> Removed the "ugly" space context passing of osegStrand.  Also, put mutexes around craq cache good.:src/CraqCacheGood.hpp
+
   public:
     CraqCacheGood();
     ~CraqCacheGood();
