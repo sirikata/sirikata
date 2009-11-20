@@ -31,6 +31,7 @@
  */
 
 #include "MigrationMonitor.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
@@ -39,7 +40,12 @@ MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservic
    mLocService(locservice),
    mCSeg(cseg),
    mStrand(ctx->mainStrand), // NOTE: All uses of Loc, CSeg, and mBoundingRegions need to be thread safe before this is its own strand
-   mTimer( IOTimer::create(ctx->ioService, std::tr1::bind(&MigrationMonitor::service, this)) ),
+   mTimer(
+       IOTimer::create(
+           ctx->ioService,
+           mStrand->wrap(std::tr1::bind(&MigrationMonitor::service, this))
+       )
+   ),
    mMinEventTime(Time::null()),
    mCB(cb)
 {
@@ -52,8 +58,6 @@ MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservic
 MigrationMonitor::~MigrationMonitor() {
     mCSeg->removeListener(this);
     mLocService->removeListener(this);
-
-    delete mStrand;
 }
 
 void MigrationMonitor::waitForNextEvent() {
@@ -83,6 +87,11 @@ void MigrationMonitor::service() {
         it != mObjectInfo.get<nextevent>().end() && it->nextEvent < curt;
         it++) {
 
+        // Removals posted by a location update might not have been processed yet.
+        // Double check that the object is still available.
+        if (!mLocService->contains(it->objid))
+            continue;
+
         considered.insert(it->objid);
 
         Vector3f obj_pos = mLocService->currentPosition(it->objid);
@@ -103,6 +112,12 @@ void MigrationMonitor::service() {
     // Update events for all objects we considered
     ObjectInfoByID& by_id = mObjectInfo.get<objid>();
     for(std::set<UUID>::iterator it = considered.begin(); it != considered.end(); it++) {
+        // Since mCB (called above) might migrate the object and remove it, we need to make sure
+        // we still have it.  FIXME Strand->wrap which uses post() instead of dispatch() would
+        // resolve this
+        if (!mLocService->contains(*it))
+            continue;
+
         by_id.modify(
             by_id.find(*it),
             std::tr1::bind(&MigrationMonitor::changeNextEventTime, std::tr1::placeholders::_1, computeNextEventTime(*it, mLocService->location(*it)))
