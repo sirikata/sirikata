@@ -35,7 +35,6 @@
 
 #include "Utility.hpp"
 #include "MotionVector.hpp"
-#include "ServerNetwork.hpp"
 #include "AnalysisEvents.hpp"
 
 namespace CBR {

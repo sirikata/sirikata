@@ -236,4 +236,8 @@ inline std::istream& operator >>(std::istream& is, BoundingBox<scalar> &rhs) {
 
 } // namespace Sirikata
 
+
+// Types that are useful throughout the system but are defined by our project
+#include "VWTypes.hpp"
+
 #endif //_CBR_UTILITY_HPP_

@@ -36,7 +36,6 @@
 #include "MotionPath.hpp"
 #include "AnalysisEvents.hpp"
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
 #include "RecordedMotionPath.hpp"
 
 #include <algorithm>

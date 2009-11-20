@@ -1,6 +1,5 @@
 #include "Utility.hpp"
 #include "Network.hpp"
-#include "ServerNetwork.hpp"
 #include "Server.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "Message.hpp"

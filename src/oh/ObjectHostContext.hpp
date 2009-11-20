@@ -36,7 +36,6 @@
 #include "Utility.hpp"
 #include "Context.hpp"
 #include "PollingService.hpp"
-#include "ObjectHostNetwork.hpp"
 
 namespace CBR {
 

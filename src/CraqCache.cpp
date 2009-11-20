@@ -1,6 +1,5 @@
 
 #include "CraqCache.hpp"
-#include "ServerNetwork.hpp"
 #include <algorithm>
 #include <map>
 #include <list>
@@ -33,14 +32,14 @@ namespace CBR
 
   }
 
-  
+
   void CraqCache::maintain()
   {
     if ((int)mMap.size()  > LARGEST_CRAQ_CACHE_SIZE)
     {
       //sort list
       mAgeList.sort( compareIDAge);
-      
+
       //grab oldest and kill
       for (int s=0; s < NUM_CRAQ_CACHE_REMOVE; ++s)
       {
@@ -59,7 +58,7 @@ namespace CBR
 
     AgeList::iterator result;
 
-    
+
     result = std::find_if( mAgeList.begin(), mAgeList.end(), boost::bind(compareFindIDAge, _1, uuid));
     if (result != mAgeList.end())
     {
@@ -72,42 +71,42 @@ namespace CBR
     IDAge inserter;
     inserter.id = uuid;
     inserter.age = (int)dur.toMilliseconds();
-    mAgeList.push_back(inserter);    
+    mAgeList.push_back(inserter);
 
     //maintain();
   }
 
 
-  
+
 
   ServerID CraqCache::get(const UUID& uuid)
   {
     ServIDMap::iterator it;
     it = mMap.find(uuid);
 
-    
+
     if (it == mMap.end())
     {
       return NullServerID;
     }
-      
+
     //means it is in map.  Must decide if too old to return
     AgeList::iterator result;
     result = std::find_if( mAgeList.begin(), mAgeList.end(), boost::bind(compareFindIDAge, _1, uuid));
-    
+
     Duration dur = mTimer.elapsed();
 
-    
+
     if (((int)dur.toMilliseconds()) - ((int)result->age) < MAXIMUM_CRAQ_AGE)
     {
       return it->second;
     }
 
-      
+
     //maybe I could delete it here.
 
-    return NullServerID;      
-    
+    return NullServerID;
+
   }
 
-}  
+}

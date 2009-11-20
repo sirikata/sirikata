@@ -36,7 +36,6 @@
 #include "Utility.hpp"
 #include "Network.hpp"
 #include "MotionVector.hpp"
-#include "ServerNetwork.hpp"
 
 #include "CBR_ServerMessage.pbj.hpp"
 #include "CBR_ObjectMessage.pbj.hpp"
@@ -203,7 +202,7 @@ public:
 }; // class ObjectMessage
 
 // FIXME get rid of this
-ObjectMessage* createObjectHostMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
 
 /** Interface for classes that need to receive object messages, i.e. those that

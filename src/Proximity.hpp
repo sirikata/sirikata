@@ -35,7 +35,6 @@
 
 #include "ProxSimulationTraits.hpp"
 #include "CBRLocationServiceCache.hpp"
-#include "ServerNetwork.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>

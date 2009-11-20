@@ -1,5 +1,5 @@
 /*  cbr
- *  ServerNetwork.hpp
+ *  VWTypes.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,14 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_NETWORK_HPP_
-#define _CBR_SERVER_NETWORK_HPP_
+#include "VWTypes.hpp"
 
 namespace CBR {
 
-typedef uint32 ServerID;
-#define NullServerID 0
+
+std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs) {
+    os << rhs.id;
+    return os;
+}
+
+std::istream& operator>>(std::istream& is, ObjectHostID& rhs) {
+    is >> rhs.id;
+    return is;
+}
+
 
 } // namespace CBR
-
-#endif //_CBR_SERVER_NETWORK_HPP_

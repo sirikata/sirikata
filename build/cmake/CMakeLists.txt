@@ -269,6 +269,7 @@ SET(CBR_CORE_SOURCES
   ${CBR_SOURCE_DIR}/TimeProfiler.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
   ${CBR_SOURCE_DIR}/TimeSync.cpp
+  ${CBR_SOURCE_DIR}/VWTypes.cpp
 )
 
 SET(CBR_SOURCES

@@ -7,7 +7,6 @@
 #include "SpaceContext.hpp"
 #include "Message.hpp"
 #include "Network.hpp"
-#include "ServerNetwork.hpp"
 
 #include "Queue.hpp"
 #include "FairQueue.hpp"

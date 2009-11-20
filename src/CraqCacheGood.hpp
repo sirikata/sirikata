@@ -10,7 +10,6 @@
 #include <list>
 #include <boost/bind.hpp>
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
 #include "Timer.hpp"
 
 
@@ -29,8 +28,8 @@ namespace CBR
     int age;
     ServerID sID;
   };
-  
-  
+
+
   class CraqCacheGood
   {
   private:
@@ -40,19 +39,19 @@ namespace CBR
     typedef std::multimap<int,CraqCacheRecord*> TimeRecordMap;
     TimeRecordMap timeRecMap;
 
-    
+
     Timer mTimer;
     void maintain();
     bool satisfiesCacheAgeCondition(int inAge);
-    
-    
+
+
   public:
     CraqCacheGood();
     ~CraqCacheGood();
-    
+
     void insert(const UUID& uuid, const ServerID& sID);
     ServerID get(const UUID& uuid);
   };
 }
-  
+
 #endif

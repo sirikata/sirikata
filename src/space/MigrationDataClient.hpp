@@ -34,7 +34,6 @@
 #define _CBR_MIGRATION_DATA_CLIENT_HPP_
 
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
 
 namespace CBR {
 

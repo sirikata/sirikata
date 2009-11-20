@@ -170,7 +170,7 @@ String GetPerServerFile(const char* opt_name, const ServerID& sid) {
 }
 
 String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid) {
-    return (GetPerServerFile(opt_name, (ServerID)ohid)); // FIXME relies on fact that ServerID and ObjectHostID are both uint64
+    return (GetPerServerFile(opt_name, (ServerID)ohid.id)); // FIXME relies on fact that ServerID and ObjectHostID are both uint64
 }
 
 } // namespace CBR

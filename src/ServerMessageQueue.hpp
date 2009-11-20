@@ -4,7 +4,6 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "Network.hpp"
-#include "ServerNetwork.hpp"
 #include "ServerIDMap.hpp"
 
 namespace CBR{

@@ -36,7 +36,6 @@
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 #include "Network.hpp"
-#include "ServerNetwork.hpp"
 #include "Message.hpp"
 
 #include <boost/thread/recursive_mutex.hpp>

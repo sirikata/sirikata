@@ -49,6 +49,10 @@ uint64 GenerateUniqueID(const ServerID& origin) {
     return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
 }
 
+uint64 GenerateUniqueID(const ObjectHostID& origin) {
+    return GenerateUniqueID(origin.id);
+}
+
 ServerID GetUniqueIDServerID(uint64 uid) {
     uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
     uint64 server_int = ( uid & message_id_server_bits ) >> MESSAGE_ID_SERVER_SHIFT;
@@ -217,7 +221,7 @@ std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessa
     return final_payload;
 }
 
-ObjectMessage* createObjectHostMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
+ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
     ObjectMessage* result = new ObjectMessage();
 
     result->set_source_object(src);

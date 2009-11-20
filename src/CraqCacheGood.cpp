@@ -1,6 +1,5 @@
 
 #include "CraqCacheGood.hpp"
-#include "ServerNetwork.hpp"
 #include <algorithm>
 #include <map>
 #include <list>
@@ -30,7 +29,7 @@ namespace CBR
     if ((int)idRecMap.size() > LARGEST_CRAQ_CACHE_SIZE)
     {
       int numObjectsDeleted = 0;
-    
+
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
       for (int s=0; (s < NUM_CRAQ_CACHE_REMOVE) && (tMapIter != timeRecMap.end()); ++s)
       {
@@ -55,7 +54,7 @@ namespace CBR
       }
     }
   }
-  
+
 
   void CraqCacheGood::insert(const UUID& uuid, const ServerID& sID)
   {
@@ -76,7 +75,7 @@ namespace CBR
       bool found = false;
       for(timeRecMapIter = eqRange.first; timeRecMapIter != eqRange.second; ++timeRecMapIter)
       {
-        //run through looking for the corresponding 
+        //run through looking for the corresponding
         if(timeRecMapIter->second->obj_id.toString() == uuid.toString())
         {
           //found the object.
@@ -85,7 +84,7 @@ namespace CBR
           delete timeRecMapIter->second;
           //remove the iterator
           timeRecMap.erase(timeRecMapIter);
-          
+
           //re-insert the same record (with updated age) back into the multimap
           CraqCacheRecord* rcd = new CraqCacheRecord;
           rcd->obj_id = uuid;
@@ -122,16 +121,16 @@ namespace CBR
       rcdIDRecMap->obj_id   = uuid;
       rcdIDRecMap->age      = currentDur.toMilliseconds();
       rcdIDRecMap->sID      = sID;
-      
+
       idRecMap.insert(std::pair<UUID,CraqCacheRecord*>(uuid,rcdIDRecMap));
-      maintain();      
+      maintain();
     }
   }
 
   ServerID CraqCacheGood::get(const UUID& uuid)
   {
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
-    
+
     if (idRecMapIter != idRecMap.end())
     {
       //means that we have a record of the object
@@ -142,7 +141,7 @@ namespace CBR
     }
     return NullServerID;
   }
-  
+
 //if inAge indicates that object is young enough, then return true.
 //otherwise, return false
 bool CraqCacheGood::satisfiesCacheAgeCondition(int inAge)

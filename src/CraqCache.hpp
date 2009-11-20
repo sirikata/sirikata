@@ -10,7 +10,6 @@
 #include <list>
 #include <boost/bind.hpp>
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
 #include "Timer.hpp"
 
 namespace CBR
@@ -20,7 +19,7 @@ namespace CBR
 
   static const int MAXIMUM_CRAQ_AGE        = 8800; //maximum age is 8.8 seconds
 
-  
+
   struct IDAge
   {
     UUID id;
@@ -30,7 +29,7 @@ namespace CBR
   bool compareIDAge(const IDAge& a, const IDAge& b);
   static bool compareFindIDAge(const IDAge& a, const UUID& uid);
   static bool compareEvts(IDAge A, IDAge B);
-  
+
   class CraqCache
   {
   private:
@@ -43,14 +42,14 @@ namespace CBR
 
     void maintain();
 
-    
+
   public:
     CraqCache();
     ~CraqCache();
-    
+
     void insert(const UUID& uuid, const ServerID& sID);
     ServerID get(const UUID& uuid);
   };
 }
-  
+
 #endif

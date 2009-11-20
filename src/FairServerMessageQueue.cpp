@@ -1,6 +1,5 @@
 #include "Network.hpp"
 #include "Server.hpp"
-#include "ServerNetwork.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
@@ -190,7 +189,7 @@ float FairServerMessageQueue::getServerWeight(ServerID sid) {
     return 0;
 }
 
-void FairServerMessageQueue::reportQueueInfo(const Time& t) const {   
+void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
     for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
         uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
         float tx_weight = mServerQueues.getQueueWeight(*it);

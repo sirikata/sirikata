@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectHostNetwork.hpp
+ *  VWTypes.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,13 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_HOST_NETWORK_HPP_
-#define _CBR_OBJECT_HOST_NETWORK_HPP_
+#ifndef _CBR_VW_TYPES_HPP_
+#define _CBR_VW_TYPES_HPP_
+
+#include "Utility.hpp"
 
 namespace CBR {
 
-typedef uint64 ObjectHostID;
+typedef uint32 ServerID;
+#define NullServerID 0
+
+
+
+struct ObjectHostID {
+    ObjectHostID()
+     : id(0)
+    {
+    }
+
+    explicit ObjectHostID(uint64 _id)
+     : id(_id)
+    {
+    }
+
+    uint64 id;
+};
+
+std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs);
+std::istream& operator>>(std::istream& is, ObjectHostID& rhs);
+
 
 } // namespace CBR
 
-#endif //_CBR_OBJECT_HOST_NETWORK_HPP_
+#endif //_CBR_VW_TYPES_HPP_

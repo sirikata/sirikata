@@ -34,7 +34,6 @@
 #define _CBR_SPACE_CONTEXT_HPP_
 
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
 #include "Context.hpp"
 
 namespace CBR {

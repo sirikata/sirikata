@@ -34,8 +34,6 @@
 #define _CBR_OPTIONS_HPP_
 
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
-#include "ObjectHostNetwork.hpp"
 
 #define CBR_MODULE "cbr"
 
