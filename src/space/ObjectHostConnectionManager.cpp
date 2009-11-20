@@ -95,9 +95,9 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protoco
     }
 
     ObjectHostConnection* conn = conn_it->second;
-    String* data = serializeObjectHostMessage(*msg);
-    bool sent = conn->socket->send( Sirikata::MemoryReference( &((*data)[0]), data->size() ), Sirikata::Network::ReliableOrdered );
-    delete data;
+    String data = serializePBJMessage(*msg);
+    bool sent = conn->socket->send( Sirikata::MemoryReference(data), Sirikata::Network::ReliableOrdered );
+
     if (sent)
         delete msg;
     return sent;

@@ -213,7 +213,7 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 loc_it->second.location = newloc;
                 notifyReplicaLocationUpdated( update.object(), newloc );
 
-                mContext->trace()->serverLoc( mContext->time, GetUniqueIDServerID(msg->id()), mContext->id(), update.object(), newloc );
+                mContext->trace()->serverLoc( mContext->time, msg->source_server(), mContext->id(), update.object(), newloc );
             }
 
             if (update.has_bounds()) {

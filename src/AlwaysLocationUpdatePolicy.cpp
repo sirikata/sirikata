@@ -111,13 +111,12 @@ void AlwaysLocationUpdatePolicy::service() {
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-    obj_msg->set_source_object(UUID::null());
-    obj_msg->set_source_port(OBJECT_PORT_LOCATION);
-    obj_msg->set_dest_object(dest);
-    obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
-    obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id()));
-    obj_msg->set_payload( serializePBJMessage(blu) );
+    CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
+        mLocService->context()->id(),
+        UUID::null(), OBJECT_PORT_LOCATION,
+        dest, OBJECT_PORT_LOCATION,
+        serializePBJMessage(blu)
+    );
 
     return mLocService->context()->router()->route(obj_msg, false);
 }

@@ -547,13 +547,12 @@ void Proximity::generateObjectQueryEvents() {
                 evts.pop_front();
             }
 
-            CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-            obj_msg->set_source_object(UUID::null());
-            obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
-            obj_msg->set_dest_object(query_id);
-            obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
-            obj_msg->set_unique(GenerateUniqueID(mContext->id()));
-            obj_msg->set_payload( serializePBJMessage(prox_results) );
+            CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
+                mContext->id(),
+                UUID::null(), OBJECT_PORT_PROXIMITY,
+                query_id, OBJECT_PORT_PROXIMITY,
+                serializePBJMessage(prox_results)
+            );
 
             mObjectResults.push(obj_msg);
         }

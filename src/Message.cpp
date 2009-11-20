@@ -38,6 +38,8 @@ namespace CBR {
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
 
+namespace {
+
 uint64 sIDSource = 0;
 
 uint64 GenerateUniqueID(const ServerID& origin) {
@@ -64,7 +66,7 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
     return ( uid & ~message_id_server_bits );
 }
 
-
+}
 
 /* Helper methods for filling in message data in a single line. */
 inline void fillMessage(Message* outmsg, ServerID src, uint16 src_port, ServerID dest, uint16 dest_port) {
@@ -92,6 +94,11 @@ Message::Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_por
 
 Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl) {
     fillMessage(this, src, src_port, dest, dest_port, pl);
+}
+
+void Message::set_source_server(const ServerID sid) {
+    mImpl.set_source_server(sid);
+    set_id( GenerateUniqueID(sid) );
 }
 
 bool Message::serialize(Network::Chunk* output) {
@@ -214,12 +221,6 @@ void MessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessa
 }
 
 
-
-std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
-    // FIXME get rid of this, it shouldn't be necessary anymore
-    std::string* final_payload = new std::string( serializePBJMessage(msg) );
-    return final_payload;
-}
 
 ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
     ObjectMessage* result = new ObjectMessage();

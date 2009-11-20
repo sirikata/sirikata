@@ -82,10 +82,6 @@ typedef uint16 ObjectMessagePort;
 
 
 typedef uint64 UniqueMessageID;
-uint64 GenerateUniqueID(const ServerID& origin);
-ServerID GetUniqueIDServerID(UniqueMessageID uid);
-uint64 GetUniqueIDMessageID(UniqueMessageID uid);
-
 
 template<typename PBJMessageType>
 std::string serializePBJMessage(const PBJMessageType& contents) {
@@ -116,9 +112,6 @@ bool parsePBJMessage(PBJMessageType* contents, const WireType& wire, uint32 offs
     return contents->ParseFromArray((void*)&wire[offset], rlen);
 }
 
-// FIXME we're using a nasty custom framing for object host messages
-std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg);
-
 CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
 /** Base class for messages that go over the network.  Must provide
@@ -131,10 +124,7 @@ public:
     Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl);
 
     ServerID source_server() const { return mImpl.source_server(); }
-    void set_source_server(const ServerID sid) {
-        mImpl.set_source_server(sid);
-        set_id( GenerateUniqueID(sid) );
-    }
+    void set_source_server(const ServerID sid);
 
     uint16 source_port() const { return mImpl.source_port(); }
     void set_source_port(const uint16 port) { mImpl.set_source_port(port); }
@@ -197,7 +187,7 @@ public:
     }
 
     std::string* serialize() {
-        return serializeObjectHostMessage(*this);
+        return new std::string( serializePBJMessage(*this) );
     };
 }; // class ObjectMessage
 
