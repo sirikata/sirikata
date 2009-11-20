@@ -8,7 +8,7 @@
 #include <boost/array.hpp>
 #include "../../SpaceContext.hpp"
 #include "../../Timer.hpp"
-#include "../../ServerNetwork.hpp"
+#include "../../VWTypes.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
