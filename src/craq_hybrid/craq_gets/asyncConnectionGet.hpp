@@ -33,7 +33,7 @@ private:
 public:
 
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING}; //we'll probably be always processing or need new socket.  (minus the initial connection registration.
-  
+
   void initialize(boost::asio::ip::tcp::socket* socket,     boost::asio::ip::tcp::resolver::iterator );  
 
   void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
@@ -84,7 +84,7 @@ private:
 
 
   void queryTimedOutCallbackGet(IndividualQueryData* iqd);
-
+  void queryTimedOutCallbackGetPrint(IndividualQueryData* iqd);
   
   
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.

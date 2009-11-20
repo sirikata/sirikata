@@ -73,21 +73,69 @@ bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& 
 }
 
 
-//this function gets called whenever we haven't received a response to our query.  (Essentially, we just re-issue the query.)
-//it should be called wrapped inside of osegStrand because interfacing with outstandingqueries.
+
+//This gets called with a pointer to query data as its argument.  The query data inside of this has waited too long to be processed.
+//Therefore, we must return an error as our operation result and remove the query from our list of outstanding queries.
 void AsyncConnectionGet::queryTimedOutCallbackGet(IndividualQueryData* iqd)
 {
   std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
   
-  std::string query = "";
-  query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
-  query.append(iqd->currentlySearchingFor); //this is the re
-  query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
+  //look through multimap to find 
+  std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
+  
+  MultiOutstandingQueries::iterator outQueriesIter;
+  outQueriesIter = eqRange.first;
+
+  while(outQueriesIter != eqRange.second)
+  {
+    if (outQueriesIter->second->gs == IndividualQueryData::GET )
+    {
+      //says that this is a get.
+      CraqOperationResult* cor  = new CraqOperationResult(0,
+                                                          outQueriesIter->second->currentlySearchingFor,
+                                                          outQueriesIter->second->tracking_number,
+                                                          false,
+                                                          CraqOperationResult::GET,
+                                                          false); //this is a not_found, means that we add 0 for the id found
+
+      cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
+
+      mOperationResultErrorVector.push_back(cor);  //loads this value back as an error into 
+
+      std::cout<<"\n\nSending error\n\n";
+      
+      if (outQueriesIter->second->deadline_timer != NULL)
+      {
+        outQueriesIter->second->deadline_timer->cancel();
+        delete outQueriesIter->second->deadline_timer;
+      }
+      
+
+      delete outQueriesIter->second;  //delete this from a memory perspective
+      allOutstandingQueries.erase(outQueriesIter++); //
+    }
+    else
+    {
+      outQueriesIter++;
+    }
+  }
+}
+
+//this function gets called whenever we haven't received a response to our query.  (Essentially, we just re-issue the query.)
+//it should be called wrapped inside of osegStrand because interfacing with outstandingqueries.
+void AsyncConnectionGet::queryTimedOutCallbackGetPrint(IndividualQueryData* iqd)
+{
+  std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
+  
+//   std::string query = "";
+//   query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
+//   query.append(iqd->currentlySearchingFor); //this is the re
+//   query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
 
 
-  async_write((*mSocket),
-              boost::asio::buffer(query),
-              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+//   async_write((*mSocket),
+//               boost::asio::buffer(query),
+//               boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
 }
 
 
@@ -115,12 +163,12 @@ AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
 //servicing function.  gets results of all the operations that we were processing.
 void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets)
 {
-  if (mPrevReadFrag.size() > 2000)
+  if (mPrevReadFrag.size() > 200)
   {
     std::cout<<"\n\n\n\nHUGE mPrevReadFrag in asyncConnectionGet:  "<<mPrevReadFrag<<"\n\n";
-    std::cout.flush();
-    assert(false);
+    mPrevReadFrag = mPrevReadFrag.substr(0,100);
   }
+  
   
   if ((mOperationResultVector.size() !=0)||(mOperationResultErrorVector.size() !=0)||(mOperationResultTrackedSetsVector.size() !=0))
   {
@@ -711,8 +759,6 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 
 
 
-
-
 //just see comments for not found stuff
 //looks to see if we received a value in the response.
 //eg: VALUE000000000000000000000000000000000Z120000000000YY
@@ -1150,9 +1196,6 @@ bool AsyncConnectionGet::checkError(std::string& response)
       errorPhrase = suffixed.substr(suffixErrorIndex, smallestNext);
       suffixed = suffixed.substr(smallestNext);
       returner = true;
-      
-      if ((prefixed.size() > 1000) || (suffixed.size() > 1000))
-        printf("\n\n******Long prefix/suffix:   %s \n\n\n %s\n\n\n",prefixed.c_str(),suffixed.c_str());
       
       response = prefixed +suffixed;
     }
