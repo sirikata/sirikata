@@ -481,14 +481,14 @@ namespace Graphics {
         void onUnresponsive(Berkelium::Window*);
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
 
-        void onChromeSend(Berkelium::Window *win, WindowDelegate::Data msg, const WindowDelegate::Data*str, size_t numStr);
+        void onChromeSend(Berkelium::Window *win, Berkelium::WindowDelegate::Data msg, const Berkelium::WindowDelegate::Data*str, size_t numStr);
 
     /** Linux only. uses an OpenGL texture.
      * If not using OpenGL, each srcRect will get its own call to 'onPaint'
      * It should be possible to paint plugins directly onto the canvas.
      * If this is not possible, then plugins may be created as widgets with
      * a negative z-index (i.e. below anything else on the screen).
-     
+
     virtual void onPaintPluginTexture(
         Berkelium::Window *win,
         void* sourceGLTexture,
