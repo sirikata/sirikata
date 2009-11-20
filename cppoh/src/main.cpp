@@ -174,7 +174,7 @@ int main ( int argc,const char**argv ) {
                                 NULL);
 
     PluginManager plugins;
-    const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics", "bulletphysics", "colladamodels", NULL};
+    const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics", "bulletphysics", /* "colladamodels", */ NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
         plugins.load( DynamicLibrary::filename(*plugin_name) );
 
@@ -263,7 +263,7 @@ int main ( int argc,const char**argv ) {
 
     // MCB: seems like a good place to initialize models system
     ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider, graphicsCommandArguments ) );
-    
+
     if ( mm )
     {
         SILOG(cppoh,info,"Created ModelsSystemFactory ");
@@ -272,7 +272,7 @@ int main ( int argc,const char**argv ) {
     {
         SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
     }
-    
+
     if (!provider) {
         SILOG(cppoh,error,"Failed to get TopLevelSpaceConnection for main space "<<mainSpace);
     }

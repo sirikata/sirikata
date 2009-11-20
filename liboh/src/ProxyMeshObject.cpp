@@ -63,34 +63,46 @@ void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )
 
 void ProxyMeshObject::setMesh ( URI const& mesh )
 {
-    mModelObject->setMesh ( mesh );
+    if (hasModelObject())
+        mModelObject->setMesh ( mesh );
     MeshProvider::notify ( &MeshListener::onSetMesh, mesh );
 }
 
 URI const& ProxyMeshObject::getMesh () const
 {
+    if (!hasModelObject())
+        return URI();
+
     return mModelObject->getMesh ();
 }
 
 void ProxyMeshObject::setScale ( Vector3f const& scale )
 {
-    mModelObject->setScale ( scale );
+    if (hasModelObject())
+        mModelObject->setScale ( scale );
     MeshProvider::notify ( &MeshListener::onSetScale, scale );
 }
 
 Vector3f const& ProxyMeshObject::getScale () const
 {
+    if (!hasModelObject())
+        return Vector3f(1.f, 1.f, 1.f);
+
     return mModelObject->getScale ();
 }
 
 void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 {
-    mModelObject->setPhysical ( pp );
+    if (hasModelObject())
+        mModelObject->setPhysical ( pp );
     MeshProvider::notify ( &MeshListener::onSetPhysical, pp );
 }
 
 PhysicalParameters const& ProxyMeshObject::getPhysical () const
 {
+    if (!hasModelObject())
+        return PhysicalParameters();
+
     return mModelObject->getPhysical ();
 }
 
