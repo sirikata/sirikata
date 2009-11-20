@@ -287,7 +287,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
-  #${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/space/MigrationMonitor.cpp
