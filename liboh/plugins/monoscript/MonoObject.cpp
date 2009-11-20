@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "oh/Platform.hpp"
+#include "util/Time.hpp"
 #include "MonoObject.hpp"
 #include "MonoClass.hpp"
 #include "MonoException.hpp"
@@ -761,7 +762,7 @@ Sirikata::Duration Object::unboxDuration() const {
     ticks*=65536;
     ticks*=65536;
     ticks+=lower;
-    return Sirikata::Duration::microseconds(ticks);    
+    return Sirikata::Duration::microseconds(ticks);
 }
 Sirikata::Time Object::unboxTime() const {
     return Sirikata::Time::epoch()+unboxDuration();

@@ -33,6 +33,7 @@
 #ifndef _MONO_DEFS_HPP_
 #define _MONO_DEFS_HPP_
 
+#include "oh/Platform.hpp"
 #include <string>
 
 namespace Mono {

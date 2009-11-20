@@ -87,7 +87,7 @@ void MonoSystem::listAssemblies() {
 //#####################################################################
 // Function getClass
 //#####################################################################
-Class MonoSystem::getClass(const Meru::String& name_space, const Meru::String& klass) {
+Class MonoSystem::getClass(const Sirikata::String& name_space, const Sirikata::String& klass) {
     // Check all loaded assemblies
     for(unsigned int i = 0; i < mAssemblies.size(); i++) {
         // FIXME we should probably have a way to just check and not have to deal with all these exceptions...
@@ -107,7 +107,7 @@ Class MonoSystem::getClass(const Meru::String& name_space, const Meru::String& k
 //#####################################################################
 // Function loadAssembly
 //#####################################################################
-bool MonoSystem::loadAssembly(const Meru::String& name) const {
+bool MonoSystem::loadAssembly(const Sirikata::String& name) const {
     MonoAssemblyName aname;
     bool parsed = (mono_assembly_name_parse(name.c_str(), &aname)!=0);
     if (!parsed) return false;
@@ -122,7 +122,7 @@ bool MonoSystem::loadAssembly(const Meru::String& name) const {
 //#####################################################################
 // Function loadAssembly
 //#####################################################################
-bool MonoSystem::loadAssembly(const Meru::String& name, const Meru::String& dir) const {
+bool MonoSystem::loadAssembly(const Sirikata::String& name, const Sirikata::String& dir) const {
     MonoAssemblyName aname;
     bool parsed = (mono_assembly_name_parse(name.c_str(), &aname)!=0);
     if (!parsed) return false;
@@ -167,4 +167,3 @@ void MonoSystem::GC() const {
 }
 
 } // namespace Mono
-

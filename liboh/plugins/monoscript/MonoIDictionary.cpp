@@ -71,14 +71,14 @@ Object IDictionary::operator[](const Object& obj) const {
 //#####################################################################
 // Function operator[]
 //#####################################################################
-Object IDictionary::operator[](const Meru::String& str) const {
+Object IDictionary::operator[](const Sirikata::String& str) const {
     return getProperty("Item", Domain::root().String(str));
 }
 
 //#####################################################################
 // Function operator[]
 //#####################################################################
-Object IDictionary::operator[](const Meru::int32 idx) const {
+Object IDictionary::operator[](const Sirikata::int32 idx) const {
     return getProperty("Item", Domain::root().Int32(idx));
 }
 

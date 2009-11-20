@@ -32,7 +32,6 @@
 #ifndef _MONO_CLASS_HPP_
 #define _MONO_CLASS_HPP_
 
-#include "MeruDefs.hpp"
 #include "MonoDefs.hpp"
 #include <mono/metadata/metadata.h>
 

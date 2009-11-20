@@ -620,10 +620,9 @@ SET(INCLUDE_DIRECTORIES
   ${PROX_INCLUDE_DIRS}
   ${CXXTESTRoot}
   ${CMAKE_CURRENT_SOURCE_DIR} #generated files
-  ${bullet_INCLUDE_DIRS}
-  ${OpenCOLLADA_INCLUDE_DIRS}
   ${SQLite3_INCLUDE_DIRS}
   )
+
 IF(OGRE_FOUND AND sdl_FOUND)
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${OGRE_INCLUDE_DIRS} ${sdl_INCLUDE_DIRS})
 ENDIF()
@@ -636,6 +635,13 @@ ENDIF()
 IF(BERKELIUM_FOUND)
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${BERKELIUM_INCLUDE_DIRS})
 ENDIF()
+IF(OpenCOLLADA_FOUND)
+  SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${OpenCOLLADA_INCLUDE_DIRS})
+ENDIF()
+IF(bullet_FOUND)
+  SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${bullet_INCLUDE_DIRS})
+ENDIF()
+
 
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${TOP_LEVEL}/externals/pbj/)
 
@@ -677,10 +683,10 @@ SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
 IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
   SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
-  # FIXME there should probably be another check for IronPython
-  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
+  IF(IRON_PYTHON_ROOT)
+    SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
+  ENDIF()
 ENDIF()
-
 
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"util/Standard.hh\"\n")
 
@@ -711,7 +717,6 @@ ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATE_CSHARP GENERATE_PYTHON
   ${SCRIPTING_PROTOCOLBUFFERS_GENS}
 )
 SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})
@@ -825,12 +830,14 @@ ENDIF()
 #source files
 
 SET(AdditionalProtoDepends)
-FOREACH(FILE ${ScriptingProtocolBuffersSources})
-   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
-ENDFOREACH()
-ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
+IF(IRON_PYTHON_ROOT)
+   FOREACH(FILE ${ScriptingProtocolBuffersSources})
+      SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
+   ENDFOREACH()
+   ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
               DEPENDS ${AdditionalProtoDepends}
               COMMENT "Checking ${AdditionalProtoDepends}")
+ENDIF()
 
 IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
@@ -860,7 +867,15 @@ IF(MONO_FOUND)
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${SirikataProtoScriptRuntimeBuildOutputs}")
 
 
-  FILE(GLOB SirikataScriptSources ${ScriptsRoot}/csharp/*.cs )
+  # Note: Can't use GLOB here because of Python objects
+  SET(SirikataScriptSources
+       ${ScriptsRoot}/csharp/HostedObject.cs
+       ${ScriptsRoot}/csharp/Time.cs
+     )
+  IF(IRON_PYTHON_FOUND)
+    SET(SirikataScriptSources ${ScriptsRoot}/csharp/PythonObject.cs)
+  ENDIF()
+
   SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   SET(SirikataScriptRuntime_LIBRARY ${SirikataScriptRuntime_LIBRARY_DIR}/Sirikata.Runtime.dll)
   ADD_CUSTOM_TARGET(SirikataScriptRuntime ALL

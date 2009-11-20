@@ -33,6 +33,8 @@
 #define _MONO_DOMAIN_HPP_
 
 #include "oh/Platform.hpp"
+#include "util/UUID.hpp"
+#include "util/SpaceObjectReference.hpp"
 #include "MonoDefs.hpp"
 #include <boost/shared_ptr.hpp>
 #include <mono/metadata/appdomain.h>

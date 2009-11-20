@@ -161,7 +161,7 @@ MonoDomain* Domain::domain() const {
 //#####################################################################
 // Function getAssembly
 //#####################################################################
-Assembly Domain::getAssembly(const Meru::String& name) const {
+Assembly Domain::getAssembly(const Sirikata::String& name) const {
     // The commented version requires an actual filename, but is the only thing
     // that actually takes a domain.  FIXME how do we get the domain to increment
     // the reference count of the assembly?
@@ -197,7 +197,7 @@ Object Domain::String(const char* str, int nbytes) {
 //#####################################################################
 // Function String
 //#####################################################################
-Object Domain::String(const Meru::String& str) {
+Object Domain::String(const Sirikata::String& str) {
     return Object( (MonoObject*)mono_string_new_len(mDomain->domain(), str.c_str(), str.size()) );
 }
 

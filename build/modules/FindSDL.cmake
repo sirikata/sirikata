@@ -41,7 +41,7 @@ ELSEIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")  # OS X
   #INCLUDE(CMakeFindFrameworks)
   #CMAKE_FIND_FRAMEWORKS(sdl) 
   SET(sdl_FRAMEWORKS ${sdl_ROOT}/Frameworks/SDL.framework)
-  IF(sdl_FRAMEWORKS)
+  IF(EXISTS ${sdl_FRAMEWORKS})
     LIST(GET sdl_FRAMEWORKS 0 sdl_LIBRARIES)
     SET(sdl_INCLUDE_DIRS ${sdl_LIBRARIES}/Headers)
     
@@ -52,7 +52,7 @@ ELSEIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")  # OS X
     SET(sdl_LIBRARIES)
     SET(sdl_CFLAGS)
     SET(sdl_FOUND TRUE)
-  ENDIF(sdl_FRAMEWORKS)
+  ENDIF(EXISTS ${sdl_FRAMEWORKS})
 
 ELSE(WIN32)  # Linux etc
   FIND_PACKAGE(PkgConfig)

@@ -29,8 +29,8 @@ clean:
 
 DEPVC8REV=HEAD
 DEPVC9REV=5
-DEPOSXREV=16
-DEPSOURCE=8
+DEPOSXREV=17
+DEPSOURCE=9
 DEPARCHINDEP=6
 #========== Dependencies ===========
 
@@ -86,14 +86,25 @@ update-dependencies: distributions
 	esac ; \
 	svn co -r$(DEPARCHINDEP) http://sirikatamachindep.googlecode.com/svn/trunk/ machindependencies
 
+# deprecated
 minimaldepends: update-dependencies
 	$(MAKE) -C dependencies minimaldepends $(*)
 
-minimalfulldepends: update-dependencies
+minimal-depends: update-dependencies
+	$(MAKE) -C dependencies minimal-depends $(*)
+
+minimal-graphics-depends: update-dependencies
+	$(MAKE) -C dependencies minimal-graphics-depends $(*)
+
+minimal-depends-with-root: update-dependencies
 	$(MAKE) -C dependencies minimalrootdepends minimaldepends $(*)
 
 depends: update-dependencies
 	$(MAKE) -C dependencies depends $(*)
 
+# deprecated
 fulldepends: update-dependencies
 	$(MAKE) -C dependencies fulldepends $(*)
+
+full-depends:
+	$(MAKE) -C dependencies full-depends $(*)

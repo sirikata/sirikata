@@ -65,14 +65,14 @@ Array::~Array() {
 //#####################################################################
 // Function operator[]
 //#####################################################################
-Object Array::operator[](const Meru::int32 idx) const {
+Object Array::operator[](const Sirikata::int32 idx) const {
     return send("GetValue", Domain::root().Int32(idx));
 }
 
 //#####################################################################
 // Function set
 //#####################################################################
-void Array::set(const Meru::int32 idx, const Object& obj) {
+void Array::set(const Sirikata::int32 idx, const Object& obj) {
     send("SetValue", obj, Domain::root().Int32(idx));
 }
 

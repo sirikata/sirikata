@@ -66,7 +66,7 @@ IList::~IList() {
 //#####################################################################
 // Function operator[]
 //#####################################################################
-Object IList::operator[](const Meru::int32 idx) const {
+Object IList::operator[](const Sirikata::int32 idx) const {
     return getProperty("Item", Domain::root().Int32(idx));
 }
 
