@@ -47,7 +47,6 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	viewName = name;
 	viewWidth = width;
 	viewHeight = height;
-	movable = true;
 	maxUpdatePS = 0;
 	lastUpdateTime = 0;
 	opacity = 1;
@@ -98,7 +97,6 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	viewWidth = width;
 	viewHeight = height;
 	overlay = 0;
-	movable = false;
 	maxUpdatePS = 0;
 	lastUpdateTime = 0;
 	opacity = 1;
@@ -214,373 +212,367 @@ void WebView::createMaterial()
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
 	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
-	texDepth = Ogre::PixelUtil::getNumElemBytes(pixelBox.format);
-	texPitch = (pixelBox.rowPitch*texDepth);
+	unsigned int texDepth = Ogre::PixelUtil::getNumElemBytes(pixelBox.format);
+	unsigned int texPitch = (pixelBox.rowPitch*texDepth);
 
-	uint8* pDest = static_cast<uint8*>(pixelBox.data);
+     uint8* pDest = static_cast<uint8*>(pixelBox.data);
 
-	memset(pDest, 128, texHeight*texPitch);
+     memset(pDest, 128, texHeight*texPitch);
 
-	pixelBuffer->unlock();
-#endif
-	MaterialPtr material = MaterialManager::getSingleton().create(getMaterialName(),
-		ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-	matPass = material->getTechnique(0)->getPass(0);
-	//matPass->setSeparateSceneBlending (SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
-	matPass->setSeparateSceneBlending (SBF_ONE, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
-	matPass->setDepthWriteEnabled(false);
+     pixelBuffer->unlock();
+ #endif
+     MaterialPtr material = MaterialManager::getSingleton().create(getMaterialName(),
+         ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+     matPass = material->getTechnique(0)->getPass(0);
+     //matPass->setSeparateSceneBlending (SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
+     matPass->setSeparateSceneBlending (SBF_ONE, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
+     matPass->setDepthWriteEnabled(false);
 
-	baseTexUnit = matPass->createTextureUnitState(getViewTextureName());
+     baseTexUnit = matPass->createTextureUnitState(getViewTextureName());
 
-	baseTexUnit->setTextureFiltering(texFiltering, texFiltering, FO_NONE);
-	if(texFiltering == FO_ANISOTROPIC)
-		baseTexUnit->setTextureAnisotropy(4);
-}
+     baseTexUnit->setTextureFiltering(texFiltering, texFiltering, FO_NONE);
+     if(texFiltering == FO_ANISOTROPIC)
+         baseTexUnit->setTextureAnisotropy(4);
+ }
 
-// This is for when the rendering device has a hiccup and loses the dynamic texture
-void WebView::loadResource(Resource* resource)
-{
-	Texture *tex = static_cast<Texture*>(resource);
+ // This is for when the rendering device has a hiccup and loses the dynamic texture
+ void WebView::loadResource(Resource* resource)
+ {
+     Texture *tex = static_cast<Texture*>(resource);
 
-	tex->setTextureType(TEX_TYPE_2D);
-	tex->setWidth(texWidth);
-	tex->setHeight(texHeight);
-	tex->setNumMipmaps(0);
-	tex->setFormat(PF_BYTE_BGRA);
-	tex->setUsage(TU_DYNAMIC);
-	tex->createInternalResources();
+     tex->setTextureType(TEX_TYPE_2D);
+     tex->setWidth(texWidth);
+     tex->setHeight(texHeight);
+     tex->setNumMipmaps(0);
+     tex->setFormat(PF_BYTE_BGRA);
+     tex->setUsage(TU_DYNAMIC);
+     tex->createInternalResources();
 
-	// force update
-}
+     // force update
+ }
 
-void WebView::update()
-{
-	if(maxUpdatePS)
-		if(timer.getMilliseconds() - lastUpdateTime < 1000 / maxUpdatePS)
-			return;
+ void WebView::update()
+ {
+     if(maxUpdatePS)
+         if(timer.getMilliseconds() - lastUpdateTime < 1000 / maxUpdatePS)
+             return;
 
-	updateFade();
+     updateFade();
 
-	if(usingMask)
-		baseTexUnit->setAlphaOperation(LBX_SOURCE1, LBS_MANUAL, LBS_CURRENT, fadeValue * opacity);
-	else if(isWebViewTransparent)
-		baseTexUnit->setAlphaOperation(LBX_BLEND_TEXTURE_ALPHA, LBS_MANUAL, LBS_TEXTURE, fadeValue * opacity);
-	else
-		baseTexUnit->setAlphaOperation(LBX_SOURCE1, LBS_MANUAL, LBS_CURRENT, fadeValue * opacity);
+     if(usingMask)
+         baseTexUnit->setAlphaOperation(LBX_SOURCE1, LBS_MANUAL, LBS_CURRENT, fadeValue * opacity);
+     else if(isWebViewTransparent)
+         baseTexUnit->setAlphaOperation(LBX_BLEND_TEXTURE_ALPHA, LBS_MANUAL, LBS_TEXTURE, fadeValue * opacity);
+     else
+         baseTexUnit->setAlphaOperation(LBX_SOURCE1, LBS_MANUAL, LBS_CURRENT, fadeValue * opacity);
 
-	lastUpdateTime = timer.getMilliseconds();
-}
+     lastUpdateTime = timer.getMilliseconds();
+ }
 
-void WebView::updateFade()
-{
-	if(isFading)
-	{
-		fadeValue += deltaFadePerMS * (timer.getMilliseconds() - lastFadeTimeMS);
+ void WebView::updateFade()
+ {
+     if(isFading)
+     {
+         fadeValue += deltaFadePerMS * (timer.getMilliseconds() - lastFadeTimeMS);
 
-		if(fadeValue > 1)
-		{
-			fadeValue = 1;
-			isFading = false;
-		}
-		else if(fadeValue < 0)
-		{
-			fadeValue = 0;
-			isFading = false;
-			overlay->hide();
-		}
+         if(fadeValue > 1)
+         {
+             fadeValue = 1;
+             isFading = false;
+         }
+         else if(fadeValue < 0)
+         {
+             fadeValue = 0;
+             isFading = false;
+             overlay->hide();
+         }
 
-		lastFadeTimeMS = timer.getMilliseconds();
-	}
-}
+         lastFadeTimeMS = timer.getMilliseconds();
+     }
+ }
 
-bool WebView::isPointOverMe(int x, int y)
-{
-	if(isMaterialOnly())
-		return false;
-	if(!overlay->isVisible || !overlay->viewport)
-		return false;
+ bool WebView::isPointOverMe(int x, int y)
+ {
+     if(isMaterialOnly())
+         return false;
+     if(!overlay->isVisible || !overlay->viewport)
+         return false;
 
-	int localX = overlay->getRelativeX(x);
-	int localY = overlay->getRelativeY(y);
+     int localX = overlay->getRelativeX(x);
+     int localY = overlay->getRelativeY(y);
 
-	if(localX > 0 && localX < overlay->width)
-		if(localY > 0 && localY < overlay->height)
-			return !ignoringTrans || !alphaCache ? true :
-				alphaCache[localY * alphaCachePitch + localX] > 255 * transparent;
+     if(localX > 0 && localX < overlay->width)
+         if(localY > 0 && localY < overlay->height)
+             return !ignoringTrans || !alphaCache ? true :
+                 alphaCache[localY * alphaCachePitch + localX] > 255 * transparent;
 
-	return false;
-}
+     return false;
+ }
 
-void WebView::loadURL(const std::string& url)
-{
-#if defined(HAVE_BERKELIUM)
-    webView->navigateTo(url.data(),url.length());
-#endif
-}
+ void WebView::loadURL(const std::string& url)
+ {
+ #if defined(HAVE_BERKELIUM)
+     webView->navigateTo(url.data(),url.length());
+ #endif
+ }
 
-void WebView::loadFile(const std::string& file)
-{
-#if defined(HAVE_BERKELIUM)
-    std::string url = file;
-    if (file.length() == 0) {
-        url = "about:blank";
-    } else if (file[0]=='/') {
-        url = "file://"+file;
-    } else {
-        url = "file://"+WebViewManager::getSingleton().getBaseDir()+"/"+file;
-    }
-    webView->navigateTo(url.data(),url.length());
-#endif
-}
-static std::string htmlPrepend("data:text/html;charset=utf-8,");
-void WebView::loadHTML(const std::string& html)
-{
-#if defined(HAVE_BERKELIUM)
-    char * data= new char[htmlPrepend.length()+html.length()+1];
-    memcpy(data,htmlPrepend.data(),htmlPrepend.length());
-    memcpy(data+htmlPrepend.length(),html.data(),html.length());
-    data[htmlPrepend.length()+html.length()]=0;
-    webView->navigateTo(data,htmlPrepend.length()+html.length());
-    delete[] data;
-#endif
-}
+ void WebView::loadFile(const std::string& file)
+ {
+ #if defined(HAVE_BERKELIUM)
+     std::string url = file;
+     if (file.length() == 0) {
+         url = "about:blank";
+     } else if (file[0]=='/') {
+         url = "file://"+file;
+     } else {
+         url = "file://"+WebViewManager::getSingleton().getBaseDir()+"/"+file;
+     }
+     webView->navigateTo(url.data(),url.length());
+ #endif
+ }
+ static std::string htmlPrepend("data:text/html;charset=utf-8,");
+ void WebView::loadHTML(const std::string& html)
+ {
+ #if defined(HAVE_BERKELIUM)
+     char * data= new char[htmlPrepend.length()+html.length()+1];
+     memcpy(data,htmlPrepend.data(),htmlPrepend.length());
+     memcpy(data+htmlPrepend.length(),html.data(),html.length());
+     data[htmlPrepend.length()+html.length()]=0;
+     webView->navigateTo(data,htmlPrepend.length()+html.length());
+     delete[] data;
+ #endif
+ }
 
-void WebView::evaluateJS(const std::string& utf8js)
-{
-#if defined(HAVE_BERKELIUM)
-	wchar_t *outchars = new wchar_t[utf8js.size()+1];
-	size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
-    webView->executeJavascript(outchars,len);
-    delete []outchars;
-#endif
-}
+ void WebView::evaluateJS(const std::string& utf8js)
+ {
+ #if defined(HAVE_BERKELIUM)
+     wchar_t *outchars = new wchar_t[utf8js.size()+1];
+     size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
+     webView->executeJavascript(outchars,len);
+     delete []outchars;
+ #endif
+ }
 
-void WebView::bind(const std::string& name, JSDelegate callback)
-{
-	delegateMap[name] = callback;
-}
+ void WebView::bind(const std::string& name, JSDelegate callback)
+ {
+     delegateMap[name] = callback;
+ }
 
-void WebView::setViewport(Ogre::Viewport* newViewport)
-{
-	if(overlay)
-		overlay->setViewport(newViewport);
-}
+ void WebView::setViewport(Ogre::Viewport* newViewport)
+ {
+     if(overlay)
+         overlay->setViewport(newViewport);
+ }
 
-void WebView::setTransparent(bool isTransparent)
-{
-	if(!isTransparent)
-	{
-		if(alphaCache && !usingMask)
-		{
-			delete[] alphaCache;
-			alphaCache = 0;
-		}
-	}
-	else
-	{
-		if(!alphaCache && !usingMask)
-		{
-			alphaCache = new unsigned char[texWidth * texHeight];
-			alphaCachePitch = texWidth;
-		}
-	}
+ void WebView::setTransparent(bool isTransparent)
+ {
+     if(!isTransparent)
+     {
+         if(alphaCache && !usingMask)
+         {
+             delete[] alphaCache;
+             alphaCache = 0;
+         }
+     }
+     else
+     {
+         if(!alphaCache && !usingMask)
+         {
+             alphaCache = new unsigned char[texWidth * texHeight];
+             alphaCachePitch = texWidth;
+         }
+     }
 
-#if defined(HAVE_BERKELIUM)
-	webView->setTransparent(isTransparent);
-#endif
-	isWebViewTransparent = isTransparent;
-}
+ #if defined(HAVE_BERKELIUM)
+     webView->setTransparent(isTransparent);
+ #endif
+     isWebViewTransparent = isTransparent;
+ }
 
-void WebView::setIgnoreBounds(bool ignoreBounds)
-{
-	ignoringBounds = ignoreBounds;
-}
+ void WebView::setIgnoreBounds(bool ignoreBounds)
+ {
+     ignoringBounds = ignoreBounds;
+ }
 
-void WebView::setIgnoreTransparent(bool ignoreTrans, float threshold)
-{
-	ignoringTrans = ignoreTrans;
+ void WebView::setIgnoreTransparent(bool ignoreTrans, float threshold)
+ {
+     ignoringTrans = ignoreTrans;
 
-	if(threshold > 1) threshold = 1;
-	else if(threshold < 0) threshold = 0;
+     if(threshold > 1) threshold = 1;
+     else if(threshold < 0) threshold = 0;
 
-	transparent = threshold;
-}
+     transparent = threshold;
+ }
 
-void WebView::setMaxUPS(unsigned int maxUPS)
-{
-	maxUpdatePS = maxUPS;
-}
+ void WebView::setMaxUPS(unsigned int maxUPS)
+ {
+     maxUpdatePS = maxUPS;
+ }
 
-void WebView::setMovable(bool isMovable)
-{
-	if(!isMaterialOnly())
-		movable = isMovable;
-}
+ void WebView::setOpacity(float opacity)
+ {
+     if(opacity > 1) opacity = 1;
+     else if(opacity < 0) opacity = 0;
 
-void WebView::setOpacity(float opacity)
-{
-	if(opacity > 1) opacity = 1;
-	else if(opacity < 0) opacity = 0;
+     this->opacity = opacity;
+ }
 
-	this->opacity = opacity;
-}
+ void WebView::setPosition(const OverlayPosition &viewPosition)
+ {
+     if(overlay)
+         overlay->setPosition(viewPosition);
+ }
 
-void WebView::setPosition(const OverlayPosition &viewPosition)
-{
-	if(overlay)
-		overlay->setPosition(viewPosition);
-}
+ void WebView::resetPosition()
+ {
+     if(overlay)
+         overlay->resetPosition();
+ }
 
-void WebView::resetPosition()
-{
-	if(overlay)
-		overlay->resetPosition();
-}
+ void WebView::hide()
+ {
+     hide(false, 0);
+ }
 
-void WebView::hide()
-{
-	hide(false, 0);
-}
+ void WebView::hide(bool fade, unsigned short fadeDurationMS)
+ {
+     updateFade();
 
-void WebView::hide(bool fade, unsigned short fadeDurationMS)
-{
-	updateFade();
+     if(fade)
+     {
+         isFading = true;
+         deltaFadePerMS = -1 / (double)fadeDurationMS;
+         lastFadeTimeMS = timer.getMilliseconds();
+     }
+     else
+     {
+         isFading = false;
+         fadeValue = 0;
+         overlay->hide();
+     }
+ }
 
-	if(fade)
-	{
-		isFading = true;
-		deltaFadePerMS = -1 / (double)fadeDurationMS;
-		lastFadeTimeMS = timer.getMilliseconds();
-	}
-	else
-	{
-		isFading = false;
-		fadeValue = 0;
-		overlay->hide();
-	}
-}
+ void WebView::show()
+ {
+     show(false, 0);
+ }
 
-void WebView::show()
-{
-	show(false, 0);
-}
+ void WebView::show(bool fade, unsigned short fadeDurationMS)
+ {
+     updateFade();
 
-void WebView::show(bool fade, unsigned short fadeDurationMS)
-{
-	updateFade();
+     if(fade)
+     {
+         isFading = true;
+         deltaFadePerMS = 1 / (double)fadeDurationMS;
+         lastFadeTimeMS = timer.getMilliseconds();
+     }
+     else
+     {
+         isFading = false;
+         fadeValue = 1;
+     }
 
-	if(fade)
-	{
-		isFading = true;
-		deltaFadePerMS = 1 / (double)fadeDurationMS;
-		lastFadeTimeMS = timer.getMilliseconds();
-	}
-	else
-	{
-		isFading = false;
-		fadeValue = 1;
-	}
+     overlay->show();
+ }
 
-	overlay->show();
-}
+ void WebView::focus()
+ {
+ #if defined(HAVE_BERKELIUM)
+     webView->focus();
+ #endif
+ }
 
-void WebView::focus()
-{
-#if defined(HAVE_BERKELIUM)
-    webView->focus();
-#endif
-}
+ void WebView::unfocus()
+ {
+ #if defined(HAVE_BERKELIUM)
+     webView->unfocus();
+ #endif
+ }
 
-void WebView::unfocus()
-{
-#if defined(HAVE_BERKELIUM)
-    webView->unfocus();
-#endif
-}
+ void WebView::raise()
+ {
+     if(overlay) {
+         WebViewManager::getSingleton().focusWebView(0, 0, this);
+     } else {
+         focus();
+     }
+ }
 
-void WebView::raise()
-{
-	if(overlay) {
-		WebViewManager::getSingleton().focusWebView(0, 0, this);
-    } else {
-        focus();
-    }
-}
+ void WebView::move(int deltaX, int deltaY)
+ {
+     if(overlay)
+         overlay->move(deltaX, deltaY);
+ }
 
-void WebView::move(int deltaX, int deltaY)
-{
-	if(overlay)
-		overlay->move(deltaX, deltaY);
-}
+ void WebView::getExtents(unsigned short &width, unsigned short &height)
+ {
+     width = viewWidth;
+     height = viewHeight;
+ }
 
-void WebView::getExtents(unsigned short &width, unsigned short &height)
-{
-	width = viewWidth;
-	height = viewHeight;
-}
+ int WebView::getRelativeX(int absX)
+ {
+     if(isMaterialOnly())
+         return 0;
+     else
+         return overlay->getRelativeX(absX);
+ }
 
-int WebView::getRelativeX(int absX)
-{
-	if(isMaterialOnly())
-		return 0;
-	else
-		return overlay->getRelativeX(absX);
-}
+ int WebView::getRelativeY(int absY)
+ {
+     if(isMaterialOnly())
+         return 0;
+     else
+         return overlay->getRelativeY(absY);
+ }
 
-int WebView::getRelativeY(int absY)
-{
-	if(isMaterialOnly())
-		return 0;
-	else
-		return overlay->getRelativeY(absY);
-}
+ bool WebView::isMaterialOnly()
+ {
+     return !overlay;
+ }
 
-bool WebView::isMaterialOnly()
-{
-	return !overlay;
-}
+ ViewportOverlay* WebView::getOverlay()
+ {
+     return overlay;
+ }
 
-ViewportOverlay* WebView::getOverlay()
-{
-	return overlay;
-}
+ std::string WebView::getName()
+ {
+     return viewName;
+ }
 
-std::string WebView::getName()
-{
-	return viewName;
-}
+ std::string WebView::getViewTextureName()
+ {
+     return viewName + "Texture";
+ }
 
-std::string WebView::getViewTextureName()
-{
-    return viewName + "Texture";
-}
+ std::string WebView::getMaterialName()
+ {
+     return viewName + "Material";
+ }
 
-std::string WebView::getMaterialName()
-{
-	return viewName + "Material";
-}
+ bool WebView::getVisibility()
+ {
+     if(isMaterialOnly())
+         return fadeValue != 0;
+     else
+         return overlay->isVisible;
+ }
 
-bool WebView::getVisibility()
-{
-	if(isMaterialOnly())
-		return fadeValue != 0;
-	else
-		return overlay->isVisible;
-}
+ bool WebView::getNonStrictVisibility() {
+     if (isFading) {
+         // When fading, we are actually the *opposite* of what the overlay claims.
+         return !overlay->isVisible;
+     }
+     else {
+         // If we're not fading, then we can trust the overlay.
+         return overlay->isVisible;
+     }
+ }
 
-bool WebView::getNonStrictVisibility() {
-    if (isFading) {
-        // When fading, we are actually the *opposite* of what the overlay claims.
-        return !overlay->isVisible;
-    }
-    else {
-        // If we're not fading, then we can trust the overlay.
-        return overlay->isVisible;
-    }
-}
-
-void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre::Real& v2)
-{
+ void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre::Real& v2)
+ {
 	u1 = v1 = 0;
 	u2 = v2 = 1;
 
@@ -593,9 +585,13 @@ void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre:
 
 void WebView::injectMouseMove(int xPos, int yPos)
 {
+    if (xPos>mBorderLeft&&yPos>mBorderTop&&xPos<viewWidth-mBorderRight) {
 #if defined(HAVE_BERKELIUM)
-	webView->mouseMoved(xPos, yPos);
+        webView->mouseMoved(xPos-mBorderLeft, yPos-mBorderTop);
 #endif
+    }else {
+        //handle tug on border
+    }
 }
 
 void WebView::injectMouseWheel(int relScrollX, int relScrollY)
@@ -607,18 +603,26 @@ void WebView::injectMouseWheel(int relScrollX, int relScrollY)
 
 void WebView::injectMouseDown(int xPos, int yPos)
 {
+    if (xPos>mBorderLeft&&yPos>mBorderTop&&xPos<viewWidth-mBorderRight) {
 #if defined(HAVE_BERKELIUM)
-    webView->mouseMoved(xPos, yPos);
+        webView->mouseMoved(xPos-mBorderLeft, yPos-mBorderTop);
     webView->mouseButton(0, true);
 #endif
+    }else {
+        //handle tug on border
+    }
 }
 
 void WebView::injectMouseUp(int xPos, int yPos)
 {
+    if (xPos>mBorderLeft&&yPos>mBorderTop&&xPos<viewWidth-mBorderRight) {
 #if defined(HAVE_BERKELIUM)
-    webView->mouseMoved(xPos, yPos);
-	webView->mouseButton(0, false);
+        webView->mouseMoved(xPos-mBorderTop, yPos-mBorderLeft);
+        webView->mouseButton(0, false);
 #endif
+    }else {
+        //handle tug on border
+    }
 }
 
 void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancode) {
@@ -708,8 +712,8 @@ void WebView::resize(int width, int height)
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
 	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
-	texDepth = Ogre::PixelUtil::getNumElemBytes(pixelBox.format);
-	texPitch = (pixelBox.rowPitch*texDepth);
+	unsigned int texDepth = Ogre::PixelUtil::getNumElemBytes(pixelBox.format);
+	unsigned int texPitch = (pixelBox.rowPitch*texDepth);
 
 	uint8* pDest = static_cast<uint8*>(pixelBox.data);
 

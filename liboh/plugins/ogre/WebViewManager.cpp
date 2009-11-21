@@ -287,8 +287,7 @@ bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
 
 	if((focusedWebView && isDraggingFocusedWebView) || (focusedWebView && isDragging))
 	{
-		if(focusedWebView->movable)
-			focusedWebView->move(coord.x-mouseXPos, coord.y-mouseYPos);
+        focusedWebView->move(coord.x-mouseXPos, coord.y-mouseYPos);
 
 		eventHandled = true;
 	}

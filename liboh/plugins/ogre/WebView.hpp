@@ -153,13 +153,6 @@ namespace Graphics {
 		void setMaxUPS(unsigned int maxUPS = 0);
 
 		/**
-		* Toggles whether or not this WebView is movable. (not applicable to WebViews created as materials)
-		*
-		* @param	isMovable	Whether or not this WebView should be movable.
-		*/
-		void setMovable(bool isMovable = true);
-
-		/**
 		* Changes the overall opacity of this WebView to a certain percentage.
 		*
 		* @param	opacity		The opacity percentage as a float.
@@ -217,7 +210,7 @@ namespace Graphics {
 		void raise();
 
 		/**
-		* Moves this WebView by relative amounts. (not applicable to WebViews created as materials or non-movable WebViews)
+		* Moves this WebView by relative amounts. (not applicable to WebViews created as materials)
 		*
 		* @param	deltaX	The relative X amount to move this WebView by. Positive amounts move it right.
 		*
@@ -347,30 +340,48 @@ namespace Graphics {
                                               int dx, int dy, const Berkelium::Rect&clipRect);
         void compositeWidgets(Berkelium::Window*);
 #endif
+        ///the name of the webview, so as to allocate predictable ogre names to the textures and materials
 		std::string viewName;
+        ///the width of the overlay and observed pixel view of the web page
 		unsigned short viewWidth;
+        ///the height of the overlay and observed pixel view of the web page
 		unsigned short viewHeight;
+        ///The left border of the frame around the window. Chrome is told about a window that's viewWidth-mBorderLeft-mBorderRight. May be 0
 		unsigned short mBorderLeft;
+        ///The right border of the frame around the window. Chrome is told about a window that's viewWidth-mBorderLeft-mBorderRight. May be 0
 		unsigned short mBorderRight;
+        ///The top border/titlebar of the frame around the window. Chrome is told about a window that's viewWidth-mBorderLeft-mBorderRight. May be 0
 		unsigned short mBorderTop;
+        ///The bottom border of the frame around the window. Chrome is told about a window that's viewWidth-mBorderLeft-mBorderRight.  May be 0
 		unsigned short mBorderBottom;
+
+        ///Ogre overlay that may manage displaying this webpage perpendicular to the screen. NULL if webview is on a 3d element
 		ViewportOverlay* overlay;
-		bool movable;
+        ///How often the alpha mask and other items are updated on the web view
 		unsigned int maxUpdatePS;
+        ///Used to time the time between updates
 		Ogre::Timer timer;
+        ///last update time in milliseconds
 		unsigned long lastUpdateTime;
+        ///how opaque this window is, set every update() to the ogre material (polling)
 		float opacity;
+        ///Whether the window is using a transparency mask
 		bool usingMask;
+        ///A cache of alpha values as observed upon every IPC call
 		unsigned char* alphaCache;
+        ///the pitch of the alpha cache value (actual width always equal to texWidth and actual height always equal texHeight)
 		size_t alphaCachePitch;
+
+        ///References into ogre internal materials
 		Ogre::Pass* matPass;
 		Ogre::TextureUnitState* baseTexUnit;
 		Ogre::TextureUnitState* maskTexUnit;
+
+        ///Whether mouse clicks over transparent areas of the webview is transparent
 		bool ignoringTrans;
 		float transparent;
 		bool isWebViewTransparent;
 		bool ignoringBounds;
-		bool okayToDelete;
 
         Ogre::TexturePtr viewTexture;
         Ogre::TexturePtr backingTexture;
@@ -379,16 +390,20 @@ namespace Graphics {
 		bool isFading;
 		double deltaFadePerMS;
 		double lastFadeTimeMS;
-
+        ///Whether the nearest power of two is used instead of the desired width/height (useful on apple machines where the graphics system gets kicked into software if a NPOT texture encountered
 		bool compensateNPOT;
+
+        bool okayToDelete;
+        ///The actual texture width (and alpha cache width ) allocated in ogre
 		unsigned short texWidth;
+        ///The actual texture height (and alpha cache width ) allocated in ogre
 		unsigned short texHeight;
-		size_t texDepth;
-		size_t texPitch;
+        ///map from callback name to function1's
 		std::map<std::string, JSDelegate> delegateMap;
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
 
+        ///shared pointer to proxy object that supplies this webview
 		std::tr1::shared_ptr<ProxyWebViewObject> proxyObject;
 
 		friend class WebViewManager;
