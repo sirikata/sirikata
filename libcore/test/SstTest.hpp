@@ -41,10 +41,13 @@
 #include "util/PluginManager.hpp"
 #include "util/DynamicLibrary.hpp"
 #include <cxxtest/TestSuite.h>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 #include <time.h>
 using namespace Sirikata::Network;
 class SstTest : public CxxTest::TestSuite
 {
+    typedef boost::unique_lock<boost::mutex> unique_mutex_lock;
 public:
     void runRoutine(Stream* s) {
         for (unsigned int i=0;i<mMessagesToSend.size();++i) {
@@ -94,7 +97,10 @@ public:
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             static int newid=0;
-            mStreams.push_back(newStream);
+            {
+                unique_mutex_lock lck(mMutex);
+                mStreams.push_back(newStream);
+            }
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
@@ -109,7 +115,10 @@ public:
     void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             static int newid=0;
-            mStreams.push_back(newStream);
+            {
+                unique_mutex_lock lck(mMutex);
+                mStreams.push_back(newStream);
+            }
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
@@ -131,6 +140,7 @@ public:
     std::map<unsigned int, std::vector<Sirikata::Network::Chunk> > mDataMap;
     const char * ENDSTRING;
     volatile bool mAbortTest;
+    boost::mutex mMutex;
     void validateSameness(
         int id,
         const std::vector<const Sirikata::Network::Chunk* >&netData,
@@ -344,11 +354,13 @@ public:
     }
 
     ~SstTest() {
-        for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
-            delete *i;
+        {
+            unique_mutex_lock lck(mMutex);
+            for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+                delete *i;
+            }
+            mStreams.resize(0);
         }
-        mStreams.resize(0);
-
         delete mListener;
 
         // The other thread should finish up any outstanding handlers and stop
@@ -485,8 +497,11 @@ public:
                 if (rand()<RAND_MAX/10) {
                     r->readyRead();
                     z->readyRead();
-                    for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
-                        (*i)->readyRead();
+                    {
+                        unique_mutex_lock lck(mMutex);
+                        for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+                            (*i)->readyRead();
+                        }
                     }
                 }
 
@@ -517,8 +532,11 @@ public:
             while(mDisconCount.read()<3){
                 if (rand()<RAND_MAX/10) {
                     z->readyRead();
-                    for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
-                        mStreams[i]->readyRead();
+                    {
+                        unique_mutex_lock lck(mMutex);
+                        for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
+                            mStreams[i]->readyRead();
+                        }
                     }
                 }
 
@@ -541,8 +559,11 @@ public:
         while(mEndCount.read()<1){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
             if (rand()<RAND_MAX/10) {
-                for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
-                    mStreams[i]->readyRead();
+                {
+                    unique_mutex_lock lck(mMutex);
+                    for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
+                        mStreams[i]->readyRead();
+                    }
                 }
             }
             if (this_time>last_time+5) {
