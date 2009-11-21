@@ -41,7 +41,9 @@ namespace Graphics {
 WebView::WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
 {
+#ifdef HAVE_BERKELIUM
 	webView = 0;
+#endif
 	viewName = name;
 	viewWidth = width;
 	viewHeight = height;
@@ -82,7 +84,9 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 WebView::WebView(const std::string& name, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
 {
+#ifdef HAVE_BERKELIUM
 	webView = 0;
+#endif
 	viewName = name;
 	viewWidth = width;
 	viewHeight = height;
@@ -118,10 +122,6 @@ WebView::~WebView()
 {
 	if(alphaCache)
 		delete[] alphaCache;
-#ifdef HAVE_AWESOMIUM
-	if(webView)
-		webView->destroy();
-#endif
 #ifdef HAVE_BERKELIUM
     delete webView;
 #endif
@@ -163,12 +163,6 @@ void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
     webView->setDelegate(this);
     webView->resize(viewWidth, viewHeight);
 #endif
-#ifdef HAVE_AWESOMIUM
-	webView = Awesomium::WebCore::Get().createWebView(viewWidth, viewHeight, false, asyncRender, maxAsyncRenderRate);
-	webView->setListener(this);
-
-	bind("drag", std::tr1::bind(&WebView::onRequestDrag, this, _1, _2));
-#endif
 }
 
 void WebView::createMaterial()
@@ -198,7 +192,7 @@ void WebView::createMaterial()
 
 
 	// Create the texture
-#if defined(HAVE_BERKELIUM) || defined(HAVE_AWESOMIUM) || !defined(__APPLE__)
+#if defined(HAVE_BERKELIUM) || !defined(__APPLE__)
 	TexturePtr texture = TextureManager::getSingleton().createManual(
 		getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
@@ -262,30 +256,6 @@ void WebView::update()
 	else
 		baseTexUnit->setAlphaOperation(LBX_SOURCE1, LBS_MANUAL, LBS_CURRENT, fadeValue * opacity);
 
-#ifdef HAVE_AWESOMIUM
-	if(!webView->isDirty())
-		return;
-
-	TexturePtr texture = viewTexture;
-
-	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
-	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
-	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
-
-	uint8* destBuffer = static_cast<uint8*>(pixelBox.data);
-
-	webView->render(destBuffer, (int)texPitch, (int)texDepth);
-
-	if(isWebViewTransparent && !usingMask && ignoringTrans)
-	{
-		for(int row = 0; row < texHeight; row++)
-			for(int col = 0; col < texWidth; col++)
-				alphaCache[row * alphaCachePitch + col] = destBuffer[row * texPitch + col * 4 + 3];
-	}
-
-	pixelBuffer->unlock();
-#endif
-
 	lastUpdateTime = timer.getMilliseconds();
 }
 
@@ -331,18 +301,14 @@ bool WebView::isPointOverMe(int x, int y)
 
 void WebView::loadURL(const std::string& url)
 {
-#ifdef HAVE_AWESOMIUM
-	webView->loadURL(url);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     webView->navigateTo(url.data(),url.length());
 #endif
 }
 
 void WebView::loadFile(const std::string& file)
 {
-#ifdef HAVE_AWESOMIUM
-	webView->loadFile(file);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     std::string url = file;
     if (file.length() == 0) {
         url = "about:blank";
@@ -357,9 +323,7 @@ void WebView::loadFile(const std::string& file)
 static std::string htmlPrepend("data:text/html;charset=utf-8,");
 void WebView::loadHTML(const std::string& html)
 {
-#ifdef HAVE_AWESOMIUM
-	webView->loadHTML(html);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     char * data= new char[htmlPrepend.length()+html.length()+1];
     memcpy(data,htmlPrepend.data(),htmlPrepend.length());
     memcpy(data+htmlPrepend.length(),html.data(),html.length());
@@ -371,9 +335,7 @@ void WebView::loadHTML(const std::string& html)
 
 void WebView::evaluateJS(const std::string& utf8js)
 {
-#ifdef HAVE_AWESOMIUM
-	webView->executeJavascript(javascript);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	wchar_t *outchars = new wchar_t[utf8js.size()+1];
 	size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
     webView->executeJavascript(outchars,len);
@@ -381,65 +343,9 @@ void WebView::evaluateJS(const std::string& utf8js)
 #endif
 }
 
-#if 0
-void WebView::evaluateJS(const std::string& javascript, const Awesomium::JSArguments& args)
-{
-#if defined(HAVE_AWESOMIUM) // ||defined(HAVE_BERKELIUM)
-	std::string resultScript;
-	char paramName[15];
-	unsigned int i, count;
-
-	for(i = 0, count = 0; i < javascript.length(); i++)
-	{
-		if(javascript[i] == '?')
-		{
-			count++;
-			if(count <= args.size())
-			{
-				sprintf(paramName, "__p00%d", count - 1);
-				setProperty(paramName, args[count-1]);
-				resultScript += "Client.";
-				resultScript += paramName;
-			}
-			else
-			{
-				resultScript += "undefined";
-			}
-		}
-		else
-		{
-			resultScript.push_back(javascript[i]);
-		}
-	}
-
-	evaluateJS(resultScript);
-#endif
-}
-
-Awesomium::FutureJSValue WebView::evaluateJSWithResult(const std::string& javascript)
-{
-#ifdef HAVE_AWESOMIUM
-	return webView->executeJavascriptWithResult(javascript);
-#else
-	return 0;
-#endif
-}
-#endif
-
 void WebView::bind(const std::string& name, JSDelegate callback)
 {
 	delegateMap[name] = callback;
-
-#ifdef HAVE_AWESOMIUM
-	webView->setCallback(name);
-#endif
-}
-
-void WebView::setProperty(const std::string& name, const Awesomium::JSValue& value)
-{
-#ifdef HAVE_AWESOMIUM
-	webView->setProperty(name, value);
-#endif
 }
 
 void WebView::setViewport(Ogre::Viewport* newViewport)
@@ -467,7 +373,7 @@ void WebView::setTransparent(bool isTransparent)
 		}
 	}
 
-#if defined(HAVE_AWESOMIUM)||defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	webView->setTransparent(isTransparent);
 #endif
 	isWebViewTransparent = isTransparent;
@@ -568,18 +474,14 @@ void WebView::show(bool fade, unsigned short fadeDurationMS)
 
 void WebView::focus()
 {
-#if defined(HAVE_AWESOMIUM)
-    webView->focus();
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     webView->focus();
 #endif
 }
 
 void WebView::unfocus()
 {
-#if defined(HAVE_AWESOMIUM)
-    webView->unfocus();
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     webView->unfocus();
 #endif
 }
@@ -679,27 +581,21 @@ void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre:
 
 void WebView::injectMouseMove(int xPos, int yPos)
 {
-#if defined(HAVE_AWESOMIUM)
-	webView->injectMouseMove(xPos, yPos);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	webView->mouseMoved(xPos, yPos);
 #endif
 }
 
 void WebView::injectMouseWheel(int relScrollX, int relScrollY)
 {
-#if defined(HAVE_AWESOMIUM)
-	webView->injectMouseWheelXY(relScrollX, relScrollY);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     webView->mouseWheel(relScrollX, relScrollY);
 #endif
 }
 
 void WebView::injectMouseDown(int xPos, int yPos)
 {
-#if defined(HAVE_AWESOMIUM)
-	webView->injectMouseDown(Awesomium::LEFT_MOUSE_BTN);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     webView->mouseMoved(xPos, yPos);
     webView->mouseButton(0, true);
 #endif
@@ -707,51 +603,24 @@ void WebView::injectMouseDown(int xPos, int yPos)
 
 void WebView::injectMouseUp(int xPos, int yPos)
 {
-#if defined(HAVE_AWESOMIUM)
-	webView->injectMouseUp(Awesomium::LEFT_MOUSE_BTN);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     webView->mouseMoved(xPos, yPos);
 	webView->mouseButton(0, false);
 #endif
 }
 
 void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancode) {
-#if defined(HAVE_AWESOMIUM)
-	webView->injectKeyEvent(press, modifiers, vk_code, scancode);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	webView->keyEvent(press, modifiers, vk_code, scancode);
 #endif
 }
 
 void WebView::injectTextEvent(std::string utf8) {
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
-	wchar_t *outchars = new wchar_t[utf8.size()+1];
-	size_t len = mbstowcs(outchars, utf8.c_str(), utf8.size());
-#if defined(HAVE_AWESOMIUM)
-	std::wstring widestr(outchars, len);
-	webView->injectTextEvent(widestr);
-#elif defined(HAVE_BERKELIUM)
-	webView->textEvent(outchars,len);
-#endif
+#if defined(HAVE_BERKELIUM)
+    wchar_t *outchars = new wchar_t[utf8.size()+1];
+    size_t len = mbstowcs(outchars, utf8.c_str(), utf8.size());
+    webView->textEvent(outchars,len);
     delete []outchars;
-#endif
-}
-
-void WebView::captureImage(const std::string& filename)
-{
-#ifdef HAVE_AWESOMIUM
-	Ogre::Image result;
-
-	int bpp = isWebViewTransparent? 4 : 3;
-
-	unsigned char* buffer = OGRE_ALLOC_T(unsigned char, viewWidth * viewHeight * bpp, Ogre::MEMCATEGORY_GENERAL);
-
-	webView->render(buffer, viewWidth * bpp, bpp);
-
-	result.loadDynamicImage(buffer, viewWidth, viewHeight, 1, isWebViewTransparent? Ogre::PF_BYTE_BGRA : Ogre::PF_BYTE_BGR, false);
-	result.save(Awesomium::WebCore::Get().getBaseDirectory() + "\\" + filename);
-
-	OGRE_FREE(buffer, Ogre::MEMCATEGORY_GENERAL);
 #endif
 }
 
@@ -783,7 +652,7 @@ void WebView::resize(int width, int height)
 	}
 
 	overlay->resize(viewWidth, viewHeight);
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	webView->resize(viewWidth, viewHeight);
 #endif
 
@@ -804,7 +673,7 @@ void WebView::resize(int width, int height)
 
 	matPass->removeAllTextureUnitStates();
 	maskTexUnit = 0;
-#if defined(HAVE_AWESOMIUM)|| defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 
 	if (!this->viewTexture.isNull()) {
         ResourcePtr res(this->viewTexture);
@@ -857,80 +726,6 @@ void WebView::resize(int width, int height)
 		alphaCachePitch = texWidth;
 	}
 }
-
-void WebView::onBeginNavigation(const std::string& url)
-{
-}
-
-void WebView::onBeginLoading(const std::string& url, int statusCode, const std::wstring& mimeType)
-{
-}
-
-void WebView::onFinishLoading()
-{
-}
-
-void WebView::onCallback(const std::string& name, const Awesomium::JSArguments& args)
-{
-#ifdef HAVE_AWESOMIUM
-	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(name);
-
-	if(i != delegateMap.end()) {
-        std::vector<std::string> tempStrings;
-        JSArguments argArray;
-        for (Awesomium::JSArguments::const_iterator iter = args.begin(); iter != args.end(); ++iter) {
-            std::string *thisArg;
-            if (iter->isString()) {
-                thisArg = &(args[i].toString());
-            } else {
-                tempStrings.push_back(args[i].toString());
-                thisArg = &tempStrings.back();
-            }
-            argArray.push_back(JSArgument(thisArg->data(), thisArg->length()));
-        }
-        i->second(this, args);
-    }
-#endif
-}
-
-void WebView::onReceiveTitle(const std::wstring& title)
-{
-}
-
-void WebView::onChangeTooltip(const std::wstring& tooltip)
-{
-	WebViewManager::getSingleton().handleTooltip(this, tooltip);
-}
-
-#if defined(_WIN32)
-void WebView::onChangeCursor(const HCURSOR& cursor)
-{
-}
-#endif
-
-void WebView::onChangeKeyboardFocus(bool isFocused)
-{
-}
-
-void WebView::onBeginNavigation(const std::string& url, const std::wstring& frameName) {
-}
-
-void WebView::onBeginLoading(const std::string& url, const std::wstring& frameName, int statusCode, const std::wstring& mimeType) {
-}
-
-void WebView::onReceiveTitle(const std::wstring& title, const std::wstring& frameName) {
-}
-
-void WebView::onChangeTargetURL(const std::string& url) {
-}
-
-
-void WebView::onRequestDrag(WebView *caller, const Awesomium::JSArguments &args)
-{
-	WebViewManager::getSingleton().handleRequestDrag(this);
-}
-
-
 
 
 

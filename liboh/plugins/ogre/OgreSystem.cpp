@@ -79,8 +79,10 @@ volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 namespace Sirikata {
 namespace Graphics {
 
+namespace {
+
 // FIXME we really need a better way to figure out where our data is
-static std::string getResourcesDir() {
+std::string getResourcesDir() {
     using namespace boost::filesystem;
 
     // FIXME there probably need to be more of these, including
@@ -116,10 +118,12 @@ static std::string getResourcesDir() {
     return boost::filesystem::complete(path(".")).string();
 }
 
-static std::string getAwesomiumResourcesDir() {
+std::string getChromeResourcesDir() {
     using namespace boost::filesystem;
 
     return (path(getResourcesDir()) / "chrome").string();
+}
+
 }
 
 
@@ -519,7 +523,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler();
-    new WebViewManager(0, mInputManager, getAwesomiumResourcesDir()); ///// FIXME: Initializing singleton class
+    new WebViewManager(0, mInputManager, getChromeResourcesDir()); ///// FIXME: Initializing singleton class
 
 /*  // Test web view
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());

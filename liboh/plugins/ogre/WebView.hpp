@@ -40,18 +40,6 @@
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
-#ifndef HAVE_AWESOMIUM
-namespace Awesomium {
-  typedef Sirikata::JSArguments JSArguments;
-  struct JSValue;
-  struct JSDelegate;
-  typedef int FutureJSValue;
-#if !defined(HAVE_BERKELIUM)
-  class WebViewListener {};
-  class WebView {};
-#endif
-}
-#endif
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
   struct Rect {};
@@ -78,8 +66,6 @@ namespace Graphics {
         : public Ogre::ManualResourceLoader,
 #ifdef HAVE_BERKELIUM
           public Berkelium::WindowDelegate,
-#else
-          public Awesomium::WebViewListener,
 #endif
           public Sirikata::WebViewListener,
           public Sirikata::ProxyObjectListener
@@ -116,11 +102,6 @@ namespace Graphics {
 		*/
 		void evaluateJS(const std::string& javascript);
 
-#if 0
-		void evaluateJS(const std::string& javascript, const JSArguments& args);
-
-		Awesomium::FutureJSValue evaluateJSWithResult(const std::string& javascript);
-#endif
 		/**
 		* Sets a global 'Client' callback that can be invoked via Javascript from
 		* within all pages loaded into this WebView.
@@ -130,18 +111,6 @@ namespace Graphics {
 		*/
 		void bind(const std::string& name, JSDelegate callback);
 
-		/**
-		* Sets a global 'Client' property that can be accessed via Javascript from
-		* within all pages loaded into this WebView.
-		*
-		* @param	name	The name of the property.
-		* @param	value	The javascript-value of the property.
-		*
-		* @note	You can access all properties you set via the 'Client' object using Javascript. For example,
-		*		if you set the property with a name of 'color' and a value of 'blue', you could access
-		*		this from the page using Javascript: document.write("The color is " + Client.color);
-		*/
-		void setProperty(const std::string& name, const Awesomium::JSValue& value);
 
 		void setViewport(Ogre::Viewport* newViewport);
 
@@ -368,20 +337,6 @@ namespace Graphics {
 
 		void injectTextEvent(std::string utf8);
 
-		/**
-		* Saves a capture of this WebView to an image.
-		*/
-		void captureImage(const std::string& filename);
-
-
-		void onBeginNavigation(const std::string& url, const std::wstring& frameName);
-
-		void onBeginLoading(const std::string& url, const std::wstring& frameName, int statusCode, const std::wstring& mimeType);
-
-		void onReceiveTitle(const std::wstring& title, const std::wstring& frameName);
-
-		void onChangeTargetURL(const std::string& url);
-
 		void resize(int width, int height);
 
 	protected:
@@ -391,8 +346,6 @@ namespace Graphics {
                                               const unsigned char*srcBuffer, const Berkelium::Rect&rect,
                                               int dx, int dy, const Berkelium::Rect&clipRect);
         void compositeWidgets(Berkelium::Window*);
-#else
-		Awesomium::WebView* webView;
 #endif
 		std::string viewName;
 		unsigned short viewWidth;
@@ -455,19 +408,6 @@ namespace Graphics {
 		void updateFade();
 
 		bool isPointOverMe(int x, int y);
-
-		void onBeginNavigation(const std::string& url);
-		void onBeginLoading(const std::string& url, int statusCode, const std::wstring& mimeType);
-		void onFinishLoading();
-		void onCallback(const std::string& name, const Awesomium::JSArguments& args);
-		void onReceiveTitle(const std::wstring& title);
-		void onChangeTooltip(const std::wstring& tooltip);
-#if defined(_WIN32)
-		void onChangeCursor(const HCURSOR& cursor);
-#endif
-		void onChangeKeyboardFocus(bool isFocused);
-
-		void onRequestDrag(WebView* caller, const Awesomium::JSArguments& args);
 
         void onAddressBarChanged(Berkelium::Window*, const char*url, size_t urlLength);
         void onStartLoading(Berkelium::Window*, const char* url, size_t urlLength);

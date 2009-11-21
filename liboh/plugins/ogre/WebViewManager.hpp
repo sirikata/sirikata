@@ -46,14 +46,6 @@
 #include "berkelium/WindowDelegate.hpp"
 #endif
 
-#ifdef HAVE_AWESOMIUM
-#include "WebCore.h"
-#else
-namespace Awesomium {
-  struct WebCore;
-}
-#endif
-
 namespace Sirikata {
 
 typedef Sirikata::DataReference<const char*> JSArgument;
@@ -269,7 +261,6 @@ public:
 protected:
 	friend class WebView; // Our very close friend <3
 
-	Awesomium::WebCore* webCore;
 	typedef std::map<std::string,WebView*> WebViewMap;
     WebViewMap activeWebViews;
     WebView* focusedWebView;
@@ -299,7 +290,7 @@ protected:
     /** Callback which generates WebView events due to a script in a WebView.  This is the portal
      *  from Javascript into the InputEvent system.
      *
-     *  We expose an event() function on the Awesomium Client object.  A script may then call it
+     *  We expose an event() function on the WebView's DOM's Client object.  A script may then call it
      *  to raise an event.  The call
      *    Client.event(name, some, other, args)
      *  will generate a WebView event with the parameters

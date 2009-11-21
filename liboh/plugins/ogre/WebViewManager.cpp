@@ -51,24 +51,21 @@ using namespace Sirikata::Input;
 #define TIP_SHOW_DELAY 0.7
 #define TIP_ENTRY_DELAY 2.0
 
-std::string getCurrentWorkingDirectory()
-{
-	return "";
+namespace {
+
+int InputButtonToWebViewButton(int32 input_button);
+
+template<typename EventPtrType>
+WebViewCoord InputCoordToWebViewCoord(EventPtrType evt, float x, float y);
+
+unsigned int InputKeyToWebViewKey(SDL_scancode scancode, bool& numpad);
+int InputModifiersToWebViewModifiers(Modifier mod, bool numpad);
+
 }
 
 
-static int InputButtonToAwesomiumButton(int32 input_button);
-
-template<typename EventPtrType>
-static WebViewCoord InputCoordToWebViewCoord(EventPtrType evt, float x, float y);
-
-static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad);
-static int InputModifiersToAwesomiumModifiers(Modifier mod, bool numpad);
-
-
-
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string &baseDirectory)
-	: webCore(0), focusedWebView(0), tooltipParent(0),
+	: focusedWebView(0), tooltipParent(0),
           chromeWebView(NULL), focusedNonChromeWebView(NULL),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
 	  isDragging(false), isResizing(false),
@@ -91,24 +88,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         setenv("LD_LIBRARY_PATH",ldLibraryPath.c_str(),1);
     }
 #endif
-#ifdef HAVE_AWESOMIUM
-	webCore = new Awesomium::WebCore(Awesomium::LOG_VERBOSE);
-	webCore->setBaseDirectory(getCurrentWorkingDirectory() + baseDirectory + "\\");
-#endif
 #ifdef HAVE_BERKELIUM
     Berkelium::init();
-#endif
-#if defined(HAVE_AWESOMIUM)
-	tooltipWebView = createWebView("__tooltip", 250, 50, OverlayPosition(0, 0), false, 70, TIER_FRONT);
-	tooltipWebView->hide();
-	tooltipWebView->setTransparent(false);
-	tooltipWebView->loadFile("tooltip.html");
-	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
-	//tooltipWebView->setIgnoresMouse();
-
-        chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
-        chromeWebView->loadFile("navbar.html");
-        chromeWebView->setTransparent(true);
 #endif
 #ifdef HAVE_BERKELIUM
 /*
@@ -126,7 +107,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 */
         chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         chromeWebView->loadFile("../../../liboh/plugins/ogre/data/chrome/navbar.html");
-        
+
         /*
         WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
         mychromeWebView->loadURL("http://google.com/");
@@ -155,10 +136,6 @@ WebViewManager::~WebViewManager()
 #ifdef HAVE_BERKELIUM
     Berkelium::destroy();
 #endif
-#ifdef HAVE_AWESOMIUM
-	if(webCore)
-		delete webCore;
-#endif
 }
 
 WebViewManager& WebViewManager::getSingleton()
@@ -180,9 +157,6 @@ void WebViewManager::Update()
 {
 #ifdef HAVE_BERKELIUM
     Berkelium::update();
-#endif
-#ifdef HAVE_AWESOMIUM
-	webCore->update();
 #endif
 	WebViewMap::iterator end, iter;
 	end = activeWebViews.end();
@@ -439,10 +413,10 @@ bool WebViewManager::injectKeyEvent(KeyEvent type, Modifier mods, KeyButton butt
     if (focusedWebView) {
         bool numpad = false;
         bool pressed = (type == KEY_PRESSED);
-        int vk_code = InputKeyToAwesomiumKey((SDL_scancode)button, numpad);
-        int awemods = InputModifiersToAwesomiumModifiers(mods, numpad);
+        int vk_code = InputKeyToWebViewKey((SDL_scancode)button, numpad);
+        int wvmods = InputModifiersToWebViewModifiers(mods, numpad);
 
-        focusedWebView->injectKeyEvent(pressed, awemods, vk_code, numpad);
+        focusedWebView->injectKeyEvent(pressed, wvmods, vk_code, numpad);
         return true;
     }
     return false;
@@ -498,7 +472,7 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 	}
 
 	focusedWebView = webViewToFocus;
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	focusedWebView->focus();
 #endif
 
@@ -532,7 +506,7 @@ WebView* WebViewManager::getTopWebView(int x, int y)
 void WebViewManager::deFocusAllWebViews()
 {
 	WebViewMap::iterator iter;
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		iter->second->unfocus();
 #endif
@@ -622,7 +596,6 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 
 void WebViewManager::navigate(NavigationAction action) {
     // New tab is a special case: it doesn't require a previously focused web view
-    // and doesn't strictly require awesomium
     if (action == NavigateNewTab) {
         static uint32 unique_id = 0;
         // FIXME ghetto lexical cast because I'm not sure why we have our own version elsewhere
@@ -640,7 +613,7 @@ void WebViewManager::navigate(NavigationAction action) {
         return;
 
     switch (action) {
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     case NavigateBack:
         focusedNonChromeWebView->evaluateJS("history.go(-1)");
         break;
@@ -648,14 +621,7 @@ void WebViewManager::navigate(NavigationAction action) {
         focusedNonChromeWebView->evaluateJS("history.go(1)");
         break;
 #endif
-#if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
-    case NavigateRefresh:
-        focusedNonChromeWebView->webView->refresh();
-#elif defined(HAVE_AWESOMIUM)
-    case NavigateRefresh:
-        SILOG(ogre,error,"FIXME: refresh() is disabled...");
-        focusedNonChromeWebView->webView->goToHistoryOffset(0);
-#elif defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     case NavigateRefresh:
         focusedNonChromeWebView->webView->refresh();
 #endif
@@ -728,7 +694,7 @@ static void NavigateCommandDispatcher(const String& str) {
 
 
 void WebViewManager::navigate(NavigationAction action, const String& arg) {
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     switch (action) {
       case NavigateGo:
         if (focusedNonChromeWebView)
@@ -742,11 +708,11 @@ void WebViewManager::navigate(NavigationAction action, const String& arg) {
         SILOG(ogre, error, "Unknown navigation action from navigate(action, arg).");
         break;
     }
-#endif //HAVE_AWESOMIUM
+#endif //HAVE_BERKELIUM
 }
 
 void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& args) {
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     if (args.size() < 1) {
         SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
         return;
@@ -785,11 +751,11 @@ Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::Event
 
     this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
 
-    int awebutton = InputButtonToAwesomiumButton(e->mButton);
-    if (awebutton == UnknownMouseButton)
+    int wvbutton = InputButtonToWebViewButton(e->mButton);
+    if (wvbutton == UnknownMouseButton)
         return Sirikata::Task::EventResponse::nop();
 
-    bool success = this->injectMouseUp(awebutton);
+    bool success = this->injectMouseUp(wvbutton);
 
     if (success) {
         return Sirikata::Task::EventResponse::cancel();
@@ -805,11 +771,11 @@ Sirikata::Task::EventResponse WebViewManager::onMousePressed(Sirikata::Task::Eve
 
     this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
 
-    int awebutton = InputButtonToAwesomiumButton(e->mButton);
-    if (awebutton == UnknownMouseButton)
+    int wvbutton = InputButtonToWebViewButton(e->mButton);
+    if (wvbutton == UnknownMouseButton)
         return Sirikata::Task::EventResponse::nop();
 
-    bool success = this->injectMouseDown(awebutton);
+    bool success = this->injectMouseDown(wvbutton);
 
 	if (success) {
 		return Sirikata::Task::EventResponse::cancel();
@@ -827,8 +793,8 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
 
     this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
 
-    int awebutton = InputButtonToAwesomiumButton(e->mButton);
-    if (awebutton == UnknownMouseButton)
+    int wvbutton = InputButtonToWebViewButton(e->mButton);
+    if (wvbutton == UnknownMouseButton)
         return Sirikata::Task::EventResponse::nop();
 
     bool success = true;
@@ -838,7 +804,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
       case Sirikata::Input::DRAG_DRAG:
         break;
       case Sirikata::Input::DRAG_END:
-        success = this->injectMouseUp(awebutton);
+        success = this->injectMouseUp(wvbutton);
         break;
       default:
         SILOG(ogre,error,"Unknown drag event type.");
@@ -884,7 +850,9 @@ Sirikata::Task::EventResponse WebViewManager::onKeyTextInput(Sirikata::Task::Eve
 }
 
 
-static int InputButtonToAwesomiumButton(int32 input_button) {
+namespace {
+
+int InputButtonToWebViewButton(int32 input_button) {
     switch(input_button) {
       case 1:
         return LeftMouseButton;
@@ -898,7 +866,7 @@ static int InputButtonToAwesomiumButton(int32 input_button) {
 }
 
 template<typename EventPtrType>
-static WebViewCoord InputCoordToWebViewCoord(EventPtrType evt, float x, float y) {
+WebViewCoord InputCoordToWebViewCoord(EventPtrType evt, float x, float y) {
     unsigned int wid,hei;
     evt->getDevice()->getInputManager()->getWindowSize(wid,hei);
     return WebViewCoord(((x+1)*wid)/2, ((1-y)*hei)/2);
@@ -990,7 +958,7 @@ WIN_VK_ZOOM = 0xFB
 #define MAP_VK(A, B) case SDL_SCANCODE_##A: return WIN_VK_##B
 #define MAP_NUMPAD_VK(A, B) case SDL_SCANCODE_##A: numpad=true; return WIN_VK_##B
 
-static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad)
+unsigned int InputKeyToWebViewKey(SDL_scancode scancode, bool& numpad)
 {
 	numpad = false;
 	switch(scancode)
@@ -1045,28 +1013,27 @@ static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad)
 	}
 }
 
-static int InputModifiersToAwesomiumModifiers(Modifier modifiers, bool numpad) {
-    int awemods = 0;
-#ifdef HAVE_AWESOMIUM
-    using namespace Awesomium;
-#endif
+int InputModifiersToWebViewModifiers(Modifier modifiers, bool numpad) {
+    int wvmods = 0;
 #ifdef HAVE_BERKELIUM
     using namespace Berkelium;
 #endif
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_BERKELIUM)
     if (modifiers &Input::MOD_SHIFT)
-        awemods |= SHIFT_MOD;
+        wvmods |= SHIFT_MOD;
     if (modifiers &Input::MOD_CTRL)
-        awemods |= CONTROL_MOD;
+        wvmods |= CONTROL_MOD;
     if (modifiers &Input::MOD_ALT)
-        awemods |= ALT_MOD;
+        wvmods |= ALT_MOD;
     if (modifiers &Input::MOD_GUI)
-        awemods |= META_MOD;
+        wvmods |= META_MOD;
     if (numpad)
-        awemods |= KEYPAD_KEY;
+        wvmods |= KEYPAD_KEY;
 #endif
-    return awemods;
+    return wvmods;
 }
 
-}
-}
+} // namespace
+
+} // namespace Graphics
+} // namespace Sirikata
