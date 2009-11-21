@@ -685,10 +685,10 @@ SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
 IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
   SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
-  IF(IRON_PYTHON_FOUND)
-    SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
-  ENDIF()
 ENDIF()
+
+#needed for scene converter irrespective of IronPython
+SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
 
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"util/Standard.hh\"\n")
 
@@ -832,14 +832,12 @@ ENDIF()
 #source files
 
 SET(AdditionalProtoDepends)
-IF(IRON_PYTHON_FOUND)
-   FOREACH(FILE ${ScriptingProtocolBuffersSources})
-      SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
-   ENDFOREACH()
-   ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
-              DEPENDS ${AdditionalProtoDepends}
-              COMMENT "Checking ${AdditionalProtoDepends}")
-ENDIF()
+FOREACH(FILE ${ScriptingProtocolBuffersSources})
+   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
+ENDFOREACH()
+ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
+           DEPENDS ${AdditionalProtoDepends}
+           COMMENT "Checking ${AdditionalProtoDepends}")
 
 IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
