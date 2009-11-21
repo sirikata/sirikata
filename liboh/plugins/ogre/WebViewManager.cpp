@@ -664,10 +664,9 @@ void WebViewManager::navigate(NavigationAction action) {
         focusedNonChromeWebView->loadURL("http://www.google.com");
         break;
     case NavigateDelete:
-//        delete focusedNonChromeWebView;
-        /// this is bull -- delete is crashing
-        focusedNonChromeWebView->loadURL("");
-        focusedNonChromeWebView->setTransparent(true);
+        delete focusedNonChromeWebView;
+//        focusedNonChromeWebView->loadURL("");
+//        focusedNonChromeWebView->setTransparent(true);
         focusedNonChromeWebView=0;
         break;
     default:
