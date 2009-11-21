@@ -70,7 +70,10 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
-
+    mBorderLeft=3;
+    mBorderRight=6;
+    mBorderTop=12;
+    mBorderBottom=2;
 	createMaterial();
 
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
@@ -87,6 +90,10 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
+    mBorderLeft=3;
+    mBorderRight=6;
+    mBorderTop=12;
+    mBorderBottom=2;
 	viewName = name;
 	viewWidth = width;
 	viewHeight = height;
@@ -161,7 +168,12 @@ void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 #ifdef HAVE_BERKELIUM
     webView = Berkelium::Window::create();
     webView->setDelegate(this);
-    webView->resize(viewWidth, viewHeight);
+    //make sure that the width and height of the border do not dominate the size
+    if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
+        webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
+    } else {
+        webView->resize(0, 0);
+    }
 #endif
 }
 
@@ -653,7 +665,12 @@ void WebView::resize(int width, int height)
 
 	overlay->resize(viewWidth, viewHeight);
 #if defined(HAVE_BERKELIUM)
-	webView->resize(viewWidth, viewHeight);
+    //make sure that the width and height of the border do not dominate the size
+    if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
+        webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
+    } else {
+        webView->resize(0, 0);
+    }
 #endif
 
     uint16 oldTexWidth = texWidth;
@@ -750,13 +767,13 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
                       const unsigned char*srcBuffer, const Berkelium::Rect&rect,
                       int dx, int dy, const Berkelium::Rect&clipRect) {
     Berkelium::Rect pixelBufferRect;
-    pixelBufferRect.mHeight=pixelBuffer->getHeight();
-    pixelBufferRect.mWidth=pixelBuffer->getWidth();
+    pixelBufferRect.mHeight=pixelBuffer->getHeight()-mBorderTop-mBorderBottom;
+    pixelBufferRect.mWidth=pixelBuffer->getWidth()-mBorderLeft-mBorderRight;
     pixelBufferRect.mTop=0;
     pixelBufferRect.mLeft=0;
     if (dx || dy) {
-            SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
-
+        SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
+        
         Berkelium::Rect scrollRect = clipRect;
         scrollRect.mLeft += dx;
         scrollRect.mTop += dy;
@@ -774,13 +791,13 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
                 SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
                 shadowBuffer->blit(
                     pixelBuffer,
-                    Ogre::Box(scrollRect.left()-dx, scrollRect.top()-dy, scrollRect.right()-dx, scrollRect.bottom()-dy),
+                    Ogre::Box(scrollRect.left()-dx+mBorderLeft, scrollRect.top()+mBorderTop-dy, scrollRect.right()+mBorderLeft-dx, scrollRect.bottom()-dy+mBorderTop),
                     Ogre::Box(0,0,width,height));
 
                 pixelBuffer->blit(
                     shadowBuffer,
                     Ogre::Box(0,0,width,height),
-                    Ogre::Box(scrollRect.left(), scrollRect.top(), scrollRect.right(), scrollRect.bottom()));
+                    Ogre::Box(scrollRect.left()+mBorderLeft, scrollRect.top()+mBorderTop, scrollRect.right()+mBorderLeft, scrollRect.bottom()+mBorderTop));
             }
             Ogre::ResourcePtr shadowResource(shadow);
             Ogre::TextureManager::getSingleton().remove(shadowResource);
@@ -792,7 +809,7 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
     }
     pixelBuffer->blitFromMemory(
         Ogre::PixelBox(pixelBufferRect.width(), pixelBufferRect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
-        Ogre::Box(pixelBufferRect.left(), pixelBufferRect.top(), pixelBufferRect.right(), pixelBufferRect.bottom()));
+        Ogre::Box(pixelBufferRect.left()+mBorderLeft, pixelBufferRect.top()+mBorderTop, pixelBufferRect.right()+mBorderLeft, pixelBufferRect.bottom()+mBorderTop));
     return pixelBufferRect;
 }
 #endif // HAVE_BERKELIUM

@@ -350,6 +350,10 @@ namespace Graphics {
 		std::string viewName;
 		unsigned short viewWidth;
 		unsigned short viewHeight;
+		unsigned short mBorderLeft;
+		unsigned short mBorderRight;
+		unsigned short mBorderTop;
+		unsigned short mBorderBottom;
 		ViewportOverlay* overlay;
 		bool movable;
 		unsigned int maxUpdatePS;
