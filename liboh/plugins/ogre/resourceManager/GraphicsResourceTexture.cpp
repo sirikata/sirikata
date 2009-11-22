@@ -141,9 +141,9 @@ TextureLoadTask::TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resou
 
 void TextureLoadTask::doRun()
 {
-  mArchiveName = CDNArchive::addArchive(CDNArchive::canonicalMhashName(mHash), mBuffer);
+  mArchiveName = CDNArchiveFactory::getSingleton().addArchive(CDNArchive::canonicalMhashName(mHash), mBuffer);
   Ogre::TextureManager::getSingleton().load(CDNArchive::canonicalMhashName(mHash), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-  CDNArchive::removeArchive(mArchiveName);
+  CDNArchiveFactory::getSingleton().removeArchive(mArchiveName);
   mResource->loaded(true, mEpoch);
 }
 

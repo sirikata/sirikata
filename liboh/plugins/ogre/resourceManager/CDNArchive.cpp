@@ -38,11 +38,6 @@
 
 namespace Meru {
 
-static boost::mutex CDNArchiveMutex;
-static std::map<unsigned int, std::vector <Ogre::String> > CDNArchivePackages;
-static std::map<Ogre::String, std::pair<ResourceBuffer, unsigned int> > CDNArchiveFileRefcount;
-static std::vector <Ogre::String> CDNArchiveToBeDeleted;
-static int sCurArchive = 0;
 static const unsigned char white_png[] = /* 160 */
 {0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,0x00,0x00,0x00,0x0D,0x49,0x48,0x44
 ,0x52,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x02,0x08,0x02,0x00,0x00,0x00,0xFD
@@ -127,22 +122,9 @@ static const char *const native_files_data[]={(char*)white_png,(char*)black_png,
 static const int native_files_size[]={sizeof(white_png),sizeof(black_png),sizeof(whiteclear_png) , sizeof(blackclear_png) , sizeof(graytrans_png) , sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png) };
 static const int num_native_files=sizeof(native_files)/sizeof(native_files[0]);
 
-static void removeUndesirables()
-{
-  while (!CDNArchiveToBeDeleted.empty()) {
-    std::map<Ogre::String, std::pair<ResourceBuffer,unsigned int> >::iterator tbd=CDNArchiveFileRefcount.find(CDNArchiveToBeDeleted.back());
-    if (tbd!=CDNArchiveFileRefcount.end()) {
-      if (tbd->second.second==0) {
-        CDNArchiveFileRefcount.erase(tbd);
-      }
-    }
-    CDNArchiveToBeDeleted.pop_back();
-  }
-}
-
 static std::string MERU_URI_HASH_PREFIX("mhash:");
 
-static String canonicalizeHash(const String&filename)
+String CDNArchive::canonicalizeHash(const String&filename)
 {
   if (filename.length()>strlen(CDN_REPLACING_MATERIAL_STREAM_HINT)&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,strlen(CDN_REPLACING_MATERIAL_STREAM_HINT))==0) {
     return canonicalizeHash(filename.substr(strlen(CDN_REPLACING_MATERIAL_STREAM_HINT)));
@@ -154,44 +136,6 @@ static String canonicalizeHash(const String&filename)
     return filename.substr(filename.length()-SHA256::hex_size);
   }
   return filename;
-}
-
-time_t CDNArchive::getModifiedTime(const Ogre::String&)
-{
-  time_t retval;
-  memset(&retval, 0, sizeof(retval));
-  return retval;
-}
-
-unsigned int CDNArchive::addArchive()
-{
-  boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  CDNArchivePackages[sCurArchive]=std::vector<Ogre::String>();
-  removeUndesirables();
-  return sCurArchive++;
-}
-
-unsigned int CDNArchive::addArchive(const Ogre::String&filename, const ResourceBuffer &rbuffer)
-{
-  boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  CDNArchivePackages[sCurArchive]=std::vector<Ogre::String>();
-  removeUndesirables();
-  addArchiveDataNoLock(sCurArchive, filename, rbuffer);
-  return sCurArchive++;
-}
-
-void CDNArchive::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String&filename, const ResourceBuffer &rbuffer)
-{
-  std::map<Ogre::String,std::pair<ResourceBuffer,unsigned int> >::iterator where=CDNArchiveFileRefcount.find(filename);
-  if (where==CDNArchiveFileRefcount.end()) {
-    SILOG(resource,debug,"File "<<filename<<" Added to CDNArchive");
-    CDNArchiveFileRefcount[canonicalizeHash(filename)]=std::pair<ResourceBuffer,unsigned int>(rbuffer,1);
-  }
-  else {
-    SILOG(resource,debug,"File "<<filename<<" already downloaded to CDNArchive, what a waste! incref to "<<where->second.second+1);
-    ++where->second.second;
-  }
-  CDNArchivePackages[archiveName].push_back(filename);
 }
 
 Ogre::String CDNArchive::canonicalMhashName(const Ogre::String&filename)
@@ -208,90 +152,51 @@ Ogre::String CDNArchive::canonicalMhashName(const Ogre::String&filename)
   return filename;
 }
 
-void CDNArchive::addArchiveData(unsigned int archiveName, const Ogre::String&filename, const ResourceBuffer &rbuffer)
+time_t CDNArchive::getModifiedTime(const Ogre::String&)
 {
-  boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  addArchiveDataNoLock(archiveName,canonicalMhashName(filename),rbuffer);
-}
-
-void CDNArchive::clearArchive(unsigned int which)
-{
-  boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  std::map<unsigned int, std::vector<Ogre::String> >::iterator where=CDNArchivePackages.find(which);
-  if (where!=CDNArchivePackages.end()) {
-    for (std::vector<Ogre::String>::iterator i=where->second.begin(),ie=where->second.end();i!=ie;++i) {
-      std::map<Ogre::String,std::pair<ResourceBuffer,unsigned int> >::iterator where2=CDNArchiveFileRefcount.find(*i);
-      if (where2!=CDNArchiveFileRefcount.end()) {
-        if (where2->second.second==0||--where2->second.second==0) {
-          CDNArchiveFileRefcount.erase(where2);
-          SILOG(resource,debug,"File "<<*i<<" Removed from CDNArchive");
-        }else {
-          SILOG(resource,debug,"File "<<*i<<" Decref'd from CDNArchive to "<<where2->second.second);
-        }
-      }
-    }
-  }
-}
-
-void CDNArchive::removeArchive(unsigned int which)
-{
-  clearArchive(which);
-
-  boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  std::map<unsigned int, std::vector<Ogre::String> >::iterator where=CDNArchivePackages.find(which);
-  if (where!=CDNArchivePackages.end()) {
-    CDNArchivePackages.erase(where);
-  }
-  removeUndesirables();
+  time_t retval;
+  memset(&retval, 0, sizeof(retval));
+  return retval;
 }
 
 class CDNArchiveDataStream : public Ogre::MemoryDataStream
 {
 public:
-  CDNArchiveDataStream(const Ogre::String &name, std::pair<ResourceBuffer,unsigned int> *input)
-    : Ogre::MemoryDataStream((void*)input->first->data(),(size_t)input->first->length(),false),mBuffer(&input->first)
+  CDNArchiveDataStream(CDNArchiveFactory *owner, const Ogre::String &name, std::pair<ResourceBuffer,unsigned int> *input)
+    : Ogre::MemoryDataStream((void*)input->first->data(),(size_t)input->first->length(),false),mBuffer(input->first)
   {
+      mOwner=owner;
       mName=name;
       input->second++;
   }
 
   virtual void close() {
-    boost::mutex::scoped_lock lok(CDNArchiveMutex);
-    std::map<Ogre::String,std::pair<ResourceBuffer,unsigned int> >::iterator where=CDNArchiveFileRefcount.find(getName());
-    if (where!=CDNArchiveFileRefcount.end()) {
-      if (where->second.second==0){
-        SILOG(resource,error,"File "<<getName()<< " Not in CDNArchive Map already has refcount=0");
-      }else {
-        if (--where->second.second==0){
-          CDNArchiveToBeDeleted.push_back(where->first);
-        }
-      }
-    }else {
-      SILOG(resource,error,"File "<<getName()<< " Not in CDNArchive Map to be removed upon close");
-    }
+    mOwner->decref(getName());
   }
   ~CDNArchiveDataStream() {
   }
 
 private:
-  ResourceBuffer *mBuffer;
+  CDNArchiveFactory *mOwner;
+  ResourceBuffer mBuffer;
 };
 
-CDNArchive::CDNArchive(const Ogre::String& name, const Ogre::String& archType)
+CDNArchive::CDNArchive(CDNArchiveFactory *owner, const Ogre::String& name, const Ogre::String& archType)
 : Archive(name, archType)
 {
-    mNativeFileArchive=addArchive();
+	mOwner = owner;
+    mNativeFileArchive=mOwner->addArchive();
     for (int i=0;i<num_native_files;++i) {
         int size=native_files_size[i];
         DenseData*dd=new DenseData(Transfer::Range((Transfer::cache_usize_type)0,(Transfer::cache_usize_type)size,Transfer::LENGTH,true));
         memcpy(dd->writableData(),native_files_data[i],size);
         DenseDataPtr rbuffer(dd);
-        addArchiveDataNoLock(mNativeFileArchive, native_files[i], rbuffer);
+        mOwner->addArchiveDataNoLock(mNativeFileArchive, native_files[i], rbuffer);
     }
 }
 
 CDNArchive::~CDNArchive() {
-    removeArchive(mNativeFileArchive);
+    mOwner->removeArchive(mNativeFileArchive);
 }
 
 bool CDNArchive::isCaseSensitive() const {
@@ -314,18 +219,21 @@ char * findMem(char *data, size_t howmuch, const char * target, size_t targlen)
 
 Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
 {
-  boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  std::map<Ogre::String,std::pair<ResourceBuffer,unsigned int> >::iterator where=CDNArchiveFileRefcount.find(canonicalizeHash(filename));
-  if (where != CDNArchiveFileRefcount.end()) {
+  boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
+  std::map<Ogre::String,std::pair<ResourceBuffer,unsigned int> >::iterator where =
+      mOwner->CDNArchiveFileRefcount.find(canonicalizeHash(filename));
+  if (where != mOwner->CDNArchiveFileRefcount.end()) {
     SILOG(resource,debug,"File "<<filename << " Opened");
     unsigned int hintlen=strlen(CDN_REPLACING_MATERIAL_STREAM_HINT);
     if (filename.length()>hintlen&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,hintlen)==0) {
-      Ogre::DataStreamPtr inner (new CDNArchiveDataStream(filename.substr(hintlen),&where->second));
+      Ogre::DataStreamPtr inner (new CDNArchiveDataStream(mOwner, filename.substr(hintlen),&where->second));
       Ogre::DataStreamPtr retval(new ReplacingDataStream(inner,filename.substr(hintlen),NULL));
       return retval;
     }
     else {
-      Ogre::DataStreamPtr retval(new CDNArchiveDataStream(filename.find("mhash://") == 0 ? filename.substr(filename.length() - SHA256::hex_size) : filename, &where->second));
+      Ogre::DataStreamPtr retval(new CDNArchiveDataStream(mOwner, filename.find("mhash://") == 0
+          ? filename.substr(filename.length() - SHA256::hex_size)
+          : filename, &where->second));
       return retval;
     }
   }
@@ -371,13 +279,13 @@ Ogre::FileInfoListPtr CDNArchive::findFileInfo(const Ogre::String& pattern, bool
 }
 
 bool CDNArchive::exists(const Ogre::String& filename) {
-    boost::mutex::scoped_lock lok(CDNArchiveMutex);
-    if (CDNArchiveFileRefcount.find(canonicalizeHash(filename))!=CDNArchiveFileRefcount.end()) {
+    boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
+    if (mOwner->CDNArchiveFileRefcount.find(canonicalizeHash(filename))!=mOwner->CDNArchiveFileRefcount.end()) {
       SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalizeHash(filename));
         return true;
     }else {
         String Filename=filename;
-      if (Filename.length()>5&&Filename.substr(0,5)=="%%_%%")
+      if (Filename.length()>5&&Filename.substr(0,5)==CDN_REPLACING_MATERIAL_STREAM_HINT)
           Filename=Filename.substr(5);
 
       if (Filename.find("badfoood")!=0) {
@@ -386,7 +294,7 @@ bool CDNArchive::exists(const Ogre::String& filename) {
                   if (Filename.find("white.png")!=0) {
                       if (Filename.find("bad.mesh")!=0) {
 
-                          SILOG(resource,info,"File "<<filename << " AKA "<<canonicalizeHash(filename)<<" Not existing in recently loaded cache");
+                          SILOG(resource,error,"File "<<filename << " AKA "<<canonicalizeHash(filename)<<" Not existing in recently loaded cache");
 
                           return false;
                       }

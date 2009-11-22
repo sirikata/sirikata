@@ -77,7 +77,7 @@ protected:
 
 GraphicsResourceMaterial::GraphicsResourceMaterial(const RemoteFileId &resourceID)
   : GraphicsResourceAsset(resourceID, GraphicsResource::MATERIAL),
-  mArchiveName(CDNArchive::addArchive())
+  mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
 
 }
@@ -367,7 +367,7 @@ MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr res
 
 void MaterialLoadTask::doRun()
 {
-  CDNArchive::addArchiveData(mArchiveName, CDNArchive::canonicalMhashName(mHash), mBuffer);
+  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, CDNArchive::canonicalMhashName(mHash), mBuffer);
   MaterialScriptManager::getSingleton().load(CDNArchive::canonicalMhashName(mHash), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
     false, 0, mTextureAliases);
 
@@ -400,7 +400,7 @@ void MaterialUnloadTask::doRun()
   Ogre::ResourcePtr materialResource = materialManager->getByName(mHash);
   assert(materialResource.isNull());
 
-  CDNArchive::clearArchive(mArchiveName);
+  CDNArchiveFactory::getSingleton().clearArchive(mArchiveName);
 
   SharedResourcePtr resource = mResource.lock();
   if (resource)

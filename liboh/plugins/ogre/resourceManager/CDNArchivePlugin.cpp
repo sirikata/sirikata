@@ -39,7 +39,6 @@ namespace Meru {
 static String sPluginName = "CDNArchive";
 
 CDNArchivePlugin::CDNArchivePlugin()
-: mCDNArchiveFactory(NULL)
 {
 }
 
@@ -48,8 +47,10 @@ const String& CDNArchivePlugin::getName() const {
 }
 
 void CDNArchivePlugin::install() {
-	mCDNArchiveFactory = new CDNArchiveFactory();
-	ArchiveManager::getSingleton().addArchiveFactory(mCDNArchiveFactory);
+	if (!CDNArchiveFactory::getSingletonPtr()) {
+		new CDNArchiveFactory();
+	}
+	ArchiveManager::getSingleton().addArchiveFactory(CDNArchiveFactory::getSingletonPtr());
 }
 
 void CDNArchivePlugin::initialise() {
@@ -59,8 +60,7 @@ void CDNArchivePlugin::shutdown() {
 }
 
 void CDNArchivePlugin::uninstall() {
-	if (mCDNArchiveFactory)
-		delete mCDNArchiveFactory;
+	delete CDNArchiveFactory::getSingletonPtr();
 }
 
 } // namespace Meru

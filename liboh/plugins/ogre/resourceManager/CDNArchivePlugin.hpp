@@ -52,8 +52,6 @@ public:
 	void initialise();
 	void shutdown();
 	void uninstall();
-private:
-	CDNArchiveFactory* mCDNArchiveFactory;
 };
 
 } // namespace Meru

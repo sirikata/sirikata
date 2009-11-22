@@ -219,9 +219,9 @@ MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr
 void MeshLoadTask::doRun()
 {
   String hash = mHash; //CDNArchive::canonicalMhashName(mHash);
-  int archive = CDNArchive::addArchive(hash, mBuffer);
+  int archive = CDNArchiveFactory::getSingleton().addArchive(hash, mBuffer);
   Ogre::MeshManager::getSingleton().load(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-  CDNArchive::removeArchive(archive);
+  CDNArchiveFactory::getSingleton().removeArchive(archive);
 
   //Ogre::SkeletonPtr skeletonPtr = Ogre::SkeletonManager::getSingleton().getByName(meshPtr->getSkeletonName());
   //if ((!skeletonPtr.isNull()) && (skeletonPtr->isLoaded())) {

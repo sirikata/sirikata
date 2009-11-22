@@ -75,7 +75,7 @@ protected:
 
 GraphicsResourceShader::GraphicsResourceShader(const RemoteFileId &resourceID)
 : GraphicsResourceAsset(resourceID, GraphicsResource::SHADER),
-  mArchiveName(CDNArchive::addArchive())
+  mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
 
 }
@@ -141,7 +141,7 @@ ShaderLoadTask::ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resourc
 
 void ShaderLoadTask::doRun()
 {
-  CDNArchive::addArchiveData(mArchiveName, CDNArchive::canonicalMhashName(mHash), mBuffer);
+  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, CDNArchive::canonicalMhashName(mHash), mBuffer);
   mResource->loaded(true, mEpoch);
 }
 
@@ -155,7 +155,7 @@ ShaderUnloadTask::ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resou
 
 void ShaderUnloadTask::doRun()
 {
-  CDNArchive::clearArchive(mArchiveName);
+  CDNArchiveFactory::getSingleton().clearArchive(mArchiveName);
 
   SharedResourcePtr resource = mResource.lock();
   if (resource) {

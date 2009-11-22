@@ -31,22 +31,70 @@
  */
 #ifndef _CDN_ARCHIVE_FACTORY_HPP_
 #define _CDN_ARCHIVE_FACTORY_HPP_
+
+#include "MeruDefs.hpp"
 #include "../OgreHeaders.hpp"
 #include <Ogre.h>
 #include <OgreArchiveFactory.h>
+#include <OgreSingleton.h>
 
 namespace Meru {
 
 /** Archive factory for URLArchives, a specialization of Ogre::ArchiveFactory.
  *  See Ogre's documentation for interface details and documentation.
  */
-class CDNArchiveFactory : public Ogre::ArchiveFactory {
+class CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CDNArchiveFactory> {
+
+  friend class CDNArchive;
+
+  void addArchiveDataNoLock(unsigned int archiveName, const Ogre::String &filename, const ResourceBuffer &rbuffer);
+
+  void removeUndesirables();
+
+  boost::mutex CDNArchiveMutex;
+  std::map<unsigned int, std::vector <Ogre::String> > CDNArchivePackages;
+  std::map<Ogre::String, std::pair<ResourceBuffer, unsigned int> > CDNArchiveFileRefcount;
+  std::vector <Ogre::String> CDNArchiveToBeDeleted;
+  int mCurArchive;
+
 public:
+
 	CDNArchiveFactory();
-	virtual ~CDNArchiveFactory();
+	~CDNArchiveFactory();
 	const Ogre::String& getType() const;
 	Ogre::Archive* createInstance(const Ogre::String& name);
 	void destroyInstance(Ogre::Archive* archive);
+
+  /**
+   * Add a specific data stream to a package that will be hung onto until removeArchive is called
+   */
+  void addArchiveData(unsigned int archiveName, const Ogre::String &filename, const ResourceBuffer &rbuffer);
+
+  /**
+   * Adds a package to the CDNArchive that will stay open until all items are used
+   * Must be called from main thread
+   */
+  unsigned int addArchive();
+
+  /**
+   * Adds a package to the CDNArchive and one instance of filename/data
+   */
+  unsigned int addArchive(const Ogre::String&filename, const ResourceBuffer &rbuffer);
+
+  /**
+   * Removes a package from CDNArchive that may be later opened by ogre
+   * Must be called from main thread.
+   */
+  void removeArchive(unsigned int name);
+
+  /**
+   * Removes all files from a CDNArchive.
+   * Must be called from main thread.
+   */
+  void clearArchive(unsigned int name);
+
+  void decref(const Ogre::String &name);
+
 };
 
 } // namespace Meru
