@@ -147,13 +147,17 @@ class CsvToSql:
         listval.append(float(csvrow[fieldname+'_x']))
         listval.append(float(csvrow[fieldname+'_y']))
         listval.append(float(csvrow[fieldname+'_z']))
-
+    def charconvert(self, c):
+        if type(c)==type(''):
+            return c;
+        return chr(c)
+        
     def set(self, curs, uuid, key, value, which=0):
         object_name = self.getTableName(uuid)
         key_name = self.getKeyName(key, which)
         table_insert = "INSERT INTO \"" + self.table_name + "\""
         table_insert += " VALUES (?, ?, ?)"
-        value = "".join(chr(c) for c in value);
+        value = "".join(self.charconvert(c) for c in value);
         curs.execute(table_insert, (buffer(object_name), key_name, buffer(value)))
 
     def go(self, openfile, **csvargs):
