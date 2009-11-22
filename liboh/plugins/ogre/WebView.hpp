@@ -409,14 +409,22 @@ namespace Graphics {
 		friend class WebViewManager;
 
 		WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			bool asyncRender, int maxAsyncRenderRate, Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
+			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
 
 		WebView(const std::string& name, unsigned short width, unsigned short height,
-			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering);
+			Ogre::FilterOptions texFiltering);
 
 		~WebView();
 
 		void createWebView(bool asyncRender, int maxAsyncRenderRate);
+
+        void initializeWebView(
+#ifdef HAVE_AWESOMIUM
+            Awesomium::WebView *win
+#else
+            Berkelium::Window *win
+#endif
+            );
 
 		void createMaterial();
 

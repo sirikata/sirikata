@@ -217,8 +217,9 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-        WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, asyncRender, maxAsyncRenderRate, (Ogre::uchar)zOrder, tier,
+        WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport);
+        newWebView->createWebView(asyncRender, maxAsyncRenderRate);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
         return newWebView;
@@ -232,7 +233,8 @@ WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, u
 			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
-        WebView* newWebView = new WebView(webViewName, width, height, asyncRender, maxAsyncRenderRate, texFiltering);
+        WebView* newWebView = new WebView(webViewName, width, height, texFiltering);
+        newWebView->createWebView(asyncRender, maxAsyncRenderRate);
         activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
         return newWebView;
@@ -629,7 +631,7 @@ void WebViewManager::navigate(NavigationAction action) {
         focusedNonChromeWebView->loadURL("http://www.google.com");
         break;
     case NavigateDelete:
-        delete focusedNonChromeWebView;
+        destroyWebView(focusedNonChromeWebView);
 //        focusedNonChromeWebView->loadURL("");
 //        focusedNonChromeWebView->setTransparent(true);
         focusedNonChromeWebView=0;

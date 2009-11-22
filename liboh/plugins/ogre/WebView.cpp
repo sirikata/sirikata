@@ -39,7 +39,7 @@ namespace Sirikata {
 namespace Graphics {
 
 WebView::WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			bool asyncRender, int maxAsyncRenderRate, Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
+			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -79,12 +79,10 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 
 	if(compensateNPOT)
 		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
-
-	createWebView(asyncRender, maxAsyncRenderRate);
 }
 
 WebView::WebView(const std::string& name, unsigned short width, unsigned short height,
-			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
+			Ogre::FilterOptions texFiltering)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -120,7 +118,6 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	this->texFiltering = texFiltering;
 
 	createMaterial();
-	createWebView(asyncRender, maxAsyncRenderRate);
 }
 
 WebView::~WebView()
@@ -149,9 +146,10 @@ void WebView::destroyed() {
 
 void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
 {
-	if(this->proxyObject)
+	if(this->proxyObject) {
 		proxyObject->WebViewProvider::removeListener(this);
 		proxyObject->ProxyObjectProvider::removeListener(this);
+    }
 
 	this->proxyObject = proxyObject;
 
@@ -172,6 +170,29 @@ void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
     } else {
         webView->resize(0, 0);
     }
+#endif
+#ifdef HAVE_AWESOMIUM
+    webView = Awesomium::WebCore::Get().createWebView(viewWidth, viewHeight, false, asyncRender, maxAsyncRenderRate);
+
+    bind("drag", std::tr1::bind(&WebView::onRequestDrag, this, _1, _2));
+#endif
+    initializeWebView(webView);
+}
+
+void WebView::initializeWebView(
+#ifdef HAVE_AWESOMIUM
+    Awesomium::WebView *win
+#else
+    Berkelium::Window *win
+#endif
+    )
+{
+    webView = win;
+#ifdef HAVE_BERKELIUM
+    webView->setDelegate(this);
+#endif
+#ifdef HAVE_AWESOMIUM
+    webView->setListener(this);
 #endif
 }
 
@@ -859,9 +880,32 @@ void WebView::onUnresponsive(Berkelium::Window*) {
     SILOG(webview,debug,"onUnresponsive");
 }
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
-    SILOG(webview,debug,"onCreatedWindow");
+    std::string name;
+    {
+        static int i = 0;
+        i++;
+        std::ostringstream os;
+        os << "_blank" << i;
+        name = os.str();
+    }
+    SILOG(webview,debug,"onCreatedWindow "<<name);
+
 #ifdef HAVE_BERKELIUM
-    delete newwin;
+    Berkelium::Rect r;
+    r.mLeft = 0;
+    r.mTop = 0;
+    r.mWidth = 600;
+    r.mHeight = 400;
+    Berkelium::Widget *wid = newwin->getWidget();
+    if (wid) {
+        r = wid->getRect();
+    }
+    WebView *wv = new WebView(
+        name, r.width(), r.height(),
+        OverlayPosition(r.left(), r.top()),
+        overlay?(Ogre::uchar)overlay->zOrder:0, TIER_MIDDLE,
+        overlay?overlay->viewport:WebViewManager::getSingleton().defaultViewport);
+    wv->initializeWebView(newwin);
 #endif
 }
 
