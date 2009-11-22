@@ -106,5 +106,5 @@ depends: update-dependencies
 fulldepends: update-dependencies
 	$(MAKE) -C dependencies fulldepends $(*)
 
-full-depends:
+full-depends: update-dependencies
 	$(MAKE) -C dependencies full-depends $(*)

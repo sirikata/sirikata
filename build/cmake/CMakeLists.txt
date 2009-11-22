@@ -423,30 +423,7 @@ IF(NOT SQLite3_ROOT)
     IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
       SET(SQLite3_ROOT ${PLATFORM_LIBS})
     ELSE()
-      FOREACH (SQCHROMEPATH NOTHING)
-        IF(EXISTS ${SQCHROMEPATH}/src/third_party/sqlite/preprocessed)
-          IF(EXISTS ${SQCHROMEPATH}/src/out/Release/obj.target/third_party/sqlite)
-            SET(SQLite3_INCLUDE_DIRS ${SQCHROMEPATH}/src/third_party/sqlite/preprocessed)
-            SET(SQLite3_LIBRARY_DIRS ${SQCHROMEPATH}/src/out/Release/obj.target/third_party/sqlite)
-            FIND_LIBRARY(SQLite3_LIBRARIES
-                       NAMES sqlite3
-                       PATHS
-                       ${SQLite3_LIBRARY_DIRS}
-                       NO_DEFAULT_PATH)
-            IF(NOT SQLite3_LIBRARIES)
-              FIND_LIBRARY(SQLite3_LIBRARIES
-                   NAMES sqlite
-                   PATHS
-                   ${SQLite3_LIBRARY_DIRS}
-                   NO_DEFAULT_PATH)
-            ENDIF()
-            IF(SQLite3_LIBRARIES)
-              SET(SQLite3_FOUND TRUE)
-              MESSAGE(STATUS "SQLite found in chromium path ${SQLite3_LIBRARY_DIRS} Headers in ${SQLite3_INCLUDE_DIRS}")
-            ENDIF()
-          ENDIF()
-        ENDIF()
-      ENDFOREACH()
+      SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
     ENDIF()
   ENDIF()
 ENDIF()
