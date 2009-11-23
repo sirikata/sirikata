@@ -183,6 +183,9 @@ Ogre::String ReplacingDataStream::replace_lexeme(const Ogre::String &input,
   }
 }
 
+
+///////////// FIXME: Hardcoded reference to "mhash:"
+
 static const char* MERU_URI_HASH_SCHEME = ("mhash:");
 
 static std::string possibleMhashCanonicalization(const std::string&input) {
@@ -198,8 +201,8 @@ static std::string possibleMhashCanonicalization(const std::string&input) {
     }
     std::string::size_type wherecolon=input.rfind(':');
     if (wherecolon==std::string::npos||wherecolon<MERU_URI_HASH_SCHEME_LENGTH)
-        return CDNArchive::canonicalMhashName(input);
-    std::string retval(CDNArchive::canonicalMhashName(input.substr(0,wherecolon))+input.substr(wherecolon));
+        return CDNArchive::canonicalizeHash(input);
+    std::string retval(CDNArchive::canonicalizeHash(input.substr(0,wherecolon))+input.substr(wherecolon));
     return retval;
 }
 
@@ -350,7 +353,7 @@ Ogre::String ReplacingDataStream::replaceData(Ogre::String input) {
                   Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(Ogre::String(what[i].first,what[i].second));
                   if (where!=mTextureAliases->end()) {
                       retval+=midval.substr(pwhere,(what[0].first-midval.begin())-pwhere);
-                      retval+=CDNArchive::canonicalMhashName(where->second);
+                      retval+=CDNArchive::canonicalizeHash(where->second);
                       start=what[0].second;
                       pwhere=start-midval.begin();
                   }else {

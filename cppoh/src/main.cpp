@@ -158,7 +158,7 @@ int main ( int argc,const char**argv ) {
     const char **myargv = new const char*[myargc];
     memcpy(myargv, argv, argc*sizeof(const char*));
     myargv[argc] = "--moduleloglevel";
-    myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
+    myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=debug";
 
     using namespace Sirikata;
     OptionValue *ohOption;

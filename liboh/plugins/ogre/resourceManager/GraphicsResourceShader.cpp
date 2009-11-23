@@ -141,7 +141,7 @@ ShaderLoadTask::ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resourc
 
 void ShaderLoadTask::doRun()
 {
-  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, CDNArchive::canonicalMhashName(mHash), mBuffer);
+  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mHash, mBuffer);
   mResource->loaded(true, mEpoch);
 }
 

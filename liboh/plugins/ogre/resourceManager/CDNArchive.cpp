@@ -2,7 +2,7 @@
  *  CDNArchive.cpp
  *
  *  Copyright (c) 2009, Stanford University
- *  All rights reserved.
+ *  All rights reserved. Go Bears! We beat you 34-28!
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
@@ -122,8 +122,29 @@ static const char *const native_files_data[]={(char*)white_png,(char*)black_png,
 static const int native_files_size[]={sizeof(white_png),sizeof(black_png),sizeof(whiteclear_png) , sizeof(blackclear_png) , sizeof(graytrans_png) , sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png) };
 static const int num_native_files=sizeof(native_files)/sizeof(native_files[0]);
 
-static std::string MERU_URI_HASH_PREFIX("mhash:");
-
+/* Verifies that a URI is in hashed form, and strips out all but the hash.
+ * Also, removes quotes and a %%_%% prefix.
+ * If the URI is not a hashed URI, then returns the input.
+ */
+String CDNArchive::canonicalizeHash(const String&filename_orig)
+{
+  String filename = filename_orig;
+  if (filename.length()>strlen(CDN_REPLACING_MATERIAL_STREAM_HINT)&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,strlen(CDN_REPLACING_MATERIAL_STREAM_HINT))==0) {
+    filename = filename.substr(strlen(CDN_REPLACING_MATERIAL_STREAM_HINT));
+  }
+  if (filename.length() > 2 && filename[0] == '\"' && filename[filename.length()-1] == '\"') {
+    filename = filename.substr(1, filename.length()-2);
+  }
+  String::size_type lastslash = filename.rfind('/');
+  if (lastslash != String::npos) {
+    if (filename.length() == lastslash + 1 + SHA256::hex_size) {
+      return filename.substr(lastslash + 1, SHA256::hex_size);
+    }
+  }
+  return filename;
+}
+// Two functions that do almost the same thing and used interchangably in equivalent functions!
+/*
 String CDNArchive::canonicalizeHash(const String&filename)
 {
   if (filename.length()>strlen(CDN_REPLACING_MATERIAL_STREAM_HINT)&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,strlen(CDN_REPLACING_MATERIAL_STREAM_HINT))==0) {
@@ -151,6 +172,7 @@ Ogre::String CDNArchive::canonicalMhashName(const Ogre::String&filename)
   }
   return filename;
 }
+*/
 
 time_t CDNArchive::getModifiedTime(const Ogre::String&)
 {
@@ -159,27 +181,56 @@ time_t CDNArchive::getModifiedTime(const Ogre::String&)
   return retval;
 }
 
-class CDNArchiveDataStream : public Ogre::MemoryDataStream
+class CDNArchiveDataStream : public Ogre::DataStream
 {
 public:
-  CDNArchiveDataStream(CDNArchiveFactory *owner, const Ogre::String &name, std::pair<ResourceBuffer,unsigned int> *input)
-    : Ogre::MemoryDataStream((void*)input->first->data(),(size_t)input->first->length(),false),mBuffer(input->first)
-  {
-      mOwner=owner;
-      mName=name;
-      input->second++;
-  }
+	CDNArchiveDataStream(CDNArchiveFactory *owner, const Ogre::String &name, const SparseData &input)
+		: Ogre::DataStream()
+	{
+		mOwner=owner;
+		mName=name;
+		mData=input;
+		mSize=mData.size();
+		mIter=mData.begin();
+	}
+	virtual size_t read(void* buffer, size_t length) {
+		SparseData::value_type *data = mIter.dataAt();
+		if (!data) {
+			return 0;
+		}
+		size_t buflength = mIter.lengthAt();
+		if (buflength < length) {
+			length = buflength;
+		}
+		std::memcpy(buffer, data, length);
+		mIter += length;
+		return length;
+	}
+	virtual void skip(long int relative) {
+		mIter += relative;
+	}
+	virtual void seek(size_t absolute) {
+		mIter = mData.begin() + absolute;
+	}
+	virtual size_t tell() const {
+		return mIter - mData.begin();
+	}
+	virtual bool eof() const {
+		return mIter == mData.end();
+	}
 
-  virtual void close() {
-    mOwner->decref(getName());
-  }
-  ~CDNArchiveDataStream() {
-  }
+	virtual void close() {
+	}
+
+	~CDNArchiveDataStream() {
+	}
 
 private:
-  CDNArchiveFactory *mOwner;
-  ResourceBuffer mBuffer;
+	SparseData mData;
+	SparseData::const_iterator mIter;
+	CDNArchiveFactory *mOwner;
 };
+
 
 CDNArchive::CDNArchive(CDNArchiveFactory *owner, const Ogre::String& name, const Ogre::String& archType)
 : Archive(name, archType)
@@ -191,7 +242,7 @@ CDNArchive::CDNArchive(CDNArchiveFactory *owner, const Ogre::String& name, const
         DenseData*dd=new DenseData(Transfer::Range((Transfer::cache_usize_type)0,(Transfer::cache_usize_type)size,Transfer::LENGTH,true));
         memcpy(dd->writableData(),native_files_data[i],size);
         DenseDataPtr rbuffer(dd);
-        mOwner->addArchiveDataNoLock(mNativeFileArchive, native_files[i], rbuffer);
+        mOwner->addArchiveDataNoLock(mNativeFileArchive, native_files[i], SparseData(rbuffer));
     }
 }
 
@@ -220,20 +271,20 @@ char * findMem(char *data, size_t howmuch, const char * target, size_t targlen)
 Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
 {
   boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
-  std::map<Ogre::String,std::pair<ResourceBuffer,unsigned int> >::iterator where =
-      mOwner->CDNArchiveFileRefcount.find(canonicalizeHash(filename));
-  if (where != mOwner->CDNArchiveFileRefcount.end()) {
+  std::map<Ogre::String,SparseData>::iterator where =
+      mOwner->CDNArchiveFiles.find(canonicalizeHash(filename));
+  if (where != mOwner->CDNArchiveFiles.end()) {
     SILOG(resource,debug,"File "<<filename << " Opened");
     unsigned int hintlen=strlen(CDN_REPLACING_MATERIAL_STREAM_HINT);
     if (filename.length()>hintlen&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,hintlen)==0) {
-      Ogre::DataStreamPtr inner (new CDNArchiveDataStream(mOwner, filename.substr(hintlen),&where->second));
+      Ogre::DataStreamPtr inner (new CDNArchiveDataStream(mOwner, filename.substr(hintlen),where->second));
       Ogre::DataStreamPtr retval(new ReplacingDataStream(inner,filename.substr(hintlen),NULL));
       return retval;
     }
     else {
       Ogre::DataStreamPtr retval(new CDNArchiveDataStream(mOwner, filename.find("mhash://") == 0
           ? filename.substr(filename.length() - SHA256::hex_size)
-          : filename, &where->second));
+          : filename, where->second));
       return retval;
     }
   }
@@ -280,11 +331,11 @@ Ogre::FileInfoListPtr CDNArchive::findFileInfo(const Ogre::String& pattern, bool
 
 bool CDNArchive::exists(const Ogre::String& filename) {
     boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
-    if (mOwner->CDNArchiveFileRefcount.find(canonicalizeHash(filename))!=mOwner->CDNArchiveFileRefcount.end()) {
+    if (mOwner->CDNArchiveFiles.find(canonicalizeHash(filename))!=mOwner->CDNArchiveFiles.end()) {
       SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalizeHash(filename));
         return true;
     }else {
-        String Filename=filename;
+      String Filename=filename;
       if (Filename.length()>5&&Filename.substr(0,5)==CDN_REPLACING_MATERIAL_STREAM_HINT)
           Filename=Filename.substr(5);
 

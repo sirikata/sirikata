@@ -337,7 +337,8 @@ public:
             setDataPtr();
 		}
 
-		unsigned char operator*() const{
+		inline unsigned char operator*() const{
+			assert(valid());
 			return data[globalbyte-datastart];
 		}
 		const_iterator &operator+=(difference_type diff) {
@@ -387,6 +388,32 @@ public:
 		bool operator!=(const const_iterator&other) const {
 			return (other.iter != iter || other.globalbyte != globalbyte);
 		}
+
+		inline bool valid() const {
+			return data && datastart <= globalbyte;
+		}
+
+		inline bool eof() const {
+			return !data;
+		}
+
+		value_type *dataAt() const {
+			if (valid()) {
+				return &(data[globalbyte-datastart]);
+			} else {
+				return NULL;
+			}
+		}
+		size_type lengthAt() const {
+			if (valid()) {
+				return dataend - globalbyte;
+			} else if (eof()) {
+				return 0;
+			} else {
+				return datastart - globalbyte;
+			}
+		}
+
 	};
 
 	const_iterator begin() const {

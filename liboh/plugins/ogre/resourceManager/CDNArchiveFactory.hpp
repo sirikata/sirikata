@@ -47,14 +47,11 @@ class CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CD
 
   friend class CDNArchive;
 
-  void addArchiveDataNoLock(unsigned int archiveName, const Ogre::String &filename, const ResourceBuffer &rbuffer);
-
-  void removeUndesirables();
+  void addArchiveDataNoLock(unsigned int archiveName, const Ogre::String &filename, const SparseData &rbuffer);
 
   boost::mutex CDNArchiveMutex;
   std::map<unsigned int, std::vector <Ogre::String> > CDNArchivePackages;
-  std::map<Ogre::String, std::pair<ResourceBuffer, unsigned int> > CDNArchiveFileRefcount;
-  std::vector <Ogre::String> CDNArchiveToBeDeleted;
+  std::map<Ogre::String, SparseData > CDNArchiveFiles;
   int mCurArchive;
 
 public:
@@ -68,7 +65,7 @@ public:
   /**
    * Add a specific data stream to a package that will be hung onto until removeArchive is called
    */
-  void addArchiveData(unsigned int archiveName, const Ogre::String &filename, const ResourceBuffer &rbuffer);
+  void addArchiveData(unsigned int archiveName, const Ogre::String &filename, const SparseData &rbuffer);
 
   /**
    * Adds a package to the CDNArchive that will stay open until all items are used
@@ -79,7 +76,7 @@ public:
   /**
    * Adds a package to the CDNArchive and one instance of filename/data
    */
-  unsigned int addArchive(const Ogre::String&filename, const ResourceBuffer &rbuffer);
+  unsigned int addArchive(const Ogre::String&filename, const SparseData &rbuffer);
 
   /**
    * Removes a package from CDNArchive that may be later opened by ogre
@@ -92,8 +89,6 @@ public:
    * Must be called from main thread.
    */
   void clearArchive(unsigned int name);
-
-  void decref(const Ogre::String &name);
 
 };
 

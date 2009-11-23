@@ -90,7 +90,7 @@ GraphicsResourceMaterial::~GraphicsResourceMaterial()
 
 void GraphicsResourceMaterial::resolveName(const URI& id, const URI& hash)
 {
-  mTextureAliases[id.toString()] = CDNArchive::canonicalMhashName(hash.toString());
+  mTextureAliases[id.toString()] = CDNArchive::canonicalizeHash(hash.toString());
 }
 
 ResourceDownloadTask* GraphicsResourceMaterial::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
@@ -367,8 +367,9 @@ MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr res
 
 void MaterialLoadTask::doRun()
 {
-  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, CDNArchive::canonicalMhashName(mHash), mBuffer);
-  MaterialScriptManager::getSingleton().load(CDNArchive::canonicalMhashName(mHash), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mHash, mBuffer);
+  MaterialScriptManager::getSingleton().load(CDNArchive::canonicalizeHash(mHash),
+    Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
     false, 0, mTextureAliases);
 
   mResource->loaded(true, mEpoch);

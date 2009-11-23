@@ -90,7 +90,7 @@ GraphicsResourceMesh::~GraphicsResourceMesh()
 
 void GraphicsResourceMesh::resolveName(const URI& id, const URI& hash)
 {
-  mMaterialNames[id.toString()] = CDNArchive::canonicalMhashName(hash.toString());
+  mMaterialNames[id.toString()] = CDNArchive::canonicalizeHash(hash.toString());
   if (mLoadState == LOAD_LOADED)
     setMaterialNames(this);
 }

@@ -159,6 +159,8 @@ using ::Sirikata::UUID;
 using ::Sirikata::URI;
 using ::Sirikata::SHA256;
 using ::Sirikata::Transfer::DenseData;
+using ::Sirikata::Transfer::SparseData;
+using ::Sirikata::Transfer::DenseDataPtr;
 using ::Sirikata::Transfer::RemoteFileId;
 
 namespace Transfer = ::Sirikata::Transfer;

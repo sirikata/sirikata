@@ -38,7 +38,7 @@ namespace Meru {
 ResourceLoadTask::ResourceLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String& hash, unsigned int epoch)
 : DependencyTask(mgr->getQueue()),
   mResource(resource),
-  mHash(CDNArchive::canonicalMhashName(hash)),
+  mHash(CDNArchive::canonicalizeHash(hash)),
   mEpoch(epoch),
   mCancelled(false),
   mStarted(false)

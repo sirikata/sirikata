@@ -52,10 +52,11 @@ class CDNArchive : public Ogre::Archive
   CDNArchiveFactory *mOwner;
 public:
   /**
-   * This function takes a mhash:// file descriptor and extracts the salient bits--- i.e. everything past the hint about where to get the hash based filename
+   * This function takes a hash-based URI or filename and extracts the salient bits---
+   * i.e. everything past the hint about where to get the hash based filename
    * i.e. mhash://meru/1bf00deadbeef turns into 1bf00deadbeef
+   * This function also strips quotes as well as a preceeding %%_%% (CDN_REPLACING_MATERIAL_STREAM_HINT)
    */
-  static Ogre::String canonicalMhashName(const Ogre::String&filename);
   static String canonicalizeHash(const String&filename);
 
   CDNArchive(CDNArchiveFactory *owner, const Ogre::String& name, const Ogre::String& archType);
