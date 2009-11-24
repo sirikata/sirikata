@@ -171,28 +171,17 @@ void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
         webView->resize(0, 0);
     }
 #endif
-#ifdef HAVE_AWESOMIUM
-    webView = Awesomium::WebCore::Get().createWebView(viewWidth, viewHeight, false, asyncRender, maxAsyncRenderRate);
-
-    bind("drag", std::tr1::bind(&WebView::onRequestDrag, this, _1, _2));
-#endif
-    initializeWebView(webView);
 }
 
 void WebView::initializeWebView(
-#ifdef HAVE_AWESOMIUM
-    Awesomium::WebView *win
-#else
+#ifdef HAVE_BERKELIUM
     Berkelium::Window *win
 #endif
     )
 {
-    webView = win;
 #ifdef HAVE_BERKELIUM
+    webView = win;
     webView->setDelegate(this);
-#endif
-#ifdef HAVE_AWESOMIUM
-    webView->setListener(this);
 #endif
 }
 

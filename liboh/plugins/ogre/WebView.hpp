@@ -419,9 +419,7 @@ namespace Graphics {
 		void createWebView(bool asyncRender, int maxAsyncRenderRate);
 
         void initializeWebView(
-#ifdef HAVE_AWESOMIUM
-            Awesomium::WebView *win
-#else
+#ifdef HAVE_BERKELIUM
             Berkelium::Window *win
 #endif
             );
