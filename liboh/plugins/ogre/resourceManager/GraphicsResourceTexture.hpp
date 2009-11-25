@@ -46,6 +46,8 @@ public:
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
   virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
   virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);
+
+  int maxDimension() const;
 };
 
 }

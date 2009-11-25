@@ -108,8 +108,13 @@ public:
      *  locally this does nothing.
      *
      *  \param rid the ResourceID of the resource to be downloaded
+     *  \param cb Callback containing the Download Event.
+     *  \param range,
      */
-    SubscriptionId request (const RemoteFileId &rid, const std::tr1::function<EventResponse(const EventPtr&)>&);
+    SubscriptionId request (
+        const RemoteFileId &rid,
+        const std::tr1::function<EventResponse(const EventPtr&)>&cb,
+        Transfer::Range range=Transfer::Range(true));
 
 
     /** Create a new resource from in-memory data.

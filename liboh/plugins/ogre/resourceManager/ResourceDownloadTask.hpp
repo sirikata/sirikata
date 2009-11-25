@@ -56,6 +56,12 @@ public:
   ResourceDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, ResourceRequestor* resourceRequestor);
   virtual ~ResourceDownloadTask();
 
+  void setRange(const Transfer::Range &r) {
+    mRange = r;
+  }
+
+  void mergeData(const Transfer::SparseData &dataToMerge);
+
   virtual void operator()();
 
   bool isStarted() {
@@ -70,7 +76,9 @@ protected:
 
   const RemoteFileId mHash;
   SubscriptionId mCurrentDownload;
+  Transfer::Range mRange;
   ResourceRequestor* mResourceRequestor;
+  Transfer::SparseData mMergeData;
 };
 
 }

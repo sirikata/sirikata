@@ -53,7 +53,7 @@ public:
   }
 
   virtual void setResourceBuffer(const SparseData& buffer) {
-    mBuffer = buffer.flatten();
+    mBuffer = buffer;
   }
 
   void cancel()
@@ -70,7 +70,7 @@ protected:
 
   SharedResourcePtr mResource;
   String mHash;
-  DenseDataPtr mBuffer;
+  SparseData mBuffer;
   const unsigned int mEpoch;
   bool mCancelled;
   bool mStarted;

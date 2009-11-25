@@ -41,7 +41,7 @@ ResourceRequestor::~ResourceRequestor() {
 }
 
 ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const RemoteFileId &hash, ResourceRequestor* resourceRequestor)
-: DependencyTask(mgr->getQueue()), mHash(hash), mResourceRequestor(resourceRequestor)
+: DependencyTask(mgr->getQueue()), mHash(hash), mRange(true), mResourceRequestor(resourceRequestor)
 {
   mStarted = false;
 }
@@ -53,11 +53,27 @@ ResourceDownloadTask::~ResourceDownloadTask()
   EventSource::getSingleton().unsubscribe(mCurrentDownload);
 }
 
+void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
+  for (Transfer::DenseDataList::const_iterator iter =
+           dataToMerge.Transfer::DenseDataList::begin();
+       iter != dataToMerge.Transfer::DenseDataList::end();
+       ++iter) {
+    iter->addToList<Transfer::DenseDataList>(iter.std::list<Transfer::DenseDataPtr>::const_iterator::operator*(), mMergeData);
+  }
+}
+
 EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& event)
 {
   std::tr1::shared_ptr<DownloadCompleteEvent> transferEvent = DowncastEvent<DownloadCompleteEvent>(event);
   if (transferEvent->success()) {
-    mResourceRequestor->setResourceBuffer(transferEvent->data());
+    Transfer::SparseData finishedData = transferEvent->data();
+    for (Transfer::DenseDataList::const_iterator iter =
+             mMergeData.Transfer::DenseDataList::begin();
+         iter != mMergeData.Transfer::DenseDataList::end();
+         ++iter) {
+      iter->addToList<Transfer::DenseDataList>(iter.std::list<Transfer::DenseDataPtr>::const_iterator::operator*(), finishedData);
+    }
+    mResourceRequestor->setResourceBuffer(finishedData);
   }
   else {
     //assert(false); // ???
@@ -71,7 +87,8 @@ void ResourceDownloadTask::operator()()
   mStarted = true;
   // FIXME: Daniel: the defaultProgressiveDownloadFunctor will not properly deal with textures
   mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
-      std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1));
+      std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
+      mRange);
 }
 
 }
