@@ -116,6 +116,8 @@ class CsvToSql:
         self.name_to_uuid = {}
         self.uuid_objects = {}
         self.table_name = 'persistence'
+        self.camera_count=0
+        self.max_cameras=1
 
     def getTableName(self, uuid):
         return uuid.get_bytes()
@@ -160,30 +162,36 @@ class CsvToSql:
         value = "".join(self.charconvert(c) for c in value);
         curs.execute(table_insert, (buffer(object_name), key_name, buffer(value)))
 
-    def go(self, openfile, **csvargs):
+    def go(self, filelist, **csvargs):
         cursor = self.conn.cursor()
         self.addTable(cursor)
 
         uuidlist = Sirikata.UUIDListProperty()
 
-        reader = csv.DictReader(openfile, **csvargs)
-        for row in reader:
-            try:
-                if row['objtype'] not in ALLOWED_TYPES:
-                    return # blank or bad row
+        for openfile in filelist:
+            reader = csv.DictReader(openfile, **csvargs)
+            for row in reader:
+                try:
+                    if row['objtype'] not in ALLOWED_TYPES:
+                        continue # blank or bad row
 
-                u = self.addUUID(row)
-                self.processRow(u, row, cursor)
-                uuidlist.value.append(u.get_bytes())
-            except:
-                print row
-                raise
+                    u = self.addUUID(row)
+                    self.processRow(u, row, cursor)
+                    uuidlist.value.append(u.get_bytes())
+                except:
+                    print row
+                    raise
         nulluuid = uuid.UUID(int=0)
         self.set(cursor, nulluuid, 'ObjectList', uuidlist.SerializeToString())
         self.conn.commit()
         cursor.close()
 
     def processRow(self, uuid, row, cursor):
+        if row['objtype']=='camera':
+            self.camera_count += 1
+            if self.camera_count > self.max_cameras:
+                print "not a good idea to have too many cameras -- not adding this one"
+                return
         location = Sirikata.ObjLoc()
         self.protovec(location.position, row, 'pos')
         if (row.get('orient_w','')):
@@ -191,8 +199,8 @@ class CsvToSql:
         else:
             """
             # Convert from angle
-            theta = float(row['orient_x'])*math.pi/180.
-            phi = float(row['orient_y'])*math.pi/180.
+            phi = float(row['orient_x'])*math.pi/180.
+            theta = float(row['orient_y'])*math.pi/180.
             psi = float(row['orient_z'])*math.pi/180.
             location.orientation.append(math.sin(phi/2)*math.cos(theta/2)*math.cos(psi/2)
                                       + math.cos(phi/2)*math.sin(theta/2)*math.sin(psi/2)) #x
@@ -318,22 +326,30 @@ class CsvToSql:
             self.set(cursor, uuid, 'IsCamera', '')
 
 if __name__=='__main__':
+    sqlfile = 'scene.db'
     if len(sys.argv) > 1:
-        csvfile = sys.argv[1]
+        if len(sys.argv) == 2:
+            csvfiles = [sys.argv[1]]
+        else:
+            csvfiles = []
+            for i in sys.argv[1:-1]:
+                csvfiles.append(i)
+            sqlfile = sys.argv[-1]
     else:
-        csvfile = 'scene.csv'
-    if len(sys.argv) > 2:
-        sqlfile = sys.argv[2]
-    else:
-        sqlfile = 'scene.db'
-    if len(sys.argv) > 3:
-        noisy=True
+        csvfiles = ['scene.csv']
+
     try:
         os.rename(sqlfile, sqlfile+'.bak')
     except OSError:
         pass
 
+    print "converting:", csvfiles, "to:", sqlfile
     conn = sqlite3.connect(sqlfile)
     converter = CsvToSql(conn)
-    converter.go(open(csvfile))
+    handles = []
+    for fname in csvfiles:
+        handles.append(open(fname))
+    converter.go(handles)
+    for han in handles:
+        han.close()
     print "Generating scene: SUCCESS!"
