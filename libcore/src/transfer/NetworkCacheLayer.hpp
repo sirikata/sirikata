@@ -163,6 +163,7 @@ public:
 			const TransferCallback &callback) {
 
 		RequestInfo info(downloadFileId, requestedRange, callback);
+		SILOG(transfer,error,"NetworkCacheLayer: "<<downloadFileId.uri()<<" range "<<requestedRange);
 		std::list<RequestInfo>::iterator infoIter;
 		{
 			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);

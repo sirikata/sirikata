@@ -42,7 +42,7 @@ public:
   GraphicsResourceTexture(const RemoteFileId &resourceID);
   virtual ~GraphicsResourceTexture();
 
-  virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
+  virtual DependencyTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
   virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
   virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);

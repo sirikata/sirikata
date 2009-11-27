@@ -37,6 +37,7 @@
 #include "ResourceLoadingQueue.hpp"
 #include "ResourceUnloadTask.hpp"
 #include "SequentialWorkQueue.hpp"
+#include "DependencyManager.hpp"
 #include <boost/bind.hpp>
 #include <OgreResourceBackgroundQueue.h>
 
@@ -74,7 +75,7 @@ protected:
 };
 
 
-class TextureDownloadTask : public ResourceDownloadTask, public ResourceRequestor
+class TextureDownloadTask : public DependencyTask, public ResourceRequestor
 {
 
   // simplified dds header struct with the minimum data needed
@@ -130,13 +131,17 @@ class TextureDownloadTask : public ResourceDownloadTask, public ResourceRequesto
   }
 
   ResourceDownloadTask *mHeaderTask;
+  ResourceDownloadTask *mDataTask;
   ResourceRequestor* mOrigResourceRequestor;
   unsigned int mMaxDimension;
+  RemoteFileId mHash;
 
   size_t determineDownloadRange(unsigned char *header);
 public:
   TextureDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, unsigned int maxDim, ResourceRequestor* resourceRequestor);
   virtual ~TextureDownloadTask();
+
+  virtual void operator()();
 
   virtual void setResourceBuffer(const SparseData& buffer);
 };
@@ -158,7 +163,7 @@ int GraphicsResourceTexture::maxDimension() const {
     return 512;
 }
 
-ResourceDownloadTask* GraphicsResourceTexture::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
+DependencyTask* GraphicsResourceTexture::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
   return new TextureDownloadTask(manager, mResourceID, maxDimension(), resourceRequestor);
 }
@@ -254,13 +259,18 @@ void TextureUnloadTask::doRun()
 /***************************** TEXTURE DOWNLOAD TASK *************************/
 
 TextureDownloadTask::TextureDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, unsigned int maxDim, ResourceRequestor* resourceRequestor)
-: ResourceDownloadTask(mgr, hash, this)
+    : DependencyTask(mgr->getQueue()), mHash(hash)
 {
 	mHeaderTask = new ResourceDownloadTask(mgr, hash, this);
-	mHeaderTask->setRange(Transfer::Range(true));
-    addDepender(mHeaderTask);
+    mHeaderTask->addDepender(this);
+    mDataTask = new ResourceDownloadTask(mgr, hash, this);
+    mDataTask->addDepender(this);
+
+	mHeaderTask->setRange(Transfer::Range(0, DDSHEADER_BYTESIZE, Transfer::BOUNDS));
     mHeaderTask->go();
+
     mMaxDimension = maxDim;
+    mOrigResourceRequestor = resourceRequestor;
 }
 
 TextureDownloadTask::~TextureDownloadTask() {
@@ -271,6 +281,7 @@ enum {DDPF_RGB = 0x00000040};
 size_t TextureDownloadTask::determineDownloadRange(unsigned char *header) {
     if (!checkFourCC(header, DDS_MAGIC, "DDS ")) {
         // attempt a normal download.
+        SILOG(resource,insane,"File "<<mHash.uri().toString()<<" not a dds: "<< (char)header[0]<<(char)header[1]<<(char)header[2]<<(char)header[3]<<(char)header[4]);
         return 0;
     }
     if (getDWORD(header, DDS_SIZE) + 4 > DDSHEADER_BYTESIZE) {
@@ -318,7 +329,7 @@ size_t TextureDownloadTask::determineDownloadRange(unsigned char *header) {
         if (width <= mMaxDimension && height <= mMaxDimension) {
             setDWORD(header, DDS_WIDTH, width < 1 ? 1 : width);
             setDWORD(header, DDS_HEIGHT, height < 1 ? 1 : height);
-            if (!DXT_ver) {
+            if (DXT_ver) {
                 // PITCH set to bytes per "scan line" whatever that means.
                 setDWORD(header, DDS_PITCH, num_bytes);
             } else {
@@ -336,19 +347,29 @@ size_t TextureDownloadTask::determineDownloadRange(unsigned char *header) {
     return 0;
 }
 
+void TextureDownloadTask::operator()() {
+    finish(true);
+}
+
 void TextureDownloadTask::setResourceBuffer(const SparseData &sdata)
 {
     if (mHeaderTask) {
         mHeaderTask = NULL;
-        mergeData(sdata);
+        mDataTask->mergeData(sdata);
         if (sdata.contains(Transfer::Range(0, DDSHEADER_BYTESIZE, Transfer::BOUNDS))) {
             unsigned char header [DDSHEADER_BYTESIZE];
             std::copy (sdata.begin(), sdata.begin()+DDSHEADER_BYTESIZE, header);
             size_t dataToSkip = determineDownloadRange(header);
             if (dataToSkip > 0) {
-                setRange(Transfer::Range(DDSHEADER_BYTESIZE + dataToSkip, true));
+                Transfer::Range range(DDSHEADER_BYTESIZE + dataToSkip, true);
+                mDataTask->setRange(range);
+            } else {
+                SILOG(resource, insane, "Texture without mipmaps "<<mHash.uri().toString());
             }
+        } else {
+            SILOG(resource, insane, "Texture does not contain header "<<mHash.uri().toString());
         }
+        mDataTask->go();
         return;
     }
     /* Check size because a 1x1 png file takes less space than the DDS header.
@@ -370,8 +391,8 @@ void TextureDownloadTask::setResourceBuffer(const SparseData &sdata)
                 // The DDS file is missing data at the mipmap we want.
                 std::ostringstream os;
                 Transfer::Range::printRangeList<Transfer::DenseDataList>(os, sdata, sourceRange);
-                SILOG(resource, error, "Partial DDS bad sparse data "<<mHash.toString()
-                      <<" asked for "<<mRange<<" want "<<(dataToSkip+DDSHEADER_BYTESIZE)
+                SILOG(resource, error, "Partial DDS bad sparse data "
+                      <<" want "<<(dataToSkip+DDSHEADER_BYTESIZE)
                       <<" have "<<os.str());
                 return; // We have a corrupt texture--not what we asked for!
             }

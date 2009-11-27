@@ -85,7 +85,7 @@ void GraphicsResourceAsset::doLoad()
   DependencyManager* depMgr = grm->getDependencyManager();
 
   mLoadTask = createLoadTask(depMgr);
-  ResourceDownloadTask *downloadTask = createDownloadTask(depMgr, mLoadTask);
+  DependencyTask *downloadTask = createDownloadTask(depMgr, mLoadTask);
   depMgr->establishDependencyRelationship(mLoadTask, downloadTask);
   downloadTask->go();
 }
@@ -114,7 +114,7 @@ void GraphicsResourceAsset::doParse()
   DependencyManager* depMgr = grm->getDependencyManager();
 
   mParseTask = createDependencyTask(depMgr);
-  ResourceDownloadTask *downloadTask = createDownloadTask(depMgr, mParseTask);
+  DependencyTask *downloadTask = createDownloadTask(depMgr, mParseTask);
   depMgr->establishDependencyRelationship(mParseTask, downloadTask);
   downloadTask->go();
 }

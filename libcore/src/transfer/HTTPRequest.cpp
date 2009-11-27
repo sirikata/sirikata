@@ -127,13 +127,13 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		istr >> ver >> code;
 		if (code) {
 			if (code == 200 && (!mRequestedRange.goesToEndOfFile() || mRequestedRange.startbyte() != 0)) {
-				SILOG(transfer,insane,"Server does not support partial content for " << mURI);
+				SILOG(transfer,insane,"Server does not support partial content for " << mURI<<", "<<mRequestedRange);
 				mRequestedRange = Range(true); // Server is giving us the whole file.
 				mData->setBase(0);
 				mData->setLength(0, true);
 			}
 			mStatusCode = code;
-			SILOG(transfer,insane,"Got status " << code << " (" << ver << ") for "<<mURI);
+			SILOG(transfer,insane,"Got status " << code << " (" << ver << ") for "<<mURI<<", "<<mRequestedRange);
 		}
 		return;
 	}
@@ -392,8 +392,8 @@ void HTTPRequest::curlLoop () {
 					// CURLE_RANGE_ERROR
 					// CURLE_HTTP_RETURNED_ERROR
 					std::stringstream str;
-					str << curl_easy_strerror(transferMsg->data.result) <<
-							" (" << request->mStatusCode << ") for " << request->mURI;
+					str << "CURL Says: "<<curl_easy_strerror(transferMsg->data.result) <<
+                        " (" << request->mStatusCode << ") for " << request->mURI<<" range "<<request->mRequestedRange;
 					SILOG(transfer,info,str.str());
 					success = false;
 					if (request->mStatusCode == 417) {
@@ -545,21 +545,16 @@ void HTTPRequest::initCurlHandle() {
 
 	std::ostringstream orangestring;
 	bool nontrivialRange=false;
-    if (mRequestedRange.length() == 0 && !mRequestedRange.goesToEndOfFile()) {
+    if (mRequestedRange.length() <= 0 && !mRequestedRange.goesToEndOfFile()) {
 		curl_easy_setopt(mCurlRequest, CURLOPT_NOBODY, 1);
     } else {
         if (mRequestedRange.startbyte() != 0) {
             nontrivialRange=true;
-            orangestring << mRequestedRange.startbyte();
-            mOffset = mRequestedRange.startbyte();
         }
+        orangestring << mRequestedRange.startbyte();
+        mOffset = mRequestedRange.startbyte();
         orangestring << '-';
         if (!mRequestedRange.goesToEndOfFile()) {
-            if (mRequestedRange.length() <= 0) {
-                // invalid range
-                mCallback(this, DenseDataPtr(new DenseData(mRequestedRange)), true);
-                return;
-            }
             nontrivialRange=true;
             orangestring << (mRequestedRange.endbyte());
         }

@@ -161,7 +161,7 @@ int open_at_byte(const char *path, int options, cache_usize_type startbyte=0, in
 	int fd = open(path, options|O_BINARY, mode);
 	if (fd < 0) {
 		SILOG(transfer,error, "Failed to open " << path <<
-			  " for "<<options<<"; reason: " << errno);
+			  " for "<<options<<" byte "<<startbyte<<"; reason: " << errno);
 		return -1;
 	}
 	if (startbyte != 0) {

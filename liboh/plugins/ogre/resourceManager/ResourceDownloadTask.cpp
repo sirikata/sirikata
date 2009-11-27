@@ -85,7 +85,6 @@ EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& even
 void ResourceDownloadTask::operator()()
 {
   mStarted = true;
-  // FIXME: Daniel: the defaultProgressiveDownloadFunctor will not properly deal with textures
   mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
       std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
       mRange);

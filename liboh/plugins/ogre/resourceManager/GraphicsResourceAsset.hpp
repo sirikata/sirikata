@@ -67,7 +67,7 @@ protected:
   virtual void loaded(bool success, unsigned int epoch);
   virtual void unloaded(bool success, unsigned int epoch);
 
-  virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor) = 0;
+  virtual DependencyTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor) = 0;
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager) = 0;
   virtual ResourceLoadTask * createLoadTask(DependencyManager *manager) = 0;
   virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager) = 0;

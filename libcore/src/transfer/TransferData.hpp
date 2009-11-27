@@ -309,9 +309,6 @@ public:
 			while (data && dataend <= globalbyte) {
 				++iter;
 				setDataPtr();
-				if (datastart > globalbyte) {
-					throw std::runtime_error("SparseData iterator skipped over some data");
-				}
 			}
 			if (iter == (parent->DenseDataList::end())) {
 				globalbyte = parent->endbyte();
