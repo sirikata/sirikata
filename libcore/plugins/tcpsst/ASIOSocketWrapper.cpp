@@ -33,6 +33,7 @@
 
 #include "util/Platform.hpp"
 #include "network/Asio.hpp"
+#include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"

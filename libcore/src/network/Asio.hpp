@@ -164,9 +164,6 @@ public:
     }
 };
 
-#define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
-// #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}
-
 } // namespace Network
 } // namespace Sirikata
 
