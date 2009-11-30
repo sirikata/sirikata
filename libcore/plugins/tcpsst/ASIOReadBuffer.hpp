@@ -37,10 +37,16 @@ namespace Network {
 
 class ASIOReadBuffer {
     enum {
-        ///The point at which the class switches from reading into a fixed buffer to filling a sole preallocated packet with data
-        sLowWaterMark=256,
-        ///The length of the fixed buffer
-        sBufferLength=1440
+        ///The length of the fixed buffer.  This should only affect the largest chunk of data delivered at once,
+        ///since async_receive should return as soon as data is available.  Therefore we use a relatively large
+        ///buffer to avoid too much overhead from IO operations.
+        sBufferLength=64*1024,
+        ///The low water mark is the point at which reads are shifted from the fixed sized buffer into a preallocated
+        ///chunk.  Since the chunk is preallocated, this has to be greater than the longest possible header length.
+        ///It also must be less than sBufferLength.  Since this is only really necessary to handle large packets and
+        ///avoid extra copying (of the available packet info from end of buffer to front of buffer, then over into the
+        ///real packet), we set this to be as large as possible, sBufferLength.
+        sLowWaterMark=sBufferLength
     };
     enum ReadStatus{
         PAUSED_FIXED_BUFFER=0x0,
