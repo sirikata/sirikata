@@ -25,7 +25,7 @@ class TCPNetwork : public Network {
     public:
         Sirikata::Network::Stream *stream;
         Chunk *front;
-        Sirikata::SizedThreadSafeQueue<Chunk*,Sirikata::SizedPointerResourceMonitor> buffer;
+        Sirikata::SizedThreadSafeQueue<Chunk*> buffer;
         bool inserted; // whether this connection got the initial info so it could be inserted into the main map
         bool paused;//this is true if someone paused a stream, and the stream must be unpaused the next time some bozo calls receiveOne
         TSQueue (TCPNetwork*parent, Sirikata::Network::Stream*strm);

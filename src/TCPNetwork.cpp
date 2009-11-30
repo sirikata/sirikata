@@ -27,7 +27,7 @@ TCPNetwork::SendStream::SendStream(Sirikata::Network::Stream* stream)
 TCPNetwork::TSQueue::TSQueue(TCPNetwork* parent, Sirikata::Network::Stream*strm)
  : stream(strm),
    front(NULL),
-   buffer(Sirikata::SizedPointerResourceMonitor(parent->mIncomingBufferLength)),
+   buffer(Sirikata::SizedResourceMonitor(parent->mIncomingBufferLength)),
    inserted(false),
    paused(false)
 {
