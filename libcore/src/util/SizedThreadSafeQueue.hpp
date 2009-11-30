@@ -38,7 +38,7 @@
 namespace Sirikata {
 
 
-class SizedPointerResourceMonitor {
+class SizedResourceMonitor {
     AtomicValue<int32> mSize;
     const int32 mLimit;
 public:
@@ -51,35 +51,67 @@ public:
     uint32 filledSize() const {
         return (uint32)mSize.read();
     }
-    SizedPointerResourceMonitor(uint32 limit):mSize(0),mLimit((int32)limit){
+    SizedResourceMonitor(uint32 limit):mSize(0),mLimit((int32)limit){
         assert(mLimit>=0);
     }
-    template <class T>bool preIncrement(T value, bool force) {
+
+    template <class T>
+    bool preIncrement(T value, bool force) {
+        if ((mSize+=(int32)value.size())>=mLimit&&mLimit&&!force) {
+            mSize-=value.size();
+            return false;
+        }
+        return true;
+    }
+
+    template <class T>
+    bool preIncrement(T* value, bool force) {
         if ((mSize+=(int32)value->size())>=mLimit&&mLimit&&!force) {
             mSize-=value->size();
             return false;
         }
         return true;
     }
-    template <class T> void postDecrement(T value) {      
-        int32 check=(mSize-=(int32)value->size());
-        assert(check>=0);        
+
+    template <class T>
+    void postDecrement(T value) {
+        int32 check=(mSize-=(int32)value.size());
+        assert(check>=0);
     }
-    template <class T> bool probablyCanPush(T t) {
+
+    template <class T>
+    void postDecrement(T* value) {
+        int32 check=(mSize-=(int32)value->size());
+        assert(check>=0);
+    }
+
+    template <class T>
+    bool probablyCanPush(T t) {
         return mSize.read()+(uint32)t->size()<=mLimit||!mLimit;
     }
+
+    template <class T>
+    bool probablyCanPush(T* t) {
+        return mSize.read()+(uint32)t.size()<=mLimit||!mLimit;
+    }
+
     bool probablyCanPush(size_t size) {
         return mSize.read()+(int32)size<=mLimit||!mLimit;
     }
 };
 
 /**
- * This class acts like a thread safe queue but it conservatively tracks a particular resource size 
+ * This class acts like a thread safe queue but it conservatively tracks a particular resource size
  * of the list to avoid wasting too much memory
  * Is an adapter on any type of thread safe queue including Lock Free queues
  */
 
-template <typename T, class ResourceMonitor, class Superclass=ThreadSafeQueue<T> > class SizedThreadSafeQueue : protected Superclass {
+template <
+    typename T,
+    class ResourceMonitor=SizedResourceMonitor,
+    class Superclass=ThreadSafeQueue<T>
+    >
+class SizedThreadSafeQueue : protected Superclass {
     ResourceMonitor mResourceMonitor;
 public:
     SizedThreadSafeQueue(const ResourceMonitor&rm):mResourceMonitor(rm){
@@ -93,7 +125,7 @@ public:
         }
     }
     bool push(const T &value, bool force) {
-        if (mResourceMonitor.preIncrement(value,force)) {                
+        if (mResourceMonitor.preIncrement(value,force)) {
             try {
                 Superclass::push(value);
                 return true;

@@ -218,7 +218,7 @@ bool MultiplexedSocket::sendBytes(const MultiplexedSocketPtr& thus,const RawRequ
                 TCPSSTLOG(this,"sendl8r",&*data.data->begin(),data.data->size(),false);
                 TCPSSTLOG(this,"sendl8r","\n",1,false);
                 if (thus->mNewRequests==NULL) {
-                    thus->mNewRequests=new SizedThreadSafeQueue<RawRequest,SizedPointerResourceMonitor>(SizedPointerResourceMonitor(maxQueueSize));
+                    thus->mNewRequests=new SizedThreadSafeQueue<RawRequest>(SizedResourceMonitor(maxQueueSize));
                 }
                 retval=thus->mNewRequests->push(data,false);
             }

@@ -52,11 +52,9 @@ public:
         bool unreliable;
         Stream::StreamID originStream;
         Chunk * data;
-        Chunk*operator ->()const {
-            return data;
-        }
-        Chunk&operator *()const {
-            return *data;
+
+        uint32 size() const {
+            return data->size();
         }
     };
     enum SocketConnectionPhase{
@@ -91,7 +89,7 @@ private:
     /// these next items (mCallbackRegistration, mNewRequests, mSocketConnectionPhase) are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
     static boost::mutex sConnectingMutex;
     ///list of packets that must be sent before mSocketConnectionPhase switches to CONNECTION
-    SizedThreadSafeQueue<RawRequest,SizedPointerResourceMonitor>* mNewRequests;
+    SizedThreadSafeQueue<RawRequest>* mNewRequests;
     ///must be set to PRECONNECTION when items are being placed on mNewRequests queue and WAITCONNECTING when it is emptying the queue (with lock held) and finally CONNECTED when the user can send directly to the socket.  DISCONNECTED must be set as soon as the socket fails to write or read
     volatile SocketConnectionPhase mSocketConnectionPhase;
     ///This is a list of items for callback registration so that when packets are received by those streamIDs the appropriate callback may be called

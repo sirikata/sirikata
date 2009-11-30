@@ -50,7 +50,7 @@ class ASIOSocketWrapper {
     /**
      * The queue of packets to send while an active async_send is doing its job
      */
-    SizedThreadSafeQueue<Chunk*,SizedPointerResourceMonitor>mSendQueue;
+    SizedThreadSafeQueue<Chunk*>mSendQueue;
 	enum {
 		ASYNCHRONOUS_SEND_FLAG=(1<<29),
 		QUEUE_CHECK_FLAG=(1<<30),
@@ -119,7 +119,7 @@ class ASIOSocketWrapper {
 
 public:
 
-    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(socket),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
+    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(socket),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(SizedResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
         //mPacketLogger.reserve(268435456);
     }
 
@@ -132,8 +132,8 @@ public:
         mSocket=socket.mSocket;
         return *this;
     }
-    const SizedPointerResourceMonitor&getResourceMonitor()const{return mSendQueue.getResourceMonitor();}
-    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(NULL),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
+    const SizedResourceMonitor&getResourceMonitor()const{return mSendQueue.getResourceMonitor();}
+    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(NULL),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(SizedResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
     }
     ~ASIOSocketWrapper() {
         delete []mBuffer;
