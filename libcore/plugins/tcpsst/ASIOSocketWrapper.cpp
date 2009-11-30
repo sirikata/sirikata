@@ -58,6 +58,10 @@ void copyHeader(void * destination, const UUID&key, unsigned int num) {
                 UUID::static_size);
 }
 
+void ASIOSocketWrapper::finishedSendingChunk(const TimestampedChunk& tc) {
+    mAverageSendLatency.sample( tc.sinceCreation() );
+}
+
 void ASIOSocketWrapper::unpauseSendStreams(const MultiplexedSocketPtr&parentMultiSocket) {
     std::vector<Stream::StreamID> toUnpause;
     toUnpause.swap(mPausedSendStreams);
@@ -70,7 +74,7 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
     assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
     //Turn on the information that the queue is being checked and this means that further pushes to the queue may not be heeded if the queue happened to be empty
     mSendingStatus+=QUEUE_CHECK_FLAG;
-    std::deque<Chunk*>toSend;
+    std::deque<TimestampedChunk>toSend;
     mSendQueue.popAll(&toSend);
     std::size_t num_packets=toSend.size();
     if (num_packets==0) {
@@ -88,47 +92,52 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
     //unpause streams after lock released, in case callback takes a while to avoid deadlock
     unpauseSendStreams(parentMultiSocket);
 }
-void ASIOSocketWrapper::sendLargeChunkItem(const MultiplexedSocketPtr&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
-    TCPSSTLOG(this,"snd",&*toSend->begin()+originalOffset,bytes_sent,error);
+void ASIOSocketWrapper::sendLargeChunkItem(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+    TCPSSTLOG(this,"snd",&*toSend.chunk->begin()+originalOffset,bytes_sent,error);
     if (error)  {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
-    }else if (bytes_sent+originalOffset!=toSend->size()) {
+    }else if (bytes_sent+originalOffset!=toSend.size()) {
         sendToWire(parentMultiSocket,toSend,originalOffset+bytes_sent);
     }else {
-        delete toSend;
+        finishedSendingChunk(toSend);
+        delete toSend.chunk;
         finishAsyncSend(parentMultiSocket);
     }
 }
 
-void ASIOSocketWrapper::sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+void ASIOSocketWrapper::sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
     TCPSSTLOG(this,"snd",&*const_toSend.front()->begin()+originalOffset,bytes_sent,error);
     if (error )   {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
-    } else if (bytes_sent+originalOffset!=const_toSend.front()->size()) {
+    } else if (bytes_sent+originalOffset!=const_toSend.front().size()) {
         sendToWire(parentMultiSocket,const_toSend,originalOffset+bytes_sent);
-    }else if (const_toSend.size()<2) {
-        //the entire packet got sent and there's no more items left: delete the front item
-        delete const_toSend.front();
-        //and send further items on the global queue if they are there
-        finishAsyncSend(parentMultiSocket);
-    }else {
-        std::deque<Chunk*> toSend=const_toSend;
-        //the first item got sent out
-        delete toSend.front();
-        toSend.pop_front();
-        if (toSend.size()==1) {
-            //if there's just one item left, it may be sent by itself
-            sendToWire(parentMultiSocket,toSend.front());
+    } else {
+        finishedSendingChunk(const_toSend.front());
+
+        if (const_toSend.size()<2) {
+            //the entire packet got sent and there's no more items left: delete the front item
+            delete const_toSend.front().chunk;
+            //and send further items on the global queue if they are there
+            finishAsyncSend(parentMultiSocket);
         }else {
-            //otherwise send the whole queue
-            sendToWire(parentMultiSocket,toSend);
+            std::deque<TimestampedChunk> toSend=const_toSend;
+            //the first item got sent out
+            delete toSend.front().chunk;
+            toSend.pop_front();
+            if (toSend.size()==1) {
+                //if there's just one item left, it may be sent by itself
+                sendToWire(parentMultiSocket,toSend.front());
+            }else {
+                //otherwise send the whole queue
+                sendToWire(parentMultiSocket,toSend);
+            }
         }
     }
 }
 #define ASIOSocketWrapperBuffer(pointer,size) boost::asio::buffer(pointer,(size))
-void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
+void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&toSend, const std::deque<TimestampedChunk>& workingSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
     TCPSSTLOG(this,"snd",current_buffer,bytes_sent,error);
     if (!error) {
         //mPacketLogger.insert(mPacketLogger.end(),currentBuffer,currentBuffer+bytes_sent);
@@ -137,20 +146,25 @@ void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiS
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent!=bufferSize) {
-
-
         //if the previous send was not able to push the whole buffer out to the network, the rest must be sent
         mSocket->async_send(ASIOSocketWrapperBuffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
                             std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                         this,
                                         parentMultiSocket,
                                         toSend,
+                                        workingSend,
                                         currentBuffer+bytes_sent,
                                         bufferSize-bytes_sent,
                                         lastChunkOffset,
                                           _1,
                                           _2));
     }else {
+        // Record these packets as having been sent
+        for(std::deque<TimestampedChunk>::const_iterator it = workingSend.begin(); it != workingSend.end(); it++) {
+            finishedSendingChunk(*it);
+            delete it->chunk;
+        }
+
         if (!toSend.empty()) {
             //if stray items are left in a deque
             if (toSend.size()==1) {
@@ -168,11 +182,10 @@ void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiS
 }
 
 
-void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, Chunk *toSend, size_t bytesSent) {
+void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t bytesSent) {
     //sending a single chunk is a straightforward call directly to asio
 
-
-    mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend->begin()+bytesSent,toSend->size()-bytesSent),
+    mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend.chunk->begin()+bytesSent,toSend.size()-bytesSent),
                         std::tr1::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                     this,
                                     parentMultiSocket,
@@ -182,12 +195,10 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
                                           _2));
 }
 
-void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent){
-
-
-    if (const_toSend.front()->size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
+void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&const_toSend, size_t bytesSent){
+    if (const_toSend.front().size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
         //if there's but a single packet, or a single big packet that is bigger than the mBuffer's size...send that one by itself
-        mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent),
+        mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front().chunk->begin()+bytesSent,const_toSend.front().size()-bytesSent),
                             std::tr1::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                         this,
                                         parentMultiSocket,
@@ -195,25 +206,26 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
                                         bytesSent,
                                           _1,
                                           _2));
-    }else if (const_toSend.front()->size()){
+    }else if (const_toSend.front().size()){
         //otherwise copy the packets onto the mBuffer and send from the fixed sized buffer
-        std::deque<Chunk*> toSend=const_toSend;
-        size_t bufferLocation=toSend.front()->size()-bytesSent;
-        std::memcpy(mBuffer,&*toSend.front()->begin()+bytesSent,toSend.front()->size()-bytesSent);
-        delete toSend.front();
+        std::deque<TimestampedChunk> toSend=const_toSend;
+        size_t bufferLocation=toSend.front().size()-bytesSent;
+        std::memcpy(mBuffer,&*toSend.front().chunk->begin()+bytesSent,toSend.front().size()-bytesSent);
+        delete toSend.front().chunk;
         toSend.pop_front();
         bytesSent=0;
+        std::deque<TimestampedChunk> workingChunks;
         while (bufferLocation<PACKET_BUFFER_SIZE&&toSend.size()) {
-            if (toSend.front()->size()>PACKET_BUFFER_SIZE-bufferLocation) {
+            if (toSend.front().size()>PACKET_BUFFER_SIZE-bufferLocation) {
                 //if the first packet is too large for the buffer, copy part of it but keep it around
                 bytesSent=PACKET_BUFFER_SIZE-bufferLocation;
-                std::memcpy(mBuffer+bufferLocation,&*toSend.front()->begin(),bytesSent);
+                std::memcpy(mBuffer+bufferLocation,&*toSend.front().chunk->begin(),bytesSent);
                 bufferLocation=PACKET_BUFFER_SIZE;
             }else {
-                //if the entire packets fits in the buffer, copy it there and delete the packet
-                std::memcpy(mBuffer+bufferLocation,&*toSend.front()->begin(),toSend.front()->size());
-                bufferLocation+=toSend.front()->size();
-                delete toSend.front();
+                //if the entire packets fits in the buffer, move it into the queue of packets that are done when this batch is sent
+                std::memcpy(mBuffer+bufferLocation,&*toSend.front().chunk->begin(),toSend.front().size());
+                bufferLocation+=toSend.front().size();
+                workingChunks.push_front( toSend.front() );
                 toSend.pop_front();
             }
         }
@@ -223,6 +235,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
                                           this,
                                           parentMultiSocket,
                                           toSend,
+                                          workingChunks,
                                           mBuffer,
                                           bufferLocation,
                                           bytesSent,
@@ -243,7 +256,7 @@ void ASIOSocketWrapper::retryQueuedSend(const MultiplexedSocketPtr&parentMultiSo
             if (current_status==1) {//if this thread is the first into the system with nothing else having claimed the status
                 //then this thread should take the torch, check the queue and if not empty be willing to send
                 mSendingStatus+=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG-1);
-                std::deque<Chunk*>toSend;
+                std::deque<TimestampedChunk>toSend;
                 mSendQueue.popAll(&toSend);
                 if (toSend.empty()) {//the chunk that we put on the queue must have been sent by someone else
                     //nothing to send, let another thread take up the torch if something was placed there by it
@@ -375,4 +388,14 @@ Address ASIOSocketWrapper::getRemoteEndpoint()const{
 Address ASIOSocketWrapper::getLocalEndpoint()const{
     return convertEndpointToAddress(mSocket->local_endpoint());
 }
+
+
+Duration ASIOSocketWrapper::averageSendLatency() const {
+    return mAverageSendLatency.value();
+}
+
+Duration ASIOSocketWrapper::averageReceiveLatency() const {
+    return Duration::zero();
+}
+
 } }

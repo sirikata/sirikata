@@ -195,6 +195,9 @@ public:
     //Shuts down the socket, allowing StreamID to be reused and opposing stream to get disconnection callback
     virtual void close();
     ~TCPStream();
+
+    virtual Duration averageSendLatency() const;
+    virtual Duration averageReceiveLatency() const;
 };
 
 } // namespace Network

@@ -75,6 +75,13 @@ class Time : private Task::LocalTime{
         return Time(LocalTime::now()+spaceDurationOffset);
     }
 
+    /** Return the current local time, i.e. Time::now() with no offset.
+     *  \returns the current local time
+     */
+    static Time local() {
+        return now(Duration::zero());
+    }
+
 	/**
 	 * Creates the time when items are 0
 	 *

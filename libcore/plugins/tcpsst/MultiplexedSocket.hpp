@@ -278,6 +278,10 @@ public:
 
     Address getRemoteEndpoint(Stream::StreamID id)const ;
     Address getLocalEndpoint(Stream::StreamID id)const ;
+
+    // -- Statistics
+    Duration averageSendLatency() const;
+    Duration averageReceiveLatency() const;
 };
 
 } // namespace Network

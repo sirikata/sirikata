@@ -491,5 +491,27 @@ Address MultiplexedSocket::getLocalEndpoint(Stream::StreamID originStream)const 
     }else return Address::null();
 }
 
+Duration MultiplexedSocket::averageSendLatency() const {
+    Duration avg(Duration::zero());
+
+    uint32 nsockets = (uint32)mSockets.size();
+    for(uint32 ii = 0; ii < nsockets; ++ii) {
+        avg += mSockets[ii].averageSendLatency();
+    }
+
+    return avg / (float)nsockets;
+}
+
+Duration MultiplexedSocket::averageReceiveLatency() const {
+    Duration avg(Duration::zero());
+
+    uint32 nsockets = (uint32)mSockets.size();
+    for(uint32 ii = 0; ii < nsockets; ++ii) {
+        avg += mSockets[ii].averageReceiveLatency();
+    }
+
+    return avg / (float)nsockets;
+}
+
 } // namespace Network
 } // namespace Sirikata

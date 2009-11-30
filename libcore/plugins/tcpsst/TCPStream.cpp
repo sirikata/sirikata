@@ -52,6 +52,14 @@ TCPStream::TCPStream(const MultiplexedSocketPtr&shared_socket,const Stream::Stre
     mSendBufferSize=shared_socket->getASIOSocketWrapper(0).getResourceMonitor().maxSize();
 }
 
+Duration TCPStream::averageSendLatency() const {
+    return mSocket->averageSendLatency();
+}
+
+Duration TCPStream::averageReceiveLatency() const {
+    return mSocket->averageReceiveLatency();
+}
+
 void TCPStream::readyRead() {
     MultiplexedSocketPtr socket_copy = mSocket;
     if (socket_copy.get() == NULL) {

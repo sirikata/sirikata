@@ -34,6 +34,7 @@
 #define SIRIKATA_Stream_HPP__
 
 #include "Address.hpp"
+#include "util/Time.hpp"
 
 namespace Sirikata {
 namespace Network {
@@ -236,6 +237,25 @@ public:
      *  original Stream, the underlying connection is closed as well.
      */
     virtual void close()=0;
+
+
+    // -- Statistics
+
+    /** Get the average latency spent in queues in the stream.  This does not include time
+     *  spent locally but buffered in an underlying network library or the OS.
+     */
+    virtual Duration averageSendLatency() const {
+        return Duration::zero();
+    }
+
+    /** Get the average latency spent in queues in the stream, waiting for deliver to the
+     *  user.  This does not include time spent locally in the underlying network library
+     *  or OS.
+     */
+    virtual Duration averageReceiveLatency() const {
+        return Duration::zero();
+    }
+
 };
 } // namespace Network
 } // namespace Sirikata
