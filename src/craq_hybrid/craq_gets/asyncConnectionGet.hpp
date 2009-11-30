@@ -83,9 +83,8 @@ private:
   bool getQuery(const CraqDataKey& dataToGet);
 
 
-  void queryTimedOutCallbackGet(IndividualQueryData* iqd);
-  void queryTimedOutCallbackGetPrint(IndividualQueryData* iqd);
-  
+  void queryTimedOutCallbackGet(const boost::system::error_code& e, IndividualQueryData* iqd);
+  void queryTimedOutCallbackGetPrint(const boost::system::error_code& e, IndividualQueryData* iqd);
   
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
@@ -155,7 +154,9 @@ private:
   SpaceContext* ctx;
   IOStrand* mStrand;
   Timer mTimer;
-  boost::asio::io_service* m_io_service;  
+  boost::asio::io_service* m_io_service;
+  Duration mBeginDur;
+  
 };
 
 }

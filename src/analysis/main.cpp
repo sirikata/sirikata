@@ -40,7 +40,7 @@
 #include "Visualization.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"
-#include "CoordinateSegmentationClient.hpp"
+//#include "CoordinateSegmentationClient.hpp"
 
 #include "ServerWeightCalculator.hpp"
 
@@ -144,7 +144,8 @@ int main(int argc, char** argv) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
+      std::cout<<"\n\nBFTM deleted because couldn't get to compile\n\n";
+      //      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
     }
     else {
         assert(false);

@@ -26,12 +26,16 @@ AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, boost::
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
 
   mTimer.start();
+  mBeginDur = mTimer.elapsed();
 }
 
+
+  
 int AsyncConnectionGet::numStillProcessing()
 {
   return (int) (allOutstandingQueries.size());
 }
+
 
 
 void AsyncConnectionGet::outputLargeOutstanding()
@@ -47,8 +51,7 @@ void AsyncConnectionGet::outputLargeOutstanding()
     double timeInQueue = ((double) currentTime) - ((double) it->second->time_admitted);
 
     if (timeInQueue > 50)
-      std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"\n\n";
-    
+      std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"    "<<it->second->currentlySearchingFor << "\n\n";
   }
 }
 
@@ -76,9 +79,12 @@ bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& 
 
 //This gets called with a pointer to query data as its argument.  The query data inside of this has waited too long to be processed.
 //Therefore, we must return an error as our operation result and remove the query from our list of outstanding queries.
-void AsyncConnectionGet::queryTimedOutCallbackGet(IndividualQueryData* iqd)
+void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_code& e, IndividualQueryData* iqd)
 {
-  std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
+  if (e == boost::asio::error::operation_aborted)
+    return;
+  
+  bool foundInIterator = false;
   
   //look through multimap to find 
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
@@ -110,7 +116,8 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(IndividualQueryData* iqd)
         delete outQueriesIter->second->deadline_timer;
       }
       
-
+      foundInIterator = true;
+      
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
     }
@@ -119,12 +126,19 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(IndividualQueryData* iqd)
       outQueriesIter++;
     }
   }
+
+  if (! foundInIterator)
+    std::cout<<"\n\nAsyncConnectionGet CALLBACK.  Not found in iterator.\n\n";
+  
 }
 
 //this function gets called whenever we haven't received a response to our query.  (Essentially, we just re-issue the query.)
 //it should be called wrapped inside of osegStrand because interfacing with outstandingqueries.
-void AsyncConnectionGet::queryTimedOutCallbackGetPrint(IndividualQueryData* iqd)
+void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::error_code& e, IndividualQueryData* iqd)
 {
+  if (e == boost::asio::error::operation_aborted)
+    return;
+
   std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
   
 //   std::string query = "";
@@ -289,7 +303,7 @@ bool AsyncConnectionGet::getMulti(CraqDataKey& dataToGet)
   iqd->deadline_timer = NULL;
   
   Duration dur = mTimer.elapsed();
-  iqd->time_admitted = dur.toMilliseconds();
+  iqd->time_admitted = (uint64) (((double) dur.toMilliseconds()) - ((double) mBeginDur.toMilliseconds()));
 
   
   //need to add the individual query data to allOutstandingQueries.
@@ -451,7 +465,7 @@ bool AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 
   iqd->deadline_timer  = new boost::asio::deadline_timer ((*m_io_service), boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
 
-  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, iqd)));
+  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, iqd)));
   
   return getQuery(dataToGet);
 }
