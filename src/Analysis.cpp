@@ -1186,26 +1186,30 @@ MessageLatencyAnalysis::PacketData::PacketData(){
 #define PACKETSTAGE(x) case Trace::x: return #x
 const char* getPacketStageName (uint32 path) {
     switch (path) {
+        // Object Host Checkpoints
         PACKETSTAGE(CREATED);
+        PACKETSTAGE(DESTROYED);
+        PACKETSTAGE(OH_ENQUEUED);
+        PACKETSTAGE(OH_DEQUEUED);
+        PACKETSTAGE(OH_HIT_NETWORK);
+        PACKETSTAGE(OH_DROPPED);
+        PACKETSTAGE(OH_NET_RECEIVED);
+        PACKETSTAGE(OH_RECEIVED);
+
+        // Space Checkpoints
         PACKETSTAGE(SPACE_OUTGOING_MESSAGE);
         PACKETSTAGE(SPACE_SERVER_MESSAGE_QUEUE);
+        PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
         PACKETSTAGE(SELF_LOOP);
         PACKETSTAGE(FORWARDED);
         PACKETSTAGE(DISPATCHED);
         PACKETSTAGE(DELIVERED);
-        PACKETSTAGE(DESTROYED);
         PACKETSTAGE(DROPPED);
-        PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
-        PACKETSTAGE(HIT_NETWORK);
-        PACKETSTAGE(OH_ENQUEUED);
-        PACKETSTAGE(OH_DEQUEUED);
-        PACKETSTAGE(OH_DROPPED);
-        PACKETSTAGE(OH_NET_RECEIVED);
-        PACKETSTAGE(OH_RECEIVED);
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
+
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
@@ -1241,7 +1245,6 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             if (evt == NULL)
                 break;
 
-
             {
                 MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
                 if (tevt != NULL) {
@@ -1261,11 +1264,12 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
         for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
              iter!=ie;
              ++iter) {
-            if (mFilter(iter->second)&&iter->second.mStamps.size()) {
-                std::sort(iter->second.mStamps.begin(),iter->second.mStamps.end());
-                for (size_t i=1;i<iter->second.mStamps.size();++i) {
-                    Duration diff=iter->second.mStamps[i]-iter->second.mStamps[i-1];
-                    Average *avg=&results[PathPair(iter->second.mStamps[i-1].mPath,iter->second.mStamps[i].mPath)];
+            PacketData& pd = iter->second;
+            if (mFilter(pd)&&pd.mStamps.size()) {
+                std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
+                for (size_t i=1;i<pd.mStamps.size();++i) {
+                    Duration diff=pd.mStamps[i]-pd.mStamps[i-1];
+                    Average *avg=&results[PathPair(pd.mStamps[i-1].mPath,pd.mStamps[i].mPath)];
                     if (!doVariance) {
                         avg->addAverageSample(diff);
                     }else {

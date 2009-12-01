@@ -57,7 +57,7 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
    tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED),
    send_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    tag_dequeued(ctx, Trace::OH_DEQUEUED, Trace::OH_DROPPED),
-   streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0)),
+   streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0), Trace::OH_HIT_NETWORK),
    receive_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {

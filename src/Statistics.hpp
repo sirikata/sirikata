@@ -108,7 +108,17 @@ public:
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
 
     enum MessagePath {
+        // Object Host Checkpoints
         CREATED,
+        DESTROYED,
+        OH_ENQUEUED,
+        OH_DEQUEUED,
+        OH_HIT_NETWORK,
+        OH_DROPPED,
+        OH_NET_RECEIVED,
+        OH_RECEIVED,
+
+        // Space Checkpoints
         SPACE_OUTGOING_MESSAGE,
         SPACE_SERVER_MESSAGE_QUEUE,
         HANDLE_OBJECT_HOST_MESSAGE,
@@ -116,18 +126,12 @@ public:
         FORWARDED,
         DISPATCHED,
         DELIVERED,
-        DESTROYED,
         DROPPED,
-        OH_ENQUEUED,
-        OH_DEQUEUED,
-        HIT_NETWORK,
-        OH_DROPPED,
-        OH_NET_RECEIVED,
-        OH_RECEIVED,
         SPACE_TO_OH_ENQUEUED,
         OSEG_LOOKUP_STARTED,
         OSEG_CACHE_LOOKUP_FINISHED,
         OSEG_SERVER_LOOKUP_FINISHED,
+
         NUM_PATHS
     };
 
