@@ -87,7 +87,7 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast< Transfer::DownloadEvent > ( evbase );
 
     assert((std::cout << "MCB: ColladaSystem::downloadFinished()"
-            << " status: " <<  ev->getStatus ()
+            << " status: " <<  (int)(ev->getStatus ())
             << " length: " <<  ev->data ().length ()
             << std::endl,true));
 

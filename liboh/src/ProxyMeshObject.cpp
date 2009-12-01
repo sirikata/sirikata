@@ -70,8 +70,9 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
 
 URI const& ProxyMeshObject::getMesh () const
 {
+	static URI defaultReturn;
     if (!hasModelObject())
-        return URI();
+        return defaultReturn;
 
     return mModelObject->getMesh ();
 }
@@ -85,8 +86,9 @@ void ProxyMeshObject::setScale ( Vector3f const& scale )
 
 Vector3f const& ProxyMeshObject::getScale () const
 {
+	static Vector3f defaultReturn(1.f, 1.f, 1.f);
     if (!hasModelObject())
-        return Vector3f(1.f, 1.f, 1.f);
+        return defaultReturn;
 
     return mModelObject->getScale ();
 }
@@ -100,8 +102,9 @@ void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 
 PhysicalParameters const& ProxyMeshObject::getPhysical () const
 {
+	static PhysicalParameters defaultReturn;
     if (!hasModelObject())
-        return PhysicalParameters();
+        return defaultReturn;
 
     return mModelObject->getPhysical ();
 }
