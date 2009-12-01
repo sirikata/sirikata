@@ -108,15 +108,20 @@ public:
 		delete this;
 	}
 
+	inline void relocateURI(URI &uri, const URIContext &context, const std::string &merge) {
+		uri.getContext() = URIContext(context, merge);
+	}
 };
 
 class SimpleServiceIterator : public ServiceIterator {
 	ListOfServicesPtr mServices;
+	std::string mMergePath;
 	unsigned int mIndex;
 public:
 	// SUCCESS means that the download was successful (e.g. you are retrying due to a format error)
 
-	SimpleServiceIterator(const ListOfServicesPtr &serv) : mServices(serv), mIndex(0) {
+	SimpleServiceIterator(const ListOfServicesPtr &serv, const std::string &mergePath)
+		: mServices(serv), mMergePath(mergePath), mIndex(0) {
 	}
 
 	virtual bool tryNext(ErrorType reason, URI &uri, ServiceParams &outParams) {
@@ -124,7 +129,7 @@ public:
 			delete this;
 			return false;
 		}
-		uri.getContext() = (*mServices)[mIndex].first;
+		relocateURI(uri, (*mServices)[mIndex].first, mMergePath);
 		outParams = (*mServices)[mIndex].second;
 		mIndex++;
 		return true;
@@ -157,11 +162,12 @@ public:
 	 *
 	 * Does nothing except in CachedServiceLookup.
 	 */
-	virtual bool addToCache(const URIContext &origService, const ListOfServicesPtr &toCache,const Callback &cb=Callback()) {
+	virtual void addToCache(const URIContext &origService, const ListOfServicesPtr &toCache, const std::string &mergePath=std::string(), const Callback &cb=Callback()) {
 		if (mRespondTo) {
-			return mRespondTo->addToCache(origService, toCache, cb);
+			mRespondTo->addToCache(origService, toCache, mergePath, cb);
+		} else if (cb) {
+			cb(new SimpleServiceIterator(toCache, mergePath));
 		}
-		return false;
 	}
 
 	/// Virtual destructor, for subclasses.
@@ -197,27 +203,47 @@ public:
 	 * There could be a wide variety of returned URIs--basically it depends
 	 * on the format of the underlying protocol...
 	 *
-	 * @param context  The SURI Context to lookup--The basepath MAY be ignored.
+	 * @param context  The SURI Context to lookup.
+     * @param merge    Parts of the URI to append.
 	 * @param cb       A callback to be called. Most lookups will be synchronous.
+     * @param retry    Pointer to the original ServiceLookup if we need to retry.
 	 *
 	 * Default lookup function does nothing except try the next lookup method.
 	 */
-	virtual void lookupService(const URIContext &context, const Callback &cb) {
+	void lookupService(const URIContext &context, const Callback &cb) {
+		doLookupService(context, std::string(), cb, this);
+	}
+	virtual void doLookupService(const URIContext &context, const std::string &merge, const Callback &cb, ServiceLookup *retry) {
 		if (mNext) {
-			mNext->lookupService(context, cb);
+			mNext->doLookupService(context, merge, cb, retry);
 		} else {
 			SILOG(transfer,error,"ServiceLookup could find no handlers for " <<
-				context);
-			cb(new ServiceIterator);
+				  context);
+			// Ideally, we would retry once per directory/hostname/protocol.
+			// But until we find a use for this, only support a default URI.
+			if (retry && context != URIContext()) {
+				std::string mergeStr = merge;
+				URIContext parentContext = context;
+				parentContext.toParentContext(&mergeStr);
+				if (parentContext == context) {
+					SILOG(transfer,error,"Failure in URIContext::toParentContext. Old is "<<context<<" new is "<<parentContext);
+					assert(parentContext == URIContext());
+					cb(new ServiceIterator);
+				} else {
+					retry->doLookupService(parentContext, mergeStr, cb, retry);
+				}
+			} else {
+				cb(new ServiceIterator);
+			}
 		}
 	}
 };
 
 class NullServiceLookup : public ServiceLookup {
-	virtual void lookupService(const URIContext &context, const Callback &cb) {
+	virtual void doLookupService(const URIContext &context, const std::string &merge, const Callback &cb, ServiceLookup *retry) {
 		ListOfServicesPtr services(new ListOfServices);
 		services->push_back(ListOfServices::value_type(context, ServiceParams()));
-		cb(new SimpleServiceIterator(services));
+		cb(new SimpleServiceIterator(services, merge));
 	}
 };
 
@@ -227,20 +253,18 @@ class NullServiceLookup : public ServiceLookup {
  */
 class OptionManagerServiceLookup : public ServiceLookup {
 public:
-	virtual void lookupService(const URIContext &context, const Callback &cb) {
+	virtual void doLookupService(const URIContext &context, const std::string &merge, const Callback &cb, ServiceLookup *retry) {
 //		std::vector<UriContext> *vec = GET_OPTION("protocol", context);
 		OptionSet *services = OptionSet::getOptions("service");
 		OptionValue *serviceOptionValue = NULL;
 		services->referenceOption(context.toString(), &serviceOptionValue);
 		if (!serviceOptionValue) {
-			ServiceLookup::lookupService(context, cb);
+			ServiceLookup::doLookupService(context, merge, cb, retry);
 			return;
 		}
 		const ListOfServices &vec = serviceOptionValue->get()->as<const ListOfServices>();
 		ListOfServicesPtr vecptr(new ListOfServices(vec));
-		if (!addToCache(context, vecptr, cb)) {
-			cb(new SimpleServiceIterator(vecptr));
-		}
+		addToCache(context, vecptr, merge, cb);
 	}
 };
 

@@ -56,8 +56,8 @@ class CachedServiceLookup : public ServiceLookup {
 		unsigned int mCurrentService;
 		unsigned int mIteration;
 		ListOfServicesPtr mServicesList;
+		std::string mMergePath;
 		CachedServiceLookup *mCache;
-		URIContext origContext;
 	public:
 		virtual bool tryNext(ErrorType reason, URI &uri, ServiceParams &outParams) {
 			unsigned int length = mServicesList->size();
@@ -66,7 +66,7 @@ class CachedServiceLookup : public ServiceLookup {
 				return false;
 			}
 			mCurrentService %= length;
-			uri.getContext() = (*mServicesList)[mCurrentService].first;
+			relocateURI(uri, (*mServicesList)[mCurrentService].first, mMergePath);
 			outParams = (*mServicesList)[mCurrentService].second;
 			mCurrentService++;
 			return true;
@@ -75,8 +75,8 @@ class CachedServiceLookup : public ServiceLookup {
 		CachedServiceIterator(CachedServiceLookup *parent,
 				unsigned int num,
 				const ListOfServicesPtr &services,
-				const URIContext &origService)
-			: mCurrentService(num), mIteration(0), mServicesList(services), mCache(parent), origContext(origService) {
+				const std::string &mergePath)
+			: mCurrentService(num), mIteration(0), mServicesList(services), mMergePath(mergePath), mCache(parent) {
             mCurrentService=0;      /// make sure we always do 0 first
 		}
 
@@ -102,21 +102,19 @@ class CachedServiceLookup : public ServiceLookup {
 	};
 
 public:
-	virtual bool addToCache(const URIContext &origService, const ListOfServicesPtr &toCache,const Callback &cb=Callback()) {
+	virtual void addToCache(const URIContext &origService, const ListOfServicesPtr &toCache, const std::string &mergePath=std::string(), const Callback &cb=Callback()) {
 		{
 			boost::unique_lock<boost::shared_mutex> insertlock(mMut);
 			mLookupCache.insert(ServiceMap::value_type(origService,
 				std::pair<int, ListOfServicesPtr>(0, toCache)));
 		}
-		if (!ServiceLookup::addToCache(origService, toCache, cb)) {
-			if (cb) {
-				cb(new CachedServiceIterator(this, 0, toCache, origService));
-			}
+		if (cb) {
+			cb(new CachedServiceIterator(this, 0, toCache, mergePath));
 		}
-		return true;
+		ServiceLookup::addToCache(origService, toCache, mergePath);
 	}
 
-	virtual void lookupService(const URIContext &context, const Callback &cb) {
+	virtual void doLookupService(const URIContext &context, const std::string &merge, const Callback &cb, ServiceLookup *retry) {
 		ListOfServicesPtr found;
 		int num = 0;
 		{
@@ -128,11 +126,10 @@ public:
 			}
 		}
 		if (found) {
-			if (!ServiceLookup::addToCache(context, found, cb)) {
-				cb(new CachedServiceIterator(this, num, found, context));
-			}
+			ServiceLookup::addToCache(context, found, merge);
+			cb(new CachedServiceIterator(this, num, found, merge));
 		} else {
-			ServiceLookup::lookupService(context, cb);
+			ServiceLookup::doLookupService(context, merge, cb, retry);
 		}
 	}
 };

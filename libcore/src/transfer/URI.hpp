@@ -57,7 +57,7 @@ class URIContext {
 	std::string mProto;
 	std::string mHost;
 	std::string mUser;
-	std::string mDirectory; ///< Does not include initial slash, but includes ending slash.
+	std::string mDirectory; ///< DOES NOT include initial or ending slash.
 //	AuthenticationCreds mAuth;
 
 	/** Should handle resolving ".." and "." inside of a path. */
@@ -106,6 +106,20 @@ class URIContext {
 public:
 	/// Default constructor (://@/) -- use this along with an absolute URI.
 	URIContext() {
+	}
+
+	/// Absolute URI constructor.
+	URIContext(const std::string &newProto,
+			const std::string &newHost,
+			const std::string &newUser,
+			const std::string &newDirectory)
+		: mProto(newProto),
+		  mHost(newHost),
+		  mUser(newUser),
+		  mDirectory(newDirectory){
+
+		cleanup(mProto);
+		cleanup(mHost);
 	}
 
 	/** Acts like the string-parsing constructor, NULL strings mean
@@ -215,26 +229,9 @@ private:
 
 		cleanup(mProto);
 		cleanup(mHost);
-                if (mProto.empty()) {
-                        throw std::invalid_argument("mProto is empty for URIContext: "+identifier);
-                }
 	}
 
 public:
-	/// Absolute URI constructor.
-	URIContext(const std::string &newProto,
-			const std::string &newHost,
-			const std::string &newUser,
-			const std::string &newDirectory)
-		: mProto(newProto),
-		  mHost(newHost),
-		  mUser(newUser),
-		  mDirectory(newDirectory){
-
-		cleanup(mProto);
-		cleanup(mHost);
-	}
-
 	/// protocol getter (without a ':'), like "http".
 	inline const std::string &proto() const {
 		return mProto;
@@ -281,6 +278,49 @@ public:
 		mDirectory = basepath;
 	}
 
+	void toParentPath(std::string *pathString) {
+		std::string::size_type slash = mDirectory.rfind('/');
+		if (slash == std::string::npos) {
+			if (pathString) {
+				if (!mDirectory.empty()) {
+					*pathString = mDirectory + "/" + *pathString;
+				}
+			}
+			mDirectory = std::string();
+		} else {
+			if (pathString) {
+				if (slash > 0) {
+					*pathString = mDirectory.substr(0, slash) + "/" + *pathString;
+				}
+			}
+			mDirectory = mDirectory.substr(0, slash);
+		}
+	}
+
+	void toParentContext(std::string *pathString) {
+		if (mDirectory.empty()) {
+			if (mHost.empty()) {
+				if (pathString) {
+					*pathString = mProto + ":" + *pathString;
+				}
+				mProto = std::string();
+			} else {
+				if (pathString) {
+					*pathString = "//" + (mUser.empty()?mUser+"@":"") + mHost + "/" + *pathString;
+				}
+				mHost = std::string();
+			}
+			mUser = std::string();
+		} else {
+			toParentPath(pathString);
+		}
+	}
+/*
+	void relocate(const URIContext &source, const URIContext &dest) {
+		std::string
+	}
+*/
+
 	/// Constructs a URI... will exclude an empty username.
 	inline std::string toString(bool trailingSlash=true) const {
 		std::string ret (mProto + "://" + (mUser.empty() ? std::string() : (mUser + "@")) + mHost);
@@ -316,6 +356,10 @@ public:
 			mUser == other.mUser &&
 			mHost == other.mHost &&
 			mProto == other.mProto;
+	}
+	inline bool operator!=(const URIContext &other) const {
+		// We can ignore the hash if it references the same URL.
+		return !((*this) == other);
 	}
 };
 
@@ -438,7 +482,11 @@ public:
 			return '/' + mContext.basepath() + '/' + mPath;
 		}
 	}
-
+/*
+	void relocate(const URIContext &source, const URIContext &dest) {
+		getContext().relocate(source, dest);
+	}
+*/
 	/** const accessor for the full string URI
 	 * Note that URIContext::toString does include the ending slash.
 	 */

@@ -84,7 +84,7 @@ public:
 		if (mServices) {
 			mServices->lookupService(context, cb);
 		} else {
-			cb(new SimpleServiceIterator(ListOfServicesPtr()));
+			cb(new ServiceIterator);
 		}
 	}
 
