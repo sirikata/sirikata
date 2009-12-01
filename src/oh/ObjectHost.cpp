@@ -276,6 +276,10 @@ Object* ObjectHost::ObjectConnections::roundRobinObject(ServerID whichServer, bo
     return NULL;
 }
 
+ServerID ObjectHost::ObjectConnections::numServerIDs() const{
+    return mObjectServerMap.size();
+}
+
 Object* ObjectHost::ObjectConnections::randomObject(bool null_if_disconnected) {
     if (mObjectServerMap.size()==0) return NULL;
     int iteratorLevel=rand()%mObjectServerMap.size();

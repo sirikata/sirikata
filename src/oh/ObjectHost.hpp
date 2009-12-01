@@ -77,6 +77,9 @@ public:
     void disconnect(Object* obj);
 
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    /* Ping Utility Methods. */
+    bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
+
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
     // reads and writes to the actual sockets are handled in mIOStrand. But that is all that is handled
@@ -163,9 +166,6 @@ private:
     // Callback that indicates we have a connection to the new server and can now start the migration to it.
     void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
 
-
-    /* Ping Utility Methods. */
-    bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
 
     OptionSet* mStreamOptions;
 
@@ -280,7 +280,7 @@ private:
         Object* randomObject(bool null_if_disconnected = false);
         Object* randomObject(ServerID whichServer, bool null_if_disconnected = false);
         Object* roundRobinObject(ServerID whichServer, bool null_if_disconnected = false);
-
+        ServerID numServerIDs()const;
     private:
         struct ObjectInfo {
             ObjectInfo(Object* obj);
@@ -312,6 +312,8 @@ private:
 
     bool mShuttingDown;
     uint64 mPingId;
+public:
+    ObjectConnections*getObjectConnections(){return &mObjectConnections;}
 }; // class ObjectHost
 
 } // namespace CBR
