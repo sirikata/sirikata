@@ -325,9 +325,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap
 
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
 
-    mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&ObjectHost::generatePings, this), Duration::milliseconds((int64)1));
-    mPingId=0;
-    mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
+
+
+
     mHandleMessageProfiler = mContext->profiler->addStage("Handle Server Message");
 
     mContext->objectHost = this;
@@ -342,8 +342,6 @@ ObjectHost::~ObjectHost() {
     }
     mConnections.clear();
 
-    delete mPingPoller;
-    delete mPingProfiler;
 
     delete mHandleMessageProfiler;
 
@@ -356,7 +354,6 @@ const ObjectHostContext* ObjectHost::context() const {
 }
 
 void ObjectHost::start() {
-    mPingPoller->start();
 
     mIOWork = new IOWork( mIOService, "ObjectHost Work" );
     mIOThread = new Thread( std::tr1::bind(&IOService::run, mIOService) );
@@ -376,7 +373,6 @@ void ObjectHost::stop() {
     delete mIOThread;
     mIOThread = NULL;
 
-    mPingPoller->stop();
 }
 
 void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
@@ -624,17 +620,6 @@ bool ObjectHost::randomPing(const Time& t) {
     return false;
 }
 
-void ObjectHost::generatePings() {
-    mPingProfiler->started();
-
-    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-
-    for (int i=0;i<1000;++i)
-        if (!randomPing(mContext->simTime()))
-            break;
-
-    mPingProfiler->finished();
-}
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);

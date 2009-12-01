@@ -36,11 +36,12 @@
 #include "ObjectHost.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
+#include "ScenarioFactory.hpp"
 
 #include "Options.hpp"
 #include "Statistics.hpp"
 #include "TabularServerIDMap.hpp"
-
+#include "ScenarioFactory.hpp"
 void *main_loop(void *);
 int main(int argc, char** argv) {
     using namespace CBR;
@@ -87,7 +88,8 @@ int main(int argc, char** argv) {
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
-
+    Scenario* scenario = ScenarioFactory::getSingleton().getConstructor("ping")("");
+    scenario->initialize(ctx);
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
         Time now_time = Timer::now();
@@ -102,6 +104,7 @@ int main(int argc, char** argv) {
     ctx->add(ctx);
     ctx->add(obj_host);
     ctx->add(obj_factory);
+    ctx->add(scenario);
     ctx->run(2);
 
     if (GetOption(PROFILE)->as<bool>()) {
@@ -112,6 +115,7 @@ int main(int argc, char** argv) {
 
     delete server_id_map;
     delete obj_factory;
+    delete scenario;
     delete obj_host;
     delete ctx;
 

@@ -51,6 +51,8 @@ class ServerIDMap;
 
 class ObjectHost : public Service {
 public:
+
+    bool randomPing(const Time& t);
     typedef std::tr1::function<void(ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef SessionCallback ConnectedCallback;
@@ -164,7 +166,6 @@ private:
 
     /* Ping Utility Methods. */
     bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
-    bool randomPing(const Time& t);
 
     OptionSet* mStreamOptions;
 
@@ -182,7 +183,7 @@ private:
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
     Poller* mPingPoller;
-    TimeProfiler::Stage* mPingProfiler;
+
     TimeProfiler::Stage* mHandleMessageProfiler;
 
     Sirikata::SerializationCheck mSerialization;
