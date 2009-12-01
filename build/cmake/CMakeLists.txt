@@ -334,6 +334,15 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/analysis/main.cpp
 )
 
+SET(BENCH_SOURCE_DIR ${CBR_SOURCE_DIR}/bench)
+SET(BENCH_SOURCES
+  ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
+  ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/main.cpp
+)
+
 SET(CBR_MOC_HEADERS
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.h
 )
@@ -430,3 +439,14 @@ TARGET_LINK_LIBRARIES(analysis
         ${PROTOCOLBUFFERS_LIBRARIES}
         ${GLUT_LIBRARIES}
         )
+
+ADD_EXECUTABLE(bench ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(bench
+  cbr-core
+  ${Boost_THREAD_LIBRARY}
+  ${Boost_DATE_TIME_LIBRARY}
+  ${Boost_PROGRAM_OPTIONS_LIBRARY}
+  ${Boost_REGEX_LIBRARY}
+  ${SirikataCore_LIBRARIES}
+  ${PROTOCOLBUFFERS_LIBRARIES}
+  )
