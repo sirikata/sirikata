@@ -122,6 +122,7 @@ public:
         OH_DEQUEUED,
         HIT_NETWORK,
         OH_DROPPED,
+        OH_NET_RECEIVED,
         OH_RECEIVED,
         SPACE_TO_OH_ENQUEUED,
         OSEG_LOOKUP_STARTED,

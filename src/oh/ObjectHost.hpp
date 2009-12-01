@@ -197,6 +197,7 @@ private:
         ~SpaceNodeConnection();
 
         // Thread Safe
+        ObjectHostContext* mContext;
         ObjectHost* parent;
         ServerID server;
         Sirikata::Network::Stream* socket;
@@ -205,7 +206,7 @@ private:
         bool push(ObjectMessage* msg);
 
         // Pull a packet from the receive queue
-        Sirikata::Network::Chunk* pull();
+        ObjectMessage* pull();
 
         void shutdown();
 
@@ -223,7 +224,7 @@ private:
         TracePacketElement<ObjectMessage> tag_dequeued;
         StreamTxElement<ObjectMessage> streamTx;
 
-        QueueRouterElement<Sirikata::Network::Chunk> receive_queue;
+        QueueRouterElement<ObjectMessage> receive_queue;
 
         ReceiveCallback mReceiveCB;
     };

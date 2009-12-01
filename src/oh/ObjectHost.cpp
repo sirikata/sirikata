@@ -49,7 +49,8 @@ using namespace Sirikata::Network;
 namespace CBR {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
- : parent(ctx->objectHost),
+ : mContext(ctx),
+   parent(ctx->objectHost),
    server(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
    connecting(false),
@@ -57,7 +58,7 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
    send_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    tag_dequeued(ctx, Trace::OH_DEQUEUED, Trace::OH_DROPPED),
    streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0)),
-   receive_queue(16*1024 /* FIXME */, std::tr1::bind(&Sirikata::Network::Chunk::size, std::tr1::placeholders::_1)),
+   receive_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
@@ -77,22 +78,47 @@ bool ObjectHost::SpaceNodeConnection::push(ObjectMessage* msg) {
     return tag_enqueued.push(0,msg);
 }
 
-Sirikata::Network::Chunk* ObjectHost::SpaceNodeConnection::pull() {
+ObjectMessage* ObjectHost::SpaceNodeConnection::pull() {
     return receive_queue.pull();
 }
 
 Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk) {
-    Chunk* data = new Chunk();
-    data->swap(chunk);
+    // Parse
+    ObjectMessage* msg = new ObjectMessage();
+    bool parse_success = msg->ParseFromArray(chunk.data(), chunk.size());
+    assert(parse_success == true);
+
+    // Push might delete it, record for timestamping
+    uint64 msg_unique = msg->unique();
+    uint16 msg_source_port = msg->source_port();
+    uint16 msg_dest_port = msg->dest_port();
+
+    // Mark as received
+    mContext->trace()->timestampMessage(
+        mContext->simTime(),
+        msg_unique,
+        Trace::OH_NET_RECEIVED,
+        msg_source_port,
+        msg_dest_port
+    );
 
     // NOTE: We can't record drops here or we incur a lot of overhead in parsing...
-    bool pushed = receive_queue.push(data);
+    bool pushed = receive_queue.push(msg);
 
     if (pushed) {
         // handleConnectionRead() could be called from any thread/strand. Everything that is not
         // thread safe that could result from a new message needs to happen in the main strand,
         // so just post the whole handler there.
         mReceiveCB(this);
+    }
+    else {
+        mContext->trace()->timestampMessage(
+            mContext->simTime(),
+            msg_unique,
+            Trace::OH_DROPPED,
+            msg_source_port,
+            msg_dest_port
+        );
     }
 
     // No matter what, we've "handled" the data, either for real or by dropping
@@ -731,17 +757,11 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     mHandleMessageProfiler->started();
 
     // Pull it off the queue
-    Sirikata::Network::Chunk* data = conn->pull();
-    if (data == NULL) {
+    ObjectMessage* msg = conn->pull();
+    if (msg == NULL) {
         mHandleMessageProfiler->finished();
         return;
     }
-
-    // Parse
-    ObjectMessage* msg = new ObjectMessage();
-    bool parse_success = msg->ParseFromArray(data->data(), data->size());
-    assert(parse_success == true);
-    delete data;
 
     // Mark as received
     mContext->trace()->timestampMessage(
