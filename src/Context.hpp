@@ -53,6 +53,7 @@ public:
        profiler( new TimeProfiler(name) ),
        mTrace(_trace),
        mEpoch(epoch),
+       mLastSimTime(Time::null()),
        mSimDuration(simlen)
     {
     }
@@ -74,7 +75,16 @@ public:
     }
     // WARNING: The evaluates Timer::now, which shouldn't be done too often
     Time simTime() const {
-        return simTime( Timer::now() );
+        Time curt = simTime( Timer::now() );
+
+        if (curt < mLastSimTime)
+            curt = mLastSimTime;
+
+        // FIXME this is to avoid const fallout since this didn't used to
+        // need to modify data
+        const_cast<Time&>(this->mLastSimTime) = curt;
+
+        return curt;
     }
 
     void add(Service* ps) {
@@ -114,6 +124,7 @@ protected:
     Trace* mTrace;
 
     Sirikata::AtomicValue<Time> mEpoch;
+    Time mLastSimTime;
     Duration mSimDuration;
     std::vector<Service*> mServices;
 }; // class ObjectHostContext
