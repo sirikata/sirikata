@@ -77,13 +77,15 @@ public:
     Time simTime() const {
         Time curt = simTime( Timer::now() );
 
-        if (curt < mLastSimTime)
-            curt = mLastSimTime;
+#if 0
+        Time last = mLastSimTime.read();
+        if (curt < last)
+            curt = last;
 
         // FIXME this is to avoid const fallout since this didn't used to
         // need to modify data
-        const_cast<Time&>(this->mLastSimTime) = curt;
-
+        const_cast< Sirikata::AtomicValue<Time>& >(this->mLastSimTime) = curt;
+#endif
         return curt;
     }
 
@@ -124,7 +126,7 @@ protected:
     Trace* mTrace;
 
     Sirikata::AtomicValue<Time> mEpoch;
-    Time mLastSimTime;
+    Sirikata::AtomicValue<Time> mLastSimTime;
     Duration mSimDuration;
     std::vector<Service*> mServices;
 }; // class ObjectHostContext
