@@ -38,6 +38,8 @@
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
 
+#define FORCE_MONOTONIC_CLOCK 1
+
 namespace CBR {
 
 class Trace;
@@ -68,6 +70,8 @@ public:
         return rawtime - mEpoch.read();
     }
     Time simTime(const Duration& sinceStart) const {
+        if (sinceStart.toMicroseconds() < 0)
+            return Time::null();
         return Time::null() + sinceStart;
     }
     Time simTime(const Time& rawTime) const {
@@ -77,7 +81,7 @@ public:
     Time simTime() const {
         Time curt = simTime( Timer::now() );
 
-#if 0
+#if FORCE_MONOTONIC_CLOCK
         Time last = mLastSimTime.read();
         if (curt < last)
             curt = last;
