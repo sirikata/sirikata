@@ -1219,15 +1219,26 @@ const char* getPacketStageName (uint32 path) {
 MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter)
         :mFilter(filter)
 {
-    StageGroup oh_group("Object Host");
-    oh_group.add(Trace::CREATED)
-            .add(Trace::DESTROYED)
+    StageGroup oh_create_group("Object Host Creation");
+    oh_create_group.add(Trace::CREATED)
             .add(Trace::OH_ENQUEUED)
+            ;
+
+    StageGroup oh_net_exchange_group("Object Host Networking Exchange");
+    oh_net_exchange_group.add(Trace::OH_ENQUEUED)
             .add(Trace::OH_DEQUEUED)
+            ;
+
+    StageGroup oh_send_group("Object Host Send");
+    oh_send_group.add(Trace::OH_DEQUEUED)
             .add(Trace::OH_HIT_NETWORK)
             .add(Trace::OH_DROPPED)
-            .add(Trace::OH_NET_RECEIVED)
-            .add(Trace::OH_RECEIVED)
+            ;
+
+    StageGroup oh_to_space_group("Object Host -> Space");
+    oh_to_space_group
+            .add(Trace::OH_HIT_NETWORK)
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
             ;
 
     StageGroup space_group("Space");
@@ -1246,24 +1257,29 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::OSEG_SERVER_LOOKUP_FINISHED)
             ;
 
-    StageGroup oh_to_space_group("Object Host -> Space");
-    oh_to_space_group
-            .add(Trace::OH_HIT_NETWORK)
-            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
-            ;
-
     StageGroup space_to_oh_group("Space -> Object Host");
     space_to_oh_group
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             .add(Trace::OH_NET_RECEIVED)
             ;
 
+    StageGroup oh_receive_group("Object Host Receive");
+    oh_receive_group.add(Trace::DESTROYED)
+            .add(Trace::OH_DROPPED)
+            .add(Trace::OH_NET_RECEIVED)
+            .add(Trace::OH_RECEIVED)
+            ;
+
+
     typedef std::vector<StageGroup> StageGroupList;
     StageGroupList groups;
-    groups.push_back(oh_group);
+    groups.push_back(oh_create_group);
+    groups.push_back(oh_net_exchange_group);
+    groups.push_back(oh_send_group);
     groups.push_back(oh_to_space_group);
     groups.push_back(space_group);
     groups.push_back(space_to_oh_group);
+    groups.push_back(oh_receive_group);
 
     // read in all our data
     mNumberOfServers = nservers;
