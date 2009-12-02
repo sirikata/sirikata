@@ -1259,41 +1259,26 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
         }
     }
     std::map<PathPair,Average> results;
-    for (int doVariance=0;doVariance<2;++doVariance) {
-
-        for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
-             iter!=ie;
-             ++iter) {
-            PacketData& pd = iter->second;
-            if (mFilter(pd)&&pd.mStamps.size()) {
-                std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
-                for (size_t i=1;i<pd.mStamps.size();++i) {
-                    Duration diff=pd.mStamps[i]-pd.mStamps[i-1];
-                    Average *avg=&results[PathPair(pd.mStamps[i-1].mPath,pd.mStamps[i].mPath)];
-                    if (!doVariance) {
-                        avg->addAverageSample(diff);
-                    }else {
-                        avg->addVarianceSample(diff);
-                    }
-                }
+    for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
+         iter!=ie;
+         ++iter) {
+        PacketData& pd = iter->second;
+        if (mFilter(pd)&&pd.mStamps.size()) {
+            std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
+            for (size_t i=1;i<pd.mStamps.size();++i) {
+                Duration diff=pd.mStamps[i]-pd.mStamps[i-1];
+                Average *avg=&results[PathPair(pd.mStamps[i-1].mPath,pd.mStamps[i].mPath)];
+                avg->sample(diff);
             }
         }
-        if (!doVariance)
-        for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
-             resiter!=resiterend;
-             ++resiter) {
-            resiter->second.averageOut();
-
-        }
-
     }
     for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
          resiter!=resiterend;
          ++resiter) {
-        if (resiter->second.numSamples) {
+        if (resiter->second.samples()) {
             const char* lastStage=getPacketStageName(resiter->first.first);
             const char* currentStage=getPacketStageName(resiter->first.second);
-            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average<<"s stddev "<<sqrt(resiter->second.variance)<<" #"<<resiter->second.numSamples<<std::endl;
+            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average()<<"s stddev "<<sqrt(resiter->second.variance())<<" #"<<resiter->second.samples()<<std::endl;
             lastStage=currentStage;
 
         }

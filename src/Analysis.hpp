@@ -181,29 +181,31 @@ class MessageLatencyAnalysis {public:
         }
     };
     class Average {
+        double sample_sum; // sum (t)
+        double sample2_sum; // sum (t^2)
+        uint32 numSamples;
     public:
-        double average;
-        unsigned int numSamples;
-        double variance;
-        Average(): average(0){
-            variance=0;
-            numSamples=0;
-        }
-        void addAverageSample(Duration t){
-            double st=t.toSeconds();
-            st=fabs(st);
-            average+=st;
-
+        Average()
+         : sample_sum(0),
+           sample2_sum(0),
+           numSamples(0)
+        {}
+        void sample(const Duration& t) {
+            double st = t.toSeconds();
+            sample_sum += st;
+            sample2_sum += st*st;
             ++numSamples;
         }
-        void averageOut(){
-            if (numSamples) {
-                average=average/(double)numSamples;
-            }
+        double average() {
+            return sample_sum / double(numSamples);
         }
-        void addVarianceSample(Duration t) {
-            double diff=(t.toSeconds()-average);
-            variance+=diff*diff/(double)numSamples;
+        double variance() {
+            double avg = sample_sum / double(numSamples);
+            double sq_avg = sample2_sum / double(numSamples);
+            return sq_avg - avg*avg;
+        }
+        uint32 samples() const {
+            return numSamples;
         }
     };
     class PacketData {public:
