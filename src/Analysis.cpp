@@ -1215,27 +1215,61 @@ const char* getPacketStageName (uint32 path) {
     }
 
 }
-class PathPair {
-public:
-    Trace::MessagePath first;
-    Trace::MessagePath second;
-    PathPair(const Trace::MessagePath &first,
-              const Trace::MessagePath &second) {
-        this->first=first;
-        this->second=second;
-    }
-    bool operator < (const PathPair&other) const{
-        if (first==other.first) return second<other.second;
-        return first<other.first;
-    }
-    bool operator ==(const PathPair&other) const{
-        return first==other.first&&second==other.second;
-    }
-};
-MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter):mFilter(filter) {
+
+MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter)
+        :mFilter(filter)
+{
+    StageGroup oh_group("Object Host");
+    oh_group.add(Trace::CREATED)
+            .add(Trace::DESTROYED)
+            .add(Trace::OH_ENQUEUED)
+            .add(Trace::OH_DEQUEUED)
+            .add(Trace::OH_HIT_NETWORK)
+            .add(Trace::OH_DROPPED)
+            .add(Trace::OH_NET_RECEIVED)
+            .add(Trace::OH_RECEIVED)
+            ;
+
+    StageGroup space_group("Space");
+    space_group
+            .add(Trace::SPACE_OUTGOING_MESSAGE)
+            .add(Trace::SPACE_SERVER_MESSAGE_QUEUE)
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            .add(Trace::SELF_LOOP)
+            .add(Trace::FORWARDED)
+            .add(Trace::DISPATCHED)
+            .add(Trace::DELIVERED)
+            .add(Trace::DROPPED)
+            .add(Trace::SPACE_TO_OH_ENQUEUED)
+            .add(Trace::OSEG_LOOKUP_STARTED)
+            .add(Trace::OSEG_CACHE_LOOKUP_FINISHED)
+            .add(Trace::OSEG_SERVER_LOOKUP_FINISHED)
+            ;
+
+    StageGroup oh_to_space_group("Object Host -> Space");
+    oh_to_space_group
+            .add(Trace::OH_HIT_NETWORK)
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            ;
+
+    StageGroup space_to_oh_group("Space -> Object Host");
+    space_to_oh_group
+            .add(Trace::SPACE_TO_OH_ENQUEUED)
+            .add(Trace::OH_NET_RECEIVED)
+            ;
+
+    typedef std::vector<StageGroup> StageGroupList;
+    StageGroupList groups;
+    groups.push_back(oh_group);
+    groups.push_back(oh_to_space_group);
+    groups.push_back(space_group);
+    groups.push_back(space_to_oh_group);
+
     // read in all our data
     mNumberOfServers = nservers;
-    std::tr1::unordered_map<uint64,PacketData> packetFlow;
+    typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;
+    PacketMap packetFlow;
+
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -1248,7 +1282,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             {
                 MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
                 if (tevt != NULL) {
-                    MessageLatencyAnalysis::PacketData*pd=&packetFlow[tevt->uid];
+                    MessageLatencyAnalysis::PacketData*pd = &packetFlow[tevt->uid];
                     pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
                     if (tevt->msg_type!=255) pd->mType=tevt->msg_type;
                     if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
@@ -1258,32 +1292,61 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             delete evt;
         }
     }
-    std::map<PathPair,Average> results;
-    for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
+
+    // Compute time diffs for each group x packet
+    typedef std::map<PathPair,Average> PathAverageMap;
+    PathAverageMap results;
+    for (PacketMap::iterator iter=packetFlow.begin(),ie=packetFlow.end();
          iter!=ie;
          ++iter) {
         PacketData& pd = iter->second;
-        if (mFilter(pd)&&pd.mStamps.size()) {
-            std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
-            for (size_t i=1;i<pd.mStamps.size();++i) {
-                Duration diff=pd.mStamps[i]-pd.mStamps[i-1];
-                Average *avg=&results[PathPair(pd.mStamps[i-1].mPath,pd.mStamps[i].mPath)];
-                avg->sample(diff);
+        if ( !mFilter(pd) || (pd.mStamps.size() == 0) ) continue;
+        std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
+        for(StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
+            StageGroup& group = *group_it;
+            // Given our packet list and a set of valid stages, we need to step
+            // through finding "adjacent" pairs of stages, where adjacent means
+            // that tag A and tag B are both in the StageGroup and there is no
+            // tag C that is also in the StageGroup and exists between A and B.
+            std::vector<DTime> filtered_stamps = group.filter(pd.mStamps);
+            for (uint32 idx = 1; idx < filtered_stamps.size(); ++idx) {
+                Duration diff = filtered_stamps[idx] - filtered_stamps[idx-1];
+                Average& avg = results[ PathPair(filtered_stamps[idx-1].mPath, filtered_stamps[idx].mPath) ];
+                avg.sample(diff);
             }
         }
     }
-    for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
-         resiter!=resiterend;
-         ++resiter) {
-        if (resiter->second.samples()) {
-            const char* lastStage=getPacketStageName(resiter->first.first);
-            const char* currentStage=getPacketStageName(resiter->first.second);
-            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average()<<"s stddev "<<sqrt(resiter->second.variance())<<" #"<<resiter->second.samples()<<std::endl;
-            lastStage=currentStage;
 
+    // Report results for each (sensible) pair of stages
+    // Reports are done by groups
+    for (StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
+        StageGroup& group = *group_it;
+        SILOG(analysis,info,"Group: " << group.name());
+        // This approach is inefficient but only bad if # of groups sky rockets
+        for (PathAverageMap::iterator resiter=results.begin(),resiterend=results.end();
+             resiter!=resiterend;
+             ++resiter) {
+
+            PathPair path_pair = resiter->first;
+            if (!group.contains(path_pair))
+                continue;
+
+            Average& avg = resiter->second;
+            if (avg.samples() == 0)
+                continue;
+
+            const char* lastStage=getPacketStageName(path_pair.first);
+            const char* currentStage=getPacketStageName(path_pair.second);
+
+            SILOG(analysis,info,
+                  "Stage " << lastStage << '-' << currentStage << ':'
+                  << avg.average() << "s stddev " << sqrt(avg.variance())
+                  << " #" << avg.samples()
+                  );
         }
     }
 }
+
 LatencyAnalysis::PacketData::PacketData()
  :_send_start_time(Time::null()),
   _send_end_time(Time::null()),

@@ -208,6 +208,66 @@ class MessageLatencyAnalysis {public:
             return numSamples;
         }
     };
+
+    class PathPair {
+      public:
+        Trace::MessagePath first;
+        Trace::MessagePath second;
+        PathPair(const Trace::MessagePath &first,
+                 const Trace::MessagePath &second) {
+            this->first=first;
+            this->second=second;
+        }
+        bool operator < (const PathPair&other) const{
+            if (first==other.first) return second<other.second;
+            return first<other.first;
+        }
+        bool operator ==(const PathPair&other) const{
+            return first==other.first&&second==other.second;
+        }
+    };
+
+    // A group of tags which should be considered together since they are
+    // sensible combinations.  A group should either be a) a group of tags which
+    // are handled in the same thread of control so they should be guaranteed to
+    // be ordered properly or b) represent the barriers between threads of
+    // control, which ideally should be thin, hopefully having only one tag on
+    // either side.
+    class StageGroup {
+      public:
+        StageGroup(const String& _name)
+                : mName(_name)
+        {}
+
+        String name() const {
+            return mName;
+        }
+        // Returns *this for chaining
+        StageGroup& add(Trace::MessagePath p) {
+            mTags.insert(p);
+            return *this;
+        }
+        bool contains(Trace::MessagePath p) const {
+            return (mTags.find(p) != mTags.end());
+        }
+        bool contains(const PathPair& p) const {
+            return (contains(p.first) && contains(p.second));
+        }
+
+        std::vector<DTime> filter(const std::vector<DTime>& orig) {
+            std::vector<DTime> result;
+            for(std::vector<DTime>::const_iterator it = orig.begin(); it != orig.end(); it++)
+                if (this->contains(it->mPath))
+                    result.push_back(*it);
+            return result;
+        }
+      private:
+        String mName;
+        typedef std::set<Trace::MessagePath> TagSet;
+        TagSet mTags;
+    };
+
+
     class PacketData {public:
         uint64 mId;
         unsigned char mType;
