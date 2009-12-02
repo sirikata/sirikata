@@ -36,9 +36,9 @@
 
 using namespace Ogre;
 
+template<> Meru::CDNArchiveFactory* Ogre::Singleton<Meru::CDNArchiveFactory>::ms_Singleton = 0;
 namespace Meru {
 
-template<> CDNArchiveFactory* Ogre::Singleton<CDNArchiveFactory>::ms_Singleton = 0;
 
 CDNArchiveFactory::CDNArchiveFactory() {
 	mCurArchive = 0;
