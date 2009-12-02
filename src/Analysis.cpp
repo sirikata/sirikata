@@ -1344,7 +1344,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
                 PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
                 if (ping_evt != NULL) {
                     mLatency.insert(
-                        std::map<double,Duration>::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
+                        std::multimap<double,Duration>::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
                 }
             }
             delete evt;
@@ -1356,7 +1356,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
 void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Average > &retval){
     int bucket=-1;
     int bucketSamples=0;
-    for (std::map<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
+    for (std::multimap<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
          i!=ie;++i) {
         int curBucket=(int)floor(i->first/bucketWidth);
         if (curBucket!=bucket) {

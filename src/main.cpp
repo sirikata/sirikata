@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
     if (network_type == "sst")
         gNetwork = new SSTNetwork(space_context);
     else if (network_type == "tcp")
-        gNetwork = new TCPNetwork(space_context,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+        gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     gNetwork->init(&main_loop);
 
     sync.stop();

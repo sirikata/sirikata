@@ -148,7 +148,7 @@ private:
 }; // class BandwidthAnalysis
 
 class ObjectLatencyAnalysis {
-    std::map<double, Duration> mLatency;
+    std::multimap<double, Duration> mLatency;
 public:
     int mNumberOfServers;
     ObjectLatencyAnalysis(const char* opt_name, const uint32 nservers);

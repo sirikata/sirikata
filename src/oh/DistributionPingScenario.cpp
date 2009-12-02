@@ -2,10 +2,22 @@
 #include "ScenarioFactory.hpp"
 #include "ObjectHost.hpp"
 #include "Object.hpp"
+#include "Options.hpp"
 namespace CBR{
+void DPSInitOptions(DistributionPingScenario *thus) {
+   
+    Sirikata::InitializeClassOptions ico("DistributedPingScenario",thus,
+                                         new OptionValue("num-pings-per-tick","1000",Sirikata::OptionValueType<size_t>(),"Number of pings launched per tick event"),
+        NULL);
+}
 DistributionPingScenario::DistributionPingScenario(const String &options){ 
+
     mContext=NULL;    
     mPingID=0;
+    DPSInitOptions(this);
+    OptionSet* optionsSet = OptionSet::getOptions("DistributedPingScenario",this);
+    optionsSet->parse(options);
+    mNumPingsPerTick=optionsSet->referenceOption("num-pings-per-tick")->as<size_t>();
 }
 DistributionPingScenario::~DistributionPingScenario(){ 
     delete mPingPoller;
@@ -41,15 +53,11 @@ void DistributionPingScenario::generatePings() {
     }    
     unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
     
-    for (int i=0;i<1000;++i) {        
+    for (unsigned int i=0;i<mNumPingsPerTick;++i) {        
         Object * objA=mContext->objectHost->getObjectConnections()->randomObject((ServerID)minServer,
                                                          false);
         Object * objB=mContext->objectHost->getObjectConnections()->randomObject((ServerID)(minServer+distance),
                                                          false);
-        //FIXME: below I am selecting the objects badly using a bad mechanism from Bertrand's paradox suggesting I wil get a shorter length on average. But I don't want to change
-        //the benchmarks too much mid-stream
-        objA=mContext->objectHost->getObjectConnections()->randomObject();
-        objB=mContext->objectHost->getObjectConnections()->randomObject();
         if (rand()<RAND_MAX/2) {
             Object * tmp=objA;
             objA=objB;
@@ -60,7 +68,7 @@ void DistributionPingScenario::generatePings() {
             if (!mContext->objectHost->ping(t,
                                             objA,
                                             objB->uuid(),
-                                            (objA->location().extrapolate(t).position()-objB->location().extrapolate(t).position()).length())) {
+                                            distance*GetOption("region")->as<BoundingBox3f>().diag().x/maxDistance)) {
                 
                 break;
             }

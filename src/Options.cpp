@@ -138,6 +138,12 @@ void InitOptions() {
         .addOption(new OptionValue("cseg-world-height", "3432", Sirikata::OptionValueType<uint32>(), "The number of cells across the height of the world population dataset."))
         .addOption(new OptionValue("cseg-max-leaf-population", "800", Sirikata::OptionValueType<uint32>(), "The maximum number of avatars/people at the leaf of the BSP tree."))
       .addOption(new OptionValue("cseg-population-density-file", "glds00ag.asc", Sirikata::OptionValueType<String>(), "The file containing the population density numbers."))
+      .addOption(new OptionValue("scenario", "ping", Sirikata::OptionValueType<String>(), "ObjectHost-wide script dictating mass wide object behaviors"))
+      .addOption(new OptionValue("scenario-options", "", Sirikata::OptionValueType<String>(), "Options for ObjectHost-wide script dictating mass wide object behaviors"))
+      .addOption(new OptionValue("scenario-options", "", Sirikata::OptionValueType<String>(), "Options for ObjectHost-wide script dictating mass wide object behaviors"))
+      .addOption(new OptionValue("object-host-receive-buffer", "16384", Sirikata::OptionValueType<size_t>(), "size of the object host space node connection receive queue"))
+      .addOption(new OptionValue("object-host-send-buffer", "16384", Sirikata::OptionValueType<size_t>(), "size of the object host space node cnonection send queue"))
+      .addOption(new OptionValue("space-to-space-receive-buffer", "8192", Sirikata::OptionValueType<size_t>(), "size of the object host space node cnonection send queue"))
 
       ;
 }

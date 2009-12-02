@@ -55,10 +55,10 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
    connecting(false),
    tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED),
-   send_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
+  send_queue(GetOption("object-host-send-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    tag_dequeued(ctx, Trace::OH_DEQUEUED, Trace::OH_DROPPED),
    streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0), Trace::OH_HIT_NETWORK),
-   receive_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
+   receive_queue(GetOption("object-host-receive-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
