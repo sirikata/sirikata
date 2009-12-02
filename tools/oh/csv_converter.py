@@ -49,8 +49,8 @@ except:
     sys.exit(0);
 basepath=''
 if len(sys.argv):
-    where1=sys.argv[0].rfind("/")
-    where2=sys.argv[0].rfind("\\")
+    where1=sys.argv[0].rfind("/tools/oh/")
+    where2=sys.argv[0].rfind("\\tools\\oh")
     if where1!=-1:
         if where2!=-1 and where2>where1:
             where1=where2
@@ -58,7 +58,7 @@ if len(sys.argv):
         where1=where2
     if where1!=-1:
         basepath=sys.argv[0][0:where1]+'/'
-    
+print basepath
 sys.path.append(basepath+'liboh/scripts/ironpython')
 sys.path.append(basepath+'liboh/scripts/ironpython/site-packages')
 

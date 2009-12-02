@@ -113,6 +113,16 @@ IF(NOT TOP_LEVEL)
 ENDIF()
 GET_FILENAME_COMPONENT(TOP_LEVEL ${TOP_LEVEL} ABSOLUTE)
 
+# a bunch of location definitions
+GET_FILENAME_COMPONENT(TOOLS_DIR ${TOP_LEVEL}/tools ABSOLUTE)
+GET_FILENAME_COMPONENT(OH_TOOLS_DIR ${TOOLS_DIR}/oh ABSOLUTE)
+GET_FILENAME_COMPONENT(CDN_TOOLS_DIR ${TOOLS_DIR}/cdn ABSOLUTE)
+
+GET_FILENAME_COMPONENT(DEMO_DIR ${TOP_LEVEL}/demo ABSOLUTE)
+GET_FILENAME_COMPONENT(DEMO_SCENES_DIR ${DEMO_DIR}/scenes ABSOLUTE)
+
+
+
 #add-ins
 
 IF(NOT CMAKE_MODULE_PATH)
@@ -1428,15 +1438,23 @@ ENDIF()
 
 
 IF(PYTHON_EXECUTABLE AND IRON_PYTHON_FOUND) #FIXME should work if we have dotnet protobufs (if we can generate pbj.py files)
-  ADD_CUSTOM_TARGET(SCENEDB ALL
-              DEPENDS ${AdditionalProtoDepends} ${CMAKE_CURRENT_BINARY_DIR}/scene.db
-              COMMENT "Checking ${CMAKE_CURRENT_BINARY_DIR}/scene.db")
+  SET(CSV_CONVERTER_BINARY ${OH_TOOLS_DIR}/csv_converter.py)
+  SET(INPUT_SCENE_CSV ${DEMO_SCENES_DIR}/scenebig.csv)
 
-  ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scene.db
-                     COMMAND ${PYTHON_EXECUTABLE} ${TOP_LEVEL}/csv_converter.py ${TOP_LEVEL}/scenebig.csv ${CMAKE_CURRENT_BINARY_DIR}/scene.db
-                     DEPENDS ${AdditionalProtoDepends}
-                     COMMENT "Making example scene database from  ${CMAKE_CURRENT_BINARY_DIR}/scene.db")
+  IF(EXISTS ${CSV_CONVERTER_BINARY} AND EXISTS ${INPUT_SCENE_CSV})
+    SET(GENERATED_SCENE_DB ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
+    ADD_CUSTOM_TARGET(SCENEDB ALL
+      DEPENDS ${AdditionalProtoDepends} ${GENERATED_SCENE_DB}
+      COMMENT "Checking ${GENERATED_SCENE_DB}")
+
+    ADD_CUSTOM_COMMAND(OUTPUT ${GENERATED_SCENE_DB}
+      COMMAND ${PYTHON_EXECUTABLE} ${CSV_CONVERTER_BINARY} ${INPUT_SCENE_CSV} ${GENERATED_SCENE_DB}
+      DEPENDS ${AdditionalProtoDepends}
+      COMMENT "Making example scene database from  ${GENERATED_SCENE_DB}")
+
+    MESSAGE(STATUS "Added ${GENERATED_SCENE_DB} target.")
+  ENDIF()
 ENDIF()
 
 SET(EXEC_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
@@ -1642,7 +1660,7 @@ IF(APPLE)
       SET(APPLE_PLUGIN_COMMANDS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib${APPLE_PLUGIN}_d${DYLIB_EXT} sirikata.app/Contents/MacOS/lib${APPLE_PLUGIN}_d${DYLIB_EXT} && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib${APPLE_PLUGIN}${DYLIB_EXT} sirikata.app/Contents/MacOS/lib${APPLE_PLUGIN}${DYLIB_EXT} ${APPLE_PLUGIN_COMMANDS})
 
     ENDFOREACH()
-    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${TOP_LEVEL}/cdn.txt sirikata.app/Contents/MacOS/cdn.txt && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/scene.db sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
+    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${TOP_LEVEL}/cdn.txt sirikata.app/Contents/MacOS/cdn.txt && ln -sf ${GENERATED_SCENE_DB} sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
 ELSE()
 IF(NOT WIN32)
 ADD_CUSTOM_TARGET(berkelium.bin ALL COMMAND ln -sf chrome/berkelium && ln -sf chrome/berkelium berkelium.bin)
@@ -1776,9 +1794,11 @@ INSTALL(FILES ${TOP_LEVEL}/cdn.txt
         DESTINATION bin/)
 
 IF(PYTHON_EXECUTABLE)
-  INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/scene.db
-          DESTINATION bin/
-          OPTIONAL )
+  IF(${GENERATED_SCENE_DB})
+    INSTALL(FILES ${GENERATED_SCENE_DB}
+      DESTINATION bin/
+      OPTIONAL )
+  ENDIF()
 ENDIF()
 
 ADD_CUSTOM_TARGET(test
