@@ -5,6 +5,11 @@
 #include "../asyncCraqUtil.hpp"
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include "../../ObjectSegmentation.hpp"
+#include "../asyncCraqScheduler.hpp"
+#include <sirikata/network/Asio.hpp>
+
+
 //#define ASYNC_CONNECTION_DEBUG
 
 namespace CBR
@@ -17,25 +22,21 @@ public:
 
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING}; //we'll probably be always processing or need new socket.  (minus the initial connection registration.
   
-  void initialize(boost::asio::ip::tcp::socket* socket,     boost::asio::ip::tcp::resolver::iterator );  
+  void initialize(Sirikata::Network::TCPSocket* socket,     boost::asio::ip::tcp::resolver::iterator );  
 
-  void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
-  
   AsyncConnectionSet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
-  bool set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum);
-  bool get(CraqDataKey dataToGet);
+  void setBound(const CraqObjectID& obj_dataToGet, const int& dataToSetTo, const bool&  track, const int& trackNum);
+  void set(const CraqDataKey& dataToSet, const int& dataToSetTo, const bool&  track, const int& trackNum);
   
   ~AsyncConnectionSet();
-  AsyncConnectionSet(SpaceContext* , IOStrand*);
-
-
+  AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg);
+  
   int numStillProcessing();
-  void printOutstanding();
+
   
 private:
-  
-  boost::asio::ip::tcp::socket* mSocket;
+  Sirikata::Network::TCPSocket* mSocket;
 
   struct IndividualQueryData
   {
@@ -45,53 +46,37 @@ private:
     int currentlySettingTo;
     bool is_tracking;
     int tracking_number;
+    uint64 time_admitted; //in milliseconds what time was when lookup was requested.
+    Sirikata::Network::DeadlineTimer* deadline_timer;
   };
   typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
 
-  SpaceContext*   ctx;
-  IOStrand*   mStrand;
-  
+  SpaceContext*                      ctx;
+  IOStrand*                      mStrand;
+  IOStrand*                 mErrorStrand;
+  IOStrand*               mResultsStrand;
+  AsyncCraqScheduler*   mSchedulerMaster;
+  ObjectSegmentation*              mOSeg;
+  Timer mTimer;
   
   ConnectionState mReady;
 
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
-  
-  std::vector<CraqOperationResult*> mOperationResultVector;
-  std::vector<CraqOperationResult*> mOperationResultErrorVector;
-  std::vector<CraqOperationResult*> mOperationResultTrackedSetsVector;
+
 
   void set_generic_read_result_handler();
   void set_generic_read_error_handler();
 
 
-  void generic_read_handler       ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
+  bool processEntireResponse(std::string response);
 
-  void generic_read_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
-
-  
-  bool processGet(const std::string& response);
-  bool processSet(const std::string& response);
-
-  
-  void processValueNotFound(std::string dataKey); //takes in 
-  void processValueFound(std::string dataKey, int sID);
   void processStoredValue(std::string dataKey);
-
-  
-  bool parseValueNotFound(std::string response, std::string& dataKey);
-  bool parseValueValue(std::string response, std::string& dataKey,int& sID);
   bool parseStoredValue(const std::string& response, std::string& dataKey);
 
 
-  
-
-  bool processEntireResponse(std::string response);
-
   bool checkStored(std::string& response);
-  bool checkValue(std::string& response);
-  bool checkNotFound(std::string& response);
   bool checkError(std::string& response);
 
 
@@ -101,8 +86,9 @@ private:
   std::string mPrevReadFrag;
 
   
-
   //***********handlers**************
+  //timeout callback handler
+  void queryTimedOutCallbackSet(const boost::system::error_code& e, IndividualQueryData* iqd);
   
   //connect_handler
   void connect_handler(const boost::system::error_code& error);
@@ -114,9 +100,6 @@ private:
   //set handler
   void read_handler_set      ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
   void write_some_handler_set( const boost::system::error_code& error, std::size_t bytes_transferred);
-  //get handler
-  void write_some_handler_get(  const boost::system::error_code& error, std::size_t bytes_transferred);
-  void read_handler_get      (  const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
 };
 
 

@@ -7,6 +7,8 @@
 #include "asyncConnectionSet.hpp"
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include "../asyncCraqScheduler.hpp"
+#include <sirikata/network/Asio.hpp>
 
 #ifndef __ASYNC_CRAQ_SET_CLASS_H__
 #define __ASYNC_CRAQ_SET_CLASS_H__
@@ -15,52 +17,44 @@
 namespace CBR
 {
 
+  class AsyncCraqSet : AsyncCraqScheduler, PollingService
+  {
+  public:
 
-class AsyncCraqSet
-{
-public:
-  AsyncCraqSet(SpaceContext* con, IOStrand* str);
-  ~AsyncCraqSet();
+    AsyncCraqSet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
+    ~AsyncCraqSet();
 
+
+    void initialize(std::vector<CraqInitializeArgs>);
   
-  enum AsyncCraqReqStatus{REQUEST_PROCESSED, REQUEST_NOT_PROCESSED};
+    void set(CraqDataSetGet cdSet, uint64 tracking_number = 0);
 
-  void initialize(std::vector<CraqInitializeArgs>);
 
-  boost::asio::io_service io_service;  //creates an io service
+    int queueSize();
+    int numStillProcessing();
 
-  int set(CraqDataSetGet cdSet);
-  int get(CraqDataSetGet cdGet);
-
-  void runTestOfConnection();
-  void runTestOfAllConnections();
-  void tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
-
-  int queueSize();
-  int numStillProcessing();
+    virtual void erroredGetValue(CraqOperationResult* cor);
+    virtual void erroredSetValue(CraqOperationResult* cor);
+    void poll();
   
-private:
-  
-  void processGetResults       (std::vector <CraqOperationResult*> & getRes);
-  void processErrorResults     (std::vector <CraqOperationResult*> & errorRes);
-  void processTrackedSetResults(std::vector <CraqOperationResult*> & trackedSetRes);
+  private:
 
-  
-  std::vector<CraqInitializeArgs> mIpAddPort;
-  std::vector<AsyncConnectionSet*> mConnections;
-  int mCurrentTrackNum;
-  bool connected;
+    std::vector<CraqInitializeArgs> mIpAddPort;
+    std::vector<AsyncConnectionSet*> mConnections;
+    std::vector<IOStrand*>mConnectionsStrands;
+    bool connected;
 
-  std::queue<CraqDataSetGet> mQueue;
-  
+    std::queue<CraqDataSetGet> mQueue;
 
-  void reInitializeNode(int s);
-  void checkConnections(int s);
+    void reInitializeNode(int s);
+    void checkConnections(int s);
+    
+    SpaceContext*                    ctx;
+    IOStrand*                    mStrand;
+    IOStrand*             mResultsStrand;
+    ObjectSegmentation*            mOSeg;
 
-  SpaceContext* ctx;
-  IOStrand* mStrand;
-  
-};
+  };
 
 }//end namespace
 

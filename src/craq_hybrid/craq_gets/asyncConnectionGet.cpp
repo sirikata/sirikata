@@ -10,23 +10,29 @@
 #include "../../Timer.hpp"
 #include "../../VWTypes.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/network/Asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include "../../Utility.hpp"
 
-#define NUM_MULTI 1
 
 namespace CBR
 {
-
 //constructor
-AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, boost::asio::io_service* iserve)
+  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg )
   : ctx(con),
     mStrand(str),
-    m_io_service(iserve)
+    mPostErrorsStrand(error_strand),
+    mResultStrand(result_strand),
+    mSchedulerMaster (master),
+    mOSeg(oseg)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
 
   mTimer.start();
+  mSpecificTimer.start();
   mBeginDur = mTimer.elapsed();
+  getTime = 0;
+  numGets = 0;
 }
 
 
@@ -35,7 +41,6 @@ int AsyncConnectionGet::numStillProcessing()
 {
   return (int) (allOutstandingQueries.size());
 }
-
 
 
 void AsyncConnectionGet::outputLargeOutstanding()
@@ -51,30 +56,24 @@ void AsyncConnectionGet::outputLargeOutstanding()
     double timeInQueue = ((double) currentTime) - ((double) it->second->time_admitted);
 
     if (timeInQueue > 50)
-      std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"    "<<it->second->currentlySearchingFor << "\n\n";
+    {
+      std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"    "<<it->second->currentlySearchingFor << "\n";
+      if (it->second->gs == IndividualQueryData::GET)
+        std::cout<<"GET operation\n";
+      else
+        std::cout<<"SET operation\n";
+
+      if (it->second->is_tracking)
+        std::cout<<"TRACKING\n";
+      else
+        std::cout<<"NOT tracking  \n";
+
+      std::cout<<"Time admitted:    "<< it->second->time_admitted <<"\n";
+      std::cout<<"Tracking number:  "<<it->second->tracking_number<<"\n\n\n";
+      
+    }
   }
 }
-
-bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& dtg)
-{
-  std::string query = "";
-
-  static bool first = true;
-  
-  for (int s=0; s < (int)dtg.size(); ++s)
-  {
-    query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
-    query.append(dtg[s]->currentlySearchingFor); //this is the re
-    query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
-  }
-  
-  async_write((*mSocket),
-              boost::asio::buffer(query),
-              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
-  
-  return true;
-}
-
 
 
 //This gets called with a pointer to query data as its argument.  The query data inside of this has waited too long to be processed.
@@ -88,6 +87,8 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
   
   //look through multimap to find 
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
+
+  std::cout<<"\n\nQuery timeout callback\n";
   
   MultiOutstandingQueries::iterator outQueriesIter;
   outQueriesIter = eqRange.first;
@@ -106,7 +107,8 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mOperationResultErrorVector.push_back(cor);  //loads this value back as an error into 
+      mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
+      
 
       std::cout<<"\n\nSending error\n\n";
       
@@ -141,15 +143,6 @@ void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::erro
 
   std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
   
-//   std::string query = "";
-//   query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
-//   query.append(iqd->currentlySearchingFor); //this is the re
-//   query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
-
-
-//   async_write((*mSocket),
-//               boost::asio::buffer(query),
-//               boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
 }
 
 
@@ -158,6 +151,9 @@ void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::erro
 AsyncConnectionGet::~AsyncConnectionGet()
 {
   outputLargeOutstanding();
+
+  std::cout<<"\n\nGet times:   "<<getTime<<"  num gets:  "<<numGets<<"   avg: "<< ((double)getTime) / ((double)numGets)<<"\n\n";
+
   
   if (! NEED_NEW_SOCKET)
   {
@@ -174,84 +170,22 @@ AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
 }
 
 
-//servicing function.  gets results of all the operations that we were processing.
-void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets)
-{
-  if (mPrevReadFrag.size() > 200)
-  {
-    std::cout<<"\n\n\n\nHUGE mPrevReadFrag in asyncConnectionGet:  "<<mPrevReadFrag<<"\n\n";
-    mPrevReadFrag = mPrevReadFrag.substr(0,100);
-  }
-  
-  
-  if ((mOperationResultVector.size() !=0)||(mOperationResultErrorVector.size() !=0)||(mOperationResultTrackedSetsVector.size() !=0))
-  {
-    mTimesBetweenResults = 0;
-  }
 
-  if (allOutstandingQueries.size() != 0)
+  
+  //gives us a socket to connect to
+  void AsyncConnectionGet::initialize( Sirikata::Network::TCPSocket* socket,    boost::asio::ip::tcp::resolver::iterator it)
   {
-    ++mTimesBetweenResults;
-  }
-
-  if (mTimesBetweenResults >  MAX_TIME_BETWEEN_RESULTS)
-  {
-    /*
-    mSocket->close();
-    delete mSocket;
+    mSocket = socket;
+    mReady = PROCESSING;   //need to run connection routine.  so until we receive an ack that conn has finished, we stay in processing state.
     
-    mReady = NEED_NEW_SOCKET;
-    std::cout<<"\n\nReset: need new connection.  Times between: "<< mTimesBetweenResults <<" outstanding queries:  " <<allOutstandingQueries.size()  <<" \n\n\n";
+    mHandlerState = false;
+    mSocket->async_connect(*it,mStrand->wrap(boost::bind(&AsyncConnectionGet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
+
+    mPrevReadFrag = "";
+
     mTimesBetweenResults = 0;
-    */
+    mAllResponseCount = 0;
   }
-  
-  
-  if (mOperationResultVector.size() != 0)
-  {
-    opResults_get.swap(mOperationResultVector);
-    if (mOperationResultVector.size() != 0)
-    {
-      mOperationResultVector.clear();
-    }
-  }
-
-  //  opResults_error = mOperationResultErrorVector;
-  if (mOperationResultErrorVector.size() !=0)
-  {
-    opResults_error.swap( mOperationResultErrorVector);
-    if (mOperationResultErrorVector.size() != 0)
-    {
-      mOperationResultErrorVector.clear();
-    }
-  }
-
-  //  opResults_trackedSets = mOperationResultTrackedSetsVector;
-  if (mOperationResultTrackedSetsVector.size() != 0)
-  {
-    opResults_trackedSets.swap(mOperationResultTrackedSetsVector);
-    if (mOperationResultTrackedSetsVector.size() != 0)
-    {
-      mOperationResultTrackedSetsVector.clear();
-    }
-  }
-}
-
-//gives us a socket to connect to
-void AsyncConnectionGet::initialize( boost::asio::ip::tcp::socket* socket,    boost::asio::ip::tcp::resolver::iterator it)
-{
-  mSocket = socket;
-  mReady = PROCESSING;   //need to run connection routine.  so until we receive an ack that conn has finished, we stay in processing state.
-
-  mHandlerState = false;
-  mSocket->async_connect(*it, boost::bind(&AsyncConnectionGet::connect_handler,this,_1));  //using that tcp socket for an asynchronous connection.
-  
-  mPrevReadFrag = "";
-
-  mTimesBetweenResults = 0;
-  mAllResponseCount = 0;
-  
-}
 
 
 //connection handler.
@@ -275,48 +209,11 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
   //  set_generic_read_error_handler();
   set_generic_stored_not_found_error_handler();
 
-
   //run any outstanding get queries.
   runReQuery();
 }
 
 
-
-//datakey should have a null termination character.
-//public interface for the get command
-bool AsyncConnectionGet::getMulti(CraqDataKey& dataToGet)
-{
-  static std::vector<IndividualQueryData*> tmpDataToGet;
-    
-  if (mReady != READY)
-  {
-    return false;
-  }
-
-  IndividualQueryData* iqd = new IndividualQueryData;
-  iqd->is_tracking = false;
-  iqd->tracking_number = 0;
-  std::string tmpString = dataToGet;
-  tmpString += STREAM_DATA_KEY_SUFFIX;
-  strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
-  iqd->gs = IndividualQueryData::GET;
-  iqd->deadline_timer = NULL;
-  
-  Duration dur = mTimer.elapsed();
-  iqd->time_admitted = (uint64) (((double) dur.toMilliseconds()) - ((double) mBeginDur.toMilliseconds()));
-
-  
-  //need to add the individual query data to allOutstandingQueries.
-  allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
-
-  tmpDataToGet.push_back(iqd);
-  if (tmpDataToGet.size() >= NUM_MULTI)
-  {
-    getMultiQuery(tmpDataToGet);
-    tmpDataToGet.clear();
-  }
-  return true;
-}
 
 
 
@@ -333,73 +230,6 @@ void AsyncConnectionGet::printStatisticsTimesTaken()
   std::cout<<"\n\n\nTHIS IS TOTAL:   "<<total<<"\n\n";
   std::cout<<"\n\n\nTHIS IS AVG:     "<<total/((double) mTimesTaken.size())<<"\n\n";
   
-}
-
-
-
-//public interface for setting data in craq via this connection.
-bool AsyncConnectionGet::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum)
-{
-  if (mReady != READY)
-  {
-    std::cout<<"\n\nbftm debug:  huge error\n\n";
-    exit(1);
-    return false;
-  }
-
-  IndividualQueryData* iqd    =    new IndividualQueryData;
-  iqd->is_tracking            =                      track;
-  iqd->tracking_number        =                   trackNum;
-  std::string tmpStringData = dataToSet;
-  strncpy(iqd->currentlySearchingFor,tmpStringData.c_str(),tmpStringData.size() + 1);
-    //  iqd->currentlySearchingFor  =                  dataToSet;
-  iqd->currentlySettingTo     =                dataToSetTo;
-  iqd->gs                     =   IndividualQueryData::SET;
-  iqd->deadline_timer         =                  NULL;
-
-  
-  Duration dur = mTimer.elapsed();
-  iqd->time_admitted          = dur.toMilliseconds();
-
-  
-  std::string index = dataToSet;
-  index += STREAM_DATA_KEY_SUFFIX;
-
-  allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this 
-
-  
-  mReady = READY;
-
-  //generating the query to write.
-  std::string query;
-  query.append(CRAQ_DATA_SET_PREFIX);
-  query.append(dataToSet); //this is the re
-  query += STREAM_DATA_KEY_SUFFIX; //bftm changed here.
-  query.append(CRAQ_DATA_TO_SET_SIZE);
-  query.append(CRAQ_DATA_SET_END_LINE);
-
-  //convert from integer to string.
-  std::stringstream ss;
-  ss << dataToSetTo;
-  std::string tmper = ss.str();
-  for (int s=0; s< CRAQ_SERVER_SIZE - ((int) tmper.size()); ++s)
-  {
-    query.append("0");
-  }
-    
-  query.append(tmper);
-  query.append(STREAM_CRAQ_TO_SET_SUFFIX);
-  
-  query.append(CRAQ_DATA_SET_END_LINE);
-  StreamCraqDataSetQuery dsQuery;    
-  strncpy(dsQuery,query.c_str(), STREAM_CRAQ_DATA_SET_SIZE);
-
-  
-  //creating callback for write function
-  mSocket->async_write_some(boost::asio::buffer(dsQuery,STREAM_CRAQ_DATA_SET_SIZE -2),
-                            boost::bind(&AsyncConnectionGet::write_some_handler_set,this,_1,_2));
-
-  return true;
 }
 
 
@@ -442,11 +272,21 @@ int AsyncConnectionGet::runReQuery()
 //datakey should have a null termination character.
 //public interface for the get command
 //called from inside of oseg_strand.
-bool AsyncConnectionGet::get(const CraqDataKey& dataToGet)
+void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 {
+  Duration beginningDur = mSpecificTimer.elapsed();
+  
   if (mReady != READY)
   {
-    return false;
+    CraqOperationResult* cor = new CraqOperationResult (0,
+                                                        dataToGet,
+                                                        0,
+                                                        false, //means that the operation has failed
+                                                        CraqOperationResult::GET,
+                                                        false); //false means that we weren't tracking it anyways.
+
+    mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
+    return;
   }
 
   IndividualQueryData* iqd = new IndividualQueryData;
@@ -463,12 +303,25 @@ bool AsyncConnectionGet::get(const CraqDataKey& dataToGet)
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
 
-  iqd->deadline_timer  = new boost::asio::deadline_timer ((*m_io_service), boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
-
+  iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
+  iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
+  
   iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, iqd)));
   
-  return getQuery(dataToGet);
+  getQuery(dataToGet);
+
+  
+  Duration endingDur = mSpecificTimer.elapsed();
+  getTime += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
+  ++numGets;
 }
+
+
+void AsyncConnectionGet::getBound(const CraqObjectID& obj_dataToGet)
+{
+  get(obj_dataToGet.cdk);
+}
+
 
 
 
@@ -487,7 +340,6 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
   async_write((*mSocket),
               boost::asio::buffer(query),
               boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
-
 
   return true;
 }
@@ -591,6 +443,9 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
 
   mPrevReadFrag = response;  //apparently I've been running into the problem of what happens when data gets interrupted mid-stream
                              //The solution is to save the end bit of data that couldn't be parsed correctly (now in "response" variable and save it for appending to the next read.
+
+  if ((int)mPrevReadFrag.size() > MAX_GET_PREV_READ_FRAG_SIZE)
+    mPrevReadFrag.substr(((int)mPrevReadFrag.size()) - CUT_GET_PREV_READ_FRAG);
   
   return returner;
 }
@@ -743,17 +598,18 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
     if (outQueriesIter->second->gs == IndividualQueryData::GET )
     {
       //says that this is a get.
-      CraqOperationResult* cor  = new CraqOperationResult(0,
-                                                          outQueriesIter->second->currentlySearchingFor,
-                                                          outQueriesIter->second->tracking_number,
-                                                          true,
-                                                          CraqOperationResult::GET,
-                                                          false); //this is a not_found, means that we add 0 for the id found
+      CraqOperationResult* cor  = new CraqOperationResult (0,
+                                                           outQueriesIter->second->currentlySearchingFor,
+                                                           outQueriesIter->second->tracking_number,
+                                                           true,
+                                                           CraqOperationResult::GET,
+                                                           false); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      
-      mOperationResultVector.push_back(cor); //loads this not found result into the results vector.
 
+      mResultStrand->post(boost::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
+
+      
       if (outQueriesIter->second->deadline_timer != NULL)
       {
         outQueriesIter->second->deadline_timer->cancel();
@@ -866,16 +722,20 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to 
     {
       
-      CraqOperationResult* cor  = new CraqOperationResult(sID,
-                                                          outQueriesIter->second->currentlySearchingFor,
-                                                          outQueriesIter->second->tracking_number,
-                                                          true,
-                                                          CraqOperationResult::GET,
-                                                          false); //this is a not_found, means that we add 0 for the id found
+      CraqOperationResult* cor  = new CraqOperationResult (sID,
+                                                           outQueriesIter->second->currentlySearchingFor,
+                                                           outQueriesIter->second->tracking_number,
+                                                           true,
+                                                           CraqOperationResult::GET,
+                                                           false); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mOperationResultVector.push_back(cor);
 
+
+      mResultStrand->post(boost::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
+
+
+      
       if (outQueriesIter->second->deadline_timer != NULL)
       {
         outQueriesIter->second->deadline_timer->cancel();
@@ -952,15 +812,17 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to 
     {
-      CraqOperationResult* cor  = new CraqOperationResult(outQueriesIter->second->currentlySettingTo,
-                                                          outQueriesIter->second->currentlySearchingFor,
-                                                          outQueriesIter->second->tracking_number,
-                                                          true,
-                                                          CraqOperationResult::SET,
-                                                          outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
+      CraqOperationResult* cor  = new CraqOperationResult (outQueriesIter->second->currentlySettingTo,
+                                                           outQueriesIter->second->currentlySearchingFor,
+                                                           outQueriesIter->second->tracking_number,
+                                                           true,
+                                                           CraqOperationResult::SET,
+                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mOperationResultVector.push_back(cor);
+
+      mResultStrand->post(boost::bind(&ObjectSegmentation::craqSetResult, mOSeg, cor));
+
 
       if (outQueriesIter->second->deadline_timer != NULL)
       {
@@ -1015,11 +877,6 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
   mHandlerState = true;
   
   //sets read handler
-  //  boost::asio::async_read_until((*mSocket),
-  //                                (*sBuff),
-  //                                reg,
-  //                                boost::bind(&AsyncConnectionGet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff));
-
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
@@ -1077,25 +934,6 @@ int AsyncConnectionGet::getRespCount()
 {
   return mAllResponseCount;
 }
-
-//counts the number of instances of toFind in initialString
-int AsyncConnectionGet::countInstancesOf(const std::string& needle, const std::string& haystack)
-{
-  int returner   = 0;
-  int indexBegin = 0;
-  int sizeNeedle = needle.size();
-  
-  size_t index = haystack.find(needle,indexBegin);
-  while (index != std::string::npos)
-  {
-    indexBegin = ((int)index) + sizeNeedle;
-    index = haystack.find(needle,indexBegin);
-    ++returner;
-  }
-
-  return returner;
-}
-
 
 
 // Looks for and removes all instances of complete stored messages

@@ -15,10 +15,19 @@ namespace CBR
   CraqCacheGood::CraqCacheGood()
   {
     mTimer.start();
+    insertMilliseconds = 0;
+    numInserted = 0;
+    maintainDur = 0;
+    numMaintained = 0;
   }
 
   CraqCacheGood::~CraqCacheGood()
   {
+
+    std::cout<<"\n\n  insertMilliseconds:  "<<insertMilliseconds<<"  numInserted:   "<<numInserted<<"    avg: "<<((double)insertMilliseconds)/((double) numInserted)<<"\n\n";
+
+    std::cout<<"\n\n maintainDur:  "<<maintainDur<<"   numMaintained  "<<numMaintained<<"  avg: "<<((double)maintainDur)/((double)numMaintained)<<"\n\n";
+    
   }
 
 
@@ -27,6 +36,7 @@ namespace CBR
   {
     if ((int)idRecMap.size() > LARGEST_CRAQ_CACHE_SIZE)
     {
+      Duration beginningDur = mTimer.elapsed();
       int numObjectsDeleted = 0;
 
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
@@ -49,12 +59,19 @@ namespace CBR
         //delete the record from the multimap
         timeRecMap.erase(tMapIter++);
       }
+      Duration endingDur = mTimer.elapsed();
+      maintainDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
+      ++numMaintained;
     }
+
+
   }
 
 
   void CraqCacheGood::insert(const UUID& uuid, const ServerID& sID)
   {
+    Duration beginningDur = mTimer.elapsed();
+    
     Duration currentDur = mTimer.elapsed();
     
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
@@ -121,6 +138,12 @@ namespace CBR
       idRecMap.insert(std::pair<UUID,CraqCacheRecord*>(uuid,rcdIDRecMap));
       maintain();
     }
+
+    Duration endingDur = mTimer.elapsed();
+    insertMilliseconds += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
+    ++numInserted;
+    
+    
   }
 
   

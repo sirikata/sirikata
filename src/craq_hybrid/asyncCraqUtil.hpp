@@ -40,10 +40,18 @@ namespace CBR
   const int STREAM_CRAQ_NUM_CONNECTIONS_GET        = 8;
 
   const int STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS  = 560; //this is in ms
-  
+  const int STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS  = 40000; //essentially infinity
 
   const char STREAM_CRAQ_READ_RESULT_UNTIL_REGEX[] = "YY\r\n";
   const char STREAM_CRAQ_READ_ERROR_RESULT_UNTIL_REGEX[] = "ERROR\r\n";
+
+
+  const int MAX_GET_PREV_READ_FRAG_SIZE    = 200;
+  const int CUT_GET_PREV_READ_FRAG         = 100;
+  
+  const int MAX_SET_PREV_READ_FRAG_SIZE    = 200;
+  const int CUT_SET_PREV_READ_FRAG         = 100;
+
   
 }//namespace
 

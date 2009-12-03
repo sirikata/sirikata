@@ -4,74 +4,50 @@
 #include "asyncCraqHybrid.hpp"
 #include "../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
-
+#include "../ObjectSegmentation.hpp"
 
 namespace CBR
 {
 
-AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, IOStrand* str)
+  AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg)
   : ctx(con),
-    mStrand(str),
-    aCraqGet(con,str),
-    aCraqSet(con,str)
-{
-
-}
-
-void AsyncCraqHybrid::initialize(std::vector<CraqInitializeArgs> initArgs)
-{
-  aCraqGet.initialize(initArgs);
-  aCraqSet.initialize(initArgs);
-}
-
-AsyncCraqHybrid::~AsyncCraqHybrid()
-{
-
-}
-
-
-int AsyncCraqHybrid::set(CraqDataSetGet cdSet)
-{
-  return aCraqSet.set(cdSet);
-}
-
-int AsyncCraqHybrid::get(CraqDataSetGet cdGet)
-{
-  return aCraqGet.get(cdGet);
-}
-
-
-void AsyncCraqHybrid::tick(std::vector<CraqOperationResult*>&allGetResults, std::vector<CraqOperationResult*>&allTrackedResults)
-{
-
-  std::vector<CraqOperationResult*> getResults;
-  std::vector<CraqOperationResult*> trackedSetResults;
+    mGetStrand(con->ioService->createStrand()),
+    mSetStrand(con->ioService->createStrand()),
+    aCraqGet(con,mGetStrand,strand_to_post_results_to,oseg),
+    aCraqSet(con,mSetStrand,strand_to_post_results_to,oseg)
+  {
+  }
   
-  aCraqGet.tick(getResults,trackedSetResults);
+  void AsyncCraqHybrid::initialize(std::vector<CraqInitializeArgs> initArgs)
+  {
+    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::initialize,&aCraqGet,initArgs));
+    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::initialize,&aCraqSet,initArgs));
+  }
 
-  allGetResults.insert(allGetResults.end(), getResults.begin(), getResults.end());
-  allTrackedResults.insert(allTrackedResults.end(), trackedSetResults.begin(), trackedSetResults.end());
+  AsyncCraqHybrid::~AsyncCraqHybrid()
+  {
+  }
 
-  
-  std::vector<CraqOperationResult*> getResults2;
-  std::vector<CraqOperationResult*> trackedSetResults2;
 
-  aCraqSet.tick(getResults2,trackedSetResults2);
-  
-  allGetResults.insert(allGetResults.end(), getResults2.begin(), getResults2.end());
-  allTrackedResults.insert(allTrackedResults.end(),trackedSetResults2.begin(), trackedSetResults2.end());
-  
-}
+  void AsyncCraqHybrid::set(CraqDataSetGet cdSet, uint64 trackingNumber)
+  {
+    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::set,&aCraqSet,cdSet, trackingNumber));
+  }
 
-int AsyncCraqHybrid::queueSize()
-{
-  return aCraqSet.queueSize() + aCraqGet.queueSize();
-}
+  void AsyncCraqHybrid::get(CraqDataSetGet cdGet)
+  {
+    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::get,&aCraqGet, cdGet));
+  }
 
-int AsyncCraqHybrid::numStillProcessing()
-{
-  return aCraqSet.numStillProcessing() + aCraqGet.numStillProcessing();
-}
+  int AsyncCraqHybrid::queueSize()
+  {
+    return aCraqSet.queueSize() + aCraqGet.queueSize();
+  }
+
+  int AsyncCraqHybrid::numStillProcessing()
+  {
+    return aCraqSet.numStillProcessing() + aCraqGet.numStillProcessing();
+  }
 
 }//end namespace
 

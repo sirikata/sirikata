@@ -6,27 +6,26 @@
 #include <boost/regex.hpp>
 #include <boost/asio.hpp>
 
+
 #include "asyncConnectionGet.hpp"
 #include "../asyncCraqUtil.hpp"
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/network/Asio.hpp>
+
+#define CRAQ_MAX_PUSH_GET 10
 
 namespace CBR
 {
 
-
-//nothing to destroy
-AsyncCraqGet::~AsyncCraqGet()
-{
-  io_service.reset();  
-  //  delete mSocket;
-
-  for (int s= 0;s < (int) mConnections.size(); ++s)
+  AsyncCraqGet::~AsyncCraqGet()
   {
-    delete mConnections[s];
+    for (int s= 0;s < (int) mConnections.size(); ++s)
+    {
+      delete mConnections[s];
+      delete mConnectionsStrands[s];
+    }
   }
-  
-}
 
   int AsyncCraqGet::getRespCount()
   {
@@ -35,49 +34,64 @@ AsyncCraqGet::~AsyncCraqGet()
     {
       returner += mConnections[s]->getRespCount();
     }
-
     return returner;
   }
   
 
-//nothing to initialize
-AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* str)
-  : ctx(con),
-    mStrand(str)
-{
-}
-
-int AsyncCraqGet::runReQuery()
-{
-  int returner = 0;
-  for (int s=0; s < (int) mConnections.size(); ++s)
+  //nothing to initialize
+  AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
+    : PollingService(strand_this_runs_on),
+      ctx(con),
+      mStrand(strand_this_runs_on),
+      mResultsStrand(strand_to_post_results_to),
+      mOSeg(parent_oseg_called)
   {
-    if (mConnections[s]->ready() == AsyncConnectionGet::READY)
-    {
-      returner += mConnections[s]->runReQuery();
-    }
   }
-  return returner;
-}
+  
+  int AsyncCraqGet::runReQuery()
+  {
+    int returner = 0;
+    for (int s=0; s < (int) mConnections.size(); ++s)
+    {
+      if (mConnections[s]->ready() == AsyncConnectionGet::READY)
+      {
+        returner += mConnections[s]->runReQuery();
+      }
+    }
+    return returner;
+  }
 
 void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 {
   
   mIpAddPort = ipAddPort;
-  
-  boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
 
+  Sirikata::Network::TCPResolver resolver((*ctx->ioService)); //a resolver can resolve a query into a series of endpoints.
+  
   mCurrentTrackNum = 10;
   
   //  AsyncConnectionTwo tmpConn;
 
   for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_GET; ++s)
   {
-    AsyncConnectionGet* tmpConn = new AsyncConnectionGet (ctx,mStrand, &io_service);
+
+    IOStrand* tmpStrand         = ctx->ioService->createStrand();
+    mConnectionsStrands.push_back(tmpStrand);
+
+    
+    AsyncConnectionGet* tmpConn = new AsyncConnectionGet (ctx,             //space context
+                                                          tmpStrand,       //strand specific for this connection
+                                                          mStrand,         //use asyncCraqGet's strand to post errors back on.
+                                                          mResultsStrand,  //strand to post results to.
+                                                          this,            //tells connection to post errors back to this.
+                                                          mOSeg            //tells connection to post results back to mOSeg.
+                                                          );
     mConnections.push_back(tmpConn);
   }
 
-  boost::asio::ip::tcp::socket* passSocket;
+  
+  Sirikata::Network::TCPSocket* passSocket;
+
   
   if (((int)ipAddPort.size()) >= STREAM_CRAQ_NUM_CONNECTIONS_GET)
   {
@@ -86,8 +100,9 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     {
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-      passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+      
+      passSocket   = new Sirikata::Network::TCPSocket((*ctx->ioService));
+      mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
     }
   }
   else
@@ -103,9 +118,6 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       percentageConnectionsServed = ((double)s)/((double) STREAM_CRAQ_NUM_CONNECTIONS_GET);
       whichRouterServing = (int)(percentageConnectionsServed*((double)ipAddPort.size()));
 
-      //      whichRouterServing = 0; //bftm debug
-
-      
       if (whichRouterServing  != whichRouterServingPrevious)
       {
         boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
@@ -115,53 +127,13 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
         
         whichRouterServingPrevious = whichRouterServing;
       }
-      passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+
+      passSocket   = new Sirikata::Network::TCPSocket((*ctx->ioService));
+      mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
     }
   }
   
 }
-
-void AsyncCraqGet::runTestOfAllConnections()
-{
-  //temporarily empty.
-}
-
-void AsyncCraqGet::runTestOfConnection()
-{
-  //temporarily empty.
-}
-
-
-//assumes that we're already connected.
-int AsyncCraqGet::set(const CraqDataSetGet& dataToSet)
-{
-  std::cout<<"\n\nShould not be calling set from inside of asyncCraqGet\n\n";
-  assert(false);  
-  
-  //force this to be a set message.
-
-  CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToSet.dataKey,dataToSet.dataKeyValue,dataToSet.trackMessage,CraqDataSetGet::SET);
-
-  if (dataToSet.trackMessage)
-  {
-    cdQuery->trackingID = mCurrentTrackNum;
-    ++mCurrentTrackNum;
-
-    mQueue.push(cdQuery);
-    straightPoll();
-    return mCurrentTrackNum - 1;
-      
-  }
-  
-  mQueue.push(cdQuery);
-  straightPoll();
-  checkConnections(0);
-
-  return 0;
-}
-
-
 
 
 /*
@@ -173,165 +145,67 @@ int AsyncCraqGet::queueSize()
 }
 
 
-
-int AsyncCraqGet::numStillProcessing()
-{
-  int returner = 0;
-
-  for (int s=0; s < (int)mConnections.size(); ++s)
+  int AsyncCraqGet::numStillProcessing()
   {
-    returner = returner + ((int)mConnections[s]->numStillProcessing());
-  }
-
-
-  return returner;
-}
-
-
-
-
-int AsyncCraqGet::getMulti(CraqDataSetGet& dataToGet)
-{
-  CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
-
-  mQueue.push(cdQuery);
-
-  int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
-  checkConnectionsMulti(rand_connection);
-  return 0;
-}
-
-  
-int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
-{
-  CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
-  mQueue.push(cdQuery);
-
-  int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
-  checkConnections(rand_connection);
-  return 0;
-}
-
-
-void AsyncCraqGet::straightPoll()
-{
-  int numHandled = io_service.poll();
-  
-  if (numHandled == 0)
-    io_service.reset();
-}
-
-
-/*
-  tick processes 
-  tick returns all the 
-*/
-void AsyncCraqGet::tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
-{
-
-  straightPoll();
-  
-  std::vector<CraqOperationResult*> tickedMessages_getResults;
-  std::vector<CraqOperationResult*> tickedMessages_errorResults;
-  std::vector<CraqOperationResult*> tickedMessages_trackedSetResults;
-  
-  for (int s=0; s < (int)mConnections.size(); ++s)
-  {
-    if (tickedMessages_getResults.size() != 0)
-      tickedMessages_getResults.clear();
-
-    if (tickedMessages_errorResults.size() != 0)
-      tickedMessages_errorResults.clear();
-
-    if (tickedMessages_trackedSetResults.size() != 0)
-      tickedMessages_trackedSetResults.clear();
-
-
-    //can optimize by setting separate tracks for 
-    mConnections[s]->tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
-
-
-    getResults.insert(getResults.end(), tickedMessages_getResults.begin(), tickedMessages_getResults.end());
-    trackedSetResults.insert(trackedSetResults.end(),tickedMessages_trackedSetResults.begin(), tickedMessages_trackedSetResults.end());
-
-    processErrorResults(tickedMessages_errorResults);
+    int returner = 0;
     
-    checkConnections(s); //checks whether connection is ready for an additional query and also checks if it needs a new socket.
-  }
-}
-
-
-
-
-
-
-/*
-  tick processes 
-  tick returns all the 
-*/
-void AsyncCraqGet::tickMulti(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
-{
-
-  straightPoll();
-  
-  std::vector<CraqOperationResult*> tickedMessages_getResults;
-  std::vector<CraqOperationResult*> tickedMessages_errorResults;
-  std::vector<CraqOperationResult*> tickedMessages_trackedSetResults;
-  
-  for (int s=0; s < (int)mConnections.size(); ++s)
-  {
-    if (tickedMessages_getResults.size() != 0)
-      tickedMessages_getResults.clear();
-
-    if (tickedMessages_errorResults.size() != 0)
-      tickedMessages_errorResults.clear();
-
-    if (tickedMessages_trackedSetResults.size() != 0)
-      tickedMessages_trackedSetResults.clear();
-
-
-    //can optimize by setting separate tracks for 
-    mConnections[s]->tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
-
-    getResults.insert(getResults.end(), tickedMessages_getResults.begin(), tickedMessages_getResults.end());
-    trackedSetResults.insert(trackedSetResults.end(), tickedMessages_trackedSetResults.begin(), tickedMessages_trackedSetResults.end());
-
-    
-    processErrorResults(tickedMessages_errorResults);
-    
-    checkConnectionsMulti(s); //checks whether connection is ready for an additional query and also checks if it needs a new socket.
-  }
-}
-
-
-
-
-
-
-
-
-/*
-  errorRes is full of results that went bad from a craq connection.  In the future, we may do something more intelligent, but for now, we are just going to put the request back in mQueue
-*/
-void AsyncCraqGet::processErrorResults(std::vector <CraqOperationResult*> & errorRes)
-{
-  for (int s=0;s < (int)errorRes.size(); ++s)
-  {
-    if (errorRes[s]->whichOperation == CraqOperationResult::GET)
+    for (int s=0; s < (int)mConnections.size(); ++s)
     {
-      CraqDataSetGet* cdSG = new CraqDataSetGet (errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
+      returner = returner + ((int)mConnections[s]->numStillProcessing());
+    }
+
+    return returner;
+  }
+
+  void AsyncCraqGet::poll()
+  {
+    int numTries = 0;
+    while((mQueue.size() != 0) && (numTries < CRAQ_MAX_PUSH_GET))
+    {
+      ++numTries;
+      int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
+      checkConnections(rand_connection);
+    }
+  }
+  
+  void AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
+  {
+    CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
+    mQueue.push(cdQuery);
+
+    int numTries = 0;
+    while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_GET))
+    {
+      ++numTries;
+      int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
+      checkConnections(rand_connection);
+    }
+  }
+
+
+void AsyncCraqGet::erroredSetValue(CraqOperationResult* cor)
+{
+  std::cout<<"\n\nShould not received an errored set inside of asyncCraqGet.cpp\n\n";
+  assert(false);
+}
+
+
+  //will be posted to from different connections.  am responsible for deleting.
+  void AsyncCraqGet::erroredGetValue(CraqOperationResult* errorRes)
+  {
+    if (errorRes->whichOperation == CraqOperationResult::GET)
+    {
+      CraqDataSetGet* cdSG = new CraqDataSetGet (errorRes->objID,errorRes->servID,errorRes->tracking, CraqDataSetGet::GET);
       mQueue.push(cdSG);
     }
     else
     {
-      CraqDataSetGet* cdSG = new CraqDataSetGet (errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
-      mQueue.push(cdSG);      
+      std::cout<<"\n\nShould never be receiving an error result for a set in asyncCraqGet.cpp\n\n";
+      assert(false);
     }
 
-    delete errorRes[s];
-    
+    delete errorRes;
   }
-}
 
 
 /*
@@ -344,7 +218,6 @@ void AsyncCraqGet::checkConnections(int s)
   
   int numOperations = 0;
 
-
   if (mConnections[s]->ready() == AsyncConnectionGet::READY)
   {
     if (mQueue.size() != 0)
@@ -358,14 +231,16 @@ void AsyncCraqGet::checkConnections(int s)
       if (cdSG->messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.
-        mConnections[s]->get(cdSG->dataKey);
+        CraqObjectID tmpCraqID;
+        memcpy(tmpCraqID.cdk, cdSG->dataKey, CRAQ_DATA_KEY_SIZE);
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::getBound,mConnections[s],tmpCraqID));
+
       }
       else if (cdSG->messageType == CraqDataSetGet::SET)
       {
-        //performing a set in connections.
-        mConnections[s]->set(cdSG->dataKey, cdSG->dataKeyValue, cdSG->trackMessage, cdSG->trackingID);
+        std::cout<<"\n\nShould be incapable of performing a set from asyncCraqGet\n\n";
+        assert(false);
       }
-
       delete cdSG;
     }
   }
@@ -376,54 +251,6 @@ void AsyncCraqGet::checkConnections(int s)
     std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
   }
 }
-
-
-
-void AsyncCraqGet::checkConnectionsMulti(int s)
-{
-  if (s >= (int)mConnections.size())
-    return;
-  
-  int numOperations = 0;
-
-  
-  //  if (mConnections[s].ready() == AsyncConnectionTwo::READY)
-  if (mConnections[s]->ready() == AsyncConnectionGet::READY)
-  {
-    if (mQueue.size() != 0)
-    {
-      //need to put in another
-      CraqDataSetGet* cdSG = mQueue.front();
-      mQueue.pop();
-
-      ++numOperations;
-      
-      if (cdSG->messageType == CraqDataSetGet::GET)
-      {
-        //perform a get in  connections.
-        mConnections[s]->getMulti(cdSG->dataKey);
-      }
-      else if (cdSG->messageType == CraqDataSetGet::SET)
-      {
-        //performing a set in connections.
-        mConnections[s]->set(cdSG->dataKey, cdSG->dataKeyValue, cdSG->trackMessage, cdSG->trackingID);
-      }
-
-      delete cdSG;
-    }
-  }
-  //  else if (mConnections[s].ready() == AsyncConnectionTwo::NEED_NEW_SOCKET)
-  else if (mConnections[s]->ready() == AsyncConnectionGet::NEED_NEW_SOCKET)
-  {
-    //need to create a new socket for the other
-    reInitializeNode(s);
-    std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
-  }
-}
-
-
-
-
 
 //means that we need to connect a new socket to the service.
 void AsyncCraqGet::reInitializeNode(int s)
@@ -431,16 +258,18 @@ void AsyncCraqGet::reInitializeNode(int s)
   if (s >= (int)mConnections.size())
     return;
 
-  boost::asio::ip::tcp::socket* passSocket;
 
-  boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
+  Sirikata::Network::TCPSocket* passSocket;
+  Sirikata::Network::TCPResolver resolver(*ctx->ioService);   //a resolver can resolve a query into a series of endpoints.
   
   if ( ((int)mIpAddPort.size()) >= STREAM_CRAQ_NUM_CONNECTIONS_GET)
   {
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-    passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+
+    passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
+
+    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
   }
   else
   {
@@ -455,8 +284,9 @@ void AsyncCraqGet::reInitializeNode(int s)
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[whichRouterServing].ipAdd.c_str(), mIpAddPort[whichRouterServing].port.c_str());
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         
-    passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+    passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
+    
+    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
   }
 }
 

@@ -19,7 +19,7 @@
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>
 
-#define CRAQ_INIT_WAIT_TIME 2000
+
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
@@ -45,6 +45,9 @@ namespace CBR
   private:
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
+    double checkOwnTimeDur;
+    int checkOwnTimeCount;
+    
     //debugging:
 
     Timer mTimer;
@@ -69,8 +72,6 @@ namespace CBR
     std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
     boost::mutex inTransOrLookup_m;
 
-    
-    std::map<UUID,ServerID> mFinishedMoveOrLookup;
 
     struct TrackedSetResultsData
     {
@@ -83,10 +84,6 @@ namespace CBR
 
     std::vector<UUID> mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
     boost::mutex receivingObjects_m;
-
-    
-    void iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
-    void basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
 
 
     //what to do when craq can't find the object
@@ -103,15 +100,16 @@ namespace CBR
     //end what to do when craq can't find the object
 
 
-    //for lookups and sets
-    //    AsyncCraq craqDhtGet;
-    //    AsyncCraq craqDhtSet;
+    //for lookups and sets respectively
     AsyncCraqHybrid craqDhtGet;
     AsyncCraqHybrid craqDhtSet;
-    
 
-    IOStrand* postingStrand;
+    int mAtomicTrackID;
+    boost::mutex atomic_track_id_m;
+    int getUniqueTrackID();
     
+    IOStrand* postingStrand;
+    IOStrand* mStrand;
 
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
@@ -120,7 +118,8 @@ namespace CBR
     bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
     std::vector<UUID> vectorObjectsInMigration ;
 
-
+    void removeFromInTransOrLookup(const UUID& obj_id);
+    void removeFromReceivingObjects(const UUID& obj_id);
 
     //for message addition. when add an object, send a message to the server that you can now finish adding it to forwarder, loc services, etc.
     struct TrackedSetResultsDataAdded
@@ -133,6 +132,7 @@ namespace CBR
     CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id);
     //end message addition.
 
+    
 
     //building for the cache
     ServerID satisfiesCache(const UUID& obj_id);
@@ -165,11 +165,13 @@ namespace CBR
     virtual void receiveMessage(Message* msg);
     virtual bool clearToMigrate(const UUID& obj_id);
     virtual void newObjectAdd(const UUID& obj_id);
+    virtual void craqGetResult(CraqOperationResult* cor);
+    virtual void craqSetResult(CraqOperationResult* cor);
 
+    
     CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
     void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
     void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);
-    void processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated);
     void processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
 
   };

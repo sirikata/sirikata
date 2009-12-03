@@ -107,8 +107,6 @@ protected:
       ~Forwarder();
       void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq);
 
-      void tickOSeg();
-
 
       // Routing interface for servers.  This is used to route messages that originate from
       // a server provided service, and thus don't have a source object.  Messages may be destined

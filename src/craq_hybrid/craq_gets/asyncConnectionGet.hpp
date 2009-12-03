@@ -5,12 +5,16 @@
 #include "../asyncCraqUtil.hpp"
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/network/Asio.hpp>
 #include "../../Timer.hpp"
+#include "../../ObjectSegmentation.hpp"
+#include "../asyncCraqScheduler.hpp"
+#include "../../Utility.hpp"
+
 
 namespace CBR
 {
 
-//static const int MAX_TIME_BETWEEN_RESULTS = 10000;
 static const int MAX_TIME_BETWEEN_RESULTS = 50000;
 
 
@@ -26,7 +30,7 @@ private:
     bool is_tracking;
     int tracking_number;
     uint64 time_admitted; //in milliseconds what time was when lookup was requested.
-    boost::asio::deadline_timer* deadline_timer;
+    Sirikata::Network::DeadlineTimer* deadline_timer;
   };
 
   
@@ -34,31 +38,27 @@ public:
 
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING}; //we'll probably be always processing or need new socket.  (minus the initial connection registration.
 
-  void initialize(boost::asio::ip::tcp::socket* socket,     boost::asio::ip::tcp::resolver::iterator );  
+  void initialize(Sirikata::Network::TCPSocket* socket,     boost::asio::ip::tcp::resolver::iterator );  
 
   void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
   
   AsyncConnectionGet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
-  bool set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum);
-  bool get(const CraqDataKey& dataToGet);
-  bool getMulti( CraqDataKey& dataToGet);
+  void get(const CraqDataKey& dataToGet);
+  void getBound(const CraqObjectID& obj_dataToGet);
   
   ~AsyncConnectionGet();
-  AsyncConnectionGet(SpaceContext* con, IOStrand* str, boost::asio::io_service* iserve);
-
+  AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg );
+  
   int numStillProcessing();
   void printOutstanding();
 
   int runReQuery(); //re-query everything remaining in outstanding results.
-  bool getMultiQuery(const std::vector<IndividualQueryData*>& dtg);
   void printStatisticsTimesTaken();
 
   int getRespCount();
   
 private:
-
-  
   
   int mAllResponseCount;
   
@@ -66,17 +66,15 @@ private:
   
   int mTimesBetweenResults;
   bool mHandlerState;
-  
-  boost::asio::ip::tcp::socket* mSocket;
 
-  bool getMultiQuery(const CraqDataKey& dataToGet);
+  
+  Sirikata::Network::TCPSocket* mSocket;
+
   
   void outputLargeOutstanding();
   
   typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
-  
-  std::string mAllResps;
   
   ConnectionState mReady;
 
@@ -89,9 +87,6 @@ private:
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
   
-  std::vector<CraqOperationResult*> mOperationResultVector;
-  std::vector<CraqOperationResult*> mOperationResultErrorVector;
-  std::vector<CraqOperationResult*> mOperationResultTrackedSetsVector;
 
   void set_generic_read_result_handler();
   void set_generic_read_error_handler();
@@ -102,10 +97,6 @@ private:
   void generic_read_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
 
   
-  bool processGet(const std::string& response);
-  bool processSet(const std::string& response);
-
-  
   void processValueNotFound(std::string dataKey); //takes in 
   void processValueFound(std::string dataKey, int sID);
   void processStoredValue(std::string dataKey);
@@ -114,9 +105,6 @@ private:
   bool parseValueNotFound(std::string response, std::string& dataKey);
   bool parseValueValue(std::string response, std::string& dataKey,int& sID);
   bool parseStoredValue(const std::string& response, std::string& dataKey);
-
-
-  
 
   bool processEntireResponse(std::string response);
 
@@ -131,7 +119,6 @@ private:
   
   std::string mPrevReadFrag;
 
-  int countInstancesOf(const std::string& needle, const std::string& haystack);  
 
   //***********handlers**************
   
@@ -153,8 +140,14 @@ private:
   //***strand and context
   SpaceContext* ctx;
   IOStrand* mStrand;
+  IOStrand* mPostErrorsStrand;
+  IOStrand* mResultStrand;
+  AsyncCraqScheduler* mSchedulerMaster;  
+  ObjectSegmentation* mOSeg;
   Timer mTimer;
-  boost::asio::io_service* m_io_service;
+  Timer mSpecificTimer;
+  double getTime;
+  int numGets;
   Duration mBeginDur;
   
 };

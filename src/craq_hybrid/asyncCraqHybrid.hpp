@@ -3,6 +3,7 @@
 #include "asyncCraqUtil.hpp"
 #include "../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include "asyncCraqScheduler.hpp"
 
 #ifndef  __ASYNC_CRAQ_HYBRID_HPP__
 #define  __ASYNC_CRAQ_HYBRID_HPP__
@@ -10,19 +11,16 @@
 namespace CBR
 {
 
-class AsyncCraqHybrid
+  class AsyncCraqHybrid
 {
 public:
-  AsyncCraqHybrid(SpaceContext* con, IOStrand* str);
+  AsyncCraqHybrid(SpaceContext* con, IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg);
   ~AsyncCraqHybrid();
-  
   
   void initialize(std::vector<CraqInitializeArgs>);
 
-  int set(CraqDataSetGet cdSet);
-  int get(CraqDataSetGet cdGet);
-
-  void tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
+  void set(CraqDataSetGet cdSet, uint64 tracking_number = 0);
+  void get(CraqDataSetGet cdGet);
 
   int queueSize();
   int numStillProcessing();
@@ -30,7 +28,9 @@ public:
 private:
 
   SpaceContext*  ctx;
-  IOStrand*  mStrand;
+
+  IOStrand* mGetStrand;
+  IOStrand* mSetStrand;
   
   AsyncCraqGet aCraqGet;
   AsyncCraqSet aCraqSet;

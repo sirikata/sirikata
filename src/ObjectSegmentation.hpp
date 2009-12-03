@@ -7,6 +7,7 @@
 #include "PollingService.hpp"
 #include <iostream>
 #include <iomanip>
+#include "craq_oseg/asyncUtil.hpp"
 //object segmenter h file
 
 namespace CBR
@@ -74,8 +75,9 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool) = 0;
     virtual void newObjectAdd(const UUID& obj_id) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
-
-
+    virtual void craqGetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
+    virtual void craqSetResult(CraqOperationResult* cor) = 0; //also responsible for destroying 
+        
   };
 }
 #endif

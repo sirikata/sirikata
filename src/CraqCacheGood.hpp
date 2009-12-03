@@ -46,6 +46,12 @@ namespace CBR
 
     boost::mutex mMutex;
 
+    double insertMilliseconds;
+    int numInserted;
+    double maintainDur;
+    int numMaintained;
+
+    
   public:
     CraqCacheGood();
     ~CraqCacheGood();

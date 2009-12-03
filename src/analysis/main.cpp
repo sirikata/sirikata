@@ -343,6 +343,19 @@ int main(int argc, char** argv) {
         oseg_process_stream.flush();
         oseg_process_stream.close();
 
+        //oseg processed lookups in csv
+//         String object_segmentation_processed_filename_csv = "oseg_object_segmentation_processed_file";
+//         object_segmentation_processed_filename_csv += ".csv";
+
+//         ObjectSegmentationProcessedRequestsAnalysis processedAnalysisCSV(STATS_TRACE_FILE,max_space_servers);
+//         std::ofstream oseg_process_stream_csv(object_segmentation_processed_filename_csv.c_str());
+
+//         processedAnalysisCSV.printDataCSV(oseg_process_stream, true, osegProcessedAfterSeconds);
+//         oseg_process_stream_csv.flush();
+//         oseg_process_stream_csv.close();
+
+
+        
         //completed round trip migrate times
         String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";
         migration_round_trip_times_filename += ".dat";

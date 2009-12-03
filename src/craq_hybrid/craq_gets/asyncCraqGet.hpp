@@ -8,6 +8,7 @@
 
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/network/Asio.hpp>
 
 #ifndef __ASYNC_CRAQ_GET_CLASS_H__
 #define __ASYNC_CRAQ_GET_CLASS_H__
@@ -16,62 +17,48 @@ namespace CBR
 {
 
 
-class AsyncCraqGet
-{
-public:
-  AsyncCraqGet(SpaceContext* ctx, IOStrand* str);
-  ~AsyncCraqGet();
+  class AsyncCraqGet : AsyncCraqScheduler, PollingService
+  {
+  public:
+    AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
+    ~AsyncCraqGet();
+    
+    int runReQuery();
+    void initialize(std::vector<CraqInitializeArgs>);
+
+    virtual void erroredGetValue(CraqOperationResult* cor);
+    virtual void erroredSetValue(CraqOperationResult* cor);
+    virtual void poll();
   
-  int runReQuery();
+    void get(const CraqDataSetGet& cdGet);
+
+    int queueSize();
+    int numStillProcessing();
+    int getRespCount();
   
-  enum AsyncCraqReqStatus{REQUEST_PROCESSED, REQUEST_NOT_PROCESSED};
+  private:
 
-  void initialize(std::vector<CraqInitializeArgs>);
+    void straightPoll();
+    std::vector<CraqInitializeArgs> mIpAddPort;
+    std::vector<AsyncConnectionGet*> mConnections;
+    std::vector<IOStrand*> mConnectionsStrands;
+    
+    int mCurrentTrackNum;
+    bool connected;
 
-  boost::asio::io_service io_service;  //creates an io service
-
-  
-  int set(const CraqDataSetGet& cdSet);
-  int get(const CraqDataSetGet& cdGet);
-
-  void runTestOfConnection();
-  void runTestOfAllConnections();
-  void tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
-
-  int queueSize();
-  int numStillProcessing();
-
-  int getMulti(CraqDataSetGet& dataToGet);
-  void tickMulti(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
-  int getRespCount();
-  
-private:
-
-
-
-  
-  void processGetResults       (std::vector <CraqOperationResult*> & getRes);
-  void processErrorResults     (std::vector <CraqOperationResult*> & errorRes);
-  void processTrackedSetResults(std::vector <CraqOperationResult*> & trackedSetRes);
-
-  void straightPoll();
-  std::vector<CraqInitializeArgs> mIpAddPort;
-  std::vector<AsyncConnectionGet*> mConnections;
-  int mCurrentTrackNum;
-  bool connected;
-
-  std::queue<CraqDataSetGet*> mQueue;
+    std::queue<CraqDataSetGet*> mQueue;
   
 
-  void reInitializeNode(int s);
-  void checkConnections(int s);
-  void checkConnectionsMulti(int s);
+    void reInitializeNode(int s);
+    void checkConnections(int s);
 
 
-  SpaceContext* ctx;
-  IOStrand* mStrand;
+    SpaceContext* ctx;
+    IOStrand* mStrand;        //strand that the asyncCraqGet is running on.
+    IOStrand* mResultsStrand; //strand that we post our results to.
+    ObjectSegmentation* mOSeg;
   
-};
+  };
 
 
 }//end namespace

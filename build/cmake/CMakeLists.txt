@@ -339,13 +339,16 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
+#bftm changed because has trouble compiling
 SET(CSEG_SOURCES
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSetPoolTest.cpp
+  ${CBR_SOURCE_DIR}/oh/ObjectHostContext.cpp
+  ${CBR_SOURCE_DIR}/oh/Object.cpp
+  ${CBR_SOURCE_DIR}/oh/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
+  ${CBR_SOURCE_DIR}/oh/main.cpp
 )
+
+
 
 #bftm changed because has trouble compiling
 #SET(CSEG_SOURCES
@@ -366,6 +369,7 @@ SET(ANALYSIS_SOURCES
 )
 
 
+
 SET(BENCH_SOURCE_DIR ${CBR_SOURCE_DIR}/bench)
 SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
@@ -375,6 +379,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
+
 
 
 SET(CBR_MOC_HEADERS
@@ -443,28 +448,6 @@ TARGET_LINK_LIBRARIES(cbr
 ADD_EXECUTABLE(oh ${OH_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(oh
   cbr-core
-        ${Boost_THREAD_LIBRARY}
-        ${Boost_DATE_TIME_LIBRARY}
-        ${Boost_PROGRAM_OPTIONS_LIBRARY}
-        ${Boost_REGEX_LIBRARY}
-        ${SirikataCore_LIBRARIES}
-        ${PROTOCOLBUFFERS_LIBRARIES}
-        )
-
-
-ADD_EXECUTABLE(craq_get_test ${CRAQ_GET_TEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
-TARGET_LINK_LIBRARIES(craq_get_test
-        ${Boost_THREAD_LIBRARY}
-        ${Boost_DATE_TIME_LIBRARY}
-        ${Boost_PROGRAM_OPTIONS_LIBRARY}
-        ${Boost_REGEX_LIBRARY}
-        ${SirikataCore_LIBRARIES}
-        ${PROTOCOLBUFFERS_LIBRARIES}
-        )
-
-
-ADD_EXECUTABLE(craq_set_test ${CRAQ_SET_TEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
-TARGET_LINK_LIBRARIES(craq_set_test
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}

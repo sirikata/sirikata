@@ -79,7 +79,7 @@ struct CraqOperationResult
   bool succeeded;
   enum GetOrSet {GET, SET};
   GetOrSet whichOperation;
-  CraqOperationResult(int sID,CraqDataKey obj_id, int tm, bool hasSucceeded, GetOrSet, bool track_or_not);
+  CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not);
   std::string idToString();
 };
 
