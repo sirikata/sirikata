@@ -155,7 +155,7 @@ class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
  *  cross-platform allocation and use.  If you just want a timer that works
  *  with IOService, see IOTimer.
  */
-class DeadlineTimer : public boost::asio::deadline_timer {
+class SIRIKATA_EXPORT DeadlineTimer : public boost::asio::deadline_timer {
 public:
     DeadlineTimer(IOService& io);
 
