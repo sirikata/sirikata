@@ -108,14 +108,17 @@ public:
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
 
     enum MessagePath {
+        NONE, // Used when tag is needed but we don't have a name for it
+
         // Object Host Checkpoints
         CREATED,
         DESTROYED,
         OH_ENQUEUED,
         OH_DEQUEUED,
         OH_HIT_NETWORK,
-        OH_DROPPED,
+        OH_DROPPED_AT_OH_ENQUEUED,
         OH_NET_RECEIVED,
+        OH_DROPPED_AT_RECEIVE_QUEUE,
         OH_RECEIVED,
 
         // Space Checkpoints

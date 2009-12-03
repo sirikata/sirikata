@@ -54,9 +54,9 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
    server(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
    connecting(false),
-   tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED),
+   tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED_AT_OH_ENQUEUED),
   send_queue(GetOption("object-host-send-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
-   tag_dequeued(ctx, Trace::OH_DEQUEUED, Trace::OH_DROPPED),
+   tag_dequeued(ctx, Trace::OH_DEQUEUED),
    streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0), Trace::OH_HIT_NETWORK),
    receive_queue(GetOption("object-host-receive-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
@@ -115,7 +115,7 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
         mContext->trace()->timestampMessage(
             mContext->simTime(),
             msg_unique,
-            Trace::OH_DROPPED,
+            Trace::OH_DROPPED_AT_RECEIVE_QUEUE,
             msg_source_port,
             msg_dest_port
         );

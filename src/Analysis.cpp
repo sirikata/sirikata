@@ -1192,8 +1192,9 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OH_ENQUEUED);
         PACKETSTAGE(OH_DEQUEUED);
         PACKETSTAGE(OH_HIT_NETWORK);
-        PACKETSTAGE(OH_DROPPED);
+        PACKETSTAGE(OH_DROPPED_AT_OH_ENQUEUED);
         PACKETSTAGE(OH_NET_RECEIVED);
+        PACKETSTAGE(OH_DROPPED_AT_RECEIVE_QUEUE);
         PACKETSTAGE(OH_RECEIVED);
 
         // Space Checkpoints
@@ -1222,6 +1223,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     StageGroup oh_create_group("Object Host Creation");
     oh_create_group.add(Trace::CREATED)
             .add(Trace::OH_ENQUEUED)
+            .add(Trace::OH_DROPPED_AT_OH_ENQUEUED)
             ;
 
     StageGroup oh_net_exchange_group("Object Host Networking Exchange");
@@ -1232,7 +1234,6 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     StageGroup oh_send_group("Object Host Send");
     oh_send_group.add(Trace::OH_DEQUEUED)
             .add(Trace::OH_HIT_NETWORK)
-            .add(Trace::OH_DROPPED)
             ;
 
     StageGroup oh_to_space_group("Object Host -> Space");
@@ -1265,7 +1266,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
 
     StageGroup oh_receive_group("Object Host Receive");
     oh_receive_group.add(Trace::DESTROYED)
-            .add(Trace::OH_DROPPED)
+            .add(Trace::OH_DROPPED_AT_RECEIVE_QUEUE)
             .add(Trace::OH_NET_RECEIVED)
             .add(Trace::OH_RECEIVED)
             ;

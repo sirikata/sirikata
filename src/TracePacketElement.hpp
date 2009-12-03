@@ -46,7 +46,7 @@ namespace CBR {
 template<typename PacketType>
 class TracePacketElement : public UpstreamElementFixed<PacketType, 1>, public DownstreamElementFixed<PacketType, 1> {
 public:
-    TracePacketElement(Context* ctx, Trace::MessagePath succ, Trace::MessagePath failure)
+    TracePacketElement(Context* ctx, Trace::MessagePath succ, Trace::MessagePath failure = Trace::NONE)
      : mContext(ctx),
        mSuccessTag(succ),
        mFailureTag(failure)
