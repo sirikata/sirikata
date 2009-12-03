@@ -9,6 +9,8 @@ class DistributionPingScenario : public Scenario {
     ObjectHostContext*mContext;
     Poller* mPingPoller;
     unsigned int mPingID;
+    bool mSameObjectHostPings;
+    bool mForceSameObjectHostPings;
     TimeProfiler::Stage* mPingProfiler;
     void generatePings();
     static DistributionPingScenario*create(const String&options);

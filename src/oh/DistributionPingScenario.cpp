@@ -8,6 +8,8 @@ void DPSInitOptions(DistributionPingScenario *thus) {
    
     Sirikata::InitializeClassOptions ico("DistributedPingScenario",thus,
                                          new OptionValue("num-pings-per-tick","1000",Sirikata::OptionValueType<size_t>(),"Number of pings launched per tick event"),
+                                         new OptionValue("allow-same-object-host","false",Sirikata::OptionValueType<bool>(),"allow pings to occasionally hit the same object host you are on"),
+                                         new OptionValue("force-same-object-host","false",Sirikata::OptionValueType<bool>(),"force pings to only go through 1 spaec server hop"),
         NULL);
 }
 DistributionPingScenario::DistributionPingScenario(const String &options){ 
@@ -18,6 +20,8 @@ DistributionPingScenario::DistributionPingScenario(const String &options){
     OptionSet* optionsSet = OptionSet::getOptions("DistributedPingScenario",this);
     optionsSet->parse(options);
     mNumPingsPerTick=optionsSet->referenceOption("num-pings-per-tick")->as<size_t>();
+    mSameObjectHostPings=optionsSet->referenceOption("allow-same-object-host")->as<bool>();
+    mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
 }
 DistributionPingScenario::~DistributionPingScenario(){ 
     delete mPingPoller;
@@ -47,10 +51,13 @@ void DistributionPingScenario::generatePings() {
     mPingProfiler->started();
     unsigned int maxDistance=mContext->objectHost->getObjectConnections()->numServerIDs();
     unsigned int distance=0;
-    if (maxDistance>1) {
+    if (maxDistance&&((!mSameObjectHostPings)&&(!mForceSameObjectHostPings)))
         maxDistance-=1;
-        distance=(rand()%maxDistance)+1;//uniform distance at random
-    }    
+    if (maxDistance>1&&!mForceSameObjectHostPings) {
+        distance=(rand()%maxDistance);//uniform distance at random
+        if (!mSameObjectHostPings)
+            distance+=1;
+    }
     unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
     
     for (unsigned int i=0;i<mNumPingsPerTick;++i) {        
