@@ -46,9 +46,16 @@ def get_logfile_name(trial):
 # cc - ClusterConfig
 # cs - ClusterSimSettings
 # ping_rate - # of pings to try to generate, i.e. load
-def run_ping_trial(cc, cs, ping_rate):
+# allow_same - allow pings to go to objects on the same server
+# force_same - force pings to go to objects on the same server
+def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False):
     cs.scenario = 'ping'
-    cs.scenario_options = '--num-pings-per-tick=' + str(ping_rate)
+    cs.scenario_options = ' '.join(
+        ['--num-pings-per-tick=' + str(ping_rate),
+         '--allow-same-object-host=' + str(allow_same),
+         '--force-same-object-host=' + str(force_same),
+         ]
+        )
 
     cluster_sim = ClusterSim(cc, cs)
     run_trial(cluster_sim)
@@ -74,9 +81,10 @@ if __name__ == "__main__":
 
     cs.duration = '100s'
 
+
     rates = sys.argv[1:]
     for rate in rates:
-        run_ping_trial(cc, cs, rate)
+        run_ping_trial(cc, cs, rate, True, False)
 
     log_files = [get_logfile_name(x) for x in rates]
     graph_message_latency(log_files, 'latency_stacked_bar.pdf')
