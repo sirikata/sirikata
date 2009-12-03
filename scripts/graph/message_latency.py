@@ -4,11 +4,8 @@ import sys
 import re
 import stacked_bar
 
-
-#do main loop through stats file
-if __name__ == "__main__":
-
-    data_srcs = sys.argv[1:]
+def graph_message_latency(log_files, filename=None):
+    data_srcs = log_files
 
     group_pattern = '^Group: (.*)'
     stage_pattern = '^Stage (.*):(.*)s stddev (.*) #(.*)'
@@ -43,6 +40,9 @@ if __name__ == "__main__":
                 stage_avg = float(stage_match.group(2))
                 stage_stddev = float(stage_match.group(3))
                 stage_count = int(stage_match.group(4))
+
+                #if stage_count < 10000:
+                #    continue
 
                 if (not stage_name in stage_group_map):
                     stage_group_map[stage_name] = current_group
@@ -84,4 +84,11 @@ if __name__ == "__main__":
     chart = stacked_bar.stacked_bar('Stage Latencies', 'Group', 'Latency (ms)', ind, labels, avgs, stddevs, stage_labels)
 
 #    chart.show()
-    chart.savefig('latency_stacked_bar.pdf');
+    if filename == None:
+        filename = 'latency_stacked_bar.pdf'
+    chart.savefig(filename)
+
+
+#do main loop through stats file
+if __name__ == "__main__":
+    graph_message_latency(sys.argv[1:])

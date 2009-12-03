@@ -51,6 +51,9 @@ class ClusterSimSettings:
         self.num_pack_objects = 0
         self.object_pack = '/home/meru/data/objects.pack'
 
+        # OH: scenario / ping settings
+        self.scenario = 'ping'
+        self.scenario_options = '--num-pings-per-tick=1000'
 
         self.blocksize = 200
         self.center = (0, 0, 0)
@@ -146,6 +149,8 @@ class ClusterSim:
             '--object.2d=' + self.settings.object_2d,
             '--object.num.pack=' + str(self.settings.num_pack_objects),
             '--object.pack=' + self.settings.object_pack,
+            '--scenario=' + self.settings.scenario,
+            '--scenario-options=' + self.settings.scenario_options,
             '%(packoffset)s',
             ]
         class_params = {
@@ -375,9 +380,16 @@ class ClusterSim:
     def object_latency_analysis(self):
         subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
-    def message_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())])
+    def message_latency_analysis(self, filename=None):
+        stdout_fp = None
+        if filename != None:
+            stdout_fp = open(filename, 'w')
 
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
+                        stdout=stdout_fp,
+                        stderr=stdout_fp)
+        if stdout_fp != None:
+            stdout_fp.close()
 
     def oseg_analysis(self):
         subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
