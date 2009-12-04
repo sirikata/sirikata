@@ -535,8 +535,11 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT = cppoh/src         liboh/src          liboh/include/oh \
-          liboh/plugins/ogre liboh/plugins/ogre/resourceManager liboh/plugins/ogre/input \
+          liboh/plugins/ogre liboh/plugins/ogre/resourceManager \
+          liboh/plugins/ogre/meruCompat liboh/plugins/ogre/input \
           liboh/plugins/bullet \
+          liboh/plugins/collada \
+          liboh/plugins/monoscript \
         \
         space/src        libspace/src        libspace/include/space \
         \
@@ -548,9 +551,14 @@ INPUT = cppoh/src         liboh/src          liboh/include/oh \
         libcore/src/util libcore/src/options libcore/src/task \
         libcore/src/persistence libcore/src/network libcore/src/transfer \
         libcore/plugins/sqlite \
+        libcore/plugins/tcpsst \
         \
         libcore/src/ObjectHost_Persistence.pbj.hpp libcore/src/Protocol_MessageHeader.pbj.hpp \
-        libcore/src/ObjectHost_Sirikata.pbj.hpp libcore/src/ObjectHost_Subscription.pbj.hpp
+        libcore/src/ObjectHost_Sirikata.pbj.hpp libcore/src/ObjectHost_Subscription.pbj.hpp \
+        \
+        externals/berkelium/include/berkelium externals/berkelium/src \
+        externals/prox/libprox/include/prox externals/libprox/prox/src \
+        externals/pbj \
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -602,7 +610,7 @@ EXCLUDE_PATTERNS       = *.pb.* *_protobuf.*
 # AClass::ANamespace, ANamespace::*Test
 
 EXCLUDE_SYMBOLS        = Sirikata::Util* Sirikata::*::Protocol Sirikata::QuaternionImpl \
-                         Mid Ogre Mono boost_* Awesomium Meru::*
+                         Mid Ogre boost_* boost* Awesomium COLLADA* sandbox
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or 
 # directories that contain example code fragments that are included (see 
