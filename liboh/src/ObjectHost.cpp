@@ -345,6 +345,13 @@ const Duration&ObjectHost::getSpaceTimeOffset(const Network::Address&id)const{
     static Duration nil(Duration::seconds(0));
     return nil;
 }
+
+void ObjectHost::dequeueAll() const {
+    if (getWorkQueue()) {
+        getWorkQueue()->dequeueAll();
+    }
+}
+
 ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
     SpaceConnectionMap::const_iterator iter = mSpaceConnections.find(space);
     if (iter != mSpaceConnections.end()) {

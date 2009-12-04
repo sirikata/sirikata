@@ -147,9 +147,12 @@ public:
     Network::IOService *getSpaceIO() const {
         return mSpaceConnectionIO;
     }
+    /** May return null if this object host is in the process of being destructed. */
     Task::WorkQueue *getWorkQueue() const {
         return mMessageQueue;
     }
+    /** Process pending messages immediately. Only call if you are currently in the main thread. */
+    void dequeueAll() const;
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost

@@ -229,7 +229,7 @@ struct HostedObject::PrivateCallbacks {
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
         }
-        realThis->mObjectHost->getWorkQueue()->dequeueAll();
+        realThis->mObjectHost->dequeueAll();
     }
 
     static Network::Stream::ReceivedResponse receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
@@ -285,7 +285,7 @@ struct HostedObject::PrivateCallbacks {
         } else {
             realThis->sendReply(origHeader, bodyData);
         }
-        realThis->mObjectHost->getWorkQueue()->dequeueAll();
+        realThis->mObjectHost->dequeueAll();
     }
     static void handlePersistenceMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
         using namespace Persistence::Protocol;
@@ -414,7 +414,7 @@ struct HostedObject::PrivateCallbacks {
         } else {
             delete persistenceMsg;
         }
-        realThis->mObjectHost->getWorkQueue()->dequeueAll();
+        realThis->mObjectHost->dequeueAll();
     }
     static void handleRPCMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
         /// Parse message_names and message_arguments.
@@ -740,7 +740,7 @@ void HostedObject::initializeConnect(
     mObjectHost->registerHostedObject(getSharedPtr());
     connectToSpace(spaceID, spaceConnectionHint);
     sendNewObj(startingLocation, meshBounds, spaceID);
-    mObjectHost->getWorkQueue()->dequeueAll(); // don't need to wait until next frame.
+    mObjectHost->dequeueAll(); // don't need to wait until next frame.
 
     if (!mesh.empty()) {
         Protocol::StringProperty meshprop;
@@ -800,7 +800,7 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     msg->header().set_destination_object(ObjectReference::spaceServiceID());
     msg->header().set_destination_port(Services::PERSISTENCE);
     msg->serializeSend();
-    mObjectHost->getWorkQueue()->dequeueAll(); // don't need to wait until next frame.
+    mObjectHost->dequeueAll(); // don't need to wait until next frame.
 }
 namespace {
 bool myisalphanum(char c) {
@@ -1009,7 +1009,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             SILOG(objecthost, error, "LocRequest message not for any known object.");
         }
         // loc requests need to be fast, unlikely to land in infinite recursion.
-        mObjectHost->getWorkQueue()->dequeueAll();
+        mObjectHost->dequeueAll();
         return;             /// comment out if we want scripts to see these requests
     }
     else if (name == "SetLoc") {
