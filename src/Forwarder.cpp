@@ -239,6 +239,13 @@ void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) 
     MessageDispatcher::dispatchMessage(msg);
 }
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    mContext->trace()->timestampMessage(mContext->simTime(),
+                                        obj_msg->unique(),
+                                        Trace::FORWARDING_STARTED,
+                                        obj_msg->source_port(),
+                                        obj_msg->dest_port()
+                                        );
+
     // Messages destined for the space skip the object message queue and just get dispatched
     if (obj_msg->dest_object() == UUID::null()) {
         dispatchMessage(*obj_msg);

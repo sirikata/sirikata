@@ -1202,6 +1202,7 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(SPACE_SERVER_MESSAGE_QUEUE);
         PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
         PACKETSTAGE(SELF_LOOP);
+        PACKETSTAGE(FORWARDING_STARTED);
         PACKETSTAGE(FORWARDED);
         PACKETSTAGE(DISPATCHED);
         PACKETSTAGE(DELIVERED);
@@ -1242,11 +1243,23 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
             ;
 
+    StageGroup space_direct_route_group("Space Direct Routing");
+    space_direct_route_group
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            .add(Trace::SPACE_TO_OH_ENQUEUED)
+            ;
+
+    StageGroup space_indirect_route_group("Space Indirect Routing");
+    space_indirect_route_group
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            .add(Trace::FORWARDING_STARTED)
+            ;
+
     StageGroup space_group("Space");
     space_group
+            .add(Trace::FORWARDING_STARTED)
             .add(Trace::SPACE_OUTGOING_MESSAGE)
             .add(Trace::SPACE_SERVER_MESSAGE_QUEUE)
-            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
             .add(Trace::SELF_LOOP)
             .add(Trace::FORWARDED)
             .add(Trace::DISPATCHED)
@@ -1278,6 +1291,8 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     groups.push_back(oh_net_exchange_group);
     groups.push_back(oh_send_group);
     groups.push_back(oh_to_space_group);
+    groups.push_back(space_direct_route_group);
+    groups.push_back(space_indirect_route_group);
     groups.push_back(space_group);
     groups.push_back(space_to_oh_group);
     groups.push_back(oh_receive_group);

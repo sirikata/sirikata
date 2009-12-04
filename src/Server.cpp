@@ -6,6 +6,7 @@
 #include "Statistics.hpp"
 #include "Options.hpp"
 #include "Forwarder.hpp"
+#include "LocalForwarder.hpp"
 #include "MigrationMonitor.hpp"
 
 #include "ObjectSegmentation.hpp"
@@ -29,6 +30,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mCSeg(cseg),
    mProximity(prox),
    mOSeg(oseg),
+   mLocalForwarder(NULL),
    mForwarder(forwarder),
    mMigrationMonitor(),
    mMigrationSendRunning(false),
@@ -48,18 +50,19 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
-        mContext->mainStrand->wrap(
-            std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
-        )
+        std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
     );
+
+    mLocalForwarder = new LocalForwarder(
+        mContext,
+        mObjectHostConnectionManager->netStrand()
+                                         );
 
     mMigrationTimer.start();
 }
 
 Server::~Server()
 {
-    delete mObjectHostConnectionManager;
-
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
     mForwarder->unregisterMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
     mForwarder->unregisterMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
@@ -76,22 +79,18 @@ Server::~Server()
 
         // Stop Forwarder from delivering via this Object's
         // connection, destroy said connection
-        ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-        delete migrated_conn;
+        mForwarder->removeObjectConnection(obj_id);
 
         // FIXME there's probably quite a bit more cleanup to do here
     }
     mObjects.clear();
+
+    delete mObjectHostConnectionManager;
+    delete mLocalForwarder;
 }
 
-ObjectConnection* Server::getObjectConnection(const UUID& object_id) const {
-    ObjectConnectionMap::const_iterator it = mObjects.find(object_id);
-    if(it != mObjects.end())
-        return it->second;
-
-    // XXX FIXME migrating objects?
-
-    return NULL;
+bool Server::isObjectConnected(const UUID& object_id) const {
+    return (mObjects.find(object_id) != mObjects.end());
 }
 
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, CBR::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
@@ -105,8 +104,6 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::Conn
 }
 
 void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
-    Trace * tr=mContext->trace();
-    //tr->timestampMessage(mContext->time,obj_msg->unique(),Trace::HANDLE_OBJECT_HOST_MESSAGE,obj_msg->source_port(),obj_msg->dest_port());
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
     // exceptions for bootstrapping purposes (namely session messages to the space).
 
@@ -126,13 +123,33 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     bool session_msg = (obj_msg->dest_port() == OBJECT_PORT_SESSION);
     if (space_dest && session_msg)
     {
-        handleSessionMessage(conn_id, *obj_msg);
-        delete obj_msg;
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &Server::handleSessionMessage,
+                this, conn_id, obj_msg
+                           )
+                                   );
         return;
     }
 
+    // 3. Try to shortcut the main thread. Let the LocalForwarder try
+    // to ship it over a connection.
+    // FIXME the source object sanity check below doesn't get
+    // performed on this route...
+    if (mLocalForwarder->tryForward(obj_msg))
+        return;
 
-    // 3. If we don't have a connection for the source object, we can't do anything with it.
+    // 4. Otherwise, we need to do full checks and routing
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &Server::handleObjectHostMessageRouting,
+            this, conn_id, obj_msg
+                       )
+                               );
+}
+
+void Server::handleObjectHostMessageRouting(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    // If we don't have a connection for the source object, we can't do anything with it.
     // The object could be migrating and we get outdated packets.  Currently this can
     // happen because we need to maintain the connection long enough to deliver the init migration
     // message.  Therefore, we check if its in the currently migrating connections as well as active
@@ -159,32 +176,32 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
         return;
     }
 
-    // 4. Finally, if we've passed all these tests, then everything looks good and we can route it
+    // Finally, if we've passed all these tests, then everything looks good and we can route it
     bool route_success = mForwarder->routeObjectHostMessage(obj_msg);
     // FIXME handle forwarding failure
 }
 
 // Handle Session messages from an object
-void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& msg) {
+void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
     CBR::Protocol::Session::Container session_msg;
-    bool parse_success = session_msg.ParseFromString(msg.payload());
+    bool parse_success = session_msg.ParseFromString(msg->payload());
     assert(parse_success);
 
     // Connect or migrate messages
     if (session_msg.has_connect()) {
         if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Fresh)
         {
-            handleConnect(oh_conn_id, msg, session_msg.connect());
+            handleConnect(oh_conn_id, *msg, session_msg.connect());
         }
         else if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Migration)
         {
-            handleMigrate(oh_conn_id, msg, session_msg.connect());
+            handleMigrate(oh_conn_id, *msg, session_msg.connect());
         }
         else
             SILOG(space,error,"Unknown connection message type");
     }
     else if (session_msg.has_connect_ack()) {
-        handleConnectAck(oh_conn_id, msg);
+        handleConnectAck(oh_conn_id, *msg);
     }
     else if (session_msg.has_disconnect()) {
         // FIXME handle disconnections
@@ -193,7 +210,10 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     // InitiateMigration messages
     assert(!session_msg.has_connect_response());
     assert(!session_msg.has_init_migration());
+
+    delete msg;
 }
+
 void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* obj_response) {
     if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
         mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
@@ -204,7 +224,7 @@ void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID&
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
-    assert( getObjectConnection(obj_id) == NULL );
+    assert( !isObjectConnected(obj_id) );
 
     // If the requested location isn't on this server, redirect
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
@@ -289,6 +309,7 @@ void Server::finishAddObject(const UUID& obj_id)
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
+    mLocalForwarder->addActiveConnection(conn);
 
     // Add object as local object to LocationService
     mLocationService->addLocalObject(obj_id, loc, sc.conn_msg.bounds());
@@ -326,7 +347,7 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
 {
     UUID obj_id = container.source_object();
 
-    assert( getObjectConnection(obj_id) == NULL );
+    assert( !isObjectConnected(obj_id) );
 
     // FIXME sanity check the new connection
     // -- authentication
@@ -449,6 +470,7 @@ void Server::handleMigration(const UUID& obj_id)
 
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
+    mLocalForwarder->addActiveConnection(obj_conn);
 
 
     // Update LOC to indicate we have this object locally
@@ -595,6 +617,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
 
+            mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
         }
     }
@@ -670,8 +693,11 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
 
 
+    // Remove the previous connection from the local forwarder
+    mLocalForwarder->removeActiveConnection( obj_id );
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
+    mLocalForwarder->addActiveConnection(obj_conn);
 
 
     // Update LOC to indicate we have this object locally
@@ -753,8 +779,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     if (connIDer == objConMapIt->second.uniqueConnId)
     {
       //means that the object did not undergo an intermediate migrate.  Should go ahead and remove this connection from forwarder
-      ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-      delete migrated_conn;
+      mForwarder->removeObjectConnection(obj_id);
     }
     else
     {

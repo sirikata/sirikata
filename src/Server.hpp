@@ -12,6 +12,7 @@
 namespace CBR
 {
 class Forwarder;
+class LocalForwarder;
 
 class LocationService;
 class Proximity;
@@ -57,15 +58,21 @@ private:
     void sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, CBR::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate);
 
 
-    // Finds the ObjectConnection associated with the given object, returns NULL if the object isn't available.
-    ObjectConnection* getObjectConnection(const UUID& object_id) const;
+    // Checks if an object is connected to this server
+    bool isObjectConnected(const UUID& object_id) const;
 
     // Callback which handles messages from object hosts -- mostly just does sanity checking
-    // before using the forwarder to do routing.
+    // before using the forwarder to do routing.  Operates in the
+    // network strand to allow for fast forwarding, see
+    // handleObjectHostMessageRouting for continuation in main strand
     void handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    // Perform forwarding for a message from teh object host which
+    // couldn't be forwarded directly by the networking code
+    // (i.e. needs routing to another node)
+    void handleObjectHostMessageRouting(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
 
     // Handle Session messages from an object
-    void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& msg);
+    void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg);
     // Handle Connect message from object
     void retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* );
     void retryObjectMessage(const UUID& obj_id, CBR::Protocol::Object::ObjectMessage* );
@@ -93,6 +100,7 @@ private:
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
     ObjectSegmentation* mOSeg;
+    LocalForwarder* mLocalForwarder;
     Forwarder* mForwarder;
     MigrationMonitor* mMigrationMonitor;
     bool mMigrationSendRunning; // Indicates whether an event chain for sending outstanding migration messages is running.
@@ -105,7 +113,10 @@ private:
 
     typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
 
-    ObjectConnectionMap mObjects;
+    ObjectConnectionMap mObjects; // NOTE: only Forwarder and LocalForwarder
+                                  // should actually use the connection, this is
+                                  // only still a map to handle migrations
+                                  // properly
     ObjectConnectionMap mObjectsAwaitingMigration;
 
     typedef std::map<UUID, CBR::Protocol::Migration::MigrationMessage*> ObjectMigrationMap;

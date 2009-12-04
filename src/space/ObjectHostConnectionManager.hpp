@@ -64,6 +64,10 @@ public:
     bool send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
 
     void shutdown();
+
+    IOStrand* const netStrand() const {
+        return mIOStrand;
+    }
 private:
     SpaceContext* mContext;
 
