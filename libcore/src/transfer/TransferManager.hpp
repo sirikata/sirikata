@@ -220,15 +220,6 @@ public:
             listener(nameURI, NULL);
         }
 
-        bool isNameURI(const URI &check) const {
-                std::string::size_type length = check.proto().length();
-                if (length < 4) {
-                        return false;
-                }
-                return check.proto().substr(length-4,4) == "hash";
-        }
-
-
 	/// Like the other upload() function, but avoids recomputing the hash.
 	virtual void upload(const URI &name,
 			const RemoteFileId &hash,

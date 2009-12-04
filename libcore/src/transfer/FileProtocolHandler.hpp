@@ -67,11 +67,13 @@ public:
 	}
 
 	virtual void download(DownloadHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const Range &bytes,
 			const DownloadHandler::Callback &cb);
 
 	virtual void stream(DownloadHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const Range &bytes,
 			const DownloadHandler::Callback &cb);
@@ -79,6 +81,7 @@ public:
 		return true;
 	}
 	virtual void exists(DownloadHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const DownloadHandler::Callback &cb);
 
@@ -92,6 +95,7 @@ public:
 			const URI &uri,
 			const UploadHandler::Callback &cb);
 	void append(UploadHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const std::string &uploadData,
 			const UploadHandler::Callback &cb);
@@ -138,13 +142,14 @@ public:
 	}
 
 	virtual void nameLookup(NameLookupHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const NameLookupHandler::Callback &cb) {
 		std::tr1::shared_ptr<NameLookupProgress> data(new NameLookupProgress(shared_from_this()));
         if (ptrRef) {
             *ptrRef = NameLookupHandler::TransferDataPtr(data);
         }
-		mFileProtocol->download(&data->mProgress, URI(uri.context().toString(false)), Range(true),
+		mFileProtocol->download(&data->mProgress, ServiceParams(), URI(uri.context().toString(false)), Range(true),
 								std::tr1::bind(&FileNameHandler::finishedDownload, this, cb, uri.filename(), _1, _2));
 	}
 
@@ -157,7 +162,7 @@ public:
         if (ptrRef) {
             *ptrRef = NameUploadHandler::TransferDataPtr(data);
         }
-		mFileProtocol->append(&data->mProgress, URI(uri.context().toString(false)),
+		mFileProtocol->append(&data->mProgress, ServiceParams(), URI(uri.context().toString(false)),
 							  uri.filename() + " " + uploadId.uri().toString() + "\n", cb);
 	}
 
@@ -169,7 +174,7 @@ public:
         if (ptrRef) {
             *ptrRef = NameUploadHandler::TransferDataPtr(data);
         }
-		mFileProtocol->append(&data->mProgress, URI(uri.context().toString(false)),
+		mFileProtocol->append(&data->mProgress, ServiceParams(), URI(uri.context().toString(false)),
                               uri.filename()+"\n", cb);
 	}
 };

@@ -73,6 +73,7 @@ public:
 
   SharedResourcePtr getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity);
   SharedResourcePtr getResourceAsset(const URI &id, GraphicsResource::Type resourceType);
+  SharedResourcePtr getResourceAssetByHash(const ResourceHash &id, GraphicsResource::Type resourceType);
 
   DependencyManager* getDependencyManager() {
     return mDependencyManager;

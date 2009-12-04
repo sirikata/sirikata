@@ -412,6 +412,7 @@ std::string FileProtocolHandler::pathFromURI(const URI &path) {
 }
 
 void FileProtocolHandler::download(DownloadHandler::TransferDataPtr *ptrRef,
+		const ServiceParams &params,
 		const URI &uri,
 		const Range &bytes,
 		const DownloadHandler::Callback &cb) {
@@ -424,6 +425,7 @@ void FileProtocolHandler::download(DownloadHandler::TransferDataPtr *ptrRef,
 }
 
 void FileProtocolHandler::stream(DownloadHandler::TransferDataPtr *ptrRef,
+		const ServiceParams &params,
 		const URI &uri,
 		const Range &bytes,
 		const DownloadHandler::Callback &cb) {
@@ -436,6 +438,7 @@ void FileProtocolHandler::stream(DownloadHandler::TransferDataPtr *ptrRef,
 }
 
 void FileProtocolHandler::exists(DownloadHandler::TransferDataPtr *ptrRef,
+		const ServiceParams &params,
 		const URI &uri,
 		const DownloadHandler::Callback &cb) {
 	Task::AbortableWorkItemPtr work(new ExistsTask(pathFromURI(uri), cb));
@@ -462,6 +465,7 @@ void FileProtocolHandler::upload(UploadHandler::TransferDataPtr *ptrRef,
 }
 
 void FileProtocolHandler::append(UploadHandler::TransferDataPtr *ptrRef,
+		const ServiceParams &params,
 		const URI &uri,
 		const std::string &appendStr,
 		const UploadHandler::Callback &cb) {

@@ -58,14 +58,6 @@ class ResourceManager:public ManualSingleton<ResourceManager> {
 
   ::Sirikata::Transfer::TransferManager *mTransferManager;
 
-    /**
-     * \param resource_id is the string with a URI for the resource
-     * In the event that the name is already in a cache or contained in the URI
-     * \param result is where it will return the ResourceHash to be downloaded.
-     * \returns true if resource_id lookup is in memory, otherwise returns false and does not alter result
-     */
-    bool nameLookup(const URI &resource_id, ResourceHash&result);
-
 public:
     /** Initializes the ResourceManager and starts CacheLevel threads if necessary
      * \param lvl is the complete specification of this resource manager's cache hierarchy
@@ -75,8 +67,6 @@ public:
     /** Destroys the resource manager and all its cache levels
      */
     ~ResourceManager();
-
-    bool isMHashScheme(const URI &uri);
 
     /**
      * Requests a lookup on the name of a resource.

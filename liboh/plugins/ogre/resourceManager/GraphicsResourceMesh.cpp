@@ -167,10 +167,14 @@ void MeshDependencyTask::operator()()
 
     MemoryBuffer::iterator itr, iend;
     for (itr = mBuffer.begin(), iend = mBuffer.end() - 7; itr != iend; ++itr) {
-      if (*itr == 'm'
-       && (*(itr + 1)) == 'e'
-       && (*(itr + 2)) == 'r'
-       && (*(itr + 3)) == 'u'
+        if (((*itr == 'm'
+              && (*(itr + 1)) == 'e'
+              && (*(itr + 2)) == 'r'
+              && (*(itr + 3)) == 'u')
+             ||(*itr == 'h'
+              && (*(itr + 1)) == 't'
+              && (*(itr + 2)) == 't'
+              && (*(itr + 3)) == 'p'))
        && (*(itr + 4)) == ':'
        && (*(itr + 5)) == '/'
        && (*(itr + 6)) == '/') {

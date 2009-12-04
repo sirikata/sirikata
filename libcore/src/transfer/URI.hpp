@@ -195,13 +195,14 @@ private:
 				mUser = identifier.substr(beginpos, atpos-beginpos);
 				beginpos = atpos+1;
 			}
-			// FIXME: should empty hostname inherit form the parent context?
 			if (slashpos != beginpos) {
 				if (slashpos == std::string::npos) {
 					mHost = identifier.substr(beginpos);
 				} else {
 					mHost = identifier.substr(beginpos, slashpos-beginpos);
 				}
+			} else {
+				mHost = std::string();
 			}
 			startpos = slashpos;
 		}
@@ -290,7 +291,7 @@ public:
 		} else {
 			if (pathString) {
 				if (slash > 0) {
-					*pathString = mDirectory.substr(0, slash) + "/" + *pathString;
+					*pathString = mDirectory.substr(slash+1) + "/" + *pathString;
 				}
 			}
 			mDirectory = mDirectory.substr(0, slash);
@@ -306,7 +307,7 @@ public:
 				mProto = std::string();
 			} else {
 				if (pathString) {
-					*pathString = "//" + (mUser.empty()?mUser+"@":"") + mHost + "/" + *pathString;
+					*pathString = "//" + (mUser.empty()?"":mUser+"@") + mHost + "/" + *pathString;
 				}
 				mHost = std::string();
 			}

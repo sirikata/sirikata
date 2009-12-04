@@ -155,6 +155,7 @@ class EventTransferManager : public TransferManager {
 
 				// FIXME: mFirstTransferLayer may be destroyed if cleanup is called after previous check.
                 //using std::tr1::placeholders::_1;
+				SILOG(transfer,debug,"*** Download data "<<remoteid->uri().toString()<<", hash "<<remoteid->fingerprint().convertToHexString());
 				theCacheLayer->getData(*remoteid, range,
 					std::tr1::bind(&EventTransferManager::downloadFinished, this, *remoteid, range, _1));
 
@@ -285,7 +286,7 @@ class EventTransferManager : public TransferManager {
 				ServiceIterator::SUCCESS,
 				hash.uri(),dloadURI,params,dataHandler)) {
 
-			dataHandler->exists(NULL, dloadURI, std::tr1::bind(
+			dataHandler->exists(NULL, params, dloadURI, std::tr1::bind(
 				&EventTransferManager::uploadIfNotExists, this, hash, toUpload, listener, _2, existsInAll, false, services));
 		} else {
 			if (existsInAll && !firstRound) {

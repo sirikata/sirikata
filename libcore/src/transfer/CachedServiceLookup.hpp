@@ -66,8 +66,8 @@ class CachedServiceLookup : public ServiceLookup {
 				return false;
 			}
 			mCurrentService %= length;
-			relocateURI(uri, (*mServicesList)[mCurrentService].first, mMergePath);
 			outParams = (*mServicesList)[mCurrentService].second;
+			relocate(uri, outParams, (*mServicesList)[mCurrentService].first, mMergePath);
 			mCurrentService++;
 			return true;
 		}

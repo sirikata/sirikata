@@ -111,6 +111,15 @@ public:
 	inline void relocateURI(URI &uri, const URIContext &context, const std::string &merge) {
 		uri.getContext() = URIContext(context, merge);
 	}
+
+	void relocate(URI &uri, ServiceParams &params, const URIContext &context, const std::string &merge) {
+		if (!params.get("requesturi").empty()) {
+			params.set("requesturi",uri.toString());
+			uri = URI(context.toString());
+		} else {
+			relocateURI(uri, context, merge);
+		}
+	}
 };
 
 class SimpleServiceIterator : public ServiceIterator {
@@ -129,8 +138,8 @@ public:
 			delete this;
 			return false;
 		}
-		relocateURI(uri, (*mServices)[mIndex].first, mMergePath);
 		outParams = (*mServices)[mIndex].second;
+		relocate(uri, outParams, (*mServices)[mIndex].first, mMergePath);
 		mIndex++;
 		return true;
 	}

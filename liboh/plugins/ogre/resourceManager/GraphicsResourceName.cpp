@@ -83,7 +83,7 @@ void GraphicsResourceName::hashLookupCallback(WeakResourcePtr resourcePtr, Type 
     if (hash) {
       try {
         GraphicsResourceManager *grm = GraphicsResourceManager::getSingletonPtr();
-        SharedResourcePtr hashResource = grm->getResourceAsset(hash->uri(), refType);
+        SharedResourcePtr hashResource = grm->getResourceAssetByHash(*hash, refType);
         resource->addDependency(hashResource);
         resource->parsed(true);
       }

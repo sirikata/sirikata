@@ -191,6 +191,8 @@ void MaterialDependencyTask::operator()()
     finish(false);
     return;
   }
+  GraphicsResourceMaterial *gfxmat = (GraphicsResourceMaterial*)resourcePtr.get();
+  Sirikata::Transfer::URIContext myURIContext = gfxmat->getURI().context();
 
   GraphicsResourceManager *grm = GraphicsResourceManager::getSingletonPtr();
 
@@ -215,7 +217,7 @@ void MaterialDependencyTask::operator()()
       lexemeBeginIndex = what[0].second - mBuffer.begin();
       find_lexeme(mBuffer, lexemeBeginIndex, lexemeEndIndex);
     }
-    if (what[1].matched) {
+    if (what[1].matched) { ////// NOTE: Does not support relative!!!
       // Material dependency has been found.
       // ignore protocol for now
       MemoryBuffer::const_iterator protocol = std::find(mBuffer.begin() + lexemeBeginIndex, mBuffer.begin() + lexemeEndIndex,':');
@@ -237,7 +239,7 @@ void MaterialDependencyTask::operator()()
           Ogre::String dependencyName (start_index,midpoint);
           if (dependencyName.size()) {
             SILOG(resource,debug,"Found LEGACY dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::MATERIAL);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -248,7 +250,7 @@ void MaterialDependencyTask::operator()()
         Ogre::String dependencyName(start_index, midpoint);
         if (dependencyName.size()) {
           SILOG(resource,debug,"Found Normal dependency "<<dependencyName);
-          SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::MATERIAL);
+          SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
           resourcePtr->addDependency(hashResource);
         }
       }
@@ -262,7 +264,7 @@ void MaterialDependencyTask::operator()()
           if (what[2].matched) {
             SILOG(resource,debug,"Found texture/program dependency "<<dependencyName);
             {
-              URI dependencyURI(dependencyName);
+              URI dependencyURI(dependencyName); ///////// NOTE: Not using URI Context!!!!
               if (!dependencyURI.proto().empty()) {
                 SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
                 if (hashResource)
@@ -293,7 +295,7 @@ void MaterialDependencyTask::operator()()
                   if (next_eol(mBuffer,lexemeEndIndex)){
                     break;//framerate is last, don't add to dependency
                   }
-                  URI dependencyURI(dependencyName);
+                  URI dependencyURI(dependencyName); /////////// NOTE: Not using URI Context!
                   if (!dependencyURI.proto().empty()) {
                     SILOG(resource,debug,"Found ANIM texture dependency "<<dependencyName);
                     SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
@@ -323,7 +325,7 @@ void MaterialDependencyTask::operator()()
                     if (next_eol(mBuffer,lexemeEndIndex)){
                       break;
                     }
-                    URI dependencyURI(dependencyName);
+                    URI dependencyURI(dependencyName); ////// NOTE: Not using uri context!
                     if (!dependencyURI.proto().empty()) {
                       SILOG(resource,debug,"Found CUBIC texture dependency "<<dependencyName);
                       SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
@@ -336,7 +338,7 @@ void MaterialDependencyTask::operator()()
           }
           if (what[3].matched) {
             SILOG(resource,debug,"Found what[3] dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::SHADER);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::SHADER);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -347,7 +349,7 @@ void MaterialDependencyTask::operator()()
       if (dependencyName.size()) {
         // this is actually a material reference
         SILOG(resource,debug,"Found material dependency "<<dependencyName);
-        SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
         resourcePtr->addDependency(hashResource);
       }
     }

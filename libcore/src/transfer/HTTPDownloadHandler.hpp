@@ -115,6 +115,7 @@ public:
 	 * The returned TransferDataPtr contains a shared reference to the HTTPRequest.
 	 * If you hold onto it, you can abort the download. */
 	virtual void download(DownloadHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const Range &bytes,
 			const DownloadHandler::Callback &cb) {
@@ -139,6 +140,7 @@ public:
 	}
 	/// FIXME: Unimplemented -- needs a better interface from HTTPRequest to work.
 	virtual void stream(DownloadHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const Range &bytes,
 			const DownloadHandler::Callback &cb) {
@@ -157,6 +159,7 @@ public:
 	 * Also strips ASCII spaces/newlines from the body.
 	 */
 	virtual void nameLookup(NameLookupHandler::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
 			const URI &uri,
 			const NameLookupHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, Range(true)));

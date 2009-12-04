@@ -72,6 +72,7 @@ private:
 
 		RemoteFileId rfid(hash, URI(origNamedUri.context(), str));
 		addToCache(origNamedUri, rfid);
+		SILOG(transfer,debug,"Received hash "<<rfid.fingerprint().convertToHexString()<<", uri "<<rfid.uri().toString()<<" for named URI "<<origNamedUri);
 		cb(origNamedUri, &rfid);
 	}
 
@@ -100,8 +101,9 @@ private:
 		std::tr1::shared_ptr<NameLookupHandler> handler;
 		if (mNameServ->getNextProtocol(services,reason,origNamedUri,lookupUri,params,handler)) {
 			/// FIXME: Need a way of aborting a name lookup that is taking too long.
-			handler->nameLookup(NULL, lookupUri,
+			handler->nameLookup(NULL, params, lookupUri,
 				std::tr1::bind(&NameLookupManager::gotNameLookup, this, cb, origNamedUri, services, _1, _2, _3));
+/*
 		} else {
 			SILOG(transfer,warn,"None of the services registered for " <<
 					origNamedUri << " were successful for NameLookup.");
@@ -113,6 +115,7 @@ private:
 				cb(origNamedUri, NULL);
 			}
 			return;
+*/
 		}
 	}
 
@@ -158,6 +161,7 @@ public:
 	 * @param namedUri A ServiceURI or a regular URI (depending on if serviceLookup is NULL)
 	 * @param cb       The Callback to be called either on success or failure. */
 	virtual void lookupHash(const URI &namedUri, const Callback &cb) {
+		SILOG(transfer,debug,"Looking up hash for named URI "<<namedUri);
 		mNameServ->lookupService(namedUri.context(), std::tr1::bind(&NameLookupManager::doNameLookup,
 			this, cb, namedUri, _1, ServiceIterator::SUCCESS));
 	}

@@ -73,7 +73,11 @@ public:
 	 * @param cb       The callback to be called when the download has completed.
 	 *                 FIXME: 'data' may be non-null even if 'success' is false.
 	 */
-	virtual void download(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback &cb) = 0;
+	virtual void download(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Range &bytes,
+			const Callback &cb) = 0;
 	/*{
 		cb(DenseDataPtr(), false);
 	}*/
@@ -91,7 +95,11 @@ public:
 	 * @param streamCB The callback to be called for each packet. If 'success' is
 	 *                 false, it indicates either EOF or failed connection.
 	 */
-	virtual void stream(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback &streamCB) = 0;
+	virtual void stream(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Range &bytes,
+			const Callback &streamCB) = 0;
 	/* {
 		streamCB(DenseDataPtr(), false);
 	} */
@@ -99,8 +107,11 @@ public:
 	/** Checks the existence of a file. The DenseData parameter of callback should be ignored
 	 * and may be NULL.  The default version calls download with an empty range.
 	 */
-	virtual void exists(TransferDataPtr *ptrRef, const URI &uri, const Callback &cb) {
-		download(ptrRef, uri, Range(false), cb);
+	virtual void exists(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Callback &cb) {
+		download(ptrRef, params, uri, Range(false), cb);
 	}
 
 	/** Returns true if stream() will receive data in order (such as in HTTP or FTP)
@@ -132,9 +143,10 @@ public:
 	}
 
 	/** Performs a name lookup using this method, and calls cb whether it succeeded or not. */
-	virtual void nameLookup(TransferDataPtr *ptrRef, const URI &uri, const Callback &cb) {
-		cb(Fingerprint(), std::string(), false);
-	}
+	virtual void nameLookup(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Callback &cb) = 0;
 };
 typedef std::tr1::shared_ptr<NameLookupHandler> NameLookupHandlerPtr;
 

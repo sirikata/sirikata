@@ -101,57 +101,56 @@ SharedResourcePtr GraphicsResourceManager::getResourceEntity(const SpaceObjectRe
   }
 }
 
-SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, GraphicsResource::Type resourceType)
+SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const ResourceHash &resourceId, GraphicsResource::Type resourceType)
 {
-  WeakResourcePtr curWeakPtr;
-  SharedResourcePtr curSharedPtr;
-  if (ResourceManager::getSingleton().isMHashScheme(id)) {
-    try {
-      curWeakPtr = getResource(RemoteFileId(id).fingerprint().convertToHexString());
-      curSharedPtr = curWeakPtr.lock();
-    } catch (std::invalid_argument &) {
-    }
-  }
+  bool isMHash = true;
+  WeakResourcePtr curWeakPtr = getResource(resourceId.fingerprint().convertToHexString());
+  SharedResourcePtr curSharedPtr = curWeakPtr.lock();
+  /*
   if (!curSharedPtr) {
-    curWeakPtr = getResource(id.toString());
+    curWeakPtr = getResource(id.uri().toString());
     curSharedPtr = curWeakPtr.lock();
   }
-  if (curSharedPtr)
-    return curSharedPtr;
-  else {
-    try {
-      if (ResourceManager::getSingleton().isMHashScheme(id)) {
-        // std::invalid_argument may be thrown, but is caught by the "catch" below.
-        RemoteFileId resourceId(id);
-        if (resourceType == GraphicsResource::MESH) {
-          curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(resourceId);
-        }
-        else if (resourceType == GraphicsResource::MATERIAL) {
-          curSharedPtr = GraphicsResource::construct<GraphicsResourceMaterial>(resourceId);
-        }
-        else if (resourceType == GraphicsResource::TEXTURE) {
-          curSharedPtr = GraphicsResource::construct<GraphicsResourceTexture>(resourceId);
-        }
-        else if (resourceType == GraphicsResource::SHADER) {
-          curSharedPtr = GraphicsResource::construct<GraphicsResourceShader>(resourceId);
-        }
-        else {
-          assert(false);
-        }
-      }
-      else {
-        curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType);
-      }
-
-      mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
-      mResources.insert(curSharedPtr.get());
-    }
-    catch (std::invalid_argument& ) {
-
-    }
-
+  */
+  if (curSharedPtr) {
     return curSharedPtr;
   }
+  if (resourceType == GraphicsResource::MESH) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(resourceId);
+  }
+  else if (resourceType == GraphicsResource::MATERIAL) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceMaterial>(resourceId);
+  }
+  else if (resourceType == GraphicsResource::TEXTURE) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceTexture>(resourceId);
+  }
+  else if (resourceType == GraphicsResource::SHADER) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceShader>(resourceId);
+  }
+  else {
+    assert(false);
+  }
+
+  mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
+  mResources.insert(curSharedPtr.get());
+
+  return curSharedPtr;
+}
+SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, GraphicsResource::Type resourceType)
+{
+  bool isMHash = false;
+  WeakResourcePtr curWeakPtr = getResource(id.toString());
+  SharedResourcePtr curSharedPtr = curWeakPtr.lock();
+
+  if (curSharedPtr) {
+    return curSharedPtr;
+  }
+  curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType);
+
+  mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
+  mResources.insert(curSharedPtr.get());
+
+  return curSharedPtr;
 }
 /*DependencyTask * DEBUGME(std::set<DependencyTask*,DependencyTask::DependencyTaskLessThanFunctor>&x) {
     return *x.begin();

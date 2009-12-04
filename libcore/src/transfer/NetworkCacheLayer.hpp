@@ -111,7 +111,7 @@ class NetworkCacheLayer : public CacheLayer {
 		if (mService->getNextProtocol(info.serviter,reason,info.fileId.uri(),lookupUri,params,handler)) {
 			// info IS GETTING FREED BEFORE download RETURNS TO SET info.httpreq!!!!!!!!!
 			info.httpreq = DownloadHandler::TransferDataPtr();
-			handler->download(&info.httpreq, lookupUri, info.range,
+			handler->download(&info.httpreq, params, lookupUri, info.range,
 					std::tr1::bind(&NetworkCacheLayer::httpCallback, this, iter, _1, _2));
 			// info may be deleted by now (not so unlikely as it sounds -- it happens if you connect to localhost)
 		} else {

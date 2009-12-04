@@ -14,6 +14,7 @@
 #include <transfer/HTTPUploadHandler.hpp>
 #include <transfer/HTTPFormUploadHandler.hpp>
 #include <transfer/FileProtocolHandler.hpp>
+#include <transfer/HashNameHandler.hpp>
 #include <transfer/CachedNameLookupManager.hpp>
 #include <transfer/CachedServiceLookup.hpp>
 #include <transfer/ServiceManager.hpp>
@@ -104,6 +105,8 @@ void initializeProtocols() {
             std::tr1::shared_ptr<Transfer::HTTPFormUploadHandler> httpFormUploadHandler(new Transfer::HTTPFormUploadHandler);
             std::tr1::shared_ptr<Transfer::FileProtocolHandler> fileHandler(new Transfer::FileProtocolHandler);
             std::tr1::shared_ptr<Transfer::FileNameHandler> fileNameHandler(new Transfer::FileNameHandler(fileHandler));
+            std::tr1::shared_ptr<Transfer::ComputeHashNameHandler> computeHashNameHandler(new Transfer::ComputeHashNameHandler());
+            std::tr1::shared_ptr<Transfer::FilenameHashNameHandler> returnHashNameHandler(new Transfer::FilenameHashNameHandler());
             downloadProtocolRegistry.setHandler("http", httpHandler);
             nameProtocolRegistry.setHandler("http", httpHandler);
             uploadProtocolRegistry.setHandler("http", httpFormUploadHandler);
@@ -118,6 +121,9 @@ void initializeProtocols() {
             nameProtocolRegistry.setHandler("file", fileNameHandler);
             uploadProtocolRegistry.setHandler("file", fileHandler);
             nameUploadProtocolRegistry.setHandler("file", fileNameHandler);
+
+            nameProtocolRegistry.setHandler("x-shasumofuri", computeHashNameHandler); // http: URIs -- don't know hash, so take hash of URI instead.
+            nameProtocolRegistry.setHandler("x-hashed", returnHashNameHandler); // mhash: URIs -- know hash from the filename.
 }
 
 
@@ -191,6 +197,37 @@ TransferManager *initializeTransferManager (const OptionMap& options, GenEventMa
             insertServices(options["namelookup"], nameServiceMap);
             insertServices(options["upload"], upServiceMap);
             insertServices(options["nameupload"], upnameServiceMap);
+            {
+                Transfer::ListOfServices *services = new Transfer::ListOfServices;
+                Transfer::ServiceParams params;
+                params.set("requesturi","true");
+                services->push_back(Transfer::ListOfServices::value_type(
+                    Transfer::URIContext("x-shasumofuri:"),
+                    params));
+                nameServiceMap->addToCache(
+                    Transfer::URIContext(),
+                    Transfer::ListOfServicesPtr(services));
+            }
+            {
+                Transfer::ListOfServices *services = new Transfer::ListOfServices;
+                services->push_back(Transfer::ListOfServices::value_type(
+                    Transfer::URIContext(),
+                    Transfer::ServiceParams()));
+                downServiceMap->addToCache(
+                    Transfer::URIContext(),
+                    Transfer::ListOfServicesPtr(services));
+            }
+            {
+                Transfer::ListOfServices *services = new Transfer::ListOfServices;
+                Transfer::ServiceParams params;
+                params.set("requesturi","true");
+                services->push_back(Transfer::ListOfServices::value_type(
+                    Transfer::URIContext("x-hashed:"),
+                    params));
+                nameServiceMap->addToCache(
+                    Transfer::URIContext("mhash:"),
+                    Transfer::ListOfServicesPtr(services));
+            }
 
         return new Transfer::EventTransferManager(
                 firstCacheLayer,

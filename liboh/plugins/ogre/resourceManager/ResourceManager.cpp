@@ -61,10 +61,6 @@ ResourceManager::ResourceManager(::Sirikata::Transfer::TransferManager*transferM
 ResourceManager::~ResourceManager(){
 }
 
-bool ResourceManager::isMHashScheme(const URI &uri) {
-    return mTransferManager->isNameURI(uri);
-}
-
 /*
 void ResourceManager::write (const URI &request, ResourceBuffer data){
     //write through cache
@@ -128,16 +124,7 @@ void ResourceManager::nameLookup(const URI &resource_id, std::tr1::function<void
     mTransferManager->downloadName(resource_id,callback);
 }
 
-bool ResourceManager::nameLookup(const URI &resource_id, ResourceHash &result)  {
-    if (isMHashScheme(resource_id)) {
-        result=RemoteFileId(resource_id);
-        return true;
-    }
-    return false;// no swift-caching yet
-}
 bool ResourceManager::nameLookup(const URI &resource_id, ResourceHash &result, std::tr1::function<void(const URI&,const ResourceHash*)>callback) {
-    if (nameLookup(resource_id,result))
-        return true;
     mTransferManager->downloadName(resource_id,callback);
     return false;
 }
