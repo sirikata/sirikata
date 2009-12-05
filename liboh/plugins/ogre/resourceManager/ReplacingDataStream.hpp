@@ -56,7 +56,8 @@ protected:
   Ogre::MemoryDataStreamPtr helper;
   std::vector<Ogre::String> provides;//materials and programs this provides
   std::vector<Ogre::String> depends_on;//materials and programs this depends on
-  const Ogre::NameValuePairList*mTextureAliases;  
+  const Ogre::NameValuePairList*mTextureAliases;
+  URI mSourceURI;
   ///loads in and replaces the data
   void verifyData()const;
     /**

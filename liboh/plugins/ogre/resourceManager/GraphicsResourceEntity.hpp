@@ -45,7 +45,7 @@ public:
   virtual void doParse();
   virtual void doLoad();
   virtual void doUnload();
-  virtual void resolveName(const URI& id, const URI& hash);
+  virtual void resolveName(const URI& id, const ResourceHash& hash);
   virtual void fullyParsed();
 
   void setMeshResource(SharedResourcePtr newMeshPtr);
@@ -59,7 +59,7 @@ protected:
   virtual float calcBenefit();
 
   GraphicsEntity *mGraphicsEntity;
-  URI mMeshID;
+  ResourceHash mMeshID;
   SharedResourcePtr mCurMesh;
   Sirikata::Task::LocalTime mLoadTime;
 };

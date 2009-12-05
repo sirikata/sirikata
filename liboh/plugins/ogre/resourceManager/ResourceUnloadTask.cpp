@@ -35,10 +35,10 @@
 
 namespace Meru {
 
-ResourceUnloadTask::ResourceUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash, unsigned int epoch)
+ResourceUnloadTask::ResourceUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256& hash, unsigned int epoch)
 : DependencyTask(mgr->getQueue()),
  mResource(resource),
- mHash(CDNArchive::canonicalizeHash(hash)),
+ mHash(hash),
  mEpoch(epoch),
  mCancelled(false),
  mStarted(false)

@@ -67,11 +67,11 @@ unsigned int CDNArchiveFactory::addArchive()
   return mCurArchive++;
 }
 
-unsigned int CDNArchiveFactory::addArchive(const Ogre::String&filename, const SparseData &rbuffer)
+unsigned int CDNArchiveFactory::addArchive(const SHA256&filename, const SparseData &rbuffer)
 {
   boost::mutex::scoped_lock lok(CDNArchiveMutex);
   CDNArchivePackages[mCurArchive]=std::vector<Ogre::String>();
-  addArchiveDataNoLock(mCurArchive, filename, rbuffer);
+  addArchiveDataNoLock(mCurArchive, filename.convertToHexString(), rbuffer);
   return mCurArchive++;
 }
 
@@ -85,10 +85,10 @@ void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogr
   CDNArchivePackages[archiveName].push_back(filename);
 }
 
-void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const Ogre::String&filename, const SparseData &rbuffer)
+void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const SHA256&filename, const SparseData &rbuffer)
 {
   boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  addArchiveDataNoLock(archiveName,CDNArchive::canonicalizeHash(filename),rbuffer);
+  addArchiveDataNoLock(archiveName,filename.convertToHexString(),rbuffer);
 }
 
 void CDNArchiveFactory::clearArchive(unsigned int which)

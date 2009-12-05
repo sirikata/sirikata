@@ -54,7 +54,7 @@ public:
 class ShaderLoadTask : public ResourceLoadTask
 {
 public:
-  ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String &hash, unsigned int archiveName, unsigned int epoch);
+  ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch);
 
   virtual void doRun();
 
@@ -65,7 +65,7 @@ protected:
 class ShaderUnloadTask : public ResourceUnloadTask
 {
 public:
-  ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int archiveName, unsigned int epoch);
+  ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch);
 
   virtual void doRun();
 
@@ -98,12 +98,12 @@ ResourceDependencyTask* GraphicsResourceShader::createDependencyTask(DependencyM
 
 ResourceLoadTask* GraphicsResourceShader::createLoadTask(DependencyManager *manager)
 {
-  return new ShaderLoadTask(manager, getSharedPtr(), mResourceID.toString(), mArchiveName, mLoadEpoch);
+  return new ShaderLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mArchiveName, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceShader::createUnloadTask(DependencyManager *manager)
 {
-  return new ShaderUnloadTask(manager, getWeakPtr(), mResourceID.toString(), mArchiveName, mLoadEpoch);
+  return new ShaderUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mArchiveName, mLoadEpoch);
 }
 
 /***************************** SHADER DEPENDENCY TASK *************************/
@@ -134,7 +134,7 @@ void ShaderDependencyTask::operator()()
 
 /***************************** SHADER LOAD TASK *************************/
 
-ShaderLoadTask::ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const String &hash, unsigned int archiveName, unsigned int epoch)
+ShaderLoadTask::ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int archiveName, unsigned int epoch)
 : ResourceLoadTask(mgr, resourcePtr, hash, epoch), mArchiveName(archiveName)
 {
 }
@@ -147,7 +147,7 @@ void ShaderLoadTask::doRun()
 
 /***************************** SHADER UNLOAD TASK *************************/
 
-ShaderUnloadTask::ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int archiveName, unsigned int epoch)
+ShaderUnloadTask::ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch)
 : ResourceUnloadTask(mgr, resource, hash, epoch), mArchiveName(archiveName)
 {
 

@@ -55,7 +55,7 @@ public:
 class MaterialLoadTask : public ResourceLoadTask
 {
 public:
-  MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String &hash, unsigned int archiveName, Ogre::NameValuePairList *textureAliases, unsigned int epoch);
+  MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int archiveName, Ogre::NameValuePairList *textureAliases, unsigned int epoch);
 
   virtual void doRun();
 
@@ -67,7 +67,7 @@ protected:
 class MaterialUnloadTask : public ResourceUnloadTask
 {
 public:
-  MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int archiveName, unsigned int epoch);
+  MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch);
 
   virtual void doRun();
 
@@ -79,7 +79,7 @@ GraphicsResourceMaterial::GraphicsResourceMaterial(const RemoteFileId &resourceI
   : GraphicsResourceAsset(resourceID, GraphicsResource::MATERIAL),
   mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
-
+  mTextureAliases[""] = resourceID.uri().toString();
 }
 
 GraphicsResourceMaterial::~GraphicsResourceMaterial()
@@ -88,9 +88,9 @@ GraphicsResourceMaterial::~GraphicsResourceMaterial()
     doUnload();
 }
 
-void GraphicsResourceMaterial::resolveName(const URI& id, const URI& hash)
+void GraphicsResourceMaterial::resolveName(const URI& id, const ResourceHash& hash)
 {
-  mTextureAliases[id.toString()] = CDNArchive::canonicalizeHash(hash.toString());
+  mTextureAliases[id.toString()] = hash.fingerprint().convertToHexString();
 }
 
 ResourceDownloadTask* GraphicsResourceMaterial::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
@@ -105,12 +105,12 @@ ResourceDependencyTask* GraphicsResourceMaterial::createDependencyTask(Dependenc
 
 ResourceLoadTask* GraphicsResourceMaterial::createLoadTask(DependencyManager *manager)
 {
-  return new MaterialLoadTask(manager, getSharedPtr(), mResourceID.toString(), mArchiveName, &mTextureAliases, mLoadEpoch);
+  return new MaterialLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mArchiveName, &mTextureAliases, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceMaterial::createUnloadTask(DependencyManager *manager)
 {
-  return new MaterialUnloadTask(manager, getWeakPtr(), mResourceID.toString(), mArchiveName, mLoadEpoch);
+  return new MaterialUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mArchiveName, mLoadEpoch);
 }
 
 /***************************** MATERIAL DEPENDENCY TASK *************************/
@@ -362,7 +362,7 @@ void MaterialDependencyTask::operator()()
 
 /***************************** MATERIAL LOAD TASK *************************/
 
-MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const String& hash, unsigned int archiveName, Ogre::NameValuePairList* textureAliases, unsigned int epoch)
+MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256& hash, unsigned int archiveName, Ogre::NameValuePairList* textureAliases, unsigned int epoch)
 : ResourceLoadTask(mgr, resourcePtr, hash, epoch), mArchiveName(archiveName), mTextureAliases(textureAliases)
 {
 }
@@ -370,7 +370,7 @@ MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr res
 void MaterialLoadTask::doRun()
 {
   CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mHash, mBuffer);
-  MaterialScriptManager::getSingleton().load(CDNArchive::canonicalizeHash(mHash),
+  MaterialScriptManager::getSingleton().load(mHash.convertToHexString(),
     Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
     false, 0, mTextureAliases);
 
@@ -379,7 +379,7 @@ void MaterialLoadTask::doRun()
 
 /***************************** MATERIAL UNLOAD TASK *************************/
 
-MaterialUnloadTask::MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int archiveName, unsigned int epoch)
+MaterialUnloadTask::MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch)
 : ResourceUnloadTask(mgr, resource, hash, epoch), mArchiveName(archiveName)
 {
 
@@ -398,9 +398,9 @@ void MaterialUnloadTask::doRun()
   //    SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MaterialUnloadTask::mainThreadUnload, this, mHash));
 
   MaterialScriptManager* materialManager = MaterialScriptManager::getSingletonPtr();
-  materialManager->remove(mHash);
+  materialManager->remove(mHash.convertToHexString());
 
-  Ogre::ResourcePtr materialResource = materialManager->getByName(mHash);
+  Ogre::ResourcePtr materialResource = materialManager->getByName(mHash.convertToHexString());
   assert(materialResource.isNull());
 
   CDNArchiveFactory::getSingleton().clearArchive(mArchiveName);

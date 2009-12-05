@@ -48,7 +48,7 @@ public:
   virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
   virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);
 
-  virtual void resolveName(const URI& id, const URI& hash);
+  virtual void resolveName(const URI& id, const ResourceHash& hash);
 
 protected:
   const unsigned int mArchiveName;

@@ -60,7 +60,7 @@ public:
 class MeshLoadTask : public ResourceLoadTask
 {
 public:
-  MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String &hash, unsigned int epoch);
+  MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int epoch);
 
   virtual void doRun();
 };
@@ -68,7 +68,7 @@ public:
 class MeshUnloadTask : public ResourceUnloadTask
 {
 public:
-  MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int epoch);
+  MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch);
 
   virtual void doRun();
 
@@ -88,9 +88,9 @@ GraphicsResourceMesh::~GraphicsResourceMesh()
     doUnload();
 }
 
-void GraphicsResourceMesh::resolveName(const URI& id, const URI& hash)
+void GraphicsResourceMesh::resolveName(const URI& id, const ResourceHash& hash)
 {
-  mMaterialNames[id.toString()] = CDNArchive::canonicalizeHash(hash.toString());
+  mMaterialNames[id.toString()] = hash.fingerprint().convertToHexString();
   if (mLoadState == LOAD_LOADED)
     setMaterialNames(this);
 }
@@ -133,12 +133,12 @@ ResourceDependencyTask* GraphicsResourceMesh::createDependencyTask(DependencyMan
 
 ResourceLoadTask* GraphicsResourceMesh::createLoadTask(DependencyManager *manager)
 {
-  return new MeshLoadTask(manager, getSharedPtr(), mResourceID.toString(), mLoadEpoch);
+  return new MeshLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceMesh::createUnloadTask(DependencyManager *manager)
 {
-  return new MeshUnloadTask(manager, getWeakPtr(), mResourceID.toString(), mLoadEpoch);
+  return new MeshUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mLoadEpoch);
 }
 
 /***************************** MESH DEPENDENCY TASK *************************/
@@ -215,15 +215,15 @@ void MeshDependencyTask::operator()()
 
 /***************************** MESH LOAD TASK *************************/
 
-MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const String &hash, unsigned int epoch)
+MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int epoch)
 : ResourceLoadTask(mgr, resourcePtr, hash, epoch)
 {
 }
 
 void MeshLoadTask::doRun()
 {
-  String hash = mHash; //CDNArchive::canonicalMhashName(mHash);
-  int archive = CDNArchiveFactory::getSingleton().addArchive(hash, mBuffer);
+  String hash = mHash.convertToHexString(); //CDNArchive::canonicalMhashName(mHash);
+  int archive = CDNArchiveFactory::getSingleton().addArchive(mHash, mBuffer);
   Ogre::MeshManager::getSingleton().load(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
   CDNArchiveFactory::getSingleton().removeArchive(archive);
 
@@ -239,7 +239,7 @@ void MeshLoadTask::doRun()
 
 /***************************** MESH UNLOAD TASK *************************/
 
-MeshUnloadTask::MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int epoch)
+MeshUnloadTask::MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch)
 : ResourceUnloadTask(mgr, resource, hash, epoch)
 {
 
@@ -257,7 +257,7 @@ void MeshUnloadTask::doRun()
   /*I REALLY wish this were true*/
   // SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshUnloadTask::mainThreadUnload, this, mHash));
 
-  String hash = mHash; //CDNArchive::canonicalMhashName(mHash);
+  String hash = mHash.convertToHexString(); //CDNArchive::canonicalMhashName(mHash);
   Ogre::MeshManager* meshManager = Ogre::MeshManager::getSingletonPtr();
   meshManager->remove(hash);
 

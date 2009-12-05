@@ -41,7 +41,7 @@ namespace Meru {
 class ResourceLoadTask : public DependencyTask, public ResourceRequestor
 {
 public:
-  ResourceLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String& hash, const unsigned int epoch);
+  ResourceLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256& hash, const unsigned int epoch);
   virtual ~ResourceLoadTask();
 
   virtual void operator() ()
@@ -69,7 +69,7 @@ protected:
   virtual void doRun() = 0;
 
   SharedResourcePtr mResource;
-  String mHash;
+  SHA256 mHash;
   SparseData mBuffer;
   const unsigned int mEpoch;
   bool mCancelled;

@@ -107,9 +107,10 @@ void GraphicsResourceName::fullyParsed()
       std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
           std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
       if (assetPtr) {
-        resourcePtr->resolveName(mURI, assetPtr->getURI());
+        resourcePtr->resolveName(mURI, assetPtr->getRemoteFileId());
       } else {
-        resourcePtr->resolveName(mURI, URI((*mDependencies.begin())->getID()));
+        SILOG(resource,fatal,"Fatal: Dependency of GraphicsResourceName is not a GraphicsResourceAsset" << getID() << " -> " << (*mDependencies.begin())->getID());
+        resourcePtr->resolveName(mURI, ResourceHash(URI((*mDependencies.begin())->getID())));
       }
     }
   }
@@ -121,9 +122,10 @@ void GraphicsResourceName::addDependent(Meru::WeakResourcePtr newParent)
     std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
         std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
     if (assetPtr) {
-      newParent.lock()->resolveName(mURI, assetPtr->getURI());
+      newParent.lock()->resolveName(mURI, assetPtr->getRemoteFileId());
     } else {
-      newParent.lock()->resolveName(mURI, URI((*mDependencies.begin())->getID()));
+      SILOG(resource,fatal,"Fatal: Dependency of GraphicsResourceName is not a GraphicsResourceAsset" << getID() << " -> " << (*mDependencies.begin())->getID());
+      newParent.lock()->resolveName(mURI, ResourceHash(URI((*mDependencies.begin())->getID())));
     }
   }
   GraphicsResource::addDependent(newParent);

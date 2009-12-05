@@ -94,7 +94,7 @@ public:
   virtual void loaded(bool success, unsigned int epoch);
   virtual void unloaded(bool success, unsigned int epoch);
 
-  virtual void resolveName(const URI& id, const URI& hash) {
+  virtual void resolveName(const URI& id, const ResourceHash& hash) {
   }
 
   void removeLoadDependencies(unsigned int epoch);

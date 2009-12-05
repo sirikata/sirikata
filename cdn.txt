@@ -41,6 +41,7 @@ download=(
        1 = http://graphics.stanford.edu/~danielrh/uploadsystem/files/global
        2 = file:///./Staging
     )
+    : = :
 )
 
 nameupload=(

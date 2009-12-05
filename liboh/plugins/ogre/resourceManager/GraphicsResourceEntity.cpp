@@ -121,11 +121,8 @@ void GraphicsResourceEntity::doLoad()
   assert(mDependencies.size() > 0);
 
   mLoadTime = Sirikata::Task::LocalTime::now();
-  if (mMeshID.filename().empty()) {
-      SILOG(ogre, error, "Attempt to load an empty mesh filename. ID = " << mID << "; URI = "<<mGraphicsEntity->getProxy().getMesh());
-  }
   if (mGraphicsEntity) {
-    mGraphicsEntity->loadMesh(mMeshID.filename());
+    mGraphicsEntity->loadMesh(mMeshID.fingerprint().convertToHexString());
   }
   mCurMesh = SharedResourcePtr();
   loaded(true, mLoadEpoch);
@@ -152,12 +149,6 @@ void GraphicsResourceEntity::setMeshResource(SharedResourcePtr newMeshPtr)
 
   clearDependencies();
   addDependency(newMeshPtr);
-  std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr (
-    std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(newMeshPtr));
-  if (assetPtr) {
-    // No name lookup needed.
-    mMeshID = assetPtr->getURI();
-  }
   if (mCurMesh) { // this is a hack, need to properly split different parse/load
     sCostPropEpoch++;
     mDepCost = mCurMesh->getDepCost(sCostPropEpoch);
@@ -174,7 +165,7 @@ void GraphicsResourceEntity::fullyParsed()
   GraphicsResource::fullyParsed();
 }
 
-void GraphicsResourceEntity::resolveName(const URI& id, const URI& hash)
+void GraphicsResourceEntity::resolveName(const URI& id, const ResourceHash& hash)
 {
 //FIXME!!!!!!!!!!!
 //  assert((*mDependencies.begin())->getID() == getID());

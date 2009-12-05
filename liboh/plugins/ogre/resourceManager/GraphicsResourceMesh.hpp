@@ -42,7 +42,7 @@ public:
   GraphicsResourceMesh(const RemoteFileId &resourceID);
   virtual ~GraphicsResourceMesh();
 
-  virtual void resolveName(const URI& id, const URI& hash);
+  virtual void resolveName(const URI& id, const ResourceHash& hash);
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);

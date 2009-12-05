@@ -36,8 +36,7 @@ namespace Meru {
 
 ResourceDependencyTask::ResourceDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash)
 : DependencyTask(mgr->getQueue()),
-  mResource(resource),
-  mHash(hash)
+  mResource(resource)
 {
 }
 

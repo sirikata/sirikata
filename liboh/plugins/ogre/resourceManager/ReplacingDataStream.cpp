@@ -55,6 +55,12 @@ static String mangleTextureName(const String&resourceName, const String&material
 }
 ReplacingDataStream::ReplacingDataStream(Ogre::DataStreamPtr &input, const Ogre::String &destination,const Ogre::NameValuePairList*textureAliases):DataStream(destination),file(input) {
     this->mTextureAliases=textureAliases;
+    if (mTextureAliases) {
+        Ogre::NameValuePairList::const_iterator where=mTextureAliases->find("");
+        if (where!=mTextureAliases->end()) {
+            this->mSourceURI = URI(where->second);
+        }
+    }
 }
 template <class MemoryBuffer> bool tnext_eol(const MemoryBuffer &input,
                                              typename MemoryBuffer::size_type &where_lexeme_start) {
@@ -239,17 +245,55 @@ void ReplacingDataStream::replace_reference(Ogre::String&retval, const Ogre::Str
       if (lexeme_start<return_lexeme_end) {
           Ogre::String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
           retval+=input.substr(pwhere,lexeme_start-pwhere);
-          if (dep[0]=='\"') {
-              dep=myquote+CDN_REPLACING_MATERIAL_STREAM_HINT+dep.substr(1);
+          String uri;
+          if (dep.length() > 2 && dep[0]=='\"') {
+            uri = dep.substr(1,dep.length()-2);
           }else {
-              dep=CDN_REPLACING_MATERIAL_STREAM_HINT+dep;
+            uri = dep;
+          }
+          if (mTextureAliases) {
+            Ogre::String absURI(URI(mSourceURI.getContext(), uri).toString());
+            Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(absURI);
+            if (where!=mTextureAliases->end()) {
+              uri=where->second;
+            }
+          }
+          if (dep.length() > 2 && dep[0]=='\"') {
+              dep=myquote+CDN_REPLACING_MATERIAL_STREAM_HINT+uri+myquote;
+          }else {
+              dep=CDN_REPLACING_MATERIAL_STREAM_HINT+uri;
           }
           retval+=dep;
           pwhere=return_lexeme_end;
       }
 }
 void ReplacingDataStream::replace_texture_reference(Ogre::String&retval, const Ogre::String&input, Ogre::String::size_type&pwhere,Ogre::String::const_iterator second_input, bool texture_instead_of_source,const Ogre::String&filename) {
-
+  if (mTextureAliases) {
+    Ogre::String::size_type lexeme_start=second_input-input.begin(),return_lexeme_end;
+    find_lexeme(input,lexeme_start,return_lexeme_end);
+    if (lexeme_start<return_lexeme_end) {
+      String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
+      String uri;
+      if (dep.length() > 2 && dep[0]=='\"') {
+        uri = dep.substr(1,dep.length()-2);
+      }else {
+        uri = dep;
+      }
+      Ogre::String absURI(URI(mSourceURI.getContext(), uri).toString());
+      Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(absURI);
+      if (where!=mTextureAliases->end()) {
+        retval+=input.substr(pwhere,lexeme_start-pwhere);
+        if (dep.length() > 2 && dep[0]=='\"') {
+          retval+=myquote;
+        }
+        retval+=where->second;
+        if (dep.length() > 2 && dep[0]=='\"') {
+          retval+=myquote;
+        }
+        pwhere=return_lexeme_end;
+      }
+    }
+  }
 }
 Ogre::String::size_type find_space_colon_space(const Ogre::String &input, Ogre::String::size_type start) {
     Ogre::String::size_type len=input.length();
@@ -332,6 +376,9 @@ Ogre::String ReplacingDataStream::replaceData(Ogre::String input) {
   size_t num_texture_aliases=mTextureAliases?mTextureAliases->size():0;
   if (num_texture_aliases!=0) {
       for (Ogre::NameValuePairList::const_iterator iter=mTextureAliases->begin(),iterend=mTextureAliases->end();iter!=iterend;++iter) {
+          if (iter->first.empty()) {
+            continue;
+          }
           if (cur_expr.length())
               cur_expr+='|';
           cur_expr+='(';
@@ -350,10 +397,11 @@ Ogre::String ReplacingDataStream::replaceData(Ogre::String input) {
 
           for (size_t i=1;i<=num_texture_aliases;++i) {
               if (what[i].matched) {
-                  Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(Ogre::String(what[i].first,what[i].second));
+                  Ogre::String absURI(URI(mSourceURI.getContext(), String(what[i].first,what[i].second)).toString());
+                  Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(absURI);
                   if (where!=mTextureAliases->end()) {
                       retval+=midval.substr(pwhere,(what[0].first-midval.begin())-pwhere);
-                      retval+=CDNArchive::canonicalizeHash(where->second);
+                      retval+=where->second;
                       start=what[0].second;
                       pwhere=start-midval.begin();
                   }else {

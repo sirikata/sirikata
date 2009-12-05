@@ -55,7 +55,7 @@ public:
 class TextureLoadTask : public ResourceLoadTask
 {
 public:
-  TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String &hash, unsigned int epoch);
+  TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int epoch);
 
   virtual void doRun();
 
@@ -66,7 +66,7 @@ protected:
 class TextureUnloadTask : public ResourceUnloadTask
 {
 public:
-  TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int epoch);
+  TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch);
 
   virtual void doRun();
 
@@ -175,12 +175,12 @@ ResourceDependencyTask* GraphicsResourceTexture::createDependencyTask(Dependency
 
 ResourceLoadTask* GraphicsResourceTexture::createLoadTask(DependencyManager *manager)
 {
-  return new TextureLoadTask(manager, getSharedPtr(), mResourceID.toString(), mLoadEpoch);
+  return new TextureLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceTexture::createUnloadTask(DependencyManager *manager)
 {
-  return new TextureUnloadTask(manager, getWeakPtr(), mResourceID.toString(), mLoadEpoch);
+  return new TextureUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mLoadEpoch);
 }
 
 /***************************** TEXTURE DEPENDENCY TASK *************************/
@@ -212,7 +212,7 @@ void TextureDependencyTask::operator()()
 
 /***************************** TEXTURE LOAD TASK *************************/
 
-TextureLoadTask::TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const String &hash, unsigned int epoch)
+TextureLoadTask::TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int epoch)
 : ResourceLoadTask(mgr, resourcePtr, hash, epoch)
 {
 }
@@ -220,14 +220,14 @@ TextureLoadTask::TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resou
 void TextureLoadTask::doRun()
 {
   mArchiveName = CDNArchiveFactory::getSingleton().addArchive(mHash, mBuffer);
-  Ogre::TextureManager::getSingleton().load(CDNArchive::canonicalizeHash(mHash), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+  Ogre::TextureManager::getSingleton().load(mHash.convertToHexString(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
   CDNArchiveFactory::getSingleton().removeArchive(mArchiveName);
   mResource->loaded(true, mEpoch);
 }
 
 /***************************** TEXTURE UNLOAD TASK *************************/
 
-TextureUnloadTask::TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String &hash, unsigned int epoch)
+TextureUnloadTask::TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch)
 : ResourceUnloadTask(mgr, resource, hash, epoch)
 {
 
@@ -246,9 +246,9 @@ void TextureUnloadTask::doRun()
   //    SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&TextureUnloadTask::mainThreadUnload, this, mHash));
 
   Ogre::TextureManager* textureManager = Ogre::TextureManager::getSingletonPtr();
-  textureManager->remove(mHash);
+  textureManager->remove(mHash.convertToHexString());
 
-  Ogre::ResourcePtr textureResource = textureManager->getByName(mHash);
+  Ogre::ResourcePtr textureResource = textureManager->getByName(mHash.convertToHexString());
   assert(textureResource.isNull());
 
   SharedResourcePtr resource = mResource.lock();

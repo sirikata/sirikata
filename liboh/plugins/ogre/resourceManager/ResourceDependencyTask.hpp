@@ -54,7 +54,7 @@ public:
 protected:
 
   WeakResourcePtr mResource;
-  String mHash;
+  //String mHash;
   SparseData mBuffer;
 };
 
