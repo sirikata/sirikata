@@ -66,6 +66,7 @@ ColladaMeshObject::~ColladaMeshObject ()
 /////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////
+// MCB: Move this method to a new class called ColladaGeometry for consistency
 
 bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry )
 {
@@ -91,7 +92,7 @@ bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::M
 {
     assert((std::cout << "MCB: ColladaMeshObject::import(COLLADAFW::Mesh) entered" << std::endl,true));
     
-    bool ok = buildAndAddGLMultiPrimitives ( mesh.getMeshPrimitives (), mGeometry, mesh);
+    bool ok = false;
 
     return ok;
 }

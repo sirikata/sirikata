@@ -39,8 +39,7 @@ namespace Sirikata { namespace Models {
 
 ColladaDocument::ColladaDocument ( Transfer::URI const& uri )
     :   mURI ( uri ),
-        mAsset(), 
-        mMeshObject()
+        mAsset()
 {
     assert((std::cout << "MCB: ColladaDocument::ColladaDocument() entered" << std::endl,true));
     
@@ -70,7 +69,10 @@ bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::Geo
 {
     assert((std::cout << "MCB: ColladaDocument::import(COLLADAFW::Geometry) entered" << std::endl,true));
 
-    bool ok = mMeshObject.import ( importer, geometry );
+    // MCB: I don't like this approach. It's too tightly coupled to MeshObject.
+    // MCB: How about a set of ColladaGeometry objects here instead?
+//    bool ok = mMeshObject.import ( importer, geometry );
+    bool ok = true;
 
     return ok;
 }

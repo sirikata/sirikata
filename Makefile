@@ -28,9 +28,9 @@ clean:
 	( test -e Makefile && $(MAKE) clean $(*) ) || true
 
 DEPVC8REV=HEAD
-DEPVC9REV=5
-DEPOSXREV=18
-DEPSOURCE=11
+DEPVC9REV=6
+DEPOSXREV=19
+DEPSOURCE=12
 DEPARCHINDEP=6
 #========== Dependencies ===========
 
@@ -42,9 +42,7 @@ distributions:
 		*MINGW*|*CYGWIN*|*win32*) \
 			if [ x = x"$(VCVER)" ]; then \
 				echo To force a specific version of visual studio, set VCVER to 8 or 9 ; \
-				[ -e c:/Program\ Files/Microsoft\ Visual\ Studio\ 9*/VC/bin ] && \
-					svn co -r$(DEPVC9REV) http://sirikatawin32.googlecode.com/svn/trunk dependencies || \
-					svn co -r$(DEPVC8REV) http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies ; \
+				svn co -r$(DEPVC9REV) http://sirikatawin32.googlecode.com/svn/trunk dependencies ; \
 			else \
 				if [ x"9" = x"$(VCVER)" ]; then \
 					svn co -r$(DEPVC9REV) http://sirikatawin32.googlecode.com/svn/trunk dependencies ; \
