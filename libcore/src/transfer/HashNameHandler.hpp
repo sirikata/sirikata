@@ -42,7 +42,7 @@ namespace Sirikata {
 namespace Transfer {
 
 /** Stores a file-name log. of mappings from names to hashes. */
-class SIRIKATA_EXPORT ComputeHashNameHandler :
+class ComputeHashNameHandler :
         public NameLookupHandler
 {
 public:
@@ -61,7 +61,7 @@ public:
 };
 
 /** Stores a file-name log. of mappings from names to hashes. */
-class SIRIKATA_EXPORT FilenameHashNameHandler :
+class FilenameHashNameHandler :
         public NameLookupHandler
 {
 public:
