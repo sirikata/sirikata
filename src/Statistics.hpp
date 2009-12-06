@@ -127,6 +127,7 @@ public:
         HANDLE_OBJECT_HOST_MESSAGE,
         SELF_LOOP,
         FORWARDING_STARTED,
+        FORWARDED_LOCALLY,
         FORWARDED,
         DISPATCHED,
         DELIVERED,
