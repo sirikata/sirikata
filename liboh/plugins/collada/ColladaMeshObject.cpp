@@ -34,6 +34,9 @@
 
 #include "ColladaSystem.hpp"
 
+#include "COLLADAFWGeometry.h"
+#include "COLLADAFWMesh.h"
+
 /////////////////////////////////////////////////////////////////////
 
 namespace Sirikata { namespace Models {
@@ -61,6 +64,37 @@ ColladaMeshObject::~ColladaMeshObject ()
 }
 
 /////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////
+
+bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry )
+{
+    assert((std::cout << "MCB: ColladaMeshObject::import(COLLADAFW::Geometry) entered" << std::endl,true));
+    
+    bool ok = false;
+    
+    if ( geometry.getType () == COLLADAFW::Geometry::GEO_TYPE_MESH )
+    {
+        COLLADAFW::Mesh const& asMesh = static_cast< COLLADAFW::Mesh const& > ( geometry );
+        
+        ok = import ( importer, asMesh );
+    }
+    else // MCB: handle other types of geometry TODO
+    {
+        std::cout << "ColladaMeshObject::import(" << &geometry << ") is not a mesh, skipping..." << std::endl;
+        ok = true;
+    }
+    return ok;
+}
+
+bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::Mesh const& mesh )
+{
+    assert((std::cout << "MCB: ColladaMeshObject::import(COLLADAFW::Mesh) entered" << std::endl,true));
+    
+    bool ok = buildAndAddGLMultiPrimitives ( mesh.getMeshPrimitives (), mGeometry, mesh);
+
+    return ok;
+}
     
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshObject

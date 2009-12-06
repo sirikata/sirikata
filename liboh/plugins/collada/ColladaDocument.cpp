@@ -32,9 +32,6 @@
 
 #include "ColladaDocument.hpp"
 
-#include "COLLADAFWFileInfo.h"
-
-
 #include <cassert>
 #include <iostream>
 
@@ -42,23 +39,13 @@ namespace Sirikata { namespace Models {
 
 ColladaDocument::ColladaDocument ( Transfer::URI const& uri )
     :   mURI ( uri ),
-        mAsset ()
+        mAsset(), 
+        mMeshObject()
 {
     assert((std::cout << "MCB: ColladaDocument::ColladaDocument() entered" << std::endl,true));
     
 }
 
-ColladaDocument::ColladaDocument ( ColladaDocument const& rhs )
-{
-    assert((std::cout << "MCB: ColladaDocument::ColladaDocument(copy) entered" << std::endl,true));
-    
-}
-
-ColladaDocument& ColladaDocument::operator = ( ColladaDocument const& rhs )
-{
-    assert((std::cout << "MCB: ColladaDocument::operator=() entered" << std::endl,true));
-    return *this;
-}
 
 ColladaDocument::~ColladaDocument ()
 {
@@ -70,7 +57,7 @@ ColladaDocument::~ColladaDocument ()
 
 bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::FileInfo const& asset )
 {
-    assert((std::cout << "MCB: ColladaDocument::import() entered" << std::endl,true));
+    assert((std::cout << "MCB: ColladaDocument::import(COLLADAFW::FileInfo) entered" << std::endl,true));
 
     bool ok = mAsset.import ( importer, asset );
 
@@ -79,7 +66,17 @@ bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::Fil
 
 /////////////////////////////////////////////////////////////////////
 
+bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry )
+{
+    assert((std::cout << "MCB: ColladaDocument::import(COLLADAFW::Geometry) entered" << std::endl,true));
 
+    bool ok = mMeshObject.import ( importer, geometry );
+
+    return ok;
+}
+
+/////////////////////////////////////////////////////////////////////
+    
 /////////////////////////////////////////////////////////////////////
     
 

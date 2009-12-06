@@ -34,12 +34,14 @@
 #define _SIRIKATA_COLLADA_DOCUMENT_
 
 #include "ColladaAsset.hpp"
+#include "ColladaMeshObject.hpp"
 
 #include <transfer/URI.hpp>
 
 namespace COLLADAFW {
 
 class FileInfo;
+class Geometry;
 
 }
 
@@ -61,13 +63,23 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocument
         ~ColladaDocument ();
 
         bool import ( ColladaDocumentImporter& importer, COLLADAFW::FileInfo const& asset );
+        bool import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry );
+
 //        bool export ( ColladaDocumentExporter& exporter, ... );
 
+        Transfer::URI const& getURI () const { return mURI; }
+
+        ColladaAsset const& getAsset () const { return mAsset; }
+        
     protected:
 
     private:
         Transfer::URI mURI;
         ColladaAsset mAsset;
+        
+        // MCB: Because ProxyMeshObject triggers a document load, there is potentially a
+        // MCB: many-to-one relationship between between COLLADA <geometry> and MeshObject.
+        ColladaMeshObject mMeshObject;
 };
 
 typedef std::tr1::shared_ptr< ColladaDocument > ColladaDocumentPtr;

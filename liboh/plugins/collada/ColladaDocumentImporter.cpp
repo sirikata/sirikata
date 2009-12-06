@@ -109,10 +109,7 @@ bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 bool ColladaDocumentImporter::writeVisualScene ( COLLADAFW::VisualScene const* visualScene )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeVisualScene(" << visualScene << ") entered" << std::endl,true));
-
-    bool ok = true;
-    
-    return ok;
+    return true;
 }
 
 
@@ -126,7 +123,10 @@ bool ColladaDocumentImporter::writeLibraryNodes ( COLLADAFW::LibraryNodes const*
 bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometry )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeGeometry(" << geometry << ") entered" << std::endl,true));
-    return true;
+
+    bool ok = mDocument->import ( *this, *geometry );
+    
+    return ok;
 }
 
 

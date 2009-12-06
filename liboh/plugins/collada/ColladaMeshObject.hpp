@@ -39,8 +39,18 @@
 #include <oh/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
 #include <transfer/URI.hpp>
 
+namespace COLLADAFW {
+    
+class Geometry;
+class Mesh;
+    
+}
+
 namespace Sirikata { namespace Models {
 
+/////////////////////////////////////////////////////////////////////
+    
+class ColladaDocumentImporter;
 class ColladaSystem;
 
 class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
@@ -51,7 +61,10 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         ColladaMeshObject ( ColladaMeshObject const& rhs );
         ColladaMeshObject& operator = ( ColladaMeshObject const& rhs );
         virtual ~ColladaMeshObject ();
-        
+
+        bool import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry );
+        bool import ( ColladaDocumentImporter& importer, COLLADAFW::Mesh const& mesh );
+
     protected:
     
     private:
