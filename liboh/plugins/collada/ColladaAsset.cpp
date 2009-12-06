@@ -40,6 +40,9 @@
 namespace Sirikata { namespace Models {
 
 ColladaAsset::ColladaAsset ()
+    :   mUnitMeter ( 1.0 ),
+        mUnitName ( "meter" ),
+        mUpAxis ( Vector3< float > ( 0.0f, 1.0f, 0.0f ) )
 {
     assert((std::cout << "MCB: ColladaAsset::ColladaAsset() entered" << std::endl,true));
     
@@ -71,7 +74,7 @@ bool ColladaAsset::import ( ColladaDocumentImporter& importer, COLLADAFW::FileIn
 
     bool ok = true;
     
-    computeUpAxisRotation ( importer, asset );
+    computeUpAxis ( asset );
 
     mUnitName = asset.getUnit ().getLinearUnitName ();
     mUnitMeter = asset.getUnit ().getLinearUnitMeter ();
@@ -81,23 +84,26 @@ bool ColladaAsset::import ( ColladaDocumentImporter& importer, COLLADAFW::FileIn
 
 /////////////////////////////////////////////////////////////////////
 
-void ColladaAsset::computeUpAxisRotation ( ColladaDocumentImporter& importer, COLLADAFW::FileInfo const& asset )
+void ColladaAsset::computeUpAxis ( COLLADAFW::FileInfo const& asset )
 {
     switch ( asset.getUpAxisType () )
     {
         case COLLADAFW::FileInfo::X_UP:
         {
+            mUpAxis = Vector3< float > ( 1.0f, 0.0f, 0.0f );
             break;
         }
             
         case COLLADAFW::FileInfo::Y_UP:
         default:
         {
+            mUpAxis = Vector3< float > ( 0.0f, 1.0f, 0.0f );
             break;
         }
             
         case COLLADAFW::FileInfo::Z_UP:
         {
+            mUpAxis = Vector3< float > ( 0.0f, 0.0f, 1.0f );
             break;
         }
     }

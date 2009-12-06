@@ -64,11 +64,11 @@ class SIRIKATA_PLUGIN_EXPORT ColladaAsset
     protected:
         
     private:
-        void computeUpAxisRotation ( ColladaDocumentImporter& importer, COLLADAFW::FileInfo const& asset );
+        void computeUpAxis ( COLLADAFW::FileInfo const& asset );
         
-        String mUnitName;
         float64 mUnitMeter;
-        Quaternion mUpAxisRotation;
+        String mUnitName;
+        Vector3< float > mUpAxis;
 };
 
     
