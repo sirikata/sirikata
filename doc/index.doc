@@ -1,0 +1,36 @@
+/** \page index Introduction
+ *
+ *  <h2> Introduction </h2>
+ *  Sirikata is an BSD licensed open source platform for games and virtual
+ *  worlds. We aim to provide a set of libraries and protocols which can be
+ *  used to deploy a virtual world, as well as fully featured sample
+ *  implementations of services for hosting and deploying these worlds.
+ *
+ *  Sirikata is not an application but a platform on which shared, networked,
+ *  3D applications can be built.  Examples include multiplayer online games,
+ *  interactive meeting spaces, and social virtual worlds.  Sirikata
+ *  recognizes that large parts of these systems are identical -- objects
+ *  join a shared space, discover other objects, communicate with each other,
+ *  have behavior defined by small scripts, and so on -- and attempts to
+ *  provide scalable, flexible, and extensible implementations of these
+ *  services.  Application developers can build on Sirikata's infrastructure,
+ *  taking advantage of a much lower barrier to entry and proven scalability.
+ *
+ *  <h2> Target Audience </h2>
+ *  This manual is targeted at <b>users</b> of Sirikata.  Note that this means
+ *  users of the platform, not users of applications built on Sirikata.  So
+ *  in this case, user means an application developer.  Because Sirikata has
+ *  many standard components with reasonable defaults, ideally applications
+ *  can be developed mainly in scripting languages.  However, this manual is
+ *  geared towards users who need to also extend Sirikata, adding
+ *  functionality which is not already available from the existing plugins.
+ *
+ *  <h2> Latest Documentation </h2>
+ *  Please make sure you have the latest documentation, or the version
+ *  appropriate for your release, before proceeding.
+ *  <ul>
+ *  <li> See http://www.sirikata.com/docs/ for all available documentation
+ *  <li> See http://www.sirikata.com/docs/head/ for documentation generated
+ *       nightly from the source code repository
+ *  </ul>
+ */
