@@ -459,10 +459,22 @@ namespace CBR
 
   void CraqObjectSegmentation::poll()
   {
+    static int counter = 0;
+    ++counter;
+    
     mServiceStage->started();
     //shouldn't really need to do anything in here.
     //    well, maybe try to re-send the messages that failed;
     //    maybe also deal with not founds.
+
+
+    if (counter > 10000)
+    {
+      std::cout<<"\n\ninside of craqobjseg poll\n\n";
+      counter = 0;
+    }
+    
+    
     mServiceStage->finished();
   }
 

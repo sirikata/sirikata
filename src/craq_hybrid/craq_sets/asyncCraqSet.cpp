@@ -184,6 +184,9 @@ namespace CBR
 
   void AsyncCraqSet::poll()
   {
+    static int counter = 0;
+
+    
     int numTries = 0;
     while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_SET))
     {
@@ -191,6 +194,15 @@ namespace CBR
       int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_SET;
       checkConnections(rand_connection);
     }
+
+
+    ++counter;
+    if (counter > 10000)
+    {
+      std::cout<<"\nPolling from inside of asynccraqset\n";
+      counter = 0;
+    }
+    
   }
   
 

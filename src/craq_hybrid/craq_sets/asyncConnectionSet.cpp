@@ -142,10 +142,14 @@ void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetT
 
   allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this 
 
+  /* killing all deadline timers
   iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS));
   iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
+  */
+  iqd->deadline_timer = NULL;
 
+  
   mReady = PROCESSING;
 
   //generating the query to write.
