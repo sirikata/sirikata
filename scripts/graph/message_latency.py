@@ -41,13 +41,13 @@ def graph_message_latency(log_files, filename=None):
                 stage_stddev = float(stage_match.group(3))
                 stage_count = int(stage_match.group(4))
 
-                #if stage_count < 10000:
-                #    continue
+                if stage_count < 1000:
+                    continue
 
                 if (not stage_name in stage_group_map):
                     stage_group_map[stage_name] = current_group
 
-                data[ (trial,stage_name) ] = (stage_avg*1000, stage_stddev*1000)
+                data[ (trial,stage_name) ] = (stage_count, stage_avg*1000, stage_stddev*1000)
 
         fp.close()
 
@@ -61,27 +61,32 @@ def graph_message_latency(log_files, filename=None):
     stage_labels = []
     avgs = []
     stddevs = []
+    widths = []
     for stage in stage_group_map.keys():
         stage_labels.append( stage )
 
         avg_vec = []
         stddev_vec = []
+        width_vec = []
 
         for trial in data_srcs:
             data_key = (trial, stage)
             if data_key not in data:
                 avg = 0
                 stddev = 0
+                width=0
             else:
-                avg,stddev = data[ data_key ]
-
+                import math
+                width,avg,stddev = data[ data_key ]
+                width=math.log(width);
+            width_vec.append(width);
             avg_vec.append(avg)
             stddev_vec.append(stddev)
 
         avgs.append(avg_vec)
         stddevs.append(stddev_vec)
-
-    chart = stacked_bar.stacked_bar('Stage Latencies', 'Group', 'Latency (ms)', ind, labels, avgs, stddevs, stage_labels)
+        widths.append(width_vec)
+    chart = stacked_bar.stacked_bar('Stage Latencies', 'Group', 'Latency (ms)', ind, labels, widths, avgs, stddevs, stage_labels)
 
 #    chart.show()
     if filename == None:
