@@ -305,14 +305,15 @@ void Forwarder::receiveMessage(Message* msg) {
         else
             send_success = conn->send(obj_msg);
 
-        Trace::MessagePath path = send_success ? Trace::SPACE_TO_OH_ENQUEUED : Trace::DROPPED;
-        mContext->trace()->timestampMessage(
-            mContext->simTime(),
-            msg_uniq,
-            path,
-            msg_src_port,
-            msg_dst_port
-        );
+        if (!send_success) {
+            mContext->trace()->timestampMessage(
+                mContext->simTime(),
+                msg_uniq,
+                Trace::DROPPED,
+                msg_src_port,
+                msg_dst_port
+                                                );
+        }
 
         if (!send_success)
             delete obj_msg;

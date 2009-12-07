@@ -98,8 +98,16 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protoco
     String data = serializePBJMessage(*msg);
     bool sent = conn->socket->send( Sirikata::MemoryReference(data), Sirikata::Network::ReliableOrdered );
 
-    if (sent)
+    if (sent) {
+        mContext->trace()->timestampMessage(
+            mContext->simTime(),
+            msg->unique(),
+            Trace::SPACE_TO_OH_ENQUEUED,
+            msg->source_port(),
+            msg->dest_port()
+                                            );
         delete msg;
+    }
     return sent;
 }
 
