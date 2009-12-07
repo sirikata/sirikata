@@ -104,6 +104,8 @@ namespace CBR
     AsyncCraqHybrid craqDhtGet;
     AsyncCraqHybrid craqDhtSet;
 
+
+    
     int mAtomicTrackID;
     boost::mutex atomic_track_id_m;
     int getUniqueTrackID();

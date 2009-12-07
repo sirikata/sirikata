@@ -17,7 +17,7 @@
 namespace CBR
 {
 
-  class AsyncCraqSet : AsyncCraqScheduler, PollingService
+  class AsyncCraqSet : AsyncCraqScheduler // , PollingService
   {
   public:
 
@@ -41,7 +41,9 @@ namespace CBR
 
     std::vector<CraqInitializeArgs> mIpAddPort;
     std::vector<AsyncConnectionSet*> mConnections;
-    std::vector<IOStrand*>mConnectionsStrands;
+    //    std::vector<IOStrand*>mConnectionsStrands;
+    IOStrand* mConnectionsStrands;
+    
     bool connected;
 
     std::queue<CraqDataSetGet> mQueue;

@@ -25,6 +25,9 @@ namespace CBR
       delete mConnections[s];
       delete mConnectionsStrands[s];
     }
+    mConnections.clear();
+    mConnectionsStrands.clear();
+    
   }
 
   int AsyncCraqGet::getRespCount()
@@ -40,8 +43,8 @@ namespace CBR
 
   //nothing to initialize
   AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-    : PollingService(strand_this_runs_on),
-      ctx(con),
+  //    : PollingService(strand_this_runs_on),
+    :      ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
       mOSeg(parent_oseg_called)

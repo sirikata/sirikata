@@ -95,7 +95,10 @@ private:
 
         Duration elapsed = sinceEpoch( Timer::now());
 
-        if (elapsed > mSimDuration) {
+        if (elapsed > mSimDuration)
+        {
+          std::cout<<"\n\nBFTM: Got shutdown signal in SpaceContext.hpp\n\n";
+          
             this->stop();
             for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
                 (*it)->stop();

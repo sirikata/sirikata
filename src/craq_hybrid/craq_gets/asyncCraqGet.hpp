@@ -17,7 +17,7 @@ namespace CBR
 {
 
 
-  class AsyncCraqGet : AsyncCraqScheduler, PollingService
+  class AsyncCraqGet : AsyncCraqScheduler // , PollingService
   {
   public:
     AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
@@ -28,7 +28,8 @@ namespace CBR
 
     virtual void erroredGetValue(CraqOperationResult* cor);
     virtual void erroredSetValue(CraqOperationResult* cor);
-    virtual void poll();
+    //virtual void poll();
+    void poll();
   
     void get(const CraqDataSetGet& cdGet);
 

@@ -157,6 +157,7 @@ namespace CBR
   bool CraqObjectSegmentation::clearToMigrate(const UUID& obj_id)
   {
     //set a mutex lock.
+    std::cout<<"\nGot a lock clear to migrate\n";
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::iterator mInTransIter = mInTransitOrLookup.find(obj_id);
 
@@ -170,11 +171,14 @@ namespace CBR
         migratingFromHere = true;
       }
     }
+    std::cout<<"\nGave a lock clear to migrate\n";
     inTransOrLookup_m.unlock();
-    
+
+    std::cout<<"\nGot a lock2 clear to migrate\n ";
     receivingObjects_m.lock();
     bool migratingToHere = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) != mReceivingObjects.end();
     //means that the object migrating to here has not yet received an acknowledge, and therefore shouldn't begin migrating again.
+    std::cout<<"\nGave a lock2 clear to migrate\n ";
     receivingObjects_m.unlock();
     
     //clear to migrate only if migrating from here and migrating to here are false.
@@ -186,20 +190,24 @@ namespace CBR
   //this call returns true if the object is migrating from this server to another server, but hasn't yet received an ack message (which will disconnect the object connection.)
   bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id)
   {
+    std::cout<<"\nGot a lock checkMigrationFromNotCompleteYet\n";
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::const_iterator iterInTransOrLookup = mInTransitOrLookup.find(obj_id);
 
     if (iterInTransOrLookup == mInTransitOrLookup.end())
     {
+      std::cout<<"\nGave a lock checkMigrationFromNotCompleteYet\n";
       inTransOrLookup_m.unlock();
       return false;
     }
     if (iterInTransOrLookup->second.sID != CRAQ_OSEG_LOOKUP_SERVER_ID)
     {
+      std::cout<<"\nGave a lock checkMigrationFromNotCompleteYet\n";
       inTransOrLookup_m.unlock();
       return true;
     }
 
+    std::cout<<"\nGave a lock checkMigrationFromNotCompleteYet\n";
     inTransOrLookup_m.unlock();
     return false;
   }
@@ -220,9 +228,11 @@ namespace CBR
 
   int CraqObjectSegmentation::getUniqueTrackID()
   {
+    std::cout<<"\nGot a lock getUniqueTrackID\n";
     atomic_track_id_m.lock();
       int returner = mAtomicTrackID;
       ++mAtomicTrackID;
+    std::cout<<"\nGave a lock getUniqueTrackID\n";      
     atomic_track_id_m.unlock();
 
     return returner;
@@ -371,6 +381,7 @@ namespace CBR
 
       CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
 
+      std::cout<<"\nGot a lock addObject\n";
       receivingObjects_m.lock();
 
       //shouldn't need to check if it already exists, but may as well.
@@ -379,6 +390,8 @@ namespace CBR
         //means that this object has been pushed to this server, but its migration isn't complete yet.
         mReceivingObjects.push_back(obj_id);  
       }
+
+      std::cout<<"\nGave a lock addObject\n";
       receivingObjects_m.unlock();
 
       TrackedSetResultsData tsrd;
@@ -546,7 +559,8 @@ namespace CBR
     std::map<UUID,TransLookup>::iterator inTransIt;
 
     postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, serv_from));
-    
+
+    std::cout<<"\nGot a lock processMigrateMessageAcknowledge\n";
     inTransOrLookup_m.lock();
     inTransIt = mInTransitOrLookup.find(obj_id);
     if (inTransIt != mInTransitOrLookup.end())
@@ -565,6 +579,7 @@ namespace CBR
                                                   obj_id,serv_from,
                                                   mContext->id());
     }
+    std::cout<<"\nGave a lock processMigrateMessageAcknowledge\n";
     inTransOrLookup_m.unlock();
     
     //send a message to the server that object should now disconnect
@@ -716,7 +731,7 @@ namespace CBR
     //put the value in the cache!
     postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, tmper, cor->servID));
     
-    
+    std::cout<<"\nGot a lock craqGetResult\n";
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
     
@@ -742,7 +757,7 @@ namespace CBR
         mInTransitOrLookup.erase(iter);
       }
     }
-
+    std::cout<<"\nGave a lock craqGetResult\n";
     inTransOrLookup_m.unlock();
     callOsegLookupCompleted(tmper,cor->servID);
 
@@ -754,6 +769,7 @@ namespace CBR
   //which we already know has an entry in trackingMessages
   void CraqObjectSegmentation::removeFromInTransOrLookup(const UUID& obj_id)
   {
+    std::cout<<"\nGot a lock removeFromInTransOrLookup\n";
     inTransOrLookup_m.lock();
       
     //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
@@ -765,6 +781,7 @@ namespace CBR
       mInTransitOrLookup.erase(inTransLookIter);
     }
 
+    std::cout<<"\nGave a lock removeFromInTransOrLookup\n";
     //finished deleting from mInTransitOrLookup
     inTransOrLookup_m.unlock();
   }
@@ -775,6 +792,7 @@ namespace CBR
   {
     //remove this object from mReceivingObjects,
     //this removal indicates that this object can now be safely migrated from this server to another if need be.
+    std::cout<<"\nGot a lock removeFromReceivingObjects\n";
     receivingObjects_m.lock();
     std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id);
     if (recObjIter != mReceivingObjects.end())
@@ -782,7 +800,8 @@ namespace CBR
       //the object should be removed from receiving objects
       mReceivingObjects.erase(recObjIter);
     }
-    
+
+    std::cout<<"\nGave a lock removeFromReceivingObjects\n";
     //done removing from receivingObjects.
     receivingObjects_m.unlock();
   }
