@@ -119,9 +119,11 @@ namespace CBR
       dataToSet.trackingID = track_num;
       mQueue.push(dataToSet);
     }
-  
-    //we got all the way through without finding a ready connection.  Need to add query to queue.
-    mQueue.push(dataToSet);
+    else
+    {
+      //we got all the way through without finding a ready connection.  Need to add query to queue.
+      mQueue.push(dataToSet);
+    }
 
 
     int numTries = 0;
@@ -223,6 +225,7 @@ namespace CBR
           //performing a set in connections.
           CraqObjectID tmpCraqID;
           memcpy(tmpCraqID.cdk, cdSG.dataKey, CRAQ_DATA_KEY_SIZE);
+          
           mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::setBound, mConnections[s], tmpCraqID, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID));
         }
       }

@@ -38,6 +38,19 @@ int AsyncConnectionSet::numStillProcessing()
 
 AsyncConnectionSet::~AsyncConnectionSet()
 {
+  //delete all outstanding queries
+  for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)
+  {
+    if (outQuerIt->second->deadline_timer != NULL)
+    {
+      outQuerIt->second->deadline_timer->cancel();
+      delete       outQuerIt->second->deadline_timer;
+    }
+    delete outQuerIt->second;
+  }
+  allOutstandingQueries.clear();
+
+  
   if (! NEED_NEW_SOCKET)
   {
     mSocket->close();
@@ -131,7 +144,6 @@ void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetT
 
   iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS));
-  
   iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
 
   mReady = PROCESSING;
@@ -248,11 +260,14 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
 
   MultiOutstandingQueries::iterator outQueriesIter;
 
+  int numberPostedHere   = 0;
   outQueriesIter = eqRange.first;
   while (outQueriesIter != eqRange.second)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::SET)  //we only need to delete from multimap if it's a set response.
     {
+      ++numberPostedHere;
+
       
       CraqOperationResult* cor  = new CraqOperationResult(outQueriesIter->second->currentlySettingTo,
                                                           outQueriesIter->second->currentlySearchingFor,
@@ -264,6 +279,9 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
       mResultsStrand->post(std::tr1::bind(&ObjectSegmentation::craqSetResult,mOSeg,cor));
 
+
+
+      
       //cancel the callback
       if (outQueriesIter->second->deadline_timer != NULL)
       {
@@ -485,13 +503,14 @@ void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_cod
 {
   if (e == boost::asio::error::operation_aborted)
     return;
+
+  std::cout<<"\n\nQuery timeout callback set\n";
   
   bool foundInIterator = false;
   
   //look through multimap to find 
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
 
-  std::cout<<"\n\nQuery timeout callback set\n";
   
   MultiOutstandingQueries::iterator outQueriesIter;
   outQueriesIter = eqRange.first;

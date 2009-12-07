@@ -89,6 +89,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
         it = mLocations.find(uuid);
     } else {
         // It was already in there as a replica, notify its removal
+      
         assert(it->second.local == false);
         mContext->trace()->serverObjectEvent(mContext->time, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME remote server ID
         notifyReplicaObjectRemoved(uuid);
@@ -161,6 +162,9 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         locinfo.local = false;
         mLocations[uuid] = locinfo;
 
+        std::cout<<"\n\nbftm adding replica object: " <<uuid.toString() <<" \n\n";
+
+        
         // We only run this notification when the object actually is new
         mContext->trace()->serverObjectEvent(mContext->time, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
         notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));

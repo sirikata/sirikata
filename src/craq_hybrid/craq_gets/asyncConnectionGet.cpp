@@ -154,6 +154,18 @@ AsyncConnectionGet::~AsyncConnectionGet()
 
   std::cout<<"\n\nGet times:   "<<getTime<<"  num gets:  "<<numGets<<"   avg: "<< ((double)getTime) / ((double)numGets)<<"\n\n";
 
+  //delete all outstanding queries
+  for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)
+  {
+    if (outQuerIt->second->deadline_timer != NULL)
+    {
+      outQuerIt->second->deadline_timer->cancel();
+      delete   outQuerIt->second->deadline_timer;
+    }
+    delete outQuerIt->second;
+  }
+  allOutstandingQueries.clear();
+  
   
   if (! NEED_NEW_SOCKET)
   {
@@ -205,8 +217,7 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 
   mReady = READY;
 
-  //  set_generic_read_result_handler();
-  //  set_generic_read_error_handler();
+
   set_generic_stored_not_found_error_handler();
 
   //run any outstanding get queries.
@@ -889,10 +900,8 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
 
 void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff)
 {
-  static std::string prevReadFlag = "Initial";
-  
   mHandlerState = false;
-  //  set_generic_stored_not_found_error_handler();
+
   if (error)
   {
 
@@ -923,9 +932,6 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
   bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
   
   delete sBuff;
-
-  prevReadFlag = response;
-
   set_generic_stored_not_found_error_handler();
 }
 

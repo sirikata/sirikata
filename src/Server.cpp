@@ -301,12 +301,12 @@ void Server::finishAddObject(const UUID& obj_id)
 {
   //  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->time.raw()<<"\n\n";
 
-  if (mStoredConnectionData.find(obj_id) != mStoredConnectionData.end())
+  StoredConnectionMap::iterator storedConIter = mStoredConnectionData.find(obj_id);
+  if (storedConIter != mStoredConnectionData.end())
   {
     StoredConnection sc = mStoredConnectionData[obj_id];
 
     TimedMotionVector3f loc( sc.conn_msg.loc().t(), MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
-
 
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
@@ -336,6 +336,8 @@ void Server::finishAddObject(const UUID& obj_id)
     );
     // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
     sendSessionMessageWithRetry(conn->connID(), obj_response, Duration::seconds(0.05));
+
+    //    mStoredConnectionData.erase(storedConIter);
   }
   else
   {

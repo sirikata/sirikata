@@ -39,8 +39,6 @@ public:
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING}; //we'll probably be always processing or need new socket.  (minus the initial connection registration.
 
   void initialize(Sirikata::Network::TCPSocket* socket,     boost::asio::ip::tcp::resolver::iterator );  
-
-  void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
   
   AsyncConnectionGet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
@@ -87,15 +85,6 @@ private:
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
   
-
-  void set_generic_read_result_handler();
-  void set_generic_read_error_handler();
-
-
-  void generic_read_handler       ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
-
-  void generic_read_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
-
   
   void processValueNotFound(std::string dataKey); //takes in 
   void processValueFound(std::string dataKey, int sID);

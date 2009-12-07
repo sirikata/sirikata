@@ -26,6 +26,8 @@ namespace CBR
 
   AsyncCraqHybrid::~AsyncCraqHybrid()
   {
+    delete mGetStrand;
+    delete mSetStrand;
   }
 
 

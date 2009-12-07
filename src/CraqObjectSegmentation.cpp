@@ -62,9 +62,6 @@ namespace CBR
     checkOwnTimeCount = 0;
 
     mAtomicTrackID    = 10;
-    //    pthread_mutex_init(&atomic_track_id_m,   NULL);
-    //    pthread_mutex_init(&inTransOrLookup_m,   NULL);
-    //    pthread_mutex_init(&receivingObjects_m,  NULL);
   }
 
   /*
@@ -76,6 +73,37 @@ namespace CBR
     mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
     mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
+    //    should delete not found queu;
+    while (mNfData.size() != 0)
+    {
+      NotFoundData* nfd = mNfData.front();
+      mNfData.pop();
+      delete nfd;
+    }
+    
+
+    for (TrackedMessageMapAdded::iterator tmessmapit  = trackedAddMessages.begin(); tmessmapit != trackedAddMessages.end(); ++tmessmapit)
+      delete tmessmapit->second.msgAdded;
+
+    trackedAddMessages.clear();
+    
+
+    //delete retries
+    for (int s=0; s < (int) reTryAddedMessage.size(); ++s)
+      delete reTryAddedMessage[s];
+    reTryAddedMessage.clear();
+
+    for (int s=0; s < (int) reTryMigAckMessage.size(); ++s)
+      delete reTryMigAckMessage[s];
+    reTryMigAckMessage.clear();
+
+    for (int s=0; s < (int) reTryKillConnMessage.size(); ++s)
+      delete reTryKillConnMessage[s];
+    reTryKillConnMessage.clear();
+    
+
+    
+    
     std::cout<<"\n\n\nIN DESTRUCTOR \n\n";
     mContext->trace()->processOSegShutdownEvents(mContext->time,
                                                  mContext->id(),
@@ -203,6 +231,8 @@ namespace CBR
   
   void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id)
   {
+    std::cout<<"\n\nRequest to add new object:  "<<obj_id.toString()<<"\n\n";
+    
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
 
@@ -662,6 +692,9 @@ namespace CBR
       delete cor;
 
       std::cout<<"\n\nWe have an object that does not exist in craq system.  This shouldn't have really been called.\n\n";
+
+      std::cout<<"Object:  "<<cor->objID<<"  server id:  "<<cor->servID<<"  tracking  "<<cor->tracking<<"  suceeded: "<<cor->succeeded<<"  GET or set:   "<<cor->whichOperation<<"\n\n";
+        
       assert(false);
       return;
     }
@@ -686,7 +719,10 @@ namespace CBR
                                                             (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)),
                                                             (uint32) craqDhtGet.queueSize()  );
 
-        
+
+      uint32 timeItTook = (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted));
+      std::cout<<"\n\nProcessed a lookup request:  " << tmper.toString()<<"    serv id:"<<cor->servID<<" duration:  "<< timeItTook<<  " \n\n";
+      
       if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
       {
         //means that after receiving a lookup request, we did not intermediarilly receive a migrate request.
@@ -749,6 +785,7 @@ namespace CBR
       return;
     }
 
+    
     if (trackingMessages.find(trackedSetResult->trackedMessage) != trackingMessages.end())
     {
       //means that we have a record of locally tracking this message and that we'll have to send an ack.
@@ -794,6 +831,7 @@ namespace CBR
     }
     else if (trackedAddMessages.find(trackedSetResult->trackedMessage) != trackedAddMessages.end())
     {
+      
       //means that we just finished adding first object
       mObjects.push_back(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid() );//need to add obj_id
 
