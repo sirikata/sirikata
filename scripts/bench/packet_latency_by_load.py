@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     rates = sys.argv[1:]
     for rate in rates:
-        run_ping_trial(cc, cs, rate, True, False)
+        run_ping_trial(cc, cs, rate, True, True)
 
     log_files = [get_logfile_name(x) for x in rates]
     graph_message_latency(log_files, 'latency_stacked_bar.pdf')

@@ -120,9 +120,6 @@ void Forwarder::poll()
             if (!mServerMessageQueue->canSend(next_msg))
                 break;
 
-            //tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), next_msg, Trace::SPACE_OUTGOING_MESSAGE);
-
-
             mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
             bool send_success = mServerMessageQueue->addMessage(next_msg);
             if (!send_success)
@@ -231,11 +228,9 @@ void Forwarder::poll()
 //end what i think it should be replaced with
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    //tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), msg, Trace::DISPATCHED);
     MessageDispatcher::dispatchMessage(msg);
 }
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
-    //mContext->trace()->timestampMessage(mContext->simTime(),msg.unique(),Trace::DISPATCHED,0,0);
     MessageDispatcher::dispatchMessage(msg);
 }
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {

@@ -304,8 +304,7 @@ class MessageLatencyAnalysis {public:
             return (mDestPort==NULL||pd.mDstPort==*mDestPort)&&
                 verify(mFilterByCreationServer,pd,Trace::CREATED)&&
                 verify(mFilterByDestructionServer,pd,Trace::DESTROYED)&&
-                verify(mFilterByForwardingServer,pd,Trace::FORWARDED)&&
-                verify(mFilterByDeliveryServer,pd,Trace::DELIVERED);
+                    verify(mFilterByForwardingServer,pd,Trace::FORWARDED);
         }
     };
     MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters f);

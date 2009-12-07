@@ -122,20 +122,15 @@ public:
         OH_RECEIVED,
 
         // Space Checkpoints
-        SPACE_OUTGOING_MESSAGE,
-        SPACE_SERVER_MESSAGE_QUEUE,
         HANDLE_OBJECT_HOST_MESSAGE,
-        SELF_LOOP,
-        FORWARDING_STARTED,
         FORWARDED_LOCALLY,
-        FORWARDED,
-        DISPATCHED,
-        DELIVERED,
-        DROPPED,
-        SPACE_TO_OH_ENQUEUED,
+        FORWARDING_STARTED,
         OSEG_LOOKUP_STARTED,
         OSEG_CACHE_LOOKUP_FINISHED,
         OSEG_SERVER_LOOKUP_FINISHED,
+        FORWARDED,
+        DROPPED,
+        SPACE_TO_OH_ENQUEUED,
 
         NUM_PATHS
     };

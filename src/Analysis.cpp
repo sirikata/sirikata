@@ -1198,20 +1198,15 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OH_RECEIVED);
 
         // Space Checkpoints
-        PACKETSTAGE(SPACE_OUTGOING_MESSAGE);
-        PACKETSTAGE(SPACE_SERVER_MESSAGE_QUEUE);
         PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
-        PACKETSTAGE(SELF_LOOP);
-        PACKETSTAGE(FORWARDING_STARTED);
         PACKETSTAGE(FORWARDED_LOCALLY);
-        PACKETSTAGE(FORWARDED);
-        PACKETSTAGE(DISPATCHED);
-        PACKETSTAGE(DELIVERED);
-        PACKETSTAGE(DROPPED);
-        PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
+        PACKETSTAGE(FORWARDING_STARTED);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
+        PACKETSTAGE(FORWARDED);
+        PACKETSTAGE(DROPPED);
+        PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
@@ -1260,12 +1255,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     StageGroup space_group("Space");
     space_group
             .add(Trace::FORWARDING_STARTED)
-            .add(Trace::SPACE_OUTGOING_MESSAGE)
-            .add(Trace::SPACE_SERVER_MESSAGE_QUEUE)
-            .add(Trace::SELF_LOOP)
             .add(Trace::FORWARDED)
-            .add(Trace::DISPATCHED)
-            .add(Trace::DELIVERED)
             .add(Trace::DROPPED)
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             .add(Trace::OSEG_LOOKUP_STARTED)

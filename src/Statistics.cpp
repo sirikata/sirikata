@@ -235,28 +235,11 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 #endif
 }
-/*
-bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk&data){
-#ifdef TRACE_MESSAGE
-    uint32 offset=0;
-    Message*result=NULL;
-    offset = Message::deserialize(data,offset,&result);
-    ObjectMessage *om=dynamic_cast<ObjectMessage*>(result);
-    if (om) {
-        timestampMessage(t,om->contents.unique(),path,om->contents.source_port(),om->contents.dest_port(),result->type());
-    }else return false;
-#endif
-    return true;
-}
-*/
+
 void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt, ServerMessagePort msg_type) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
-/*
-    if (msg_type!=CREATED&&msg_type!=DESTROYED&&msg_type!=SPACE_OUTGOING_MESSAGE) {
-        return;
-    }
-*/
+
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &MessageTimestampTag, sizeof(MessageTimestampTag) );
     data.write( &sent, sizeof(sent) );
