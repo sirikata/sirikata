@@ -59,12 +59,24 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
     random.seed(0)
 
     plt.figure(1, figsize=(30,15), dpi=600)
-
+    plt.subplot(1,1,1)
+    plt.subplots_adjust(wspace=.5, top=.95, bottom=.179, left=.25, right=1)
     sum = [0] * len(indices)
     groups = []
+    max_width=0;
+    for widlist in widths:
+        for wid in widlist:
+            if (wid>max_width):
+                max_width=wid;
+    startList=[]
+    widthList=[]
+    for x in indices:
+        startList.append((x-1)*max_width);
+        widthList.append((x-1)*max_width+max_width/2);
+
     for val,err,width in zip(vals,errors,widths):
         col = get_random_color()
-        px = plt.bar(indices, val, bottom=sum, yerr=err, color=col, width=width);
+        px = plt.bar(startList, val, bottom=sum, yerr=err, color=col, width=width);
         groups.append(px[0])
         sum = [pre_sum+x for pre_sum,x in zip(sum,val)]
 
@@ -72,18 +84,10 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     max_sum = max(sum)
-    max_width=0;
-    for widlist in widths:
-        for wid in widlist:
-            if (wid>max_width):
-                max_width=wid;
-    widthList=[]
-    for x in indices:
-        widthList.append(x*max_width+max_width/2);
     plt.xticks( widthList, labels)
     plt.ylim( (0, max_sum*1.05) )
-    plt.xlim( (0,max_width*1.05) )
-    leg = plt.legend( groups, group_labels, loc=(0,0) )
+    plt.xlim( (0,len(widthList)*max_width*1.05) )
+    leg = plt.legend( groups, group_labels, loc=(-.333,0) )
     set_legend_fontsize(leg, 8)
 
     return plt;

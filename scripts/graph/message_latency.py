@@ -62,7 +62,29 @@ def graph_message_latency(log_files, filename=None):
     avgs = []
     stddevs = []
     widths = []
-    for stage in stage_group_map.keys():
+    ordered_stages=[]
+    unordered_stages={}
+    did_process={}
+    current_matches={"CREATED":True};
+    next_matches={}
+    any_matches=True;
+    while any_matches:
+        any_matches=False
+        for stage in stage_group_map.keys():
+            st,ed=stage.split("-");
+            if (st in current_matches):
+                any_matches=True;
+                if not stage in unordered_stages:
+                    ordered_stages.append(stage);
+                    unordered_stages[stage]=True;
+                    if (ed!=st and not ( ed in did_process)):
+                        next_matches[ed]=True
+        for match in current_matches:
+            did_process[match]=True
+        current_matches=next_matches;
+        next_matches={}
+
+    for stage in ordered_stages:
         stage_labels.append( stage )
 
         avg_vec = []
