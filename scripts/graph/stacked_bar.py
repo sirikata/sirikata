@@ -3,46 +3,8 @@
 import sys
 import random
 import matplotlib.pyplot as plt
-color_seed=0
-def get_random_color():
-    global color_seed;
-    color_list=[(51/255.,102/255.,204/255.),
-              (153/255.,204/255.,255/255.),
-              (153/255.,153/255.,51/255.),
-              (102/255.,102/255.,153/255.),
-              (204/255.,153/255.,51/255.),
-              (0/255.,102/255.,102/255.),
-              (51/255.,153/255.,255/255.),
-              (153/255.,51/255.,0/255.),
-              (204/255.,204/255.,153/255.),
-              (102/255.,102/255.,102/255.),
-              (255/255.,204/255.,102/255.),
-              (102/255.,153/255.,204/255.),
-              (102/255.,51/255.,102/255.),
-              (153/255.,153/255.,204/255.),
-              (204/255.,204/255.,204/255.),
-              (102/255.,153/255.,153/255.),
-              (204/255.,204/255.,102/255.),
-              (204/255.,102/255.,0/255.),
-              (153/255.,153/255.,255/255.),
-              (0/255.,102/255.,204/255.),
-              (153/255.,204/255.,204/255.),
-              (153/255.,153/255.,153/255.),
-              (255/255.,204/255.,0/255.),
-              (0/255.,153/255.,153/255.),
-              (153/255.,204/255.,51/255.),
-              (255/255.,153/255.,0/255.),
-              (153/255.,153/255.,102/255.),
-              (102/255.,204/255.,204/255.),
-              (51/255.,153/255.,102/255.),
-              (204/255.,204/255.,51/255.)]
-    retval=color_list[color_seed%len(color_list)];
-    divisor=int(color_seed/len(color_list))+1;
-    retval=(retval[0]/divisor,
-            retval[1]/divisor,
-            retval[2]/divisor)
-    color_seed+=1;
-    return retval;
+import subprocess
+import colors
 
 def set_legend_fontsize(legend, fontsize):
     for t in legend.get_texts():
@@ -75,7 +37,7 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
         widthList.append((x-1)*max_width+max_width/2);
 
     for val,err,width in zip(vals,errors,widths):
-        col = get_random_color()
+        col = colors.get_random_color()
         px = plt.bar(startList, val, bottom=sum, yerr=err, color=col, width=width);
         groups.append(px[0])
         sum = [pre_sum+x for pre_sum,x in zip(sum,val)]
