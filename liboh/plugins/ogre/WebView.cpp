@@ -627,7 +627,7 @@ void WebView::injectMouseUp(int xPos, int yPos)
 {
     if (xPos>mBorderLeft&&yPos>mBorderTop&&xPos<viewWidth-mBorderRight) {
 #if defined(HAVE_BERKELIUM)
-        webView->mouseMoved(xPos-mBorderTop, yPos-mBorderLeft);
+        webView->mouseMoved(xPos-mBorderLeft, yPos-mBorderTop);
         webView->mouseButton(0, false);
 #endif
     }else {
