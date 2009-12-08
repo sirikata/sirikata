@@ -41,7 +41,7 @@ def run_message_latency_analysis(cluster_sim, log_file, histogram_file):
     cluster_sim.message_latency_analysis(log_file)
     cluster_sim.object_latency_analysis()
     # object latency histogram always goes to 'distance_latency_histogram.csv'
-    subprocess.call(['cp', 'distance_latency_histogram.csv', 'histogram_file'])
+    subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
 
 def get_logfile_name(trial):
     log_file = 'packet_latency_by_load.log.' + str(trial)
