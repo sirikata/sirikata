@@ -54,6 +54,10 @@ bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance
                                                                              false);
     Object * objB=mContext->objectHost->getObjectConnections()->randomObject((ServerID)(minServer+distance),
                                                                              false);
+
+    std::cout<<"\n\nbftm: This is distance:  "<<distance<<"\n\n";
+    
+
     if (rand()<RAND_MAX/2) {
         Object * tmp=objA;
         objA=objB;
@@ -87,6 +91,7 @@ void DistributionPingScenario::generatePings() {
     Time newTime=mContext->simTime();
     int64 howManyPings=(newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
     
+
     bool broke=false;
     int64 limit=howManyPings-mNumTotalPings;
     int64 i;

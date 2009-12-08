@@ -85,7 +85,6 @@ private:
 
   
   std::string mPrevReadFrag;
-
   bool mReceivedStopRequest;
   
   void clear_all_deadline_timers();  

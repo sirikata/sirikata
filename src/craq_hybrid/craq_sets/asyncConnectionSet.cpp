@@ -19,14 +19,14 @@ namespace CBR
 
   //constructor
   AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg)
-  : ctx(con),
+  : mSocket(NULL),
+    ctx(con),
     mStrand(str),
     mErrorStrand(error_strand),
     mResultsStrand(result_strand),
     mSchedulerMaster(master),
     mOSeg(oseg),
-    mReceivedStopRequest(false),
-    mSocket(NULL)
+    mReceivedStopRequest(false)
   {
     mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
     mTimer.start();

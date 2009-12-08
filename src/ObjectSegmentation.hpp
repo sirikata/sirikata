@@ -48,6 +48,9 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
        mListener(NULL),
        oStrand(o_strand)
     {
+
+      printf("\n\nThis is mcontext id: %i\n ",(int) mContext->id());
+      fflush(stdout);
         mServiceStage = mContext->profiler->addStage("OSeg");
     }
 

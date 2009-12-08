@@ -31,10 +31,10 @@ namespace CBR
     Basic constructor
   */
   CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to)
- : ObjectSegmentation(ctx, o_strand),
+ : ObjectSegmentation(con, o_strand),
    mCSeg (cseg),
-   craqDhtGet(ctx, o_strand, this),
-   craqDhtSet(ctx, o_strand, this),
+   craqDhtGet(con, o_strand, this),
+   craqDhtSet(con, o_strand, this),
    postingStrand(strand_to_post_to),
    mStrand(o_strand),
    ctx(con),
@@ -154,22 +154,21 @@ namespace CBR
     {
       //means that the object isn't hosted on this space server
 
-      //      Duration endingDur = mTimer.elapsed();
-      //      Duration endingDur = ctx->time.elapsed();
-      Duration endingDur =  Time::local() - Time::epoch();
+      Duration endingDur = mTimer.elapsed();
       
       checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
       ++checkOwnTimeCount;
+
+      std::cout<<"\n\t\tObject not on space server\n";
       
       return false;
     }
 
+    std::cout<<"\n\t\tObject on space server:  "<<obj_id.toString()<<"\n";
+    
     //means that the object *is* hosted on this space server
 
-    //    Duration endingDur = mTimer.elapsed();
-    //    Duration endingDur = ctx->time;
-    Duration endingDur =  Time::local() - Time::epoch();
-
+    Duration endingDur = mTimer.elapsed();
     
     checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
     ++ checkOwnTimeCount;
@@ -266,6 +265,8 @@ namespace CBR
     if (mReceivedStopRequest)
       return ;
     
+
+    std::cout<<"\n\t\tAdding new object:  "<<obj_id.toString()<<"\n";
     
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
@@ -274,9 +275,7 @@ namespace CBR
 
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id);
-    //    tsrda.dur       = mTimer.elapsed();
-    //    tsrda.dur       = ctx->time;
-    tsrda.dur = Time::local() - Time::epoch();
+    tsrda.dur       = mTimer.elapsed();
 
     
     int trackID = getUniqueTrackID();
@@ -371,9 +370,9 @@ namespace CBR
       ++numLookingUpDebug;
 
       //puts object in transit or lookup.
-      //      Duration timerDur = mTimer.elapsed();
+      Duration timerDur = mTimer.elapsed();
       //      Duration timerDur = ctx->time;
-      Duration timerDur =  Time::local() - Time::epoch();
+      //Duration timerDur =  Time::local() - Time::epoch();
       
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
@@ -434,9 +433,9 @@ namespace CBR
 
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
-      //      tsrd.dur       = mTimer.elapsed();
+      tsrd.dur       = mTimer.elapsed();
       //tsrd.dur       = ctx->time;
-      tsrd.dur =  Time::local() - Time::epoch();
+      //tsrd.dur =  Time::local() - Time::epoch();
       
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet,trackID);
@@ -482,9 +481,9 @@ namespace CBR
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = new_server_id;
 
-    //    Duration tmpDurer= mTimer.elapsed();
+    Duration tmpDurer= mTimer.elapsed();
     //    Duration tmpDurer= ctx->time;
-    Duration tmpDurer = Time::local() - Time::epoch();
+    //    Duration tmpDurer = Time::local() - Time::epoch();
     
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
@@ -727,9 +726,9 @@ namespace CBR
 
     NotFoundData* nfd = new NotFoundData();
     nfd->obj_id =  mapDataKeyToUUID[nf->idToString()];
-    //    nfd->dur    =  mTimer.elapsed();
+    nfd->dur    =  mTimer.elapsed();
     //    nfd->dur    =  ctx->time;
-    nfd->dur = Time::local() - Time::epoch();
+    //    nfd->dur = Time::local() - Time::epoch();
     
     mNfData.push(nfd);
   }
@@ -748,9 +747,9 @@ namespace CBR
 
     std::cout<<"\n\nGOT NOT FOUND\n\n";
 
-    //    Duration tmpDur = mTimer.elapsed();
+    Duration tmpDur = mTimer.elapsed();
     //    Duration tmpDur = ctx->time;
-    Duration tmpDur = Time::local() - Time::epoch();
+    //    Duration tmpDur = Time::local() - Time::epoch();
 
     
     bool queueDataOldEnough = true;
@@ -814,9 +813,9 @@ namespace CBR
     if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
     {
       //log message stating that object was processed.
-      //      Duration timerDur = mTimer.elapsed();
+      Duration timerDur = mTimer.elapsed();
       //Duration timerDur = ctx->time;
-      Duration timerDur = Time::local() - Time::epoch();
+      //      Duration timerDur = Time::local() - Time::epoch();
       
       mContext->trace()->objectSegmentationProcessedRequest(mContext->time,
                                                             tmper,
@@ -921,9 +920,9 @@ namespace CBR
       removeFromReceivingObjects(obj_id);
 
       //log event
-      //      Duration procTrackedSetRes = mTimer.elapsed();
+      Duration procTrackedSetRes = mTimer.elapsed();
       //      Duration procTrackedSetRes = ctx->time;
-      Duration procTrackedSetRes = Time::local() - Time::epoch();
+      //      Duration procTrackedSetRes = Time::local() - Time::epoch();
       
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
       

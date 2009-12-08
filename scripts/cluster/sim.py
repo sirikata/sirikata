@@ -40,7 +40,7 @@ class ClusterSimSettings:
 
         # OH: random object generation settings
         self.num_random_objects = 1000
-        self.object_static = 'random'
+        self.object_static = 'static'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'
         self.object_drift_z = '0'
@@ -53,7 +53,7 @@ class ClusterSimSettings:
 
         # OH: scenario / ping settings
         self.scenario = 'ping'
-        self.scenario_options = '--num-pings-per-tick=1000'
+        self.scenario_options = '--num-pings-per-second=1000'
 
         self.blocksize = 200
         self.center = (0, 0, 0)
