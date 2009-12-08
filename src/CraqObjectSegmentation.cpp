@@ -21,6 +21,7 @@
 #include "CraqCacheGood.hpp"
 #include <boost/thread/mutex.hpp>
 #include "OSegLookupTraceToken.hpp"
+#include "Utility.hpp"
 
 
 namespace CBR
@@ -130,13 +131,14 @@ namespace CBR
                                                  numTimeElapsedCacheEviction,
                                                  numMigrationNotCompleteYet);
 
+    /*
     printf("\n\nREMAINING IN QUEUE GET:  %i     SET:  %i\n\n", (int) craqDhtGet.queueSize(),(int) craqDhtSet.queueSize());
     fflush(stdout);
     printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
     fflush(stdout);
 
     std::cout<<"\n\nCheckOwnTimeDur "<<checkOwnTimeDur<<"   checkOwnTimeCount  "<<checkOwnTimeCount<<"  avg: "<<((double)checkOwnTimeDur)/((double)checkOwnTimeCount)<<"\n\n";
-    
+    */
   }
 
 
@@ -145,14 +147,17 @@ namespace CBR
   */
   bool CraqObjectSegmentation::checkOwn(const UUID& obj_id)
   {
-    Duration beginningDur = mTimer.elapsed();
+    //    Duration beginningDur = mTimer.elapsed();
+    Duration beginningDur = Time::local() - Time::epoch();
     
     if (std::find(mObjects.begin(),mObjects.end(), obj_id) == mObjects.end())
     {
       //means that the object isn't hosted on this space server
 
-      Duration endingDur = mTimer.elapsed();
+      //      Duration endingDur = mTimer.elapsed();
       //      Duration endingDur = ctx->time.elapsed();
+      Duration endingDur =  Time::local() - Time::epoch();
+      
       checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
       ++checkOwnTimeCount;
       
@@ -161,8 +166,11 @@ namespace CBR
 
     //means that the object *is* hosted on this space server
 
-    Duration endingDur = mTimer.elapsed();
+    //    Duration endingDur = mTimer.elapsed();
     //    Duration endingDur = ctx->time;
+    Duration endingDur =  Time::local() - Time::epoch();
+
+    
     checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
     ++ checkOwnTimeCount;
     return true;
@@ -266,9 +274,11 @@ namespace CBR
 
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id);
-    tsrda.dur       = mTimer.elapsed();
+    //    tsrda.dur       = mTimer.elapsed();
     //    tsrda.dur       = ctx->time;
+    tsrda.dur = Time::local() - Time::epoch();
 
+    
     int trackID = getUniqueTrackID();
     craqDhtSet.set(cdSetGet, trackID);
     trackedAddMessages[trackID] = tsrda;
@@ -361,8 +371,10 @@ namespace CBR
       ++numLookingUpDebug;
 
       //puts object in transit or lookup.
-      Duration timerDur = mTimer.elapsed();
+      //      Duration timerDur = mTimer.elapsed();
       //      Duration timerDur = ctx->time;
+      Duration timerDur =  Time::local() - Time::epoch();
+      
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
@@ -422,9 +434,10 @@ namespace CBR
 
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
-      tsrd.dur       = mTimer.elapsed();
+      //      tsrd.dur       = mTimer.elapsed();
       //tsrd.dur       = ctx->time;
-
+      tsrd.dur =  Time::local() - Time::epoch();
+      
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet,trackID);
       trackingMessages[trackID] = tsrd;
@@ -469,8 +482,10 @@ namespace CBR
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = new_server_id;
 
-    Duration tmpDurer= mTimer.elapsed();
+    //    Duration tmpDurer= mTimer.elapsed();
     //    Duration tmpDurer= ctx->time;
+    Duration tmpDurer = Time::local() - Time::epoch();
+    
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
@@ -509,20 +524,12 @@ namespace CBR
       return;
     }
     
-    static int counter = 0;
-    ++counter;
-    
     mServiceStage->started();
     //shouldn't really need to do anything in here.
     //    well, maybe try to re-send the messages that failed;
     //    maybe also deal with not founds.
 
 
-    if (counter > 10000)
-    {
-      std::cout<<"\n\ninside of craqobjseg poll\n\n";
-      counter = 0;
-    }
     
     mServiceStage->finished();
   }
@@ -720,8 +727,10 @@ namespace CBR
 
     NotFoundData* nfd = new NotFoundData();
     nfd->obj_id =  mapDataKeyToUUID[nf->idToString()];
-    nfd->dur    =  mTimer.elapsed();
+    //    nfd->dur    =  mTimer.elapsed();
     //    nfd->dur    =  ctx->time;
+    nfd->dur = Time::local() - Time::epoch();
+    
     mNfData.push(nfd);
   }
 
@@ -739,8 +748,10 @@ namespace CBR
 
     std::cout<<"\n\nGOT NOT FOUND\n\n";
 
-    Duration tmpDur = mTimer.elapsed();
+    //    Duration tmpDur = mTimer.elapsed();
     //    Duration tmpDur = ctx->time;
+    Duration tmpDur = Time::local() - Time::epoch();
+
     
     bool queueDataOldEnough = true;
     NotFoundData* nfd;
@@ -803,8 +814,10 @@ namespace CBR
     if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
     {
       //log message stating that object was processed.
-      Duration timerDur = mTimer.elapsed();
+      //      Duration timerDur = mTimer.elapsed();
       //Duration timerDur = ctx->time;
+      Duration timerDur = Time::local() - Time::epoch();
+      
       mContext->trace()->objectSegmentationProcessedRequest(mContext->time,
                                                             tmper,
                                                             cor->servID,
@@ -908,8 +921,10 @@ namespace CBR
       removeFromReceivingObjects(obj_id);
 
       //log event
-      Duration procTrackedSetRes = mTimer.elapsed();
+      //      Duration procTrackedSetRes = mTimer.elapsed();
       //      Duration procTrackedSetRes = ctx->time;
+      Duration procTrackedSetRes = Time::local() - Time::epoch();
+      
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
       
       mContext->trace()->processOSegTrackedSetResults(mContext->time,

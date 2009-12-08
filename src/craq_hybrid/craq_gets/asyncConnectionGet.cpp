@@ -185,7 +185,7 @@ AsyncConnectionGet::~AsyncConnectionGet()
 {
   outputLargeOutstanding();
 
-  std::cout<<"\n\nGet times:   "<<getTime<<"  num gets:  "<<numGets<<"   avg: "<< ((double)getTime) / ((double)numGets)<<"\n\n";
+  //  std::cout<<"\n\nGet times:   "<<getTime<<"  num gets:  "<<numGets<<"   avg: "<< ((double)getTime) / ((double)numGets)<<"\n\n";
 
   //delete all outstanding queries
   for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)

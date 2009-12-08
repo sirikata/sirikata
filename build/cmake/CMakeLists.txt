@@ -289,7 +289,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-#  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
@@ -298,7 +298,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
-#  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
@@ -340,33 +340,23 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
+
+
+
 #bftm changed because has trouble compiling
 SET(CSEG_SOURCES
-  ${CBR_SOURCE_DIR}/oh/ObjectHostContext.cpp
-  ${CBR_SOURCE_DIR}/oh/Object.cpp
-  ${CBR_SOURCE_DIR}/oh/ObjectFactory.cpp
-  ${CBR_SOURCE_DIR}/oh/ScenarioFactory.cpp
-  ${CBR_SOURCE_DIR}/oh/DistributionPingScenario.cpp
-  ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
- ${CBR_SOURCE_DIR}/oh/main.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
+  ${CBR_SOURCE_DIR}/cseg/main.cpp
 )
-
-
-
-#bftm changed because has trouble compiling
-#SET(CSEG_SOURCES
-#  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-#  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
-#  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
-#  ${CBR_SOURCE_DIR}/cseg/main.cpp
-#)
 
 SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/Analysis.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
-#  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/analysis/main.cpp

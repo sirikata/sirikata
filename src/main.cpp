@@ -57,7 +57,7 @@
 #include "ExpIntegral.hpp"
 #include "SqrIntegral.hpp"
 #include "UniformCoordinateSegmentation.hpp"
-//#include "CoordinateSegmentationClient.hpp"
+#include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
 #include "CraqObjectSegmentation.hpp"
 
@@ -195,8 +195,7 @@ void *main_loop(void *) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "client") {
-      std::cout<<"\n\nBFTM edited out temporarily because had trouble building\n\n";
-      //cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
+      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
     }
     else {
         assert(false);
