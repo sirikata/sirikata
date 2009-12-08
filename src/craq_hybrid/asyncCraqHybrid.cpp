@@ -27,8 +27,8 @@ namespace CBR
   void AsyncCraqHybrid::stop()
   {
     std::cout<<"\n\nReceived shutdown in asyncCraqHybrid\n";
-    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::stop,&aCraqGet));
-    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::stop,&aCraqSet));
+    //    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::stop,&aCraqGet));
+    //    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::stop,&aCraqSet));
   }
   
   AsyncCraqHybrid::~AsyncCraqHybrid()
@@ -56,6 +56,14 @@ namespace CBR
   int AsyncCraqHybrid::numStillProcessing()
   {
     return aCraqSet.numStillProcessing() + aCraqGet.numStillProcessing();
+  }
+
+  std::vector <PollingService*> AsyncCraqHybrid::getPollingServices()
+  {
+    std::vector<PollingService*> returner;
+    returner.push_back(&aCraqSet);
+    returner.push_back(&aCraqGet);
+    return returner;
   }
 
 }//end namespace

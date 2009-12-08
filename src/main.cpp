@@ -308,53 +308,33 @@ void *main_loop(void *) {
     space_context->add(forwarder);
     space_context->add(loadMonitor);
 
-    space_context->run(2);
 
+    std::vector<PollingService*>oseg_nested_pollers =  oseg->getNestedPollers();
+    for (int s=0; s < (int) oseg_nested_pollers.size(); ++s)
+      space_context->add(oseg_nested_pollers[s]);
 
-    std::cout<<"\n\nbftm Got out of space_context->run\n";
     
+    space_context->run(2);
 
     if (GetOption(PROFILE)->as<bool>()) {
         space_context->profiler->report();
     }
 
     gTrace->prepareShutdown();
-
-    std::cout<<"\n\nbftm Got out of prepare shutdown\n";
-    
     prox->shutdown();
 
-    std::cout<<"\n\nbftm Got out of prox shutdown\n";
-    
     delete server;
-
-    std::cout<<"\n\nbftm deleted server\n";
-    
     delete sq;
-
-    std::cout<<"\n\nbftm deleted sq\n";
-    
     delete prox;
-
-    std::cout<<"\n\nbftm deleted prox\n";
-    
     delete server_id_map;
     
-    std::cout<<"\n\nbftm deleted server_id_map\n";
     
     if (weight_calc != NULL)
       delete weight_calc;
 
-    std::cout<<"\n\nbftm deleted weight_calc\n";
 
     delete cseg;
-
-    std::cout<<"\n\nbftm deleted cseg\n";
-    
     delete oseg;
-
-    std::cout<<"\n\nbftm deleted oseg\n";
-    
     delete loc_service;
     delete forwarder;
 
@@ -367,7 +347,6 @@ void *main_loop(void *) {
 
     IOStrand* mainStrand = space_context->mainStrand;
     IOService* ios = space_context->ioService;
-
     
     delete space_context;
     space_context = NULL;

@@ -24,23 +24,15 @@ namespace CBR
     for (int s=0; s < (int) mConnections.size(); ++s)
       mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::stop,mConnections[s]));
 
-    
-    /*
-    for (int s= 0;s < (int) mConnections.size(); ++s)
-    {
-      delete mConnections[s];
-      delete mConnectionsStrands[s];
-    }
-    mConnections.clear();
-    mConnectionsStrands.clear();
-    */
+       
+    PollingService::stop();
+
   }
   
   AsyncCraqGet::~AsyncCraqGet()
   {
     for (int s= 0;s < (int) mConnections.size(); ++s)
     {
-      std::cout<<"\n\nFailure in asynccraqget: should have been closed during shutdown\n";
       delete mConnections[s];
       delete mConnectionsStrands[s];
     }
@@ -62,8 +54,8 @@ namespace CBR
 
   //nothing to initialize
   AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-  //    : PollingService(strand_this_runs_on),
-    :      ctx(con),
+    : PollingService(strand_this_runs_on),
+      ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
       mOSeg(parent_oseg_called)
@@ -85,14 +77,9 @@ namespace CBR
 
 void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 {
-  
   mIpAddPort = ipAddPort;
 
   Sirikata::Network::TCPResolver resolver((*ctx->ioService)); //a resolver can resolve a query into a series of endpoints.
-  
-  mCurrentTrackNum = 10;
-  
-  //  AsyncConnectionTwo tmpConn;
 
   for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_GET; ++s)
   {
@@ -181,9 +168,6 @@ int AsyncCraqGet::queueSize()
 
   void AsyncCraqGet::poll()
   {
-    static int counter = 0;
-
-    
     int numTries = 0;
     while((mQueue.size() != 0) && (numTries < CRAQ_MAX_PUSH_GET))
     {
@@ -191,16 +175,6 @@ int AsyncCraqGet::queueSize()
       int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
       checkConnections(rand_connection);
     }
-
-
-    ++counter;
-    if (counter > 10000)
-    {
-      std::cout<<"\nPolling from inside of asynccraqget\n";
-      counter = 0;
-    }
-    
-    
   }
   
   void AsyncCraqGet::get(const CraqDataSetGet& dataToGet)

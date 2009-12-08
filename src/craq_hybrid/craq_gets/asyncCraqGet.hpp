@@ -17,7 +17,8 @@ namespace CBR
 {
 
 
-  class AsyncCraqGet : AsyncCraqScheduler // , PollingService
+  class AsyncCraqGet : public AsyncCraqScheduler,
+                       public PollingService
   {
   public:
     AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
@@ -28,16 +29,15 @@ namespace CBR
 
     virtual void erroredGetValue(CraqOperationResult* cor);
     virtual void erroredSetValue(CraqOperationResult* cor);
-    //virtual void poll();
-    void poll();
+
   
     void get(const CraqDataSetGet& cdGet);
 
     int queueSize();
     int numStillProcessing();
     int getRespCount();
-    void stop();
-
+    virtual void stop();
+    virtual void poll();
     
   private:
 
@@ -45,9 +45,7 @@ namespace CBR
     std::vector<CraqInitializeArgs> mIpAddPort;
     std::vector<AsyncConnectionGet*> mConnections;
     std::vector<IOStrand*> mConnectionsStrands;
-    
-    int mCurrentTrackNum;
-    bool connected;
+
 
     std::queue<CraqDataSetGet*> mQueue;
   

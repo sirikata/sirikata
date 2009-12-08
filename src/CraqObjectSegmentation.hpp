@@ -46,7 +46,7 @@ namespace CBR
     double checkOwnTimeDur;
     int checkOwnTimeCount;
 
-    bool mReceivedStopRequest;
+
     
     //debugging:
 
@@ -154,7 +154,7 @@ namespace CBR
     
     virtual void poll();
 
-
+    bool mReceivedStopRequest;
     
   public:
     CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
@@ -169,7 +169,7 @@ namespace CBR
     virtual void newObjectAdd(const UUID& obj_id);
     virtual void craqGetResult(CraqOperationResult* cor);
     virtual void craqSetResult(CraqOperationResult* cor);
-
+    virtual std::vector<PollingService*> getNestedPollers();
     virtual void stop();
     
     

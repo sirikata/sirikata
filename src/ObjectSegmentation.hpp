@@ -51,19 +51,6 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
         mServiceStage = mContext->profiler->addStage("OSeg");
     }
 
-    /*
-    ObjectSegmentation(SpaceContext* ctx)
-     :
-       mContext(ctx),
-       mListener(NULL)
-    {
-      mStrand = ctx->ios->createStrand();
-      PollingService(mStrand);
-      mServiceStage = mContext->profiler->addStage("OSeg");
-    }
-    */
-    
-
     virtual ~ObjectSegmentation() {}
 
       void setListener(OSegListener* listener) {
@@ -77,7 +64,9 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
     virtual void craqGetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
     virtual void craqSetResult(CraqOperationResult* cor) = 0; //also responsible for destroying 
-        
+    virtual std::vector<PollingService*> getNestedPollers() = 0;
+
+    
   };
 }
 #endif

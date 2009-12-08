@@ -88,7 +88,7 @@ private:
 
   bool mReceivedStopRequest;
   
-  
+  void clear_all_deadline_timers();  
   //***********handlers**************
   //timeout callback handler
   void queryTimedOutCallbackSet(const boost::system::error_code& e, IndividualQueryData* iqd);

@@ -17,7 +17,7 @@
 namespace CBR
 {
 
-//constructor
+  //constructor
   AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg)
   : ctx(con),
     mStrand(str),
@@ -27,47 +27,65 @@ namespace CBR
     mOSeg(oseg),
     mReceivedStopRequest(false),
     mSocket(NULL)
-{
-  mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
-  mTimer.start();
-}
-
-int AsyncConnectionSet::numStillProcessing()
-{
-  return (int) (allOutstandingQueries.size());
-}
-
-
-AsyncConnectionSet::~AsyncConnectionSet()
-{
-  //delete all outstanding queries
-  for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)
   {
-    if (outQuerIt->second->deadline_timer != NULL)
-    {
-      outQuerIt->second->deadline_timer->cancel();
-      delete       outQuerIt->second->deadline_timer;
-    }
-    delete outQuerIt->second;
+    mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
+    mTimer.start();
   }
-  allOutstandingQueries.clear();
+
+  int AsyncConnectionSet::numStillProcessing()
+  {
+    return (int) (allOutstandingQueries.size());
+  }
+
+
+  AsyncConnectionSet::~AsyncConnectionSet()
+  {
+    //delete all outstanding queries
+    for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)
+    {
+      if (outQuerIt->second->deadline_timer != NULL)
+      {
+        outQuerIt->second->deadline_timer->cancel();
+        delete       outQuerIt->second->deadline_timer;
+      }
+      delete outQuerIt->second;
+    }
+    allOutstandingQueries.clear();
 
   
-  if (! NEED_NEW_SOCKET)
-  {
-    mSocket->cancel();
-    mSocket->close();
-    delete mSocket;
-    mSocket = NULL;
+    if (! NEED_NEW_SOCKET)
+    {
+      mSocket->cancel();
+      mSocket->close();
+      delete mSocket;
+      mSocket = NULL;
+    }
   }
-}
 
   void AsyncConnectionSet::stop()
   {
+    mStrand->post(std::tr1::bind(&AsyncConnectionSet::clear_all_deadline_timers, this));
+    
     mReceivedStopRequest = true;
     if (mSocket!= NULL)
       mSocket->cancel();
   }
+
+  void AsyncConnectionSet::clear_all_deadline_timers()
+  {
+    MultiOutstandingQueries::iterator it;
+
+    for(it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
+    {
+      if(it->second->deadline_timer != NULL)
+      {
+        it->second->deadline_timer->cancel();
+        it->second->deadline_timer = NULL;
+      }
+    }
+  }
+  
+
   
   AsyncConnectionSet::ConnectionState AsyncConnectionSet::ready()
   {
@@ -87,159 +105,155 @@ AsyncConnectionSet::~AsyncConnectionSet()
   }
 
 
-//connection handler.
-void AsyncConnectionSet::connect_handler(const boost::system::error_code& error)
-{
-  if (mReceivedStopRequest)
-    return;
-  
-  if (error)
+  //connection handler.
+  void AsyncConnectionSet::connect_handler(const boost::system::error_code& error)
   {
+    if (mReceivedStopRequest)
+      return;
+    
+    if (error)
+    {
+      mSocket->cancel();
+      mSocket->close();
+      delete mSocket;
+      mSocket = NULL;
+      mReady = NEED_NEW_SOCKET;
+
+      std::cout<<"\n\nError in connection\n\n";
+      return;
+    }
+
+    std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
+    mReady = READY;
+
+    set_generic_stored_not_found_error_handler();
+  }
+
+
+
+  void AsyncConnectionSet::setBound(const CraqObjectID& obj_dataToGet, const int& dataToSetTo, const bool&  track, const int& trackNum)
+  {
+    set(obj_dataToGet.cdk,dataToSetTo,track,trackNum);
+  }
+
+
+
+  //public interface for setting data in craq via this connection.
+  void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetTo, const bool&  track, const int& trackNum)
+  {
+    if(mReceivedStopRequest)
+      return;
+
+  
+    if (mReady != READY)
+    {
+      std::cout<<"\n\nI'm not ready yet in asyncConnectionSet\n\n";
+
+      CraqOperationResult* cor  = new CraqOperationResult(0,
+                                                          dataToSet,
+                                                          trackNum,
+                                                          false, //means that the operation has failed
+                                                          CraqOperationResult::SET,
+                                                          track);
+
+    
+      mErrorStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
+    
+      return;
+    }
+
+    IndividualQueryData* iqd    =    new IndividualQueryData;
+    iqd->is_tracking            =                      track;
+    iqd->tracking_number        =                   trackNum;
+    std::string tmpStringData = dataToSet;
+    strncpy(iqd->currentlySearchingFor,tmpStringData.c_str(),tmpStringData.size() + 1);
+    iqd->currentlySettingTo     =                dataToSetTo;
+    iqd->gs                     =   IndividualQueryData::SET;
+
+    Duration dur = mTimer.elapsed();
+    iqd->time_admitted = dur.toMilliseconds();
+
+  
+    std::string index = dataToSet;
+    index += STREAM_DATA_KEY_SUFFIX;
+
+    allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this 
+
+  
+    iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
+    iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS));
+    iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
+  
+  
+    mReady = PROCESSING;
+
+    //generating the query to write.
+    std::string query;
+    query.append(CRAQ_DATA_SET_PREFIX);
+    query.append(dataToSet); //this is the re
+    query += STREAM_DATA_KEY_SUFFIX; //bftm changed here.
+    query.append(CRAQ_DATA_TO_SET_SIZE);
+    query.append(CRAQ_DATA_SET_END_LINE);
+
+    //convert from integer to string.
+    std::stringstream ss;
+    ss << dataToSetTo;
+    std::string tmper = ss.str();
+    for (int s=0; s< CRAQ_SERVER_SIZE - ((int) tmper.size()); ++s)
+    {
+      query.append("0");
+    }
+    
+    query.append(tmper);
+    query.append(STREAM_CRAQ_TO_SET_SUFFIX);
+    query.append(CRAQ_DATA_SET_END_LINE);
+
+  
+    //sets write handler
+    async_write((*mSocket),
+                boost::asio::buffer(query),
+                boost::bind(&AsyncConnectionSet::write_some_handler_set,this,_1,_2));
+  
+  }
+
+
+  //dummy handler for writing the set instruction.  (Essentially, if we run into an error from doing the write operation of a set, we know what to do.)
+  void AsyncConnectionSet::write_some_handler_set(  const boost::system::error_code& error, std::size_t bytes_transferred)
+  {
+    if (mReceivedStopRequest)
+      return;
+
+  
+    static int thisWrite = 0;
+
+    ++thisWrite;
+  
+    if (error)
+    {
+      printf("\n\nin write_some_handler_set\n\n");
+      fflush(stdout);
+      assert(false);
+      killSequence();
+    }
+  }
+
+
+  //This sequence needs to load all of its outstanding queries into the error results vector.
+  void AsyncConnectionSet::killSequence()
+  {
+    if (mReceivedStopRequest)
+      return;
+  
+    mReady = NEED_NEW_SOCKET;
     mSocket->cancel();
     mSocket->close();
     delete mSocket;
     mSocket = NULL;
-    mReady = NEED_NEW_SOCKET;
 
-    std::cout<<"\n\nError in connection\n\n";
-    return;
-  }
-
-  std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
-  mReady = READY;
-
-  set_generic_stored_not_found_error_handler();
-}
-
-
-
-void AsyncConnectionSet::setBound(const CraqObjectID& obj_dataToGet, const int& dataToSetTo, const bool&  track, const int& trackNum)
-{
-  set(obj_dataToGet.cdk,dataToSetTo,track,trackNum);
-}
-
-
-
-//public interface for setting data in craq via this connection.
-void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetTo, const bool&  track, const int& trackNum)
-{
-  if(mReceivedStopRequest)
-    return;
-
-  
-  if (mReady != READY)
-  {
-    std::cout<<"\n\nI'm not ready yet in asyncConnectionSet\n\n";
-
-    CraqOperationResult* cor  = new CraqOperationResult(0,
-                                                        dataToSet,
-                                                        trackNum,
-                                                        false, //means that the operation has failed
-                                                        CraqOperationResult::SET,
-                                                        track);
-
-    
-    mErrorStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
-    
-    return;
-  }
-
-  IndividualQueryData* iqd    =    new IndividualQueryData;
-  iqd->is_tracking            =                      track;
-  iqd->tracking_number        =                   trackNum;
-  std::string tmpStringData = dataToSet;
-  strncpy(iqd->currentlySearchingFor,tmpStringData.c_str(),tmpStringData.size() + 1);
-  iqd->currentlySettingTo     =                dataToSetTo;
-  iqd->gs                     =   IndividualQueryData::SET;
-
-  Duration dur = mTimer.elapsed();
-  iqd->time_admitted = dur.toMilliseconds();
-
-  
-  std::string index = dataToSet;
-  index += STREAM_DATA_KEY_SUFFIX;
-
-  allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this 
-
-  /* killing all deadline timers
-  iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
-  iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS));
-  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
-  */
-  iqd->deadline_timer = NULL;
-
-  
-  mReady = PROCESSING;
-
-  //generating the query to write.
-  std::string query;
-  query.append(CRAQ_DATA_SET_PREFIX);
-  query.append(dataToSet); //this is the re
-  query += STREAM_DATA_KEY_SUFFIX; //bftm changed here.
-  query.append(CRAQ_DATA_TO_SET_SIZE);
-  query.append(CRAQ_DATA_SET_END_LINE);
-
-  //convert from integer to string.
-  std::stringstream ss;
-  ss << dataToSetTo;
-  std::string tmper = ss.str();
-  for (int s=0; s< CRAQ_SERVER_SIZE - ((int) tmper.size()); ++s)
-  {
-    query.append("0");
-  }
-    
-  query.append(tmper);
-  query.append(STREAM_CRAQ_TO_SET_SUFFIX);
-  query.append(CRAQ_DATA_SET_END_LINE);
-
-  
-  //sets write handler
-  async_write((*mSocket),
-              boost::asio::buffer(query),
-              boost::bind(&AsyncConnectionSet::write_some_handler_set,this,_1,_2));
-  
-}
-
-
-//dummy handler for writing the set instruction.  (Essentially, if we run into an error from doing the write operation of a set, we know what to do.)
-void AsyncConnectionSet::write_some_handler_set(  const boost::system::error_code& error, std::size_t bytes_transferred)
-{
-  if (mReceivedStopRequest)
-    return;
-
-  
-  static int thisWrite = 0;
-
-  ++thisWrite;
-  
-  if (error)
-  {
-    printf("\n\nin write_some_handler_set\n\n");
+    printf("\n\n HIT KILL SEQUENCE \n\n");
     fflush(stdout);
     assert(false);
-    killSequence();
   }
-}
-
-
-//This sequence needs to load all of its outstanding queries into the error results vector.
-//
-void AsyncConnectionSet::killSequence()
-{
-  if (mReceivedStopRequest)
-    return;
-  
-  mReady = NEED_NEW_SOCKET;
-  mSocket->cancel();
-  mSocket->close();
-  delete mSocket;
-  mSocket = NULL;
-
-
-  printf("\n\n HIT KILL SEQUENCE \n\n");
-  fflush(stdout);
-  assert(false);
-}
 
 
 //looks through the entire response string and processes out relevant information:

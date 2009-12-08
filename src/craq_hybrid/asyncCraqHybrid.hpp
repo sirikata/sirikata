@@ -26,6 +26,7 @@ public:
   int numStillProcessing();
 
   void stop();
+  std::vector <PollingService*> getPollingServices();
   
 private:
 

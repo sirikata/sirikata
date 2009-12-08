@@ -66,7 +66,7 @@ private:
   
   int mTimesBetweenResults;
   bool mHandlerState;
-  bool mReceivedStopRequest;
+
   
   
   Sirikata::Network::TCPSocket* mSocket;
@@ -129,6 +129,8 @@ private:
   void read_handler_get      (  const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
 
 
+  void clear_all_deadline_timers();
+  
   //***strand and context
   SpaceContext* ctx;
   IOStrand* mStrand;
@@ -141,7 +143,7 @@ private:
   double getTime;
   int numGets;
   Duration mBeginDur;
-  
+  bool mReceivedStopRequest;  
 };
 
 }

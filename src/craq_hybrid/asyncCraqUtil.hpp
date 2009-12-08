@@ -36,15 +36,10 @@ namespace CBR
   
   const int STREAM_SIZE_SIZE_TAG_GET_RESPONSE =2;
   
-  /*
+
   const int STREAM_CRAQ_NUM_CONNECTIONS_SET        = 30;
   const int STREAM_CRAQ_NUM_CONNECTIONS_GET        = 4;
-  */
-  
-  const int STREAM_CRAQ_NUM_CONNECTIONS_SET        = 1;
-  const int STREAM_CRAQ_NUM_CONNECTIONS_GET        = 1;
 
-  
   const int STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS  = 560; //this is in ms
   const int STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS  = 40000; //essentially infinity
 
