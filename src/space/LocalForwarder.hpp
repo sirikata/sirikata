@@ -76,7 +76,7 @@ class LocalForwarder {
     void handleRemoveActiveConnection(const UUID& objid);
 
 
-    typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
+    typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUID::Hasher> ObjectConnectionMap;
 
     SpaceContext* mContext;
     IOStrand* mNetStrand;

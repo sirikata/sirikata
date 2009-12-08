@@ -44,15 +44,42 @@
 
 namespace CBR {
 
-ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(const ConnectionID& conn_id, Sirikata::Network::Stream* str)
- : id(conn_id),
-   socket(str)
+ObjectHostConnectionManager::ConnectionID::ConnectionID()
+        : conn(NULL)
+{
+}
+
+ObjectHostConnectionManager::ConnectionID::ConnectionID(ObjectHostConnection* _conn)
+        : conn(_conn)
+{
+}
+
+ObjectHostConnectionManager::ConnectionID::ConnectionID(const ConnectionID& rhs)
+        : conn(rhs.conn)
+{
+}
+
+ObjectHostConnectionManager::ConnectionID& ObjectHostConnectionManager::ConnectionID::operator=(const ConnectionID& rhs) {
+    conn = rhs.conn;
+    return *this;
+}
+
+
+
+
+ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(Sirikata::Network::Stream* str)
+        : socket(str)
 {
 }
 
 ObjectHostConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
     delete socket;
 }
+
+ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHostConnection::conn_id() {
+    return ConnectionID(this);
+}
+
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
@@ -80,21 +107,17 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
 }
 
 
-ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::getNewConnectionID() {
-    // FIXME better and atomic way for generating these
-    static ConnectionID src = 0;
-
-    return ++src;
-}
-
 bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
-    ObjectHostConnectionMap::iterator conn_it = mConnections.find(conn_id);
-    if (conn_it == mConnections.end()) {
-        SPACE_LOG(error,"Tried to send to unconnected object host.");
+    ObjectHostConnection* conn = conn_id.conn;
+
+    if (conn == NULL) {
+        SPACE_LOG(error,"Tried to send over invalid connection.");
         return false;
     }
 
-    ObjectHostConnection* conn = conn_it->second;
+    // If its not in the connection list we're probably chasing bad pointers
+    assert( mConnections.find(conn) != mConnections.end() );
+
     String data = serializePBJMessage(*msg);
     bool sent = conn->socket->send( Sirikata::MemoryReference(data), Sirikata::Network::ReliableOrdered );
 
@@ -162,7 +185,7 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     SPACE_LOG(debug,"New object host connection handled");
 
     // Add the new connection to our index, set read callbacks
-    ObjectHostConnection* conn = new ObjectHostConnection(getNewConnectionID(), str);
+    ObjectHostConnection* conn = new ObjectHostConnection(str);
     set_callbacks(
         &Sirikata::Network::Stream::ignoreConnectionCallback,
         std::tr1::bind(&ObjectHostConnectionManager::handleConnectionRead,
@@ -186,19 +209,19 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleC
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 
-    mMessageReceivedCallback(conn->id, obj_msg);
+    mMessageReceivedCallback(conn->conn_id(), obj_msg);
 
     return Sirikata::Network::Stream::AcceptedData;
 }
 
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
-    mConnections[conn->id] = conn;
+    mConnections.insert(conn);
 }
 
 void ObjectHostConnectionManager::closeAllConnections() {
     // Close each connection
-    for(ObjectHostConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
-        ObjectHostConnection* conn = it->second;
+    for(ObjectHostConnectionSet::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
+        ObjectHostConnection* conn = (*it);
         conn->socket->close();
     }
 }

@@ -47,14 +47,29 @@ namespace CBR {
  *  connections, and handles shipping messages out to the network.
  */
 class ObjectHostConnectionManager {
+    struct ObjectHostConnection;
 public:
-    // Uniquely identifies an object host connection for the rest of the system.
-    typedef uint64 ConnectionID;
+    // Opaque wrapper around ObjectHostConnection*, which maps a connection held
+    // by a user to an ObjectHostConnection that data can be sent over.  This
+    // provides zero overhead lookup but makes it opaque to outsiders.
+    class ConnectionID {
+      public:
+        ConnectionID();
+        ConnectionID(const ConnectionID& rhs);
+        ConnectionID& operator=(const ConnectionID& rhs);
+      private:
+        friend class ObjectHostConnectionManager;
+
+        ConnectionID(ObjectHostConnection* _conn);
+
+        ObjectHostConnection* conn;
+    };
+
 
     /** Callback generated when an object message is received over a connection.  This callback can be generated
      *  from any strand -- use strand->wrap to ensure its handled in your strand.
      */
-    typedef std::tr1::function<void(const ConnectionID&, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
+    typedef std::tr1::function<void(ConnectionID, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
 
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
@@ -79,19 +94,18 @@ private:
     Sirikata::Network::StreamListener* mAcceptor;
 
     struct ObjectHostConnection {
-        ObjectHostConnection(const ConnectionID& conn_id, Sirikata::Network::Stream* str);
+        ObjectHostConnection(Sirikata::Network::Stream* str);
         ~ObjectHostConnection();
 
-        ConnectionID id;
+        ConnectionID conn_id();
+
         Sirikata::Network::Stream* socket;
     };
-    typedef std::map<ConnectionID, ObjectHostConnection*> ObjectHostConnectionMap;
-    ObjectHostConnectionMap mConnections;
+    typedef std::set<ObjectHostConnection*> ObjectHostConnectionSet;
+    ObjectHostConnectionSet mConnections;
 
     MessageReceivedCallback mMessageReceivedCallback;
 
-
-    ConnectionID getNewConnectionID();
 
     /** Listen for and handle new connections. */
     void listen(const Address4& listen_addr); // sets up the acceptor, starts the listening cycle
