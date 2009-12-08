@@ -5,12 +5,7 @@ import random
 import matplotlib.pyplot as plt
 import subprocess
 import colors
-
-def set_legend_fontsize(legend, fontsize):
-    for t in legend.get_texts():
-        t.set_fontsize(fontsize)
-        t.set_fontname('serif')
-
+import fonts
 
 #indices: horizontal indices, i.e. separate experiments
 #labels: horizontal labels
@@ -54,7 +49,7 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
         groups.reverse()
         group_labels.reverse()
         leg = plt.legend( groups, group_labels, loc=(-.333,0) )
-        set_legend_fontsize(leg, 8)
+        fonts.set_legend_fontsize(leg, 8)
 
     return plt;
 
