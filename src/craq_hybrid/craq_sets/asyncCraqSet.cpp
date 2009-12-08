@@ -20,8 +20,8 @@
 namespace CBR
 {
 
-
-  AsyncCraqSet::~AsyncCraqSet()
+    
+  void AsyncCraqSet::stop()
   {
     for (int s= 0;s < (int) mConnections.size(); ++s)
     {
@@ -29,7 +29,26 @@ namespace CBR
       delete mConnections[s];
     }
     mConnections.clear();
-    delete mConnectionsStrands;
+    if (mConnectionsStrands != NULL)
+    {
+      delete mConnectionsStrands;
+      mConnectionsStrands = NULL;
+    }
+  }
+  
+
+  AsyncCraqSet::~AsyncCraqSet()
+  {
+    for (int s= 0;s < (int) mConnections.size(); ++s)
+    {
+      std::cout<<"\n\nError in asynccraqset.  Should have deleted in shutdown\n";
+      
+      //      delete mConnectionsStrands[s];
+      delete mConnections[s];
+    }
+    mConnections.clear();
+    if (mConnectionsStrands != NULL)
+      delete mConnectionsStrands;
   }
 
   AsyncCraqSet::AsyncCraqSet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)

@@ -24,7 +24,9 @@ namespace CBR
     mErrorStrand(error_strand),
     mResultsStrand(result_strand),
     mSchedulerMaster(master),
-    mOSeg(oseg)
+    mOSeg(oseg),
+    mReceivedStopRequest(false),
+    mSocket(NULL)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
   mTimer.start();
@@ -53,16 +55,24 @@ AsyncConnectionSet::~AsyncConnectionSet()
   
   if (! NEED_NEW_SOCKET)
   {
+    mSocket->cancel();
     mSocket->close();
     delete mSocket;
+    mSocket = NULL;
   }
 }
 
-
-AsyncConnectionSet::ConnectionState AsyncConnectionSet::ready()
-{
-  return mReady;
-}
+  void AsyncConnectionSet::stop()
+  {
+    mReceivedStopRequest = true;
+    if (mSocket!= NULL)
+      mSocket->cancel();
+  }
+  
+  AsyncConnectionSet::ConnectionState AsyncConnectionSet::ready()
+  {
+    return mReady;
+  }
 
 
   //gives us a socket to connect to
@@ -80,10 +90,15 @@ AsyncConnectionSet::ConnectionState AsyncConnectionSet::ready()
 //connection handler.
 void AsyncConnectionSet::connect_handler(const boost::system::error_code& error)
 {
+  if (mReceivedStopRequest)
+    return;
+  
   if (error)
   {
+    mSocket->cancel();
     mSocket->close();
     delete mSocket;
+    mSocket = NULL;
     mReady = NEED_NEW_SOCKET;
 
     std::cout<<"\n\nError in connection\n\n";
@@ -108,6 +123,10 @@ void AsyncConnectionSet::setBound(const CraqObjectID& obj_dataToGet, const int& 
 //public interface for setting data in craq via this connection.
 void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetTo, const bool&  track, const int& trackNum)
 {
+  if(mReceivedStopRequest)
+    return;
+
+  
   if (mReady != READY)
   {
     std::cout<<"\n\nI'm not ready yet in asyncConnectionSet\n\n";
@@ -185,6 +204,10 @@ void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetT
 //dummy handler for writing the set instruction.  (Essentially, if we run into an error from doing the write operation of a set, we know what to do.)
 void AsyncConnectionSet::write_some_handler_set(  const boost::system::error_code& error, std::size_t bytes_transferred)
 {
+  if (mReceivedStopRequest)
+    return;
+
+  
   static int thisWrite = 0;
 
   ++thisWrite;
@@ -203,9 +226,14 @@ void AsyncConnectionSet::write_some_handler_set(  const boost::system::error_cod
 //
 void AsyncConnectionSet::killSequence()
 {
+  if (mReceivedStopRequest)
+    return;
+  
   mReady = NEED_NEW_SOCKET;
+  mSocket->cancel();
   mSocket->close();
   delete mSocket;
+  mSocket = NULL;
 
 
   printf("\n\n HIT KILL SEQUENCE \n\n");
@@ -219,6 +247,9 @@ void AsyncConnectionSet::killSequence()
 // returns true if anything matches the basic template.  false otherwise
 bool AsyncConnectionSet::processEntireResponse(std::string response)
 {
+  if (mReceivedStopRequest)
+    return false;
+  
   bool returner = false;
   bool firstTime = true;
   
@@ -259,6 +290,9 @@ bool AsyncConnectionSet::processEntireResponse(std::string response)
 
 void AsyncConnectionSet::processStoredValue(std::string dataKey)
 {
+  if (mReceivedStopRequest)
+    return;
+  
   //look through multimap to find
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
@@ -307,6 +341,9 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
 //runs through the response in response and says whether the value you gave it completely matches the signature of a stored value resp.
 bool AsyncConnectionSet::parseStoredValue(const std::string& response, std::string& dataKey)
 {
+  if (mReceivedStopRequest)
+    return false;
+  
   size_t storedIndex = response.find(STREAM_CRAQ_STORED_RESP);
 
   if (storedIndex == std::string::npos)
@@ -327,6 +364,9 @@ bool AsyncConnectionSet::parseStoredValue(const std::string& response, std::stri
 
 void AsyncConnectionSet::set_generic_stored_not_found_error_handler()
 {
+  if (mReceivedStopRequest)
+    return;
+  
   boost::asio::streambuf * sBuff = new boost::asio::streambuf;
 
   const boost::regex reg ("Z\r\n");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
@@ -343,6 +383,12 @@ void AsyncConnectionSet::set_generic_stored_not_found_error_handler()
 
 void AsyncConnectionSet::generic_read_stored_not_found_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff)
 {
+  if (mReceivedStopRequest)
+  {
+    delete sBuff;
+    return;
+  }
+  
   if (error)
   {
     killSequence();
@@ -505,6 +551,9 @@ bool AsyncConnectionSet::checkError(std::string& response)
 //Therefore, we must return an error as our operation result and remove the query from our list of outstanding queries.
 void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_code& e, IndividualQueryData* iqd)
 {
+  if (mReceivedStopRequest)
+    return;
+  
   if (e == boost::asio::error::operation_aborted)
     return;
 

@@ -36,7 +36,9 @@ namespace CBR
     virtual void erroredGetValue(CraqOperationResult* cor);
     virtual void erroredSetValue(CraqOperationResult* cor);
     void poll();
-  
+
+    void stop();
+    
   private:
 
     std::vector<CraqInitializeArgs> mIpAddPort;

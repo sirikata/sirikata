@@ -24,6 +24,8 @@ public:
 
   int queueSize();
   int numStillProcessing();
+
+  void stop();
   
 private:
 

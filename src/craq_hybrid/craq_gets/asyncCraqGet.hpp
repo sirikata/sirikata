@@ -36,7 +36,9 @@ namespace CBR
     int queueSize();
     int numStillProcessing();
     int getRespCount();
-  
+    void stop();
+
+    
   private:
 
     void straightPoll();

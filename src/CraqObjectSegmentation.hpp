@@ -34,8 +34,6 @@ namespace CBR
     int timeAdmitted;
   };
 
-
-
   
   const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
   static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
@@ -47,6 +45,8 @@ namespace CBR
 
     double checkOwnTimeDur;
     int checkOwnTimeCount;
+
+    bool mReceivedStopRequest;
     
     //debugging:
 
@@ -170,6 +170,8 @@ namespace CBR
     virtual void craqGetResult(CraqOperationResult* cor);
     virtual void craqSetResult(CraqOperationResult* cor);
 
+    virtual void stop();
+    
     
     CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
     void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);

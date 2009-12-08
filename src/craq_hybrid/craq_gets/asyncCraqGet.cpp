@@ -18,10 +18,22 @@
 namespace CBR
 {
 
+  void AsyncCraqGet::stop()
+  {
+    for (int s= 0;s < (int) mConnections.size(); ++s)
+    {
+      delete mConnections[s];
+      delete mConnectionsStrands[s];
+    }
+    mConnections.clear();
+    mConnectionsStrands.clear();
+  }
+  
   AsyncCraqGet::~AsyncCraqGet()
   {
     for (int s= 0;s < (int) mConnections.size(); ++s)
     {
+      std::cout<<"\n\nFailure in asynccraqget: should have been closed during shutdown\n";
       delete mConnections[s];
       delete mConnectionsStrands[s];
     }

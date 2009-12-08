@@ -33,7 +33,8 @@ public:
   AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg);
   
   int numStillProcessing();
-
+  void stop();
+  
   
 private:
   Sirikata::Network::TCPSocket* mSocket;
@@ -85,6 +86,8 @@ private:
   
   std::string mPrevReadFrag;
 
+  bool mReceivedStopRequest;
+  
   
   //***********handlers**************
   //timeout callback handler

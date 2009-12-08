@@ -24,6 +24,13 @@ namespace CBR
     mSetStrand->post(std::tr1::bind(&AsyncCraqSet::initialize,&aCraqSet,initArgs));
   }
 
+  void AsyncCraqHybrid::stop()
+  {
+    std::cout<<"\n\nReceived shutdown in asyncCraqHybrid\n";
+    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::stop,&aCraqGet));
+    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::stop,&aCraqSet));
+  }
+  
   AsyncCraqHybrid::~AsyncCraqHybrid()
   {
     delete mGetStrand;

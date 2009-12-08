@@ -18,13 +18,14 @@
 namespace CBR
 {
 //constructor
-  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg )
+  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg)
   : ctx(con),
     mStrand(str),
     mPostErrorsStrand(error_strand),
     mResultStrand(result_strand),
     mSchedulerMaster (master),
-    mOSeg(oseg)
+    mOSeg(oseg),
+    mReceivedStopRequest(false)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
 
@@ -36,50 +37,61 @@ namespace CBR
 }
 
 
-  
-int AsyncConnectionGet::numStillProcessing()
-{
-  return (int) (allOutstandingQueries.size());
-}
-
-
-void AsyncConnectionGet::outputLargeOutstanding()
-{
-  MultiOutstandingQueries::iterator it;
-  mTimer.elapsed();
-  Duration dur = mTimer.elapsed();
-  
-  uint64 currentTime = dur.toMilliseconds();
-  
-  for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
+  void AsyncConnectionGet::stop()
   {
-    double timeInQueue = ((double) currentTime) - ((double) it->second->time_admitted);
+    mReceivedStopRequest = true;
+    if (mSocket != NULL)
+      mSocket->cancel();
 
-    if (timeInQueue > 50)
+  }
+  
+  
+  int AsyncConnectionGet::numStillProcessing()
+  {
+    return (int) (allOutstandingQueries.size());
+  }
+
+
+  void AsyncConnectionGet::outputLargeOutstanding()
+  {
+    MultiOutstandingQueries::iterator it;
+    mTimer.elapsed();
+    Duration dur = mTimer.elapsed();
+    
+    uint64 currentTime = dur.toMilliseconds();
+  
+    for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
     {
-      std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"    "<<it->second->currentlySearchingFor << "\n";
-      if (it->second->gs == IndividualQueryData::GET)
-        std::cout<<"GET operation\n";
-      else
-        std::cout<<"SET operation\n";
-
-      if (it->second->is_tracking)
-        std::cout<<"TRACKING\n";
-      else
-        std::cout<<"NOT tracking  \n";
-
-      std::cout<<"Time admitted:    "<< it->second->time_admitted <<"\n";
-      std::cout<<"Tracking number:  "<<it->second->tracking_number<<"\n\n\n";
+      double timeInQueue = ((double) currentTime) - ((double) it->second->time_admitted);
       
+      if (timeInQueue > 50)
+      {
+        std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"    "<<it->second->currentlySearchingFor << "\n";
+        if (it->second->gs == IndividualQueryData::GET)
+          std::cout<<"GET operation\n";
+        else
+          std::cout<<"SET operation\n";
+        
+        if (it->second->is_tracking)
+          std::cout<<"TRACKING\n";
+        else
+          std::cout<<"NOT tracking  \n";
+
+        std::cout<<"Time admitted:    "<< it->second->time_admitted <<"\n";
+        std::cout<<"Tracking number:  "<<it->second->tracking_number<<"\n\n\n";
+      
+      }
     }
   }
-}
 
 
 //This gets called with a pointer to query data as its argument.  The query data inside of this has waited too long to be processed.
 //Therefore, we must return an error as our operation result and remove the query from our list of outstanding queries.
 void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_code& e, IndividualQueryData* iqd)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   if (e == boost::asio::error::operation_aborted)
     return;
   
@@ -138,6 +150,9 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 //it should be called wrapped inside of osegStrand because interfacing with outstandingqueries.
 void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::error_code& e, IndividualQueryData* iqd)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   if (e == boost::asio::error::operation_aborted)
     return;
 
@@ -169,17 +184,19 @@ AsyncConnectionGet::~AsyncConnectionGet()
   
   if (! NEED_NEW_SOCKET)
   {
+    mSocket->cancel();
     mSocket->close();
     delete mSocket;
+    mSocket = NULL;
   }
 }
 
 
 
-AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
-{
-  return mReady;
-}
+  AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
+  {
+    return mReady;
+  }
 
 
 
@@ -203,10 +220,15 @@ AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
 //connection handler.
 void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   if (error)
   {
+    mSocket->cancel();
     mSocket->close();
     delete mSocket;
+    mSocket = NULL;
     mReady = NEED_NEW_SOCKET;
 
     std::cout<<"\n\nError in connection\n\n";
@@ -224,6 +246,33 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
   runReQuery();
 }
 
+  
+int AsyncConnectionGet::runReQuery()
+{
+  if ( mReceivedStopRequest)
+    return 0;
+
+  
+  MultiOutstandingQueries::iterator it;
+
+  int returner = 0;
+  for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
+  {
+    getQuery(it->second->currentlySearchingFor);
+    ++ returner;
+  }
+
+  if (returner != 0)
+    std::cout<<"\n\nThis is numToRequery: "<<returner<<"\n\n";
+
+  
+  if (! mHandlerState)
+  {
+    std::cout<<"\n\n***********************************HANDLER ISSUE*******************\n\n";
+  }
+  
+  return returner;
+}
 
 
 
@@ -247,6 +296,9 @@ void AsyncConnectionGet::printStatisticsTimesTaken()
 //dummy handler for writing the set instruction.  (Essentially, if we run into an error from doing the write operation of a set, we know what to do.)
 void AsyncConnectionGet::write_some_handler_set(  const boost::system::error_code& error, std::size_t bytes_transferred)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   if (error)
   {
     printf("\n\nin write_some_handler_set\n\n");
@@ -256,28 +308,6 @@ void AsyncConnectionGet::write_some_handler_set(  const boost::system::error_cod
   }
 }
 
-int AsyncConnectionGet::runReQuery()
-{
-  MultiOutstandingQueries::iterator it;
-
-  int returner = 0;
-  for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
-  {
-    getQuery(it->second->currentlySearchingFor);
-    ++ returner;
-  }
-
-  if (returner != 0)
-    std::cout<<"\n\nThis is numToRequery: "<<returner<<"\n\n";
-
-  
-  if (! mHandlerState)
-  {
-    std::cout<<"\n\n***********************************HANDLER ISSUE*******************\n\n";
-  }
-  
-  return returner;
-}
 
 
 //datakey should have a null termination character.
@@ -285,6 +315,9 @@ int AsyncConnectionGet::runReQuery()
 //called from inside of oseg_strand.
 void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 {
+  if( mReceivedStopRequest)
+    return;
+  
   Duration beginningDur = mSpecificTimer.elapsed();
   
   if (mReady != READY)
@@ -342,6 +375,9 @@ void AsyncConnectionGet::getBound(const CraqObjectID& obj_dataToGet)
 
 bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
 {
+  if ( mReceivedStopRequest)
+    return true;
+  
   //crafts query
   std::string query;
   query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
@@ -362,6 +398,9 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
 
 void AsyncConnectionGet::write_some_handler_get(  const boost::system::error_code& error, std::size_t bytes_transferred)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   if (error)
   {
     printf("\n\nin write_some_handler_get\n\n");
@@ -376,9 +415,14 @@ void AsyncConnectionGet::write_some_handler_get(  const boost::system::error_cod
 //
 void AsyncConnectionGet::killSequence()
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   mReady = NEED_NEW_SOCKET;
+  mSocket->cancel();
   mSocket->close();
   delete mSocket;
+  mSocket = NULL;
 
   
   printf("\n\n HIT KILL SEQUENCE \n\n");
@@ -414,6 +458,9 @@ void AsyncConnectionGet::printOutstanding()
 // returns true if anything matches the basic template.  false otherwise
 bool AsyncConnectionGet::processEntireResponse(std::string response)
 {
+  if ( mReceivedStopRequest)
+    return true;
+  
   //index from stored
   //not_found
   //value
@@ -602,6 +649,9 @@ bool AsyncConnectionGet::parseValueNotFound(std::string response, std::string& d
 //takes the data key associated with a not found message, and loads it into operation result vector.
 void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   //look through multimap to find 
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(dataKey);
 
@@ -727,6 +777,9 @@ bool AsyncConnectionGet::checkValue(std::string& response)
 //takes the string associated with the datakey of a value found message and inserts it into operation value found
 void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   //look through multimap to find
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
@@ -817,6 +870,9 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
 
 void AsyncConnectionGet::processStoredValue(std::string dataKey)
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   //look through multimap to find
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
@@ -883,6 +939,9 @@ bool AsyncConnectionGet::parseStoredValue(const std::string& response, std::stri
 
 void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
 {
+  if ( mReceivedStopRequest)
+    return;
+  
   boost::asio::streambuf * sBuff = new boost::asio::streambuf;
   //  const boost::regex reg ("(ND\r\n|ERROR\r\n)");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
   //  const boost::regex reg ("Z\r\n");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
@@ -904,6 +963,13 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
 
 void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff)
 {
+  if( mReceivedStopRequest)
+  {
+    delete sBuff;
+    return;
+  }
+    
+  
   mHandlerState = false;
 
   if (error)

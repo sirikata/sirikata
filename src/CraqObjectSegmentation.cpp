@@ -33,7 +33,8 @@ namespace CBR
    craqDhtGet(ctx, o_strand, this),
    craqDhtSet(ctx, o_strand, this),
    postingStrand(strand_to_post_to),
-   mStrand(o_strand)
+   mStrand(o_strand),
+   mReceivedStopRequest(false)
   {
   
     //registering with the dispatcher.  can now receive messages addressed to it.
@@ -64,6 +65,17 @@ namespace CBR
     mAtomicTrackID    = 10;
   }
 
+  
+  void CraqObjectSegmentation::stop()
+  {
+    std::cout<<"\nGot a shutdown in CraqObjectSegmentation\n";
+    craqDhtSet.stop();
+    craqDhtGet.stop();
+    Poller::stop();
+
+    mReceivedStopRequest = true;
+  }
+  
   /*
     Destructor
   */
@@ -73,7 +85,7 @@ namespace CBR
     mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
     mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
-    //    should delete not found queu;
+    //    should delete not found queue;
     while (mNfData.size() != 0)
     {
       NotFoundData* nfd = mNfData.front();
@@ -156,6 +168,9 @@ namespace CBR
   */
   bool CraqObjectSegmentation::clearToMigrate(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return false;
+    
     //set a mutex lock.
     std::cout<<"\nGot a lock clear to migrate\n";
     inTransOrLookup_m.lock();
@@ -190,6 +205,9 @@ namespace CBR
   //this call returns true if the object is migrating from this server to another server, but hasn't yet received an ack message (which will disconnect the object connection.)
   bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return false;
+    
     std::cout<<"\nGot a lock checkMigrationFromNotCompleteYet\n";
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::const_iterator iterInTransOrLookup = mInTransitOrLookup.find(obj_id);
@@ -241,6 +259,9 @@ namespace CBR
   
   void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return ;
+    
     std::cout<<"\n\nRequest to add new object:  "<<obj_id.toString()<<"\n\n";
     
     CraqDataKey cdk;
@@ -272,6 +293,9 @@ namespace CBR
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return NullServerID;
+    
     ++numLookups;
 
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
@@ -311,6 +335,9 @@ namespace CBR
 
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
@@ -374,6 +401,10 @@ namespace CBR
   */
   void CraqObjectSegmentation::addObject(const UUID& obj_id, const ServerID idServerAckTo, bool generateAck)
   {
+    if (mReceivedStopRequest)
+      return;
+
+    
     if (generateAck)
     {
       CraqDataKey cdk;
@@ -429,6 +460,9 @@ namespace CBR
   */
   void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const ServerID new_server_id)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     //log the message.
     mContext->trace()->objectBeginMigrate(mContext->time,
                                           obj_id,mContext->id(),
@@ -472,6 +506,12 @@ namespace CBR
 
   void CraqObjectSegmentation::poll()
   {
+    if (mReceivedStopRequest)
+    {
+      std::cout<<"\n\nReally shouldn't have gotten a craqobjseg poll\n";
+      return;
+    }
+    
     static int counter = 0;
     ++counter;
     
@@ -487,7 +527,6 @@ namespace CBR
       counter = 0;
     }
     
-    
     mServiceStage->finished();
   }
 
@@ -496,6 +535,9 @@ namespace CBR
   //should be called from inside of o_strand and posts to postingStrand mainStrand->post.
   void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     postingStrand->post(std::tr1::bind (&OSegListener::osegLookupCompleted,mListener,obj_id,sID));
   }
 
@@ -509,6 +551,12 @@ namespace CBR
   //This receives messages oseg migrate and acknowledge messages
   void CraqObjectSegmentation::receiveMessage(Message* msg)
   {
+    if (mReceivedStopRequest)
+    {
+      delete msg;
+      return;
+    }
+    
       if (msg->dest_port() == SERVER_PORT_OSEG_MIGRATE_MOVE) {
           CBR::Protocol::OSeg::MigrateMessageMove oseg_move_msg;
           bool parsed = parsePBJMessage(&oseg_move_msg, msg->payload());
@@ -542,12 +590,18 @@ namespace CBR
   //called from within o_strand
   void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on()));
   }
 
   //called from within o_strand
   void CraqObjectSegmentation::processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     ServerID serv_from, serv_to;
     UUID obj_id;
 
@@ -605,6 +659,9 @@ namespace CBR
   //should probably be called from within o_strand
   void CraqObjectSegmentation::checkReSends()
   {
+    if (mReceivedStopRequest)
+      return;
+    
     Timer checkSendTimer;
     checkSendTimer.start();
 
@@ -659,6 +716,9 @@ namespace CBR
   //this function tells us what to do with all the ids that just weren't found in craq.
   void CraqObjectSegmentation::notFoundFunction(CraqOperationResult* nf)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     //turn the id into a uuid and then push it onto the end of  mNfData queue.
     if (mapDataKeyToUUID.find(nf->idToString()) == mapDataKeyToUUID.end())
       return; //means that we really have no record of this objects' even having been requested.
@@ -673,6 +733,9 @@ namespace CBR
   //this function tells us if there are any ids that have waited long enough for it to be safe to query for the again.
   void CraqObjectSegmentation::checkNotFoundData()
   {
+    if (mReceivedStopRequest)
+      return;
+    
     //look at the first element of the queue.  if the time hasn't been sufficiently long, return.  if the time has been sufficiently long, then go ahead and directly request asyncCraq to perform another lookup.
     
     if (mNfData.size() == 0)
@@ -713,6 +776,12 @@ namespace CBR
   //gets posted to from asyncCraqGet.  Should get inside of o_strand from the post.
   void CraqObjectSegmentation::craqGetResult(CraqOperationResult* cor)
   {
+    if (mReceivedStopRequest)
+    {
+      delete cor;
+      return;
+    }
+    
     if (cor->servID == NullServerID)
     {
       notFoundFunction(cor);
@@ -769,6 +838,9 @@ namespace CBR
   //which we already know has an entry in trackingMessages
   void CraqObjectSegmentation::removeFromInTransOrLookup(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     std::cout<<"\nGot a lock removeFromInTransOrLookup\n";
     inTransOrLookup_m.lock();
       
@@ -790,6 +862,9 @@ namespace CBR
   //Assumes that the result as an entry in trackingMessages
   void CraqObjectSegmentation::removeFromReceivingObjects(const UUID& obj_id)
   {
+    if (mReceivedStopRequest)
+      return;
+    
     //remove this object from mReceivingObjects,
     //this removal indicates that this object can now be safely migrated from this server to another if need be.
     std::cout<<"\nGot a lock removeFromReceivingObjects\n";
@@ -810,6 +885,11 @@ namespace CBR
   //gets posted to from asyncCraqSet.  Should get inside of o_strand from the post.
   void CraqObjectSegmentation::craqSetResult(CraqOperationResult* trackedSetResult)
   {
+    if (mReceivedStopRequest)
+    {
+      delete trackedSetResult;
+      return;
+    }
     if(trackedSetResult->trackedMessage == 0)  //means that we weren't supposed to be tracking this message
     {
       delete trackedSetResult;

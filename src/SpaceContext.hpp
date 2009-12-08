@@ -103,7 +103,7 @@ private:
             for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
                 (*it)->stop();
         }
-
+        
         lastTime = time;
         time = Time::null() + elapsed;
 

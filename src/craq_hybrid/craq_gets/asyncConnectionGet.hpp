@@ -55,6 +55,8 @@ public:
   void printStatisticsTimesTaken();
 
   int getRespCount();
+
+  void stop();
   
 private:
   
@@ -64,7 +66,8 @@ private:
   
   int mTimesBetweenResults;
   bool mHandlerState;
-
+  bool mReceivedStopRequest;
+  
   
   Sirikata::Network::TCPSocket* mSocket;
 
