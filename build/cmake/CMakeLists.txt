@@ -225,6 +225,8 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(Prox REQUIRED)
 
+#dependency: gcrypt
+FIND_PACKAGE(GCrypt REQUIRED)
 
 # get some useful macros from sirikata
 SET(PBJ_RUNABLE ${Sirikata_PBJ}) # FIXME this should be an option
@@ -261,6 +263,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${SST_INCLUDE_DIRS}
         ${PROX_INCLUDE_DIRS}
         ${PROTOCOLBUFFERS_INCLUDE_DIRS}
+        ${GCRYPT_INCLUDE_DIRS}
         )
 
 #source files
@@ -414,6 +417,7 @@ TARGET_LINK_LIBRARIES(cbr
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
+        ${GCRYPT_LIBRARIES}
         )
 
 ADD_EXECUTABLE(oh ${OH_SOURCES} ${CBR_PROTOCOL_SOURCES})
@@ -437,6 +441,7 @@ TARGET_LINK_LIBRARIES(cseg
         ${Boost_REGEX_LIBRARY}
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
+        ${GCRYPT_LIBRARIES}
         )
 
 ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
@@ -449,6 +454,7 @@ TARGET_LINK_LIBRARIES(analysis
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
         ${GLUT_LIBRARIES}
+        ${GCRYPT_LIBRARIES}
         )
 
 ADD_EXECUTABLE(bench ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
