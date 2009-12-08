@@ -5,16 +5,16 @@
 #include "Options.hpp"
 namespace CBR{
 void DPSInitOptions(DistributionPingScenario *thus) {
-   
+
     Sirikata::InitializeClassOptions ico("DistributedPingScenario",thus,
                                          new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<size_t>(),"Number of pings launched per simulation second"),
                                          new OptionValue("allow-same-object-host","false",Sirikata::OptionValueType<bool>(),"allow pings to occasionally hit the same object host you are on"),
                                          new OptionValue("force-same-object-host","false",Sirikata::OptionValueType<bool>(),"force pings to only go through 1 spaec server hop"),
         NULL);
 }
-DistributionPingScenario::DistributionPingScenario(const String &options):mLastTime(Time::epoch()){ 
+DistributionPingScenario::DistributionPingScenario(const String &options):mLastTime(Time::epoch()){
 
-    mContext=NULL;    
+    mContext=NULL;
     mPingID=0;
     DPSInitOptions(this);
     OptionSet* optionsSet = OptionSet::getOptions("DistributedPingScenario",this);
@@ -25,7 +25,7 @@ DistributionPingScenario::DistributionPingScenario(const String &options):mLastT
     mNumPingsMissed=0;
 
 }
-DistributionPingScenario::~DistributionPingScenario(){ 
+DistributionPingScenario::~DistributionPingScenario(){
     delete mPingPoller;
     delete mPingProfiler;
 }
@@ -67,7 +67,7 @@ bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance
                                         objA,
                                         objB->uuid(),
                                         distance*GetOption("region")->as<BoundingBox3f>().diag().x/maxDistance)) {
-            
+
             return false;
         }
     }
@@ -86,12 +86,11 @@ void DistributionPingScenario::generatePings() {
             distance+=1;
     }
     unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
-    
+
     mNumPingsMissed++;
     bool broke=false;
     unsigned int limit=mNumPingsMissed;
-    for (unsigned i=0;i<limit;++i) {   
-        printf("ping %d\n",i);
+    for (unsigned i=0;i<limit;++i) {
         if (!pingOne(minServer,distance)) {
             broke=true;
             break;
@@ -101,7 +100,6 @@ void DistributionPingScenario::generatePings() {
     }
     Time newTime=mContext->simTime();
     double numNewPings=(newTime-mLastTime).toSeconds()/mNumPingsPerSecond-1;
-    printf("ping %f\n",numNewPings);
     while (!broke && numNewPings>1) {
         if(!pingOne(minServer,distance)) {
             break;
@@ -112,7 +110,7 @@ void DistributionPingScenario::generatePings() {
     mPingProfiler->finished();
     static bool printed=false;
     if (mNumPingsMissed>10*mNumPingsPerSecond&&!printed) {
-        SILOG(oh,debug,"[OH] " << mNumPingsMissed<<" pending ");       
+        SILOG(oh,debug,"[OH] " << mNumPingsMissed<<" pending ");
         printed=true;
     }
     mLastTime=newTime;
