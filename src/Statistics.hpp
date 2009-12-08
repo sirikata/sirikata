@@ -37,6 +37,7 @@
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
+#include "OSegLookupTraceToken.hpp"
 
 #include <boost/thread/recursive_mutex.hpp>
 
@@ -106,7 +107,9 @@ public:
     static const uint8 ObjectGeneratedLocationTag = 22;
     static const uint8 OSegCacheResponseTag = 23;
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
+    static const uint8 OSegCumulativeTraceAnalysisTag   = 25;
 
+  
     enum MessagePath {
         NONE, // Used when tag is needed but we don't have a name for it
 
@@ -182,6 +185,8 @@ public:
 
   void osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj);
 
+  void osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken);
+  
     void prepareShutdown();
     void shutdown();
 

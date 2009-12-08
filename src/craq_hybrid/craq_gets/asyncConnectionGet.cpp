@@ -370,9 +370,6 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
   iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, iqd)));
 
-
-
-
   
   getQuery(dataToGet);
 

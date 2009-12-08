@@ -314,6 +314,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/space/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
@@ -364,6 +365,7 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/Analysis.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
 #  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp

@@ -20,6 +20,8 @@
 #include <algorithm>
 #include "CraqCacheGood.hpp"
 #include <boost/thread/mutex.hpp>
+#include "OSegLookupTraceToken.hpp"
+
 
 namespace CBR
 {
@@ -27,13 +29,14 @@ namespace CBR
   /*
     Basic constructor
   */
-  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to)
+  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to)
  : ObjectSegmentation(ctx, o_strand),
    mCSeg (cseg),
    craqDhtGet(ctx, o_strand, this),
    craqDhtSet(ctx, o_strand, this),
    postingStrand(strand_to_post_to),
    mStrand(o_strand),
+   ctx(con),
    mReceivedStopRequest(false)
   {
   
@@ -57,12 +60,13 @@ namespace CBR
     numServices                 = 0;
     numLookingUpDebug           = 0;
     mServiceTimer.start();
-    mTimer.start();
 
     checkOwnTimeDur   = 0;
     checkOwnTimeCount = 0;
 
     mAtomicTrackID    = 10;
+
+    mTimer.start();
   }
 
   
@@ -148,6 +152,7 @@ namespace CBR
       //means that the object isn't hosted on this space server
 
       Duration endingDur = mTimer.elapsed();
+      //      Duration endingDur = ctx->time.elapsed();
       checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
       ++checkOwnTimeCount;
       
@@ -157,6 +162,7 @@ namespace CBR
     //means that the object *is* hosted on this space server
 
     Duration endingDur = mTimer.elapsed();
+    //    Duration endingDur = ctx->time;
     checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
     ++ checkOwnTimeCount;
     return true;
@@ -261,6 +267,7 @@ namespace CBR
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id);
     tsrda.dur       = mTimer.elapsed();
+    //    tsrda.dur       = ctx->time;
 
     int trackID = getUniqueTrackID();
     craqDhtSet.set(cdSetGet, trackID);
@@ -355,6 +362,7 @@ namespace CBR
 
       //puts object in transit or lookup.
       Duration timerDur = mTimer.elapsed();
+      //      Duration timerDur = ctx->time;
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
@@ -415,6 +423,7 @@ namespace CBR
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
       tsrd.dur       = mTimer.elapsed();
+      //tsrd.dur       = ctx->time;
 
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet,trackID);
@@ -461,6 +470,7 @@ namespace CBR
     tmpTransLookup.sID = new_server_id;
 
     Duration tmpDurer= mTimer.elapsed();
+    //    Duration tmpDurer= ctx->time;
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
@@ -711,6 +721,7 @@ namespace CBR
     NotFoundData* nfd = new NotFoundData();
     nfd->obj_id =  mapDataKeyToUUID[nf->idToString()];
     nfd->dur    =  mTimer.elapsed();
+    //    nfd->dur    =  ctx->time;
     mNfData.push(nfd);
   }
 
@@ -729,6 +740,7 @@ namespace CBR
     std::cout<<"\n\nGOT NOT FOUND\n\n";
 
     Duration tmpDur = mTimer.elapsed();
+    //    Duration tmpDur = ctx->time;
     
     bool queueDataOldEnough = true;
     NotFoundData* nfd;
@@ -792,6 +804,7 @@ namespace CBR
     {
       //log message stating that object was processed.
       Duration timerDur = mTimer.elapsed();
+      //Duration timerDur = ctx->time;
       mContext->trace()->objectSegmentationProcessedRequest(mContext->time,
                                                             tmper,
                                                             cor->servID,
@@ -896,6 +909,7 @@ namespace CBR
 
       //log event
       Duration procTrackedSetRes = mTimer.elapsed();
+      //      Duration procTrackedSetRes = ctx->time;
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
       
       mContext->trace()->processOSegTrackedSetResults(mContext->time,

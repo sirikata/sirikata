@@ -37,7 +37,7 @@
 #include "AnalysisEvents.hpp"
 #include "Utility.hpp"
 #include "RecordedMotionPath.hpp"
-
+#include "OSegLookupTraceToken.hpp"
 #include <algorithm>
 
 namespace CBR {
@@ -156,6 +156,14 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = pqevt;
           }
           break;
+
+      case Trace::OSegCumulativeTraceAnalysisTag:
+        {
+          OSegCumulativeEvent* cumevt = new OSegCumulativeEvent;
+          is.read((char*)&cumevt->time, sizeof(cumevt->time));
+          is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
+          evt = cumevt;
+        }
       case Trace::ServerDatagramSentTag:
           {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
@@ -360,7 +368,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         break;
 
 
-
       default:
 
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
@@ -370,9 +377,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 
     return evt;
 }
-
-
-
 
 
 
@@ -1650,7 +1654,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectBeginMigrateID.push_back(obj_mig_evt->mObjID);
           objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->mMigrateFrom);
           objectBeginMigrateMigrateTo.push_back(obj_mig_evt->mMigrateTo);
-
+          delete evt;
           continue;
         }
 
@@ -1662,7 +1666,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->mObjID);
           objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
           objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
-
+          delete evt;
           continue;
         }
 
@@ -1818,7 +1822,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           times.push_back(obj_lookup_evt->time);
           obj_ids.push_back(obj_lookup_evt->mObjID);
           sID_lookup.push_back(obj_lookup_evt->mID_lookup);
-
+          delete evt;
           continue;
         }
 
@@ -1923,6 +1927,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           times.push_back(obj_lookup_evt->time);
           obj_ids.push_back(obj_lookup_evt->mObjID);
           sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          delete evt;
           continue;
         }
 
@@ -2032,6 +2037,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
           dTimes.push_back(obj_lookup_proc_evt->deltaTime);
           stillInQueues.push_back(obj_lookup_proc_evt->stillInQueue);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2230,6 +2236,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           ObjectMigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
           allRoundTripEvts.push_back(rdt_evt);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2310,6 +2317,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           OSegTrackedSetResultsEvent oseg_tracked_evter = (*oseg_tracked_evt);
           allTrackedSetResultsEvts.push_back(oseg_tracked_evter);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2385,6 +2393,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           OSegShutdownEvent oseg_shutdown_evter = (*oseg_shutdown_evt);
           allShutdownEvts.push_back(oseg_shutdown_evter);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2442,6 +2451,7 @@ OSegCacheResponseAnalysis::OSegCacheResponseAnalysis(const char* opt_name, const
       {
         OSegCacheResponseEvent oseg_cache_evter = (*oseg_cache_evt);
         allCacheResponseEvts.push_back(oseg_cache_evter);
+        delete evt;
         continue;
       }
       delete evt;
@@ -2514,6 +2524,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_rd_trip_evt != NULL)
       {
         mMigrationVector.push_back(*oseg_rd_trip_evt);
+        delete evt;
         continue;
       }
 
@@ -2521,6 +2532,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_lookup_proc_evt != NULL)
       {
         mLookupVector.push_back(*oseg_lookup_proc_evt);
+        delete evt;
         continue;
       }
 
@@ -2528,6 +2540,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_cache_evt != NULL)
       {
         mCacheResponseVector.push_back(*oseg_cache_evt);
+        delete evt;
         continue;
       }
 
@@ -2535,6 +2548,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_lookup_not_on_server_evt != NULL)
       {
         mObjectLookupNotOnServerVector.push_back(*oseg_lookup_not_on_server_evt);
+        delete evt;
         continue;
       }
 
@@ -2883,5 +2897,290 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
            << std::endl;
     }
 }
+
+
+
+
+
+OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers)
+{
+
+  for(uint32 server_id = 1; server_id <= nservers; server_id++)
+  {
+    String loc_file = GetPerServerFile(opt_name, server_id);
+    std::ifstream is(loc_file.c_str(), std::ios::in);
+
+    while(is)
+    {
+      Event* evt = Event::read(is, server_id);
+      if (evt == NULL)
+        break;
+
+      OSegCumulativeEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeEvent*> (evt);
+      if (oseg_cum_evt != NULL)
+      {
+        allTraces.push_back(oseg_cum_evt);
+        continue;
+      }
+      delete evt;
+    }
+  }
+  filterShorterPath();
+  
+  generateCacheTime();
+    generateGetCraqLookupPostTime();
+  generateCraqLookupTime();
+  generateCraqLookupNotAlreadyLookingUpTime();
+    generateManagerPostTime();
+  generateManagerEnqueueTime();
+  generateManagerDequeueTime();
+    generateConnectionPostTime();
+  generateConnectionNetworkQueryTime();
+  generateConnectionNetworkTime();
+    generateReturnPostTime();
+  generateLookupReturnTime();
+  
+}
+
+OSegCumulativeTraceAnalysis::~OSegCumulativeTraceAnalysis()
+{
+  for (int s=0;s < (int)allTraces.size(); ++s)
+  {
+    delete allTraces[s];
+  }
+  allTraces.clear();
+  cacheTimesVec.clear();
+  craqLookupPostTimesVec.clear();
+  craqLookupTimesVec.clear();
+  craqLookupNotAlreadyLookingUpTimesVec.clear();
+  managerPostTimesVec.clear();
+  managerEnqueueTimesVec.clear();
+  managerDequeueTimesVec.clear();
+  connectionPostTimesVec.clear();
+  connectionNetworkQueryTimesVec.clear();
+  connectionsNetworkTimesVec.clear();
+  returnPostTimesVec.clear();
+  lookupReturnsTimesVec.clear();
+  completeLookupTimesVec.clear();
+}
+
+void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
+{
+  fileOut << "\n\nCumulative OSeg Analysis\n\n";
+
+  fileOut << "\n\nComplete Lookup Times\n";
+  for (int s=0; s < (int) completeLookupTimesVec.size(); ++s)
+    fileOut  << completeLookupTimesVec[s] << ",";
+
+  fileOut << "\n\nCache Check Times\n";
+  for (int s=0; s < (int) cacheTimesVec.size(); ++s)
+    fileOut  << cacheTimesVec[s] << ",";
+
+  fileOut << "\n\nCraq Lookup Post Times\n";
+  for (int s=0; s < (int) craqLookupPostTimesVec.size(); ++s)
+    fileOut  << craqLookupPostTimesVec[s] << ",";
+
+  fileOut << "\n\nCraq Lookup Times\n";
+  for (int s=0; s < (int) craqLookupTimesVec.size(); ++s)
+    fileOut  << craqLookupTimesVec[s] << ",";
+
+  fileOut << "\n\nCraq Lookup Not Already Looking Up Times\n";
+  for (int s=0; s < (int) craqLookupNotAlreadyLookingUpTimesVec.size(); ++s)
+    fileOut  << craqLookupNotAlreadyLookingUpTimesVec[s] << ",";
+
+  fileOut << "\n\nManager Post Times\n";
+  for (int s=0; s < (int) managerPostTimesVec.size(); ++s)
+    fileOut  << managerPostTimesVec[s] << ",";
+  
+  fileOut << "\n\nManager Enqueue Times\n";
+  for (int s=0; s < (int) managerEnqueueTimesVec.size(); ++s)
+    fileOut  << managerEnqueueTimesVec[s] << ",";
+
+  fileOut << "\n\nManager Dequeue Times\n";
+  for (int s=0; s < (int) managerDequeueTimesVec.size(); ++s)
+    fileOut  << managerDequeueTimesVec[s] << ",";
+
+  fileOut << "\n\nPost To ConnectionGet Times\n";
+  for (int s=0; s < (int) connectionPostTimesVec.size(); ++s)
+    fileOut  << connectionPostTimesVec[s] << ",";
+
+  fileOut << "\n\nNetwork Query Times\n";
+  for (int s=0; s < (int) connectionNetworkQueryTimesVec.size(); ++s)
+    fileOut  << connectionNetworkQueryTimesVec[s] << ",";
+
+  fileOut << "\n\nNetwork Trip Times\n";
+  for (int s=0; s < (int) connectionsNetworkTimesVec.size(); ++s)
+    fileOut  << connectionsNetworkTimesVec[s] << ",";
+
+      
+  fileOut << "\n\nReturn Post Times\n";
+  for (int s=0; s < (int) returnPostTimesVec.size(); ++s)
+    fileOut  << returnPostTimesVec[s] << ",";
+
+  
+  fileOut << "\n\n Post Times\n";
+  for (int s=0; s < (int) lookupReturnsTimesVec.size(); ++s)
+    fileOut  << lookupReturnsTimesVec[s] << ",";
+
+  fileOut <<"\n\n\n";
+}
+
+
+
+void OSegCumulativeTraceAnalysis::filterShorterPath()
+{
+  std::vector<OSegCumulativeEvent*>::iterator traceIt = allTraces.begin();
+
+  while(traceIt != allTraces.end())
+  {
+    if( ((*traceIt)->traceToken.notReady)         ||
+        ((*traceIt)->traceToken.shuttingDown)     ||
+        ((*traceIt)->traceToken.deadlineExpired)  ||
+        ((*traceIt)->traceToken.notFound))
+    {
+      //need to erase it 
+      allTraces.erase(traceIt++);
+    }
+    else
+      ++traceIt;
+  }
+}
+
+
+
+void OSegCumulativeTraceAnalysis::generateCacheTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int)allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.checkCacheLocalEnd - allTraces[s]->traceToken.checkCacheLocalBegin;
+
+    cacheTimesVec.push_back(toPush);
+  }
+}
+
+void OSegCumulativeTraceAnalysis::generateGetCraqLookupPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.craqLookupBegin -  allTraces[s]->traceToken.checkCacheLocalEnd;
+    craqLookupPostTimesVec.push_back(toPush);
+  }
+
+}
+void OSegCumulativeTraceAnalysis::generateCraqLookupTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.craqLookupEnd - allTraces[s]->traceToken.craqLookupBegin;
+    craqLookupTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateCraqLookupNotAlreadyLookingUpTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpBegin;
+
+    craqLookupNotAlreadyLookingUpTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateManagerPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getManagerEnqueueBegin - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd;
+
+    managerPostTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getManagerEnqueueEnd - allTraces[s]->traceToken.getManagerEnqueueBegin;
+
+    managerEnqueueTimesVec.push_back(toPush);
+  }
+  
+}
+void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getManagerDequeued - allTraces[s]->traceToken.getManagerEnqueueEnd;
+
+    managerDequeueTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getConnectionNetworkGetBegin - allTraces[s]->traceToken.getManagerDequeued;
+
+    connectionPostTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getConnectionNetworkGetEnd - allTraces[s]->traceToken.getConnectionNetworkGetBegin;
+
+    connectionNetworkQueryTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getConnectionNetworkReceived - allTraces[s]->traceToken.getConnectionNetworkGetEnd;
+
+    connectionsNetworkTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateReturnPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.lookupReturnBegin - allTraces[s]->traceToken.getConnectionNetworkReceived;
+
+    returnPostTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size();++s)
+  {
+    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.lookupReturnBegin;
+
+    lookupReturnsTimesVec.push_back(toPush);
+  }
+}
+
+void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.initialLookupTime;
+
+    completeLookupTimesVec.push_back(toPush);
+  }
+}
+
+
 
 } // namespace CBR

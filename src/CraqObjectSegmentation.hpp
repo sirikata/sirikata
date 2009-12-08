@@ -18,7 +18,7 @@
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>
-
+#include "OSegLookupTraceToken.hpp"
 
 
 //#define CRAQ_DEBUG
@@ -46,11 +46,8 @@ namespace CBR
     double checkOwnTimeDur;
     int checkOwnTimeCount;
 
-
     
     //debugging:
-
-    Timer mTimer;
 
     char myUniquePrefixKey; //should just be one character long.
 
@@ -154,10 +151,13 @@ namespace CBR
     
     virtual void poll();
 
+    SpaceContext* ctx;
     bool mReceivedStopRequest;
+
+    Timer mTimer;
     
   public:
-    CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
+    CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
 
 
     virtual ~CraqObjectSegmentation();

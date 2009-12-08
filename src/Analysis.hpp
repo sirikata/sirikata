@@ -36,6 +36,8 @@
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 #include "AnalysisEvents.hpp"
+#include "OSegLookupTraceToken.hpp"
+
 
 namespace CBR {
 
@@ -532,30 +534,69 @@ public:
 };
 
 
-class OSegShutdownAnalysis
-{
-private:
-  std::vector<OSegShutdownEvent> allShutdownEvts;
+  class OSegShutdownAnalysis
+  {
+  private:
+    std::vector<OSegShutdownEvent> allShutdownEvts;
 
-public:
-  OSegShutdownAnalysis(const char* opt_name, const uint32 nservers);
-  ~OSegShutdownAnalysis();
-  void printData(std::ostream &fileOut);
-};
+  public:
+    OSegShutdownAnalysis(const char* opt_name, const uint32 nservers);
+    ~OSegShutdownAnalysis();
+    void printData(std::ostream &fileOut);
+  };
 
-class OSegCacheResponseAnalysis
-{
-private:
-  std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
-  static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
+  class OSegCacheResponseAnalysis
+  {
+  private:
+    std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
+    static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
+    
+  public:
+    OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
+    ~OSegCacheResponseAnalysis();
+    void printData(std::ostream &fileOut, int processAfter =0);
+  };
 
-public:
-  OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
-  ~OSegCacheResponseAnalysis();
-  void printData(std::ostream &fileOut, int processAfter =0);
-};
 
+  class OSegCumulativeTraceAnalysis
+  {
+  private:
+    std::vector<OSegCumulativeEvent*> allTraces;
 
+    void filterShorterPath();
+    void generateCacheTime();
+    void generateGetCraqLookupPostTime();
+    void generateCraqLookupTime();
+    void generateCraqLookupNotAlreadyLookingUpTime();
+    void generateManagerPostTime();
+    void generateManagerEnqueueTime();
+    void generateManagerDequeueTime();
+    void generateConnectionPostTime();
+    void generateConnectionNetworkQueryTime();
+    void generateConnectionNetworkTime();
+    void generateReturnPostTime();
+    void generateLookupReturnTime();
+    void generateCompleteLookupTime();
+    
+    std::vector<uint64> cacheTimesVec;
+    std::vector<uint64> craqLookupPostTimesVec;
+    std::vector<uint64> craqLookupTimesVec;
+    std::vector<uint64> craqLookupNotAlreadyLookingUpTimesVec;
+    std::vector<uint64> managerPostTimesVec;
+    std::vector<uint64> managerEnqueueTimesVec;
+    std::vector<uint64> managerDequeueTimesVec;
+    std::vector<uint64> connectionPostTimesVec;
+    std::vector<uint64> connectionNetworkQueryTimesVec;
+    std::vector<uint64> connectionsNetworkTimesVec;
+    std::vector<uint64> returnPostTimesVec;
+    std::vector<uint64> lookupReturnsTimesVec;
+    std::vector<uint64> completeLookupTimesVec;
+    
+  public:
+    OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers);
+    ~OSegCumulativeTraceAnalysis();
+    void printData(std::ostream &fileOut);
+  };
 
 
 

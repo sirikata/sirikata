@@ -2,6 +2,7 @@
 #ifndef __CBR_ANALYSIS_EVENTS_HPP__
 #define __CBR_ANALYSIS_EVENTS_HPP__
 #include "Statistics.hpp"
+#include "OSegLookupTraceToken.hpp"
 
 namespace CBR {
 struct Event {
@@ -243,7 +244,12 @@ struct OSegCacheResponseEvent : public Event
   UUID obj_id;
 };
 
+  struct OSegCumulativeEvent : public Event
+  {
+    OSegLookupTraceToken traceToken;
+  };
 
+  
 
 }
 

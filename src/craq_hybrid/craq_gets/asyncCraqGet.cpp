@@ -192,11 +192,11 @@ int AsyncCraqGet::queueSize()
   }
 
 
-void AsyncCraqGet::erroredSetValue(CraqOperationResult* cor)
-{
-  std::cout<<"\n\nShould not received an errored set inside of asyncCraqGet.cpp\n\n";
-  assert(false);
-}
+  void AsyncCraqGet::erroredSetValue(CraqOperationResult* cor)
+  {
+    std::cout<<"\n\nShould not received an errored set inside of asyncCraqGet.cpp\n\n";
+    assert(false);
+  }
 
 
   //will be posted to from different connections.  am responsible for deleting.

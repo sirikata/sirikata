@@ -569,4 +569,27 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
 }
 
 
+  void Trace::osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken)
+  {
+    if (traceToken == NULL)
+      return;
+
+    if (mShuttingDown)
+    {
+      delete traceToken;
+      return;
+    }
+    
+    #ifdef TRACE_OSEG_CUMULATIVE
+    
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+    data.write(&OSegCumulativeTraceAnalysisTag, sizeof (OSegCumulativeTraceAnalysisTag));
+    data.write(&t, sizeof(t));
+    data.write(&obj_id, sizeof(obj_id));
+    data.write(traceToken, sizeof(OSegLookupTraceToken));
+    #endif
+
+    delete traceToken;
+  }
+
 } // namespace CBR
