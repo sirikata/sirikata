@@ -17,7 +17,7 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
 
     plt.figure(1, figsize=(30,15), dpi=600)
     plt.subplot(1,1,1)
-    plt.subplots_adjust(wspace=.5, top=.95, bottom=.179, left=.25, right=1)
+    plt.subplots_adjust(wspace=.5, top=.95, bottom=.179, left=.20, right=1)
     sum = [0] * len(indices)
     groups = []
     max_width=0;
@@ -48,8 +48,8 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
     if (len(groups) > 0):
         groups.reverse()
         group_labels.reverse()
-        leg = plt.legend( groups, group_labels, loc=(-.333,0) )
-        fonts.set_legend_fontsize(leg, 8)
+        leg = plt.legend( groups, group_labels, loc=(-.2,0) )
+        fonts.set_legend_fontsize(leg, 12)
 
     return plt;
 

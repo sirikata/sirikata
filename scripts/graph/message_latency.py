@@ -16,6 +16,12 @@ def insert_after(ordered_list, new_val, prev_val):
             ordered_list.insert(idx+1, new_val)
 
 
+# Inserts line breaks into a name to make it fit nicely into a legend
+def line_break_stage_name(name, max_chars = 40):
+    split = name.split(' ')
+    words = [x for x in split if len(x) > 1]
+    return " ->\n".join(words)
+
 def graph_message_latency(log_files, filename=None):
     data_srcs = log_files
 
@@ -80,7 +86,7 @@ def graph_message_latency(log_files, filename=None):
     widths = []
 
     for stage in ordered_stage_names:
-        stage_labels.append( stage )
+        stage_labels.append( line_break_stage_name(stage) )
 
         avg_vec = []
         stddev_vec = []
