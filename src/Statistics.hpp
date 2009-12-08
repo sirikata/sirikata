@@ -202,6 +202,9 @@ private:
 } // namespace CBR
 
 
+
+
+#ifdef CBR_TIMESTAMP_PACKETS
 // The most complete macro, allows you to specify everything
 #define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port) trace->timestampMessage(time, packetId, path, msg_source_port, msg_dest_port)
 
@@ -220,5 +223,13 @@ private:
     Sirikata::uint64 prefix ## _dst_port = packet->dest_port()
 
 #define TIMESTAMP_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path, prefix ## _src_port, prefix ## _dst_port)
+
+#else //CBR_TIMESTAMP_PACKETS
+#define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP_SIMPLE(packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP(packet, path)
+#define TIMESTAMP_START(prefix, packet)
+#define TIMESTAMP_END(prefix, path)
+#endif //CBR_TIMESTAMP_PACKETS
 
 #endif //_CBR_STATISTICS_HPP_

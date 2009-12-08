@@ -230,6 +230,16 @@ FIND_PACKAGE(Prox REQUIRED)
 SET(PBJ_RUNABLE ${Sirikata_PBJ}) # FIXME this should be an option
 INCLUDE(AddPBJTarget)
 
+
+# -- User defined variables that control behavior at compile time
+
+SET(CBR_TIMESTAMP_PACKETS TRUE
+  CACHE BOOL "If enabled, detailed timestamps are recorded for each packet, enabling high granularity latency breakdowns."
+)
+IF(CBR_TIMESTAMP_PACKETS)
+  ADD_DEFINITIONS(-DCBR_TIMESTAMP_PACKETS)
+ENDIF()
+
 #source file location
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
 #protocol file location
