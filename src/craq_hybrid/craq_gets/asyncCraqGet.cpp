@@ -20,6 +20,12 @@ namespace CBR
 
   void AsyncCraqGet::stop()
   {
+    std::cout<<"\n\nReceived a stop in async craq get\n";
+    for (int s=0; s < (int) mConnections.size(); ++s)
+      mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::stop,mConnections[s]));
+
+    
+    /*
     for (int s= 0;s < (int) mConnections.size(); ++s)
     {
       delete mConnections[s];
@@ -27,6 +33,7 @@ namespace CBR
     }
     mConnections.clear();
     mConnectionsStrands.clear();
+    */
   }
   
   AsyncCraqGet::~AsyncCraqGet()

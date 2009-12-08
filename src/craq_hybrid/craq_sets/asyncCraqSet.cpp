@@ -23,7 +23,13 @@ namespace CBR
     
   void AsyncCraqSet::stop()
   {
-    for (int s= 0;s < (int) mConnections.size(); ++s)
+    std::cout<<"\n\nReceived a stop in async craq set\n";
+    for (int s=0; s < (int) mConnections.size(); ++s)
+      mConnectionsStrands->post(std::tr1::bind(&AsyncConnectionSet::stop,mConnections[s]));
+
+
+    
+    /*    for (int s= 0;s < (int) mConnections.size(); ++s)
     {
       //      delete mConnectionsStrands[s];
       delete mConnections[s];
@@ -33,7 +39,7 @@ namespace CBR
     {
       delete mConnectionsStrands;
       mConnectionsStrands = NULL;
-    }
+      }*/
   }
   
 
