@@ -55,7 +55,7 @@ def graph_message_latency(log_files, filename=None):
                 stage_stddev = float(stage_match.group(3))
                 stage_count = int(stage_match.group(4))
 
-                if stage_count < 1000:
+                if stage_count < 10:
                     continue
 
                 if (not stage_name in stage_group_map):

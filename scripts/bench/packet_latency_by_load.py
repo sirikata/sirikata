@@ -59,7 +59,7 @@ def get_latencyfile_name(trial):
 def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False):
     cs.scenario = 'ping'
     cs.scenario_options = ' '.join(
-        ['--num-pings-per-tick=' + str(ping_rate),
+        ['--num-pings-per-second=' + str(ping_rate),
          '--allow-same-object-host=' + str(allow_same),
          '--force-same-object-host=' + str(force_same),
          ]
