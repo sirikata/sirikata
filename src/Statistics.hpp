@@ -138,8 +138,9 @@ public:
     Trace(const String& filename);
 
     void setServerIDMap(ServerIDMap* sidmap);
-    //bool timestampMessage(const Time&t, MessagePath path,const Network::Chunk&);
+
     void timestampMessage(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
+
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void objectGenLoc(const Time& t, const UUID& source, const TimedMotionVector3f& loc);
@@ -199,5 +200,25 @@ private:
 }; // class Trace
 
 } // namespace CBR
+
+
+// The most complete macro, allows you to specify everything
+#define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port) trace->timestampMessage(time, packetId, path, msg_source_port, msg_dest_port)
+
+// Slightly simplified version, works everywhere mContext->trace() and mContext->simTime() are valid
+#define TIMESTAMP_SIMPLE(packetId, path, msg_source_port, msg_dest_port) TIMESTAMP_FULL(mContext->trace(), mContext->simTime(), packetId, path, msg_source_port, msg_dest_port)
+
+// Further simplified version, works as long as packet is a valid pointer to a packet at the time this is called
+#define TIMESTAMP(packet, path) TIMESTAMP_SIMPLE(packet->unique(), path, packet->source_port(), packet->dest_port())
+
+// In cases where you need to split the time between recording the info for a timestamp and actually performing
+// the timestamp, use a _START _END combination. Generally this should only be needed if you are timestamping
+// after a message might be deleted or is out of your control (e.g. you pushed onto a queue or destroyed it).
+#define TIMESTAMP_START(prefix, packet)                                 \
+    Sirikata::uint64 prefix ## _uniq = packet->unique();                \
+    Sirikata::uint64 prefix ## _src_port = packet->source_port();       \
+    Sirikata::uint64 prefix ## _dst_port = packet->dest_port()
+
+#define TIMESTAMP_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path, prefix ## _src_port, prefix ## _dst_port)
 
 #endif //_CBR_STATISTICS_HPP_

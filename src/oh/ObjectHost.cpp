@@ -88,19 +88,10 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
     bool parse_success = msg->ParseFromArray(chunk.data(), chunk.size());
     assert(parse_success == true);
 
-    // Push might delete it, record for timestamping
-    uint64 msg_unique = msg->unique();
-    uint16 msg_source_port = msg->source_port();
-    uint16 msg_dest_port = msg->dest_port();
+    TIMESTAMP_START(tstamp, msg);
 
     // Mark as received
-    mContext->trace()->timestampMessage(
-        mContext->simTime(),
-        msg_unique,
-        Trace::OH_NET_RECEIVED,
-        msg_source_port,
-        msg_dest_port
-    );
+    TIMESTAMP_END(tstamp, Trace::OH_NET_RECEIVED);
 
     // NOTE: We can't record drops here or we incur a lot of overhead in parsing...
     bool pushed = receive_queue.push(msg);
@@ -112,13 +103,7 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
         mReceiveCB(this);
     }
     else {
-        mContext->trace()->timestampMessage(
-            mContext->simTime(),
-            msg_unique,
-            Trace::OH_DROPPED_AT_RECEIVE_QUEUE,
-            msg_source_port,
-            msg_dest_port
-        );
+        TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
     }
 
     // No matter what, we've "handled" the data, either for real or by dropping
@@ -563,7 +548,7 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
 
     // FIXME would be nice not to have to do this alloc/dealloc
     ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
-    mContext->trace()->timestampMessage(mContext->simTime(),obj_msg->unique(),Trace::CREATED,src_port, dest_port);
+    TIMESTAMP(obj_msg, Trace::CREATED);
     return conn->push( obj_msg );
 }
 
@@ -752,19 +737,10 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
         return;
     }
 
-    // Mark as received
-    mContext->trace()->timestampMessage(
-        mContext->simTime(),
-        msg->unique(),
-        Trace::OH_RECEIVED,
-        msg->source_port(),
-        msg->dest_port()
-    );
+    TIMESTAMP_START(tstamp, msg);
 
-    // Record info to mark destruction at the end of this method since the msg will have been deleted
-    uint64 msg_uniq = msg->unique();
-    uint16 msg_src_port = msg->source_port();
-    uint16 msg_dst_port = msg->dest_port();
+    // Mark as received
+    TIMESTAMP_END(tstamp, Trace::OH_RECEIVED);
 
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         CBR::Protocol::Object::Ping ping_msg;
@@ -785,7 +761,7 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
             delete msg;
     }
 
-    mContext->trace()->timestampMessage(mContext->simTime(), msg_uniq, Trace::DESTROYED, msg_src_port, msg_dst_port);
+    TIMESTAMP_END(tstamp, Trace::DESTROYED);
 
     mHandleMessageProfiler->finished();
 }

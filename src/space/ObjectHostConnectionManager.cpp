@@ -99,13 +99,7 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protoco
     bool sent = conn->socket->send( Sirikata::MemoryReference(data), Sirikata::Network::ReliableOrdered );
 
     if (sent) {
-        mContext->trace()->timestampMessage(
-            mContext->simTime(),
-            msg->unique(),
-            Trace::SPACE_TO_OH_ENQUEUED,
-            msg->source_port(),
-            msg->dest_port()
-                                            );
+        TIMESTAMP(msg, Trace::SPACE_TO_OH_ENQUEUED);
         delete msg;
     }
     return sent;
@@ -190,13 +184,7 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleC
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
 
-    mContext->trace()->timestampMessage(
-        mContext->simTime(),
-        obj_msg->unique(),
-        Trace::HANDLE_OBJECT_HOST_MESSAGE,
-        obj_msg->source_port(),
-        obj_msg->dest_port()
-    );
+    TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 
     mMessageReceivedCallback(conn->id, obj_msg);
 

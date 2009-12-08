@@ -80,9 +80,8 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
     if (!conn->enabled())
         return false;
 
-    uint64 msg_uniq = msg->unique();
-    uint16 msg_src_port = msg->source_port();
-    uint16 msg_dst_port = msg->dest_port();
+    TIMESTAMP_START(tstamp, msg);
+
     Trace::MessagePath msg_path = Trace::FORWARDED_LOCALLY;
 
     bool send_success = conn->send(msg);
@@ -92,12 +91,7 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
         msg_path = Trace::DROPPED;
     }
 
-    mContext->trace()->timestampMessage(mContext->simTime(),
-        msg_uniq,
-        msg_path,
-        msg_src_port,
-        msg_dst_port
-    );
+    TIMESTAMP_END(tstamp, msg_path);
 
     // At this point we've handled it, regardless of send's success
     return true;

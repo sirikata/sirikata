@@ -54,23 +54,14 @@ public:
     }
 
     virtual bool push(uint32 port, PacketType* pkt) {
-        // We need to record info before pushing since we will no longer own the packet.
-        uint64 uniq = pkt->unique();
-        uint16 source_port = pkt->source_port();
-        uint16 dest_port = pkt->dest_port();
+        TIMESTAMP_START(tstamp, pkt);
 
         bool pushed = this->output(0).push(pkt);
 
         Trace::MessagePath tag =
             pushed ? mSuccessTag : mFailureTag;
 
-        mContext->trace()->timestampMessage(
-            mContext->simTime(),
-            uniq,
-            tag,
-            source_port,
-            dest_port
-        );
+        TIMESTAMP_END(tstamp, tag);
 
         return pushed;
     }
@@ -79,13 +70,7 @@ public:
         PacketType* pkt = this->input(0).pull();
 
         if (pkt != NULL) {
-            mContext->trace()->timestampMessage(
-                mContext->simTime(),
-                pkt->unique(),
-                mSuccessTag,
-                pkt->source_port(),
-                pkt->dest_port()
-            );
+            TIMESTAMP(pkt, mSuccessTag);
         }
 
         return pkt;

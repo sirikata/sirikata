@@ -129,13 +129,7 @@ private:
             }
 
             if (next_pkt->source_port() == OBJECT_PORT_PING && next_pkt->dest_port() == OBJECT_PORT_PING) {
-                mContext->trace()->timestampMessage(
-                    mContext->simTime(),
-                    next_pkt->unique(),
-                    mTag,
-                    next_pkt->source_port(),
-                    next_pkt->dest_port()
-                );
+                TIMESTAMP(next_pkt, mTag);
             }
 
             // Otherwise the packet was handled and we can clean up and continue
