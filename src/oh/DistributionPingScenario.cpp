@@ -41,7 +41,7 @@ void DistributionPingScenario::initialize(ObjectHostContext*ctx) {
     mContext=ctx;
     mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
     mLastTime=mContext->simTime();
-    mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&DistributionPingScenario::generatePings, this), Duration::seconds(1/mNumPingsPerSecond));
+    mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&DistributionPingScenario::generatePings, this), Duration::seconds(1.0/mNumPingsPerSecond));
 }
 
 void DistributionPingScenario::start() {
