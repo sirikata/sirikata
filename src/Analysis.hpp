@@ -181,8 +181,8 @@ class MessageLatencyAnalysis {public:
         }
     };
     class Average {
-        double sample_sum; // sum (t)
-        double sample2_sum; // sum (t^2)
+        int64 sample_sum; // sum (t)
+        int64 sample2_sum; // sum (t^2)
         uint32 numSamples;
     public:
         Average()
@@ -191,18 +191,23 @@ class MessageLatencyAnalysis {public:
            numSamples(0)
         {}
         void sample(const Duration& t) {
-            double st = t.toSeconds();
+            int64 st = t.toMicroseconds();
             sample_sum += st;
             sample2_sum += st*st;
             ++numSamples;
         }
-        double average() {
-            return sample_sum / double(numSamples);
+        Duration average() {
+            return Duration::microseconds((int64)(sample_sum / double(numSamples)));
         }
-        double variance() {
-            double avg = sample_sum / double(numSamples);
-            double sq_avg = sample2_sum / double(numSamples);
-            return sq_avg - avg*avg;
+        Duration variance() {
+            int64 avg = (int64)(sample_sum / double(numSamples));
+            int64 sq_avg = (int64)(sample2_sum / double(numSamples));
+            return Duration::microseconds(sq_avg - avg*avg);
+        }
+        Duration stddev() {
+            int64 avg = (int64)(sample_sum / double(numSamples));
+            int64 sq_avg = (int64)(sample2_sum / double(numSamples));
+            return Duration::microseconds((int64)sqrt((double)(sq_avg - avg*avg)));
         }
         uint32 samples() const {
             return numSamples;

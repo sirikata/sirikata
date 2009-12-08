@@ -1361,8 +1361,8 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             const char* currentStage=getPacketStageName(path_pair.second);
 
             SILOG(analysis,info,
-                  "Stage " << lastStage << " - " << currentStage << ':'
-                  << avg.average() << "s stddev " << sqrt(avg.variance())
+                  "Stage " << lastStage << " - " << currentStage << ":"
+                  << avg.average() << " stddev " << avg.stddev()
                   << " #" << avg.samples()
                   );
         }

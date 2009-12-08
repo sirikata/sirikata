@@ -33,7 +33,7 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
 
     for val,err,width in zip(vals,errors,widths):
         col = colors.get_random_color()
-        px = plt.bar(startList, val, bottom=sum, yerr=err, color=col, width=width);
+        px = plt.bar(startList, val, bottom=sum, yerr=err, color=col, width=width, label=str(val)+'us');
         groups.append(px[0])
         sum = [pre_sum+x for pre_sum,x in zip(sum,val)]
 

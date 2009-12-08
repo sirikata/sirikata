@@ -22,11 +22,34 @@ def line_break_stage_name(name, max_chars = 40):
     words = [x for x in split if len(x) > 1]
     return " ->\n".join(words)
 
+# Converts a string containing a time, of the form 123u (microseconds),
+# 123m (milliseconds) or 123 (seconds) to an int # of microseconds
+def time_to_microseconds(str_time):
+    if len(str_time) == 0:
+        return 0
+
+    # If we don't have an s at the end our only chance is to assume its
+    # raw seconds
+    last = str_time[-1:]
+    if last != 's':
+        return int( float(str_time) * 1000000 )
+
+    # Otherwise, strip the s and check second to last
+    str_time = str_time[:-1]
+    last = str_time[-1:]
+
+    if last == 'u':
+        return int( float(str_time[:-1]) )
+    elif last == 'm':
+        return int( float(str_time[:-1]) * 1000 )
+    else:
+        return int( float(str_time) * 1000000 )
+
 def graph_message_latency(log_files, filename=None):
     data_srcs = log_files
 
     group_pattern = '^Group: (.*)'
-    stage_pattern = '^Stage (.*):(.*)s stddev (.*) #(.*)'
+    stage_pattern = '^Stage (.*):(.*s) stddev (.*s) #(.*)'
 
     # keep track of labels (trials)
     trial_set = set()
@@ -57,8 +80,8 @@ def graph_message_latency(log_files, filename=None):
             stage_match = re.search(stage_pattern, line)
             if stage_match:
                 stage_name = stage_match.group(1)
-                stage_avg = float(stage_match.group(2))
-                stage_stddev = float(stage_match.group(3))
+                stage_avg = time_to_microseconds(stage_match.group(2))
+                stage_stddev = time_to_microseconds(stage_match.group(3))
                 stage_count = int(stage_match.group(4))
 
                 if stage_count < 10:
@@ -68,7 +91,7 @@ def graph_message_latency(log_files, filename=None):
                     stage_group_map[stage_name] = current_group
                     insert_after(ordered_stage_names, stage_name, prev_stage)
 
-                data[ (trial,stage_name) ] = (stage_count, stage_avg*1000, stage_stddev*1000)
+                data[ (trial,stage_name) ] = (stage_count, stage_avg, stage_stddev)
 
                 prev_stage = stage_name
 
@@ -110,7 +133,7 @@ def graph_message_latency(log_files, filename=None):
         avgs.append(avg_vec)
         stddevs.append(stddev_vec)
         widths.append(width_vec)
-    chart = stacked_bar.stacked_bar('Stage Latencies', 'Group', 'Latency (ms)', ind, labels, widths, avgs, stddevs, stage_labels)
+    chart = stacked_bar.stacked_bar('Stage Latencies', 'Group', 'Latency (us)', ind, labels, widths, avgs, stddevs, stage_labels)
 
 #    chart.show()
     if filename == None:
