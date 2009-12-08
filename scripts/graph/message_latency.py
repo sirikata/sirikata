@@ -4,6 +4,18 @@ import sys
 import re
 import stacked_bar
 
+# insert_after is a helper for maintaining an ordered list.
+def insert_after(ordered_list, new_val, prev_val):
+    if prev_val == None:
+        ordered_list.insert(0, new_val)
+    else:
+        idx = ordered_list.index(prev_val)
+        if idx == -1:
+            ordered_list.append(new_val)
+        else:
+            ordered_list.insert(idx+1, new_val)
+
+
 def graph_message_latency(log_files, filename=None):
     data_srcs = log_files
 
@@ -15,6 +27,7 @@ def graph_message_latency(log_files, filename=None):
     # track stage => group, currently only used to get list of stages
     # could be useful for filtering by groups
     stage_group_map = {}
+    ordered_stage_names = []
     # also keep track of a dict of (trial,stage) => (mean, stddev)
     data = {}
 
@@ -25,6 +38,7 @@ def graph_message_latency(log_files, filename=None):
         trial_set.add(trial)
 
         current_group = 'Unknown'
+        prev_stage = None
 
         for line in fp:
             # Update current group
@@ -46,8 +60,11 @@ def graph_message_latency(log_files, filename=None):
 
                 if (not stage_name in stage_group_map):
                     stage_group_map[stage_name] = current_group
+                    insert_after(ordered_stage_names, stage_name, prev_stage)
 
                 data[ (trial,stage_name) ] = (stage_count, stage_avg*1000, stage_stddev*1000)
+
+                prev_stage = stage_name
 
         fp.close()
 
@@ -57,34 +74,12 @@ def graph_message_latency(log_files, filename=None):
     ind = range(1,len(data_srcs)+1)
     labels = data_srcs
 
-
     stage_labels = []
     avgs = []
     stddevs = []
     widths = []
-    ordered_stages=[]
-    unordered_stages={}
-    did_process={}
-    current_matches={"CREATED":True};
-    next_matches={}
-    any_matches=True;
-    while any_matches:
-        any_matches=False
-        for stage in stage_group_map.keys():
-            st,ed=stage.split("-");
-            if (st in current_matches):
-                any_matches=True;
-                if not stage in unordered_stages:
-                    ordered_stages.append(stage);
-                    unordered_stages[stage]=True;
-                    if (ed!=st and not ( ed in did_process)):
-                        next_matches[ed]=True
-        for match in current_matches:
-            did_process[match]=True
-        current_matches=next_matches;
-        next_matches={}
 
-    for stage in ordered_stages:
+    for stage in ordered_stage_names:
         stage_labels.append( stage )
 
         avg_vec = []
@@ -103,7 +98,8 @@ def graph_message_latency(log_files, filename=None):
                 width=math.log(width);
             width_vec.append(width);
             avg_vec.append(avg)
-            stddev_vec.append(stddev)
+            #stddev_vec.append(stddev)
+            stddev_vec.append(0)
 
         avgs.append(avg_vec)
         stddevs.append(stddev_vec)
