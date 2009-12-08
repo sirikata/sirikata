@@ -336,7 +336,6 @@ class MessageLatencyAnalysis {public:
 
     class PacketData {public:
         uint64 mId;
-        unsigned char mType;
         unsigned char mSrcPort;
         unsigned short mDstPort;
         std::vector<DTime> mStamps;

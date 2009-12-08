@@ -236,7 +236,7 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 #endif
 }
 
-void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt, ServerMessagePort msg_type) {
+void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 
@@ -247,7 +247,6 @@ void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, Obje
     data.write( &path, sizeof(path) );
     data.write( &srcprt, sizeof(srcprt) );
     data.write( &dstprt, sizeof(dstprt) );
-    data.write( &msg_type, sizeof(msg_type) );
 #endif
 }
 

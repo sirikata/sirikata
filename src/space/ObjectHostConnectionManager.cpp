@@ -195,8 +195,7 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleC
         obj_msg->unique(),
         Trace::HANDLE_OBJECT_HOST_MESSAGE,
         obj_msg->source_port(),
-        obj_msg->dest_port(),
-        SERVER_PORT_OBJECT_MESSAGE_ROUTING
+        obj_msg->dest_port()
     );
 
     mMessageReceivedCallback(conn->id, obj_msg);

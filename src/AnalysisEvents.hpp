@@ -71,7 +71,6 @@ struct MessageTimestampEvent : public ObjectEvent {
     Trace::MessagePath path;
     ObjectMessagePort srcport;
     ObjectMessagePort dstport;
-    ServerMessagePort msg_type;
 };
 
 

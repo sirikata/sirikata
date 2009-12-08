@@ -127,7 +127,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read((char*)&pevt->path, sizeof(pevt->path));
               is.read((char*)&pevt->srcport, sizeof(pevt->srcport));
               is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
-              is.read((char*)&pevt->msg_type,sizeof(pevt->msg_type));
               evt=pevt;
           }
         break;
@@ -1178,7 +1177,6 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
 
 MessageLatencyAnalysis::PacketData::PacketData(){
     mId=0;
-    mType=255;
     mSrcPort=0;
     mDstPort=0;
 
@@ -1308,7 +1306,6 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                 if (tevt != NULL) {
                     MessageLatencyAnalysis::PacketData*pd = &packetFlow[tevt->uid];
                     pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
-                    if (tevt->msg_type!=255) pd->mType=tevt->msg_type;
                     if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
                     if (tevt->dstport!=0) pd->mDstPort=tevt->dstport;
                 }

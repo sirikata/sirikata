@@ -19,18 +19,7 @@
 namespace CBR
 {
 
-// Helper method which timestamps a message if it is and object-to-object message. Note that this is potentially expensive since it requires parsing the inner message
-void tryTimestampObjectMessage(Trace* trace, const Time& t, Message* next_msg, Trace::MessagePath path) {
-    if (next_msg->source_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING && next_msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
-        CBR::Protocol::Object::ObjectMessage om;
-        bool got_om = parsePBJMessage(&om, next_msg->payload());
-        if (got_om)
-            trace->timestampMessage(t, om.unique(), path, om.source_port(), om.dest_port(), SERVER_PORT_OBJECT_MESSAGE_ROUTING);
-    }
-}
-
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
-
 
 /** Automatically samples and logs current queue information for the ServerMessageQueue. */
 class ForwarderSampler : public PollingService {
@@ -253,8 +242,6 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 
 
 void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
-    tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), msg, Trace::FORWARDED);
-
     if (!forwarded_self_msg)
         mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
 
@@ -355,8 +342,8 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
           obj_msg->unique(),
           Trace::DROPPED,
           obj_msg->source_port(),
-          obj_msg->dest_port(),
-          SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+          obj_msg->dest_port()
+      );
   }else {
       delete obj_msg;
   }
