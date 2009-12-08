@@ -1247,6 +1247,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     StageGroup space_direct_route_group("Space Direct Routing");
     space_direct_route_group
             .add(Trace::FORWARDED_LOCALLY)
+            .add(Trace::DROPPED)
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             ;
 
