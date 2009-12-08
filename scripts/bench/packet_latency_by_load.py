@@ -10,6 +10,7 @@
 # number of static objects and no querying is used.
 
 import sys
+import subprocess
 
 # FIXME It would be nice to have a better way of making this script able to find
 # other modules in sibling packages
@@ -36,11 +37,18 @@ def run_trial(cluster_sim):
 
 
 # Runs MessageLatencyAnalysis and moves data to appropriate location
-def run_message_latency_analysis(cluster_sim, log_file):
+def run_message_latency_analysis(cluster_sim, log_file, histogram_file):
     cluster_sim.message_latency_analysis(log_file)
+    cluster_sim.object_latency_analysis()
+    # object latency histogram always goes to 'distance_latency_histogram.csv'
+    subprocess.call(['cp', 'distance_latency_histogram.csv', 'histogram_file'])
 
 def get_logfile_name(trial):
     log_file = 'packet_latency_by_load.log.' + str(trial)
+    return log_file
+
+def get_latencyfile_name(trial):
+    log_file = 'packet_latency_histogram.' + str(trial)
     return log_file
 
 # cc - ClusterConfig
@@ -59,12 +67,19 @@ def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False):
 
     cluster_sim = ClusterSim(cc, cs)
     run_trial(cluster_sim)
-    run_message_latency_analysis(cluster_sim, get_logfile_name(ping_rate))
+    run_message_latency_analysis(cluster_sim,
+                                 get_logfile_name(ping_rate),
+                                 get_latencyfile_name(ping_rate)
+                                 )
 
 
 if __name__ == "__main__":
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, 8, (8,1), 1)
+
+    cs.debug = False
+    cs.valgrind = False
+    cs.profile = True
 
     cs.loc = 'standard'
     cs.blocksize = 100
@@ -72,7 +87,7 @@ if __name__ == "__main__":
     cs.rx_bandwidth = 500000
     cs.noise = 'false'
 
-    cs.num_random_objects = 200
+    cs.num_random_objects = 50
     cs.num_pack_objects = 0
     cs.object_connect_phase = '0s'
 

@@ -95,7 +95,7 @@ def graph_message_latency(log_files, filename=None):
             else:
                 import math
                 width,avg,stddev = data[ data_key ]
-                width=math.log(width);
+                #width=math.log(width);
             width_vec.append(width);
             avg_vec.append(avg)
             #stddev_vec.append(stddev)
