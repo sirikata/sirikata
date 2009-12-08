@@ -1233,7 +1233,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::OH_HIT_NETWORK)
             ;
 
-    StageGroup oh_to_space_group("Object Host -> Space");
+    StageGroup oh_to_space_group("Object Host -> Space", StageGroup::ORDERED);
     oh_to_space_group
             .add(Trace::OH_HIT_NETWORK)
             .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
@@ -1263,7 +1263,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::OSEG_SERVER_LOOKUP_FINISHED)
             ;
 
-    StageGroup space_to_oh_group("Space -> Object Host");
+    StageGroup space_to_oh_group("Space -> Object Host", StageGroup::ORDERED);
     space_to_oh_group
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             .add(Trace::OH_NET_RECEIVED)
@@ -1334,9 +1334,9 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             // tag C that is also in the StageGroup and exists between A and B.
             std::vector<DTime> filtered_stamps = group.filter(pd.mStamps);
             for (uint32 idx = 1; idx < filtered_stamps.size(); ++idx) {
-                Duration diff = filtered_stamps[idx] - filtered_stamps[idx-1];
-                Average& avg = results[ PathPair(filtered_stamps[idx-1].mPath, filtered_stamps[idx].mPath) ];
-                avg.sample(diff);
+                PathPair pp = group.orderedPair( filtered_stamps[idx-1], filtered_stamps[idx] );
+                Duration diff = group.difference( filtered_stamps[idx-1], filtered_stamps[idx] );
+                results[pp].sample(diff);
             }
         }
     }

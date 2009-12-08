@@ -235,8 +235,17 @@ class MessageLatencyAnalysis {public:
     // either side.
     class StageGroup {
       public:
-        StageGroup(const String& _name)
-                : mName(_name)
+        // Indicates whether the stages in this group should only be considered
+        // in order (using negative values for ones out of order) or if
+        // reversing and completely switching the order of some elements is ok.
+        enum IsOrdered {
+            ORDERED,
+            UNORDERED
+        };
+
+        StageGroup(const String& _name, IsOrdered ordr = UNORDERED)
+                : mName(_name),
+                  mOrdered(ordr)
         {}
 
         String name() const {
@@ -244,7 +253,9 @@ class MessageLatencyAnalysis {public:
         }
         // Returns *this for chaining
         StageGroup& add(Trace::MessagePath p) {
+            assert( mTags.find(p) == mTags.end() );
             mTags.insert(p);
+            mOrderedTags.push_back(p);
             return *this;
         }
         bool contains(Trace::MessagePath p) const {
@@ -261,10 +272,65 @@ class MessageLatencyAnalysis {public:
                     result.push_back(*it);
             return result;
         }
+
+
+        // Based on ordering constraints, get a PathPair for the two
+        // records. For unordered, this will always return (start,end).  For
+        // ordered, it will arrange them appropriately based on the order in
+        // which the tags were added to the StageGroup.
+        PathPair orderedPair(const DTime& start, const DTime& end) {
+            assert( contains(start.mPath) );
+            assert( contains(end.mPath) );
+
+            if (mOrdered == UNORDERED) {
+                return PathPair(start.mPath, end.mPath);
+            }
+
+            // else ORDERED
+            uint32 start_i = findTagOrder(start.mPath);
+            uint32 end_i = findTagOrder(end.mPath);
+
+            if (start_i <= end_i)
+                return PathPair(start.mPath, end.mPath);
+            else
+                return PathPair(end.mPath, start.mPath);
+        }
+
+        // Computes the difference between start and end (end - start), taking
+        // into account ordering constraints.  If unordered is allowed, then the
+        // returned Duration will always be >= 0.  If ordering is required, then
+        // the returned Duration may be negative.
+        Duration difference(const DTime& start, const DTime& end) {
+            // figure out the permissible ordering
+            PathPair ordered = orderedPair(start, end);
+
+            // then just subtract in the matching direction
+            if (ordered.first == start.mPath) {
+                assert (ordered.second == end.mPath);
+                return end - start;
+            }
+            else {
+                assert (ordered.second == start.mPath);
+                return start - end;
+            }
+        }
+
       private:
+        uint32 findTagOrder(Trace::MessagePath tag) const {
+            for(uint32 ii = 0; ii < mOrderedTags.size(); ii++) {
+                if (mOrderedTags[ii] == tag)
+                    return ii;
+            }
+            assert(false);
+            return 0;
+        }
+
         String mName;
+        IsOrdered mOrdered;
         typedef std::set<Trace::MessagePath> TagSet;
+        typedef std::vector<Trace::MessagePath> OrderedTagSet;
         TagSet mTags;
+        OrderedTagSet mOrderedTags;
     };
 
 
