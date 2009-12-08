@@ -49,10 +49,12 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
     plt.xticks( widthList, labels)
     plt.ylim( (0, max_sum*1.05) )
     plt.xlim( (0,len(widthList)*max_width*1.05) )
-    groups.reverse()
-    group_labels.reverse()
-    leg = plt.legend( groups, group_labels, loc=(-.333,0) )
-    set_legend_fontsize(leg, 8)
+
+    if (len(groups) > 0):
+        groups.reverse()
+        group_labels.reverse()
+        leg = plt.legend( groups, group_labels, loc=(-.333,0) )
+        set_legend_fontsize(leg, 8)
 
     return plt;
 
