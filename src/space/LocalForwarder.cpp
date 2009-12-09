@@ -70,8 +70,8 @@ void LocalForwarder::handleRemoveActiveConnection(const UUID& objid) {
 }
 
 bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
+    // Destination connection must exist and be enabled
     ObjectConnectionMap::iterator it = mActiveConnections.find(msg->dest_object());
-
     if (it == mActiveConnections.end())
         return false;
 
@@ -80,8 +80,15 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
     if (!conn->enabled())
         return false;
 
-    TIMESTAMP_START(tstamp, msg);
 
+    // We only sanity check the source object when we're sure we're going to be able to
+    // ship it.
+    ObjectConnectionMap::iterator src_it = mActiveConnections.find(msg->source_object());
+    if (src_it == mActiveConnections.end())
+        return false;
+
+    // Finally, with all checks done, we can commit to doing local routing
+    TIMESTAMP_START(tstamp, msg);
     TIMESTAMP_END(tstamp, Trace::FORWARDED_LOCALLY);
 
     bool send_success = conn->send(msg);
@@ -90,7 +97,6 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
         // FIXME do anything on failure?
         delete msg;
     }
-
 
     // At this point we've handled it, regardless of send's success
     return true;

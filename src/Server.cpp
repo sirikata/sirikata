@@ -107,6 +107,29 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
     // exceptions for bootstrapping purposes (namely session messages to the space).
 
+    // 1. Try to shortcut the main thread. Let the LocalForwarder try
+    // to ship it over a connection.  This checks both the source
+    // and dest objects, guaranteeing that the appropriate connections
+    // exist for both.
+    if (mLocalForwarder->tryForward(obj_msg))
+        return;
+
+    // 2. Otherwise, we're going to have to ship this to the main thread, either
+    // for handling session messages, messages to the space, or to make a
+    // routing decision.
+    // FIXME infinite queue!
+    TIMESTAMP(obj_msg, Trace::FORWARDING_STARTED);
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &Server::handleObjectHostMessageRouting,
+            this, conn_id, obj_msg
+                       )
+                               );
+}
+
+void Server::handleObjectHostMessageRouting(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    // Take this opportunity to do some sanity checking.
+
     // 1. If the source is the space, somebody is messing with us.
     bool space_source = (obj_msg->source_object() == UUID::null());
     if (space_source) {
@@ -123,32 +146,11 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     bool session_msg = (obj_msg->dest_port() == OBJECT_PORT_SESSION);
     if (space_dest && session_msg)
     {
-        mContext->mainStrand->post(
-            std::tr1::bind(
-                &Server::handleSessionMessage,
-                this, conn_id, obj_msg
-                           )
-                                   );
+        handleSessionMessage(conn_id, obj_msg);
         return;
     }
 
-    // 3. Try to shortcut the main thread. Let the LocalForwarder try
-    // to ship it over a connection.
-    // FIXME the source object sanity check below doesn't get
-    // performed on this route...
-    if (mLocalForwarder->tryForward(obj_msg))
-        return;
 
-    // 4. Otherwise, we need to do full checks and routing
-    mContext->mainStrand->post(
-        std::tr1::bind(
-            &Server::handleObjectHostMessageRouting,
-            this, conn_id, obj_msg
-                       )
-                               );
-}
-
-void Server::handleObjectHostMessageRouting(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
     // If we don't have a connection for the source object, we can't do anything with it.
     // The object could be migrating and we get outdated packets.  Currently this can
     // happen because we need to maintain the connection long enough to deliver the init migration
