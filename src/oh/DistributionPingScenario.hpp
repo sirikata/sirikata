@@ -6,13 +6,13 @@ namespace CBR {
 class ScenarioFactory;
 class DistributionPingScenario : public Scenario {
     size_t mNumPingsPerSecond;
-    double mNumPingsMissed;
     ObjectHostContext*mContext;
     Poller* mPingPoller;
     unsigned int mPingID;
     bool mSameObjectHostPings;
     bool mForceSameObjectHostPings;
-    Time mLastTime;
+    Time mStartTime;
+    int64 mNumTotalPings;
     TimeProfiler::Stage* mPingProfiler;
     bool pingOne(ServerID minServer, unsigned int distance);
     void generatePings();

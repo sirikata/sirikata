@@ -12,8 +12,8 @@ void DPSInitOptions(DistributionPingScenario *thus) {
                                          new OptionValue("force-same-object-host","false",Sirikata::OptionValueType<bool>(),"force pings to only go through 1 spaec server hop"),
         NULL);
 }
-DistributionPingScenario::DistributionPingScenario(const String &options):mLastTime(Time::epoch()){
-
+DistributionPingScenario::DistributionPingScenario(const String &options):mStartTime(Time::epoch()){
+    mNumTotalPings=0;
     mContext=NULL;
     mPingID=0;
     DPSInitOptions(this);
@@ -22,7 +22,6 @@ DistributionPingScenario::DistributionPingScenario(const String &options):mLastT
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<size_t>();
     mSameObjectHostPings=optionsSet->referenceOption("allow-same-object-host")->as<bool>();
     mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
-    mNumPingsMissed=0;
 
 }
 DistributionPingScenario::~DistributionPingScenario(){
@@ -40,7 +39,6 @@ void DistributionPingScenario::addConstructorToFactory(ScenarioFactory*thus){
 void DistributionPingScenario::initialize(ObjectHostContext*ctx) {
     mContext=ctx;
     mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mLastTime=mContext->simTime();
     mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&DistributionPingScenario::generatePings, this), Duration::seconds(1.0/mNumPingsPerSecond));
 }
 
@@ -61,7 +59,7 @@ bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance
         objA=objB;
         objB=tmp;
     }
-    Time t=mContext->simTime();
+    Time t(mContext->simTime());
     if (objA&&objB) {
         if (!mContext->objectHost->ping(t,
                                         objA,
@@ -86,33 +84,23 @@ void DistributionPingScenario::generatePings() {
             distance+=1;
     }
     unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
-
-    mNumPingsMissed++;
-    bool broke=false;
-    unsigned int limit=mNumPingsMissed;
-    for (unsigned i=0;i<limit;++i) {
-        if (!pingOne(minServer,distance)) {
-            broke=true;
-            break;
-        }else {
-            --mNumPingsMissed;
-        }
-    }
     Time newTime=mContext->simTime();
-    double numNewPings=(newTime-mLastTime).toSeconds()*mNumPingsPerSecond-1;
-    while (!broke && numNewPings>1) {
-        if(!pingOne(minServer,distance)) {
+    int64 howManyPings=(newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
+    
+    bool broke=false;
+    int64 limit=howManyPings-mNumTotalPings;
+    int64 i;
+    for (i=0;i<limit;++i) {
+        if (!pingOne(minServer,distance)) {
             break;
         }
-        numNewPings-=1;
     }
-    mNumPingsMissed+=numNewPings;
+    mNumTotalPings+=i;
     mPingProfiler->finished();
     static bool printed=false;
-    if (mNumPingsMissed>10*mNumPingsPerSecond&&!printed) {
-        SILOG(oh,debug,"[OH] " << mNumPingsMissed<<" pending ");
+    if (i-limit>10*mNumPingsPerSecond&&!printed) {
+        SILOG(oh,debug,"[OH] " << i-limit<<" pending ");
         printed=true;
     }
-    mLastTime=newTime;
 }
 }
