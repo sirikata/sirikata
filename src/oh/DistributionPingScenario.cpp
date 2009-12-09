@@ -55,8 +55,6 @@ bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance
     Object * objB=mContext->objectHost->getObjectConnections()->randomObject((ServerID)(minServer+distance),
                                                                              false);
 
-    std::cout<<"\n\nbftm: This is distance:  "<<distance<<"\n\n";
-    
 
     if (rand()<RAND_MAX/2) {
         Object * tmp=objA;

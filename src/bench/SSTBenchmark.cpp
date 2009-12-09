@@ -35,6 +35,7 @@
 #include "sirikata/network/StreamFactory.hpp"
 #include "sirikata/network/StreamListenerFactory.hpp"
 
+#include <functional>
 #include "SSTBenchmark.hpp"
 #include "Timer.hpp"
 #include "Options.hpp"
@@ -148,6 +149,7 @@ void SSTBenchmark::start() {
         mListener=Sirikata::Network::StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mListenOptions));
         mListener->listen(Sirikata::Network::Address("127.0.0.1",mPort),
                           std::tr1::bind(&SSTBenchmark::newStream,this,_1,_2));
+
     }
     mIOService->run();
 }

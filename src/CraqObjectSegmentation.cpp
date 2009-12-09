@@ -158,13 +158,9 @@ namespace CBR
       
       checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
       ++checkOwnTimeCount;
-
-      std::cout<<"\n\t\tObject not on space server\n";
       
       return false;
     }
-
-    std::cout<<"\n\t\tObject on space server:  "<<obj_id.toString()<<"\n";
     
     //means that the object *is* hosted on this space server
 
@@ -264,9 +260,6 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return ;
-    
-
-    std::cout<<"\n\t\tAdding new object:  "<<obj_id.toString()<<"\n";
     
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
