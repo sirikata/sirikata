@@ -99,7 +99,7 @@ void DistributionPingScenario::generatePings() {
         }
     }
     Time newTime=mContext->simTime();
-    double numNewPings=(newTime-mLastTime).toSeconds()/mNumPingsPerSecond-1;
+    double numNewPings=(newTime-mLastTime).toSeconds()*mNumPingsPerSecond-1;
     while (!broke && numNewPings>1) {
         if(!pingOne(minServer,distance)) {
             break;
