@@ -19,6 +19,7 @@ sys.path.insert(0, sys.path[0]+"/..")
 from cluster.config import ClusterConfig
 from cluster.sim import ClusterSimSettings,ClusterSim
 from graph.message_latency import graph_message_latency
+from graph.stages import graph_stages_raw_samples
 
 #  8x1 configuration
 #  blocksize = 100
@@ -37,8 +38,11 @@ def run_trial(cluster_sim):
 
 
 # Runs MessageLatencyAnalysis and moves data to appropriate location
-def run_message_latency_analysis(cluster_sim, log_file, histogram_file):
+def run_message_latency_analysis(cluster_sim, log_file, histogram_file, samples_file):
     cluster_sim.message_latency_analysis(log_file)
+    # individual packetx(stage-stage) samples are always in stage_samples.txt
+    subprocess.call(['cp', 'stage_samples.txt', samples_file])
+
     cluster_sim.object_latency_analysis()
     # object latency histogram always goes to 'distance_latency_histogram.csv'
     subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
@@ -49,6 +53,10 @@ def get_logfile_name(trial):
 
 def get_latencyfile_name(trial):
     log_file = 'packet_latency_histogram.' + str(trial)
+    return log_file
+
+def get_stage_samples_filename(trial):
+    log_file = 'packet_latency_samples.' + str(trial)
     return log_file
 
 # cc - ClusterConfig
@@ -69,7 +77,8 @@ def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False):
     run_trial(cluster_sim)
     run_message_latency_analysis(cluster_sim,
                                  get_logfile_name(ping_rate),
-                                 get_latencyfile_name(ping_rate)
+                                 get_latencyfile_name(ping_rate),
+                                 get_stage_samples_filename(ping_rate)
                                  )
 
 
@@ -103,3 +112,9 @@ if __name__ == "__main__":
 
     log_files = [get_logfile_name(x) for x in rates]
     graph_message_latency(log_files, 'latency_stacked_bar.pdf')
+
+    samples_files = zip(
+        [get_stage_samples_filename(x) for x in rates],
+        [get_stage_samples_filename(x) for x in rates]
+        )
+    graph_stages_raw_samples(samples_files)

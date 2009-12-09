@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
                        &unservers);//filter by destroyed @ object host
         MessageLatencyAnalysis::Filters nilfilter;
         MessageLatencyAnalysis::Filters pingfilter(&ping_port);
-        MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,pingfilter);
+        MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,pingfilter,"stage_samples.txt");
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
