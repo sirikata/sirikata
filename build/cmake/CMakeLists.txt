@@ -354,6 +354,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
 
