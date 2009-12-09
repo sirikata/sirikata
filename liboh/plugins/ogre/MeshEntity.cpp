@@ -73,10 +73,112 @@ MeshEntity::~MeshEntity() {
 
 }
 
+class ReplaceTexture {
+	const String &mFrom;
+	const String &mTo;
+public:
+	ReplaceTexture(const String &from, const String &to)
+		: mFrom(from),
+		  mTo(to) {
+	}
+	bool operator()(Ogre::TextureUnitState *tus) {
+		if (tus->getTextureName() == mFrom) {
+			tus->setTextureName(mTo);
+		}
+		return false;
+	}
+};
+
+class ShouldReplaceTexture {
+	const MeshEntity::TextureBindingsMap &mFrom;
+public:
+	ShouldReplaceTexture(const MeshEntity::TextureBindingsMap &from)
+		: mFrom(from) {
+	}
+	bool operator()(Ogre::TextureUnitState *tus) {
+		if (mFrom.find(tus->getTextureName()) != mFrom.end()) {
+			return true;
+		}
+		return false;
+	}
+};
+
+template <class Functor>
+bool forEachTexture(const Ogre::MaterialPtr &material, Functor func) {
+	int numTechniques = material->getNumTechniques();
+	for (int whichTechnique = 0; whichTechnique < numTechniques; whichTechnique++) {
+		Ogre::Technique *tech = material->getTechnique(whichTechnique);
+		int numPasses = tech->getNumPasses();
+		for (int whichPass = 0; whichPass < numPasses; whichPass++) {
+			Ogre::Pass *pass = tech->getPass(whichPass);
+			int numTUS = pass->getNumTextureUnitStates();
+			for (int whichTUS = 0; whichTUS < numTUS; whichTUS++) {
+				Ogre::TextureUnitState *tus = pass->getTextureUnitState(whichTUS);
+				if (func(tus)) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+void MeshEntity::fixTextures() {
+	Ogre::Entity *ent = getOgreEntity();
+	if (!ent) {
+		return;
+	}
+	SILOG(ogre,debug,"Fixing texture for "<<id());
+	int numSubEntities = ent->getNumSubEntities();
+	for (OriginalMaterialMap::iterator iter = mOriginalMaterials.begin();
+			iter != mOriginalMaterials.end();
+			++iter) {
+		int whichSubEntity = iter->first;
+		if (whichSubEntity >= numSubEntities) {
+			SILOG(ogre,fatal,"Original material map not cleared when mesh changed. which = " << whichSubEntity << " num = " << numSubEntities);
+		}
+		Ogre::SubEntity *subEnt = ent->getSubEntity(whichSubEntity);
+		Ogre::MaterialPtr origMaterial = iter->second;
+		subEnt->setMaterial(origMaterial);
+		SILOG(ogre,debug,"Resetting a material "<<id());
+	}
+	mOriginalMaterials.clear();
+	for (int whichSubEntity = 0; whichSubEntity < numSubEntities; whichSubEntity++) {
+		Ogre::SubEntity *subEnt = ent->getSubEntity(whichSubEntity);
+		Ogre::MaterialPtr material = subEnt->getMaterial();
+		if (forEachTexture(material, ShouldReplaceTexture(mTextureBindings))) {
+			SILOG(ogre,debug,"Replacing a material "<<id());
+			Ogre::MaterialPtr newMaterial = material->clone(material->getName()+id().toString(), false, Ogre::String());
+			for (TextureBindingsMap::const_iterator iter = mTextureBindings.begin();
+					iter != mTextureBindings.end();
+					++iter) {
+				SILOG(ogre,debug,"Replacing a texture "<<id()<<" : "<<iter->first<<" -> "<<iter->second);
+				forEachTexture(newMaterial, ReplaceTexture(iter->first, iter->second));
+			}
+			mOriginalMaterials.insert(
+				OriginalMaterialMap::value_type(whichSubEntity, newMaterial));
+			subEnt->setMaterial(newMaterial);
+		}
+	}
+}
+
+void MeshEntity::bindTexture(const std::string &textureName, const SpaceObjectReference &objId) {
+	mTextureBindings[textureName] = objId.toString();
+	fixTextures();
+}
+void MeshEntity::unbindTexture(const std::string &textureName) {
+	TextureBindingsMap::iterator iter = mTextureBindings.find(textureName);
+	if (iter != mTextureBindings.end()) {
+		mTextureBindings.erase(iter);
+	}
+	fixTextures();
+}
+
 void MeshEntity::loadMesh(const String& meshname)
 {
 
     Ogre::Entity * oldMeshObj=getOgreEntity();
+	mOriginalMaterials.clear();
 
     /** FIXME we need a better way of generating unique id's. We should
      *  be able to use just the uuid, but its not enough since we want
@@ -131,6 +233,7 @@ void MeshEntity::loadMesh(const String& meshname)
     if (oldMeshObj) {
         getScene()->getSceneManager()->destroyEntity(oldMeshObj);
     }
+    fixTextures();
 }
 
 void MeshEntity::unloadMesh() {
@@ -140,6 +243,7 @@ void MeshEntity::unloadMesh() {
     if (meshObj) {
         getScene()->getSceneManager()->destroyEntity(meshObj);
     }
+	mOriginalMaterials.clear();
 }
 
 /////////////////////////////////////////////////////////////////////

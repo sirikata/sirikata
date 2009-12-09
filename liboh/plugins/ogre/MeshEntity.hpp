@@ -52,15 +52,22 @@ class MeshEntity
     :   public Entity,
         public MeshListener
 {
-
+public:
     typedef std::tr1::shared_ptr<Meru::GraphicsResourceEntity> SharedResourcePtr;
-
+    typedef std::map<int, Ogre::MaterialPtr> OriginalMaterialMap;
+    typedef std::map<String, String> TextureBindingsMap;
+private:
     SharedResourcePtr mResource;
     BoundingInfo mBoundingInfo;
+
+    OriginalMaterialMap mOriginalMaterials;
+    TextureBindingsMap mTextureBindings;
 
     Ogre::Entity *getOgreEntity() const {
         return static_cast<Ogre::Entity*const>(mOgreObject);
     }
+
+    void fixTextures();
 
 public:
     ProxyMeshObject &getProxy() const {
@@ -75,6 +82,8 @@ public:
 //    Vector3f getScale() const {
 //        return fromOgre(mSceneNode->getScale());
 //    }
+    void bindTexture(const std::string &textureName, const SpaceObjectReference &objId);
+    void unbindTexture(const std::string &textureName);
 
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;

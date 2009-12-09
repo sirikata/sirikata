@@ -95,7 +95,7 @@ public:
     ///makes a new object with the bare minimum--assumed that a script or persistence fills in the rest.
     void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&);
     ///makes a new objects with objectName startingLocation mesh and a space to connect to
-    void initializeConnect(const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const LightInfo *lights, const SpaceID&, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
+    void initializeConnect(const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const LightInfo *lights, const String &weburl, const SpaceID&, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
     /// Attempt to restore this item from database including script [not implemented]

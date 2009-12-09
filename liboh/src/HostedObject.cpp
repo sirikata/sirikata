@@ -47,6 +47,7 @@
 #include "oh/ObjectHost.hpp"
 #include "oh/ProxyMeshObject.hpp"
 #include "oh/ProxyLightObject.hpp"
+#include "oh/ProxyWebViewObject.hpp"
 #include "oh/ProxyCameraObject.hpp"
 #include "oh/LightInfo.hpp"
 #include "oh/ObjectScriptManager.hpp"
@@ -376,7 +377,7 @@ struct HostedObject::PrivateCallbacks {
                         realThis->receivedPropertyUpdate(iter->second.mProxyObject, name, rws.writes(i).data());
                     }
                 } else {
-                    if (name != "LightInfo" && name != "MeshURI" && name != "IsCamera") {
+                    if (name != "LightInfo" && name != "MeshURI" && name != "IsCamera" && name != "WebViewURL") {
                         // changing the type of this object has to wait until we reload from database.
                         realThis->unsetProperty(name);
                     }
@@ -479,6 +480,7 @@ struct HostedObject::PrivateCallbacks {
         request->header().set_destination_port(Services::PERSISTENCE);
 
         request->body().add_reads().set_field_name("MeshURI");
+        request->body().add_reads().set_field_name("WebViewURL");
         request->body().add_reads().set_field_name("MeshScale");
         request->body().add_reads().set_field_name("Name");
         request->body().add_reads().set_field_name("PhysicalParameters");
@@ -543,6 +545,7 @@ struct HostedObject::PrivateCallbacks {
         bool hasMesh=false;
         bool hasLight=false;
         bool isCamera=false;
+        bool isWebView=false;
         ProxyObjectPtr proxyObj;
         for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
             if (sentMessage->body().reads(i).has_return_status()) {
@@ -558,6 +561,9 @@ struct HostedObject::PrivateCallbacks {
             if (field == "IsCamera") {
                 isCamera = true;
             }
+            if (field == "WebViewURL") {
+                isWebView = true;
+            }
         }
         ObjectReference myObjectReference;
         if (isCamera) {
@@ -566,6 +572,9 @@ struct HostedObject::PrivateCallbacks {
         } else if (hasLight && !hasMesh) {
             SILOG(cppoh,info, "* I found a light named " << proximateObjectId.object());
             proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId));
+        } else if (hasMesh && isWebView){
+            SILOG(cppoh,info,"* I found a WEBVIEW known as "<<proximateObjectId.object());
+            proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, proximateObjectId));
         } else {
             SILOG(cppoh,info, "* I found a MESH named " << proximateObjectId.object());
             proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
@@ -735,6 +744,7 @@ void HostedObject::initializeConnect(
     const Location&startingLocation,
     const String&mesh, const BoundingSphere3f&meshBounds,
     const LightInfo *lightInfo,
+    const String&webViewURL,
     const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint)
 {
     mObjectHost->registerHostedObject(getSharedPtr());
@@ -752,6 +762,11 @@ void HostedObject::initializeConnect(
         Protocol::PhysicalParameters physicalprop;
         physicalprop.set_mode(Protocol::PhysicalParameters::NONPHYSICAL);
         physicalprop.SerializeToString(propertyPtr("PhysicalParameters"));
+        if (!webViewURL.empty()) {
+            Protocol::StringProperty meshprop;
+            meshprop.set_value(webViewURL);
+            meshprop.SerializeToString(propertyPtr("WebViewURL"));
+        }
     } else if (lightInfo) {
         Protocol::LightInfoProperty lightProp;
         lightInfo->toProtocol(lightProp);
@@ -784,6 +799,7 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
                          &PrivateCallbacks::initializeDatabaseCallback,
                          this, spaceID,
                          _1, _2, _3));
+    msg->body().add_reads().set_field_name("WebViewURL");
     msg->body().add_reads().set_field_name("MeshURI");
     msg->body().add_reads().set_field_name("MeshScale");
     msg->body().add_reads().set_field_name("Name");
@@ -1058,6 +1074,9 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             } else if (hasProperty("LightInfo") && !hasProperty("MeshURI")) {
                 printstr<<"RetObj. I am now a Light known as "<<objectId.object();
                 proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, objectId));
+            } else if (hasProperty("MeshURI") && hasProperty("WebViewURL")){
+                printstr<<"RetObj: I am now a WebView known as "<<objectId.object();
+                proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, objectId));
             } else {
                 printstr<<"RetObj: I am now a Mesh known as "<<objectId.object();
                 proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
@@ -1205,6 +1224,16 @@ void HostedObject::receivedPropertyUpdate(
             if (proxymesh) {
                 SILOG(cppoh,info, "* Received MESH property update for " << proxy->getObjectReference().object() <<" has mesh URI "<<URI(parsedProperty.value()));
                 proxymesh->setMesh(URI(parsedProperty.value()));
+            }
+        }
+    }
+    if (propertyName == "WebViewURL") {
+        Protocol::StringProperty parsedProperty;
+        parsedProperty.ParseFromString(arguments);
+        if (parsedProperty.has_value()) {
+            ProxyWebViewObject *proxywv = dynamic_cast<ProxyWebViewObject*>(proxy.get());
+            if (proxywv) {
+                proxywv->loadURL(parsedProperty.value());
             }
         }
     }

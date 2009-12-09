@@ -554,7 +554,7 @@ void WebView::createMaterial()
 
  std::string WebView::getViewTextureName()
  {
-     return viewName + "Texture";
+     return viewName;
  }
 
  std::string WebView::getMaterialName()
@@ -841,7 +841,7 @@ void WebView::onPaint(Berkelium::Window*win,
     if (!backingTexture.isNull()) {
         compositeWidgets(win);
     }
-    if(isWebViewTransparent && !usingMask && ignoringTrans)
+    if(isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch)
     {
         int top = pixelBufferRect.top();
         int left = pixelBufferRect.left();

@@ -34,15 +34,14 @@
 #define _SIRIKATA_PROXY_WEBVIEW_OBJECT_HPP_
 
 #include "WebViewListener.hpp"
-#include "ProxyObject.hpp"
+#include "ProxyMeshObject.hpp"
 
 namespace Sirikata {
 
 typedef Provider<WebViewListener*> WebViewProvider;
 
 class SIRIKATA_OH_EXPORT ProxyWebViewObject 
-	: public WebViewProvider,
-		public ProxyObject
+	: public ProxyMeshObject, public WebViewProvider
 {
 public:
     ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id);

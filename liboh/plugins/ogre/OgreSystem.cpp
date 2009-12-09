@@ -706,8 +706,17 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         }
     }
     {
+        std::tr1::shared_ptr<ProxyWebViewObject> webviewpxy=std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(p);
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
-        if (meshpxy) {
+        if (webviewpxy) {
+            WebView* view = WebViewManager::getSingleton().createWebViewMaterial(
+				p->getObjectReference().toString(), 512, 512, Ogre::FO_ANISOTROPIC);
+            view->setProxyObject(webviewpxy);
+            view->bind("close", std::tr1::bind(&KillWebView, p));
+            MeshEntity *mesh=new MeshEntity(this,webviewpxy);
+            mesh->bindTexture("webview", p->getObjectReference());
+            created = true;
+        } else if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
         }
@@ -723,16 +732,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             created = true;
         }
     }
-    {
-        std::tr1::shared_ptr<ProxyWebViewObject> webviewpxy=std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(p);
-        if (webviewpxy) {
-            WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 128, 256, OverlayPosition());
-            view->setProxyObject(webviewpxy);
-            view->bind("close", std::tr1::bind(&KillWebView, p));
-        }
-
-    }
-
 }
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
 
