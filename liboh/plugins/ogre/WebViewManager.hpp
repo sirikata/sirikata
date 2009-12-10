@@ -237,6 +237,8 @@ public:
 	*/
 	void deFocusAllWebViews();
 
+	bool focusWebView(WebView* selection);
+
 	void setDefaultViewport(Ogre::Viewport* newViewport);
 
 
@@ -279,7 +281,6 @@ protected:
 	bool isDraggingFocusedWebView;
     std::string baseDirectory;
 
-	bool focusWebView(int x, int y, WebView* selection = 0);
 	WebView* getTopWebView(int x, int y);
 	void onResizeTooltip(WebView* WebView, const JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);

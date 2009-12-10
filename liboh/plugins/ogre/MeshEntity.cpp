@@ -38,6 +38,7 @@
 #include <OgreSubEntity.h>
 #include <OgreEntity.h>
 #include "resourceManager/GraphicsResourceManager.hpp"
+#include "WebView.hpp"
 namespace Sirikata {
 namespace Graphics {
 
@@ -244,6 +245,16 @@ void MeshEntity::unloadMesh() {
         getScene()->getSceneManager()->destroyEntity(meshObj);
     }
 	mOriginalMaterials.clear();
+}
+
+void MeshEntity::setSelected(bool selected) {
+    Entity::setSelected(selected);
+    WebView *webView = WebViewManager::getSingleton().getWebView(id().toString());
+    if (selected) {
+        WebViewManager::getSingleton().focusWebView(webView);
+    } else if (WebViewManager::getSingleton().getFocusedWebView() == webView) {
+        WebViewManager::getSingleton().deFocusAllWebViews();
+    }
 }
 
 /////////////////////////////////////////////////////////////////////

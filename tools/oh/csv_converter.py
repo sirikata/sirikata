@@ -268,6 +268,10 @@ class CsvToSql:
             meshuri = Sirikata.StringProperty()
             meshuri.value = row['meshURI']
             self.set(cursor, uuid, 'MeshURI', meshuri.SerializeToString())
+            if row.get('webpage', ''):
+                weburi = Sirikata.StringProperty()
+                weburi.value = row['webpage']
+                self.set(cursor, uuid, 'WebViewURL', weburi.SerializeToString())
             if (row.get('name','')):
                 meshuri = Sirikata.StringProperty()
                 meshuri.value = row['name']

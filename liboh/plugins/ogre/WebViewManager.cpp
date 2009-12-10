@@ -362,7 +362,7 @@ bool WebViewManager::injectMouseDown(int buttonID)
 {
 	if(buttonID == LeftMouseButton)
 	{
-		if(focusWebView(mouseXPos, mouseYPos))
+		if(focusWebView(getTopWebView(mouseXPos, mouseYPos)))
 		{
 			int relX = focusedWebView->getRelativeX(mouseXPos);
 			int relY = focusedWebView->getRelativeY(mouseYPos);
@@ -373,11 +373,11 @@ bool WebViewManager::injectMouseDown(int buttonID)
 	else if(buttonID == RightMouseButton)
 	{
 		isDragging = true;
-		focusWebView(mouseXPos, mouseYPos);
+		focusWebView(getTopWebView(mouseXPos, mouseYPos));
 	}
 	else if(buttonID == MiddleMouseButton) {
             isResizing = true;
-            focusWebView(mouseXPos, mouseYPos);
+            focusWebView(getTopWebView(mouseXPos, mouseYPos));
 	}
 
 	if(focusedWebView)
@@ -435,10 +435,10 @@ namespace {
 struct compare { bool operator()(WebView* a, WebView* b){ return(a->getOverlay()->getZOrder() > b->getOverlay()->getZOrder()); }};
 }
 
-bool WebViewManager::focusWebView(int x, int y, WebView* selection)
+bool WebViewManager::focusWebView(WebView* selection)
 {
 	deFocusAllWebViews();
-	WebView* webViewToFocus = selection? selection : getTopWebView(x, y);
+	WebView* webViewToFocus = selection;
 
 	if(!webViewToFocus) {
             focusedNonChromeWebView = NULL;
@@ -448,10 +448,13 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 	std::vector<WebView*> sortedWebViews;
 	WebViewMap::iterator iter;
 
-	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
-		if(iter->second->overlay)
-			if(iter->second->overlay->getTier() == webViewToFocus->overlay->getTier())
+	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++) {
+		if(iter->second->overlay && webViewToFocus->overlay) {
+			if(iter->second->overlay->getTier() == webViewToFocus->overlay->getTier()) {
 				sortedWebViews.push_back(iter->second);
+			}
+		}
+	}
 
 	std::sort(sortedWebViews.begin(), sortedWebViews.end(), compare());
 
@@ -460,22 +463,23 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 		if(sortedWebViews.at(0) != webViewToFocus)
 		{
 			unsigned int popIdx = 0;
-			for(; popIdx < sortedWebViews.size(); popIdx++)
-				if(sortedWebViews.at(popIdx) == webViewToFocus)
+			for(; popIdx < sortedWebViews.size(); popIdx++) {
+				if(sortedWebViews.at(popIdx) == webViewToFocus) {
 					break;
+				}
+			}
 
 			unsigned short highestZ = sortedWebViews.at(0)->overlay->getZOrder();
-			for(unsigned int i = 0; i < popIdx; i++)
+			for(unsigned int i = 0; i < popIdx; i++) {
 				sortedWebViews.at(i)->overlay->setZOrder(sortedWebViews.at(i+1)->overlay->getZOrder());
+			}
 
 			sortedWebViews.at(popIdx)->overlay->setZOrder(highestZ);
 		}
 	}
 
 	focusedWebView = webViewToFocus;
-#if defined(HAVE_BERKELIUM)
 	focusedWebView->focus();
-#endif
 
         if (focusedWebView != chromeWebView)
             focusedNonChromeWebView = focusedWebView;
@@ -590,7 +594,7 @@ void WebViewManager::handleTooltip(WebView* tooltipParent, const std::wstring& t
 
 void WebViewManager::handleRequestDrag(WebView* caller)
 {
-	focusWebView(0, 0, caller);
+	focusWebView(caller);
 	isDraggingFocusedWebView = true;
 }
 

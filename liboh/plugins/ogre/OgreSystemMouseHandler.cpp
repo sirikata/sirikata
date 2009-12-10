@@ -39,6 +39,7 @@
 #include "input/SDLInputManager.hpp"
 #include <oh/ProxyManager.hpp>
 #include <oh/ProxyObject.hpp>
+#include <oh/ProxyWebViewObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include <oh/ProxyLightObject.hpp>
 #include <oh/SpaceTimeOffsetManager.hpp>
@@ -342,7 +343,16 @@ private:
             std::tr1::dynamic_pointer_cast<ProxyLightObject>(ent->getProxyPtr()));
         ProxyObjectPtr newObj;
         if (meshObj) {
-            std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
+            std::tr1::shared_ptr<ProxyWebViewObject> webObj(
+                std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(ent->getProxyPtr()));
+            std::tr1::shared_ptr<ProxyMeshObject> newMeshObject;
+            if (webObj) {
+                std::tr1::shared_ptr<ProxyWebViewObject> newWebObject(new ProxyWebViewObject(proxyMgr, newId));
+                newWebObject->loadURL("http://www.google.com/");
+                newMeshObject = newWebObject;
+            } else {
+                newMeshObject = std::tr1::shared_ptr<ProxyMeshObject>(new ProxyMeshObject(proxyMgr, newId));
+            }
             newObj = newMeshObject;
             proxyMgr->createObject(newMeshObject);
             newMeshObject->setMesh(meshObj->getMesh());
@@ -548,7 +558,7 @@ private:
         }
     }
 
-    void createLightAction() {
+    void createWebviewAction() {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -557,7 +567,43 @@ private:
         ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
         Time now(SpaceTimeOffsetManager::getSingleton().now(newId.space()));
         Location loc (camera->getProxy().globalLocation(now));
-        loc.setPosition(loc.getPosition() + Vector3d(direction(loc.getOrientation()))*WORLD_SCALE);
+        loc.setPosition(loc.getPosition() + Vector3d(direction(loc.getOrientation()))*WORLD_SCALE/3);
+        loc.setOrientation(loc.getOrientation());
+
+        std::tr1::shared_ptr<ProxyWebViewObject> newWebObject (new ProxyWebViewObject(proxyMgr, newId));
+        proxyMgr->createObject(newWebObject);
+        {
+            newWebObject->setMesh(URI("meru:///webview.mesh"));
+            newWebObject->loadURL("http://www.yahoo.com/");
+        }
+
+        Entity *parentent = mParent->getEntity(mCurrentGroup);
+        if (parentent) {
+            Location localLoc = loc.toLocal(parentent->getProxy().globalLocation(now));
+            newWebObject->setParent(parentent->getProxyPtr(), now, loc, localLoc);
+            newWebObject->resetLocation(now, localLoc);
+        }
+        else {
+            newWebObject->resetLocation(now, loc);
+        }
+        createLight(now)->setParent(newWebObject, now);
+        mSelectedObjects.clear();
+        mSelectedObjects.insert(newWebObject);
+        Entity *ent = mParent->getEntity(newId);
+        if (ent) {
+            ent->setSelected(true);
+        }
+    }
+
+    std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+
+        CameraEntity *camera = mParent->mPrimaryCamera;
+        if (!camera) return std::tr1::shared_ptr<ProxyLightObject>();
+        SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
+        ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
+        Location loc (camera->getProxy().globalLocation(now));
+        loc.setPosition(loc.getPosition());
         loc.setOrientation(Quaternion(0.886995, 0.000000, -0.461779, 0.000000, Quaternion::WXYZ()));
 
         std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
@@ -592,7 +638,14 @@ private:
         if (ent) {
             ent->setSelected(true);
         }
+        return newLightObject;
     }
+    void createLightAction() {
+        CameraEntity *camera = mParent->mPrimaryCamera;
+        if (!camera) return;
+        createLight(SpaceTimeOffsetManager::getSingleton().now(camera->id().space()));
+    }
+
 	ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy) {
 		ProxyObjectPtr parentProxy;
 		while ((parentProxy=camProxy->getParentProxy())) {
@@ -1268,6 +1321,7 @@ public:
         mInputResponses["stableRotatePos"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::stableRotateAction, this, 1.f, _1), 1, 0);
         mInputResponses["stableRotateNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::stableRotateAction, this, -1.f, _1), 1, 0);
 
+        mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
         mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
@@ -1326,6 +1380,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RIGHT), mInputResponses["stableRotateNeg"]);
 
         // Various other actions
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);

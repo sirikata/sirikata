@@ -94,6 +94,9 @@ public:
     void loadMesh(const String& meshname);
 
     void unloadMesh();
+
+    virtual void setSelected(bool selected);
+
     ///Returns the scaled bounding info
     const BoundingInfo& getBoundingInfo()const{
         return mBoundingInfo;

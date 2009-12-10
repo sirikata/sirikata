@@ -503,7 +503,7 @@ void WebView::createMaterial()
  void WebView::raise()
  {
      if(overlay) {
-         WebViewManager::getSingleton().focusWebView(0, 0, this);
+         WebViewManager::getSingleton().focusWebView(this);
      } else {
          focus();
      }
