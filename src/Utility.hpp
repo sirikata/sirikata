@@ -109,6 +109,7 @@ typedef Sirikata::Network::IOTimer IOTimer;
 typedef Sirikata::Network::IOTimerPtr IOTimerPtr;
 typedef Sirikata::Network::IOCallback IOCallback;
 
+  
 typedef Sirikata::Thread Thread;
 
 /* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */

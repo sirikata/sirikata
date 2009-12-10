@@ -26,7 +26,7 @@ class ClusterSimSettings:
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '350s'
+        self.duration = '75s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.gaussian = False
@@ -39,8 +39,8 @@ class ClusterSimSettings:
         self.object_connect_phase = '0s'
 
         # OH: random object generation settings
-        self.num_random_objects = 300
-        self.object_static = 'random'
+        self.num_random_objects = 1000
+        self.object_static = 'static'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'
         self.object_drift_z = '0'
@@ -51,6 +51,9 @@ class ClusterSimSettings:
         self.num_pack_objects = 0
         self.object_pack = '/home/meru/data/objects.pack'
 
+        # OH: scenario / ping settings
+        self.scenario = 'ping'
+        self.scenario_options = '--num-pings-per-second=1000'
 
         self.blocksize = 200
         self.center = (0, 0, 0)
@@ -66,7 +69,7 @@ class ClusterSimSettings:
         self.cseg_service_tcp_port = 6234;
         self.oseg = 'oseg_craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
-        self.oseg_analyze_after = '100' #Will perform oseg analysis after this many seconds of the run.
+        self.oseg_analyze_after = '60' #Will perform oseg analysis after this many seconds of the run.
 
         self.vis_mode = 'object'
         self.vis_seed = 1
@@ -146,6 +149,8 @@ class ClusterSim:
             '--object.2d=' + self.settings.object_2d,
             '--object.num.pack=' + str(self.settings.num_pack_objects),
             '--object.pack=' + self.settings.object_pack,
+            '--scenario=' + self.settings.scenario,
+            '--scenario-options=' + self.settings.scenario_options,
             '%(packoffset)s',
             ]
         class_params = {
@@ -175,7 +180,7 @@ class ClusterSim:
         self.run_cluster_sim()
         self.retrieve_data()
 
-        self.bandwidth_analysis()
+#        self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
@@ -375,9 +380,16 @@ class ClusterSim:
     def object_latency_analysis(self):
         subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
-    def message_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())])
+    def message_latency_analysis(self, filename=None):
+        stdout_fp = None
+        if filename != None:
+            stdout_fp = open(filename, 'w')
 
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
+                        stdout=stdout_fp,
+                        stderr=stdout_fp)
+        if stdout_fp != None:
+            stdout_fp.close()
 
     def oseg_analysis(self):
         subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
@@ -392,8 +404,9 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-#    cs = ClusterSimSettings(cc, 3, (3,1), 1)
     cs = ClusterSimSettings(cc, 4, (2,2), 1)
+#    cs = ClusterSimSettings(cc, 2, (2,1), 1)
+#    cs = ClusterSimSettings(cc, 3, (3,1), 1)
 #    cs = ClusterSimSettings(cc, 8, (8,1), 1)
 #    cs = ClusterSimSettings(cc, 8, (8,1), 1)
 #    cs = ClusterSimSettings(cc, 14, (2,2), 1)

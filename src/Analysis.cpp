@@ -37,7 +37,7 @@
 #include "AnalysisEvents.hpp"
 #include "Utility.hpp"
 #include "RecordedMotionPath.hpp"
-
+#include "OSegLookupTraceToken.hpp"
 #include <algorithm>
 
 namespace CBR {
@@ -127,7 +127,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read((char*)&pevt->path, sizeof(pevt->path));
               is.read((char*)&pevt->srcport, sizeof(pevt->srcport));
               is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
-              is.read((char*)&pevt->msg_type,sizeof(pevt->msg_type));
               evt=pevt;
           }
         break;
@@ -157,6 +156,14 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = pqevt;
           }
           break;
+
+      case Trace::OSegCumulativeTraceAnalysisTag:
+        {
+          OSegCumulativeEvent* cumevt = new OSegCumulativeEvent;
+          is.read((char*)&cumevt->time, sizeof(cumevt->time));
+          is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
+          evt = cumevt;
+        }
       case Trace::ServerDatagramSentTag:
           {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
@@ -361,7 +368,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         break;
 
 
-
       default:
 
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
@@ -371,9 +377,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 
     return evt;
 }
-
-
-
 
 
 
@@ -1178,7 +1181,6 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
 
 MessageLatencyAnalysis::PacketData::PacketData(){
     mId=0;
-    mType=255;
     mSrcPort=0;
     mDstPort=0;
 
@@ -1186,50 +1188,115 @@ MessageLatencyAnalysis::PacketData::PacketData(){
 #define PACKETSTAGE(x) case Trace::x: return #x
 const char* getPacketStageName (uint32 path) {
     switch (path) {
+        // Object Host Checkpoints
         PACKETSTAGE(CREATED);
-        PACKETSTAGE(SPACE_OUTGOING_MESSAGE);
-        PACKETSTAGE(SPACE_SERVER_MESSAGE_QUEUE);
-        PACKETSTAGE(SELF_LOOP);
-        PACKETSTAGE(FORWARDED);
-        PACKETSTAGE(DISPATCHED);
-        PACKETSTAGE(DELIVERED);
         PACKETSTAGE(DESTROYED);
-        PACKETSTAGE(DROPPED);
-        PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
-        PACKETSTAGE(HIT_NETWORK);
         PACKETSTAGE(OH_ENQUEUED);
         PACKETSTAGE(OH_DEQUEUED);
+        PACKETSTAGE(OH_HIT_NETWORK);
+        PACKETSTAGE(OH_DROPPED_AT_OH_ENQUEUED);
+        PACKETSTAGE(OH_NET_RECEIVED);
+        PACKETSTAGE(OH_DROPPED_AT_RECEIVE_QUEUE);
         PACKETSTAGE(OH_RECEIVED);
-        PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
+
+        // Space Checkpoints
+        PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
+        PACKETSTAGE(FORWARDED_LOCALLY);
+        PACKETSTAGE(FORWARDING_STARTED);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
+        PACKETSTAGE(FORWARDED);
+        PACKETSTAGE(DROPPED);
+        PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
+
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
 
 }
-class PathPair {
-public:
-    Trace::MessagePath first;
-    Trace::MessagePath second;
-    PathPair(const Trace::MessagePath &first,
-              const Trace::MessagePath &second) {
-        this->first=first;
-        this->second=second;
-    }
-    bool operator < (const PathPair&other) const{
-        if (first==other.first) return second<other.second;
-        return first<other.first;
-    }
-    bool operator ==(const PathPair&other) const{
-        return first==other.first&&second==other.second;
-    }
-};
-MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter):mFilter(filter) {
+
+MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter)
+        :mFilter(filter)
+{
+    StageGroup oh_create_group("Object Host Creation");
+    oh_create_group.add(Trace::CREATED)
+            .add(Trace::OH_ENQUEUED)
+            .add(Trace::OH_DROPPED_AT_OH_ENQUEUED)
+            ;
+
+    StageGroup oh_net_exchange_group("Object Host Networking Exchange");
+    oh_net_exchange_group.add(Trace::OH_ENQUEUED)
+            .add(Trace::OH_DEQUEUED)
+            ;
+
+    StageGroup oh_send_group("Object Host Send");
+    oh_send_group.add(Trace::OH_DEQUEUED)
+            .add(Trace::OH_HIT_NETWORK)
+            ;
+
+    StageGroup oh_to_space_group("Object Host -> Space", StageGroup::ORDERED);
+    oh_to_space_group
+            .add(Trace::OH_HIT_NETWORK)
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            ;
+
+    StageGroup space_route_decision_group("Space Routing Decision");
+    space_route_decision_group
+            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            .add(Trace::FORWARDED_LOCALLY)
+            .add(Trace::FORWARDING_STARTED)
+            ;
+
+    StageGroup space_direct_route_group("Space Direct Routing");
+    space_direct_route_group
+            .add(Trace::FORWARDED_LOCALLY)
+            .add(Trace::DROPPED)
+            .add(Trace::SPACE_TO_OH_ENQUEUED)
+            ;
+
+    StageGroup space_group("Space");
+    space_group
+            .add(Trace::FORWARDING_STARTED)
+            .add(Trace::FORWARDED)
+            .add(Trace::DROPPED)
+            .add(Trace::SPACE_TO_OH_ENQUEUED)
+            .add(Trace::OSEG_LOOKUP_STARTED)
+            .add(Trace::OSEG_CACHE_LOOKUP_FINISHED)
+            .add(Trace::OSEG_SERVER_LOOKUP_FINISHED)
+            ;
+
+    StageGroup space_to_oh_group("Space -> Object Host", StageGroup::ORDERED);
+    space_to_oh_group
+            .add(Trace::SPACE_TO_OH_ENQUEUED)
+            .add(Trace::OH_NET_RECEIVED)
+            ;
+
+    StageGroup oh_receive_group("Object Host Receive");
+    oh_receive_group.add(Trace::DESTROYED)
+            .add(Trace::OH_DROPPED_AT_RECEIVE_QUEUE)
+            .add(Trace::OH_NET_RECEIVED)
+            .add(Trace::OH_RECEIVED)
+            ;
+
+
+    typedef std::vector<StageGroup> StageGroupList;
+    StageGroupList groups;
+    groups.push_back(oh_create_group);
+    groups.push_back(oh_net_exchange_group);
+    groups.push_back(oh_send_group);
+    groups.push_back(oh_to_space_group);
+    groups.push_back(space_route_decision_group);
+    groups.push_back(space_direct_route_group);
+    groups.push_back(space_group);
+    groups.push_back(space_to_oh_group);
+    groups.push_back(oh_receive_group);
+
     // read in all our data
     mNumberOfServers = nservers;
-    std::tr1::unordered_map<uint64,PacketData> packetFlow;
+    typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;
+    PacketMap packetFlow;
+
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -1239,13 +1306,11 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             if (evt == NULL)
                 break;
 
-
             {
                 MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
                 if (tevt != NULL) {
-                    MessageLatencyAnalysis::PacketData*pd=&packetFlow[tevt->uid];
+                    MessageLatencyAnalysis::PacketData*pd = &packetFlow[tevt->uid];
                     pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
-                    if (tevt->msg_type!=255) pd->mType=tevt->msg_type;
                     if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
                     if (tevt->dstport!=0) pd->mDstPort=tevt->dstport;
                 }
@@ -1253,46 +1318,61 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             delete evt;
         }
     }
-    std::map<PathPair,Average> results;
-    for (int doVariance=0;doVariance<2;++doVariance) {
 
-        for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
-             iter!=ie;
-             ++iter) {
-            if (mFilter(iter->second)&&iter->second.mStamps.size()) {
-                std::sort(iter->second.mStamps.begin(),iter->second.mStamps.end());
-                for (size_t i=1;i<iter->second.mStamps.size();++i) {
-                    Duration diff=iter->second.mStamps[i]-iter->second.mStamps[i-1];
-                    Average *avg=&results[PathPair(iter->second.mStamps[i-1].mPath,iter->second.mStamps[i].mPath)];
-                    if (!doVariance) {
-                        avg->addAverageSample(diff);
-                    }else {
-                        avg->addVarianceSample(diff);
-                    }
-                }
+    // Compute time diffs for each group x packet
+    typedef std::map<PathPair,Average> PathAverageMap;
+    PathAverageMap results;
+    for (PacketMap::iterator iter=packetFlow.begin(),ie=packetFlow.end();
+         iter!=ie;
+         ++iter) {
+        PacketData& pd = iter->second;
+        if ( !mFilter(pd) || (pd.mStamps.size() == 0) ) continue;
+        std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
+        for(StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
+            StageGroup& group = *group_it;
+            // Given our packet list and a set of valid stages, we need to step
+            // through finding "adjacent" pairs of stages, where adjacent means
+            // that tag A and tag B are both in the StageGroup and there is no
+            // tag C that is also in the StageGroup and exists between A and B.
+            std::vector<DTime> filtered_stamps = group.filter(pd.mStamps);
+            for (uint32 idx = 1; idx < filtered_stamps.size(); ++idx) {
+                PathPair pp = group.orderedPair( filtered_stamps[idx-1], filtered_stamps[idx] );
+                Duration diff = group.difference( filtered_stamps[idx-1], filtered_stamps[idx] );
+                results[pp].sample(diff);
             }
         }
-        if (!doVariance)
-        for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
+    }
+
+    // Report results for each (sensible) pair of stages
+    // Reports are done by groups
+    for (StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
+        StageGroup& group = *group_it;
+        SILOG(analysis,info,"Group: " << group.name());
+        // This approach is inefficient but only bad if # of groups sky rockets
+        for (PathAverageMap::iterator resiter=results.begin(),resiterend=results.end();
              resiter!=resiterend;
              ++resiter) {
-            resiter->second.averageOut();
 
-        }
+            PathPair path_pair = resiter->first;
+            if (!group.contains(path_pair))
+                continue;
 
-    }
-    for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
-         resiter!=resiterend;
-         ++resiter) {
-        if (resiter->second.numSamples) {
-            const char* lastStage=getPacketStageName(resiter->first.first);
-            const char* currentStage=getPacketStageName(resiter->first.second);
-            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average<<"s stddev "<<sqrt(resiter->second.variance)<<" #"<<resiter->second.numSamples<<std::endl;
-            lastStage=currentStage;
+            Average& avg = resiter->second;
+            if (avg.samples() == 0)
+                continue;
 
+            const char* lastStage=getPacketStageName(path_pair.first);
+            const char* currentStage=getPacketStageName(path_pair.second);
+
+            SILOG(analysis,info,
+                  "Stage " << lastStage << " - " << currentStage << ":"
+                  << avg.average() << " stddev " << avg.stddev()
+                  << " #" << avg.samples()
+                  );
         }
     }
 }
+
 LatencyAnalysis::PacketData::PacketData()
  :_send_start_time(Time::null()),
   _send_end_time(Time::null()),
@@ -1338,7 +1418,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
                 PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
                 if (ping_evt != NULL) {
                     mLatency.insert(
-                        std::map<double,Duration>::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
+                        std::multimap<double,Duration>::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
                 }
             }
             delete evt;
@@ -1350,7 +1430,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
 void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Average > &retval){
     int bucket=-1;
     int bucketSamples=0;
-    for (std::map<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
+    for (std::multimap<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
          i!=ie;++i) {
         int curBucket=(int)floor(i->first/bucketWidth);
         if (curBucket!=bucket) {
@@ -1574,7 +1654,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectBeginMigrateID.push_back(obj_mig_evt->mObjID);
           objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->mMigrateFrom);
           objectBeginMigrateMigrateTo.push_back(obj_mig_evt->mMigrateTo);
-
+          delete evt;
           continue;
         }
 
@@ -1586,7 +1666,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->mObjID);
           objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
           objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
-
+          delete evt;
           continue;
         }
 
@@ -1742,7 +1822,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           times.push_back(obj_lookup_evt->time);
           obj_ids.push_back(obj_lookup_evt->mObjID);
           sID_lookup.push_back(obj_lookup_evt->mID_lookup);
-
+          delete evt;
           continue;
         }
 
@@ -1847,6 +1927,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           times.push_back(obj_lookup_evt->time);
           obj_ids.push_back(obj_lookup_evt->mObjID);
           sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          delete evt;
           continue;
         }
 
@@ -1956,6 +2037,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
           dTimes.push_back(obj_lookup_proc_evt->deltaTime);
           stillInQueues.push_back(obj_lookup_proc_evt->stillInQueue);
+          delete evt;
           continue;
         }
         delete evt;
@@ -1964,6 +2046,67 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
+  void ObjectSegmentationProcessedRequestsAnalysis::printDataCSV(std::ostream &fileOut, bool sortedByTime, int processAfter)
+  {
+    double processAfterInMicro = processAfter* OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert seconds of processAfter to microseconds for comparison to time.raw().
+    double totalLatency = 0;
+    int maxLatency = 0;
+    double numCountedLatency  = 0;
+
+    if (sortedByTime)
+    {
+      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      convertToEvtsAndSort(sortedEvts);
+
+      for (int s=0; s < (int) sortedEvts.size(); ++s)
+      {
+        if (sortedEvts[s].time.raw() > processAfterInMicro)
+        {
+          fileOut <<sortedEvts[s].deltaTime<<",";
+        }
+      }
+    }
+    else
+    {
+      fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
+
+      for (int s= 0; s < (int) times.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:            "<<sID_processor[s]<<"\n";
+        fileOut<< "\tTime at:                    "<<times[s].raw()<<"\n";
+        fileOut<< "\tID Lookup:                  "<<obj_ids[s].toString()<<"\n";
+        fileOut<< "\tObject on:                  "<<sID_objectOn[s]<<"\n";
+        fileOut<< "\tObjects still in queue:     "<<stillInQueues[s]<<"\n";
+        fileOut<< "\tTime taken:                 "<<dTimes[s]<<"\n";
+
+
+        if (times[s].raw() > processAfterInMicro)
+        {
+          ++numCountedLatency;
+          totalLatency = totalLatency + (int) dTimes[s];
+
+          if ((int)dTimes[s] > maxLatency)
+          {
+            maxLatency = dTimes[s];
+          }
+        }
+      }
+
+
+
+      fileOut<<"\n\n************************************\n";
+      fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
+      fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
+      fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
+      fileOut<<"\n\n\n\nEND\n";
+    }
+  }
+
+
+      
+  
   //processAfter is in seconds
   void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime, int processAfter)
   {
@@ -1976,7 +2119,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     {
       std::vector<ObjectLookupProcessedEvent> sortedEvts;
       convertToEvtsAndSort(sortedEvts);
-
+      
       fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
       fileOut << "\n\n Basic statistics:   "<< sortedEvts.size() <<"  \n\n";
 
@@ -2002,11 +2145,11 @@ LatencyAnalysis::~LatencyAnalysis() {
         }
       }
 
-      fileOut<<"\n\n************************************\n";
-      fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
-      fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
-      fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
-      fileOut<<"\n\n\n\nEND\n";
+     fileOut<<"\n\n************************************\n";
+     fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
+     fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
+     fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
+     fileOut<<"\n\n\n\nEND\n";
     }
     else
     {
@@ -2093,6 +2236,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           ObjectMigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
           allRoundTripEvts.push_back(rdt_evt);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2173,6 +2317,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           OSegTrackedSetResultsEvent oseg_tracked_evter = (*oseg_tracked_evt);
           allTrackedSetResultsEvts.push_back(oseg_tracked_evter);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2248,6 +2393,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           OSegShutdownEvent oseg_shutdown_evter = (*oseg_shutdown_evt);
           allShutdownEvts.push_back(oseg_shutdown_evter);
+          delete evt;
           continue;
         }
         delete evt;
@@ -2305,6 +2451,7 @@ OSegCacheResponseAnalysis::OSegCacheResponseAnalysis(const char* opt_name, const
       {
         OSegCacheResponseEvent oseg_cache_evter = (*oseg_cache_evt);
         allCacheResponseEvts.push_back(oseg_cache_evter);
+        delete evt;
         continue;
       }
       delete evt;
@@ -2377,6 +2524,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_rd_trip_evt != NULL)
       {
         mMigrationVector.push_back(*oseg_rd_trip_evt);
+        delete evt;
         continue;
       }
 
@@ -2384,6 +2532,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_lookup_proc_evt != NULL)
       {
         mLookupVector.push_back(*oseg_lookup_proc_evt);
+        delete evt;
         continue;
       }
 
@@ -2391,6 +2540,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_cache_evt != NULL)
       {
         mCacheResponseVector.push_back(*oseg_cache_evt);
+        delete evt;
         continue;
       }
 
@@ -2398,6 +2548,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (oseg_lookup_not_on_server_evt != NULL)
       {
         mObjectLookupNotOnServerVector.push_back(*oseg_lookup_not_on_server_evt);
+        delete evt;
         continue;
       }
 
@@ -2746,5 +2897,290 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
            << std::endl;
     }
 }
+
+
+
+
+
+OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers)
+{
+
+  for(uint32 server_id = 1; server_id <= nservers; server_id++)
+  {
+    String loc_file = GetPerServerFile(opt_name, server_id);
+    std::ifstream is(loc_file.c_str(), std::ios::in);
+
+    while(is)
+    {
+      Event* evt = Event::read(is, server_id);
+      if (evt == NULL)
+        break;
+
+      OSegCumulativeEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeEvent*> (evt);
+      if (oseg_cum_evt != NULL)
+      {
+        allTraces.push_back(oseg_cum_evt);
+        continue;
+      }
+      delete evt;
+    }
+  }
+  filterShorterPath();
+  
+  generateCacheTime();
+    generateGetCraqLookupPostTime();
+  generateCraqLookupTime();
+  generateCraqLookupNotAlreadyLookingUpTime();
+    generateManagerPostTime();
+  generateManagerEnqueueTime();
+  generateManagerDequeueTime();
+    generateConnectionPostTime();
+  generateConnectionNetworkQueryTime();
+  generateConnectionNetworkTime();
+    generateReturnPostTime();
+  generateLookupReturnTime();
+  
+}
+
+OSegCumulativeTraceAnalysis::~OSegCumulativeTraceAnalysis()
+{
+  for (int s=0;s < (int)allTraces.size(); ++s)
+  {
+    delete allTraces[s];
+  }
+  allTraces.clear();
+  cacheTimesVec.clear();
+  craqLookupPostTimesVec.clear();
+  craqLookupTimesVec.clear();
+  craqLookupNotAlreadyLookingUpTimesVec.clear();
+  managerPostTimesVec.clear();
+  managerEnqueueTimesVec.clear();
+  managerDequeueTimesVec.clear();
+  connectionPostTimesVec.clear();
+  connectionNetworkQueryTimesVec.clear();
+  connectionsNetworkTimesVec.clear();
+  returnPostTimesVec.clear();
+  lookupReturnsTimesVec.clear();
+  completeLookupTimesVec.clear();
+}
+
+void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
+{
+  fileOut << "\n\nCumulative OSeg Analysis\n\n";
+
+  fileOut << "\n\nComplete Lookup Times\n";
+  for (int s=0; s < (int) completeLookupTimesVec.size(); ++s)
+    fileOut  << completeLookupTimesVec[s] << ",";
+
+  fileOut << "\n\nCache Check Times\n";
+  for (int s=0; s < (int) cacheTimesVec.size(); ++s)
+    fileOut  << cacheTimesVec[s] << ",";
+
+  fileOut << "\n\nCraq Lookup Post Times\n";
+  for (int s=0; s < (int) craqLookupPostTimesVec.size(); ++s)
+    fileOut  << craqLookupPostTimesVec[s] << ",";
+
+  fileOut << "\n\nCraq Lookup Times\n";
+  for (int s=0; s < (int) craqLookupTimesVec.size(); ++s)
+    fileOut  << craqLookupTimesVec[s] << ",";
+
+  fileOut << "\n\nCraq Lookup Not Already Looking Up Times\n";
+  for (int s=0; s < (int) craqLookupNotAlreadyLookingUpTimesVec.size(); ++s)
+    fileOut  << craqLookupNotAlreadyLookingUpTimesVec[s] << ",";
+
+  fileOut << "\n\nManager Post Times\n";
+  for (int s=0; s < (int) managerPostTimesVec.size(); ++s)
+    fileOut  << managerPostTimesVec[s] << ",";
+  
+  fileOut << "\n\nManager Enqueue Times\n";
+  for (int s=0; s < (int) managerEnqueueTimesVec.size(); ++s)
+    fileOut  << managerEnqueueTimesVec[s] << ",";
+
+  fileOut << "\n\nManager Dequeue Times\n";
+  for (int s=0; s < (int) managerDequeueTimesVec.size(); ++s)
+    fileOut  << managerDequeueTimesVec[s] << ",";
+
+  fileOut << "\n\nPost To ConnectionGet Times\n";
+  for (int s=0; s < (int) connectionPostTimesVec.size(); ++s)
+    fileOut  << connectionPostTimesVec[s] << ",";
+
+  fileOut << "\n\nNetwork Query Times\n";
+  for (int s=0; s < (int) connectionNetworkQueryTimesVec.size(); ++s)
+    fileOut  << connectionNetworkQueryTimesVec[s] << ",";
+
+  fileOut << "\n\nNetwork Trip Times\n";
+  for (int s=0; s < (int) connectionsNetworkTimesVec.size(); ++s)
+    fileOut  << connectionsNetworkTimesVec[s] << ",";
+
+      
+  fileOut << "\n\nReturn Post Times\n";
+  for (int s=0; s < (int) returnPostTimesVec.size(); ++s)
+    fileOut  << returnPostTimesVec[s] << ",";
+
+  
+  fileOut << "\n\n Post Times\n";
+  for (int s=0; s < (int) lookupReturnsTimesVec.size(); ++s)
+    fileOut  << lookupReturnsTimesVec[s] << ",";
+
+  fileOut <<"\n\n\n";
+}
+
+
+
+void OSegCumulativeTraceAnalysis::filterShorterPath()
+{
+  std::vector<OSegCumulativeEvent*>::iterator traceIt = allTraces.begin();
+
+  while(traceIt != allTraces.end())
+  {
+    if( ((*traceIt)->traceToken.notReady)         ||
+        ((*traceIt)->traceToken.shuttingDown)     ||
+        ((*traceIt)->traceToken.deadlineExpired)  ||
+        ((*traceIt)->traceToken.notFound))
+    {
+      //need to erase it 
+      allTraces.erase(traceIt++);
+    }
+    else
+      ++traceIt;
+  }
+}
+
+
+
+void OSegCumulativeTraceAnalysis::generateCacheTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int)allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.checkCacheLocalEnd - allTraces[s]->traceToken.checkCacheLocalBegin;
+
+    cacheTimesVec.push_back(toPush);
+  }
+}
+
+void OSegCumulativeTraceAnalysis::generateGetCraqLookupPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.craqLookupBegin -  allTraces[s]->traceToken.checkCacheLocalEnd;
+    craqLookupPostTimesVec.push_back(toPush);
+  }
+
+}
+void OSegCumulativeTraceAnalysis::generateCraqLookupTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.craqLookupEnd - allTraces[s]->traceToken.craqLookupBegin;
+    craqLookupTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateCraqLookupNotAlreadyLookingUpTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpBegin;
+
+    craqLookupNotAlreadyLookingUpTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateManagerPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getManagerEnqueueBegin - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd;
+
+    managerPostTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getManagerEnqueueEnd - allTraces[s]->traceToken.getManagerEnqueueBegin;
+
+    managerEnqueueTimesVec.push_back(toPush);
+  }
+  
+}
+void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getManagerDequeued - allTraces[s]->traceToken.getManagerEnqueueEnd;
+
+    managerDequeueTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getConnectionNetworkGetBegin - allTraces[s]->traceToken.getManagerDequeued;
+
+    connectionPostTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getConnectionNetworkGetEnd - allTraces[s]->traceToken.getConnectionNetworkGetBegin;
+
+    connectionNetworkQueryTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
+{
+  uint64 toPush;
+  for (int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.getConnectionNetworkReceived - allTraces[s]->traceToken.getConnectionNetworkGetEnd;
+
+    connectionsNetworkTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateReturnPostTime()
+{
+  uint64 toPush;
+  for (int s=0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.lookupReturnBegin - allTraces[s]->traceToken.getConnectionNetworkReceived;
+
+    returnPostTimesVec.push_back(toPush);
+  }
+}
+void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size();++s)
+  {
+    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.lookupReturnBegin;
+
+    lookupReturnsTimesVec.push_back(toPush);
+  }
+}
+
+void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.initialLookupTime;
+
+    completeLookupTimesVec.push_back(toPush);
+  }
+}
+
+
 
 } // namespace CBR

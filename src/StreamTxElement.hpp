@@ -68,12 +68,13 @@ private:
          *  \param max_rate the maximum rate (minimum duration between polls) for
          *         polling for new packets to send
          */
-        Impl(StreamTxElement* parent, Context* ctx, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
+        Impl(StreamTxElement* parent, Context* ctx, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate, Trace::MessagePath tag)
          : mParent(parent),
            mContext(ctx),
            mStream(strm),
            mStrand(strand),
            mMaxRate(max_rate),
+           mTag(tag),
            mWaitingPacket(NULL),
            mSerialized(NULL),
            mShutdown( false ),
@@ -128,13 +129,7 @@ private:
             }
 
             if (next_pkt->source_port() == OBJECT_PORT_PING && next_pkt->dest_port() == OBJECT_PORT_PING) {
-                mContext->trace()->timestampMessage(
-                    mContext->simTime(),
-                    next_pkt->unique(),
-                    Trace::HIT_NETWORK,
-                    next_pkt->source_port(),
-                    next_pkt->dest_port()
-                );
+                TIMESTAMP(next_pkt, mTag);
             }
 
             // Otherwise the packet was handled and we can clean up and continue
@@ -202,6 +197,7 @@ private:
         Sirikata::Network::Stream* mStream;
         IOStrand* mStrand;
         Duration mMaxRate;
+        Trace::MessagePath mTag;
         PacketType* mWaitingPacket;
         std::string* mSerialized;
         bool mShutdown;
@@ -216,9 +212,10 @@ public:
      *  \param strand the strand to run requests in
      *  \param max_rate the maximum rate (minimum duration between polls) for
      *         polling for new packets to send
+     *  \param tag the tag to timestamp with
      */
-    StreamTxElement(Context* ctx, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate)
-     : mImpl( new Impl(this, ctx, strm, strand, max_rate) )
+    StreamTxElement(Context* ctx, Sirikata::Network::Stream* strm, IOStrand* strand, const Duration& max_rate, Trace::MessagePath tag)
+     : mImpl( new Impl(this, ctx, strm, strand, max_rate, tag) )
     {
     }
 

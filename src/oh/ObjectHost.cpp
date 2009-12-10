@@ -49,15 +49,16 @@ using namespace Sirikata::Network;
 namespace CBR {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
- : parent(ctx->objectHost),
+ : mContext(ctx),
+   parent(ctx->objectHost),
    server(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
    connecting(false),
-   tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED),
-   send_queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
-   tag_dequeued(ctx, Trace::OH_DEQUEUED, Trace::OH_DROPPED),
-   streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0)),
-   receive_queue(16*1024 /* FIXME */, std::tr1::bind(&Sirikata::Network::Chunk::size, std::tr1::placeholders::_1)),
+   tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED_AT_OH_ENQUEUED),
+  send_queue(GetOption("object-host-send-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
+   tag_dequeued(ctx, Trace::OH_DEQUEUED),
+   streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0), Trace::OH_HIT_NETWORK),
+   receive_queue(GetOption("object-host-receive-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
@@ -77,22 +78,32 @@ bool ObjectHost::SpaceNodeConnection::push(ObjectMessage* msg) {
     return tag_enqueued.push(0,msg);
 }
 
-Sirikata::Network::Chunk* ObjectHost::SpaceNodeConnection::pull() {
+ObjectMessage* ObjectHost::SpaceNodeConnection::pull() {
     return receive_queue.pull();
 }
 
 Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk) {
-    Chunk* data = new Chunk();
-    data->swap(chunk);
+    // Parse
+    ObjectMessage* msg = new ObjectMessage();
+    bool parse_success = msg->ParseFromArray(chunk.data(), chunk.size());
+    assert(parse_success == true);
+
+    TIMESTAMP_START(tstamp, msg);
+
+    // Mark as received
+    TIMESTAMP_END(tstamp, Trace::OH_NET_RECEIVED);
 
     // NOTE: We can't record drops here or we incur a lot of overhead in parsing...
-    bool pushed = receive_queue.push(data);
+    bool pushed = receive_queue.push(msg);
 
     if (pushed) {
         // handleConnectionRead() could be called from any thread/strand. Everything that is not
         // thread safe that could result from a new message needs to happen in the main strand,
         // so just post the whole handler there.
         mReceiveCB(this);
+    }
+    else {
+        TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
     }
 
     // No matter what, we've "handled" the data, either for real or by dropping
@@ -250,6 +261,10 @@ Object* ObjectHost::ObjectConnections::roundRobinObject(ServerID whichServer, bo
     return NULL;
 }
 
+ServerID ObjectHost::ObjectConnections::numServerIDs() const{
+    return mObjectServerMap.size();
+}
+
 Object* ObjectHost::ObjectConnections::randomObject(bool null_if_disconnected) {
     if (mObjectServerMap.size()==0) return NULL;
     int iteratorLevel=rand()%mObjectServerMap.size();
@@ -299,9 +314,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap
 
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
 
-    mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&ObjectHost::generatePings, this), Duration::milliseconds((int64)1));
-    mPingId=0;
-    mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
+
+
+
     mHandleMessageProfiler = mContext->profiler->addStage("Handle Server Message");
 
     mContext->objectHost = this;
@@ -316,8 +331,6 @@ ObjectHost::~ObjectHost() {
     }
     mConnections.clear();
 
-    delete mPingPoller;
-    delete mPingProfiler;
 
     delete mHandleMessageProfiler;
 
@@ -330,7 +343,6 @@ const ObjectHostContext* ObjectHost::context() const {
 }
 
 void ObjectHost::start() {
-    mPingPoller->start();
 
     mIOWork = new IOWork( mIOService, "ObjectHost Work" );
     mIOThread = new Thread( std::tr1::bind(&IOService::run, mIOService) );
@@ -350,7 +362,6 @@ void ObjectHost::stop() {
     delete mIOThread;
     mIOThread = NULL;
 
-    mPingPoller->stop();
 }
 
 void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
@@ -537,7 +548,7 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
 
     // FIXME would be nice not to have to do this alloc/dealloc
     ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
-    mContext->trace()->timestampMessage(mContext->simTime(),obj_msg->unique(),Trace::CREATED,src_port, dest_port);
+    TIMESTAMP(obj_msg, Trace::CREATED);
     return conn->push( obj_msg );
 }
 
@@ -598,17 +609,6 @@ bool ObjectHost::randomPing(const Time& t) {
     return false;
 }
 
-void ObjectHost::generatePings() {
-    mPingProfiler->started();
-
-    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-
-    for (int i=0;i<1000;++i)
-        if (!randomPing(mContext->simTime()))
-            break;
-
-    mPingProfiler->finished();
-}
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
@@ -731,31 +731,16 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     mHandleMessageProfiler->started();
 
     // Pull it off the queue
-    Sirikata::Network::Chunk* data = conn->pull();
-    if (data == NULL) {
+    ObjectMessage* msg = conn->pull();
+    if (msg == NULL) {
         mHandleMessageProfiler->finished();
         return;
     }
 
-    // Parse
-    ObjectMessage* msg = new ObjectMessage();
-    bool parse_success = msg->ParseFromArray(data->data(), data->size());
-    assert(parse_success == true);
-    delete data;
+    TIMESTAMP_START(tstamp, msg);
 
     // Mark as received
-    mContext->trace()->timestampMessage(
-        mContext->simTime(),
-        msg->unique(),
-        Trace::OH_RECEIVED,
-        msg->source_port(),
-        msg->dest_port()
-    );
-
-    // Record info to mark destruction at the end of this method since the msg will have been deleted
-    uint64 msg_uniq = msg->unique();
-    uint16 msg_src_port = msg->source_port();
-    uint16 msg_dst_port = msg->dest_port();
+    TIMESTAMP_END(tstamp, Trace::OH_RECEIVED);
 
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         CBR::Protocol::Object::Ping ping_msg;
@@ -776,7 +761,7 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
             delete msg;
     }
 
-    mContext->trace()->timestampMessage(mContext->simTime(), msg_uniq, Trace::DESTROYED, msg_src_port, msg_dst_port);
+    TIMESTAMP_END(tstamp, Trace::DESTROYED);
 
     mHandleMessageProfiler->finished();
 }

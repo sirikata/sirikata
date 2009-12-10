@@ -11,6 +11,7 @@ build/cmake/cbr
 build/cmake/oh
 build/cmake/analysis
 build/cmake/cseg
+build/cmake/bench
 
 # config files
 build/cmake/serverip*

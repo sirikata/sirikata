@@ -51,6 +51,8 @@ class ServerIDMap;
 
 class ObjectHost : public Service {
 public:
+
+    bool randomPing(const Time& t);
     typedef std::tr1::function<void(ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef SessionCallback ConnectedCallback;
@@ -75,6 +77,9 @@ public:
     void disconnect(Object* obj);
 
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    /* Ping Utility Methods. */
+    bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
+
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
     // reads and writes to the actual sockets are handled in mIOStrand. But that is all that is handled
@@ -162,10 +167,6 @@ private:
     void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
 
 
-    /* Ping Utility Methods. */
-    bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
-    bool randomPing(const Time& t);
-
     OptionSet* mStreamOptions;
 
 
@@ -182,7 +183,7 @@ private:
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
     Poller* mPingPoller;
-    TimeProfiler::Stage* mPingProfiler;
+
     TimeProfiler::Stage* mHandleMessageProfiler;
 
     Sirikata::SerializationCheck mSerialization;
@@ -197,6 +198,7 @@ private:
         ~SpaceNodeConnection();
 
         // Thread Safe
+        ObjectHostContext* mContext;
         ObjectHost* parent;
         ServerID server;
         Sirikata::Network::Stream* socket;
@@ -205,7 +207,7 @@ private:
         bool push(ObjectMessage* msg);
 
         // Pull a packet from the receive queue
-        Sirikata::Network::Chunk* pull();
+        ObjectMessage* pull();
 
         void shutdown();
 
@@ -223,7 +225,7 @@ private:
         TracePacketElement<ObjectMessage> tag_dequeued;
         StreamTxElement<ObjectMessage> streamTx;
 
-        QueueRouterElement<Sirikata::Network::Chunk> receive_queue;
+        QueueRouterElement<ObjectMessage> receive_queue;
 
         ReceiveCallback mReceiveCB;
     };
@@ -278,7 +280,7 @@ private:
         Object* randomObject(bool null_if_disconnected = false);
         Object* randomObject(ServerID whichServer, bool null_if_disconnected = false);
         Object* roundRobinObject(ServerID whichServer, bool null_if_disconnected = false);
-
+        ServerID numServerIDs()const;
     private:
         struct ObjectInfo {
             ObjectInfo(Object* obj);
@@ -310,6 +312,8 @@ private:
 
     bool mShuttingDown;
     uint64 mPingId;
+public:
+    ObjectConnections*getObjectConnections(){return &mObjectConnections;}
 }; // class ObjectHost
 
 } // namespace CBR

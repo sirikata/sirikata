@@ -4,6 +4,7 @@
 
 #include <boost/asio.hpp>
 #include "asyncUtil.hpp"
+#include "../SpaceContext.hpp"
 
 
 //#define ASYNC_CONNECTION_DEBUG
@@ -19,7 +20,7 @@ public:
 
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING};
   
-  void initialize(boost::asio::ip::tcp::socket* socket,     boost::asio::ip::tcp::resolver::iterator );  
+  void initialize(boost::asio::ip::tcp::socket* socket, boost::asio::ip::tcp::resolver::iterator, SpaceContext* spc, IOStrand*  );
 
   void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
   
@@ -40,6 +41,9 @@ private:
   int currentlySettingTo;
   ConnectionState mReady;
 
+  SpaceContext* ctx;
+  IOStrand* mStrand;
+  
   bool mTracking;
   int mTrackNumber;
   std::vector<CraqOperationResult*> mOperationResultVector;
@@ -51,6 +55,7 @@ private:
 
   //set handler
   void read_handler_set ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
+  void finish_read_handler_set(std::string line, boost::asio::streambuf* sBuff);
   void write_some_handler_set(  const boost::system::error_code& error, std::size_t bytes_transferred);
   //get handler
   void write_some_handler_get(  const boost::system::error_code& error, std::size_t bytes_transferred);

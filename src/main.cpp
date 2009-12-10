@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+
 #include "Timer.hpp"
 #include "TimeSync.hpp"
 #include "TimeProfiler.hpp"
@@ -60,6 +62,8 @@
 #include "CraqObjectSegmentation.hpp"
 
 #include "ServerWeightCalculator.hpp"
+#include "SpaceContext.hpp"
+
 
 namespace {
 CBR::Network* gNetwork = NULL;
@@ -73,6 +77,7 @@ CBR::Time g_start_time( CBR::Time::null() );
 void *main_loop(void *);
 
 int main(int argc, char** argv) {
+  
     using namespace CBR;
 
     InitOptions();
@@ -99,19 +104,27 @@ int main(int argc, char** argv) {
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
+    
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
+    
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
+
     gSpaceContext = space_context;
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "sst")
         gNetwork = new SSTNetwork(space_context);
     else if (network_type == "tcp")
-        gNetwork = new TCPNetwork(space_context,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+      gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+
+
     gNetwork->init(&main_loop);
 
     sync.stop();
 
+
+
+    
     return 0;
 }
 void *main_loop(void *) {
@@ -195,45 +208,41 @@ void *main_loop(void *) {
 
     //Create OSeg
     std::string oseg_type=GetOption(OSEG)->as<String>();
-
+    IOStrand* osegStrand = space_context->ioService->createStrand();
     ObjectSegmentation* oseg = NULL;
     if (oseg_type == OSEG_OPTION_CRAQ)
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
 
-     std::vector<CraqInitializeArgs> craqArgsGet;
-     CraqInitializeArgs cInitArgs1;
+      std::vector<CraqInitializeArgs> craqArgsGet;
+      CraqInitializeArgs cInitArgs1;
 
-     cInitArgs1.ipAdd = "localhost";
-     cInitArgs1.port  =     "10299";
-     craqArgsGet.push_back(cInitArgs1);
+      cInitArgs1.ipAdd = "localhost";
+      cInitArgs1.port  =     "10498"; //craq version 2
+      craqArgsGet.push_back(cInitArgs1);
 
-     std::vector<CraqInitializeArgs> craqArgsSet;
-     CraqInitializeArgs cInitArgs2;
-     cInitArgs2.ipAdd = "localhost";
-     cInitArgs2.port  =     "10298";
-     craqArgsSet.push_back(cInitArgs2);
-
-
+      std::vector<CraqInitializeArgs> craqArgsSet;
+      CraqInitializeArgs cInitArgs2;
+      cInitArgs2.ipAdd = "localhost";
+      cInitArgs2.port  =     "10499";
+      craqArgsSet.push_back(cInitArgs2);
 
 
-     std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
+      std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
 
-     if (oseg_type.size() ==0)
-     {
-       std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
-       assert(false);
-     }
+      if (oseg_type.size() ==0)
+      {
+        std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
+        assert(false);
+      }
 
-     std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
-     std::cout<<"\n\nAre any of my changes happening?\n\n";
-     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0]);
+      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
+      oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0],osegStrand,space_context->mainStrand);
 
     }      //end craq approach
 
     //end create oseg
-
 
 
     ServerWeightCalculator* weight_calc = NULL;
@@ -298,26 +307,33 @@ void *main_loop(void *) {
     space_context->add(forwarder);
     space_context->add(loadMonitor);
 
-    space_context->run(2);
 
+    std::vector<PollingService*>oseg_nested_pollers =  oseg->getNestedPollers();
+    for (int s=0; s < (int) oseg_nested_pollers.size(); ++s)
+      space_context->add(oseg_nested_pollers[s]);
+
+    
+    space_context->run(2);
 
     if (GetOption(PROFILE)->as<bool>()) {
         space_context->profiler->report();
     }
 
     gTrace->prepareShutdown();
-
     prox->shutdown();
 
     delete server;
     delete sq;
     delete prox;
     delete server_id_map;
+    
+    
     if (weight_calc != NULL)
       delete weight_calc;
+
+
     delete cseg;
     delete oseg;
-
     delete loc_service;
     delete forwarder;
 
@@ -330,12 +346,14 @@ void *main_loop(void *) {
 
     IOStrand* mainStrand = space_context->mainStrand;
     IOService* ios = space_context->ioService;
-
+    
     delete space_context;
     space_context = NULL;
 
     delete mainStrand;
+    delete osegStrand;
+    
     IOServiceFactory::destroyIOService(ios);
-
+    
     return 0;
 }

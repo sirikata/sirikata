@@ -126,10 +126,10 @@ class ClusterBuild:
         print 'Warning: Running without ccache!'
         return ""
 
-    def build(self, build_type):
+    def build(self, build_type = 'Default', with_timestamp = True):
         cd_code_cmd = self.cd_to_code()
         cd_build_cmd = self.cd_to_build()
-        build_cmd = "%s cmake -DCMAKE_BUILD_TYPE=%s ." % (self.ccache_args(), build_type)
+        build_cmd = "%s cmake -DCMAKE_BUILD_TYPE=%s -DCBR_TIMESTAMP_PACKETS=%s ." % (self.ccache_args(), build_type, str(with_timestamp))
         make_cmd = "make -j2"
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, build_cmd, make_cmd]))
         return ClusterRunSummaryCode(retcodes)
@@ -249,10 +249,18 @@ if __name__ == "__main__":
             retval = cluster_build.patch_build_sst(patch_file)
         elif cmd == 'build':
             build_type = 'Debug'
-            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile', 'Coverage']):
-                build_type = sys.argv[cur_arg_idx]
-                cur_arg_idx += 1
-            retval = cluster_build.build(build_type)
+            with_timestamp = True
+            tstamp_map = { 'timestamp' : True, 'no-timestamp' : False }
+            while(cur_arg_idx < len(sys.argv)):
+                if sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile', 'Coverage']:
+                    build_type = sys.argv[cur_arg_idx]
+                    cur_arg_idx += 1
+                elif sys.argv[cur_arg_idx] in tstamp_map.keys():
+                    with_timestamp = tstamp_map[sys.argv[cur_arg_idx]]
+                    cur_arg_idx += 1
+                else:
+                    break
+            retval = cluster_build.build(build_type, with_timestamp)
         elif cmd == 'patch':
             patch_file = sys.argv[cur_arg_idx]
             cur_arg_idx += 1

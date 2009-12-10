@@ -40,21 +40,23 @@
 
 #include <boost/thread/locks.hpp>
 
+
+
 //#define TRACE_OBJECT
 //#define TRACE_LOCPROX
-//#define TRACE_OSEG
+#define TRACE_OSEG
 //#define TRACE_CSEG
 
-//#define TRACE_MIGRATION
-#define TRACE_DATAGRAM
-#define TRACE_PACKET
-#define TRACE_PING
-#define TRACE_MESSAGE
-//#define TRACE_ROUND_TRIP_MIGRATION_TIME
-//#define TRACE_OSEG_TRACKED_SET_RESULTS
-//#define TRACE_OSEG_SHUTTING_DOWN
-//#define TRACE_OSEG_CACHE_RESPONSE
-//#define TRACE_OSEG_NOT_ON_SERVER_LOOKUP
+#define TRACE_MIGRATION
+//#define TRACE_DATAGRAM
+//#define TRACE_PACKET
+//#define TRACE_PING
+//#define TRACE_MESSAGE
+#define TRACE_ROUND_TRIP_MIGRATION_TIME
+#define TRACE_OSEG_TRACKED_SET_RESULTS
+#define TRACE_OSEG_SHUTTING_DOWN
+#define TRACE_OSEG_CACHE_RESPONSE
+#define TRACE_OSEG_NOT_ON_SERVER_LOOKUP
 
 
 namespace CBR {
@@ -132,7 +134,8 @@ const uint8 Trace::OSegShutdownEventTag;
 const uint8 Trace::ObjectGeneratedLocationTag;
 const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
-
+  //const uint8 Trace::OSegCraqGetConnnectionShutdownTag;
+  
 
 
 Trace::Trace(const String& filename)
@@ -235,28 +238,11 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 #endif
 }
-/*
-bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk&data){
-#ifdef TRACE_MESSAGE
-    uint32 offset=0;
-    Message*result=NULL;
-    offset = Message::deserialize(data,offset,&result);
-    ObjectMessage *om=dynamic_cast<ObjectMessage*>(result);
-    if (om) {
-        timestampMessage(t,om->contents.unique(),path,om->contents.source_port(),om->contents.dest_port(),result->type());
-    }else return false;
-#endif
-    return true;
-}
-*/
-void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt, ServerMessagePort msg_type) {
+
+void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
-/*
-    if (msg_type!=CREATED&&msg_type!=DESTROYED&&msg_type!=SPACE_OUTGOING_MESSAGE) {
-        return;
-    }
-*/
+
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &MessageTimestampTag, sizeof(MessageTimestampTag) );
     data.write( &sent, sizeof(sent) );
@@ -264,7 +250,6 @@ void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, Obje
     data.write( &path, sizeof(path) );
     data.write( &srcprt, sizeof(srcprt) );
     data.write( &dstprt, sizeof(dstprt) );
-    data.write( &msg_type, sizeof(msg_type) );
 #endif
 }
 
@@ -553,6 +538,8 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
 }
 
 
+
+
 void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj_id)
 {
 #ifdef TRACE_OSEG_CACHE_RESPONSE
@@ -581,5 +568,28 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
 #endif
 }
 
+
+  void Trace::osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken)
+  {
+    if (traceToken == NULL)
+      return;
+
+    if (mShuttingDown)
+    {
+      delete traceToken;
+      return;
+    }
+    
+    #ifdef TRACE_OSEG_CUMULATIVE
+    
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+    data.write(&OSegCumulativeTraceAnalysisTag, sizeof (OSegCumulativeTraceAnalysisTag));
+    data.write(&t, sizeof(t));
+    data.write(&obj_id, sizeof(obj_id));
+    data.write(traceToken, sizeof(OSegLookupTraceToken));
+    #endif
+
+    delete traceToken;
+  }
 
 } // namespace CBR

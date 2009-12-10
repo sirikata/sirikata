@@ -95,12 +95,13 @@ private:
 
         Duration elapsed = sinceEpoch( Timer::now());
 
-        if (elapsed > mSimDuration) {
+        if (elapsed > mSimDuration)
+        {
             this->stop();
             for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
                 (*it)->stop();
         }
-
+        
         lastTime = time;
         time = Time::null() + elapsed;
 

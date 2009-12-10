@@ -7,13 +7,11 @@
 #include "PollingService.hpp"
 #include <iostream>
 #include <iomanip>
+#include "craq_oseg/asyncUtil.hpp"
 //object segmenter h file
 
 namespace CBR
 {
-
-
-  const ServerID OBJECT_IN_TRANSIT = -999;
 
 /* Listener interface for OSeg events.
  *
@@ -26,6 +24,7 @@ public:
 }; // class OSegListener
 
 
+  
 class ObjectSegmentation : public MessageRecipient, public PollingService
   {
 
@@ -35,19 +34,25 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     virtual void poll() = 0;
 
     SpaceContext* mContext;
-      TimeProfiler::Stage* mServiceStage;
-      OSegListener* mListener;
+    TimeProfiler::Stage* mServiceStage;
+    OSegListener* mListener;
+    IOStrand* oStrand;
+
+    
   public:
 
-    ObjectSegmentation(SpaceContext* ctx)
-     : PollingService(ctx->mainStrand),
+
+    ObjectSegmentation(SpaceContext* ctx,IOStrand* o_strand)
+     : PollingService(o_strand),
        mContext(ctx),
-       mListener(NULL)
+       mListener(NULL),
+       oStrand(o_strand)
     {
+
+      printf("\n\nThis is mcontext id: %i\n ",(int) mContext->id());
+      fflush(stdout);
         mServiceStage = mContext->profiler->addStage("OSeg");
     }
-
-
 
     virtual ~ObjectSegmentation() {}
 
@@ -60,8 +65,11 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool) = 0;
     virtual void newObjectAdd(const UUID& obj_id) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
+    virtual void craqGetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
+    virtual void craqSetResult(CraqOperationResult* cor) = 0; //also responsible for destroying 
+    virtual std::vector<PollingService*> getNestedPollers() = 0;
 
-
+    
   };
 }
 #endif

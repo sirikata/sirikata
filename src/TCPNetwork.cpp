@@ -5,7 +5,6 @@
 #include "sirikata/network/StreamListenerFactory.hpp"
 #include "sirikata/network/StreamListener.hpp"
 #include "Options.hpp"
-
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
 
@@ -27,7 +26,7 @@ TCPNetwork::SendStream::SendStream(Sirikata::Network::Stream* stream)
 TCPNetwork::TSQueue::TSQueue(TCPNetwork* parent, Sirikata::Network::Stream*strm)
  : stream(strm),
    front(NULL),
-   buffer(Sirikata::SizedPointerResourceMonitor(parent->mIncomingBufferLength)),
+   buffer(Sirikata::SizedResourceMonitor(parent->mIncomingBufferLength)),
    inserted(false),
    paused(false)
 {

@@ -3,7 +3,7 @@
 
 namespace CBR
 {
-  CraqOperationResult::CraqOperationResult(int sID,CraqDataKey obj_id, int tm, bool suc, GetOrSet gos, bool track_or_not)
+  CraqOperationResult::CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not)
   {
     servID = sID;
     memcpy(objID,obj_id,CRAQ_DATA_KEY_SIZE);

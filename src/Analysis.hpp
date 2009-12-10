@@ -36,6 +36,8 @@
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 #include "AnalysisEvents.hpp"
+#include "OSegLookupTraceToken.hpp"
+
 
 namespace CBR {
 
@@ -148,7 +150,7 @@ private:
 }; // class BandwidthAnalysis
 
 class ObjectLatencyAnalysis {
-    std::map<double, Duration> mLatency;
+    std::multimap<double, Duration> mLatency;
 public:
     int mNumberOfServers;
     ObjectLatencyAnalysis(const char* opt_name, const uint32 nservers);
@@ -181,34 +183,166 @@ class MessageLatencyAnalysis {public:
         }
     };
     class Average {
+        int64 sample_sum; // sum (t)
+        int64 sample2_sum; // sum (t^2)
+        uint32 numSamples;
     public:
-        double average;
-        unsigned int numSamples;
-        double variance;
-        Average(): average(0){
-            variance=0;
-            numSamples=0;
-        }
-        void addAverageSample(Duration t){
-            double st=t.toSeconds();
-            st=fabs(st);
-            average+=st;
-
+        Average()
+         : sample_sum(0),
+           sample2_sum(0),
+           numSamples(0)
+        {}
+        void sample(const Duration& t) {
+            int64 st = t.toMicroseconds();
+            sample_sum += st;
+            sample2_sum += st*st;
             ++numSamples;
         }
-        void averageOut(){
-            if (numSamples) {
-                average=average/(double)numSamples;
-            }
+        Duration average() {
+            return Duration::microseconds((int64)(sample_sum / double(numSamples)));
         }
-        void addVarianceSample(Duration t) {
-            double diff=(t.toSeconds()-average);
-            variance+=diff*diff/(double)numSamples;
+        Duration variance() {
+            int64 avg = (int64)(sample_sum / double(numSamples));
+            int64 sq_avg = (int64)(sample2_sum / double(numSamples));
+            return Duration::microseconds(sq_avg - avg*avg);
+        }
+        Duration stddev() {
+            int64 avg = (int64)(sample_sum / double(numSamples));
+            int64 sq_avg = (int64)(sample2_sum / double(numSamples));
+            return Duration::microseconds((int64)sqrt((double)(sq_avg - avg*avg)));
+        }
+        uint32 samples() const {
+            return numSamples;
         }
     };
+
+    class PathPair {
+      public:
+        Trace::MessagePath first;
+        Trace::MessagePath second;
+        PathPair(const Trace::MessagePath &first,
+                 const Trace::MessagePath &second) {
+            this->first=first;
+            this->second=second;
+        }
+        bool operator < (const PathPair&other) const{
+            if (first==other.first) return second<other.second;
+            return first<other.first;
+        }
+        bool operator ==(const PathPair&other) const{
+            return first==other.first&&second==other.second;
+        }
+    };
+
+    // A group of tags which should be considered together since they are
+    // sensible combinations.  A group should either be a) a group of tags which
+    // are handled in the same thread of control so they should be guaranteed to
+    // be ordered properly or b) represent the barriers between threads of
+    // control, which ideally should be thin, hopefully having only one tag on
+    // either side.
+    class StageGroup {
+      public:
+        // Indicates whether the stages in this group should only be considered
+        // in order (using negative values for ones out of order) or if
+        // reversing and completely switching the order of some elements is ok.
+        enum IsOrdered {
+            ORDERED,
+            UNORDERED
+        };
+
+        StageGroup(const String& _name, IsOrdered ordr = UNORDERED)
+                : mName(_name),
+                  mOrdered(ordr)
+        {}
+
+        String name() const {
+            return mName;
+        }
+        // Returns *this for chaining
+        StageGroup& add(Trace::MessagePath p) {
+            assert( mTags.find(p) == mTags.end() );
+            mTags.insert(p);
+            mOrderedTags.push_back(p);
+            return *this;
+        }
+        bool contains(Trace::MessagePath p) const {
+            return (mTags.find(p) != mTags.end());
+        }
+        bool contains(const PathPair& p) const {
+            return (contains(p.first) && contains(p.second));
+        }
+
+        std::vector<DTime> filter(const std::vector<DTime>& orig) {
+            std::vector<DTime> result;
+            for(std::vector<DTime>::const_iterator it = orig.begin(); it != orig.end(); it++)
+                if (this->contains(it->mPath))
+                    result.push_back(*it);
+            return result;
+        }
+
+
+        // Based on ordering constraints, get a PathPair for the two
+        // records. For unordered, this will always return (start,end).  For
+        // ordered, it will arrange them appropriately based on the order in
+        // which the tags were added to the StageGroup.
+        PathPair orderedPair(const DTime& start, const DTime& end) {
+            assert( contains(start.mPath) );
+            assert( contains(end.mPath) );
+
+            if (mOrdered == UNORDERED) {
+                return PathPair(start.mPath, end.mPath);
+            }
+
+            // else ORDERED
+            uint32 start_i = findTagOrder(start.mPath);
+            uint32 end_i = findTagOrder(end.mPath);
+
+            if (start_i <= end_i)
+                return PathPair(start.mPath, end.mPath);
+            else
+                return PathPair(end.mPath, start.mPath);
+        }
+
+        // Computes the difference between start and end (end - start), taking
+        // into account ordering constraints.  If unordered is allowed, then the
+        // returned Duration will always be >= 0.  If ordering is required, then
+        // the returned Duration may be negative.
+        Duration difference(const DTime& start, const DTime& end) {
+            // figure out the permissible ordering
+            PathPair ordered = orderedPair(start, end);
+
+            // then just subtract in the matching direction
+            if (ordered.first == start.mPath) {
+                assert (ordered.second == end.mPath);
+                return end - start;
+            }
+            else {
+                assert (ordered.second == start.mPath);
+                return start - end;
+            }
+        }
+
+      private:
+        uint32 findTagOrder(Trace::MessagePath tag) const {
+            for(uint32 ii = 0; ii < mOrderedTags.size(); ii++) {
+                if (mOrderedTags[ii] == tag)
+                    return ii;
+            }
+            assert(false);
+            return 0;
+        }
+
+        String mName;
+        IsOrdered mOrdered;
+        typedef std::set<Trace::MessagePath> TagSet;
+        typedef std::vector<Trace::MessagePath> OrderedTagSet;
+        TagSet mTags;
+        OrderedTagSet mOrderedTags;
+    };
+
+
     class PacketData {public:
         uint64 mId;
-        unsigned char mType;
         unsigned char mSrcPort;
         unsigned short mDstPort;
         std::vector<DTime> mStamps;
@@ -242,8 +376,7 @@ class MessageLatencyAnalysis {public:
             return (mDestPort==NULL||pd.mDstPort==*mDestPort)&&
                 verify(mFilterByCreationServer,pd,Trace::CREATED)&&
                 verify(mFilterByDestructionServer,pd,Trace::DESTROYED)&&
-                verify(mFilterByForwardingServer,pd,Trace::FORWARDED)&&
-                verify(mFilterByDeliveryServer,pd,Trace::DELIVERED);
+                    verify(mFilterByForwardingServer,pd,Trace::FORWARDED);
         }
     };
     MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters f);
@@ -366,6 +499,7 @@ private:
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime = true, int processedAfter =0);
+  void printDataCSV(std::ostream &fileOut, bool sortedByTime = true, int processAfter=0);
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
 
@@ -400,30 +534,69 @@ public:
 };
 
 
-class OSegShutdownAnalysis
-{
-private:
-  std::vector<OSegShutdownEvent> allShutdownEvts;
+  class OSegShutdownAnalysis
+  {
+  private:
+    std::vector<OSegShutdownEvent> allShutdownEvts;
 
-public:
-  OSegShutdownAnalysis(const char* opt_name, const uint32 nservers);
-  ~OSegShutdownAnalysis();
-  void printData(std::ostream &fileOut);
-};
+  public:
+    OSegShutdownAnalysis(const char* opt_name, const uint32 nservers);
+    ~OSegShutdownAnalysis();
+    void printData(std::ostream &fileOut);
+  };
 
-class OSegCacheResponseAnalysis
-{
-private:
-  std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
-  static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
+  class OSegCacheResponseAnalysis
+  {
+  private:
+    std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
+    static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
+    
+  public:
+    OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
+    ~OSegCacheResponseAnalysis();
+    void printData(std::ostream &fileOut, int processAfter =0);
+  };
 
-public:
-  OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
-  ~OSegCacheResponseAnalysis();
-  void printData(std::ostream &fileOut, int processAfter =0);
-};
 
+  class OSegCumulativeTraceAnalysis
+  {
+  private:
+    std::vector<OSegCumulativeEvent*> allTraces;
 
+    void filterShorterPath();
+    void generateCacheTime();
+    void generateGetCraqLookupPostTime();
+    void generateCraqLookupTime();
+    void generateCraqLookupNotAlreadyLookingUpTime();
+    void generateManagerPostTime();
+    void generateManagerEnqueueTime();
+    void generateManagerDequeueTime();
+    void generateConnectionPostTime();
+    void generateConnectionNetworkQueryTime();
+    void generateConnectionNetworkTime();
+    void generateReturnPostTime();
+    void generateLookupReturnTime();
+    void generateCompleteLookupTime();
+    
+    std::vector<uint64> cacheTimesVec;
+    std::vector<uint64> craqLookupPostTimesVec;
+    std::vector<uint64> craqLookupTimesVec;
+    std::vector<uint64> craqLookupNotAlreadyLookingUpTimesVec;
+    std::vector<uint64> managerPostTimesVec;
+    std::vector<uint64> managerEnqueueTimesVec;
+    std::vector<uint64> managerDequeueTimesVec;
+    std::vector<uint64> connectionPostTimesVec;
+    std::vector<uint64> connectionNetworkQueryTimesVec;
+    std::vector<uint64> connectionsNetworkTimesVec;
+    std::vector<uint64> returnPostTimesVec;
+    std::vector<uint64> lookupReturnsTimesVec;
+    std::vector<uint64> completeLookupTimesVec;
+    
+  public:
+    OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers);
+    ~OSegCumulativeTraceAnalysis();
+    void printData(std::ostream &fileOut);
+  };
 
 
 

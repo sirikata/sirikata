@@ -225,10 +225,22 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(Prox REQUIRED)
 
+#dependency: gcrypt
+FIND_PACKAGE(GCrypt REQUIRED)
 
 # get some useful macros from sirikata
 SET(PBJ_RUNABLE ${Sirikata_PBJ}) # FIXME this should be an option
 INCLUDE(AddPBJTarget)
+
+
+# -- User defined variables that control behavior at compile time
+
+SET(CBR_TIMESTAMP_PACKETS TRUE
+  CACHE BOOL "If enabled, detailed timestamps are recorded for each packet, enabling high granularity latency breakdowns."
+)
+IF(CBR_TIMESTAMP_PACKETS)
+  ADD_DEFINITIONS(-DCBR_TIMESTAMP_PACKETS)
+ENDIF()
 
 #source file location
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
@@ -251,6 +263,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${SST_INCLUDE_DIRS}
         ${PROX_INCLUDE_DIRS}
         ${PROTOCOLBUFFERS_INCLUDE_DIRS}
+        ${GCRYPT_INCLUDE_DIRS}
         )
 
 #source files
@@ -279,6 +292,13 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
+  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
@@ -287,12 +307,14 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
+  ${CBR_SOURCE_DIR}/space/LocalForwarder.cpp
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/space/MigrationMonitor.cpp
   ${CBR_SOURCE_DIR}/space/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
@@ -304,6 +326,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
 
@@ -311,10 +334,16 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/oh/ObjectHostContext.cpp
   ${CBR_SOURCE_DIR}/oh/Object.cpp
   ${CBR_SOURCE_DIR}/oh/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/oh/ScenarioFactory.cpp
+  ${CBR_SOURCE_DIR}/oh/DistributionPingScenario.cpp
   ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
+
+
+
+#bftm changed because has trouble compiling
 SET(CSEG_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
@@ -326,11 +355,26 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/Analysis.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/analysis/main.cpp
 )
+
+
+
+SET(BENCH_SOURCE_DIR ${CBR_SOURCE_DIR}/bench)
+SET(BENCH_SOURCES
+  ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
+  ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/main.cpp
+)
+
+
 
 SET(CBR_MOC_HEADERS
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.h
@@ -392,6 +436,7 @@ TARGET_LINK_LIBRARIES(cbr
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
+        ${GCRYPT_LIBRARIES}
         )
 
 ADD_EXECUTABLE(oh ${OH_SOURCES} ${CBR_PROTOCOL_SOURCES})
@@ -404,7 +449,7 @@ TARGET_LINK_LIBRARIES(oh
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
-
+      
 
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(cseg
@@ -415,6 +460,7 @@ TARGET_LINK_LIBRARIES(cseg
         ${Boost_REGEX_LIBRARY}
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
+        ${GCRYPT_LIBRARIES}
         )
 
 ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
@@ -427,4 +473,16 @@ TARGET_LINK_LIBRARIES(analysis
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
         ${GLUT_LIBRARIES}
+        ${GCRYPT_LIBRARIES}
         )
+
+ADD_EXECUTABLE(bench ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(bench
+  cbr-core
+  ${Boost_THREAD_LIBRARY}
+  ${Boost_DATE_TIME_LIBRARY}
+  ${Boost_PROGRAM_OPTIONS_LIBRARY}
+  ${Boost_REGEX_LIBRARY}
+  ${SirikataCore_LIBRARIES}
+  ${PROTOCOLBUFFERS_LIBRARIES}
+  )

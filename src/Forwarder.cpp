@@ -19,18 +19,7 @@
 namespace CBR
 {
 
-// Helper method which timestamps a message if it is and object-to-object message. Note that this is potentially expensive since it requires parsing the inner message
-void tryTimestampObjectMessage(Trace* trace, const Time& t, Message* next_msg, Trace::MessagePath path) {
-    if (next_msg->source_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING && next_msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
-        CBR::Protocol::Object::ObjectMessage om;
-        bool got_om = parsePBJMessage(&om, next_msg->payload());
-        if (got_om)
-            trace->timestampMessage(t, om.unique(), path, om.source_port(), om.dest_port(), SERVER_PORT_OBJECT_MESSAGE_ROUTING);
-    }
-}
-
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
-
 
 /** Automatically samples and logs current queue information for the ServerMessageQueue. */
 class ForwarderSampler : public PollingService {
@@ -120,9 +109,6 @@ void Forwarder::poll()
             if (!mServerMessageQueue->canSend(next_msg))
                 break;
 
-            //tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), next_msg, Trace::SPACE_OUTGOING_MESSAGE);
-
-
             mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
             bool send_success = mServerMessageQueue->addMessage(next_msg);
             if (!send_success)
@@ -199,16 +185,9 @@ void Forwarder::poll()
   {
       UUID dest_obj = msg->dest_object();
 
-      uint64 msg_uniq = msg->unique();
-      uint16 msg_src_port = msg->source_port();
-      uint16 msg_dst_port = msg->dest_port();
+      TIMESTAMP_START(tstamp, msg);
 
-      mContext->trace()->timestampMessage(mContext->simTime(),
-          msg_uniq,
-          Trace::OSEG_LOOKUP_STARTED,
-          msg_src_port,
-          msg_dst_port
-      );
+      TIMESTAMP_END(tstamp, Trace::OSEG_LOOKUP_STARTED);
 
       bool accepted = mOSegLookups->lookup(
           msg,
@@ -217,12 +196,7 @@ void Forwarder::poll()
 
 
       if (!accepted) {
-          mContext->trace()->timestampMessage(mContext->simTime(),
-              msg_uniq,
-              Trace::DROPPED,
-              msg_src_port,
-              msg_dst_port
-          );
+          TIMESTAMP_END(tstamp, Trace::DROPPED);
       }
 
       return accepted;
@@ -231,11 +205,9 @@ void Forwarder::poll()
 //end what i think it should be replaced with
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    //tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), msg, Trace::DISPATCHED);
     MessageDispatcher::dispatchMessage(msg);
 }
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
-    //mContext->trace()->timestampMessage(mContext->simTime(),msg.unique(),Trace::DISPATCHED,0,0);
     MessageDispatcher::dispatchMessage(msg);
 }
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
@@ -251,8 +223,6 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 
 
 void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
-    tryTimestampObjectMessage(mContext->trace(), mContext->simTime(), msg, Trace::FORWARDED);
-
     if (!forwarded_self_msg)
         mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
 
@@ -286,10 +256,7 @@ void Forwarder::receiveMessage(Message* msg) {
     // Otherwise, either deliver or forward it, depending on whether the destination object is attached to this server
     ObjectConnection* conn = getObjectConnection(dest);
     if (conn != NULL) {
-        // Record info for trace since msg may get deleted
-        uint64 msg_uniq = obj_msg->unique();
-        uint16 msg_src_port = obj_msg->source_port();
-        uint16 msg_dst_port = obj_msg->dest_port();
+        TIMESTAMP_START(tstamp, obj_msg);
 
         bool send_success = true;
 
@@ -298,14 +265,9 @@ void Forwarder::receiveMessage(Message* msg) {
         else
             send_success = conn->send(obj_msg);
 
-        Trace::MessagePath path = send_success ? Trace::SPACE_TO_OH_ENQUEUED : Trace::DROPPED;
-        mContext->trace()->timestampMessage(
-            mContext->simTime(),
-            msg_uniq,
-            path,
-            msg_src_port,
-            msg_dst_port
-        );
+        if (!send_success) {
+            TIMESTAMP_END(tstamp, Trace::DROPPED);
+        }
 
         if (!send_success)
             delete obj_msg;
@@ -328,12 +290,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
         : Trace::OSEG_SERVER_LOOKUP_FINISHED;
 
     // Timestamp the message as having finished an OSeg Lookup
-    mContext->trace()->timestampMessage(mContext->simTime(),
-        obj_msg->unique(),
-        mp,
-        obj_msg->source_port(),
-        obj_msg->dest_port()
-    );
+    TIMESTAMP(obj_msg, mp);
 
   //send out all server updates associated with an object with this message:
   UUID obj_id =  obj_msg->dest_object();
@@ -348,12 +305,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg, is_forward);
   if (!send_success) {
       delete svr_obj_msg;
-      mContext->trace()->timestampMessage(mContext->simTime(),
-          obj_msg->unique(),
-          Trace::DROPPED,
-          obj_msg->source_port(),
-          obj_msg->dest_port(),
-          SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+      TIMESTAMP(obj_msg, Trace::DROPPED);
   }else {
       delete obj_msg;
   }

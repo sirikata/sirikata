@@ -27,7 +27,7 @@ namespace CBR
   class Network;
   class Trace;
   class ObjectConnection;
-class OSegLookupQueue;
+  class OSegLookupQueue;
 
 class ForwarderQueue{
 public:
@@ -71,9 +71,11 @@ private:
     ForwarderQueue *mOutgoingMessages;
     ServerMessageQueue* mServerMessageQueue;
 
+
     OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
 
     ForwarderSampler* mSampler;
+
 
     // Object connections, identified by a separate unique ID to handle fast migrations
     uint64 mUniqueConnIDs; // Connection ID generator
@@ -104,8 +106,6 @@ protected:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
       void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq);
-
-      void tickOSeg();
 
 
       // Routing interface for servers.  This is used to route messages that originate from

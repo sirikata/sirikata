@@ -2,6 +2,7 @@
 #ifndef __CBR_ANALYSIS_EVENTS_HPP__
 #define __CBR_ANALYSIS_EVENTS_HPP__
 #include "Statistics.hpp"
+#include "OSegLookupTraceToken.hpp"
 
 namespace CBR {
 struct Event {
@@ -71,7 +72,6 @@ struct MessageTimestampEvent : public ObjectEvent {
     Trace::MessagePath path;
     ObjectMessagePort srcport;
     ObjectMessagePort dstport;
-    ServerMessagePort msg_type;
 };
 
 
@@ -244,7 +244,12 @@ struct OSegCacheResponseEvent : public Event
   UUID obj_id;
 };
 
+  struct OSegCumulativeEvent : public Event
+  {
+    OSegLookupTraceToken traceToken;
+  };
 
+  
 
 }
 

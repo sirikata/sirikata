@@ -40,7 +40,7 @@
 #include "Visualization.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"
-#include "CoordinateSegmentationClient.hpp"
+//#include "CoordinateSegmentationClient.hpp"
 
 #include "ServerWeightCalculator.hpp"
 
@@ -114,6 +114,7 @@ int main(int argc, char** argv) {
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
+    
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
     MockForwarder* forwarder = new MockForwarder(space_context);
@@ -143,7 +144,8 @@ int main(int argc, char** argv) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
+      std::cout<<"\n\nBFTM deleted because couldn't get to compile\n\n";
+      //      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
     }
     else {
         assert(false);
@@ -341,6 +343,19 @@ int main(int argc, char** argv) {
         oseg_process_stream.flush();
         oseg_process_stream.close();
 
+        //oseg processed lookups in csv
+//         String object_segmentation_processed_filename_csv = "oseg_object_segmentation_processed_file";
+//         object_segmentation_processed_filename_csv += ".csv";
+
+//         ObjectSegmentationProcessedRequestsAnalysis processedAnalysisCSV(STATS_TRACE_FILE,max_space_servers);
+//         std::ofstream oseg_process_stream_csv(object_segmentation_processed_filename_csv.c_str());
+
+//         processedAnalysisCSV.printDataCSV(oseg_process_stream, true, osegProcessedAfterSeconds);
+//         oseg_process_stream_csv.flush();
+//         oseg_process_stream_csv.close();
+
+
+        
         //completed round trip migrate times
         String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";
         migration_round_trip_times_filename += ".dat";

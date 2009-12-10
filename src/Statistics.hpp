@@ -37,6 +37,7 @@
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
+#include "OSegLookupTraceToken.hpp"
 
 #include <boost/thread/recursive_mutex.hpp>
 
@@ -106,35 +107,43 @@ public:
     static const uint8 ObjectGeneratedLocationTag = 22;
     static const uint8 OSegCacheResponseTag = 23;
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
+    static const uint8 OSegCumulativeTraceAnalysisTag   = 25;
 
+  
     enum MessagePath {
+        NONE, // Used when tag is needed but we don't have a name for it
+
+        // Object Host Checkpoints
         CREATED,
-        SPACE_OUTGOING_MESSAGE,
-        SPACE_SERVER_MESSAGE_QUEUE,
-        HANDLE_OBJECT_HOST_MESSAGE,
-        SELF_LOOP,
-        FORWARDED,
-        DISPATCHED,
-        DELIVERED,
         DESTROYED,
-        DROPPED,
         OH_ENQUEUED,
         OH_DEQUEUED,
-        HIT_NETWORK,
-        OH_DROPPED,
+        OH_HIT_NETWORK,
+        OH_DROPPED_AT_OH_ENQUEUED,
+        OH_NET_RECEIVED,
+        OH_DROPPED_AT_RECEIVE_QUEUE,
         OH_RECEIVED,
-        SPACE_TO_OH_ENQUEUED,
+
+        // Space Checkpoints
+        HANDLE_OBJECT_HOST_MESSAGE,
+        FORWARDED_LOCALLY,
+        FORWARDING_STARTED,
         OSEG_LOOKUP_STARTED,
         OSEG_CACHE_LOOKUP_FINISHED,
         OSEG_SERVER_LOOKUP_FINISHED,
+        FORWARDED,
+        DROPPED,
+        SPACE_TO_OH_ENQUEUED,
+
         NUM_PATHS
     };
 
     Trace(const String& filename);
 
     void setServerIDMap(ServerIDMap* sidmap);
-    //bool timestampMessage(const Time&t, MessagePath path,const Network::Chunk&);
-    void timestampMessage(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0, ServerMessagePort optionalMessageType = SERVER_PORT_UNPROCESSED_PACKET);
+
+    void timestampMessage(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
+
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void objectGenLoc(const Time& t, const UUID& source, const TimedMotionVector3f& loc);
@@ -176,6 +185,8 @@ public:
 
   void osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj);
 
+  void osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken);
+  
     void prepareShutdown();
     void shutdown();
 
@@ -194,5 +205,36 @@ private:
 }; // class Trace
 
 } // namespace CBR
+
+
+
+
+#ifdef CBR_TIMESTAMP_PACKETS
+// The most complete macro, allows you to specify everything
+#define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port) trace->timestampMessage(time, packetId, path, msg_source_port, msg_dest_port)
+
+// Slightly simplified version, works everywhere mContext->trace() and mContext->simTime() are valid
+#define TIMESTAMP_SIMPLE(packetId, path, msg_source_port, msg_dest_port) TIMESTAMP_FULL(mContext->trace(), mContext->simTime(), packetId, path, msg_source_port, msg_dest_port)
+
+// Further simplified version, works as long as packet is a valid pointer to a packet at the time this is called
+#define TIMESTAMP(packet, path) TIMESTAMP_SIMPLE(packet->unique(), path, packet->source_port(), packet->dest_port())
+
+// In cases where you need to split the time between recording the info for a timestamp and actually performing
+// the timestamp, use a _START _END combination. Generally this should only be needed if you are timestamping
+// after a message might be deleted or is out of your control (e.g. you pushed onto a queue or destroyed it).
+#define TIMESTAMP_START(prefix, packet)                                 \
+    Sirikata::uint64 prefix ## _uniq = packet->unique();                \
+    Sirikata::uint64 prefix ## _src_port = packet->source_port();       \
+    Sirikata::uint64 prefix ## _dst_port = packet->dest_port()
+
+#define TIMESTAMP_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path, prefix ## _src_port, prefix ## _dst_port)
+
+#else //CBR_TIMESTAMP_PACKETS
+#define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP_SIMPLE(packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP(packet, path)
+#define TIMESTAMP_START(prefix, packet)
+#define TIMESTAMP_END(prefix, path)
+#endif //CBR_TIMESTAMP_PACKETS
 
 #endif //_CBR_STATISTICS_HPP_

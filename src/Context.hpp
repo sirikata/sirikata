@@ -38,6 +38,8 @@
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
 
+#define FORCE_MONOTONIC_CLOCK 1
+
 namespace CBR {
 
 class Trace;
@@ -47,14 +49,17 @@ class Trace;
  */
 class Context {
 public:
+
     Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
      : ioService(ios),
        mainStrand(strand),
        profiler( new TimeProfiler(name) ),
        mTrace(_trace),
        mEpoch(epoch),
+       mLastSimTime(Time::null()),
        mSimDuration(simlen)
     {
+
     }
 
     ~Context() {
@@ -67,6 +72,8 @@ public:
         return rawtime - mEpoch.read();
     }
     Time simTime(const Duration& sinceStart) const {
+        if (sinceStart.toMicroseconds() < 0)
+            return Time::null();
         return Time::null() + sinceStart;
     }
     Time simTime(const Time& rawTime) const {
@@ -74,7 +81,18 @@ public:
     }
     // WARNING: The evaluates Timer::now, which shouldn't be done too often
     Time simTime() const {
-        return simTime( Timer::now() );
+        Time curt = simTime( Timer::now() );
+
+#if FORCE_MONOTONIC_CLOCK
+        Time last = mLastSimTime.read();
+        if (curt < last)
+            curt = last;
+
+        // FIXME this is to avoid const fallout since this didn't used to
+        // need to modify data
+        const_cast< Sirikata::AtomicValue<Time>& >(this->mLastSimTime) = curt;
+#endif
+        return curt;
     }
 
     void add(Service* ps) {
@@ -114,6 +132,7 @@ protected:
     Trace* mTrace;
 
     Sirikata::AtomicValue<Time> mEpoch;
+    Sirikata::AtomicValue<Time> mLastSimTime;
     Duration mSimDuration;
     std::vector<Service*> mServices;
 }; // class ObjectHostContext
