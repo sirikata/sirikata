@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIMER_SPEED_BENCHMARK_HPP_
-#define _CBR_TIMER_SPEED_BENCHMARK_HPP_
+#ifndef _CBR_SST_BENCHMARK_HPP_
+#define _CBR_SST_BENCHMARK_HPP_
 
 #include "Benchmark.hpp"
 #include "sirikata/network/Stream.hpp"
@@ -69,6 +69,7 @@ class SSTBenchmark : public Benchmark {
     bool mOrdered;
     Duration mPingRate;
     size_t mPingSize;
+    size_t mNumPings;
     String mStreamOptions;
     String mListenOptions;
     String mStreamPlugin;
@@ -79,9 +80,12 @@ class SSTBenchmark : public Benchmark {
     Sirikata::Network::StreamListener *mListener;
     Time mStartTime;
     Sirikata::uint64 mPingsSent;
+    Sirikata::uint64 mPingsReceived;
+    
     std::vector<Time> mOutstandingPings;
+    std::vector<Duration> mPingResponses;
 }; // class TimerSpeedBenchmark
 
 } // namespace CBR
 
-#endif //_CBR_TIMER_SPEED_BENCHMARK_HPP_
+#endif //_CBR_SST_BENCHMARK_HPP_

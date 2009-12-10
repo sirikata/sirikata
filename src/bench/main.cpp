@@ -35,7 +35,7 @@
 #include "TimerSpeedBenchmark.hpp"
 #include "TimerJitterBenchmark.hpp"
 #include "TimerMonotonicityBenchmark.hpp"
-
+#include "SSTBenchmark.hpp"
 using namespace CBR;
 
 typedef std::list<String> BenchmarkList;
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     ADD_BENCHMARK(timer-jitter, TimerJitterBenchmark::create);
     ADD_BENCHMARK(timer-monotonicity, TimerMonotonicityBenchmark::create);
 
-
+    ADD_BENCHMARK(ping, SSTBenchmark::create);
     BenchmarkRunner runner(factory, Duration::seconds(30.f));
 
 
@@ -72,14 +72,14 @@ int main(int argc, char** argv) {
     }
 
     // Otherwise, run each one that's specified
-    for(int32 argsi = 1; argsi < argc; argsi++) {
+    for(int32 argsi = 1; argsi < argc; argsi+=2) {
         String arg = argv[argsi];
 
         if (arg == "all") {
             runAll(runner, all_benchmarks);
         }
         else {
-            runner.run(arg);
+            runner.run(arg,argsi+1<argc?argv[argsi+1]:"");
         }
     }
 
