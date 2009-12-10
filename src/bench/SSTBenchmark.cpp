@@ -128,7 +128,7 @@ void SSTBenchmark::pingPoller(){
 void SSTBenchmark::connected(Sirikata::Network::Stream::ConnectionStatus connectionStatus,const std::string&reason){
     if (connectionStatus==Sirikata::Network::Stream::Connected) {
        //FIXME start pinging
-        mStartTime = Timer::now();
+        mStartTime = Time::now(Duration::zero());
         mIOService->post(mPingRate,mPingFunction);
     }
 }
@@ -162,6 +162,7 @@ Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::computePingTime(Sirika
         }
         avg/=(double)mPingResponses.size();
         SILOG(benchmark,info,"Ping Average "<<avg);
+        SILOG(benchmark,info,"Transfer Rate "<<2*mNumPings*(double)chk.size()/(cur-mStartTime).toSeconds());
         stop();
     }else
     if (mPingRate.toSeconds()==0) {
@@ -176,9 +177,11 @@ Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::bouncePing(Sirikata::N
     return Sirikata::Network::Stream::AcceptedData;
 }
 void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb) {
-    cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,_1,_2),
-       std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,_1),
-       &Sirikata::Network::Stream::ignoreReadySendCallback);
+    if (newStream) {
+        cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,_1,_2),
+           std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,_1),
+           &Sirikata::Network::Stream::ignoreReadySendCallback);
+    }
 }
 
 void noop(){}
