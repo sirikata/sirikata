@@ -50,8 +50,8 @@
 #define TRACE_MIGRATION
 //#define TRACE_DATAGRAM
 //#define TRACE_PACKET
-//#define TRACE_PING
-//#define TRACE_MESSAGE
+#define TRACE_PING
+#define TRACE_MESSAGE
 #define TRACE_ROUND_TRIP_MIGRATION_TIME
 #define TRACE_OSEG_TRACKED_SET_RESULTS
 #define TRACE_OSEG_SHUTTING_DOWN
@@ -135,7 +135,7 @@ const uint8 Trace::ObjectGeneratedLocationTag;
 const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
   //const uint8 Trace::OSegCraqGetConnnectionShutdownTag;
-  
+
 
 
 Trace::Trace(const String& filename)
@@ -579,9 +579,9 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
       delete traceToken;
       return;
     }
-    
+
     #ifdef TRACE_OSEG_CUMULATIVE
-    
+
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write(&OSegCumulativeTraceAnalysisTag, sizeof (OSegCumulativeTraceAnalysisTag));
     data.write(&t, sizeof(t));
