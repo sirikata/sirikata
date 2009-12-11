@@ -59,7 +59,7 @@ def graph_stages_raw_samples(files):
 
             ax.set_xlabel('Duration (us)')
             ax.set_ylabel('Sample Count')
-            ax.set_title('Histogram of Stage Latencies');
+            ax.set_title('Histogram of Sample Latencies\n%s - %s'%(start_tag,end_tag))
             ax.grid(True)
 
             output_file = '.'.join([out_template, start_tag, end_tag, 'pdf'])
