@@ -33,8 +33,9 @@
 #include "ColladaMeshObject.hpp"
 
 #include "ColladaSystem.hpp"
-
+#ifndef __APPLE__
 #include "COLLADABUhash_map.h"
+#endif
 #include "COLLADAFWGeometry.h"
 #include "COLLADAFWMesh.h"
 
