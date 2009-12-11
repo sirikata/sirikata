@@ -74,8 +74,8 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
                                          pingSize=new OptionValue("ping-size","10",Sirikata::OptionValueType<size_t>(),"Size of each individual ping"),
                                          pingRate=new OptionValue("pings-per-second","0",Sirikata::OptionValueType<double>(),"number of pings launched per second"),
                                          ordered=new OptionValue("ordered","true",Sirikata::OptionValueType<bool>(),"are the pings unordered"),
-                                         listenOptions=new OptionValue("listen-options","",Sirikata::OptionValueType<String>(),"options passed to tcpsst"),
-                                         streamOptions=new OptionValue("stream-options","",Sirikata::OptionValueType<String>(),"options passed to tcpsst"),
+                                         listenOptions=new OptionValue("listen-options","--send-buffer-size=32768",Sirikata::OptionValueType<String>(),"options passed to tcpsst"),
+                                         streamOptions=new OptionValue("stream-options","--send-buffer-size=32768",Sirikata::OptionValueType<String>(),"options passed to tcpsst"),
                                          whichPlugin=new OptionValue("stream-plugin","tcpsst",Sirikata::OptionValueType<String>(),"which plugin to load for sst functionality"),
                                          numPings=new OptionValue("num-pings","1000",Sirikata::OptionValueType<size_t>(),"How many pings to "),
                                          NULL);
@@ -102,7 +102,6 @@ String SSTBenchmark::name() {
 
 void SSTBenchmark::pingPoller(){
     if (mPingsReceived<mNumPings&&!mForceStop) {
-        size_t pingNumber=mOutstandingPings.size();
         Time cur=Time::now(Duration::zero());
         double invPingRate=mPingRate.toSeconds();
 
@@ -115,11 +114,14 @@ void SSTBenchmark::pingPoller(){
             // of the test
             size_t numPings = (cur-mStartTime).toSeconds() / invPingRate;
             numMorePings = numPings - mPingsAttemptedSent;
+            mPingsAttemptedSent = numPings; // BEWARE: Don't use
+                                            // mPingsAttemptedSent below unless
+                                            // you move this to after the loop
         }
-        for(uint32 ii = 0; ii < numMorePings; ii++) {
-            mOutstandingPings.push_back(cur);
-            mPingResponses.push_back(Duration::zero());
+        uint32 ii;
+        for(ii = 0; ii < numMorePings; ii++) {
             Sirikata::Network::Chunk serializedChunk;
+            size_t pingNumber=mOutstandingPings.size();
             for (int i=0;i<8;++i) {
                 unsigned char pn=pingNumber%256;
                 serializedChunk.push_back(pn);
@@ -128,9 +130,13 @@ void SSTBenchmark::pingPoller(){
             if (mPingSize>serializedChunk.size()) {
                 serializedChunk.resize(mPingSize);
             }
-            mPingsAttemptedSent++;
             if (mStream->send(serializedChunk,mOrdered?Sirikata::Network::ReliableOrdered:Sirikata::Network::ReliableUnordered)) {
                 ++mPingsSent;
+                mOutstandingPings.push_back(cur);
+                mPingResponses.push_back(Duration::zero());
+            }
+            else {
+                break;
             }
         }
         if (mPingRate.toSeconds()!=0) {
