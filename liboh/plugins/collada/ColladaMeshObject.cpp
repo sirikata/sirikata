@@ -34,6 +34,7 @@
 
 #include "ColladaSystem.hpp"
 
+#include "COLLADABUhash_map.h"
 #include "COLLADAFWGeometry.h"
 #include "COLLADAFWMesh.h"
 
