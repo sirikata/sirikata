@@ -79,10 +79,10 @@ bool intersects(const BoundingBox3f& bbox1, const BoundingBox3f& bbox2) {
 
 void WorldPopulationBSPTree::setupRegionBoundaries(WorldRegion* regionList) {
   for (int i=0; i<mWorldHeight; i++) {
-    for (int j=0; j<mWorldWidth; j++) {      
+    for (int j=0; j<mWorldWidth; j++) {
       regionList[i*mWorldWidth+j].mBoundingBox =
 	BoundingBox3f( Vector3f(j*mCellEdgeWidth, i*mCellEdgeWidth,0),
-		       Vector3f(j*mCellEdgeWidth + mCellEdgeWidth, i*mCellEdgeWidth + mCellEdgeWidth,0) );      
+		       Vector3f(j*mCellEdgeWidth + mCellEdgeWidth, i*mCellEdgeWidth + mCellEdgeWidth,0) );
       }
     }
 }
@@ -122,8 +122,8 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
   double sum2 = 0;
 
   int  i =0;
-  int idx1=0, idx2=0; 
-  
+  int idx1=0, idx2=0;
+
   WorldRegion* tempRegionList1 = new WorldRegion[listLength];
   WorldRegion* tempRegionList2 = new WorldRegion[listLength];
 
@@ -178,13 +178,13 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
     mHistogram[depth]++;
   }
 
-  
+
 
   delete regionList1;
   delete regionList2;
 }
 
-WorldPopulationBSPTree::WorldPopulationBSPTree() 
+WorldPopulationBSPTree::WorldPopulationBSPTree()
   : mFileName(GetOption("cseg-population-density-file")->as<String>()),
     mMaxPeopleInLeaf(GetOption("cseg-max-leaf-population")->as<uint32>())
 {
@@ -205,11 +205,11 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
 
   double i =0, sum=0, largestdensity = 0;
   int j=0, k=0;
-  
+
   WorldRegion* regionList = new WorldRegion[mNumRegions];
 
   std::ifstream filestream(mFileName.c_str());
-  
+
   while(!filestream.bad() && !filestream.fail() && !filestream.eof()) {
     char line[1048576];
     filestream.getline(line,1048576);
@@ -252,18 +252,18 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
   }
 
   WorldRegion* regionList2 = new WorldRegion[regionVector.size()];
-  for (k=0; k < regionVector.size(); k++) {
+  for (k=0; k < (int)regionVector.size(); k++) {
     regionList2[k] = regionVector[k];
   }
 
   regionVector.clear();
 
-  delete regionList;  
+  delete regionList;
 
   topLevelRegion.mBoundingBox = BoundingBox3f(
 				    Vector3f(0,0,0),
  			            Vector3f(mWorldWidth*mCellEdgeWidth, mWorldHeight*mCellEdgeWidth, 0));
-  
+
   constructBSPTree(topLevelRegion, regionList2, j, false, 1);
 
   printf("total_leaves=%d\n", mTotalLeaves);
@@ -272,8 +272,8 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
   }
 
   delete regionList2;
-  
-  delete mHistogram; 
+
+  delete mHistogram;
 
   fflush(stdout);
 }

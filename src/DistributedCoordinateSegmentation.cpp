@@ -357,18 +357,18 @@ void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegi
   if (mLowerLevelTrees.size() == 0) {
     int numHigherLevelTrees = rand() % mHigherLevelTrees.size();
     int i=0;
-    
+
     for (std::map<String, SegmentedRegion*>::iterator it=mHigherLevelTrees.begin();
 	 it != mHigherLevelTrees.end();
 	 it++, i++)
       {
 	if (i == numHigherLevelTrees) {
-	  
+
 	  *randomLeaf = it->second->getRandomLeaf();
-	  
+
 	  *sibling = it->second->getSibling(*randomLeaf);
 	  *parent = it->second->getParent(*randomLeaf);
-	  
+
 	  break;
 	}
       }
@@ -376,18 +376,18 @@ void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegi
   else {
     int numLowerLevelTrees = rand() % mLowerLevelTrees.size();
     int i=0;
-    
+
     for (std::map<String, SegmentedRegion*>::iterator it=mLowerLevelTrees.begin();
 	 it != mLowerLevelTrees.end();
 	 it++, i++)
       {
 	if (i == numLowerLevelTrees) {
-	  
+
 	  *randomLeaf = it->second->getRandomLeaf();
-	  
+
 	  *sibling = it->second->getSibling(*randomLeaf);
 	  *parent = it->second->getParent(*randomLeaf);
-	  
+
 	  break;
 	}
       }
@@ -984,7 +984,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
   std::vector< boost::shared_ptr<tcp::socket> > socketList;
   bool sentToAll = false;
 
-  for (uint32 i = 1; i <= mAvailableCSEGServers; i++) {
+  for (uint32 i = 1; i <= (uint32)mAvailableCSEGServers; i++) {
     if (i == mContext->id()) continue;
 
     boost::shared_ptr<tcp::socket> socket = getSocketToCSEGServer(i);
@@ -1039,7 +1039,7 @@ void DistributedCoordinateSegmentation::sendToAllCSEGServers(uint8* buffer, int 
   /* Send to other CSEG servers so they can forward the segmentation change message to
      space servers connected to them. */
   for (int i = 1; i <= mAvailableCSEGServers; i++) {
-    if (i == mContext->id()) continue;
+      if ((ServerID)i == mContext->id()) continue;
 
     boost::shared_ptr<tcp::socket> socket = getSocketToCSEGServer(i);
     if (socket.get() == 0) {

@@ -125,7 +125,8 @@ void LoadMonitor::sendLoadReadings() {
               SERVER_PORT_LOAD_STATUS,
               serialized_load
           );
-          mContext->router()->route(MessageRouter::CSEGS, msg);
+          bool send_success = mContext->router()->route(MessageRouter::CSEGS, msg);
+          // Ignore send success, lost load readings don't matter
     }
   }
 }

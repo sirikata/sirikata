@@ -88,7 +88,7 @@ void DistributionPingScenario::generatePings() {
     unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
     Time newTime=mContext->simTime();
     int64 howManyPings=(newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
-    
+
 
     bool broke=false;
     int64 limit=howManyPings-mNumTotalPings;
@@ -101,7 +101,7 @@ void DistributionPingScenario::generatePings() {
     mNumTotalPings+=i;
     mPingProfiler->finished();
     static bool printed=false;
-    if (i-limit>10*mNumPingsPerSecond&&!printed) {
+    if ( (i-limit) > (10*(int64)mNumPingsPerSecond) && !printed) {
         SILOG(oh,debug,"[OH] " << i-limit<<" pending ");
         printed=true;
     }

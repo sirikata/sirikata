@@ -111,7 +111,7 @@ bool Message::serialize(Network::Chunk* output) {
     return true;
 }
 static char toHex(unsigned char u) {
-    if (u>=0&&u<=9) return '0'+u;
+    if (u<=9) return '0'+u;
     return 'A'+(u-10);
 }
 static void hexPrint(const char *name, const Network::Chunk&data) {
