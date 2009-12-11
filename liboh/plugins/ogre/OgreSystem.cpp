@@ -740,7 +740,9 @@ struct RayTraceResult {
     Ogre::Real mDistance;
     Ogre::MovableObject *mMovableObject;
     Vector3f mNormal;
-    RayTraceResult() { mDistance=3.0e38f;mMovableObject=NULL;mNormal=Vector3f(0,0,0);}
+    float mU,mV;
+    Ogre::SubEntity *mSubMesh;
+    RayTraceResult() { mDistance=3.0e38f;mMovableObject=NULL;mNormal=Vector3f(0,0,0);mU=0;mV=0;mSubMesh=NULL;}
     RayTraceResult(Ogre::Real distance,
                    Ogre::MovableObject *moveableObject,
                    Vector3f normal) {
@@ -764,16 +766,18 @@ Entity* OgreSystem::rayTrace(const Vector3d &position,
                              int&resultCount,
                              double &returnResult,
                              Vector3f&returnNormal,
+                             Ogre::SubEntity*&subent,
                              int which) const{
-    return internalRayTrace(position,direction,false,resultCount,returnResult,returnNormal, which);
+    return internalRayTrace(position,direction,false,resultCount,returnResult,returnNormal, subent,NULL,NULL,which);
 }
 Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
                      const Vector3f &direction,
                      int&resultCount,
                      double &returnResult,
+                     Ogre::SubEntity*&subent,
                      int which) const{
     Vector3f normal;
-    return internalRayTrace(position,direction,true,resultCount,returnResult,normal,which);
+    return internalRayTrace(position,direction,true,resultCount,returnResult,normal,subent,NULL,NULL,which);
 }
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
@@ -783,15 +787,15 @@ bool OgreSystem::queryRay(const Vector3d&position,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName) {
     int resultCount=0;
-
-    Entity * retval=internalRayTrace(position,direction,false,resultCount,returnDistance,returnNormal,0);
+    Ogre::SubEntity *subent;
+    Entity * retval=internalRayTrace(position,direction,false,resultCount,returnDistance,returnNormal,subent,NULL,NULL,0);
     if (retval != NULL) {
         returnName= retval->getProxy().getObjectReference();
         return true;
     }
     return false;
 }
-Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &direction, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int which) const {
+Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &direction, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, Ogre::SubEntity*& returnSubMesh, float *returnTexU, float *returnTexV, int which) const {
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
@@ -816,12 +820,17 @@ Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &d
                 Ogre::Mesh *mesh = foundEntity->getMesh().get();
                 uint16 numSubMeshes = mesh->getNumSubMeshes();
                 for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
-                    OgreMesh ogreMesh(foundEntity, mesh->getSubMesh(ndx));
-                    std::pair<bool, std::pair<double, Vector3f> > curHit = ogreMesh.intersect(traceFrom);
-                    if (curHit.first && curHit.second.first < rtr.mDistance && curHit.second.first > 0 ) {
+                    Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
+                    OgreMesh ogreMesh(foundEntity, submesh, returnTexU&&returnTexV);
+                    IntersectResult curHit;
+                    ogreMesh.intersect(traceFrom, curHit);
+                    if (curHit.intersected && curHit.distance < rtr.mDistance && curHit.distance > 0 ) {
                         rtr.mMovableObject = result.movable;
-                        rtr.mDistance=curHit.second.first;
-                        rtr.mNormal=curHit.second.second;
+                        rtr.mDistance=curHit.distance;
+                        rtr.mNormal=curHit.normal;
+                        rtr.mU=curHit.u;
+                        rtr.mV=curHit.v;
+                        rtr.mSubMesh=foundEntity->getSubEntity(ndx);
                         passed=true;
                     }
                 }
@@ -848,6 +857,9 @@ Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &d
                 toReturn = foundEntity;
                 returnresult = result.mDistance;
                 returnNormal=result.mNormal;
+                returnSubMesh=result.mSubMesh;
+                if(returnTexU)*returnTexU=result.mU;
+                if(returnTexV)*returnTexV=result.mV;
                 break;
             }
         }

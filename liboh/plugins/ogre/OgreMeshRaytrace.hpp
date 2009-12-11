@@ -12,15 +12,38 @@ namespace Ogre {
 
 namespace Sirikata { namespace Graphics {
 
+struct TriVertex {
+  Ogre::Vector3 coord;
+  float u;
+  float v;
+  TriVertex(const Ogre::Vector3& coord, float u, float v)
+    : coord(coord), u(u), v(v) {
+  }
+};
+class Triangle;
+struct IntersectResult {
+	bool intersected;
+	double distance;
+	Vector3f normal;
+	Triangle *tri;
+	float u;
+	float v;
+	IntersectResult()
+	: intersected(false),
+	  distance(std::numeric_limits<Ogre::Real>::max()),
+	  normal(Vector3f(0,0,0)),
+	  tri(NULL),
+	  u(0),
+	  v(0) {}
+};
+
 class Triangle {
 public:
-  Triangle(const Ogre::Vector3 &v1, const Ogre::Vector3 &v2, const Ogre::Vector3 &v3) : mV1(v1), mV2(v2), mV3(v3)
+  Triangle(const TriVertex &v1, const TriVertex &v2, const TriVertex &v3) : v1(v1), v2(v2), v3(v3)
   {
   }
 
-  Ogre::Vector3 mV1;
-  Ogre::Vector3 mV2;
-  Ogre::Vector3 mV3;
+  TriVertex v1, v2, v3;
 };
 
 /**
@@ -48,10 +71,10 @@ class OgreMesh {
         }
     };
 public:
-  std::pair<bool, std::pair< double, Vector3f> > intersect(const Ogre::Ray &ray);
-  OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *submesh);
+  void  intersect(const Ogre::Ray &ray, IntersectResult &res);
+  OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *submesh, bool texcoord);
 protected:
-  void syncFromOgreMesh(Ogre::Entity *entity,  Ogre::SubMesh *mSubMesh);
+  void syncFromOgreMesh(Ogre::Entity *entity,  Ogre::SubMesh *mSubMesh, bool texcoord);
   std::vector<Triangle> mTriangles;
 public:
   int64 size()const;

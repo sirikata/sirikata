@@ -124,6 +124,31 @@ bool forEachTexture(const Ogre::MaterialPtr &material, Functor func) {
 	return false;
 }
 
+WebView *MeshEntity::getWebView(Ogre::SubEntity *subEnt) {
+	Ogre::Entity *ent = getOgreEntity();
+	if (!ent) {
+		return NULL;
+	}
+	int numSubEntities = ent->getNumSubEntities();
+	for (ReplacedMaterialMap::iterator iter = mReplacedMaterials.begin();
+			iter != mReplacedMaterials.end();
+			++iter) {
+		int whichSubEntity = iter->first;
+		if (whichSubEntity >= numSubEntities) {
+			SILOG(ogre,fatal,"Original material map not cleared when mesh changed. which = " << whichSubEntity << " num = " << numSubEntities);
+			continue;
+		}
+		if (ent->getSubEntity(whichSubEntity) != subEnt) {
+			continue;
+		}
+		WebView *wv = WebViewManager::getSingleton().getWebView(iter->second.first);
+		if (wv != NULL) {
+			return wv;
+		}
+	}
+	return NULL;
+}
+
 void MeshEntity::fixTextures() {
 	Ogre::Entity *ent = getOgreEntity();
 	if (!ent) {
@@ -131,33 +156,36 @@ void MeshEntity::fixTextures() {
 	}
 	SILOG(ogre,debug,"Fixing texture for "<<id());
 	int numSubEntities = ent->getNumSubEntities();
-	for (OriginalMaterialMap::iterator iter = mOriginalMaterials.begin();
-			iter != mOriginalMaterials.end();
+	for (ReplacedMaterialMap::iterator iter = mReplacedMaterials.begin();
+			iter != mReplacedMaterials.end();
 			++iter) {
 		int whichSubEntity = iter->first;
 		if (whichSubEntity >= numSubEntities) {
 			SILOG(ogre,fatal,"Original material map not cleared when mesh changed. which = " << whichSubEntity << " num = " << numSubEntities);
+			continue;
 		}
 		Ogre::SubEntity *subEnt = ent->getSubEntity(whichSubEntity);
-		Ogre::MaterialPtr origMaterial = iter->second;
+		Ogre::MaterialPtr origMaterial = iter->second.second;
 		subEnt->setMaterial(origMaterial);
 		SILOG(ogre,debug,"Resetting a material "<<id());
 	}
-	mOriginalMaterials.clear();
+	mReplacedMaterials.clear();
 	for (int whichSubEntity = 0; whichSubEntity < numSubEntities; whichSubEntity++) {
 		Ogre::SubEntity *subEnt = ent->getSubEntity(whichSubEntity);
 		Ogre::MaterialPtr material = subEnt->getMaterial();
 		if (forEachTexture(material, ShouldReplaceTexture(mTextureBindings))) {
 			SILOG(ogre,debug,"Replacing a material "<<id());
 			Ogre::MaterialPtr newMaterial = material->clone(material->getName()+id().toString(), false, Ogre::String());
+			String newTexture;
 			for (TextureBindingsMap::const_iterator iter = mTextureBindings.begin();
 					iter != mTextureBindings.end();
 					++iter) {
 				SILOG(ogre,debug,"Replacing a texture "<<id()<<" : "<<iter->first<<" -> "<<iter->second);
 				forEachTexture(newMaterial, ReplaceTexture(iter->first, iter->second));
+				newTexture = iter->second;
 			}
-			mOriginalMaterials.insert(
-				OriginalMaterialMap::value_type(whichSubEntity, newMaterial));
+			mReplacedMaterials.insert(
+				ReplacedMaterialMap::value_type(whichSubEntity, std::pair<String, Ogre::MaterialPtr>(newTexture, newMaterial)));
 			subEnt->setMaterial(newMaterial);
 		}
 	}
@@ -179,7 +207,7 @@ void MeshEntity::loadMesh(const String& meshname)
 {
 
     Ogre::Entity * oldMeshObj=getOgreEntity();
-	mOriginalMaterials.clear();
+    mReplacedMaterials.clear();
 
     /** FIXME we need a better way of generating unique id's. We should
      *  be able to use just the uuid, but its not enough since we want
@@ -244,7 +272,7 @@ void MeshEntity::unloadMesh() {
     if (meshObj) {
         getScene()->getSceneManager()->destroyEntity(meshObj);
     }
-	mOriginalMaterials.clear();
+    mReplacedMaterials.clear();
 }
 
 void MeshEntity::setSelected(bool selected) {

@@ -147,8 +147,8 @@ void WebView::destroyed() {
 void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
 {
 	if(this->proxyObject) {
-		proxyObject->WebViewProvider::removeListener(this);
-		proxyObject->ProxyObjectProvider::removeListener(this);
+		this->proxyObject->WebViewProvider::removeListener(this);
+		this->proxyObject->ProxyObjectProvider::removeListener(this);
     }
 
 	this->proxyObject = proxyObject;
@@ -294,7 +294,7 @@ void WebView::createMaterial()
          {
              fadeValue = 0;
              isFading = false;
-             overlay->hide();
+             if(overlay) {overlay->hide();}
          }
 
          lastFadeTimeMS = timer.getMilliseconds();
@@ -305,7 +305,7 @@ void WebView::createMaterial()
  {
      if(isMaterialOnly())
          return false;
-     if(!overlay->isVisible || !overlay->viewport)
+     if(!overlay || !overlay->isVisible || !overlay->viewport)
          return false;
 
      int localX = overlay->getRelativeX(x);
@@ -370,8 +370,9 @@ void WebView::createMaterial()
 
  void WebView::setViewport(Ogre::Viewport* newViewport)
  {
-     if(overlay)
+     if(overlay) {
          overlay->setViewport(newViewport);
+     }
  }
 
  void WebView::setTransparent(bool isTransparent)
@@ -429,14 +430,16 @@ void WebView::createMaterial()
 
  void WebView::setPosition(const OverlayPosition &viewPosition)
  {
-     if(overlay)
+     if(overlay){
          overlay->setPosition(viewPosition);
+     }
  }
 
  void WebView::resetPosition()
  {
-     if(overlay)
+     if(overlay){
          overlay->resetPosition();
+     }
  }
 
  void WebView::hide()
@@ -458,7 +461,7 @@ void WebView::createMaterial()
      {
          isFading = false;
          fadeValue = 0;
-         overlay->hide();
+         if (overlay) {overlay->hide();}
      }
  }
 
@@ -483,7 +486,7 @@ void WebView::createMaterial()
          fadeValue = 1;
      }
 
-     overlay->show();
+     if (overlay) {overlay->show();}
  }
 
  void WebView::focus()
@@ -511,8 +514,9 @@ void WebView::createMaterial()
 
  void WebView::move(int deltaX, int deltaY)
  {
-     if(overlay)
+     if(overlay) {
          overlay->move(deltaX, deltaY);
+     }
  }
 
  void WebView::getExtents(unsigned short &width, unsigned short &height)
@@ -571,6 +575,7 @@ void WebView::createMaterial()
  }
 
  bool WebView::getNonStrictVisibility() {
+	 if (!overlay) {return true;}
      if (isFading) {
          // When fading, we are actually the *opposite* of what the overlay claims.
          return !overlay->isVisible;
@@ -677,7 +682,7 @@ void WebView::resize(int width, int height)
 		}
 	}
 
-	overlay->resize(viewWidth, viewHeight);
+	if (overlay) {overlay->resize(viewWidth, viewHeight);}
 #if defined(HAVE_BERKELIUM)
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
@@ -694,9 +699,12 @@ void WebView::resize(int width, int height)
     texHeight = newTexHeight;
 
     if (compensateNPOT) {
+        // FIXME: How can we adjust UV coordinates on a mesh that we are bound to?
         Ogre::Real u1,v1,u2,v2;
         getDerivedUV(u1, v1,  u2,v2);
-        overlay->panel->setUV(u1, v1, u2, v2);
+        if (overlay) {
+            overlay->panel->setUV(u1, v1, u2, v2);
+        }
     }
 
     if (texWidth == oldTexWidth && texHeight == oldTexHeight)

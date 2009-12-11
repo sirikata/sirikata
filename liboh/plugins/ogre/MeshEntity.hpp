@@ -47,6 +47,7 @@
 namespace Sirikata {
 namespace Graphics {
 
+class WebView;
 
 class MeshEntity
     :   public Entity,
@@ -54,13 +55,13 @@ class MeshEntity
 {
 public:
     typedef std::tr1::shared_ptr<Meru::GraphicsResourceEntity> SharedResourcePtr;
-    typedef std::map<int, Ogre::MaterialPtr> OriginalMaterialMap;
-    typedef std::map<String, String> TextureBindingsMap;
+    typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
+    typedef std::map<String, String > TextureBindingsMap;
 private:
     SharedResourcePtr mResource;
     BoundingInfo mBoundingInfo;
 
-    OriginalMaterialMap mOriginalMaterials;
+    ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
     Ogre::Entity *getOgreEntity() const {
@@ -84,6 +85,8 @@ public:
 //    }
     void bindTexture(const std::string &textureName, const SpaceObjectReference &objId);
     void unbindTexture(const std::string &textureName);
+
+    WebView *getWebView(Ogre::SubEntity *subEnt);
 
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;

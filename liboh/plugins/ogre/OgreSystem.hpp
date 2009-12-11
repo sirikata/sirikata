@@ -54,6 +54,7 @@ typedef int ResourceUploadStatus;
 
 namespace Ogre {
 struct RaySceneQueryResultEntry;
+class SubEntity;
 }
 
 namespace Sirikata {
@@ -134,6 +135,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
                      int&resultCount,
                      double &returnResult,
                      Vector3f &returnNormal,
+                     Ogre::SubEntity*& returnSubMesh,
+                     float *returnTexU, float *returnTexV,
                      int which=0) const;
 public:
     bool forwardMessagesTo(MessageService*){return false;}
@@ -207,11 +210,13 @@ public:
                      int&resultCount,
                      double &returnResult,
                      Vector3f&returnNormal,
+                     Ogre::SubEntity*&subent,
                      int which=0) const;
     Entity* rayTraceAABB(const Vector3d &position,
                      const Vector3f &direction,
                      int&resultCount,
                      double &returnResult,
+                     Ogre::SubEntity*&subent,
                      int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue

@@ -78,7 +78,9 @@ unsigned int CDNArchiveFactory::addArchive(const SHA256&filename, const SparseDa
 void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String&filename, const SparseData &rbuffer)
 {
   std::map<Ogre::String,SparseData>::iterator where=CDNArchiveFiles.find(filename);
-  assert (where==CDNArchiveFiles.end());
+  if (where!=CDNArchiveFiles.end()) {
+    SILOG(resource,error,"File "<<filename<<" Already exists in CDNArchive!!!");
+  }
   SILOG(resource,debug,"File "<<filename<<" Added to CDNArchive");
   CDNArchiveFiles[filename]=rbuffer;
 

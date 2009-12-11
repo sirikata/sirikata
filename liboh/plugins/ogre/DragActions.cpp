@@ -417,6 +417,7 @@ public:
         camera = info.camera;
         mParent = info.sys;
         double distance;
+        Ogre::SubEntity*subent;
         Vector3f normal;
         Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
         Location cameraLoc = camera->getProxy().globalLocation(now);
@@ -428,7 +429,7 @@ public:
 			float WORLD_SCALE = mParent->getInputManager()->mWorldScale->as<float>();
             mPanDistance = WORLD_SCALE;
 		} else if (!mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT) &&
-				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, hitCount, distance, normal)) {
+				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, hitCount, distance, normal, subent)) {
             mPanDistance = distance;
         } else if (!info.objects.empty()) {
             Vector3d totalPosition(averageSelectedPosition(now, info.objects.begin(), info.objects.end()));
@@ -468,6 +469,7 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     Location cameraLoc = camera->getProxy().extrapolateLocation(now);
     Location cameraGlobalLoc = camera->getProxy().globalLocation(now);
     Vector3d toMove;
+    Ogre::SubEntity*subent;
 
     toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
 
@@ -478,7 +480,7 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     if (!parent->getInputManager()->isModifierDown(Input::MOD_CTRL) &&
         !parent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
         toMove *= WORLD_SCALE;
-    } else if (parent->rayTrace(cameraGlobalLoc.getPosition(), direction(cameraGlobalLoc.getOrientation()), hitCount, distance, normal) &&
+    } else if (parent->rayTrace(cameraGlobalLoc.getPosition(), direction(cameraGlobalLoc.getOrientation()), hitCount, distance, normal, subent) &&
                (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(Input::MOD_SHIFT))) {
         toMove *= distance*.75;
     } else if (!objects.empty()) {

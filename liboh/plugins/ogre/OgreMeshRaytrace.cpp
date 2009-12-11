@@ -2,6 +2,7 @@
 #include "OgreHeaders.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "OgreSubMesh.h"
+#include "OgreRay.h"
 #include "OgreEntity.h"
 #include "OgreNode.h"
 
@@ -27,14 +28,14 @@ using Ogre::Real;
 //using Ogre::AxisAlignedBox;
 
 namespace Sirikata { namespace Graphics {
-OgreMesh::OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *subMesh)
+OgreMesh::OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *subMesh, bool texcoord)
 {
-    syncFromOgreMesh(entity,subMesh);
+    syncFromOgreMesh(entity,subMesh, texcoord);
 }
 int64 OgreMesh::size() const{
     return mTriangles.size()*sizeof(Triangle);
 }
-void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh)
+void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh, bool texcoord)
 {
   const Ogre::Vector3 &position = entity->getParentNode()->_getDerivedPosition();
   const Ogre::Quaternion &orient = entity->getParentNode()->_getDerivedOrientation();
@@ -46,14 +47,19 @@ void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh)
       
       // find the element for position
       const VertexElement *element = vertexDecl->findElementBySemantic(Ogre::VES_POSITION);
-      
+      const VertexElement *texelement = texcoord ? vertexDecl->findElementBySemantic(Ogre::VES_TEXTURE_COORDINATES) : NULL;
+
       // find and lock the buffer containing position information
       VertexBufferBinding *bufferBinding = vertexData->vertexBufferBinding;
       HardwareVertexBuffer *buffer = bufferBinding->getBuffer(element->getSource()).get();
       unsigned char *pVert = static_cast<unsigned char*>(buffer->lock(HardwareBuffer::HBL_READ_ONLY));
-      std::vector<Ogre::Vector3> lvertices;
+      HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;
+      unsigned char *pTexVert = texbuffer
+          ? (texbuffer == buffer ? pVert : static_cast<unsigned char*>(texbuffer->lock(HardwareBuffer::HBL_READ_ONLY)))
+          : NULL;
+      std::vector<TriVertex> lvertices;
       for (size_t vert = 0; vert < vertexData->vertexCount; vert++) {
-          Real *vertex = 0;
+          float *vertex = 0;
           Real x, y, z;
           element->baseVertexPointerToElement(pVert, &vertex);
           x = *vertex++;
@@ -61,9 +67,19 @@ void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh)
           z = *vertex++;
           Ogre::Vector3 vec(x, y, z);
           vec = (orient * (vec * scale)) + position;
+          Ogre::Vector2 texvec(0,0);
+          if (texelement) {
+              float *texvertex = 0;
+              float u, v, w;
+              texelement->baseVertexPointerToElement(pTexVert, &texvertex);
+              u = *texvertex++;
+              v = *texvertex++;
+              texvec = Ogre::Vector2(u, v);
+              pTexVert += texbuffer->getVertexSize();
+          }
           
-          lvertices.push_back(vec);
-          
+          lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
+
           pVert += buffer->getVertexSize();
       }
       buffer->unlock();
@@ -97,25 +113,44 @@ void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh)
   }
 }
 
-std::pair<bool, std::pair< double, Vector3f> > OgreMesh::intersect(const Ogre::Ray &ray)
+// http://www.netsoc.tcd.ie/~nash/tangent_note/tangent_note.html
+
+static bool intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*itr) {
+    std::pair<bool, Real> hit = Ogre::Math::intersects(ray,
+      itr->v1.coord, itr->v2.coord,itr->v3.coord, true, false);
+    if (hit.first && hit.second <= rtn.distance) {
+      rtn.intersected = hit.first;
+      rtn.distance = hit.second;
+      Ogre::Vector3 nml=(itr->v1.coord-itr->v2.coord).
+              crossProduct(itr->v3.coord-itr->v2.coord);
+      rtn.normal.x=nml.x;
+      rtn.normal.y=nml.y;
+      rtn.normal.z=nml.z;
+      rtn.tri = itr;
+      Ogre::Vector3 intersect = ray.getPoint(rtn.distance) - rtn.tri->v2.coord;
+      Ogre::Vector3 aVec = (rtn.tri->v1.coord - rtn.tri->v2.coord);
+      Ogre::Vector3 bVec = (rtn.tri->v3.coord - rtn.tri->v2.coord);
+      rtn.u = rtn.tri->v2.u + (rtn.tri->v1.u - rtn.tri->v2.u)*cos(aVec.angleBetween(intersect).valueRadians())*intersect.length()/aVec.length();
+      rtn.v = rtn.tri->v2.v + (rtn.tri->v3.v - rtn.tri->v2.v)*cos(bVec.angleBetween(intersect).valueRadians())*intersect.length()/bVec.length();
+      return true;
+    }
+    return false;
+}
+
+void OgreMesh::intersect(const Ogre::Ray &ray, IntersectResult &rtn)
 {
-  std::pair<bool, std::pair< double, Vector3f> > rtn(false,std::pair<double,Vector3f>(std::numeric_limits<Real>::max(),Vector3f(0,0,0)));
+  if (rtn.intersected) {
+    if (intersectTri(ray, rtn, rtn.tri)) {
+      return;
+    }
+  }
+  rtn = IntersectResult();
+
   std::vector<Triangle>::iterator itr,itere=mTriangles.end();
 
   for (itr = mTriangles.begin(); itr != itere; itr++) {
-    std::pair<bool, Real> hit = Ogre::Math::intersects(ray,
-      itr->mV1, itr->mV2,itr->mV3, true, false);
-    if (hit.first && hit.second < rtn.second.first) {
-      rtn.first = hit.first;
-      rtn.second.first = hit.second;
-      Ogre::Vector3 nml=(itr->mV1-itr->mV2).crossProduct(itr->mV3-itr->mV2);
-      rtn.second.second.x=nml.x;
-      rtn.second.second.y=nml.y;
-      rtn.second.second.z=nml.z;
-    }
+    intersectTri(ray, rtn, &*itr);
   }
-
-  return rtn;
 }
 
 } }
