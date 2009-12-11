@@ -67,7 +67,6 @@ typedef uint16 ServerMessagePort;
 #define SERVER_PORT_OSEG_MIGRATE_MOVE          8
 #define SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE   9
 #define SERVER_PORT_OSEG_UPDATE                15
-#define SERVER_PORT_NOISE                      10
 #define SERVER_PORT_UNPROCESSED_PACKET         0xFFFF
 
 
@@ -78,7 +77,6 @@ typedef uint16 ObjectMessagePort;
 #define OBJECT_PORT_PROXIMITY     2
 #define OBJECT_PORT_LOCATION      3
 #define OBJECT_PORT_SUBSCRIPTION  4
-#define OBJECT_PORT_NOISE         253
 #define OBJECT_PORT_PING          254
 
 

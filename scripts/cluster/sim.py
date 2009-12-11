@@ -58,7 +58,6 @@ class ClusterSimSettings:
         self.blocksize = 200
         self.center = (0, 0, 0)
 
-        self.noise = 'true'
         self.debug = True
         self.valgrind = False
         self.profile = True
@@ -292,7 +291,6 @@ class ClusterSim:
                 "--capexcessbandwidth=false",
                 "--server.queue=" + self.settings.server_queue,
                 "--server.queue.length=" + str(self.settings.server_queue_length),
-                "--noise=" + self.settings.noise,
                 "--loc=" + self.settings.loc,
                 "--cseg=" + self.settings.cseg,
                 "--cseg-service-host=" + self.settings.cseg_service_host,

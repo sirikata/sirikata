@@ -37,7 +37,6 @@ csim.object_pack = '/home/meru/data/objects.pack'
 csim.blocksize = 100
 csim.center = (0, 0, 0)
 csim.scenario_options='--num-pings-per-second=1 --force-same-object-host=true'
-csim.noise = 'false'
 csim.debug = True
 csim.valgrind = False
 csim.profile = False

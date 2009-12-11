@@ -94,7 +94,6 @@ if __name__ == "__main__":
     cs.blocksize = 100
     cs.tx_bandwidth = 500000
     cs.rx_bandwidth = 500000
-    cs.noise = 'false'
 
     cs.num_random_objects = 50
     cs.num_pack_objects = 0

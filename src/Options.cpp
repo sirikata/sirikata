@@ -126,7 +126,6 @@ void InitOptions() {
         .addOption(new OptionValue(OSEG_LOOKUP_QUEUE_SIZE, "2000", Sirikata::OptionValueType<uint32>(), "Number of new lookups you can have on oseg lookup queue."))
       
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
-        .addOption(new OptionValue(NOISE, "false", Sirikata::OptionValueType<bool>(), "If true, will generate noise packets between servers to fill buffers."))
         .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))
         .addOption(new OptionValue(LOC_MAX_PER_RESULT, "10", Sirikata::OptionValueType<uint32>(), "Maximum number of loc updates to report in each result message."))
         .addOption(new OptionValue(PROX_MAX_PER_RESULT, "10", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))

@@ -33,7 +33,6 @@ csim.object_pack = '/home/meru/data/objects.pack'
 csim.blocksize = 100
 csim.center = (0, 0, 0)
 
-csim.noise = 'false'
 csim.debug = True
 csim.valgrind = False
 csim.profile = False

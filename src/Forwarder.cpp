@@ -63,9 +63,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
-    this->registerMessageRecipient(SERVER_PORT_NOISE, this);
 
-    mNoiseStage = mContext->profiler->addStage("Noise");
     mForwarderQueueStage = mContext->profiler->addStage("Forwarder Queue");
     mReceiveStage = mContext->profiler->addStage("Forwarder Receive");
 }
@@ -76,7 +74,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
       delete mSampler;
 
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
-      this->unregisterMessageRecipient(SERVER_PORT_NOISE, this);
   }
 
   /*
@@ -120,27 +117,6 @@ void Forwarder::poll()
     }
     mForwarderQueueStage->finished();
 
-    mNoiseStage->started();
-    if (GetOption(NOISE)->as<bool>()) {
-        for(ServerMessageQueue::KnownServerIterator it = mServerMessageQueue->knownServersBegin(); it != mServerMessageQueue->knownServersEnd(); it++) {
-            ServerID sid = *it;
-            if (sid == mContext->id()) continue;
-            while(true) {
-                std::string randnoise;
-                randnoise.resize((size_t)(50 + 200*randFloat()));
-                Message* noise_msg = new Message(mContext->id(),SERVER_PORT_NOISE,sid, SERVER_PORT_NOISE, randnoise); // FIXME control size from options?
-
-                bool sent_success = mServerMessageQueue->addMessage(noise_msg);
-                if (sent_success) {
-                        mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), 0);
-                }else {
-                    delete noise_msg;
-                }
-                if (!sent_success) break;
-            }
-        }
-    }
-    mNoiseStage->finished();
     // Try to push things from the server message queues down to the network
     mServerMessageQueue->service();
 
@@ -230,11 +206,6 @@ void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
 }
 
 void Forwarder::receiveMessage(Message* msg) {
-    if (msg->dest_port() == SERVER_PORT_NOISE) {
-        delete msg;
-        return;
-    }
-
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
     // or needs to forward them.
