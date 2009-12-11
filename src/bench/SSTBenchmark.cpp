@@ -51,13 +51,13 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
         : Benchmark(finished_cb),
          mForceStop(false),
          mPingRate(Duration::seconds(0)),
-         mStartTime(Time::epoch())
+          mStream(NULL),
+          mListener(NULL),
+          mStartTime(Time::epoch()),
+          mPingsAttemptedSent(0),
+          mPingsSent(0),
+          mPingsReceived(0)
 {
-    mPingsReceived=0;
-    mPingsSent=0;
-    mStream=NULL;
-    mListener=NULL;
-
     OptionValue*port;
     OptionValue*host;
     OptionValue*pingSize;
@@ -101,12 +101,22 @@ String SSTBenchmark::name() {
 }
 
 void SSTBenchmark::pingPoller(){
-    if (mPingsSent<mNumPings&&!mForceStop) {
+    if (mPingsReceived<mNumPings&&!mForceStop) {
         size_t pingNumber=mOutstandingPings.size();
         Time cur=Time::now(Duration::zero());
         double invPingRate=mPingRate.toSeconds();
-        size_t numPings=invPingRate?(size_t)((cur-mStartTime).toSeconds()/invPingRate):1;
-        for (size_t i=0;i<numPings;++i) {
+
+        uint32 numMorePings = 0;
+        if (invPingRate == 0) {
+            numMorePings = 1;
+        }
+        else {
+            // Compute how many pings we expect to have seen since the beginning
+            // of the test
+            size_t numPings = (cur-mStartTime).toSeconds() / invPingRate;
+            numMorePings = numPings - mPingsAttemptedSent;
+        }
+        for(uint32 ii = 0; ii < numMorePings; ii++) {
             mOutstandingPings.push_back(cur);
             mPingResponses.push_back(Duration::zero());
             Sirikata::Network::Chunk serializedChunk;
@@ -118,6 +128,7 @@ void SSTBenchmark::pingPoller(){
             if (mPingSize>serializedChunk.size()) {
                 serializedChunk.resize(mPingSize);
             }
+            mPingsAttemptedSent++;
             if (mStream->send(serializedChunk,mOrdered?Sirikata::Network::ReliableOrdered:Sirikata::Network::ReliableUnordered)) {
                 ++mPingsSent;
             }
@@ -164,6 +175,7 @@ Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::computePingTime(Sirika
             avg+=mPingResponses[i];
         }
         avg/=(double)mPingResponses.size();
+        SILOG(benchmark,info,"Test Time: "<<cur-mStartTime);
         SILOG(benchmark,info,"Ping Average "<<avg);
         SILOG(benchmark,info,"Transfer Rate "<<2*mNumPings*(double)chk.size()/(cur-mStartTime).toSeconds());
         stop();
