@@ -118,7 +118,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
         serializePBJMessage(blu)
     );
 
-    return mLocService->context()->router()->route(obj_msg, false);
+    return mLocService->context()->router()->route(obj_msg);
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {

@@ -41,6 +41,8 @@ private:
 }; // class Sampler
 
 
+// -- First, all the boring boiler plate type stuff; initialization,
+// -- destruction, delegation to base classes
 
   /*
     Constructor for Forwarder
@@ -90,52 +92,80 @@ Forwarder::Forwarder(SpaceContext* ctx)
     mContext->add(mSampler);
   }
 
-void Forwarder::poll()
+void Forwarder::dispatchMessage(Message*msg) const {
+    mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
+
+    MessageDispatcher::dispatchMessage(msg);
+}
+
+void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
+    MessageDispatcher::dispatchMessage(msg);
+}
+
+void Forwarder::poll() {
+    serviceSendQueues();
+    serviceReceiveQueues();
+}
+
+// -- Object Connection Management - Object connections are available locally,
+// -- and represent direct connections to endpoints.
+
+void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {
+  UniqueObjConn uoc;
+  uoc.id = mUniqueConnIDs;
+  uoc.conn = conn;
+  ++mUniqueConnIDs;
+
+  mObjectConnections[dest_obj] = uoc;
+}
+
+void Forwarder::enableObjectConnection(const UUID& dest_obj) {
+    ObjectConnection* conn = getObjectConnection(dest_obj);
+    if (conn == NULL) {
+        SILOG(forwarder,warn,"Tried to enable connection for unknown object.");
+        return;
+    }
+
+    conn->enable();
+}
+
+ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
+    //    ObjectConnection* conn = mObjectConnections[dest_obj];
+    UniqueObjConn uoc = mObjectConnections[dest_obj];
+    ObjectConnection* conn = uoc.conn;
+    mObjectConnections.erase(dest_obj);
+    return conn;
+}
+
+ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj) {
+    ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
+    return (it == mObjectConnections.end()) ? NULL : it->second.conn;
+}
+
+ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& ider )
 {
-    mForwarderQueueStage->started();
-    for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
-        while(true)
-        {
-
-            uint64 size=1<<30;
-            MessageRouter::SERVICES svc;
-            Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
-            if (!next_msg)
-                break;
-
-            if (!mServerMessageQueue->canSend(next_msg))
-                break;
-
-            mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
-            bool send_success = mServerMessageQueue->addMessage(next_msg);
-            if (!send_success)
-                break;
-
-            Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(&size);
-            assert(pop_msg == next_msg);
-        }
+    ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
+    if (it == mObjectConnections.end())
+    {
+      ider = 0;
+      return NULL;
     }
-    mForwarderQueueStage->finished();
-
-    // Try to push things from the server message queues down to the network
-    mServerMessageQueue->service();
-
-    mReceiveStage->started();
-    Message* next_msg = NULL;
-    while(mServerMessageQueue->receive(&next_msg)) {
-        processChunk(next_msg, false);
-    }
-    mReceiveStage->finished();
-  }
+    ider = it->second.id;
+    return it->second.conn;
+}
 
 
+// -- Server message handling.  These methods handle server to server messages,
+// -- where the payload is either an already serialized ODP message, meaning its
+// -- information isn't available, or may simply be between two space servers so
+// -- that object information doesn't even exist.
 
   // Routing interface for servers.  This is used to route messages that originate from
   // a server provided service, and thus don't have a source object.  Messages may be destined
   // for either servers or objects.  The second form will simply automatically do the destination
   // server lookup.
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg, bool is_forward)
+  bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg)
   {
       assert(msg->source_server() == mContext->id());
       assert(msg->dest_server() != NullServerID);
@@ -146,7 +176,7 @@ void Forwarder::poll()
 
     if (dest_server==mContext->id())
     {
-        processChunk(msg, is_forward);
+        dispatchMessage(msg);
         success = true;
     }
     else
@@ -157,35 +187,11 @@ void Forwarder::poll()
     return success;
   }
 
-  bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom)
-  {
-      UUID dest_obj = msg->dest_object();
 
-      TIMESTAMP_START(tstamp, msg);
+// -- Object Message Entry Points - entry points into the forwarder for object
+// -- messages.  Sources include object hosts and other space servers.
 
-      TIMESTAMP_END(tstamp, Trace::OSEG_LOOKUP_STARTED);
-
-      bool accepted = mOSegLookups->lookup(
-          msg,
-          boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, is_forward, forwardFrom)
-      );
-
-
-      if (!accepted) {
-          TIMESTAMP_END(tstamp, Trace::DROPPED);
-      }
-
-      return accepted;
-  }
-
-//end what i think it should be replaced with
-
-void Forwarder::dispatchMessage(Message*msg) const {
-    MessageDispatcher::dispatchMessage(msg);
-}
-void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
-    MessageDispatcher::dispatchMessage(msg);
-}
+// --- From object hosts
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
     // Messages destined for the space skip the object message queue and just get dispatched
     if (obj_msg->dest_object() == UUID::null()) {
@@ -194,17 +200,15 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         return true;
     }
 
-    return route(obj_msg, false, NullServerID);
+    return forward(obj_msg);
 }
 
-
-void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
-    if (!forwarded_self_msg)
-        mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
-
-    dispatchMessage(msg);
+// --- From local space server services
+bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg) {
+    return forward(msg, NullServerID);
 }
 
+// --- Forwarded from other space servers
 void Forwarder::receiveMessage(Message* msg) {
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
@@ -224,37 +228,60 @@ void Forwarder::receiveMessage(Message* msg) {
         return;
     }
 
-    // Otherwise, either deliver or forward it, depending on whether the destination object is attached to this server
-    ObjectConnection* conn = getObjectConnection(dest);
-    if (conn != NULL) {
-        TIMESTAMP_START(tstamp, obj_msg);
-
-        bool send_success = true;
-
-        if (!conn->enabled())
-            send_success = false;
-        else
-            send_success = conn->send(obj_msg);
-
-        if (!send_success) {
-            TIMESTAMP_END(tstamp, Trace::DROPPED);
-        }
-
-        if (!send_success)
-            delete obj_msg;
-    }
-    else
-    {
-        // FIXME we need to check the result here. There needs to be a way to push back, which is probably trickiest here
-        // since it would have to filter all the way back to where the original server to server message was decoded
-        route(obj_msg, true, msg->source_server());// bftm changed to allow for forwarding back messages.
-    }
+    // Otherwise, try to forward it
+    bool forward_success = forward(obj_msg, msg->source_server());
+    // ignore forward_success.  If it failed, it will have been marked as
+    // dropped in forward()
 
     delete msg;
 }
 
 
-bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, bool is_forward, ServerID forwardFrom)
+// -- Real Routing - Given an object message, from any source, decide where it
+// -- needs to go and send it out in that direction.
+
+bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom)
+{
+    UUID dest_obj = msg->dest_object();
+
+    TIMESTAMP_START(tstamp, msg);
+
+    // Check if we can forward locally
+    ObjectConnection* conn = getObjectConnection(msg->dest_object());
+    if (conn != NULL) {
+        bool send_success = true;
+        if (!conn->enabled())
+            send_success = false;
+        else
+            send_success = conn->send(msg);
+
+        if (!send_success) {
+            TIMESTAMP_END(tstamp, Trace::DROPPED);
+            delete msg;
+        }
+
+        return send_success;
+    }
+
+    // If we can't forward locally, do an OSeg lookup to find out where we need
+    // to forward the message to
+    TIMESTAMP_END(tstamp, Trace::OSEG_LOOKUP_STARTED);
+
+    bool accepted = mOSegLookups->lookup(
+        msg,
+        boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
+                                         );
+
+
+    if (!accepted) {
+        TIMESTAMP_END(tstamp, Trace::DROPPED);
+    }
+
+    return accepted;
+}
+
+
+bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
 {
     Trace::MessagePath mp = (resolved_from == OSegLookupQueue::ResolvedFromCache)
         ? Trace::OSEG_CACHE_LOOKUP_FINISHED
@@ -273,7 +300,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
       serializePBJMessage(*obj_msg)
   );
-  bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg, is_forward);
+  bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg);
   if (!send_success) {
       delete svr_obj_msg;
       TIMESTAMP(obj_msg, Trace::DROPPED);
@@ -307,61 +334,50 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
           serializePBJMessage(contents)
       );
 
-      // FIXME what if this fails to get sent out?
-      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, false);
+      bool oseg_cache_msg_success = route(MessageRouter::OSEG_CACHE_UPDATE, up_os);
+      // Ignore the success of this send.  If it failed the remote ends cache
+      // will just continue to be incorrect, but forwarding will cover the error
   }
 
   return send_success;
 }
 
+void Forwarder::serviceSendQueues() {
+    mForwarderQueueStage->started();
+    for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
+        while(true)
+        {
+            uint64 size=1<<30;
+            MessageRouter::SERVICES svc;
+            Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
+            if (!next_msg)
+                break;
 
-void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {
-  UniqueObjConn uoc;
-  uoc.id = mUniqueConnIDs;
-  uoc.conn = conn;
-  ++mUniqueConnIDs;
+            if (!mServerMessageQueue->canSend(next_msg))
+                break;
 
+            mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+            bool send_success = mServerMessageQueue->addMessage(next_msg);
+            if (!send_success)
+                break;
 
-  //    mObjectConnections[dest_obj] = conn;
-  mObjectConnections[dest_obj] = uoc;
-}
-
-void Forwarder::enableObjectConnection(const UUID& dest_obj) {
-    ObjectConnection* conn = getObjectConnection(dest_obj);
-    if (conn == NULL) {
-        SILOG(forwarder,warn,"Tried to enable connection for unknown object.");
-        return;
+            Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(&size);
+            assert(pop_msg == next_msg);
+        }
     }
+    mForwarderQueueStage->finished();
 
-    conn->enable();
+    // Try to push things from the server message queues down to the network
+    mServerMessageQueue->service();
 }
 
-ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
-    //    ObjectConnection* conn = mObjectConnections[dest_obj];
-    UniqueObjConn uoc = mObjectConnections[dest_obj];
-    ObjectConnection* conn = uoc.conn;
-    mObjectConnections.erase(dest_obj);
-    return conn;
-}
-
-ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj) {
-    ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
-    return (it == mObjectConnections.end()) ? NULL : it->second.conn;
-}
-
-
-ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& ider )
-{
-    ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
-    if (it == mObjectConnections.end())
-    {
-      ider = 0;
-      return NULL;
+void Forwarder::serviceReceiveQueues() {
+    mReceiveStage->started();
+    Message* next_msg = NULL;
+    while(mServerMessageQueue->receive(&next_msg)) {
+        dispatchMessage(next_msg);
     }
-    ider = it->second.id;
-    return it->second.conn;
+    mReceiveStage->finished();
 }
-
-
 
 } //end namespace

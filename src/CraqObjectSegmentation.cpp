@@ -733,7 +733,7 @@ namespace CBR
     //trying to resend faild added messages
     for (int s=0;s < (int)reTryAddedMessage.size(); ++s)
     {
-      bool sent = mContext->router()->route(MessageRouter::MIGRATES,reTryAddedMessage[s],false);
+      bool sent = mContext->router()->route(MessageRouter::MIGRATES,reTryAddedMessage[s]);
 
       if (!sent)
         reReTryAddedMessage.push_back(reTryAddedMessage[s]);
@@ -744,7 +744,7 @@ namespace CBR
     //trying to re-send failed mig ack messages
     for (int s=0; s< (int)reTryMigAckMessage.size(); ++s)
     {
-      bool sent= mContext->router()->route(MessageRouter::MIGRATES,reTryMigAckMessage[s],false);
+      bool sent= mContext->router()->route(MessageRouter::MIGRATES,reTryMigAckMessage[s]);
       if (!sent)
         reReTryMigAckMessage.push_back(reTryMigAckMessage[s]);
 
@@ -1005,7 +1005,7 @@ namespace CBR
                                      serializePBJMessage( *(trackingMessages[trackedSetResult->trackedMessage].migAckMsg) )
                                      );
 
-      bool sent= mContext->router()->route(MessageRouter::MIGRATES,to_send,false);
+      bool sent= mContext->router()->route(MessageRouter::MIGRATES,to_send);
 
       if (!sent)
         reTryMigAckMessage.push_back(to_send); //will try to re-send the tracking message
@@ -1026,7 +1026,7 @@ namespace CBR
                                      serializePBJMessage( *(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded) )
                                      );
 
-      bool sent = mContext->router()->route(MessageRouter::MIGRATES, to_send,false);
+      bool sent = mContext->router()->route(MessageRouter::MIGRATES, to_send);
 
       if (!sent)
         reTryAddedMessage.push_back(to_send);  //will try to re-send the add message

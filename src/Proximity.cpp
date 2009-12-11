@@ -347,7 +347,7 @@ void Proximity::poll() {
     bool object_sent = true;
     while(object_sent && !mObjectResultsToSend.empty()) {
         CBR::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
-        object_sent = mContext->router()->route(msg_front, false);
+        object_sent = mContext->router()->route(msg_front);
         if (object_sent)
             mObjectResultsToSend.pop_front();
     }

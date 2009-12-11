@@ -94,49 +94,70 @@ private:
     TimeProfiler::Stage* mForwarderQueueStage;
     TimeProfiler::Stage* mReceiveStage;
 
-    virtual void poll();
+    // -- Boiler plate stuff - initialization, destruction, methods to satisfy interfaces
+  public:
+      Forwarder(SpaceContext* ctx);
+      ~Forwarder();
+    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, uint32 oseg_lookup_queue_size);
 
-    void processChunk(Message* msg, bool forwarded_self_msg);
-protected:
+  protected:
+
     virtual void dispatchMessage(Message* msg) const;
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
-    public:
-      Forwarder(SpaceContext* ctx);
-      ~Forwarder();
-      void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, uint32 lookup_queue_size);
+  private:
+    virtual void poll();
 
-
-      // Routing interface for servers.  This is used to route messages that originate from
-      // a server provided service, and thus don't have a source object.  Messages may be destined
-      // for either servers or objects.  The second form will simply automatically do the destination
-      // server lookup.
-      // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-    WARN_UNUSED
-    bool route(MessageRouter::SERVICES svc, Message* msg, bool is_forward = false);
-
-    //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with
-    //the stale cache value.
-    WARN_UNUSED
-     bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
-
-private:
-      // This version is provided if you already know which server the message should be sent to
-    WARN_UNUSED
-    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, bool is_forward=false, ServerID forwardFrom = NullServerID);
+    // -- Public routing interface
   public:
-      bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
+    WARN_UNUSED
+    bool route(MessageRouter::SERVICES svc, Message* msg);
 
-      void receiveMessage(Message* msg);
+    WARN_UNUSED
+    bool route(CBR::Protocol::Object::ObjectMessage* msg);
 
-      void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
-      void enableObjectConnection(const UUID& dest_obj);
-      ObjectConnection* removeObjectConnection(const UUID& dest_obj);
-      ObjectConnection* getObjectConnection(const UUID& dest_obj);
-      ObjectConnection* getObjectConnection(const UUID& dest_obj, uint64& uniqueconnid );
+    // -- Real routing interface + implementation
 
-      uint32 oseg_lookup_queue_size;
-  };//end class Forwarder
+
+    // --- Inputs
+  public:
+    // Received from OH networking, needs forwarding decision
+    bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
+  private:
+    // Received from other space server, needs forwarding decision
+    void receiveMessage(Message* msg);
+
+  private:
+    // --- Worker Methods - do the real forwarding decision making and work
+
+    /** Try to forward a message to get it closer to the destination object.
+     *  This checks if we have a direct connection to the object, then does an
+     *  OSeg lookup if necessary.
+     */
+    WARN_UNUSED
+    bool forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom = NullServerID);
+
+    // This version is provided if you already know which server the message should be sent to
+    WARN_UNUSED
+    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+
+    // Services forwarder queues
+    // FIXME this should be changed to be fully event driven
+    void serviceSendQueues();
+    // FIXME this one should be relatively easy to make event driven based on
+    // network input
+    void serviceReceiveQueues();
+
+    // -- Object Connection Management used by Server
+  public:
+    void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
+    void enableObjectConnection(const UUID& dest_obj);
+    ObjectConnection* removeObjectConnection(const UUID& dest_obj);
+  //private: FIXME these should not be public
+  public:
+    ObjectConnection* getObjectConnection(const UUID& dest_obj);
+    ObjectConnection* getObjectConnection(const UUID& dest_obj, uint64& uniqueconnid );
+}; // class Forwarder
 
 } //end namespace CBR
 

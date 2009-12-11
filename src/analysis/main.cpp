@@ -61,11 +61,11 @@ public:
         ctx->mDispatcher = this;
     }
 
-    virtual bool route(SERVICES svc, CBR::Message* msg, bool is_forward = false) {
+    virtual bool route(SERVICES svc, CBR::Message* msg) {
         return true;
     }
 
-    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, CBR::ServerID forwardFrom = NullServerID) {
+    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg) {
         return true;
     }
 };
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
-    
+
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
     MockForwarder* forwarder = new MockForwarder(space_context);
@@ -359,15 +359,14 @@ int main(int argc, char** argv) {
         object_segmentation_cumulative_filename_csv += ".csv";
 
         OSegCumulativeTraceAnalysis cumulativeOsegAnalysis(STATS_TRACE_FILE,max_space_servers, osegProcessedAfterSeconds);
-        
+
         std::ofstream oseg_cumulative_stream_csv(object_segmentation_cumulative_filename_csv.c_str());
 
         cumulativeOsegAnalysis.printData(oseg_cumulative_stream_csv);
         oseg_cumulative_stream_csv.flush();
         oseg_cumulative_stream_csv.close();
 
-        
-        
+
         //completed round trip migrate times
         String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";
         migration_round_trip_times_filename += ".dat";

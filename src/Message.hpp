@@ -241,10 +241,10 @@ public:
     virtual ~MessageRouter() {}
 
     WARN_UNUSED
-    virtual bool route(SERVICES svc, Message* msg, bool is_forward = false) = 0;
+    virtual bool route(SERVICES svc, Message* msg) = 0;
 
     WARN_UNUSED
-    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom = NullServerID) = 0;
+    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg) = 0;
 };
 
 
