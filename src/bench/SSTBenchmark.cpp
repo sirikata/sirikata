@@ -199,8 +199,8 @@ Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::bouncePing(Sirikata::N
 }
 void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb) {
     if (newStream) {
-        cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,_1,_2),
-           std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,_1),
+      cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
+         std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,std::tr1::placeholders::_1),
            &Sirikata::Network::Stream::ignoreReadySendCallback);
     }
 }
@@ -214,14 +214,14 @@ void SSTBenchmark::start() {
         mStream=Sirikata::Network::StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mStreamOptions));
         mStream->connect(Sirikata::Network::Address(mHost,mPort),
                          &Sirikata::Network::Stream::ignoreSubstreamCallback,
-                         std::tr1::bind(&SSTBenchmark::connected,this,_1,_2),
-                         std::tr1::bind(&SSTBenchmark::computePingTime,this,_1),
+                         std::tr1::bind(&SSTBenchmark::connected,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
+                         std::tr1::bind(&SSTBenchmark::computePingTime,this,std::tr1::placeholders::_1),
                          &Sirikata::Network::Stream::ignoreReadySendCallback);
 
     }else {
         mListener=Sirikata::Network::StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mListenOptions));
         mListener->listen(Sirikata::Network::Address("127.0.0.1",mPort),
-                          std::tr1::bind(&SSTBenchmark::newStream,this,_1,_2));
+                          std::tr1::bind(&SSTBenchmark::newStream,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2));
 
         mIOService->post(Duration::seconds(10000000.),&noop);
 
