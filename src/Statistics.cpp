@@ -513,9 +513,6 @@ void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, cons
 void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet)
 {
 #ifdef TRACE_OSEG_SHUTTING_DOWN
-
-  std::cout<<"\n\n\nGOT INTO PROCESS  OSEG SHUTDOWN EVENT\n\n";
-
   std::cout<<"\n\n**********oseg shutdown:  \n";
   std::cout<<"\tsid:                              "<<sID<<"\n";
   std::cout<<"\tnum lookups:                      "<<num_lookups<<"\n";

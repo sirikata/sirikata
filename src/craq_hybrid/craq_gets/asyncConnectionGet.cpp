@@ -40,14 +40,14 @@ namespace CBR
   void AsyncConnectionGet::stop()
   {
     mStrand->post(std::tr1::bind(&AsyncConnectionGet::clear_all_deadline_timers,this));
-    
+
     mReceivedStopRequest = true;
     if (mSocket != NULL)
       mSocket->cancel();
 
   }
 
-  
+
   void AsyncConnectionGet::clear_all_deadline_timers()
   {
     MultiOutstandingQueries::iterator it;
@@ -62,8 +62,8 @@ namespace CBR
     }
   }
 
-  
-  
+
+
   int AsyncConnectionGet::numStillProcessing()
   {
     return (int) (allOutstandingQueries.size());
@@ -75,13 +75,13 @@ namespace CBR
     MultiOutstandingQueries::iterator it;
     mTimer.elapsed();
     Duration dur = mTimer.elapsed();
-    
+
     uint64 currentTime = dur.toMilliseconds();
-  
+
     for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
     {
       double timeInQueue = ((double) currentTime) - ((double) it->second->time_admitted);
-      
+
       if (timeInQueue > 50)
       {
         std::cout<<"\nConnection Get Long Time Waiting:   "<<timeInQueue<<"    "<<it->second->currentlySearchingFor << "\n";
@@ -89,7 +89,7 @@ namespace CBR
           std::cout<<"GET operation\n";
         else
           std::cout<<"SET operation\n";
-        
+
         if (it->second->is_tracking)
           std::cout<<"TRACKING\n";
         else
@@ -97,7 +97,7 @@ namespace CBR
 
         std::cout<<"Time admitted:    "<< it->second->time_admitted <<"\n";
         std::cout<<"Tracking number:  "<<it->second->tracking_number<<"\n\n\n";
-      
+
       }
     }
   }
@@ -109,17 +109,17 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   if (e == boost::asio::error::operation_aborted)
     return;
-  
+
   bool foundInIterator = false;
-  
-  //look through multimap to find 
+
+  //look through multimap to find
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
 
   std::cout<<"\n\nQuery timeout callback\n";
-  
+
   MultiOutstandingQueries::iterator outQueriesIter;
   outQueriesIter = eqRange.first;
 
@@ -138,18 +138,18 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
       mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
-      
+
 
       std::cout<<"\n\nSending error\n\n";
-      
+
       if (outQueriesIter->second->deadline_timer != NULL)
       {
         outQueriesIter->second->deadline_timer->cancel();
         delete outQueriesIter->second->deadline_timer;
       }
-      
+
       foundInIterator = true;
-      
+
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
     }
@@ -161,7 +161,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 
   if (! foundInIterator)
     std::cout<<"\n\nAsyncConnectionGet CALLBACK.  Not found in iterator.\n\n";
-  
+
 }
 
 //this function gets called whenever we haven't received a response to our query.  (Essentially, we just re-issue the query.)
@@ -170,12 +170,12 @@ void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::erro
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   if (e == boost::asio::error::operation_aborted)
     return;
 
   std::cout<<"\n\nAsyncConnectionGet CALLBACK\n\n";
-  
+
 }
 
 
@@ -198,8 +198,8 @@ AsyncConnectionGet::~AsyncConnectionGet()
     delete outQuerIt->second;
   }
   allOutstandingQueries.clear();
-  
-  
+
+
   if (! NEED_NEW_SOCKET)
   {
     mSocket->cancel();
@@ -218,13 +218,13 @@ AsyncConnectionGet::~AsyncConnectionGet()
 
 
 
-  
+
   //gives us a socket to connect to
   void AsyncConnectionGet::initialize( Sirikata::Network::TCPSocket* socket,    boost::asio::ip::tcp::resolver::iterator it)
   {
     mSocket = socket;
     mReady = PROCESSING;   //need to run connection routine.  so until we receive an ack that conn has finished, we stay in processing state.
-    
+
     mHandlerState = false;
     mSocket->async_connect(*it,mStrand->wrap(boost::bind(&AsyncConnectionGet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
 
@@ -240,7 +240,7 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   if (error)
   {
     mSocket->cancel();
@@ -253,7 +253,9 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
     return;
   }
 
+#ifdef ASYNC_CONNECTION_DEBUG
   std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
+#endif
 
   mReady = READY;
 
@@ -264,13 +266,13 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
   runReQuery();
 }
 
-  
+
 int AsyncConnectionGet::runReQuery()
 {
   if ( mReceivedStopRequest)
     return 0;
 
-  
+
   MultiOutstandingQueries::iterator it;
 
   int returner = 0;
@@ -283,12 +285,12 @@ int AsyncConnectionGet::runReQuery()
   if (returner != 0)
     std::cout<<"\n\nThis is numToRequery: "<<returner<<"\n\n";
 
-  
+
   if (! mHandlerState)
   {
     std::cout<<"\n\n***********************************HANDLER ISSUE*******************\n\n";
   }
-  
+
   return returner;
 }
 
@@ -307,7 +309,7 @@ void AsyncConnectionGet::printStatisticsTimesTaken()
 
   std::cout<<"\n\n\nTHIS IS TOTAL:   "<<total<<"\n\n";
   std::cout<<"\n\n\nTHIS IS AVG:     "<<total/((double) mTimesTaken.size())<<"\n\n";
-  
+
 }
 
 
@@ -316,7 +318,7 @@ void AsyncConnectionGet::write_some_handler_set(  const boost::system::error_cod
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   if (error)
   {
     printf("\n\nin write_some_handler_set\n\n");
@@ -335,9 +337,9 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 {
   if( mReceivedStopRequest)
     return;
-  
+
   Duration beginningDur = mSpecificTimer.elapsed();
-  
+
   if (mReady != READY)
   {
     CraqOperationResult* cor = new CraqOperationResult (0,
@@ -361,7 +363,7 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 
   Duration dur = mTimer.elapsed();
   iqd->time_admitted = dur.toMilliseconds();
-  
+
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
 
@@ -370,10 +372,10 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
   iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, iqd)));
 
-  
+
   getQuery(dataToGet);
 
-  
+
   Duration endingDur = mSpecificTimer.elapsed();
   getTime += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
   ++numGets;
@@ -392,7 +394,7 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
 {
   if ( mReceivedStopRequest)
     return true;
-  
+
   //crafts query
   std::string query;
   query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
@@ -401,7 +403,7 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
   query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
 
 
-  
+
   //sets write handler
   async_write((*mSocket),
               boost::asio::buffer(query),
@@ -415,7 +417,7 @@ void AsyncConnectionGet::write_some_handler_get(  const boost::system::error_cod
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   if (error)
   {
     printf("\n\nin write_some_handler_get\n\n");
@@ -432,17 +434,17 @@ void AsyncConnectionGet::killSequence()
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   mReady = NEED_NEW_SOCKET;
   mSocket->cancel();
   mSocket->close();
   delete mSocket;
   mSocket = NULL;
 
-  
+
   printf("\n\n HIT KILL SEQUENCE \n\n");
   //  printf("\n\nHere is allResps:  %s\n\n ", mAllResps.c_str());
-  
+
   fflush(stdout);
   assert(false);
 
@@ -456,14 +458,14 @@ void AsyncConnectionGet::printOutstanding()
   MultiOutstandingQueries::iterator multiIter;
 
   std::cout<<"\n\n\n\n**************PRINTING OUTSTANDING*************************\n\n";
-  
+
   for (multiIter = allOutstandingQueries.begin(); multiIter != allOutstandingQueries.end(); ++multiIter)
   {
     std::cout<<"\t"<<multiIter->first<<"      "<<multiIter->second<<"\n";
   }
 
   std::cout<<"\n\n";
-  
+
 }
 
 
@@ -475,14 +477,14 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
 {
   if ( mReceivedStopRequest)
     return true;
-  
+
   //index from stored
   //not_found
   //value
   //error
   bool returner = false;
   bool firstTime = true;
-  
+
   bool keepChecking = true;
   bool secondChecking;
 
@@ -490,25 +492,25 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
   mPrevReadFrag = "";
 
   int numChecking = 0;
-  
+
   while(keepChecking)
   {
     keepChecking   =                            false;
 
     //checks to see if there are any responses to get queries with data (also processes);
-    secondChecking =             checkValue(response);  
+    secondChecking =             checkValue(response);
     keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any responses to set responses that worked (stored) (also processes)
-    secondChecking =            checkStored(response);  
+    secondChecking =            checkStored(response);
     keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any responses to get queries that were not found  (also processes)
-    secondChecking =          checkNotFound(response);  
+    secondChecking =          checkNotFound(response);
     keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any error responses.  (also processes)
-    secondChecking =             checkError(response); 
+    secondChecking =             checkError(response);
     keepChecking   =   keepChecking || secondChecking;
 
     if (firstTime)
@@ -523,7 +525,7 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
 
   if ((int)mPrevReadFrag.size() > MAX_GET_PREV_READ_FRAG_SIZE)
     mPrevReadFrag.substr(((int)mPrevReadFrag.size()) - CUT_GET_PREV_READ_FRAG);
-  
+
   return returner;
 }
 
@@ -553,16 +555,16 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
 {
   bool returner = false;
   size_t notFoundIndex = response.find(CRAQ_NOT_FOUND_RESP);
-  
+
   std::string prefixed = "";
   std::string suffixed = "";
-  
-  
+
+
   if (notFoundIndex != std::string::npos)
   {
     prefixed = response.substr(0,notFoundIndex); //prefixed will be everything before the first STORED tag
 
-    
+
     suffixed = response.substr(notFoundIndex); //first index should start with STORED_______
 
     size_t suffixNotFoundIndex = suffixed.find(CRAQ_NOT_FOUND_RESP);
@@ -581,14 +583,14 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
     }
 
 
-    
+
     size_t smallestNext = smallestIndex(tmpSizeVec);
     std::string notFoundPhrase;
     if (smallestNext != std::string::npos)
     {
       //means that the smallest next
       notFoundPhrase = suffixed.substr(suffixNotFoundIndex, smallestNext);
-      
+
       suffixed = suffixed.substr(smallestNext);
 
 
@@ -606,7 +608,7 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
         response = response + notFoundPhrase + suffixed;
         return false;
       }
-      
+
     }
     else
     {
@@ -628,12 +630,12 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
         response = response + notFoundPhrase;
         return false;
       }
-      
+
     }
     //the above should have grabbed a phrase starting with "NOT_FOUND" from a sequence of characters
     //notFoundPhrase should store everything from NOT_FOUND up until either the end of response, or until a phrase keyed from a new keyword begins.  (eg. another "NOT_FOUND" or "STORED" or "VALUE" or "ERROR".)
-        
-    
+
+
   }
   return returner;
 }
@@ -645,7 +647,7 @@ bool AsyncConnectionGet::parseValueNotFound(std::string response, std::string& d
   size_t notFoundIndex = response.find(CRAQ_NOT_FOUND_RESP);
 
   if (notFoundIndex == std::string::npos)
-    return false;//means that there isn't actually a not found tag in this 
+    return false;//means that there isn't actually a not found tag in this
 
   if (notFoundIndex != 0)
     return false;//means that not found was in the wrong place.  return false so that can initiate kill sequence.
@@ -666,8 +668,8 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 {
   if ( mReceivedStopRequest)
     return;
-  
-  //look through multimap to find 
+
+  //look through multimap to find
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(dataKey);
 
   MultiOutstandingQueries::iterator outQueriesIter;
@@ -689,13 +691,13 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 
       mResultStrand->post(boost::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
 
-      
+
       if (outQueriesIter->second->deadline_timer != NULL)
       {
         outQueriesIter->second->deadline_timer->cancel();
         delete outQueriesIter->second->deadline_timer;
       }
-      
+
 
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
@@ -716,10 +718,10 @@ bool AsyncConnectionGet::checkValue(std::string& response)
 {
   bool returner = false;
   size_t valueIndex = response.find(STREAM_CRAQ_VALUE_RESP);
-  
+
   std::string prefixed = "";
   std::string suffixed = "";
-  
+
   if (valueIndex != std::string::npos)
   {
     prefixed = response.substr(0,valueIndex); //prefixed will be everything before the first STORED tag
@@ -739,7 +741,7 @@ bool AsyncConnectionGet::checkValue(std::string& response)
     {
       tmpSizeVec.push_back(suffixed.find("YZ") + 2);
     }
-    
+
     size_t smallestNext = smallestIndex(tmpSizeVec);
 
     std::string valuePhrase;
@@ -794,7 +796,7 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   //look through multimap to find
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
@@ -802,9 +804,9 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
   outQueriesIter = eqRange.first;
   while(outQueriesIter != eqRange.second)
   {
-    if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to 
+    if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to
     {
-      
+
       CraqOperationResult* cor  = new CraqOperationResult (sID,
                                                            outQueriesIter->second->currentlySearchingFor,
                                                            outQueriesIter->second->tracking_number,
@@ -818,13 +820,13 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
       mResultStrand->post(boost::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
 
 
-      
+
       if (outQueriesIter->second->deadline_timer != NULL)
       {
         outQueriesIter->second->deadline_timer->cancel();
         delete outQueriesIter->second->deadline_timer;
       }
-      
+
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
     }
@@ -842,18 +844,18 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
 {
   size_t valueIndex = response.find(STREAM_CRAQ_VALUE_RESP);
 
-    
+
   if (valueIndex == std::string::npos)
     return false;//means that value isn't actually in the response
 
   if (valueIndex != 0)
     return false;  //means that the value is in the wrong place.  return false so that can initiate kill sequence.
 
-  
+
   //********Parse data key
-  
+
   dataKey = response.substr(STREAM_CRAQ_VALUE_RESP_SIZE, CRAQ_DATA_KEY_SIZE);
-  
+
   if ((int)dataKey.size() != CRAQ_DATA_KEY_SIZE)
     return false;  //didn't read enough of the key header
 
@@ -865,13 +867,13 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
     //    fflush(stdout);
     return false;
   }
-    
-  std::string tmpSID = response.substr(STREAM_CRAQ_VALUE_RESP_SIZE + CRAQ_DATA_KEY_SIZE + STREAM_SIZE_SIZE_TAG_GET_RESPONSE, CRAQ_SERVER_SIZE); // the +2 is from 
+
+  std::string tmpSID = response.substr(STREAM_CRAQ_VALUE_RESP_SIZE + CRAQ_DATA_KEY_SIZE + STREAM_SIZE_SIZE_TAG_GET_RESPONSE, CRAQ_SERVER_SIZE); // the +2 is from
 
   //the above is calling sig abrt
 
-  
-    
+
+
   if ((int)tmpSID.size() != CRAQ_SERVER_SIZE)
     return false; //didn't read enough of the key header to find server id
 
@@ -887,7 +889,7 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   //look through multimap to find
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
@@ -896,7 +898,7 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 
   while(outQueriesIter != eqRange.second)
   {
-    if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to 
+    if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to
     {
       CraqOperationResult* cor  = new CraqOperationResult (outQueriesIter->second->currentlySettingTo,
                                                            outQueriesIter->second->currentlySearchingFor,
@@ -916,7 +918,7 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
         delete outQueriesIter->second->deadline_timer;
       }
 
-      
+
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
     }
@@ -934,7 +936,7 @@ bool AsyncConnectionGet::parseStoredValue(const std::string& response, std::stri
   size_t storedIndex = response.find(STREAM_CRAQ_STORED_RESP);
 
   if (storedIndex == std::string::npos)
-    return false;//means that there isn't actually a not found tag in this 
+    return false;//means that there isn't actually a not found tag in this
 
   if (storedIndex != 0)
     return false;//means that not found was in the wrong place.  return false so that can initiate kill sequence.
@@ -946,7 +948,7 @@ bool AsyncConnectionGet::parseStoredValue(const std::string& response, std::stri
     return false;  //didn't read enough of the key header
 
   return true;
-  
+
 }
 
 
@@ -956,7 +958,7 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
 {
   if ( mReceivedStopRequest)
     return;
-  
+
   boost::asio::streambuf * sBuff = new boost::asio::streambuf;
   //  const boost::regex reg ("(ND\r\n|ERROR\r\n)");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
   //  const boost::regex reg ("Z\r\n");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
@@ -964,7 +966,7 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
   const boost::regex reg ("(Z\r\n|ERROR\r\n)");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
 
   mHandlerState = true;
-  
+
   //sets read handler
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
@@ -983,8 +985,8 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
     delete sBuff;
     return;
   }
-    
-  
+
+
   mHandlerState = false;
 
   if (error)
@@ -992,20 +994,20 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
 
     if (mSocket == NULL)
       return;
-    
+
     std::cout<<"\n\nTHIS UPPER ERROR\n\n";
-    
+
     killSequence();
     return;
   }
-  
+
   std::istream is(sBuff);
   std::string response = "";
   std::string tmpLine;
-  
+
   is >> tmpLine;
-  
-  
+
+
   while (tmpLine.size() != 0)
   {
     response.append(tmpLine);
@@ -1015,7 +1017,7 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
 
 
   bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
-  
+
   delete sBuff;
   set_generic_stored_not_found_error_handler();
 }
@@ -1034,16 +1036,16 @@ bool AsyncConnectionGet::checkStored(std::string& response)
 {
   bool returner = false;
   size_t storedIndex = response.find(STREAM_CRAQ_STORED_RESP);
-  
+
   std::string prefixed = "";
   std::string suffixed = "";
-  
-  
+
+
   if (storedIndex != std::string::npos)
   {
     prefixed = response.substr(0,storedIndex); //prefixed will be everything before the first STORED tag
 
-    
+
     suffixed = response.substr(storedIndex); //first index should start with STORED_______
 
     size_t suffixStoredIndex = suffixed.find(STREAM_CRAQ_STORED_RESP);
@@ -1053,7 +1055,7 @@ bool AsyncConnectionGet::checkStored(std::string& response)
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_ERROR_RESP));
     tmpSizeVec.push_back(suffixed.find(CRAQ_NOT_FOUND_RESP));
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_VALUE_RESP));
-   
+
     size_t smallestNext = smallestIndex(tmpSizeVec);
     std::string storedPhrase;
     if (smallestNext != std::string::npos)
@@ -1074,7 +1076,7 @@ bool AsyncConnectionGet::checkStored(std::string& response)
     std::string dataKey;
     if (parseStoredValue(storedPhrase, dataKey))
     {
-      returner = true;      
+      returner = true;
       processStoredValue(dataKey);
     }
     else
@@ -1093,7 +1095,7 @@ bool AsyncConnectionGet::checkStored(std::string& response)
 size_t AsyncConnectionGet::smallestIndex(std::vector<size_t> sizeVec)
 {
   std::sort(sizeVec.begin(), sizeVec.end());
-  
+
   return sizeVec[0];
 }
 
@@ -1103,16 +1105,16 @@ bool AsyncConnectionGet::checkError(std::string& response)
 {
   bool returner = false;
   size_t errorIndex = response.find(STREAM_CRAQ_ERROR_RESP);
-  
+
   std::string prefixed = "";
   std::string suffixed = "";
-  
-  
+
+
   if (errorIndex != std::string::npos)
   {
     prefixed = response.substr(0,errorIndex); //prefixed will be everything before the first STORED tag
 
-    
+
     suffixed = response.substr(errorIndex); //first index should start with STORED_______
 
     size_t suffixErrorIndex = suffixed.find(STREAM_CRAQ_ERROR_RESP);
@@ -1123,14 +1125,14 @@ bool AsyncConnectionGet::checkError(std::string& response)
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_STORED_RESP));
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_VALUE_RESP));
 
-    
+
     size_t endValueIndex = suffixed.find("YZ");
     if (endValueIndex != std::string::npos)
     {
       tmpSizeVec.push_back(suffixed.find("YZ") + 2);
     }
-    
-    
+
+
     size_t smallestNext = smallestIndex(tmpSizeVec);
     std::string errorPhrase;
     if (smallestNext != std::string::npos)
@@ -1139,7 +1141,7 @@ bool AsyncConnectionGet::checkError(std::string& response)
       errorPhrase = suffixed.substr(suffixErrorIndex, smallestNext);
       suffixed = suffixed.substr(smallestNext);
       returner = true;
-      
+
       response = prefixed +suffixed;
     }
     else
@@ -1155,7 +1157,3 @@ bool AsyncConnectionGet::checkError(std::string& response)
 }
 
 }
-
-
-
-

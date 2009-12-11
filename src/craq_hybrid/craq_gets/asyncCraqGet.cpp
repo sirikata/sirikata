@@ -20,15 +20,17 @@ namespace CBR
 
   void AsyncCraqGet::stop()
   {
+#ifdef ASYNC_CRAQ_GET_DEBUG
     std::cout<<"\n\nReceived a stop in async craq get\n";
+#endif
     for (int s=0; s < (int) mConnections.size(); ++s)
       mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::stop,mConnections[s]));
 
-       
+
     PollingService::stop();
 
   }
-  
+
   AsyncCraqGet::~AsyncCraqGet()
   {
     for (int s= 0;s < (int) mConnections.size(); ++s)
@@ -38,7 +40,7 @@ namespace CBR
     }
     mConnections.clear();
     mConnectionsStrands.clear();
-    
+
   }
 
   int AsyncCraqGet::getRespCount()
@@ -50,7 +52,7 @@ namespace CBR
     }
     return returner;
   }
-  
+
 
   //nothing to initialize
   AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
@@ -61,7 +63,7 @@ namespace CBR
       mOSeg(parent_oseg_called)
   {
   }
-  
+
   int AsyncCraqGet::runReQuery()
   {
     int returner = 0;
@@ -87,7 +89,7 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     IOStrand* tmpStrand         = ctx->ioService->createStrand();
     mConnectionsStrands.push_back(tmpStrand);
 
-    
+
     AsyncConnectionGet* tmpConn = new AsyncConnectionGet (ctx,             //space context
                                                           tmpStrand,       //strand specific for this connection
                                                           mStrand,         //use asyncCraqGet's strand to post errors back on.
@@ -98,10 +100,10 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     mConnections.push_back(tmpConn);
   }
 
-  
+
   Sirikata::Network::TCPSocket* passSocket;
 
-  
+
   if (((int)ipAddPort.size()) >= STREAM_CRAQ_NUM_CONNECTIONS_GET)
   {
     //just assign each connection a separate router (in order that they were provided).
@@ -109,7 +111,7 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     {
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-      
+
       passSocket   = new Sirikata::Network::TCPSocket((*ctx->ioService));
       mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
     }
@@ -121,7 +123,7 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     double percentageConnectionsServed;
 
     boost::asio::ip::tcp::resolver::iterator iterator;
-    
+
     for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_GET; ++s)
     {
       percentageConnectionsServed = ((double)s)/((double) STREAM_CRAQ_NUM_CONNECTIONS_GET);
@@ -130,10 +132,10 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       if (whichRouterServing  != whichRouterServingPrevious)
       {
         boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
-      
-        
+
+
         iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-        
+
         whichRouterServingPrevious = whichRouterServing;
       }
 
@@ -141,7 +143,7 @@ void AsyncCraqGet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
     }
   }
-  
+
 }
 
 
@@ -157,7 +159,7 @@ int AsyncCraqGet::queueSize()
   int AsyncCraqGet::numStillProcessing()
   {
     int returner = 0;
-    
+
     for (int s=0; s < (int)mConnections.size(); ++s)
     {
       returner = returner + ((int)mConnections[s]->numStillProcessing());
@@ -176,7 +178,7 @@ int AsyncCraqGet::queueSize()
       checkConnections(rand_connection);
     }
   }
-  
+
   void AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
   {
     CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
@@ -194,7 +196,9 @@ int AsyncCraqGet::queueSize()
 
   void AsyncCraqGet::erroredSetValue(CraqOperationResult* cor)
   {
+#ifdef ASYNC_CRAQ_GET_DEBUG
     std::cout<<"\n\nShould not received an errored set inside of asyncCraqGet.cpp\n\n";
+#endif
     assert(false);
   }
 
@@ -209,7 +213,9 @@ int AsyncCraqGet::queueSize()
     }
     else
     {
+#ifdef ASYNC_CRAQ_GET_DEBUG
       std::cout<<"\n\nShould never be receiving an error result for a set in asyncCraqGet.cpp\n\n";
+#endif
       assert(false);
     }
 
@@ -224,7 +230,7 @@ void AsyncCraqGet::checkConnections(int s)
 {
   if (s >= (int)mConnections.size())
     return;
-  
+
   int numOperations = 0;
 
   if (mConnections[s]->ready() == AsyncConnectionGet::READY)
@@ -236,7 +242,7 @@ void AsyncCraqGet::checkConnections(int s)
       mQueue.pop();
 
       ++numOperations;
-      
+
       if (cdSG->messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.
@@ -247,7 +253,9 @@ void AsyncCraqGet::checkConnections(int s)
       }
       else if (cdSG->messageType == CraqDataSetGet::SET)
       {
+#ifdef ASYNC_CRAQ_GET_DEBUG
         std::cout<<"\n\nShould be incapable of performing a set from asyncCraqGet\n\n";
+#endif
         assert(false);
       }
       delete cdSG;
@@ -257,7 +265,9 @@ void AsyncCraqGet::checkConnections(int s)
   {
     //need to create a new socket for the other
     reInitializeNode(s);
+#ifdef ASYNC_CRAQ_GET_DEBUG
     std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
+#endif
   }
 }
 
@@ -270,7 +280,7 @@ void AsyncCraqGet::reInitializeNode(int s)
 
   Sirikata::Network::TCPSocket* passSocket;
   Sirikata::Network::TCPResolver resolver(*ctx->ioService);   //a resolver can resolve a query into a series of endpoints.
-  
+
   if ( ((int)mIpAddPort.size()) >= STREAM_CRAQ_NUM_CONNECTIONS_GET)
   {
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
@@ -282,19 +292,19 @@ void AsyncCraqGet::reInitializeNode(int s)
   }
   else
   {
-    
+
     boost::asio::ip::tcp::resolver::iterator iterator;
 
     double percentageConnectionsServed = ((double)s)/((double) STREAM_CRAQ_NUM_CONNECTIONS_GET);
     int whichRouterServing = (int)(percentageConnectionsServed*((double)mIpAddPort.size()));
 
     //    whichRouterServing = 0; //bftm debug
-    
+
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[whichRouterServing].ipAdd.c_str(), mIpAddPort[whichRouterServing].port.c_str());
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-        
+
     passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
-    
+
     mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
   }
 }
@@ -302,4 +312,3 @@ void AsyncCraqGet::reInitializeNode(int s)
 
 
 } //end namespace
-
