@@ -131,7 +131,6 @@ public:
         OSEG_LOOKUP_STARTED,
         OSEG_CACHE_LOOKUP_FINISHED,
         OSEG_SERVER_LOOKUP_FINISHED,
-        FORWARDED,
         DROPPED,
         SPACE_TO_OH_ENQUEUED,
 
@@ -186,7 +185,7 @@ public:
   void osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj);
 
   void osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken);
-  
+
   void prepareShutdown();
   void shutdown();
 

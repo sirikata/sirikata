@@ -377,8 +377,7 @@ class MessageLatencyAnalysis {public:
         bool operator() (const PacketData&pd)const{
             return (mDestPort==NULL||pd.mDstPort==*mDestPort)&&
                 verify(mFilterByCreationServer,pd,Trace::CREATED)&&
-                verify(mFilterByDestructionServer,pd,Trace::DESTROYED)&&
-                    verify(mFilterByForwardingServer,pd,Trace::FORWARDED);
+                    verify(mFilterByDestructionServer,pd,Trace::DESTROYED);
         }
     };
     MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters f, const String& stage_dump_file = "");
@@ -552,7 +551,7 @@ public:
   private:
     std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
     static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
-    
+
   public:
     OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
     ~OSegCacheResponseAnalysis();
@@ -582,9 +581,8 @@ public:
     void generateCompleteLookupTime();
     void generateFullTime();
 
-    
     uint64 mInitialTime;
-    
+
     struct CumulativeTraceData
     {
       uint64 cacheTime;
@@ -602,7 +600,7 @@ public:
       uint64 completeLookupTime;
       uint64 fullTime;
     };
-    
+
     struct OSegCumulativeDurationComparator
     {
       bool operator()(const CumulativeTraceData* lhs, const CumulativeTraceData* rhs) const
@@ -611,10 +609,9 @@ public:
       }
     };
 
-    
     std::vector<CumulativeTraceData*> mCumData;
     void sortByCompleteLookupTime( );
-    
+
   public:
     OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds =  0);
     ~OSegCumulativeTraceAnalysis();

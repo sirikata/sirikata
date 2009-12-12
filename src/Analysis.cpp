@@ -1207,7 +1207,6 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
-        PACKETSTAGE(FORWARDED);
         PACKETSTAGE(DROPPED);
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
@@ -1268,7 +1267,6 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     StageGroup space_group("Space");
     space_group
             .add(Trace::FORWARDING_STARTED)
-            .add(Trace::FORWARDED)
             .add(Trace::DROPPED)
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             .add(Trace::OSEG_LOOKUP_STARTED)
@@ -2134,8 +2132,8 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
-      
-  
+
+
   //processAfter is in seconds
   void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime, int processAfter)
   {
@@ -2148,7 +2146,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     {
       std::vector<ObjectLookupProcessedEvent> sortedEvts;
       convertToEvtsAndSort(sortedEvts);
-      
+
       fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
       fileOut << "\n\n Basic statistics:   "<< sortedEvts.size() <<"  \n\n";
 
@@ -2970,7 +2968,7 @@ void OSegCumulativeTraceAnalysis::generateAllData()
     CumulativeTraceData* toAdd = new CumulativeTraceData;
     mCumData.push_back(toAdd);
   }
-  
+
   generateCacheTime();
     generateGetCraqLookupPostTime();
   generateCraqLookupTime();
@@ -2984,7 +2982,7 @@ void OSegCumulativeTraceAnalysis::generateAllData()
     generateReturnPostTime();
   generateLookupReturnTime();
   generateCompleteLookupTime();
-  
+
   sortByCompleteLookupTime();
 }
 
@@ -3034,7 +3032,7 @@ void OSegCumulativeTraceAnalysis::printDataHuman(std::ostream &fileOut)
   fileOut << "\n\nManager Post Times\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->managerPostTime << ",";
-  
+
   fileOut << "\n\nManager Enqueue Times\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->managerEnqueueTime << ",";
@@ -3093,7 +3091,7 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
   fileOut << "\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->managerPostTime << ",";
-  
+
   fileOut << "\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->managerEnqueueTime << ",";
@@ -3233,7 +3231,7 @@ void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
 
     mCumData[s]->managerEnqueueTime = toPush;
   }
-  
+
 }
 void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
 {
