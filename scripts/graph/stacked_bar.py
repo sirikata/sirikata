@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import colors
 import fonts
+import math
 
 #indices: horizontal indices, i.e. separate experiments
 #labels: horizontal labels
@@ -17,7 +18,7 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
 
     plt.figure(1, figsize=(30,15), dpi=600)
     plt.subplot(1,1,1)
-    plt.subplots_adjust(wspace=.5, top=.95, bottom=.179, left=.20, right=1)
+    plt.subplots_adjust(wspace=.5, top=.95, bottom=.179, left=.25, right=1)
     sum = [0] * len(indices)
     groups = []
     max_width=0;
@@ -32,10 +33,12 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
         widthList.append((x-1)*max_width+max_width/2);
 
     for val,err,width in zip(vals,errors,widths):
+        abs_val = [math.fabs(v) for v in val]
+
         col = colors.get_random_color()
-        px = plt.bar(startList, val, bottom=sum, yerr=err, color=col, width=width, label=str(val)+'us');
+        px = plt.bar(startList, abs_val, bottom=sum, yerr=err, color=col, width=width);
         groups.append(px[0])
-        sum = [pre_sum+x for pre_sum,x in zip(sum,val)]
+        sum = [pre_sum+x for pre_sum,x in zip(sum,abs_val)]
 
     plt.title(title)
     plt.xlabel(xlabel)
@@ -48,7 +51,7 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
     if (len(groups) > 0):
         groups.reverse()
         group_labels.reverse()
-        leg = plt.legend( groups, group_labels, loc=(-.2,0) )
+        leg = plt.legend( groups, group_labels, loc=(-.31,0) )
         fonts.set_legend_fontsize(leg, 12)
 
     return plt;

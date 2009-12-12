@@ -22,11 +22,60 @@ def insert_after(ordered_list, new_val, prev_val):
             ordered_list.insert(idx+1, new_val)
 
 
+# breaks a single string into parts which will fit into the specified number of chars
+def break_string(name, max_chars):
+    # base case
+    if (len(name) <= max_chars):
+        return [name]
+
+    # otherwise, find a good place to split and recurse
+    for split_chars in [
+        [' '],
+        ['>'],
+        ['_']
+        ]:
+        split_chars = set(['_', '-'])
+        splits = [x for x in range(0,len(name)-1) if name[x] in split_chars]
+        if len(splits) == 0:
+            continue
+
+        # Since we found one, we need to pick the best one
+        # Choose either the longest possible prefix to cut off
+        # or the longest possible postfix
+        max_early_offset = max( [x for x in splits if x < max_chars] )
+        min_late_offset = max( [len(name)-x for x in splits if len(name)-x < max_chars] )
+
+        # If we can't find any in the first or last max_chars,
+        # just choose the middle split
+        if max(max_early_offset, min_late_offset) == 0:
+            offset = len(splits)/2
+        else:
+            # Otherwise, choose the better one
+            if (max_early_offset > min_late_offset):
+                offset = max_early_offset
+            else:
+                offset = -min_late_offset
+
+        result = break_string(name[:offset], max_chars)
+        result.extend( break_string(name[offset:], max_chars) )
+        return result
+
+    # if we can't find *any* good place to split, just pick a place
+    result = [name[:max_chars]]
+    result.extend( break_string(name[max_chars:], max_chars) )
+    return result
+
+
 # Inserts line breaks into a name to make it fit nicely into a legend
 def line_break_stage_name(name, max_chars = 40):
+    # First adjust the input to the basic format we want.
     split = name.split(' ')
-    words = [x for x in split if len(x) > 1]
-    return " ->\n".join(words)
+    words = [ ((len(x) <= 1) and '->' or x) for x in split]
+    legend_string = ' '.join(words)
+
+    broken_string = break_string(legend_string, max_chars)
+    return '\n'.join( broken_string )
+
 
 def graph_message_latency(log_files, filename=None):
     data_srcs = log_files
@@ -92,7 +141,7 @@ def graph_message_latency(log_files, filename=None):
     widths = []
 
     for stage in ordered_stage_names:
-        stage_labels.append( line_break_stage_name(stage) )
+        stage_labels.append( line_break_stage_name(stage, 30) )
 
         avg_vec = []
         stddev_vec = []
