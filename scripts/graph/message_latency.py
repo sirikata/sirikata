@@ -42,8 +42,10 @@ def break_string(name, max_chars):
         # Since we found one, we need to pick the best one
         # Choose either the longest possible prefix to cut off
         # or the longest possible postfix
-        max_early_offset = max( [x for x in splits if x < max_chars] )
-        min_late_offset = max( [len(name)-x for x in splits if len(name)-x < max_chars] )
+        early_offsets = [x for x in splits if x < max_chars]
+        max_early_offset = (len(early_offsets) > 0) and max(early_offsets) or 0
+        late_offsets = [len(name)-x for x in splits if len(name)-x < max_chars]
+        min_late_offset = (len(late_offsets) > 0) and max(late_offsets) or 0
 
         # If we can't find any in the first or last max_chars,
         # just choose the middle split
