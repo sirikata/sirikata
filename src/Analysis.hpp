@@ -244,12 +244,16 @@ class MessageLatencyAnalysis {public:
     // either side.
     class StageGroup {
       public:
-        // Indicates whether the stages in this group should only be considered
-        // in order (using negative values for ones out of order) or if
-        // reversing and completely switching the order of some elements is ok.
+        // Indicates how values in this group should be handled.  UNORDERED
+        // allows any combination in any order to work.  ORDERED_ALLOW_NEGATIVE
+        // constrains the order, but allows inverted pairs to be used with
+        // negative durations, which can be useful for unsynchronized network or
+        // cross-thread pairs.  ORDERED_STRICT only considers pairs that are
+        // strictly in order.
         enum IsOrdered {
-            ORDERED,
-            UNORDERED
+            UNORDERED,
+            ORDERED_ALLOW_NEGATIVE,
+            ORDERED_STRICT
         };
 
         StageGroup(const String& _name, IsOrdered ordr = UNORDERED)
@@ -287,6 +291,8 @@ class MessageLatencyAnalysis {public:
         // records. For unordered, this will always return (start,end).  For
         // ordered, it will arrange them appropriately based on the order in
         // which the tags were added to the StageGroup.
+        // If a pair cannot be constructed, the sentinal
+        // PathPair(Trace::NONE, Trace::NONE) will be returned
         PathPair orderedPair(const DTime& start, const DTime& end) {
             assert( contains(start.mPath) );
             assert( contains(end.mPath) );
@@ -294,15 +300,38 @@ class MessageLatencyAnalysis {public:
             if (mOrdered == UNORDERED) {
                 return PathPair(start.mPath, end.mPath);
             }
+            else if (mOrdered == ORDERED_ALLOW_NEGATIVE) {
+                uint32 start_i = findTagOrder(start.mPath);
+                uint32 end_i = findTagOrder(end.mPath);
 
-            // else ORDERED
-            uint32 start_i = findTagOrder(start.mPath);
-            uint32 end_i = findTagOrder(end.mPath);
+                if (start_i <= end_i)
+                    return PathPair(start.mPath, end.mPath);
+                else
+                    return PathPair(end.mPath, start.mPath);
+            }
+            else if (mOrdered == ORDERED_STRICT) {
+                uint32 start_i = findTagOrder(start.mPath);
+                uint32 end_i = findTagOrder(end.mPath);
 
-            if (start_i <= end_i)
-                return PathPair(start.mPath, end.mPath);
-            else
-                return PathPair(end.mPath, start.mPath);
+                if (start_i <= end_i)
+                    return PathPair(start.mPath, end.mPath);
+                else
+                    return PathPair(Trace::NONE, Trace::NONE);
+            }
+            else {
+                assert(false);
+            }
+        }
+
+        bool validPair(const DTime& start, const DTime& end) {
+            // Loops to repeated tags aren't interesting without the
+            // intermediate info
+            if (start.mPath == end.mPath)
+                return false;
+
+            // Otherwise do normal sanity check
+            PathPair ordered = orderedPair(start, end);
+            return !(ordered.first == Trace::NONE || ordered.second == Trace::NONE);
         }
 
         // Computes the difference between start and end (end - start), taking
@@ -312,6 +341,8 @@ class MessageLatencyAnalysis {public:
         Duration difference(const DTime& start, const DTime& end) {
             // figure out the permissible ordering
             PathPair ordered = orderedPair(start, end);
+
+            assert(validPair(start, end));
 
             // then just subtract in the matching direction
             if (ordered.first == start.mPath) {

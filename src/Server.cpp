@@ -118,7 +118,6 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // for handling session messages, messages to the space, or to make a
     // routing decision.
     // FIXME infinite queue!
-    TIMESTAMP(obj_msg, Trace::FORWARDING_STARTED);
     mContext->mainStrand->post(
         std::tr1::bind(
             &Server::handleObjectHostMessageRouting,

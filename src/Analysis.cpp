@@ -1202,11 +1202,14 @@ const char* getPacketStageName (uint32 path) {
 
         // Space Checkpoints
         PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
+        PACKETSTAGE(HANDLE_SPACE_MESSAGE);
         PACKETSTAGE(FORWARDED_LOCALLY);
         PACKETSTAGE(FORWARDING_STARTED);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
+        PACKETSTAGE(OSEG_LOOKUP_FINISHED);
+        PACKETSTAGE(SPACE_TO_SPACE_ENQUEUED);
         PACKETSTAGE(DROPPED);
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
@@ -1244,15 +1247,22 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::OH_HIT_NETWORK)
             ;
 
-    StageGroup oh_to_space_group("Object Host -> Space", StageGroup::ORDERED);
+    StageGroup oh_to_space_group("Object Host -> Space", StageGroup::ORDERED_ALLOW_NEGATIVE);
     oh_to_space_group
             .add(Trace::OH_HIT_NETWORK)
             .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
             ;
 
-    StageGroup space_route_decision_group("Space Routing Decision");
-    space_route_decision_group
+    StageGroup space_from_oh_route_decision_group("OH Message Routing Decision");
+    space_from_oh_route_decision_group
             .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
+            .add(Trace::FORWARDED_LOCALLY)
+            .add(Trace::FORWARDING_STARTED)
+            ;
+
+    StageGroup space_from_space_route_decision_group("Space Message Routing Decision", StageGroup::ORDERED_STRICT);
+    space_from_space_route_decision_group
+            .add(Trace::HANDLE_SPACE_MESSAGE)
             .add(Trace::FORWARDED_LOCALLY)
             .add(Trace::FORWARDING_STARTED)
             ;
@@ -1264,17 +1274,36 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             ;
 
-    StageGroup space_group("Space");
-    space_group
+    StageGroup space_slow_direct_route_group("Space Slow Direct Routing");
+    space_slow_direct_route_group
             .add(Trace::FORWARDING_STARTED)
             .add(Trace::DROPPED)
             .add(Trace::SPACE_TO_OH_ENQUEUED)
+            ;
+
+    StageGroup oseg_lookup_group("OSeg Lookups");
+    oseg_lookup_group
+            .add(Trace::FORWARDING_STARTED)
             .add(Trace::OSEG_LOOKUP_STARTED)
             .add(Trace::OSEG_CACHE_LOOKUP_FINISHED)
             .add(Trace::OSEG_SERVER_LOOKUP_FINISHED)
+            .add(Trace::OSEG_LOOKUP_FINISHED)
             ;
 
-    StageGroup space_to_oh_group("Space -> Object Host", StageGroup::ORDERED);
+    StageGroup space_forwarder_queue_group("Space Forwarding Queues");
+    space_forwarder_queue_group
+            .add(Trace::OSEG_LOOKUP_FINISHED)
+            .add(Trace::DROPPED)
+            .add(Trace::SPACE_TO_SPACE_ENQUEUED)
+            ;
+
+    StageGroup space_to_space_group("Space -> Space", StageGroup::ORDERED_ALLOW_NEGATIVE);
+    space_to_space_group
+            .add(Trace::SPACE_TO_SPACE_ENQUEUED)
+            .add(Trace::HANDLE_SPACE_MESSAGE)
+            ;
+
+    StageGroup space_to_oh_group("Space -> Object Host", StageGroup::ORDERED_ALLOW_NEGATIVE);
     space_to_oh_group
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             .add(Trace::OH_NET_RECEIVED)
@@ -1294,9 +1323,13 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     groups.push_back(oh_net_exchange_group);
     groups.push_back(oh_send_group);
     groups.push_back(oh_to_space_group);
-    groups.push_back(space_route_decision_group);
+    groups.push_back(space_from_oh_route_decision_group);
+    groups.push_back(space_from_space_route_decision_group);
     groups.push_back(space_direct_route_group);
-    groups.push_back(space_group);
+    groups.push_back(space_slow_direct_route_group);
+    groups.push_back(oseg_lookup_group);
+    groups.push_back(space_forwarder_queue_group);
+    groups.push_back(space_to_space_group);
     groups.push_back(space_to_oh_group);
     groups.push_back(oh_receive_group);
 
@@ -1349,6 +1382,8 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             // tag C that is also in the StageGroup and exists between A and B.
             std::vector<DTime> filtered_stamps = group.filter(pd.mStamps);
             for (uint32 idx = 1; idx < filtered_stamps.size(); ++idx) {
+                if (!group.validPair( filtered_stamps[idx-1], filtered_stamps[idx] ))
+                    continue;
                 PathPair pp = group.orderedPair( filtered_stamps[idx-1], filtered_stamps[idx] );
                 Duration diff = group.difference( filtered_stamps[idx-1], filtered_stamps[idx] );
                 results[pp].sample(diff);

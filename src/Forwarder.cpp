@@ -219,6 +219,9 @@ void Forwarder::receiveMessage(Message* msg) {
     bool parsed = parsePBJMessage(obj_msg, msg->payload());
     assert(parsed);
 
+
+    TIMESTAMP(obj_msg, Trace::HANDLE_SPACE_MESSAGE);
+
     UUID dest = obj_msg->dest_object();
 
     // Special case: Object 0 is the space itself
@@ -245,6 +248,7 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
     UUID dest_obj = msg->dest_object();
 
     TIMESTAMP_START(tstamp, msg);
+    TIMESTAMP_END(tstamp, Trace::FORWARDING_STARTED);
 
     // Check if we can forward locally
     ObjectConnection* conn = getObjectConnection(msg->dest_object());
@@ -289,6 +293,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
     // Timestamp the message as having finished an OSeg Lookup
     TIMESTAMP(obj_msg, mp);
+    TIMESTAMP(obj_msg, Trace::OSEG_LOOKUP_FINISHED);
 
   //send out all server updates associated with an object with this message:
   UUID obj_id =  obj_msg->dest_object();
@@ -300,6 +305,9 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
       serializePBJMessage(*obj_msg)
   );
+
+  TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
+
   bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg);
   if (!send_success) {
       delete svr_obj_msg;
