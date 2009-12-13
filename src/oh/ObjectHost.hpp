@@ -312,8 +312,14 @@ private:
 
     bool mShuttingDown;
     uint64 mPingId;
+    typedef std::tr1::function<void(const CBR::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
+    std::tr1::unordered_map<uint64, ObjectMessageCallback > mRegisteredServices;
 public:
     ObjectConnections*getObjectConnections(){return &mObjectConnections;}
+    ///Register to intercept all incoming messages on a given port
+    bool registerService(uint64 port, const ObjectMessageCallback&cb);
+    ///Unregister to intercept all incoming messages on a given port
+    bool unregisterService(uint64 port);
 }; // class ObjectHost
 
 } // namespace CBR

@@ -581,14 +581,6 @@ bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double d
     if (distance>=0)
         ping_msg.set_distance(distance);
     ping_msg.set_id(mPingId++);
-    ping_msg.set_dat1(0);
-    ping_msg.set_dat2(0);
-    ping_msg.set_dat3(0);
-    ping_msg.set_dat4(0);
-    ping_msg.set_dat5(0);
-    ping_msg.set_dat6(0);
-    ping_msg.set_dat7(0);
-    ping_msg.set_dat8(0);
     ServerID destServer = mObjectConnections.getConnectedServer(src->uuid());
 
     if (destServer!=NullServerID) {
@@ -741,8 +733,10 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
 
     // Mark as received
     TIMESTAMP_END(tstamp, Trace::OH_RECEIVED);
-
-    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+    if (mRegisteredServices.find(msg->dest_port())!=mRegisteredServices.end()) {
+        mRegisteredServices[msg->dest_port()](*msg);
+        delete msg;
+    } else if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
         mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->simTime(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
@@ -823,5 +817,24 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 
     delete msg;
 }
+
+
+bool ObjectHost::registerService(uint64 port, const ObjectMessageCallback&cb) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+    if (mRegisteredServices.find(port)!=mRegisteredServices.end())
+        return false;
+    mRegisteredServices[port]=cb;
+    return true;
+}
+bool ObjectHost::unregisterService(uint64 port) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+    if (mRegisteredServices.find(port)!=mRegisteredServices.end()) {
+        mRegisteredServices.erase(mRegisteredServices.find(port));
+        return true ;
+    }
+    return false;
+}
+
+
 
 } // namespace CBR

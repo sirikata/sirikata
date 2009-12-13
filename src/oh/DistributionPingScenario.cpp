@@ -7,9 +7,10 @@ namespace CBR{
 void DPSInitOptions(DistributionPingScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("DistributedPingScenario",thus,
-                                         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<size_t>(),"Number of pings launched per simulation second"),
+                                         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
                                          new OptionValue("allow-same-object-host","false",Sirikata::OptionValueType<bool>(),"allow pings to occasionally hit the same object host you are on"),
                                          new OptionValue("force-same-object-host","false",Sirikata::OptionValueType<bool>(),"force pings to only go through 1 spaec server hop"),
+                                         new OptionValue("ping-server-distribution","uniform",Sirikata::OptionValueType<String>(),"objects on which space server are chosen?"),
         NULL);
 }
 DistributionPingScenario::DistributionPingScenario(const String &options):mStartTime(Time::epoch()){
@@ -19,7 +20,7 @@ DistributionPingScenario::DistributionPingScenario(const String &options):mStart
     DPSInitOptions(this);
     OptionSet* optionsSet = OptionSet::getOptions("DistributedPingScenario",this);
     optionsSet->parse(options);
-    mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<size_t>();
+    mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mSameObjectHostPings=optionsSet->referenceOption("allow-same-object-host")->as<bool>();
     mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
 
