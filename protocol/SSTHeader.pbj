@@ -36,17 +36,31 @@
 
 package CBR.Protocol.SST;
 
-message SSTHeader {
+message SSTChannelHeader {
 	required uint8 channel_id = 1;
 	required uint64 transmit_sequence_number = 2;
 	required uint8 ack_count = 3;
 	required uint64 ack_sequence_number = 4;
 	
-	required uint16 lsid = 5;
-	required uint8 type = 6;
-	required uint8 flags = 7;
-	required uint8 window = 8;
+	optional bytes payload = 5;
+}
 
-	
-	optional bytes payload = 9;
+message SSTStreamHeader {
+        enum StreamPacketType {
+    	      INIT = 1;
+	      REPLY = 2;
+	      DATA = 3;
+	      ACK = 4;
+        }
+
+        required  uint16 lsid = 1;	
+	required  uint8 type = 2;
+	required  uint8 flags = 3;
+	required  uint8 window = 4;
+
+	optional uint16 psid = 5;
+	optional uint16	rsid = 6;
+	optional uint32 bsn = 7;
+
+	optional bytes payload = 8;
 }
