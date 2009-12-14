@@ -77,7 +77,7 @@ CBR::Time g_start_time( CBR::Time::null() );
 void *main_loop(void *);
 
 int main(int argc, char** argv) {
-  
+
     using namespace CBR;
 
     InitOptions();
@@ -104,9 +104,9 @@ int main(int argc, char** argv) {
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
-    
+
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    
+
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
 
     gSpaceContext = space_context;
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
 
 
-    
+
     return 0;
 }
 void *main_loop(void *) {
@@ -237,7 +237,6 @@ void *main_loop(void *) {
         assert(false);
       }
 
-      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
       oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0],osegStrand,space_context->mainStrand);
 
     }      //end craq approach
@@ -312,7 +311,7 @@ void *main_loop(void *) {
     for (int s=0; s < (int) oseg_nested_pollers.size(); ++s)
       space_context->add(oseg_nested_pollers[s]);
 
-    
+
     space_context->run(2);
 
     if (GetOption(PROFILE)->as<bool>()) {
@@ -326,8 +325,8 @@ void *main_loop(void *) {
     delete sq;
     delete prox;
     delete server_id_map;
-    
-    
+
+
     if (weight_calc != NULL)
       delete weight_calc;
 
@@ -346,14 +345,14 @@ void *main_loop(void *) {
 
     IOStrand* mainStrand = space_context->mainStrand;
     IOService* ios = space_context->ioService;
-    
+
     delete space_context;
     space_context = NULL;
 
     delete mainStrand;
     delete osegStrand;
-    
+
     IOServiceFactory::destroyIOService(ios);
-    
+
     return 0;
 }

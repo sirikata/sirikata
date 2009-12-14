@@ -17,7 +17,7 @@ namespace CBR
     aCraqSet(con,mSetStrand,strand_to_post_results_to,oseg)
   {
   }
-  
+
   void AsyncCraqHybrid::initialize(std::vector<CraqInitializeArgs> initArgs)
   {
     mGetStrand->post(std::tr1::bind(&AsyncCraqGet::initialize,&aCraqGet,initArgs));
@@ -26,11 +26,10 @@ namespace CBR
 
   void AsyncCraqHybrid::stop()
   {
-    std::cout<<"\n\nReceived shutdown in asyncCraqHybrid\n";
     //    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::stop,&aCraqGet));
     //    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::stop,&aCraqSet));
   }
-  
+
   AsyncCraqHybrid::~AsyncCraqHybrid()
   {
     delete mGetStrand;
@@ -67,7 +66,3 @@ namespace CBR
   }
 
 }//end namespace
-
-
-
-

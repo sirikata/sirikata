@@ -40,7 +40,7 @@ namespace CBR
    ctx(con),
    mReceivedStopRequest(false)
   {
-  
+
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
@@ -70,17 +70,16 @@ namespace CBR
     mTimer.start();
   }
 
-  
+
   void CraqObjectSegmentation::stop()
   {
-    std::cout<<"\nGot a shutdown in CraqObjectSegmentation\n";
     craqDhtSet.stop();
     craqDhtGet.stop();
     Poller::stop();
 
     mReceivedStopRequest = true;
   }
-  
+
   /*
     Destructor
   */
@@ -97,13 +96,13 @@ namespace CBR
       mNfData.pop();
       delete nfd;
     }
-    
+
 
     for (TrackedMessageMapAdded::iterator tmessmapit  = trackedAddMessages.begin(); tmessmapit != trackedAddMessages.end(); ++tmessmapit)
       delete tmessmapit->second.msgAdded;
 
     trackedAddMessages.clear();
-    
+
 
     //delete retries
     for (int s=0; s < (int) reTryAddedMessage.size(); ++s)
@@ -117,11 +116,10 @@ namespace CBR
     for (int s=0; s < (int) reTryKillConnMessage.size(); ++s)
       delete reTryKillConnMessage[s];
     reTryKillConnMessage.clear();
-    
 
-    
-    
-    std::cout<<"\n\n\nIN DESTRUCTOR \n\n";
+
+
+
     mContext->trace()->processOSegShutdownEvents(mContext->time,
                                                  mContext->id(),
                                                  numLookups,
@@ -149,23 +147,23 @@ namespace CBR
   {
     //    Duration beginningDur = mTimer.elapsed();
     Duration beginningDur = Time::local() - Time::epoch();
-    
+
     if (std::find(mObjects.begin(),mObjects.end(), obj_id) == mObjects.end())
     {
       //means that the object isn't hosted on this space server
 
       Duration endingDur = mTimer.elapsed();
-      
+
       checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
       ++checkOwnTimeCount;
-      
+
       return false;
     }
-    
+
     //means that the object *is* hosted on this space server
 
     Duration endingDur = mTimer.elapsed();
-    
+
     checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
     ++ checkOwnTimeCount;
     return true;
@@ -179,7 +177,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return false;
-    
+
     //set a mutex lock.
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::iterator mInTransIter = mInTransitOrLookup.find(obj_id);
@@ -200,7 +198,7 @@ namespace CBR
     bool migratingToHere = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) != mReceivingObjects.end();
     //means that the object migrating to here has not yet received an acknowledge, and therefore shouldn't begin migrating again.
     receivingObjects_m.unlock();
-    
+
     //clear to migrate only if migrating from here and migrating to here are false.
     return (!migratingFromHere) && (!migratingToHere);
   }
@@ -212,7 +210,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return false;
-    
+
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::const_iterator iterInTransOrLookup = mInTransitOrLookup.find(obj_id);
 
@@ -255,12 +253,12 @@ namespace CBR
     return returner;
   }
 
-  
+
   void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id)
   {
     if (mReceivedStopRequest)
       return ;
-    
+
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
 
@@ -270,7 +268,7 @@ namespace CBR
     tsrda.msgAdded  = generateAddedMessage(obj_id);
     tsrda.dur       = mTimer.elapsed();
 
-    
+
     int trackID = getUniqueTrackID();
     craqDhtSet.set(cdSetGet, trackID);
     trackedAddMessages[trackID] = tsrda;
@@ -293,7 +291,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return NullServerID;
-    
+
     ++numLookups;
 
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
@@ -305,7 +303,7 @@ namespace CBR
     //log the request.
     mContext->trace()->objectSegmentationLookupNotOnServerRequest(mContext->time,
                                                                   obj_id,
-                                                                  mContext->id()); 
+                                                                  mContext->id());
 
 
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
@@ -321,7 +319,7 @@ namespace CBR
       mContext->trace()->osegCacheResponse(mContext->time,
                                            cacheReturn,
                                            obj_id);
-      
+
       ++numCacheHits;
       return cacheReturn;
     }
@@ -335,7 +333,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
@@ -366,11 +364,11 @@ namespace CBR
       Duration timerDur = mTimer.elapsed();
       //      Duration timerDur = ctx->time;
       //Duration timerDur =  Time::local() - Time::epoch();
-      
+
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
-      
+
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
     }
     else
@@ -405,7 +403,7 @@ namespace CBR
     if (mReceivedStopRequest)
       return;
 
-    
+
     if (generateAck)
     {
       CraqDataKey cdk;
@@ -419,7 +417,7 @@ namespace CBR
       if (std::find(mReceivingObjects.begin(),mReceivingObjects.end(),obj_id) == mReceivingObjects.end())
       {
         //means that this object has been pushed to this server, but its migration isn't complete yet.
-        mReceivingObjects.push_back(obj_id);  
+        mReceivingObjects.push_back(obj_id);
       }
 
       receivingObjects_m.unlock();
@@ -429,7 +427,7 @@ namespace CBR
       tsrd.dur       = mTimer.elapsed();
       //tsrd.dur       = ctx->time;
       //tsrd.dur =  Time::local() - Time::epoch();
-      
+
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet,trackID);
       trackingMessages[trackID] = tsrd;
@@ -463,11 +461,11 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     //log the message.
     mContext->trace()->objectBeginMigrate(mContext->time,
                                           obj_id,mContext->id(),
-                                          new_server_id); 
+                                          new_server_id);
 
     std::map<UUID,TransLookup>::const_iterator transIter = mInTransitOrLookup.find(obj_id);
 
@@ -477,7 +475,7 @@ namespace CBR
     Duration tmpDurer= mTimer.elapsed();
     //    Duration tmpDurer= ctx->time;
     //    Duration tmpDurer = Time::local() - Time::epoch();
-    
+
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
@@ -512,28 +510,27 @@ namespace CBR
   {
     if (mReceivedStopRequest)
     {
-      std::cout<<"\n\nReally shouldn't have gotten a craqobjseg poll\n";
       return;
     }
-    
+
     mServiceStage->started();
     //shouldn't really need to do anything in here.
     //    well, maybe try to re-send the messages that failed;
     //    maybe also deal with not founds.
 
 
-    
+
     mServiceStage->finished();
   }
 
 
-  
+
   //should be called from inside of o_strand and posts to postingStrand mainStrand->post.
   void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
   {
     if (mReceivedStopRequest)
       return;
-    
+
     postingStrand->post(std::tr1::bind (&OSegListener::osegLookupCompleted,mListener,obj_id,sID));
   }
 
@@ -552,7 +549,7 @@ namespace CBR
       delete msg;
       return;
     }
-    
+
       if (msg->dest_port() == SERVER_PORT_OSEG_MIGRATE_MOVE) {
           CBR::Protocol::OSeg::MigrateMessageMove oseg_move_msg;
           bool parsed = parsePBJMessage(&oseg_move_msg, msg->payload());
@@ -588,7 +585,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on()));
   }
 
@@ -597,7 +594,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     ServerID serv_from, serv_to;
     UUID obj_id;
 
@@ -622,14 +619,14 @@ namespace CBR
       postingStrand->post(std::tr1::bind(&CraqCacheGood::insert, &mCraqCache, obj_id, serv_from));
       callOsegLookupCompleted(obj_id,serv_from);
 
-      
+
       //log reception of acknowled message
       mContext->trace()->objectAcknowledgeMigrate(mContext->time,
                                                   obj_id,serv_from,
                                                   mContext->id());
     }
     inTransOrLookup_m.unlock();
-    
+
     //send a message to the server that object should now disconnect
     // FIXME is this really supposed to go to the same server? If so, there *must* be a better way to accomplish this
     CBR::Protocol::ObjConnKill::ObjConnKill kill_msg_contents;
@@ -655,7 +652,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     Timer checkSendTimer;
     checkSendTimer.start();
 
@@ -712,7 +709,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     //turn the id into a uuid and then push it onto the end of  mNfData queue.
     if (mapDataKeyToUUID.find(nf->idToString()) == mapDataKeyToUUID.end())
       return; //means that we really have no record of this objects' even having been requested.
@@ -722,7 +719,7 @@ namespace CBR
     nfd->dur    =  mTimer.elapsed();
     //    nfd->dur    =  ctx->time;
     //    nfd->dur = Time::local() - Time::epoch();
-    
+
     mNfData.push(nfd);
   }
 
@@ -732,9 +729,9 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     //look at the first element of the queue.  if the time hasn't been sufficiently long, return.  if the time has been sufficiently long, then go ahead and directly request asyncCraq to perform another lookup.
-    
+
     if (mNfData.size() == 0)
       return;
 
@@ -744,7 +741,7 @@ namespace CBR
     //    Duration tmpDur = ctx->time;
     //    Duration tmpDur = Time::local() - Time::epoch();
 
-    
+
     bool queueDataOldEnough = true;
     NotFoundData* nfd;
 
@@ -761,7 +758,7 @@ namespace CBR
         std::string indexer = "";
         indexer.append(1,myUniquePrefixKey);
         indexer.append(nfd->obj_id.rawHexData());
-        
+
         CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
         craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
 
@@ -781,7 +778,7 @@ namespace CBR
       delete cor;
       return;
     }
-    
+
     if (cor->servID == NullServerID)
     {
       notFoundFunction(cor);
@@ -790,7 +787,7 @@ namespace CBR
       std::cout<<"\n\nWe have an object that does not exist in craq system.  This shouldn't have really been called.\n\n";
 
       std::cout<<"Object:  "<<cor->objID<<"  server id:  "<<cor->servID<<"  tracking  "<<cor->tracking<<"  suceeded: "<<cor->succeeded<<"  GET or set:   "<<cor->whichOperation<<"\n\n";
-        
+
       assert(false);
       return;
     }
@@ -799,17 +796,17 @@ namespace CBR
 
     //put the value in the cache!
     postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, tmper, cor->servID));
-    
+
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
-    
+
     if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
     {
       //log message stating that object was processed.
       Duration timerDur = mTimer.elapsed();
       //Duration timerDur = ctx->time;
       //      Duration timerDur = Time::local() - Time::epoch();
-      
+
       mContext->trace()->objectSegmentationProcessedRequest(mContext->time,
                                                             tmper,
                                                             cor->servID,
@@ -820,7 +817,7 @@ namespace CBR
 
       uint32 timeItTook = (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted));
 
-      
+
       if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
       {
         //means that after receiving a lookup request, we did not intermediarilly receive a migrate request.
@@ -841,9 +838,9 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     inTransOrLookup_m.lock();
-      
+
     //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
     std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(obj_id);
 
@@ -863,7 +860,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     //remove this object from mReceivingObjects,
     //this removal indicates that this object can now be safely migrated from this server to another if need be.
     receivingObjects_m.lock();
@@ -878,7 +875,7 @@ namespace CBR
     receivingObjects_m.unlock();
   }
 
-  
+
   //gets posted to from asyncCraqSet.  Should get inside of o_strand from the post.
   void CraqObjectSegmentation::craqSetResult(CraqOperationResult* trackedSetResult)
   {
@@ -893,13 +890,13 @@ namespace CBR
       return;
     }
 
-    
+
     if (trackingMessages.find(trackedSetResult->trackedMessage) != trackingMessages.end())
     {
       //means that we have a record of locally tracking this message and that we'll have to send an ack.
 
       UUID obj_id = trackingMessages[trackedSetResult->trackedMessage].migAckMsg->m_objid();
-      
+
       //add this to the cache
       postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, mContext->id()));
 
@@ -916,9 +913,9 @@ namespace CBR
       Duration procTrackedSetRes = mTimer.elapsed();
       //      Duration procTrackedSetRes = ctx->time;
       //      Duration procTrackedSetRes = Time::local() - Time::epoch();
-      
+
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
-      
+
       mContext->trace()->processOSegTrackedSetResults(mContext->time,
                                                       obj_id,
                                                       mContext->id(),
@@ -932,7 +929,7 @@ namespace CBR
                                      SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,
                                      serializePBJMessage( *(trackingMessages[trackedSetResult->trackedMessage].migAckMsg) )
                                      );
-          
+
       bool sent= mContext->router()->route(MessageRouter::MIGRATES,to_send,false);
 
       if (!sent)
@@ -942,7 +939,7 @@ namespace CBR
     }
     else if (trackedAddMessages.find(trackedSetResult->trackedMessage) != trackedAddMessages.end())
     {
-      
+
       //means that we just finished adding first object
       mObjects.push_back(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid() );//need to add obj_id
 
@@ -964,7 +961,7 @@ namespace CBR
     return;
   }
 
-  
+
   std::vector<PollingService*> CraqObjectSegmentation::getNestedPollers()
   {
     std::vector <PollingService*> returner;
@@ -978,5 +975,5 @@ namespace CBR
     return returner;
   }
 
-  
+
 }//namespace CBR

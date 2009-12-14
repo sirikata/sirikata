@@ -164,6 +164,26 @@ public:
     void printHistogramDistanceData(std::ostream&out, double bucketWidth);
 };
 
+
+class PathPair {
+public:
+    Trace::MessagePath first;
+    Trace::MessagePath second;
+    PathPair(const Trace::MessagePath &first,
+        const Trace::MessagePath &second) {
+        this->first=first;
+        this->second=second;
+    }
+    bool operator < (const PathPair&other) const{
+        if (first==other.first) return second<other.second;
+        return first<other.first;
+    }
+    bool operator ==(const PathPair&other) const{
+        return first==other.first&&second==other.second;
+    }
+};
+
+
 class MessageLatencyAnalysis {public:
     class DTime:public Time {
     public:
@@ -213,24 +233,6 @@ class MessageLatencyAnalysis {public:
         }
         uint32 samples() const {
             return numSamples;
-        }
-    };
-
-    class PathPair {
-      public:
-        Trace::MessagePath first;
-        Trace::MessagePath second;
-        PathPair(const Trace::MessagePath &first,
-                 const Trace::MessagePath &second) {
-            this->first=first;
-            this->second=second;
-        }
-        bool operator < (const PathPair&other) const{
-            if (first==other.first) return second<other.second;
-            return first<other.first;
-        }
-        bool operator ==(const PathPair&other) const{
-            return first==other.first&&second==other.second;
         }
     };
 
@@ -379,7 +381,7 @@ class MessageLatencyAnalysis {public:
                     verify(mFilterByForwardingServer,pd,Trace::FORWARDED);
         }
     };
-    MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters f);
+    MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters f, const String& stage_dump_file = "");
     ~MessageLatencyAnalysis();
     Filters mFilter;
     uint32_t mNumberOfServers;

@@ -52,7 +52,7 @@ namespace CBR
     }
     allOutstandingQueries.clear();
 
-  
+
     if (! NEED_NEW_SOCKET)
     {
       mSocket->cancel();
@@ -65,7 +65,7 @@ namespace CBR
   void AsyncConnectionSet::stop()
   {
     mStrand->post(std::tr1::bind(&AsyncConnectionSet::clear_all_deadline_timers, this));
-    
+
     mReceivedStopRequest = true;
     if (mSocket!= NULL)
       mSocket->cancel();
@@ -84,9 +84,9 @@ namespace CBR
       }
     }
   }
-  
 
-  
+
+
   AsyncConnectionSet::ConnectionState AsyncConnectionSet::ready()
   {
     return mReady;
@@ -100,8 +100,8 @@ namespace CBR
     mReady = PROCESSING;   //need to run connection routine.  so until we receive an ack that conn has finished, we stay in processing state.
 
     mSocket->async_connect(*it, mStrand->wrap(boost::bind(&AsyncConnectionSet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
-    
-    mPrevReadFrag = ""; 
+
+    mPrevReadFrag = "";
   }
 
 
@@ -110,7 +110,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-    
+
     if (error)
     {
       mSocket->cancel();
@@ -123,7 +123,9 @@ namespace CBR
       return;
     }
 
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
+#endif
     mReady = READY;
 
     set_generic_stored_not_found_error_handler();
@@ -144,11 +146,12 @@ namespace CBR
     if(mReceivedStopRequest)
       return;
 
-  
+
     if (mReady != READY)
     {
+#ifdef ASYNC_CONNECTION_DEBUG
       std::cout<<"\n\nI'm not ready yet in asyncConnectionSet\n\n";
-
+#endif
       CraqOperationResult* cor  = new CraqOperationResult(0,
                                                           dataToSet,
                                                           trackNum,
@@ -156,9 +159,9 @@ namespace CBR
                                                           CraqOperationResult::SET,
                                                           track);
 
-    
+
       mErrorStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
-    
+
       return;
     }
 
@@ -173,18 +176,18 @@ namespace CBR
     Duration dur = mTimer.elapsed();
     iqd->time_admitted = dur.toMilliseconds();
 
-  
+
     std::string index = dataToSet;
     index += STREAM_DATA_KEY_SUFFIX;
 
-    allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this 
+    allOutstandingQueries.insert(std::pair<std::string,IndividualQueryData*> (index, iqd));  //logs that this
 
-  
+
     iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
     iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS));
     iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
-  
-  
+
+
     mReady = PROCESSING;
 
     //generating the query to write.
@@ -203,17 +206,17 @@ namespace CBR
     {
       query.append("0");
     }
-    
+
     query.append(tmper);
     query.append(STREAM_CRAQ_TO_SET_SUFFIX);
     query.append(CRAQ_DATA_SET_END_LINE);
 
-  
+
     //sets write handler
     async_write((*mSocket),
                 boost::asio::buffer(query),
                 boost::bind(&AsyncConnectionSet::write_some_handler_set,this,_1,_2));
-  
+
   }
 
 
@@ -223,11 +226,11 @@ namespace CBR
     if (mReceivedStopRequest)
       return;
 
-  
+
     static int thisWrite = 0;
 
     ++thisWrite;
-  
+
     if (error)
     {
       printf("\n\nin write_some_handler_set\n\n");
@@ -243,7 +246,7 @@ namespace CBR
   {
     if (mReceivedStopRequest)
       return;
-  
+
     mReady = NEED_NEW_SOCKET;
     mSocket->cancel();
     mSocket->close();
@@ -263,26 +266,26 @@ bool AsyncConnectionSet::processEntireResponse(std::string response)
 {
   if (mReceivedStopRequest)
     return false;
-  
+
   bool returner = false;
   bool firstTime = true;
-  
+
   bool keepChecking = true;
   bool secondChecking;
 
   response = mPrevReadFrag + response;  //see explanation at end when re-setting mPrevReadFrag
   mPrevReadFrag = "";
-  
+
   while(keepChecking)
   {
     keepChecking   =                            false;
 
     //checks to see if there are any responses to set responses that worked (stored) (also processes)
-    secondChecking =            checkStored(response);  
+    secondChecking =            checkStored(response);
     keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any error responses.  (also processes)
-    secondChecking =             checkError(response); 
+    secondChecking =             checkError(response);
     keepChecking   =   keepChecking || secondChecking;
 
     if (firstTime)
@@ -297,7 +300,7 @@ bool AsyncConnectionSet::processEntireResponse(std::string response)
 
   if ((int)mPrevReadFrag.size() > MAX_SET_PREV_READ_FRAG_SIZE)
     mPrevReadFrag.substr(((int)mPrevReadFrag.size()) - CUT_SET_PREV_READ_FRAG);
-  
+
   return returner;
 }
 
@@ -306,7 +309,7 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
 {
   if (mReceivedStopRequest)
     return;
-  
+
   //look through multimap to find
   std::pair  <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange = allOutstandingQueries.equal_range(dataKey);
 
@@ -320,7 +323,7 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
     {
       ++numberPostedHere;
 
-      
+
       CraqOperationResult* cor  = new CraqOperationResult(outQueriesIter->second->currentlySettingTo,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
@@ -333,7 +336,7 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
 
 
 
-      
+
       //cancel the callback
       if (outQueriesIter->second->deadline_timer != NULL)
       {
@@ -341,9 +344,9 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
         delete outQueriesIter->second->deadline_timer;
       }
 
-      
+
       delete outQueriesIter->second;  //delete this query from a memory perspective
-      allOutstandingQueries.erase(outQueriesIter++); //note that this returns the value before 
+      allOutstandingQueries.erase(outQueriesIter++); //note that this returns the value before
     }
     else
     {
@@ -357,11 +360,11 @@ bool AsyncConnectionSet::parseStoredValue(const std::string& response, std::stri
 {
   if (mReceivedStopRequest)
     return false;
-  
+
   size_t storedIndex = response.find(STREAM_CRAQ_STORED_RESP);
 
   if (storedIndex == std::string::npos)
-    return false;//means that there isn't actually a not found tag in this 
+    return false;//means that there isn't actually a not found tag in this
 
   if (storedIndex != 0)
     return false;//means that not found was in the wrong place.  return false so that can initiate kill sequence.
@@ -380,7 +383,7 @@ void AsyncConnectionSet::set_generic_stored_not_found_error_handler()
 {
   if (mReceivedStopRequest)
     return;
-  
+
   boost::asio::streambuf * sBuff = new boost::asio::streambuf;
 
   const boost::regex reg ("Z\r\n");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
@@ -390,7 +393,7 @@ void AsyncConnectionSet::set_generic_stored_not_found_error_handler()
                                 (*sBuff),
                                 reg,
                                 mStrand->wrap(boost::bind(&AsyncConnectionSet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
-  
+
 }
 
 
@@ -402,19 +405,19 @@ void AsyncConnectionSet::generic_read_stored_not_found_error_handler ( const boo
     delete sBuff;
     return;
   }
-  
+
   if (error)
   {
     killSequence();
     return;
   }
-  
+
   std::istream is(sBuff);
   std::string response = "";
   std::string tmpLine;
-  
+
   is >> tmpLine;
-  
+
   while (tmpLine.size() != 0)
   {
     response.append(tmpLine);
@@ -449,16 +452,16 @@ bool AsyncConnectionSet::checkStored(std::string& response)
 {
   bool returner = false;
   size_t storedIndex = response.find(STREAM_CRAQ_STORED_RESP);
-  
+
   std::string prefixed = "";
   std::string suffixed = "";
-  
-  
+
+
   if (storedIndex != std::string::npos)
   {
     prefixed = response.substr(0,storedIndex); //prefixed will be everything before the first STORED tag
 
-    
+
     suffixed = response.substr(storedIndex); //first index should start with STORED_______
 
     size_t suffixStoredIndex = suffixed.find(STREAM_CRAQ_STORED_RESP);
@@ -468,7 +471,7 @@ bool AsyncConnectionSet::checkStored(std::string& response)
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_ERROR_RESP));
     tmpSizeVec.push_back(suffixed.find(CRAQ_NOT_FOUND_RESP));
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_VALUE_RESP));
-   
+
     size_t smallestNext = smallestIndex(tmpSizeVec);
     std::string storedPhrase;
     if (smallestNext != std::string::npos)
@@ -488,7 +491,7 @@ bool AsyncConnectionSet::checkStored(std::string& response)
     std::string dataKey;
     if (parseStoredValue(storedPhrase, dataKey))
     {
-      returner = true;      
+      returner = true;
       processStoredValue(dataKey);
     }
     else
@@ -514,11 +517,11 @@ bool AsyncConnectionSet::checkError(std::string& response)
 {
   bool returner = false;
   size_t errorIndex = response.find(STREAM_CRAQ_ERROR_RESP);
-  
+
   std::string prefixed = "";
   std::string suffixed = "";
-  
-  
+
+
   if (errorIndex != std::string::npos)
   {
     prefixed = response.substr(0,errorIndex); //prefixed will be everything before the first STORED tag
@@ -531,7 +534,7 @@ bool AsyncConnectionSet::checkError(std::string& response)
     tmpSizeVec.push_back(suffixed.find(CRAQ_NOT_FOUND_RESP));
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_STORED_RESP));
     tmpSizeVec.push_back(suffixed.find(STREAM_CRAQ_VALUE_RESP));
-   
+
     size_t smallestNext = smallestIndex(tmpSizeVec);
     std::string errorPhrase;
     if (smallestNext != std::string::npos)
@@ -567,18 +570,20 @@ void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_cod
 {
   if (mReceivedStopRequest)
     return;
-  
+
   if (e == boost::asio::error::operation_aborted)
     return;
 
+#ifdef ASYNC_CONNECTION_DEBUG
   std::cout<<"\n\nQuery timeout callback set\n";
-  
+#endif
+
   bool foundInIterator = false;
-  
-  //look through multimap to find 
+
+  //look through multimap to find
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
 
-  
+
   MultiOutstandingQueries::iterator outQueriesIter;
   outQueriesIter = eqRange.first;
 
@@ -591,22 +596,23 @@ void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_cod
                                                           outQueriesIter->second->tracking_number,
                                                           false, //means that it failed.
                                                           CraqOperationResult::SET,
-                                                          outQueriesIter->second->is_tracking); 
+                                                          outQueriesIter->second->is_tracking);
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
       mErrorStrand->post(boost::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
-      
 
+#ifdef ASYNC_CONNECTION_DEBUG
       std::cout<<"\n\nSending error from set\n\n";
-      
+#endif
+
       if (outQueriesIter->second->deadline_timer != NULL)
       {
         outQueriesIter->second->deadline_timer->cancel();
         delete outQueriesIter->second->deadline_timer;
       }
-      
+
       foundInIterator = true;
-      
+
       delete outQueriesIter->second;  //delete this from a memory perspective
       allOutstandingQueries.erase(outQueriesIter++); //
     }
@@ -616,9 +622,11 @@ void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_cod
     }
   }
 
-  if (! foundInIterator)
+  if (! foundInIterator) {
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\nAsyncConnectionGet CALLBACK.  Not found in iterator.\n\n";
-  
+#endif
+  }
 }
 
 }//end namespace

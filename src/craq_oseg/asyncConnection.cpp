@@ -72,7 +72,7 @@ void AsyncConnection::initialize(boost::asio::ip::tcp::socket* socket, boost::as
   mReady  =   PROCESSING;
   ctx     =          spc;
   mStrand =       strand;
-  
+
   //need to run connection routine.
   mSocket->async_connect(*it, boost::bind(&AsyncConnection::connect_handler,this,_1));  //using that tcp socket for an asynchronous connection.
 }
@@ -102,7 +102,9 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
 {
   if (mReady != READY)
   {
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\nbftm debug:  huge set error\n\n";
+#endif
     return false;
   }
 
@@ -113,7 +115,9 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
 #ifdef ASYNC_CONNECTION_DEBUG
   if (track)
   {
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\nbftm debug: In set of asyncConnection.cpp.  Got a positive tracking.\n\n";
+#endif
   }
 #endif
 
@@ -131,12 +135,12 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
                                 mStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
                                 //                                ctx->osegStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
 
-  //  
+  //
   //  boost::asio::async_read_until((*mSocket),
   //                                (*sBuff),
   //                                boost::regex("\r\n"),
   //                                boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff));
-  
+
 
   //generating the query to write.
   std::string query;
@@ -171,7 +175,7 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
               boost::asio::buffer(query),
               boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
 
-  
+
   //  mSocket->async_write_some(boost::asio::buffer(dsQuery,CRAQ_DATA_SET_SIZE -2),
   //                            boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
 
@@ -186,7 +190,9 @@ void AsyncConnection::write_some_handler_set(  const boost::system::error_code& 
   if (error)
   {
     //had trouble with this write.
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\nHAD PROBLEMS IN ASYNC_CONNECTION WITH THIS WRITE\n";
+#endif
     mReady = NEED_NEW_SOCKET;
 
     mSocket->close();
@@ -220,7 +226,7 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
 
 //void AsyncConnection::finish_read_handler_set(std::string line, boost::asio::streambuf* sBuff)
 
-  
+
   //process this line.
   if (line.find("STORED") != std::string::npos)
   {
@@ -240,9 +246,11 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
   else
   {
     //something besides stored was returned...indicates an error.
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\nbftm debug: There was an error in asyncConnection.cpp under read_handler_set:  ";
     std::cout<<"This is line:   "<<line<<" ";
     std::cout<<"The error was for object with id:   "<<currentlySearchingFor<<"\n\n";
+#endif
 
     mReady = NEED_NEW_SOCKET;
 
@@ -287,7 +295,7 @@ bool AsyncConnection::get(CraqDataKey& dataToGet)
                                 reg,
                                 mStrand->wrap(boost::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff)));
 
-  
+
   //  boost::asio::async_read_until((*mSocket),
   //                                (*sBuff),
   //                                reg,
@@ -310,7 +318,7 @@ bool AsyncConnection::get(CraqDataKey& dataToGet)
   async_write((*mSocket),
               boost::asio::buffer(query),
               boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
-  
+
   //  mSocket->async_write_some(boost::asio::buffer(dkQuery,CRAQ_DATA_KEY_QUERY_SIZE-1),
   //                            boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
 
@@ -334,7 +342,9 @@ void AsyncConnection::write_some_handler_get(  const boost::system::error_code& 
     //    load error vector into both.
 
     //had trouble with this write.
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\n\nHAD LOTS OF PROBLEMS WITH WRITE in write_some_handler_get of asyncConnection.cpp\n\n\n";
+#endif
   }
 }
 
@@ -352,8 +362,9 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
     CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
     mOperationResultErrorVector.push_back(tmper);
 
+#ifdef ASYNC_CONNECTION_DEBUG
     std::cout<<"\n\nGot an error in read_handler_get\n\n";
-
+#endif
     delete sBuff;
   }
   else
@@ -411,7 +422,9 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
         {
           //means that the string wasn't long enough.  Throw an error.
           mReady = READY;
+#ifdef ASYNC_CONNECTION_DEBUG
           std::cout<<"\n\nLINE NOT LONG ENOUGH!  "<<"line:  "<<line<<"  Will try again later to find object:  " << currentlySearchingFor  <<"\n\n";
+#endif
           CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
           mOperationResultErrorVector.push_back(tmper);
         }
@@ -431,8 +444,9 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       if (line.find(CRAQ_NOT_FOUND_RESP) != std::string::npos)
       {
         mReady = READY;
+#ifdef ASYNC_CONNECTION_DEBUG
         std::cout<<"\n\nUnknown!  "<<"line:  "<<line<<"  Will try again later to find object:  " << currentlySearchingFor  <<"\n\n";
-
+#endif
         //        CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
         //        mOperationResultErrorVector.push_back(tmper);
 
@@ -443,9 +457,10 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       else
       {
         //    mOperationResultErrorVector();
+#ifdef ASYNC_CONNECTION_DEBUG
         std::cout<<"\n\nbftm debug: ERROR in asyncConnection.cpp under read_handler_get ";
         std::cout<<"This is line:    "<<line<<" while looking for:  "<<  currentlySearchingFor<<"\n\n";
-
+#endif
         mReady = NEED_NEW_SOCKET;
 
         mSocket->close();

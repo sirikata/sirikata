@@ -1216,7 +1216,16 @@ const char* getPacketStageName (uint32 path) {
 
 }
 
-MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter)
+std::ostream& operator<<(std::ostream& os, const PathPair& rhs) {
+    const char* first_stage = getPacketStageName(rhs.first);
+    const char* second_stage = getPacketStageName(rhs.second);
+
+    os << first_stage << " - " << second_stage;
+
+    return os;
+}
+
+MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter, const String& stage_dump_filename)
         :mFilter(filter)
 {
     StageGroup oh_create_group("Object Host Creation");
@@ -1319,6 +1328,11 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
         }
     }
 
+    std::ofstream* stage_dump_file = NULL;
+    if (!stage_dump_filename.empty()) {
+        stage_dump_file = new std::ofstream(stage_dump_filename.c_str());
+    }
+
     // Compute time diffs for each group x packet
     typedef std::map<PathPair,Average> PathAverageMap;
     PathAverageMap results;
@@ -1339,8 +1353,22 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                 PathPair pp = group.orderedPair( filtered_stamps[idx-1], filtered_stamps[idx] );
                 Duration diff = group.difference( filtered_stamps[idx-1], filtered_stamps[idx] );
                 results[pp].sample(diff);
+
+                if (stage_dump_file) {
+                    (*stage_dump_file) << pp << " " << diff << std::endl;
+                }
             }
         }
+        if (stage_dump_file) {
+            (*stage_dump_file) << std::endl;
+        }
+
+    }
+
+    if (stage_dump_file) {
+        stage_dump_file->close();
+        delete stage_dump_file;
+        stage_dump_file = NULL;
     }
 
     // Report results for each (sensible) pair of stages
@@ -1361,16 +1389,16 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             if (avg.samples() == 0)
                 continue;
 
-            const char* lastStage=getPacketStageName(path_pair.first);
-            const char* currentStage=getPacketStageName(path_pair.second);
-
             SILOG(analysis,info,
-                  "Stage " << lastStage << " - " << currentStage << ":"
+                  "Stage " << path_pair << ":"
                   << avg.average() << " stddev " << avg.stddev()
                   << " #" << avg.samples()
                   );
         }
     }
+}
+
+MessageLatencyAnalysis::~MessageLatencyAnalysis() {
 }
 
 LatencyAnalysis::PacketData::PacketData()

@@ -65,23 +65,39 @@ class SSTBenchmark : public Benchmark {
     Sirikata::Network::Stream::ReceivedResponse computePingTime(Sirikata::Network::Chunk&chk);
     Sirikata::Network::Stream::ReceivedResponse bouncePing(Sirikata::Network::Stream*, Sirikata::Network::Chunk&chk);
     void newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb);
-    bool mForceStop;
-    bool mOrdered;
-    Duration mPingRate;
+
+
+    bool mForceStop; // Indicates that the benchmark runner wants us to exit ASAP
+    bool mOrdered; // Turn ordering of packets in the Stream on. NOTE: Currently
+                   // unordered appears to be broken
+    Duration mPingRate; // Inverse of target ping rate - seconds/ping
     size_t mPingSize;
-    size_t mNumPings;
+
+    size_t mNumPings; // Number of pings to collect before exiting and printing
+                      // stats
+
     String mStreamOptions;
     String mListenOptions;
+
     String mStreamPlugin;
     String mPort;
     String mHost;
+
     Sirikata::Network::IOService*mIOService;
     Sirikata::Network::Stream *mStream;
     Sirikata::Network::StreamListener *mListener;
-    Time mStartTime;
-    Sirikata::uint64 mPingsSent;
-    Sirikata::uint64 mPingsReceived;
-    
+
+    Time mStartTime; // Time at which we first got our connection started
+
+    Sirikata::uint64 mPingsAttemptedSent; // Pings which were generated and
+                                          // attempted to be sent to the
+                                          // server. Combined with num pings
+                                          // expected since start, indicates how
+                                          // many more pings we need to generate
+                                          // to satisfy the target rate.
+    Sirikata::uint64 mPingsSent; // Pings sent out to the server so far
+    Sirikata::uint64 mPingsReceived; // Pings received back from the server so far
+
     std::vector<Time> mOutstandingPings;
     std::vector<Duration> mPingResponses;
 }; // class TimerSpeedBenchmark
