@@ -47,6 +47,7 @@
 #include "CBR_Session.pbj.hpp"
 #include "CBR_OSeg.pbj.hpp"
 #include "CBR_ObjConnKill.pbj.hpp"
+#include "CBR_SSTHeader.pbj.hpp"
 
 
 namespace CBR {

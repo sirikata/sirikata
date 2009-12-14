@@ -337,6 +337,7 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/oh/ScenarioFactory.cpp
   ${CBR_SOURCE_DIR}/oh/DistributionPingScenario.cpp
   ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
+  ${CBR_SOURCE_DIR}/SSTImpl.cpp
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
@@ -396,6 +397,7 @@ SET(CBR_PROTOCOLS
   Session.pbj
   OSeg.pbj
   ObjConnKill.pbj
+  SSTHeader.pbj
 )
 SET(PBJ_CPP_HEADER "\n")
 # protocol targets
