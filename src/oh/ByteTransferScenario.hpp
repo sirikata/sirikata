@@ -1,5 +1,5 @@
-#ifndef _DISTRIBUTION_PING_SCENARIO_HPP_
-#define _DISTRIBUTION_PING_SCENARIO_HPP_
+#ifndef _BYTE_TRANSFER_SCENARIO_HPP_
+#define _BYTE_TRANSFER_SCENARIO_HPP_
 
 #include "Scenario.hpp"
 namespace CBR {

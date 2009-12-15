@@ -28,6 +28,7 @@ ByteTransferScenario::ByteTransferScenario(const String &options):mStartTime(Tim
     mGeneratePings=std::tr1::bind(&ByteTransferScenario::generatePings,this);
 }
 ByteTransferScenario::~ByteTransferScenario(){
+    stop();
     mContext->objectHost->unregisterService(mPort);
     delete mPingProfiler;
 }
@@ -36,7 +37,7 @@ ByteTransferScenario*ByteTransferScenario::create(const String&options){
     return new ByteTransferScenario(options);
 }
 void ByteTransferScenario::addConstructorToFactory(ScenarioFactory*thus){
-    thus->registerConstructor("ping",&ByteTransferScenario::create);
+    thus->registerConstructor("bandwidth",&ByteTransferScenario::create);
 }
 
 void ByteTransferScenario::initialize(ObjectHostContext*ctx) {
@@ -44,6 +45,7 @@ void ByteTransferScenario::initialize(ObjectHostContext*ctx) {
     mPingProfiler = mContext->profiler->addStage("Object Host Generate TransferBytes ");
     mContext->objectHost->registerService(mPort,std::tr1::bind(&ByteTransferScenario::pingReturn,this,_1));
     mReturned=false;
+    start();
 }
 
 void ByteTransferScenario::start() {
@@ -79,12 +81,13 @@ void ByteTransferScenario::stop() {
     }
 }
 void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage&msg){
+    mReturned=true;
+    static Time start=mContext->simTime();
     if (msg.payload().size()>=8){
         if (msg.payload().size()!=mPacketSize&&mPacketSize>=8) {
             SILOG(oh,error,"Packet size does not match received packet size "<<msg.payload().size()<< " != "<<mPacketSize);            
         }else {
             int64 pingNumber=0;
-            mReturned=true;
             for (int i=8;i-->0;) {
                 unsigned char val=msg.payload()[i];
                 pingNumber*=256;
@@ -93,25 +96,31 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
             if (pingNumber>=(int64)mOutstandingPackets.size()) {
                 SILOG(oh,error,"Packet received that hasn't been sent yet "<<pingNumber);                
             }else {
-                mOutstandingPackets[pingNumber].update(mContext->simTime());
+                Time tim(mContext->simTime());
+                mOutstandingPackets[pingNumber].update(tim);
+                SILOG(oh,error,"Ping Return in "<<tim-start);
+                start=tim;
             }
         }
     }else {
         SILOG(oh,error,"Runt transfer packet sized "<<msg.payload().size()); 
     }
-    mContext->mainStrand->post(mGeneratePings);
+    mGeneratePings();
 }
 void ByteTransferScenario::generatePings() {
-    if (mSourceObject==UUID::null()||mDestinationObject==UUID::null()) {
+    if (mSourceObject==UUID::null()||mDestinationObject==UUID::null()&&mContext->objectHost->getObjectConnections()->numServerIDs()>1) {
         mPingProfiler->started();
         unsigned int maxDistance=mContext->objectHost->getObjectConnections()->numServerIDs();
         unsigned int distance=0;
         if (maxDistance&&((!mSameObjectHostPings)&&(!mForceSameObjectHostPings)))
             maxDistance-=1;
         if (maxDistance>1&&!mForceSameObjectHostPings) {
-            distance=(rand()%maxDistance);//uniform distance at random
-            if (!mSameObjectHostPings)
+            if(mSameObjectHostPings) {
+                distance=(rand()%(maxDistance+1));//uniform distance at random
+            }else {
+                distance=(rand()%maxDistance);//uniform distance at random
                 distance+=1;
+            }
         }
         unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
 
@@ -130,7 +139,7 @@ void ByteTransferScenario::generatePings() {
             mSourceObject=objA->uuid();
             mDestinationObject=objB->uuid();
         }
-        mContext->mainStrand->post(Duration::milliseconds(10.),mGeneratePings);
+        mContext->mainStrand->post(Duration::milliseconds(10.0),mGeneratePings);
     }else {
         std::string buffer;
         if (mPacketSize>8) {
@@ -161,8 +170,6 @@ void ByteTransferScenario::generatePings() {
         mPingProfiler->finished();
         if (!mReturned) {
             mContext->mainStrand->post(Duration::microseconds(100),mGeneratePings);
-        }else {
-            mContext->mainStrand->post(Duration::milliseconds(100),mGeneratePings);
         }
 
     }
