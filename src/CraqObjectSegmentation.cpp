@@ -12,7 +12,6 @@
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
 
-
 #include "CoordinateSegmentation.hpp"
 #include <sstream>
 #include <string.h>
@@ -67,7 +66,6 @@ namespace CBR
 
     mAtomicTrackID    = 10;
 
-    mTimer.start();
   }
 
 
@@ -152,8 +150,10 @@ namespace CBR
     {
       //means that the object isn't hosted on this space server
 
-      Duration endingDur = mTimer.elapsed();
+      //      Duration endingDur = mTimer.elapsed();
+      Duration endingDur = Time::local() - Time::epoch();
 
+      
       checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
       ++checkOwnTimeCount;
 
@@ -161,9 +161,10 @@ namespace CBR
     }
 
     //means that the object *is* hosted on this space server
+    //    Duration endingDur = mTimer.elapsed();
+    Duration endingDur = Time::local() - Time::epoch();
 
-    Duration endingDur = mTimer.elapsed();
-
+    
     checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
     ++ checkOwnTimeCount;
     return true;
@@ -266,8 +267,9 @@ namespace CBR
 
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id);
-    tsrda.dur       = mTimer.elapsed();
-
+    //    tsrda.dur       = mTimer.elapsed();
+    tsrda.dur = Time::local() - Time::epoch();
+    
 
     int trackID = getUniqueTrackID();
     craqDhtSet.set(cdSetGet, trackID);
@@ -282,6 +284,31 @@ namespace CBR
     return oadd;
   }
 
+  ServerID CraqObjectSegmentation::cacheLookup(const UUID& obj_id)
+  {
+    if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
+    {
+      ++numOnThisServer;
+      return mContext->id();
+    }
+
+
+    if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
+    {
+      ++numMigrationNotCompleteYet;
+      return mContext->id();
+    }
+    
+    ServerID cacheReturn = satisfiesCache(obj_id);
+    if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
+    {
+      ++numCacheHits;
+      return cacheReturn;
+    }
+
+    return NullServerID;
+  }
+  
 
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
@@ -289,14 +316,21 @@ namespace CBR
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
+    Duration beginDur = Time::local() - Time::epoch();
+
     if (mReceivedStopRequest)
       return NullServerID;
 
+    
+    OSegLookupTraceToken* traceToken = new OSegLookupTraceToken(obj_id);
+    traceToken->initialLookupTime    = beginDur.toMicroseconds();
+    
     ++numLookups;
 
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
     {
       ++numOnThisServer;
+      delete traceToken;
       return mContext->id();
     }
 
@@ -309,10 +343,13 @@ namespace CBR
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
     {
       ++numMigrationNotCompleteYet;
+      delete traceToken;
       return mContext->id();
     }
 
-
+    Duration cacheBeginDur = Time::local() - Time::epoch();
+    traceToken->checkCacheLocalBegin = cacheBeginDur.toMicroseconds();
+    
     ServerID cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
@@ -321,24 +358,46 @@ namespace CBR
                                            obj_id);
 
       ++numCacheHits;
+
+      Duration cacheEndDur = Time::local() - Time::epoch();
+      traceToken->checkCacheLocalEnd = cacheEndDur.toMicroseconds();
+      //      mContext->trace()->osegCumulativeResponse(mContext->time, traceToken);
+      delete traceToken;
       return cacheReturn;
     }
 
-    oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id));
+    Duration cacheEndDur = Time::local() - Time::epoch();
+    traceToken->checkCacheLocalEnd = cacheEndDur.toMicroseconds();
 
+    
+    oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id, traceToken));
+    
     return NullServerID;
   }
 
-  void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id)
+
+
+  
+  void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken)
   {
     if (mReceivedStopRequest)
+    {
+      delete traceToken;
       return;
+    }
 
+    Duration beginCraqDur  = Time::local() - Time::epoch();
+    traceToken->craqLookupBegin = beginCraqDur.toMicroseconds();
+
+    
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
+      Duration beginCraqLookupNotAlreadyLookingUpDur = Time::local() - Time::epoch();
+      traceToken->craqLookupNotAlreadyLookingUpBegin  = beginCraqLookupNotAlreadyLookingUpDur.toMicroseconds();
+      
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
       //add the mapping of a craqData Key to a uuid.
 
@@ -352,7 +411,7 @@ namespace CBR
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
-      craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
+      //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
       mContext->trace()->objectSegmentationCraqLookupRequest(mContext->time,
                                                              obj_id,
@@ -361,19 +420,27 @@ namespace CBR
       ++numLookingUpDebug;
 
       //puts object in transit or lookup.
-      Duration timerDur = mTimer.elapsed();
-      //      Duration timerDur = ctx->time;
-      //Duration timerDur =  Time::local() - Time::epoch();
+      //Duration timerDur = mTimer.elapsed();
+      Duration timerDur =  Time::local() - Time::epoch();
 
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
 
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
+
+      Duration endCraqDur  = Time::local() - Time::epoch();
+      traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
+      traceToken->craqLookupNotAlreadyLookingUpEnd = endCraqDur.toMicroseconds();
+
+      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
     }
     else
     {
       ++numAlreadyLookingUp;
+      Duration endCraqDur  = Time::local() - Time::epoch();
+      traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
+      mContext->trace()->osegCumulativeResponse(mContext->time, traceToken);
     }
   }
 
@@ -424,9 +491,8 @@ namespace CBR
 
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
-      tsrd.dur       = mTimer.elapsed();
-      //tsrd.dur       = ctx->time;
-      //tsrd.dur =  Time::local() - Time::epoch();
+      //      tsrd.dur       = mTimer.elapsed();
+      tsrd.dur =  Time::local() - Time::epoch();
 
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet,trackID);
@@ -472,9 +538,8 @@ namespace CBR
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = new_server_id;
 
-    Duration tmpDurer= mTimer.elapsed();
-    //    Duration tmpDurer= ctx->time;
-    //    Duration tmpDurer = Time::local() - Time::epoch();
+    //    Duration tmpDurer= mTimer.elapsed();
+    Duration tmpDurer = Time::local() - Time::epoch();
 
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
@@ -509,28 +574,31 @@ namespace CBR
   void CraqObjectSegmentation::poll()
   {
     if (mReceivedStopRequest)
-    {
       return;
-    }
+
 
     mServiceStage->started();
     //shouldn't really need to do anything in here.
     //    well, maybe try to re-send the messages that failed;
     //    maybe also deal with not founds.
 
-
-
     mServiceStage->finished();
   }
 
 
-
   //should be called from inside of o_strand and posts to postingStrand mainStrand->post.
-  void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID)
+  void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken)
   {
     if (mReceivedStopRequest)
+    {
+      if (traceToken != NULL)
+        delete traceToken;
       return;
+    }
 
+    if (traceToken != NULL)
+      mContext->trace()->osegCumulativeResponse(mContext->time,traceToken);
+    
     postingStrand->post(std::tr1::bind (&OSegListener::osegLookupCompleted,mListener,obj_id,sID));
   }
 
@@ -617,7 +685,7 @@ namespace CBR
 
       //put the value in the cache!
       postingStrand->post(std::tr1::bind(&CraqCacheGood::insert, &mCraqCache, obj_id, serv_from));
-      callOsegLookupCompleted(obj_id,serv_from);
+      callOsegLookupCompleted(obj_id,serv_from, NULL);
 
 
       //log reception of acknowled message
@@ -716,10 +784,10 @@ namespace CBR
 
     NotFoundData* nfd = new NotFoundData();
     nfd->obj_id =  mapDataKeyToUUID[nf->idToString()];
-    nfd->dur    =  mTimer.elapsed();
-    //    nfd->dur    =  ctx->time;
-    //    nfd->dur = Time::local() - Time::epoch();
+    nfd->dur = Time::local() - Time::epoch();
+    nfd->traceToken = nf->traceToken;
 
+    
     mNfData.push(nfd);
   }
 
@@ -737,9 +805,7 @@ namespace CBR
 
     std::cout<<"\n\nGOT NOT FOUND\n\n";
 
-    Duration tmpDur = mTimer.elapsed();
-    //    Duration tmpDur = ctx->time;
-    //    Duration tmpDur = Time::local() - Time::epoch();
+    Duration tmpDur = Time::local() - Time::epoch();
 
 
     bool queueDataOldEnough = true;
@@ -760,7 +826,7 @@ namespace CBR
         indexer.append(nfd->obj_id.rawHexData());
 
         CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
-        craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
+        craqDhtGet.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
 
         mNfData.pop(); //remove the item from the queue.
 
@@ -773,8 +839,15 @@ namespace CBR
   //gets posted to from asyncCraqGet.  Should get inside of o_strand from the post.
   void CraqObjectSegmentation::craqGetResult(CraqOperationResult* cor)
   {
+    Duration tmpDur = Time::local() - Time::epoch();
+
+    if (cor->traceToken != NULL)
+      cor->traceToken->lookupReturnBegin = tmpDur.toMicroseconds();
+    
     if (mReceivedStopRequest)
     {
+      if (cor->traceToken != NULL)
+        delete cor->traceToken;
       delete cor;
       return;
     }
@@ -782,6 +855,10 @@ namespace CBR
     if (cor->servID == NullServerID)
     {
       notFoundFunction(cor);
+
+      if(cor->traceToken!= NULL)
+        delete cor->traceToken;
+      
       delete cor;
 
       std::cout<<"\n\nWe have an object that does not exist in craq system.  This shouldn't have really been called.\n\n";
@@ -803,9 +880,7 @@ namespace CBR
     if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
     {
       //log message stating that object was processed.
-      Duration timerDur = mTimer.elapsed();
-      //Duration timerDur = ctx->time;
-      //      Duration timerDur = Time::local() - Time::epoch();
+      Duration timerDur = Time::local() - Time::epoch();
 
       mContext->trace()->objectSegmentationProcessedRequest(mContext->time,
                                                             tmper,
@@ -813,10 +888,6 @@ namespace CBR
                                                             mContext->id(),
                                                             (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)),
                                                             (uint32) craqDhtGet.queueSize()  );
-
-
-      uint32 timeItTook = (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted));
-
 
       if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
       {
@@ -826,8 +897,13 @@ namespace CBR
       }
     }
     inTransOrLookup_m.unlock();
-    callOsegLookupCompleted(tmper,cor->servID);
 
+    Duration tmpDurEnd = Time::local() - Time::epoch();
+    if (cor->traceToken != NULL)
+      cor->traceToken->lookupReturnEnd = tmpDurEnd.toMicroseconds();
+
+    
+    callOsegLookupCompleted(tmper,cor->servID, cor->traceToken);
     delete cor;
   }
 
@@ -910,9 +986,8 @@ namespace CBR
       removeFromReceivingObjects(obj_id);
 
       //log event
-      Duration procTrackedSetRes = mTimer.elapsed();
-      //      Duration procTrackedSetRes = ctx->time;
-      //      Duration procTrackedSetRes = Time::local() - Time::epoch();
+      //      Duration procTrackedSetRes = mTimer.elapsed();
+      Duration procTrackedSetRes = Time::local() - Time::epoch();
 
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
 

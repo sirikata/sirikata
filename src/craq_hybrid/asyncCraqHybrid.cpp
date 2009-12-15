@@ -42,9 +42,9 @@ namespace CBR
     mSetStrand->post(std::tr1::bind(&AsyncCraqSet::set,&aCraqSet,cdSet, trackingNumber));
   }
 
-  void AsyncCraqHybrid::get(CraqDataSetGet cdGet)
+  void AsyncCraqHybrid::get(CraqDataSetGet cdGet, OSegLookupTraceToken* traceToken)
   {
-    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::get,&aCraqGet, cdGet));
+    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::get,&aCraqGet, cdGet, traceToken));
   }
 
   int AsyncCraqHybrid::queueSize()

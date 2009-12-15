@@ -24,9 +24,9 @@ namespace CBR
   CraqCacheGood::~CraqCacheGood()
   {
 
-    //    std::cout<<"\n\n  insertMilliseconds:  "<<insertMilliseconds<<"  numInserted:   "<<numInserted<<"    avg: "<<((double)insertMilliseconds)/((double) numInserted)<<"\n\n";
+    std::cout<<"\n\n  insertMilliseconds:  "<<insertMilliseconds<<"  numInserted:   "<<numInserted<<"    avg: "<<((double)insertMilliseconds)/((double) numInserted)<<"\n\n";
 
-    //    std::cout<<"\n\n maintainDur:  "<<maintainDur<<"   numMaintained  "<<numMaintained<<"  avg: "<<((double)maintainDur)/((double)numMaintained)<<"\n\n";
+    std::cout<<"\n\n maintainDur:  "<<maintainDur<<"   numMaintained  "<<numMaintained<<"  avg: "<<((double)maintainDur)/((double)numMaintained)<<"\n\n";
     
   }
 
@@ -58,6 +58,7 @@ namespace CBR
 
         //delete the record from the multimap
         timeRecMap.erase(tMapIter++);
+
       }
       Duration endingDur = mTimer.elapsed();
       maintainDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();

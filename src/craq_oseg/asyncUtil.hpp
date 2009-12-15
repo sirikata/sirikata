@@ -2,7 +2,7 @@
 #define __ASYNC_UTIL_HPP__
 
 #include <string>
-
+#include "../OSegLookupTraceToken.hpp"
 
 
 namespace CBR
@@ -80,7 +80,9 @@ struct CraqOperationResult
   enum GetOrSet {GET, SET};
   GetOrSet whichOperation;
   CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not);
+  CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not, OSegLookupTraceToken* ttoken);
   std::string idToString();
+  OSegLookupTraceToken* traceToken;
 };
 
 struct CraqInitializeArgs

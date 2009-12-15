@@ -10,7 +10,7 @@
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
 #include "../../Utility.hpp"
-
+#include "../../OSegLookupTraceToken.hpp"
 
 namespace CBR
 {
@@ -31,6 +31,7 @@ private:
     int tracking_number;
     uint64 time_admitted; //in milliseconds what time was when lookup was requested.
     Sirikata::Network::DeadlineTimer* deadline_timer;
+    OSegLookupTraceToken* traceToken;
   };
 
   
@@ -42,8 +43,11 @@ public:
   
   AsyncConnectionGet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
-  void get(const CraqDataKey& dataToGet);
-  void getBound(const CraqObjectID& obj_dataToGet);
+
+  void get(const CraqDataKey& dataToGet, OSegLookupTraceToken* traceToken);
+  void getBound(const CraqObjectID& obj_dataToGet, OSegLookupTraceToken* traceToken);
+
+
   
   ~AsyncConnectionGet();
   AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg );
@@ -138,11 +142,8 @@ private:
   IOStrand* mResultStrand;
   AsyncCraqScheduler* mSchedulerMaster;  
   ObjectSegmentation* mOSeg;
-  Timer mTimer;
-  Timer mSpecificTimer;
   double getTime;
   int numGets;
-  Duration mBeginDur;
   bool mReceivedStopRequest;  
 };
 

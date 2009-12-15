@@ -65,16 +65,23 @@ OSegLookupQueue::OSegLookupList::iterator OSegLookupQueue::OSegLookupList::end()
 
 // OSegLookupQueue Implementation
 
-OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred)
+
+OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred, uint32 queue_size)
  : mNetworkStrand(net_strand),
    mOSeg(oseg),
    mPredicate(pred),
-   mTotalSize(0)
+   mTotalSize(0),
+   oseg_lookup_queue_tail_drop_size_parameter (queue_size)
 {
     mOSeg->setListener(this);
 }
 
-bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb) {
+
+
+
+  
+bool OSegLookupQueue::old_lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)
+{
     UUID dest_obj = msg->dest_object();
 
     // First, initiate a lookup in case we have a cached value
@@ -92,7 +99,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
     size_t cursize = msg->ByteSize();
     if (!mPredicate(dest_obj, cursize, mTotalSize))
         return false;
-
+        
     // And if we do, stick it on a list and wait
     mTotalSize += cursize;
     OSegLookup lu;
@@ -102,6 +109,66 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
     return true;
 }
 
+
+
+
+bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)
+{
+  UUID dest_obj = msg->dest_object();
+
+  // Check if we'll accept the burden of this very heavy packet
+  size_t cursize = msg->ByteSize();
+  if (!mPredicate(dest_obj, cursize, mTotalSize))
+    return false;
+
+        
+  //if already looking up, do not call lookup on mOSeg;
+  LookupMap::const_iterator it = mLookups.find(dest_obj);
+  if (it != mLookups.end())
+  {
+    //we are already looking up the object.  Just add it to mLookups
+    // And if we do, stick it on a list and wait
+    mTotalSize += cursize;
+    OSegLookup lu;
+    lu.msg = msg;
+    lu.cb = cb;
+    mLookups[dest_obj].push_back(lu);
+    return true;
+  }
+    
+  //if get a cache hit from oseg, do not return;
+  ServerID destServer= mOSeg->cacheLookup(msg->dest_object());
+  if (destServer != NullServerID)
+  {
+    cb(msg, destServer, ResolvedFromCache);
+    return true;
+  }
+  
+  //if did not get a cache hit, check if have enough room to add it;
+  if (mLookups.size() > oseg_lookup_queue_tail_drop_size_parameter)
+    return false;
+
+  //  otherwise, do full oseg lookup;
+  destServer = mOSeg->lookup(msg->dest_object());
+  // If we already have a server, handle the callback right away
+  if (destServer != NullServerID) {
+    cb(msg, destServer, ResolvedFromCache);
+    return true;
+  }
+        
+  // And if we do, stick it on a list and wait
+  mTotalSize += cursize;
+  OSegLookup lu;
+  lu.msg = msg;
+  lu.cb = cb;
+  mLookups[dest_obj].push_back(lu);
+  return true;
+}
+
+
+
+
+  
 void OSegLookupQueue::osegLookupCompleted(const UUID& id, const ServerID& dest) {
     mNetworkStrand->post(
         std::tr1::bind(&OSegLookupQueue::handleLookupCompleted, this, id, dest)

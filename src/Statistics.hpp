@@ -109,7 +109,7 @@ public:
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
     static const uint8 OSegCumulativeTraceAnalysisTag   = 25;
 
-  
+
     enum MessagePath {
         NONE, // Used when tag is needed but we don't have a name for it
 
@@ -187,8 +187,8 @@ public:
 
   void osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken);
   
-    void prepareShutdown();
-    void shutdown();
+  void prepareShutdown();
+  void shutdown();
 
 private:
     // Thread which flushes data to disk periodically

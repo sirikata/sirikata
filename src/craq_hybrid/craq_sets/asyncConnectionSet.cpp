@@ -29,7 +29,7 @@ namespace CBR
     mReceivedStopRequest(false)
   {
     mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
-    mTimer.start();
+  
   }
 
   int AsyncConnectionSet::numStillProcessing()
@@ -173,7 +173,7 @@ namespace CBR
     iqd->currentlySettingTo     =                dataToSetTo;
     iqd->gs                     =   IndividualQueryData::SET;
 
-    Duration dur = mTimer.elapsed();
+    Duration dur = Time::local() - Time::epoch();
     iqd->time_admitted = dur.toMilliseconds();
 
 

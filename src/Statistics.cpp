@@ -46,6 +46,7 @@
 //#define TRACE_LOCPROX
 #define TRACE_OSEG
 //#define TRACE_CSEG
+#define TRACE_OSEG_CUMULATIVE
 
 #define TRACE_MIGRATION
 //#define TRACE_DATAGRAM
@@ -134,7 +135,7 @@ const uint8 Trace::OSegShutdownEventTag;
 const uint8 Trace::ObjectGeneratedLocationTag;
 const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
-  //const uint8 Trace::OSegCraqGetConnnectionShutdownTag;
+const uint8 Trace::OSegCumulativeTraceAnalysisTag;
 
 
 
@@ -582,7 +583,6 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write(&OSegCumulativeTraceAnalysisTag, sizeof (OSegCumulativeTraceAnalysisTag));
     data.write(&t, sizeof(t));
-    data.write(&obj_id, sizeof(obj_id));
     data.write(traceToken, sizeof(OSegLookupTraceToken));
     #endif
 

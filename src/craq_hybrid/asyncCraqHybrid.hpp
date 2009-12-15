@@ -4,6 +4,7 @@
 #include "../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
 #include "asyncCraqScheduler.hpp"
+#include "../OSegLookupTraceToken.hpp"
 
 #ifndef  __ASYNC_CRAQ_HYBRID_HPP__
 #define  __ASYNC_CRAQ_HYBRID_HPP__
@@ -20,7 +21,7 @@ public:
   void initialize(std::vector<CraqInitializeArgs>);
 
   void set(CraqDataSetGet cdSet, uint64 tracking_number = 0);
-  void get(CraqDataSetGet cdGet);
+  void get(CraqDataSetGet cdGet, OSegLookupTraceToken* traceToken);
 
   int queueSize();
   int numStillProcessing();

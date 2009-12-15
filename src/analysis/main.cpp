@@ -40,7 +40,7 @@
 #include "Visualization.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"
-//#include "CoordinateSegmentationClient.hpp"
+#include "CoordinateSegmentationClient.hpp"
 
 #include "ServerWeightCalculator.hpp"
 
@@ -144,8 +144,7 @@ int main(int argc, char** argv) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "client") {
-      std::cout<<"\n\nBFTM deleted because couldn't get to compile\n\n";
-      //      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
+      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
     }
     else {
         assert(false);
@@ -355,6 +354,19 @@ int main(int argc, char** argv) {
 //         oseg_process_stream_csv.close();
 
 
+        //oseg cumulative trace code
+        String  object_segmentation_cumulative_filename_csv = "oseg_object_segmentation_cumulative_file";
+        object_segmentation_cumulative_filename_csv += ".csv";
+
+        OSegCumulativeTraceAnalysis cumulativeOsegAnalysis(STATS_TRACE_FILE,max_space_servers, osegProcessedAfterSeconds);
+        
+        std::ofstream oseg_cumulative_stream_csv(object_segmentation_cumulative_filename_csv.c_str());
+
+        cumulativeOsegAnalysis.printData(oseg_cumulative_stream_csv);
+        oseg_cumulative_stream_csv.flush();
+        oseg_cumulative_stream_csv.close();
+
+        
         
         //completed round trip migrate times
         String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";

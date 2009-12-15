@@ -105,7 +105,7 @@ protected:
     public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
-      void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq);
+      void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, uint32 lookup_queue_size);
 
 
       // Routing interface for servers.  This is used to route messages that originate from
@@ -131,10 +131,12 @@ private:
       void receiveMessage(Message* msg);
 
       void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
-    void enableObjectConnection(const UUID& dest_obj);
+      void enableObjectConnection(const UUID& dest_obj);
       ObjectConnection* removeObjectConnection(const UUID& dest_obj);
       ObjectConnection* getObjectConnection(const UUID& dest_obj);
       ObjectConnection* getObjectConnection(const UUID& dest_obj, uint64& uniqueconnid );
+
+      uint32 oseg_lookup_queue_size;
   };//end class Forwarder
 
 } //end namespace CBR

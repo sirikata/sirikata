@@ -11,8 +11,21 @@ namespace CBR
     succeeded = suc;
     whichOperation = gos;
     tracking = track_or_not;
+    traceToken = NULL;
   }
 
+  CraqOperationResult::CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not, OSegLookupTraceToken* ttoken)
+  {
+    servID = sID;
+    memcpy(objID,obj_id,CRAQ_DATA_KEY_SIZE);
+    trackedMessage = tm;
+    succeeded = suc;
+    whichOperation = gos;
+    tracking = track_or_not;
+    traceToken = ttoken;
+  }
+
+  
   std::string CraqOperationResult::idToString()
   {
     objID[CRAQ_DATA_KEY_SIZE -1] = '\0';

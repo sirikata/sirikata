@@ -563,9 +563,10 @@ public:
   class OSegCumulativeTraceAnalysis
   {
   private:
+    static const uint64_t OSEG_CUMULATIVE_ANALYSIS_SECONDS_TO_MICROSECONDS = 1000000;
     std::vector<OSegCumulativeEvent*> allTraces;
-
-    void filterShorterPath();
+    void filterShorterPath(uint64 time_after_microseconds);
+    void generateAllData();
     void generateCacheTime();
     void generateGetCraqLookupPostTime();
     void generateCraqLookupTime();
@@ -579,25 +580,46 @@ public:
     void generateReturnPostTime();
     void generateLookupReturnTime();
     void generateCompleteLookupTime();
+    void generateFullTime();
+
     
-    std::vector<uint64> cacheTimesVec;
-    std::vector<uint64> craqLookupPostTimesVec;
-    std::vector<uint64> craqLookupTimesVec;
-    std::vector<uint64> craqLookupNotAlreadyLookingUpTimesVec;
-    std::vector<uint64> managerPostTimesVec;
-    std::vector<uint64> managerEnqueueTimesVec;
-    std::vector<uint64> managerDequeueTimesVec;
-    std::vector<uint64> connectionPostTimesVec;
-    std::vector<uint64> connectionNetworkQueryTimesVec;
-    std::vector<uint64> connectionsNetworkTimesVec;
-    std::vector<uint64> returnPostTimesVec;
-    std::vector<uint64> lookupReturnsTimesVec;
-    std::vector<uint64> completeLookupTimesVec;
+    uint64 mInitialTime;
+    
+    struct CumulativeTraceData
+    {
+      uint64 cacheTime;
+      uint64 craqLookupPostTime;
+      uint64 craqLookupTime;
+      uint64 craqLookupNotAlreadyLookingUpTime;
+      uint64 managerPostTime;
+      uint64 managerEnqueueTime;
+      uint64 managerDequeueTime;
+      uint64 connectionPostTime;
+      uint64 connectionNetworkQueryTime;
+      uint64 connectionsNetworkTime;
+      uint64 returnPostTime;
+      uint64 lookupReturnsTime;
+      uint64 completeLookupTime;
+      uint64 fullTime;
+    };
+    
+    struct OSegCumulativeDurationComparator
+    {
+      bool operator()(const CumulativeTraceData* lhs, const CumulativeTraceData* rhs) const
+      {
+        return (lhs->completeLookupTime < rhs->completeLookupTime);
+      }
+    };
+
+    
+    std::vector<CumulativeTraceData*> mCumData;
+    void sortByCompleteLookupTime( );
     
   public:
-    OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers);
+    OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds =  0);
     ~OSegCumulativeTraceAnalysis();
     void printData(std::ostream &fileOut);
+    void printDataHuman(std::ostream &fileOut);
   };
 
 

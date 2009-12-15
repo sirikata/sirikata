@@ -59,7 +59,6 @@ private:
   IOStrand*               mResultsStrand;
   AsyncCraqScheduler*   mSchedulerMaster;
   ObjectSegmentation*              mOSeg;
-  Timer mTimer;
   
   ConnectionState mReady;
 

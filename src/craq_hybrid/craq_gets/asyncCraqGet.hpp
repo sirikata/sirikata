@@ -9,6 +9,8 @@
 #include "../../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
 #include <sirikata/network/Asio.hpp>
+#include "../../OSegLookupTraceToken.hpp"
+
 
 #ifndef __ASYNC_CRAQ_GET_CLASS_H__
 #define __ASYNC_CRAQ_GET_CLASS_H__
@@ -20,6 +22,15 @@ namespace CBR
   class AsyncCraqGet : public AsyncCraqScheduler,
                        public PollingService
   {
+  private:
+
+    struct QueueValue
+    {
+      CraqDataSetGet* cdQuery;
+      OSegLookupTraceToken* traceToken;
+    };
+
+    
   public:
     AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
     ~AsyncCraqGet();
@@ -31,7 +42,7 @@ namespace CBR
     virtual void erroredSetValue(CraqOperationResult* cor);
 
   
-    void get(const CraqDataSetGet& cdGet);
+    void get(const CraqDataSetGet& cdGet, OSegLookupTraceToken* traceToken);
 
     int queueSize();
     int numStillProcessing();
@@ -47,8 +58,8 @@ namespace CBR
     std::vector<IOStrand*> mConnectionsStrands;
 
 
-    std::queue<CraqDataSetGet*> mQueue;
-  
+
+    std::queue<QueueValue*>mQueue;
 
     void reInitializeNode(int s);
     void checkConnections(int s);

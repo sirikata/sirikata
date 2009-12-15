@@ -13,7 +13,7 @@
 #include <sirikata/network/Asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "../../Utility.hpp"
-
+#include "../../OSegLookupTraceToken.hpp"
 
 namespace CBR
 {
@@ -29,9 +29,6 @@ namespace CBR
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
 
-  mTimer.start();
-  mSpecificTimer.start();
-  mBeginDur = mTimer.elapsed();
   getTime = 0;
   numGets = 0;
 }
@@ -57,7 +54,15 @@ namespace CBR
       if(it->second->deadline_timer != NULL)
       {
         it->second->deadline_timer->cancel();
+        delete it->second->deadline_timer;
         it->second->deadline_timer = NULL;
+
+        if (it->second->traceToken != NULL)
+        {
+          delete it->second->traceToken;
+          it->second->traceToken = NULL;
+        }
+        
       }
     }
   }
@@ -73,8 +78,7 @@ namespace CBR
   void AsyncConnectionGet::outputLargeOutstanding()
   {
     MultiOutstandingQueries::iterator it;
-    mTimer.elapsed();
-    Duration dur = mTimer.elapsed();
+    Duration dur = Time::local() - Time::epoch();
 
     uint64 currentTime = dur.toMilliseconds();
 
@@ -127,13 +131,16 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET )
     {
+      outQueriesIter->second->traceToken->deadlineExpired = true;
+      
       //says that this is a get.
       CraqOperationResult* cor  = new CraqOperationResult(0,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
                                                           false,
                                                           CraqOperationResult::GET,
-                                                          false); //this is a not_found, means that we add 0 for the id found
+                                                          false,
+                                                          outQueriesIter->second->traceToken);
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
@@ -181,41 +188,40 @@ void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::erro
 
 
 
-AsyncConnectionGet::~AsyncConnectionGet()
-{
-  outputLargeOutstanding();
-
-  //  std::cout<<"\n\nGet times:   "<<getTime<<"  num gets:  "<<numGets<<"   avg: "<< ((double)getTime) / ((double)numGets)<<"\n\n";
-
-  //delete all outstanding queries
-  for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)
+  AsyncConnectionGet::~AsyncConnectionGet()
   {
-    if (outQuerIt->second->deadline_timer != NULL)
+    outputLargeOutstanding();
+
+    //delete all outstanding queries
+    for (MultiOutstandingQueries::iterator outQuerIt = allOutstandingQueries.begin(); outQuerIt != allOutstandingQueries.end(); ++outQuerIt)
     {
-      outQuerIt->second->deadline_timer->cancel();
-      delete   outQuerIt->second->deadline_timer;
+      if (outQuerIt->second->deadline_timer != NULL)
+      {
+        outQuerIt->second->deadline_timer->cancel();
+        delete   outQuerIt->second->deadline_timer;
+      }
+
+      if (outQuerIt->second->traceToken != NULL)
+        delete outQuerIt->second->traceToken;
+    
+      delete outQuerIt->second;
     }
-    delete outQuerIt->second;
+    allOutstandingQueries.clear();
+
+    if (! NEED_NEW_SOCKET)
+    {
+      mSocket->cancel();
+      mSocket->close();
+      delete mSocket;
+      mSocket = NULL;
+    }
   }
-  allOutstandingQueries.clear();
-
-
-  if (! NEED_NEW_SOCKET)
-  {
-    mSocket->cancel();
-    mSocket->close();
-    delete mSocket;
-    mSocket = NULL;
-  }
-}
-
 
 
   AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
   {
     return mReady;
   }
-
 
 
 
@@ -267,50 +273,44 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 }
 
 
-int AsyncConnectionGet::runReQuery()
-{
-  if ( mReceivedStopRequest)
-    return 0;
-
-
-  MultiOutstandingQueries::iterator it;
-
-  int returner = 0;
-  for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
+  int AsyncConnectionGet::runReQuery()
   {
-    getQuery(it->second->currentlySearchingFor);
-    ++ returner;
+    if ( mReceivedStopRequest)
+      return 0;
+
+    MultiOutstandingQueries::iterator it;
+
+    int returner = 0;
+    for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
+    {
+      getQuery(it->second->currentlySearchingFor);
+      ++ returner;
+    }
+
+    if (returner != 0)
+      std::cout<<"\n\nThis is numToRequery: "<<returner<<"\n\n";
+
+    if (! mHandlerState)
+    {
+      std::cout<<"\n\n***********************************HANDLER ISSUE*******************\n\n";
+    }
+    
+    return returner;
   }
 
-  if (returner != 0)
-    std::cout<<"\n\nThis is numToRequery: "<<returner<<"\n\n";
 
-
-  if (! mHandlerState)
+  void AsyncConnectionGet::printStatisticsTimesTaken()
   {
-    std::cout<<"\n\n***********************************HANDLER ISSUE*******************\n\n";
+    double total = 0;
+
+    for (int s=0; s< (int) mTimesTaken.size(); ++s)
+      total += mTimesTaken[s];
+
+
+    std::cout<<"\n\n\nTHIS IS TOTAL:   "<<total<<"\n\n";
+    std::cout<<"\n\n\nTHIS IS AVG:     "<<total/((double) mTimesTaken.size())<<"\n\n";
+    
   }
-
-  return returner;
-}
-
-
-
-
-
-void AsyncConnectionGet::printStatisticsTimesTaken()
-{
-  double total = 0;
-
-  for (int s=0; s< (int) mTimesTaken.size(); ++s)
-  {
-    total += mTimesTaken[s];
-  }
-
-  std::cout<<"\n\n\nTHIS IS TOTAL:   "<<total<<"\n\n";
-  std::cout<<"\n\n\nTHIS IS AVG:     "<<total/((double) mTimesTaken.size())<<"\n\n";
-
-}
 
 
 //dummy handler for writing the set instruction.  (Essentially, if we run into an error from doing the write operation of a set, we know what to do.)
@@ -333,22 +333,33 @@ void AsyncConnectionGet::write_some_handler_set(  const boost::system::error_cod
 //datakey should have a null termination character.
 //public interface for the get command
 //called from inside of oseg_strand.
-void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
+void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken* traceToken)
 {
   if( mReceivedStopRequest)
+  {
+    if (traceToken!= NULL)
+      delete traceToken;
     return;
+  }
 
-  Duration beginningDur = mSpecificTimer.elapsed();
-
+  Duration beginningDur = Time::local() - Time::epoch();
+  traceToken->getConnectionNetworkGetBegin = beginningDur.toMicroseconds();
+  
   if (mReady != READY)
   {
+    traceToken->notReady = true;
+    
     CraqOperationResult* cor = new CraqOperationResult (0,
                                                         dataToGet,
                                                         0,
                                                         false, //means that the operation has failed
                                                         CraqOperationResult::GET,
-                                                        false); //false means that we weren't tracking it anyways.
+                                                        false, //false means that we weren't tracking it anyways.
+                                                        traceToken);
 
+
+
+    
     mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
     return;
   }
@@ -361,7 +372,7 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
   strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
   iqd->gs = IndividualQueryData::GET;
 
-  Duration dur = mTimer.elapsed();
+  Duration dur = Time::local() - Time::epoch();
   iqd->time_admitted = dur.toMilliseconds();
 
   //need to add the individual query data to allOutstandingQueries.
@@ -372,20 +383,23 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet)
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
   iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, iqd)));
 
+  iqd->traceToken = traceToken;
 
   getQuery(dataToGet);
 
 
-  Duration endingDur = mSpecificTimer.elapsed();
+  Duration endingDur = Time::local() - Time::epoch();
   getTime += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
   ++numGets;
+
+  traceToken->getConnectionNetworkGetEnd = endingDur.toMicroseconds();
 }
 
 
-void AsyncConnectionGet::getBound(const CraqObjectID& obj_dataToGet)
-{
-  get(obj_dataToGet.cdk);
-}
+  void AsyncConnectionGet::getBound(const CraqObjectID& obj_dataToGet, OSegLookupTraceToken* traceToken)
+  {
+    get(obj_dataToGet.cdk, traceToken);
+  }
 
 
 
@@ -401,8 +415,6 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
   query.append(dataToGet); //this is the re
   query += STREAM_DATA_KEY_SUFFIX; //bftm changed here.
   query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
-
-
 
   //sets write handler
   async_write((*mSocket),
@@ -679,13 +691,16 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET )
     {
+      outQueriesIter->second->traceToken->notFound = true;
+      
       //says that this is a get.
       CraqOperationResult* cor  = new CraqOperationResult (0,
                                                            outQueriesIter->second->currentlySearchingFor,
                                                            outQueriesIter->second->tracking_number,
                                                            true,
                                                            CraqOperationResult::GET,
-                                                           false); //this is a not_found, means that we add 0 for the id found
+                                                           false,
+                                                           outQueriesIter->second->traceToken); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
@@ -806,13 +821,18 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to
     {
+      Duration gotItDur = Time::local() - Time::epoch();
+      outQueriesIter->second->traceToken->getConnectionNetworkReceived = gotItDur.toMicroseconds();
+
+      
 
       CraqOperationResult* cor  = new CraqOperationResult (sID,
                                                            outQueriesIter->second->currentlySearchingFor,
                                                            outQueriesIter->second->tracking_number,
                                                            true,
                                                            CraqOperationResult::GET,
-                                                           false); //this is a not_found, means that we add 0 for the id found
+                                                           false,
+                                                           outQueriesIter->second->traceToken);
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 

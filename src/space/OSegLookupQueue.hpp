@@ -95,6 +95,8 @@ private:
     PushPredicate mPredicate; // Predicate determining entry to the queue
     int32 mTotalSize;
 
+    uint32 oseg_lookup_queue_tail_drop_size_parameter;
+  
     /* OSegListener Interface */
     virtual void osegLookupCompleted(const UUID& id, const ServerID& dest);
     /* Main thread handler for lookups. */
@@ -107,7 +109,7 @@ public:
      *  \param oseg the ObjectSegmentation which resolves queries
      *  \param pred the predicate which controls whether new lookups are admitted
      */
-    OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred);
+    OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred, uint32 queue_size);
 
     /** Perform an OSeg lookup, calling the specified callback when the result is available.
      *  If the result is available immediately, the callback may be triggered during this
@@ -119,6 +121,7 @@ public:
      *  \returns true if the lookup was accepted, false if it was rejected (due to the push predicate).
      */
     bool lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb);
+    bool old_lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb);
 };
 
 } // namespace CBR

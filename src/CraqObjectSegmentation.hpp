@@ -15,6 +15,7 @@
 #include <vector>
 #include "CraqCacheGood.hpp"
 
+#include "OSegLookupTraceToken.hpp"
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>
@@ -90,6 +91,7 @@ namespace CBR
     {
       Duration dur;
       UUID obj_id;
+      OSegLookupTraceToken* traceToken;
     };
     typedef std::queue<NotFoundData*> NfDataQ;
     NfDataQ mNfData;
@@ -146,15 +148,15 @@ namespace CBR
     std::vector<Message*> reTryKillConnMessage;
     //end redundant message vectors in case a send fails
 
-    void beginCraqLookup(const UUID& obj_id);
-    void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID);
+
+    void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
+    void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken);
+
     
     virtual void poll();
 
     SpaceContext* ctx;
     bool mReceivedStopRequest;
-
-    Timer mTimer;
     
   public:
     CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
@@ -162,6 +164,7 @@ namespace CBR
 
     virtual ~CraqObjectSegmentation();
     virtual ServerID lookup(const UUID& obj_id);
+    virtual ServerID cacheLookup(const UUID& obj_id);
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID idServerAckTo, bool);
     virtual void receiveMessage(Message* msg);
@@ -171,6 +174,8 @@ namespace CBR
     virtual void craqSetResult(CraqOperationResult* cor);
     virtual std::vector<PollingService*> getNestedPollers();
     virtual void stop();
+
+    
     
     
     CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);

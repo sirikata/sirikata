@@ -164,6 +164,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
           evt = cumevt;
         }
+        break;
       case Trace::ServerDatagramSentTag:
           {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
@@ -2928,11 +2929,9 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
 
 
 
-
-
-OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers)
+OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after)
+  : mInitialTime(0)
 {
-
   for(uint32 server_id = 1; server_id <= nservers; server_id++)
   {
     String loc_file = GetPerServerFile(opt_name, server_id);
@@ -2947,13 +2946,30 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
       OSegCumulativeEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeEvent*> (evt);
       if (oseg_cum_evt != NULL)
       {
+        if (allTraces.size() == 0)
+          mInitialTime = (oseg_cum_evt->time - Time::null()).toMicroseconds();
+        else if (mInitialTime > (uint64) (oseg_cum_evt->time - Time::null()).toMicroseconds())
+          mInitialTime = (oseg_cum_evt->time - Time::null()).toMicroseconds();
+
         allTraces.push_back(oseg_cum_evt);
         continue;
       }
       delete evt;
     }
   }
-  filterShorterPath();
+
+  filterShorterPath(time_after*OSEG_CUMULATIVE_ANALYSIS_SECONDS_TO_MICROSECONDS);
+  generateAllData();
+}
+
+
+void OSegCumulativeTraceAnalysis::generateAllData()
+{
+  for (int s=0; s <(int) allTraces.size();  ++s)
+  {
+    CumulativeTraceData* toAdd = new CumulativeTraceData;
+    mCumData.push_back(toAdd);
+  }
   
   generateCacheTime();
     generateGetCraqLookupPostTime();
@@ -2967,113 +2983,193 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
   generateConnectionNetworkTime();
     generateReturnPostTime();
   generateLookupReturnTime();
+  generateCompleteLookupTime();
   
+  sortByCompleteLookupTime();
+}
+
+void OSegCumulativeTraceAnalysis::sortByCompleteLookupTime()
+{
+  std::sort(mCumData.begin(), mCumData.end(), OSegCumulativeDurationComparator());
 }
 
 OSegCumulativeTraceAnalysis::~OSegCumulativeTraceAnalysis()
 {
   for (int s=0;s < (int)allTraces.size(); ++s)
-  {
     delete allTraces[s];
-  }
+
+  for (int s=0; s < (int) mCumData.size();  ++s)
+    delete mCumData[s];
+
+
+  mCumData.clear();
   allTraces.clear();
-  cacheTimesVec.clear();
-  craqLookupPostTimesVec.clear();
-  craqLookupTimesVec.clear();
-  craqLookupNotAlreadyLookingUpTimesVec.clear();
-  managerPostTimesVec.clear();
-  managerEnqueueTimesVec.clear();
-  managerDequeueTimesVec.clear();
-  connectionPostTimesVec.clear();
-  connectionNetworkQueryTimesVec.clear();
-  connectionsNetworkTimesVec.clear();
-  returnPostTimesVec.clear();
-  lookupReturnsTimesVec.clear();
-  completeLookupTimesVec.clear();
 }
 
-void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
+void OSegCumulativeTraceAnalysis::printDataHuman(std::ostream &fileOut)
 {
+  int untilVariable = mCumData.size();
   fileOut << "\n\nCumulative OSeg Analysis\n\n";
 
   fileOut << "\n\nComplete Lookup Times\n";
-  for (int s=0; s < (int) completeLookupTimesVec.size(); ++s)
-    fileOut  << completeLookupTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->completeLookupTime << ",";
 
   fileOut << "\n\nCache Check Times\n";
-  for (int s=0; s < (int) cacheTimesVec.size(); ++s)
-    fileOut  << cacheTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->cacheTime << ",";
 
   fileOut << "\n\nCraq Lookup Post Times\n";
-  for (int s=0; s < (int) craqLookupPostTimesVec.size(); ++s)
-    fileOut  << craqLookupPostTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->craqLookupPostTime << ",";
 
   fileOut << "\n\nCraq Lookup Times\n";
-  for (int s=0; s < (int) craqLookupTimesVec.size(); ++s)
-    fileOut  << craqLookupTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->craqLookupTime << ",";
 
   fileOut << "\n\nCraq Lookup Not Already Looking Up Times\n";
-  for (int s=0; s < (int) craqLookupNotAlreadyLookingUpTimesVec.size(); ++s)
-    fileOut  << craqLookupNotAlreadyLookingUpTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->craqLookupNotAlreadyLookingUpTime << ",";
 
   fileOut << "\n\nManager Post Times\n";
-  for (int s=0; s < (int) managerPostTimesVec.size(); ++s)
-    fileOut  << managerPostTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->managerPostTime << ",";
   
   fileOut << "\n\nManager Enqueue Times\n";
-  for (int s=0; s < (int) managerEnqueueTimesVec.size(); ++s)
-    fileOut  << managerEnqueueTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->managerEnqueueTime << ",";
 
   fileOut << "\n\nManager Dequeue Times\n";
-  for (int s=0; s < (int) managerDequeueTimesVec.size(); ++s)
-    fileOut  << managerDequeueTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->managerDequeueTime << ",";
 
   fileOut << "\n\nPost To ConnectionGet Times\n";
-  for (int s=0; s < (int) connectionPostTimesVec.size(); ++s)
-    fileOut  << connectionPostTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->connectionPostTime << ",";
 
   fileOut << "\n\nNetwork Query Times\n";
-  for (int s=0; s < (int) connectionNetworkQueryTimesVec.size(); ++s)
-    fileOut  << connectionNetworkQueryTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->connectionNetworkQueryTime << ",";
 
   fileOut << "\n\nNetwork Trip Times\n";
-  for (int s=0; s < (int) connectionsNetworkTimesVec.size(); ++s)
-    fileOut  << connectionsNetworkTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->connectionsNetworkTime << ",";
 
-      
   fileOut << "\n\nReturn Post Times\n";
-  for (int s=0; s < (int) returnPostTimesVec.size(); ++s)
-    fileOut  << returnPostTimesVec[s] << ",";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->returnPostTime << ",";
 
+  fileOut << "\n\n Process Return Times\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->lookupReturnsTime << ",";
+
+  fileOut <<"\n\n\n";
+}
+
+
+void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
+{
+  int untilVariable = mCumData.size();
+
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->completeLookupTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->cacheTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->craqLookupPostTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->craqLookupTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->craqLookupNotAlreadyLookingUpTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->managerPostTime << ",";
   
-  fileOut << "\n\n Post Times\n";
-  for (int s=0; s < (int) lookupReturnsTimesVec.size(); ++s)
-    fileOut  << lookupReturnsTimesVec[s] << ",";
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->managerEnqueueTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->managerDequeueTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->connectionPostTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->connectionNetworkQueryTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->connectionsNetworkTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->returnPostTime << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->lookupReturnsTime << ",";
 
   fileOut <<"\n\n\n";
 }
 
 
 
-void OSegCumulativeTraceAnalysis::filterShorterPath()
+
+
+void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microseconds)
 {
   std::vector<OSegCumulativeEvent*>::iterator traceIt = allTraces.begin();
 
   while(traceIt != allTraces.end())
   {
-    if( ((*traceIt)->traceToken.notReady)         ||
-        ((*traceIt)->traceToken.shuttingDown)     ||
-        ((*traceIt)->traceToken.deadlineExpired)  ||
-        ((*traceIt)->traceToken.notFound))
+    if( ((*traceIt)->traceToken.notReady)                                 ||
+        ((*traceIt)->traceToken.shuttingDown)                             ||
+        ((*traceIt)->traceToken.deadlineExpired)                          ||
+        ((*traceIt)->traceToken.notFound)                                 ||
+        ((*traceIt)->traceToken.initialLookupTime                   == 0) ||
+        ((*traceIt)->traceToken.checkCacheLocalBegin                == 0) ||
+        ((*traceIt)->traceToken.checkCacheLocalEnd                  == 0) ||
+        ((*traceIt)->traceToken.craqLookupBegin                     == 0) ||
+        ((*traceIt)->traceToken.craqLookupEnd                       == 0) ||
+        ((*traceIt)->traceToken.craqLookupNotAlreadyLookingUpBegin  == 0) ||
+        ((*traceIt)->traceToken.craqLookupNotAlreadyLookingUpEnd    == 0) ||
+        ((*traceIt)->traceToken.getManagerEnqueueBegin              == 0) ||
+        ((*traceIt)->traceToken.getManagerEnqueueEnd                == 0) ||
+        ((*traceIt)->traceToken.getManagerDequeued                  == 0) ||
+        ((*traceIt)->traceToken.getConnectionNetworkGetBegin        == 0) ||
+        ((*traceIt)->traceToken.getConnectionNetworkGetEnd          == 0) ||
+        ((*traceIt)->traceToken.getConnectionNetworkReceived        == 0) ||
+        ((*traceIt)->traceToken.lookupReturnBegin                   == 0) ||
+        ((*traceIt)->traceToken.lookupReturnEnd                     == 0))
     {
-      //need to erase it 
-      allTraces.erase(traceIt++);
+      delete (*traceIt);
+      traceIt = allTraces.erase(traceIt);
     }
     else
-      ++traceIt;
+    {
+      if (((*traceIt)->time -Time::null()).toMicroseconds()- mInitialTime < time_after_microseconds)
+      {
+        delete (*traceIt);
+        traceIt = allTraces.erase(traceIt);
+      }
+      else
+        ++traceIt;
+    }
   }
 }
-
 
 
 void OSegCumulativeTraceAnalysis::generateCacheTime()
@@ -3083,7 +3179,7 @@ void OSegCumulativeTraceAnalysis::generateCacheTime()
   {
     toPush = allTraces[s]->traceToken.checkCacheLocalEnd - allTraces[s]->traceToken.checkCacheLocalBegin;
 
-    cacheTimesVec.push_back(toPush);
+    mCumData[s]->cacheTime = toPush;
   }
 }
 
@@ -3093,7 +3189,8 @@ void OSegCumulativeTraceAnalysis::generateGetCraqLookupPostTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
     toPush = allTraces[s]->traceToken.craqLookupBegin -  allTraces[s]->traceToken.checkCacheLocalEnd;
-    craqLookupPostTimesVec.push_back(toPush);
+
+    mCumData[s]->craqLookupPostTime = toPush;
   }
 
 }
@@ -3103,7 +3200,8 @@ void OSegCumulativeTraceAnalysis::generateCraqLookupTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
     toPush = allTraces[s]->traceToken.craqLookupEnd - allTraces[s]->traceToken.craqLookupBegin;
-    craqLookupTimesVec.push_back(toPush);
+
+    mCumData[s]->craqLookupTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateCraqLookupNotAlreadyLookingUpTime()
@@ -3113,7 +3211,7 @@ void OSegCumulativeTraceAnalysis::generateCraqLookupNotAlreadyLookingUpTime()
   {
     toPush = allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpBegin;
 
-    craqLookupNotAlreadyLookingUpTimesVec.push_back(toPush);
+    mCumData[s]->craqLookupNotAlreadyLookingUpTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateManagerPostTime()
@@ -3123,7 +3221,7 @@ void OSegCumulativeTraceAnalysis::generateManagerPostTime()
   {
     toPush = allTraces[s]->traceToken.getManagerEnqueueBegin - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd;
 
-    managerPostTimesVec.push_back(toPush);
+    mCumData[s]->managerPostTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
@@ -3133,7 +3231,7 @@ void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
   {
     toPush = allTraces[s]->traceToken.getManagerEnqueueEnd - allTraces[s]->traceToken.getManagerEnqueueBegin;
 
-    managerEnqueueTimesVec.push_back(toPush);
+    mCumData[s]->managerEnqueueTime = toPush;
   }
   
 }
@@ -3144,7 +3242,7 @@ void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
   {
     toPush = allTraces[s]->traceToken.getManagerDequeued - allTraces[s]->traceToken.getManagerEnqueueEnd;
 
-    managerDequeueTimesVec.push_back(toPush);
+    mCumData[s]->managerDequeueTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
@@ -3154,7 +3252,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
   {
     toPush = allTraces[s]->traceToken.getConnectionNetworkGetBegin - allTraces[s]->traceToken.getManagerDequeued;
 
-    connectionPostTimesVec.push_back(toPush);
+    mCumData[s]->connectionPostTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
@@ -3164,7 +3262,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
   {
     toPush = allTraces[s]->traceToken.getConnectionNetworkGetEnd - allTraces[s]->traceToken.getConnectionNetworkGetBegin;
 
-    connectionNetworkQueryTimesVec.push_back(toPush);
+    mCumData[s]->connectionNetworkQueryTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
@@ -3174,7 +3272,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
   {
     toPush = allTraces[s]->traceToken.getConnectionNetworkReceived - allTraces[s]->traceToken.getConnectionNetworkGetEnd;
 
-    connectionsNetworkTimesVec.push_back(toPush);
+    mCumData[s]->connectionsNetworkTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateReturnPostTime()
@@ -3184,7 +3282,7 @@ void OSegCumulativeTraceAnalysis::generateReturnPostTime()
   {
     toPush = allTraces[s]->traceToken.lookupReturnBegin - allTraces[s]->traceToken.getConnectionNetworkReceived;
 
-    returnPostTimesVec.push_back(toPush);
+    mCumData[s]->returnPostTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
@@ -3193,8 +3291,7 @@ void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
   for(int s= 0; s < (int) allTraces.size();++s)
   {
     toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.lookupReturnBegin;
-
-    lookupReturnsTimesVec.push_back(toPush);
+    mCumData[s]->lookupReturnsTime = toPush;
   }
 }
 
@@ -3204,8 +3301,7 @@ void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
     toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.initialLookupTime;
-
-    completeLookupTimesVec.push_back(toPush);
+    mCumData[s]->completeLookupTime = toPush;
   }
 }
 

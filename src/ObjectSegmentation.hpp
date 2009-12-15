@@ -59,6 +59,7 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
       }
 
     virtual ServerID lookup(const UUID& obj_id) = 0;
+    virtual ServerID cacheLookup(const UUID& obj_id) = 0;
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool) = 0;
     virtual void newObjectAdd(const UUID& obj_id) = 0;

@@ -92,7 +92,7 @@
 #define OBJECT_DRIFT_Y             "object_drift_y"
 #define OBJECT_DRIFT_Z             "object_drift_z"
 #define OSEG_ANALYZE_AFTER         "oseg_analyze_after"
-
+#define OSEG_LOOKUP_QUEUE_SIZE     "oseg_lookup_queue_size"
 
 
 #define PROX_MAX_PER_RESULT        "prox.max-per-result"

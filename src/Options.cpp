@@ -118,9 +118,13 @@ void InitOptions() {
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
 
 
-      .addOption(new OptionValue(OSEG,OSEG_OPTION_CRAQ,Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
+        .addOption(new OptionValue(OSEG,OSEG_OPTION_CRAQ,Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
 
-      .addOption(new OptionValue(OSEG_UNIQUE_CRAQ_PREFIX,"G",Sirikata::OptionValueType<String>(),"Specifies a unique character prepended to Craq lookup calls.  Note: takes in type string.  Will only select the first character in the string.  Also note that it acceptable values range from g to z, and are case sensitive."))
+        .addOption(new OptionValue(OSEG_UNIQUE_CRAQ_PREFIX,"G",Sirikata::OptionValueType<String>(),"Specifies a unique character prepended to Craq lookup calls.  Note: takes in type string.  Will only select the first character in the string.  Also note that it acceptable values range from g to z, and are case sensitive."))
+
+
+        .addOption(new OptionValue(OSEG_LOOKUP_QUEUE_SIZE, "2000", Sirikata::OptionValueType<uint32>(), "Number of new lookups you can have on oseg lookup queue."))
+      
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
         .addOption(new OptionValue(NOISE, "false", Sirikata::OptionValueType<bool>(), "If true, will generate noise packets between servers to fill buffers."))
         .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))

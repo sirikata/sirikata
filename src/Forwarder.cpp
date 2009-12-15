@@ -82,16 +82,16 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
-{
-    mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush);
+  void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, uint32 oseg_lookup_queue_size)
+  {
+    mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush, oseg_lookup_queue_size);
     mServerMessageQueue = smq;
     mOutgoingMessages = new ForwarderQueue(smq,16384);
 
     Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
     mSampler = new ForwarderSampler(mContext, sample_rate, mServerMessageQueue);
     mContext->add(mSampler);
-}
+  }
 
 void Forwarder::poll()
 {
