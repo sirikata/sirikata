@@ -347,6 +347,11 @@ class PacketStageGraph {
                         std::cout << "Couldn't match packet path: " << pd
                                   << " due to " << pp
                                   << std::endl;
+
+                        for(OrderedPacketSampleListList::iterator dump_it = ordered_list_list.begin(); dump_it != ordered_list_list.end(); dump_it++) {
+                            PacketSampleList dump_subseq = *dump_it;
+                            std::cout << dump_subseq << std::endl;
+                        }
                         return;
                     }
 
@@ -484,7 +489,8 @@ class PacketStageGraph {
         PacketSampleList list;
     };
     bool breakAtAsync(const PacketData& pd, OrderedPacketSampleListList& output) const {
-        std::map<Time, UnusedSamples> sorted_unused_samples;
+        typedef std::multimap<Time, UnusedSamples> UnusedSampleMap;
+        UnusedSampleMap sorted_unused_samples;
 
         OrderedPacketSampleListList unconstrained_output;
 
@@ -492,14 +498,13 @@ class PacketStageGraph {
             UnusedSamples us;
             us.offset = 0;
             us.list = it->second;
-            sorted_unused_samples[it->second[0]] = us;
+            sorted_unused_samples.insert(UnusedSampleMap::value_type(it->second[0], us));
         }
-
         while(!sorted_unused_samples.empty()) {
             // Take the next earliest
             Time us_time = sorted_unused_samples.begin()->first;
             UnusedSamples us = sorted_unused_samples.begin()->second;
-            sorted_unused_samples.erase(us_time);
+            sorted_unused_samples.erase( sorted_unused_samples.begin() );
 
             // First *must* be async entry
             PacketSampleList next_set;
@@ -521,7 +526,7 @@ class PacketStageGraph {
             if (cur_offset < us.list.size()) {
                 // Reinsert
                 us.offset = cur_offset;
-                sorted_unused_samples[ us.list[cur_offset] ] = us;
+                sorted_unused_samples.insert(UnusedSampleMap::value_type(us.list[cur_offset], us));
             }
         }
 
