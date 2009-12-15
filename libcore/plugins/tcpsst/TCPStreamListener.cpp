@@ -51,8 +51,8 @@ private:
     static void handleAccept(DataPtr& data, const boost::system::error_code& error);
 public:
     Data(IOService& io,
-         unsigned char maxSimultaneousSockets,
-         unsigned int sendBufferSize)
+         uint8 maxSimultaneousSockets,
+         uint32 sendBufferSize)
      : ios(io),
        acceptor(NULL),
        socket(NULL),

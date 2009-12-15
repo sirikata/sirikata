@@ -61,8 +61,8 @@ private:
     struct Data; // Data which may be needed in callbacks, so is stored separately in shared_ptr
     typedef std::tr1::shared_ptr<Data> DataPtr;
     DataPtr mData;
-    unsigned char mMaxSimultaneousSockets;
-    unsigned char mSendBufferSize;
+    uint8 mMaxSimultaneousSockets;
+    uint32 mSendBufferSize;
 };
 
 } // namespace Network
