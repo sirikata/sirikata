@@ -53,7 +53,7 @@ class ClusterSimSettings:
 
         # OH: scenario / ping settings
         self.scenario = 'ping'
-        self.scenario_options = '--num-pings-per-second=1000'
+        self.scenario_options = '--num-pings-per-second=3000'
 
         self.blocksize = 200
         self.center = (0, 0, 0)
@@ -182,7 +182,7 @@ class ClusterSim:
         self.run_cluster_sim()
         self.retrieve_data()
 
-#        self.bandwidth_analysis()
+        self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
