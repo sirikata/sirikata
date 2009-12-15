@@ -82,8 +82,8 @@ public:
     TCPListener* acceptor;
     TCPSocket* socket;
     Stream::SubstreamCallback cb;
-    unsigned char mMaxSimultaneousSockets;
-    unsigned char mSendBufferSize;
+    uint8 mMaxSimultaneousSockets;
+    uint32 mSendBufferSize;
 
 };
 
@@ -126,10 +126,7 @@ TCPStreamListener::TCPStreamListener(IOService& io, OptionSet*options)
     OptionValue *maxSimultSockets=options->referenceOption("max-parallel-sockets");
     OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
     assert(maxSimultSockets&&sendBufferSize);
-    mMaxSimultaneousSockets=(unsigned char)maxSimultSockets->as<unsigned int>();
-    assert(mMaxSimultaneousSockets);
-    mSendBufferSize=sendBufferSize->as<unsigned int>();
-    DataPtr data (new Data(io,mMaxSimultaneousSockets,mSendBufferSize));
+    DataPtr data (new Data(io,(unsigned char)maxSimultSockets->as<unsigned int>(),sendBufferSize->as<unsigned int>()));
     mData=data;
 }
 
