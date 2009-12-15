@@ -253,16 +253,13 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
     // Check if we can forward locally
     ObjectConnection* conn = getObjectConnection(msg->dest_object());
     if (conn != NULL) {
-        bool send_success = true;
-        if (!conn->enabled())
-            send_success = false;
-        else
+        TIMESTAMP_END(tstamp, Trace::FORWARDED_LOCALLY_SLOW_PATH);
+
+        bool send_success = false;
+        if (conn->enabled())
             send_success = conn->send(msg);
 
-        if (send_success) {
-            TIMESTAMP_END(tstamp, Trace::FORWARDED_LOCALLY_SLOW_PATH);
-        }
-        else {
+        if(!send_success) {
             TIMESTAMP_END(tstamp, Trace::DROPPED);
             delete msg;
         }

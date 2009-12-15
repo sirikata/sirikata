@@ -58,10 +58,10 @@ public:
 
         bool pushed = this->output(0).push(pkt);
 
-        Trace::MessagePath tag =
-            pushed ? mSuccessTag : mFailureTag;
+        TIMESTAMP_END(tstamp, mSuccessTag);
 
-        TIMESTAMP_END(tstamp, tag);
+        if (!pushed)
+            TIMESTAMP_END(tstamp, mFailureTag);
 
         return pushed;
     }

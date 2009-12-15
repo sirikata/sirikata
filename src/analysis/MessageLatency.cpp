@@ -655,6 +655,11 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::DROPPED);
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::SPACE_TO_OH_ENQUEUED);
 
+    stage_graph.addEdge(Trace::FORWARDING_STARTED, Trace::FORWARDED_LOCALLY_SLOW_PATH);
+
+    stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::SPACE_TO_OH_ENQUEUED);
+    stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::DROPPED);
+
     stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
