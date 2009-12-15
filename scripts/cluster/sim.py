@@ -53,7 +53,7 @@ class ClusterSimSettings:
 
         # OH: scenario / ping settings
         self.scenario = 'ping'
-        self.scenario_options = '--num-pings-per-second=3000'
+        self.scenario_options = '--num-pings-per-second=1000'
 
         self.blocksize = 200
         self.center = (0, 0, 0)
