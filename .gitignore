@@ -16,22 +16,30 @@ build/cmake/bench
 # config files
 build/cmake/serverip*
 scripts/serverip*
+
 # trace files
 build/cmake/sync*.txt
 build/cmake/trace*
 scripts/sync*.txt
 scripts/trace*
+
 # analysis files
 build/cmake/*.dat
 build/cmake/*.ps
 scripts/analysis.trace
 scripts/*.dat
 scripts/*.ps
+scripts/*.pdf
 scripts/distance_latency_histogram.csv
 scripts/loc_latency*.txt
 scripts/prox.log
+scripts/packet_latency_*
+scripts/stage_samples.txt
+scripts/histogram_file
+
 # profiling files
-scripts/gprof*.txt
+gprof*.txt
+gmon.out
 
 # moc files
 build/cmake/moc*
