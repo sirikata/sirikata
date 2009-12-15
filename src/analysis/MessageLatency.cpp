@@ -395,6 +395,21 @@ class PacketStageGraph {
         }
     }
 
+    // The following check whether a stage is a pure entry or exit, meaning they
+    // are packet sources or sinks.
+    bool isPureEntry(Trace::MessagePath mp) const {
+        assert(hasStage(mp));
+        const Stage& stage = stages.find(mp)->second;
+
+        return (stage.in_edges.size() == 0);
+    }
+    bool isPureExit(Trace::MessagePath mp) const {
+        assert(hasStage(mp));
+        const Stage& stage = stages.find(mp)->second;
+
+        return (stage.out_edges.size() == 0);
+    }
+
     // The following check whether a stage is an async entry or async exit
     // state, i.e. all exits or entries to that state are async.  Given the
     // check performed by verifyEdges, we only have to check one edge in the
@@ -471,6 +486,8 @@ class PacketStageGraph {
     bool breakAtAsync(const PacketData& pd, OrderedPacketSampleListList& output) const {
         std::map<Time, UnusedSamples> sorted_unused_samples;
 
+        OrderedPacketSampleListList unconstrained_output;
+
         for(PacketData::ServerPacketMap::const_iterator it = pd.stamps.begin(); it != pd.stamps.end(); it++) {
             UnusedSamples us;
             us.offset = 0;
@@ -499,7 +516,7 @@ class PacketStageGraph {
                     break;
             }
 
-            output.push_back(next_set);
+            unconstrained_output.push_back(next_set);
 
             if (cur_offset < us.list.size()) {
                 // Reinsert
@@ -507,6 +524,36 @@ class PacketStageGraph {
                 sorted_unused_samples[ us.list[cur_offset] ] = us;
             }
         }
+
+        // With things sorted, we just need to make sure that one with a
+        // starting state and one with an ending state are first and last
+        // respectively
+        int32 starting_samples_idx = -1, ending_samples_idx = -1;
+        for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
+            if ( isPureEntry(unconstrained_output[ii][0].tag) ) {
+                if (starting_samples_idx != -1)
+                    return false; // Found 2 entry points
+                else
+                    starting_samples_idx = ii;
+            }
+
+            if ( isPureExit(unconstrained_output[ii][ unconstrained_output[ii].size()-1 ].tag) ) {
+                if (ending_samples_idx != -1)
+                    return false; // Found 2 entry points
+                else
+                    ending_samples_idx = ii;
+            }
+        }
+
+        if (starting_samples_idx == -1 || ending_samples_idx == -1)
+            return false;
+
+        output.push_back( unconstrained_output[starting_samples_idx] );
+        for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
+            if (ii != (uint32)starting_samples_idx && ii != (uint32)ending_samples_idx)
+                output.push_back( unconstrained_output[ii] );
+        }
+        output.push_back( unconstrained_output[ending_samples_idx] );
 
         return true;
     }
