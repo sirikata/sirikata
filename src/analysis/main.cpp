@@ -184,11 +184,11 @@ int main(int argc, char** argv) {
     else if ( GetOption(ANALYSIS_MESSAGE_LATENCY)->as<bool>() ) {
         uint16 ping_port=OBJECT_PORT_PING;
         uint32 unservers=nservers;
-        MessageLatencyAnalysis::Filters filter(&ping_port,&unservers,//filter by created @ object host
+        MessageLatencyFilters filter(&ping_port,&unservers,//filter by created @ object host
                        &unservers);//filter by destroyed @ object host
-        MessageLatencyAnalysis::Filters nilfilter;
-        MessageLatencyAnalysis::Filters pingfilter(&ping_port);
-        MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,pingfilter,"stage_samples.txt");
+        MessageLatencyFilters nilfilter;
+        MessageLatencyFilters pingfilter(&ping_port);
+        MessageLatencyAnalysis(STATS_TRACE_FILE,nservers,pingfilter,"stage_samples.txt");
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {

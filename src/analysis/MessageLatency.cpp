@@ -36,11 +36,258 @@
 
 namespace CBR {
 
-MessageLatencyAnalysis::PacketData::PacketData(){
-    mId=0;
-    mSrcPort=0;
-    mDstPort=0;
+namespace {
+
+class PathPair {
+  public:
+    Trace::MessagePath first;
+    Trace::MessagePath second;
+    PathPair(const Trace::MessagePath &first,
+             const Trace::MessagePath &second) {
+        this->first=first;
+        this->second=second;
+    }
+    bool operator < (const PathPair&other) const{
+        if (first==other.first) return second<other.second;
+        return first<other.first;
+    }
+    bool operator ==(const PathPair&other) const{
+        return first==other.first&&second==other.second;
+    }
+};
+
+class DTime:public Time {
+  public:
+    Trace::MessagePath mPath;
+    bool isNull() const {
+        const Time * t=this;
+        return *t==Time::null();
+    }
+    uint32 mServerId;
+    DTime():Time(Time::null()) {mServerId=0;mPath=Trace::NUM_PATHS;}
+    DTime(const Time&t, Trace::MessagePath path):Time(t){mServerId=0;mPath=path;}
+    bool operator < (const Time&other)const {
+        return *static_cast<const Time*>(this)<other;
+    }
+    bool operator == (const Time&other)const {
+        return *static_cast<const Time*>(this)==other;
+    }
+};
+class Average {
+    int64 sample_sum; // sum (t)
+    int64 sample2_sum; // sum (t^2)
+    uint32 numSamples;
+  public:
+    Average()
+            : sample_sum(0),
+              sample2_sum(0),
+              numSamples(0)
+    {}
+    void sample(const Duration& t) {
+        int64 st = t.toMicroseconds();
+        sample_sum += st;
+        sample2_sum += st*st;
+        ++numSamples;
+    }
+    Duration average() {
+        return Duration::microseconds((int64)(sample_sum / double(numSamples)));
+    }
+    Duration variance() {
+        int64 avg = (int64)(sample_sum / double(numSamples));
+        int64 sq_avg = (int64)(sample2_sum / double(numSamples));
+        return Duration::microseconds(sq_avg - avg*avg);
+    }
+    Duration stddev() {
+        int64 avg = (int64)(sample_sum / double(numSamples));
+        int64 sq_avg = (int64)(sample2_sum / double(numSamples));
+        return Duration::microseconds((int64)sqrt((double)(sq_avg - avg*avg)));
+    }
+    uint32 samples() const {
+        return numSamples;
+    }
+};
+
+// A group of tags which should be considered together since they are
+// sensible combinations.  A group should either be a) a group of tags which
+// are handled in the same thread of control so they should be guaranteed to
+// be ordered properly or b) represent the barriers between threads of
+// control, which ideally should be thin, hopefully having only one tag on
+// either side.
+class StageGroup {
+  public:
+    // Indicates how values in this group should be handled.  UNORDERED
+    // allows any combination in any order to work.  ORDERED_ALLOW_NEGATIVE
+    // constrains the order, but allows inverted pairs to be used with
+    // negative durations, which can be useful for unsynchronized network or
+    // cross-thread pairs.  ORDERED_STRICT only considers pairs that are
+    // strictly in order.
+    enum IsOrdered {
+        UNORDERED,
+        ORDERED_ALLOW_NEGATIVE,
+        ORDERED_STRICT
+    };
+
+    StageGroup(const String& _name, IsOrdered ordr = UNORDERED)
+            : mName(_name),
+              mOrdered(ordr)
+    {}
+
+    String name() const {
+        return mName;
+    }
+    // Returns *this for chaining
+    StageGroup& add(Trace::MessagePath p) {
+        assert( mTags.find(p) == mTags.end() );
+        mTags.insert(p);
+        mOrderedTags.push_back(p);
+        return *this;
+    }
+    bool contains(Trace::MessagePath p) const {
+        return (mTags.find(p) != mTags.end());
+    }
+    bool contains(const PathPair& p) const {
+        return (contains(p.first) && contains(p.second));
+    }
+
+    std::vector<DTime> filter(const std::vector<DTime>& orig) {
+        std::vector<DTime> result;
+        for(std::vector<DTime>::const_iterator it = orig.begin(); it != orig.end(); it++)
+            if (this->contains(it->mPath))
+                result.push_back(*it);
+        return result;
+    }
+
+
+    // Based on ordering constraints, get a PathPair for the two
+    // records. For unordered, this will always return (start,end).  For
+    // ordered, it will arrange them appropriately based on the order in
+    // which the tags were added to the StageGroup.
+    // If a pair cannot be constructed, the sentinal
+    // PathPair(Trace::NONE, Trace::NONE) will be returned
+    PathPair orderedPair(const DTime& start, const DTime& end) {
+        assert( contains(start.mPath) );
+        assert( contains(end.mPath) );
+
+        if (mOrdered == UNORDERED) {
+            return PathPair(start.mPath, end.mPath);
+        }
+        else if (mOrdered == ORDERED_ALLOW_NEGATIVE) {
+            uint32 start_i = findTagOrder(start.mPath);
+            uint32 end_i = findTagOrder(end.mPath);
+
+            if (start_i <= end_i)
+                return PathPair(start.mPath, end.mPath);
+            else
+                return PathPair(end.mPath, start.mPath);
+        }
+        else if (mOrdered == ORDERED_STRICT) {
+            uint32 start_i = findTagOrder(start.mPath);
+            uint32 end_i = findTagOrder(end.mPath);
+
+            if (start_i <= end_i)
+                return PathPair(start.mPath, end.mPath);
+            else
+                return PathPair(Trace::NONE, Trace::NONE);
+        }
+        else {
+            assert(false);
+        }
+    }
+
+    bool validPair(const DTime& start, const DTime& end) {
+        // Loops to repeated tags aren't interesting without the
+        // intermediate info
+        if (start.mPath == end.mPath)
+            return false;
+
+        // Otherwise do normal sanity check
+        PathPair ordered = orderedPair(start, end);
+        return !(ordered.first == Trace::NONE || ordered.second == Trace::NONE);
+    }
+
+    // Computes the difference between start and end (end - start), taking
+    // into account ordering constraints.  If unordered is allowed, then the
+    // returned Duration will always be >= 0.  If ordering is required, then
+    // the returned Duration may be negative.
+    Duration difference(const DTime& start, const DTime& end) {
+        // figure out the permissible ordering
+        PathPair ordered = orderedPair(start, end);
+
+        assert(validPair(start, end));
+
+        // then just subtract in the matching direction
+        if (ordered.first == start.mPath) {
+            assert (ordered.second == end.mPath);
+            return end - start;
+        }
+        else {
+            assert (ordered.second == start.mPath);
+            return start - end;
+        }
+    }
+
+  private:
+    uint32 findTagOrder(Trace::MessagePath tag) const {
+        for(uint32 ii = 0; ii < mOrderedTags.size(); ii++) {
+            if (mOrderedTags[ii] == tag)
+                return ii;
+        }
+        assert(false);
+        return 0;
+    }
+
+    String mName;
+    IsOrdered mOrdered;
+    typedef std::set<Trace::MessagePath> TagSet;
+    typedef std::vector<Trace::MessagePath> OrderedTagSet;
+    TagSet mTags;
+    OrderedTagSet mOrderedTags;
+};
+
+
+class PacketData {
+  public:
+    uint64 id;
+    uint16 source_port;
+    uint16 dest_port;
+
+    std::vector<DTime> mStamps;
+
+    PacketData()
+            : id(0),
+              source_port(0),
+              dest_port(0)
+    {
+    }
+};
+
+bool verify(const uint32*server, const PacketData &pd, Trace::MessagePath path) {
+    if (server==NULL) return true;
+    for (std::vector<DTime>::const_iterator i=pd.mStamps.begin(),ie=pd.mStamps.end();i!=ie;++i) {
+
+        if (i->mPath==path)
+            return i->mServerId==*server;
+    }
+    return false;
+
 }
+
+bool matches(const MessageLatencyFilters& filters, const PacketData& pd) {
+    return (filters.mDestPort == NULL || pd.dest_port == *filters.mDestPort)&&
+            verify(filters.mFilterByCreationServer,pd,Trace::CREATED)&&
+            verify(filters.mFilterByDestructionServer,pd,Trace::DESTROYED);
+}
+
+} // namespace
+
+MessageLatencyFilters::MessageLatencyFilters(uint16 *destPort, const uint32*filterByCreationServer,const uint32 *filterByDestructionServer, const uint32*filterByForwardingServer, const uint32 *filterByDeliveryServer) {
+    mDestPort=destPort;
+    mFilterByCreationServer=filterByCreationServer;
+    mFilterByDestructionServer=filterByDestructionServer;
+    mFilterByForwardingServer=filterByForwardingServer;
+    mFilterByDeliveryServer=filterByDeliveryServer;
+}
+
 
 #define PACKETSTAGE(x) case Trace::x: return #x
 const char* getPacketStageName (uint32 path) {
@@ -113,8 +360,7 @@ class PacketStageGraph {
   private:
 }; // class PacketStageGraph
 
-MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter, const String& stage_dump_filename)
-        :mFilter(filter)
+void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, MessageLatencyFilters filter, const String& stage_dump_filename)
 {
     StageGroup oh_create_group("Object Host Creation");
     oh_create_group.add(Trace::CREATED)
@@ -226,7 +472,6 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     groups.push_back(oh_receive_group);
 
     // read in all our data
-    mNumberOfServers = nservers;
     typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;
     PacketMap packetFlow;
 
@@ -242,12 +487,12 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             {
                 MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
                 if (tevt != NULL) {
-                    MessageLatencyAnalysis::PacketData*pd = &packetFlow[tevt->uid];
+                    PacketData* pd = &packetFlow[tevt->uid];
                     pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
                     MessageCreationTimestampEvent* cevt = dynamic_cast<MessageCreationTimestampEvent*>(evt);
                     if (cevt != NULL) {
-                        if (cevt->srcport!=0) pd->mSrcPort = cevt->srcport;
-                        if (cevt->dstport!=0) pd->mDstPort = cevt->dstport;
+                        if (cevt->srcport!=0) pd->source_port = cevt->srcport;
+                        if (cevt->dstport!=0) pd->dest_port = cevt->dstport;
                     }
                 }
             }
@@ -267,7 +512,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
          iter!=ie;
          ++iter) {
         PacketData& pd = iter->second;
-        if ( !mFilter(pd) || (pd.mStamps.size() == 0) ) continue;
+        if ( !matches(filter, pd) || (pd.mStamps.size() == 0) ) continue;
         std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
         for(StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
             StageGroup& group = *group_it;
@@ -325,9 +570,6 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                   );
         }
     }
-}
-
-MessageLatencyAnalysis::~MessageLatencyAnalysis() {
 }
 
 } // namespace CBR
