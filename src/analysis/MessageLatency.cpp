@@ -244,8 +244,11 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                 if (tevt != NULL) {
                     MessageLatencyAnalysis::PacketData*pd = &packetFlow[tevt->uid];
                     pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
-                    if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
-                    if (tevt->dstport!=0) pd->mDstPort=tevt->dstport;
+                    MessageCreationTimestampEvent* cevt = dynamic_cast<MessageCreationTimestampEvent*>(evt);
+                    if (cevt != NULL) {
+                        if (cevt->srcport!=0) pd->mSrcPort = cevt->srcport;
+                        if (cevt->dstport!=0) pd->mDstPort = cevt->dstport;
+                    }
                 }
             }
             delete evt;

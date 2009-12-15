@@ -103,11 +103,13 @@ public:
     static const uint8 RoundTripMigrationTimeAnalysisTag = 18;
     static const uint8 OSegTrackedSetResultAnalysisTag   = 19;
     static const uint8 OSegShutdownEventTag              = 20;
-    static const uint8 MessageTimestampTag = 21;
     static const uint8 ObjectGeneratedLocationTag = 22;
     static const uint8 OSegCacheResponseTag = 23;
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
     static const uint8 OSegCumulativeTraceAnalysisTag   = 25;
+
+    static const uint8 MessageTimestampTag = 30;
+    static const uint8 MessageCreationTimestampTag = 31;
 
 
     enum MessagePath {
@@ -151,7 +153,8 @@ public:
 
     void setServerIDMap(ServerIDMap* sidmap);
 
-    void timestampMessage(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
+    void timestampMessageCreation(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
+    void timestampMessage(const Time&t, uint64 packetId, MessagePath path);
 
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
@@ -220,30 +223,31 @@ private:
 
 #ifdef CBR_TIMESTAMP_PACKETS
 // The most complete macro, allows you to specify everything
-#define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port) trace->timestampMessage(time, packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP_FULL(trace, time, packetId, path) trace->timestampMessage(time, packetId, path)
 
 // Slightly simplified version, works everywhere mContext->trace() and mContext->simTime() are valid
-#define TIMESTAMP_SIMPLE(packetId, path, msg_source_port, msg_dest_port) TIMESTAMP_FULL(mContext->trace(), mContext->simTime(), packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP_SIMPLE(packetId, path) TIMESTAMP_FULL(mContext->trace(), mContext->simTime(), packetId, path)
 
 // Further simplified version, works as long as packet is a valid pointer to a packet at the time this is called
-#define TIMESTAMP(packet, path) TIMESTAMP_SIMPLE(packet->unique(), path, packet->source_port(), packet->dest_port())
+#define TIMESTAMP(packet, path) TIMESTAMP_SIMPLE(packet->unique(), path)
 
 // In cases where you need to split the time between recording the info for a timestamp and actually performing
 // the timestamp, use a _START _END combination. Generally this should only be needed if you are timestamping
 // after a message might be deleted or is out of your control (e.g. you pushed onto a queue or destroyed it).
 #define TIMESTAMP_START(prefix, packet)                                 \
-    Sirikata::uint64 prefix ## _uniq = packet->unique();                \
-    Sirikata::uint64 prefix ## _src_port = packet->source_port();       \
-    Sirikata::uint64 prefix ## _dst_port = packet->dest_port()
+    Sirikata::uint64 prefix ## _uniq = packet->unique();
 
-#define TIMESTAMP_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path, prefix ## _src_port, prefix ## _dst_port)
+#define TIMESTAMP_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path)
+
+#define TIMESTAMP_CREATED(packet, path) mContext->trace()->timestampMessageCreation(mContext->simTime(), packet->unique(), path, packet->source_port(), packet->dest_port())
 
 #else //CBR_TIMESTAMP_PACKETS
-#define TIMESTAMP_FULL(trace, time, packetId, path, msg_source_port, msg_dest_port)
-#define TIMESTAMP_SIMPLE(packetId, path, msg_source_port, msg_dest_port)
+#define TIMESTAMP_FULL(trace, time, packetId, path)
+#define TIMESTAMP_SIMPLE(packetId, path)
 #define TIMESTAMP(packet, path)
 #define TIMESTAMP_START(prefix, packet)
 #define TIMESTAMP_END(prefix, path)
+#define TIMESTAMP_CREATED(packet, path)
 #endif //CBR_TIMESTAMP_PACKETS
 
 #endif //_CBR_STATISTICS_HPP_

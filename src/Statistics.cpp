@@ -108,6 +108,8 @@ void BatchedBuffer::store(FILE* os) {
 
 
 const uint8 Trace::MessageTimestampTag;
+const uint8 Trace::MessageCreationTimestampTag;
+
 const uint8 Trace::ObjectPingTag;
 const uint8 Trace::ProximityTag;
 const uint8 Trace::ObjectLocationTag;
@@ -240,7 +242,21 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 #endif
 }
 
-void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt) {
+void Trace::timestampMessageCreation(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt) {
+#ifdef TRACE_MESSAGE
+    if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+    data.write( &MessageCreationTimestampTag, sizeof(MessageCreationTimestampTag) );
+    data.write( &sent, sizeof(sent) );
+    data.write( &uid, sizeof(uid) );
+    data.write( &path, sizeof(path) );
+    data.write( &srcprt, sizeof(srcprt) );
+    data.write( &dstprt, sizeof(dstprt) );
+#endif
+}
+
+void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 
@@ -249,8 +265,6 @@ void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, Obje
     data.write( &sent, sizeof(sent) );
     data.write( &uid, sizeof(uid) );
     data.write( &path, sizeof(path) );
-    data.write( &srcprt, sizeof(srcprt) );
-    data.write( &dstprt, sizeof(dstprt) );
 #endif
 }
 

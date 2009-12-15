@@ -66,10 +66,13 @@ struct GeneratedLocationEvent : public ObjectEvent {
     TimedMotionVector3f loc;
 };
 
+
 struct MessageTimestampEvent : public ObjectEvent {
-    //unique id for all packets across the board
     uint64 uid;
     Trace::MessagePath path;
+};
+
+struct MessageCreationTimestampEvent : public MessageTimestampEvent {
     ObjectMessagePort srcport;
     ObjectMessagePort dstport;
 };
@@ -249,7 +252,7 @@ struct OSegCacheResponseEvent : public Event
     OSegLookupTraceToken traceToken;
   };
 
-  
+
 
 }
 
