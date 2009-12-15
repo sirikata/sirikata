@@ -38,41 +38,7 @@ namespace CBR {
 
 namespace {
 
-class PathPair {
-  public:
-    Trace::MessagePath first;
-    Trace::MessagePath second;
-    PathPair(const Trace::MessagePath &first,
-             const Trace::MessagePath &second) {
-        this->first=first;
-        this->second=second;
-    }
-    bool operator < (const PathPair&other) const{
-        if (first==other.first) return second<other.second;
-        return first<other.first;
-    }
-    bool operator ==(const PathPair&other) const{
-        return first==other.first&&second==other.second;
-    }
-};
 
-class DTime:public Time {
-  public:
-    Trace::MessagePath mPath;
-    bool isNull() const {
-        const Time * t=this;
-        return *t==Time::null();
-    }
-    uint32 mServerId;
-    DTime():Time(Time::null()) {mServerId=0;mPath=Trace::NUM_PATHS;}
-    DTime(const Time&t, Trace::MessagePath path):Time(t){mServerId=0;mPath=path;}
-    bool operator < (const Time&other)const {
-        return *static_cast<const Time*>(this)<other;
-    }
-    bool operator == (const Time&other)const {
-        return *static_cast<const Time*>(this)==other;
-    }
-};
 class Average {
     int64 sample_sum; // sum (t)
     int64 sample2_sum; // sum (t^2)
@@ -107,187 +73,6 @@ class Average {
     }
 };
 
-// A group of tags which should be considered together since they are
-// sensible combinations.  A group should either be a) a group of tags which
-// are handled in the same thread of control so they should be guaranteed to
-// be ordered properly or b) represent the barriers between threads of
-// control, which ideally should be thin, hopefully having only one tag on
-// either side.
-class StageGroup {
-  public:
-    // Indicates how values in this group should be handled.  UNORDERED
-    // allows any combination in any order to work.  ORDERED_ALLOW_NEGATIVE
-    // constrains the order, but allows inverted pairs to be used with
-    // negative durations, which can be useful for unsynchronized network or
-    // cross-thread pairs.  ORDERED_STRICT only considers pairs that are
-    // strictly in order.
-    enum IsOrdered {
-        UNORDERED,
-        ORDERED_ALLOW_NEGATIVE,
-        ORDERED_STRICT
-    };
-
-    StageGroup(const String& _name, IsOrdered ordr = UNORDERED)
-            : mName(_name),
-              mOrdered(ordr)
-    {}
-
-    String name() const {
-        return mName;
-    }
-    // Returns *this for chaining
-    StageGroup& add(Trace::MessagePath p) {
-        assert( mTags.find(p) == mTags.end() );
-        mTags.insert(p);
-        mOrderedTags.push_back(p);
-        return *this;
-    }
-    bool contains(Trace::MessagePath p) const {
-        return (mTags.find(p) != mTags.end());
-    }
-    bool contains(const PathPair& p) const {
-        return (contains(p.first) && contains(p.second));
-    }
-
-    std::vector<DTime> filter(const std::vector<DTime>& orig) {
-        std::vector<DTime> result;
-        for(std::vector<DTime>::const_iterator it = orig.begin(); it != orig.end(); it++)
-            if (this->contains(it->mPath))
-                result.push_back(*it);
-        return result;
-    }
-
-
-    // Based on ordering constraints, get a PathPair for the two
-    // records. For unordered, this will always return (start,end).  For
-    // ordered, it will arrange them appropriately based on the order in
-    // which the tags were added to the StageGroup.
-    // If a pair cannot be constructed, the sentinal
-    // PathPair(Trace::NONE, Trace::NONE) will be returned
-    PathPair orderedPair(const DTime& start, const DTime& end) {
-        assert( contains(start.mPath) );
-        assert( contains(end.mPath) );
-
-        if (mOrdered == UNORDERED) {
-            return PathPair(start.mPath, end.mPath);
-        }
-        else if (mOrdered == ORDERED_ALLOW_NEGATIVE) {
-            uint32 start_i = findTagOrder(start.mPath);
-            uint32 end_i = findTagOrder(end.mPath);
-
-            if (start_i <= end_i)
-                return PathPair(start.mPath, end.mPath);
-            else
-                return PathPair(end.mPath, start.mPath);
-        }
-        else if (mOrdered == ORDERED_STRICT) {
-            uint32 start_i = findTagOrder(start.mPath);
-            uint32 end_i = findTagOrder(end.mPath);
-
-            if (start_i <= end_i)
-                return PathPair(start.mPath, end.mPath);
-            else
-                return PathPair(Trace::NONE, Trace::NONE);
-        }
-        else {
-            assert(false);
-        }
-    }
-
-    bool validPair(const DTime& start, const DTime& end) {
-        // Loops to repeated tags aren't interesting without the
-        // intermediate info
-        if (start.mPath == end.mPath)
-            return false;
-
-        // Otherwise do normal sanity check
-        PathPair ordered = orderedPair(start, end);
-        return !(ordered.first == Trace::NONE || ordered.second == Trace::NONE);
-    }
-
-    // Computes the difference between start and end (end - start), taking
-    // into account ordering constraints.  If unordered is allowed, then the
-    // returned Duration will always be >= 0.  If ordering is required, then
-    // the returned Duration may be negative.
-    Duration difference(const DTime& start, const DTime& end) {
-        // figure out the permissible ordering
-        PathPair ordered = orderedPair(start, end);
-
-        assert(validPair(start, end));
-
-        // then just subtract in the matching direction
-        if (ordered.first == start.mPath) {
-            assert (ordered.second == end.mPath);
-            return end - start;
-        }
-        else {
-            assert (ordered.second == start.mPath);
-            return start - end;
-        }
-    }
-
-  private:
-    uint32 findTagOrder(Trace::MessagePath tag) const {
-        for(uint32 ii = 0; ii < mOrderedTags.size(); ii++) {
-            if (mOrderedTags[ii] == tag)
-                return ii;
-        }
-        assert(false);
-        return 0;
-    }
-
-    String mName;
-    IsOrdered mOrdered;
-    typedef std::set<Trace::MessagePath> TagSet;
-    typedef std::vector<Trace::MessagePath> OrderedTagSet;
-    TagSet mTags;
-    OrderedTagSet mOrderedTags;
-};
-
-
-class PacketData {
-  public:
-    uint64 id;
-    uint16 source_port;
-    uint16 dest_port;
-
-    std::vector<DTime> mStamps;
-
-    PacketData()
-            : id(0),
-              source_port(0),
-              dest_port(0)
-    {
-    }
-};
-
-bool verify(const uint32*server, const PacketData &pd, Trace::MessagePath path) {
-    if (server==NULL) return true;
-    for (std::vector<DTime>::const_iterator i=pd.mStamps.begin(),ie=pd.mStamps.end();i!=ie;++i) {
-
-        if (i->mPath==path)
-            return i->mServerId==*server;
-    }
-    return false;
-
-}
-
-bool matches(const MessageLatencyFilters& filters, const PacketData& pd) {
-    return (filters.mDestPort == NULL || pd.dest_port == *filters.mDestPort)&&
-            verify(filters.mFilterByCreationServer,pd,Trace::CREATED)&&
-            verify(filters.mFilterByDestructionServer,pd,Trace::DESTROYED);
-}
-
-} // namespace
-
-MessageLatencyFilters::MessageLatencyFilters(uint16 *destPort, const uint32*filterByCreationServer,const uint32 *filterByDestructionServer, const uint32*filterByForwardingServer, const uint32 *filterByDeliveryServer) {
-    mDestPort=destPort;
-    mFilterByCreationServer=filterByCreationServer;
-    mFilterByDestructionServer=filterByDestructionServer;
-    mFilterByForwardingServer=filterByForwardingServer;
-    mFilterByDeliveryServer=filterByDeliveryServer;
-}
-
 
 #define PACKETSTAGE(x) case Trace::x: return #x
 const char* getPacketStageName (uint32 path) {
@@ -320,8 +105,25 @@ const char* getPacketStageName (uint32 path) {
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
-
 }
+
+class PathPair {
+  public:
+    Trace::MessagePath first;
+    Trace::MessagePath second;
+    PathPair(const Trace::MessagePath &first,
+             const Trace::MessagePath &second) {
+        this->first=first;
+        this->second=second;
+    }
+    bool operator < (const PathPair&other) const{
+        if (first==other.first) return second<other.second;
+        return first<other.first;
+    }
+    bool operator ==(const PathPair&other) const{
+        return first==other.first&&second==other.second;
+    }
+};
 
 std::ostream& operator<<(std::ostream& os, const PathPair& rhs) {
     const char* first_stage = getPacketStageName(rhs.first);
@@ -331,6 +133,104 @@ std::ostream& operator<<(std::ostream& os, const PathPair& rhs) {
 
     return os;
 }
+
+class PacketSample : public Time {
+  public:
+    uint32 server;
+    Trace::MessagePath tag;
+
+
+    bool isNull() const {
+        const Time * t=this;
+        return *t==Time::null();
+    }
+
+    PacketSample()
+            : Time(Time::null()),
+              server(-1),
+              tag(Trace::NUM_PATHS)
+    {
+    }
+
+    PacketSample(const Time&t, uint32 sid, Trace::MessagePath path)
+            : Time(t),
+              server(sid),
+              tag(path)
+    {
+    }
+
+    bool operator < (const Time&other)const {
+        return *static_cast<const Time*>(this)<other;
+    }
+    bool operator == (const Time&other)const {
+        return *static_cast<const Time*>(this)==other;
+    }
+};
+typedef std::vector<PacketSample> PacketSampleList;
+
+std::ostream& operator<<(std::ostream& os, const PacketSample& rhs) {
+    const char* tag_name = getPacketStageName(rhs.tag);
+    os << tag_name << "(" << (rhs-Time::null()) << ")";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const PacketSampleList& rhs) {
+    for(PacketSampleList::const_iterator it = rhs.begin(); it != rhs.end(); it++) {
+        os << "[" << *it << "]";
+    }
+    return os;
+}
+
+class PacketData {
+  public:
+    uint64 id;
+    uint16 source_port;
+    uint16 dest_port;
+
+    typedef std::map<uint32, PacketSampleList> ServerPacketMap;
+
+    ServerPacketMap stamps;
+
+    PacketData()
+            : id(0),
+              source_port(0),
+              dest_port(0)
+    {
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, const PacketData& rhs) {
+    for(PacketData::ServerPacketMap::const_iterator it = rhs.stamps.begin(); it != rhs.stamps.end(); it++) {
+        os << it->first << it->second << ", ";
+    }
+    return os;
+}
+
+bool verify(const uint32*server, const PacketData &pd, Trace::MessagePath path) {
+    if (server==NULL)
+        return true;
+
+    PacketData::ServerPacketMap::const_iterator server_it = pd.stamps.find(*server);
+    if (server_it == pd.stamps.end())
+        return false;
+
+    const PacketSampleList& samples = server_it->second;
+
+    for(PacketSampleList::const_iterator sample_it = samples.begin(); sample_it != samples.end(); sample_it++) {
+        if (sample_it->tag == path)
+            return true;
+    }
+
+    return false;
+}
+
+bool matches(const MessageLatencyFilters& filters, const PacketData& pd) {
+    return (filters.mDestPort == NULL || pd.dest_port == *filters.mDestPort)&&
+            verify(filters.mFilterByCreationServer,pd,Trace::CREATED)&&
+            verify(filters.mFilterByDestructionServer,pd,Trace::DESTROYED);
+}
+
+typedef std::tr1::function<void(PathPair, Duration)> ReportPairFunction;
 
 /** Represents a graph of packet stages, forming a FSM which packets follow as
  *  they flow through the system.  This graph is a little more complicated than
@@ -357,119 +257,356 @@ std::ostream& operator<<(std::ostream& os, const PathPair& rhs) {
 class PacketStageGraph {
   public:
 
+    enum EdgeType {
+        SYNC,
+        ASYNC
+    };
+
+    void addEdge(Trace::MessagePath from, Trace::MessagePath to, EdgeType type = SYNC) {
+        Edge edge;
+
+        edge.index = edges.size();
+        edge.from = from;
+        edge.to = to;
+        edge.type = type;
+
+        edges.push_back(edge);
+
+        stages[from].out_edges.push_back(edge.index);
+        verifyEdges(from);
+
+        stages[to].in_edges.push_back(edge.index);
+        verifyEdges(to);
+
+        recomputeTerminals();
+    }
+
+    typedef std::tr1::function<void(PathPair)> EdgeTraversalCallback;
+
+    void depth_first_edge_traversal(EdgeTraversalCallback cb) const {
+        StageSet visited;
+
+        typedef std::stack<Trace::MessagePath> StageStack;
+        StageStack next;
+
+        for(StageSet::iterator it = starting_stages.begin(); it != starting_stages.end(); it++)
+            next.push(*it);
+
+        while(!next.empty()) {
+            Trace::MessagePath tag = next.top();
+            next.pop();
+
+            if (visited.find(tag) != visited.end())
+                continue;
+
+            visited.insert(tag);
+
+            const Stage& st = stages.find(tag)->second;
+            for(EdgeIndexList::const_iterator it = st.out_edges.begin(); it != st.out_edges.end(); it++) {
+                const Edge& edge = edges[*it];
+
+                PathPair pp(edge.from, edge.to);
+
+                cb(pp);
+
+                if (visited.find(edge.to) == visited.end())
+                    next.push(edge.to);
+            }
+        }
+    }
+
+    void match_path(PacketData pd, ReportPairFunction cb) const {
+        // First try to get everything broken down into sets of sample lists
+        // which start and end with async operations, ordered by the time of the
+        // first sample in each list
+        OrderedPacketSampleListList ordered_list_list;
+        bool broken = breakAtAsync(pd, ordered_list_list);
+
+        if (!broken) {
+            std::cout << "Couldn't find sane breakdown for: " << pd << std::endl;
+            return;
+        }
+
+        // Now just run through them in order, sanity checking the order and
+        // connections, and generating samples.  Note that we do 2 passes, where
+        // the second one records data if the first pass was successful.
+        // We could try to match subsequences more intelligently, but currently
+        // we're just hoping we're actually slow enough + synchronized enough
+        // for it not to matter.
+        for(uint8 report = 0; report < 2; report++) {
+            PacketSample prev_sample;
+
+            for(OrderedPacketSampleListList::iterator ordered_it = ordered_list_list.begin(); ordered_it != ordered_list_list.end(); ordered_it++) {
+                PacketSampleList subseq = *ordered_it;
+                for(PacketSampleList::iterator packet_it = subseq.begin(); packet_it != subseq.end(); packet_it++) {
+                    PathPair pp(prev_sample.tag, packet_it->tag);
+
+                    if (!prev_sample.isNull() &&
+                        !validEdge(prev_sample.tag, packet_it->tag) ) {
+
+                        std::cout << "Couldn't match packet path: " << pd
+                                  << " due to " << pp
+                                  << std::endl;
+                        return;
+                    }
+
+                    if (report) {
+                        Duration diff = (*packet_it - prev_sample);
+                        cb(pp, diff);
+                    }
+                    prev_sample = *packet_it;
+                }
+            }
+        }
+    }
   private:
+    bool hasStage(Trace::MessagePath mp) const {
+        if (stages.find(mp) == stages.end()) {
+            std::cerr << "Don't have stage " << getPacketStageName(mp) << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+    // Verifies that the edges associated with a tag actually satisfy the
+    // constraints -- that all inputs and all outputs are the same type
+    void verifyEdges(Trace::MessagePath mp) const {
+        assert(hasStage(mp));
+        const Stage& stage = stages.find(mp)->second;
+
+        EdgeType in_type = SYNC;
+        for(EdgeIndexList::const_iterator it = stage.in_edges.begin(); it != stage.in_edges.end(); it++) {
+            if (it == stage.in_edges.begin()) {
+                in_type = edges[*it].type;
+                continue;
+            }
+
+            assert(edges[*it].type == in_type);
+        }
+
+        EdgeType out_type = SYNC;
+        for(EdgeIndexList::const_iterator it = stage.out_edges.begin(); it != stage.out_edges.end(); it++) {
+            if (it == stage.out_edges.begin()) {
+                out_type = edges[*it].type;
+                continue;
+            }
+
+            assert(edges[*it].type == out_type);
+        }
+    }
+
+    // The following check whether a stage is an async entry or async exit
+    // state, i.e. all exits or entries to that state are async.  Given the
+    // check performed by verifyEdges, we only have to check one edge in the
+    // correct direction to check this.
+    bool isAsyncEntry(Trace::MessagePath mp) const {
+        assert(hasStage(mp));
+        const Stage& stage = stages.find(mp)->second;
+
+        if (stage.in_edges.size() == 0)
+            return true;
+
+        return (edges[stage.in_edges[0]].type == ASYNC);
+    }
+    bool isAsyncExit(Trace::MessagePath mp) const {
+        assert(hasStage(mp));
+        const Stage& stage = stages.find(mp)->second;
+
+        if (stage.out_edges.size() == 0)
+            return true;
+
+        return (edges[stage.out_edges[0]].type == ASYNC);
+    }
+
+    // Returns true if the edge exists in the graph
+    bool validEdge(Trace::MessagePath from, Trace::MessagePath to) const {
+        assert(hasStage(from) && hasStage(to));
+
+        const Stage& from_stage = stages.find(from)->second;
+
+        for(uint32 ii = 0; ii < from_stage.out_edges.size(); ii++) {
+            assert(edges[from_stage.out_edges[ii]].from == from);
+            if (edges[from_stage.out_edges[ii]].to == to)
+                return true;
+        }
+        return false;
+    }
+
+    // Computes starting and ending states. We don't expect this graph to be
+    // huge so we just do this brute force each time instead of maintaining the
+    // info and performing updates.
+    void recomputeTerminals() {
+        starting_stages.clear();
+        terminal_stages.clear();
+
+        for(StageMap::iterator it = stages.begin(); it != stages.end(); it++) {
+            Trace::MessagePath st_tag = it->first;
+            Stage& st = it->second;
+
+            if (st.in_edges.empty())
+                starting_stages.insert(st_tag);
+
+            if (st.out_edges.empty())
+                terminal_stages.insert(st_tag);
+        }
+    }
+
+    // Breaks up PacketData into an ordered set of PacketSampleLists based on
+    // the UNSYNC edges.  This assumes that within sequences of tags on the same
+    // server there are no breaks by other tags.  This *should* be safe since
+    // the packet would have to make it back to the server over the network and
+    // the clock would have to tag it with an earlier time, which, aside from
+    // multicore systems and uber fast network links, shouldn't be possible.
+    // Note that another possible source of this problem is cross-thread posting
+    // where tags are not recorded until it is completed.  Generally this should
+    // not be done unless absolutely necessary.  Instead, prefer using a tag
+    // before the operation and one for each of success and failure to post.
+    typedef std::vector<PacketSampleList> OrderedPacketSampleListList;
+    // Records a sample list and the starting offset of unused samples in
+    // that list
+    struct UnusedSamples {
+        uint32 offset;
+        PacketSampleList list;
+    };
+    bool breakAtAsync(const PacketData& pd, OrderedPacketSampleListList& output) const {
+        std::map<Time, UnusedSamples> sorted_unused_samples;
+
+        for(PacketData::ServerPacketMap::const_iterator it = pd.stamps.begin(); it != pd.stamps.end(); it++) {
+            UnusedSamples us;
+            us.offset = 0;
+            us.list = it->second;
+            sorted_unused_samples[it->second[0]] = us;
+        }
+
+        while(!sorted_unused_samples.empty()) {
+            // Take the next earliest
+            Time us_time = sorted_unused_samples.begin()->first;
+            UnusedSamples us = sorted_unused_samples.begin()->second;
+            sorted_unused_samples.erase(us_time);
+
+            // First *must* be async entry
+            PacketSampleList next_set;
+            uint32 cur_offset = us.offset;
+            if (!isAsyncEntry(us.list[cur_offset].tag))
+                return false;
+
+            // Then continue until we hit the end or async exit
+            while(cur_offset < us.list.size()) {
+                next_set.push_back( us.list[cur_offset] );
+                uint32 was_offset = cur_offset;
+                cur_offset++;
+                if ( isAsyncExit(us.list[was_offset].tag) )
+                    break;
+            }
+
+            output.push_back(next_set);
+
+            if (cur_offset < us.list.size()) {
+                // Reinsert
+                us.offset = cur_offset;
+                sorted_unused_samples[ us.list[cur_offset] ] = us;
+            }
+        }
+
+        return true;
+    }
+
+    typedef uint32 EdgeIndex; // Index of an edge in our list
+    typedef std::vector<EdgeIndex> EdgeIndexList;
+
+    struct Stage {
+        EdgeIndexList in_edges;
+        EdgeIndexList out_edges;
+    };
+
+    typedef std::set<Trace::MessagePath> StageSet;
+    typedef std::map<Trace::MessagePath, Stage> StageMap;
+
+    struct Edge {
+        uint32 index;
+        Trace::MessagePath from;
+        Trace::MessagePath to;
+        EdgeType type;
+    };
+    typedef std::vector<Edge> EdgeList;
+
+    StageMap stages;
+    EdgeList edges;
+
+    StageSet starting_stages;
+    StageSet terminal_stages;
 }; // class PacketStageGraph
+
+
+
+
+
+
+typedef std::map<PathPair,Average> PathAverageMap;
+
+// When a valid mapping is found, this will take care of outputting a single
+// pair of stages.  Used as callback in method that maps packet timestamp
+// sequence to stage pairs
+void reportPair(PathPair pp, Duration tdiff, PathAverageMap* pam, std::ostream* stage_dump_file) {
+    if (pam) {
+        (*pam)[pp].sample(tdiff);
+    }
+
+    if (stage_dump_file) {
+        (*stage_dump_file) << pp << " " << tdiff << std::endl;
+    }
+}
+
+// Reports aggregate statistics for a stage pair to SILOG. Callback passed to
+// graph traversal method to get "ordered" output.
+void reportStats(PathPair pp, PathAverageMap* pam) {
+    if (pam == NULL)
+        return;
+
+    Average& avg = (*pam)[pp];
+    if (avg.samples() == 0)
+        return;
+
+    SILOG(analysis,info,
+          "Stage " << pp << ":"
+          << avg.average() << " stddev " << avg.stddev()
+          << " #" << avg.samples()
+          );
+}
+
+} // namespace
+
+MessageLatencyFilters::MessageLatencyFilters(uint16 *destPort, const uint32*filterByCreationServer,const uint32 *filterByDestructionServer, const uint32*filterByForwardingServer, const uint32 *filterByDeliveryServer) {
+    mDestPort=destPort;
+    mFilterByCreationServer=filterByCreationServer;
+    mFilterByDestructionServer=filterByDestructionServer;
+    mFilterByForwardingServer=filterByForwardingServer;
+    mFilterByDeliveryServer=filterByDeliveryServer;
+}
+
+
 
 void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, MessageLatencyFilters filter, const String& stage_dump_filename)
 {
-    StageGroup oh_create_group("Object Host Creation");
-    oh_create_group.add(Trace::CREATED)
-            .add(Trace::OH_ENQUEUED)
-            .add(Trace::OH_DROPPED_AT_OH_ENQUEUED)
-            ;
+    // Setup the graph of valid stage transitions
+    PacketStageGraph stage_graph;
 
-    StageGroup oh_net_exchange_group("Object Host Networking Exchange");
-    oh_net_exchange_group.add(Trace::OH_ENQUEUED)
-            .add(Trace::OH_DEQUEUED)
-            ;
+    stage_graph.addEdge(Trace::CREATED, Trace::OH_ENQUEUED);
+    stage_graph.addEdge(Trace::CREATED, Trace::OH_DROPPED_AT_OH_ENQUEUED);
+    stage_graph.addEdge(Trace::OH_ENQUEUED, Trace::OH_DEQUEUED);
+    stage_graph.addEdge(Trace::OH_DEQUEUED, Trace::OH_HIT_NETWORK);
 
-    StageGroup oh_send_group("Object Host Send");
-    oh_send_group.add(Trace::OH_DEQUEUED)
-            .add(Trace::OH_HIT_NETWORK)
-            ;
+    stage_graph.addEdge(Trace::OH_HIT_NETWORK, Trace::HANDLE_OBJECT_HOST_MESSAGE, PacketStageGraph::ASYNC);
+    stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDED_LOCALLY);
+    stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDING_STARTED);
 
-    StageGroup oh_to_space_group("Object Host -> Space", StageGroup::ORDERED_ALLOW_NEGATIVE);
-    oh_to_space_group
-            .add(Trace::OH_HIT_NETWORK)
-            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
-            ;
+    stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::DROPPED);
+    stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::SPACE_TO_OH_ENQUEUED);
 
-    StageGroup space_from_oh_route_decision_group("OH Message Routing Decision", StageGroup::ORDERED_STRICT);
-    space_from_oh_route_decision_group
-            .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
-            .add(Trace::FORWARDED_LOCALLY)
-            .add(Trace::FORWARDING_STARTED)
-            ;
-
-    StageGroup space_from_space_route_decision_group("Space Message Routing Decision", StageGroup::ORDERED_STRICT);
-    space_from_space_route_decision_group
-            .add(Trace::HANDLE_SPACE_MESSAGE)
-            .add(Trace::FORWARDED_LOCALLY)
-            .add(Trace::FORWARDING_STARTED)
-            ;
-
-    StageGroup space_direct_route_group("Space Direct Routing");
-    space_direct_route_group
-            .add(Trace::FORWARDED_LOCALLY)
-            .add(Trace::DROPPED)
-            .add(Trace::SPACE_TO_OH_ENQUEUED)
-            ;
-
-    StageGroup space_slow_direct_route_group("Space Slow Direct Routing");
-    space_slow_direct_route_group
-            .add(Trace::FORWARDING_STARTED)
-            .add(Trace::DROPPED)
-            .add(Trace::FORWARDED_LOCALLY_SLOW_PATH)
-            ;
-
-    StageGroup space_slow_direct_delivery_route_group("Space Slow Direct Delivery Routing");
-    space_slow_direct_delivery_route_group
-            .add(Trace::FORWARDED_LOCALLY_SLOW_PATH)
-            .add(Trace::SPACE_TO_OH_ENQUEUED)
-            ;
-
-    StageGroup oseg_lookup_group("OSeg Lookups");
-    oseg_lookup_group
-            .add(Trace::FORWARDING_STARTED)
-            .add(Trace::OSEG_LOOKUP_STARTED)
-            .add(Trace::OSEG_CACHE_LOOKUP_FINISHED)
-            .add(Trace::OSEG_SERVER_LOOKUP_FINISHED)
-            .add(Trace::OSEG_LOOKUP_FINISHED)
-            ;
-
-    StageGroup space_forwarder_queue_group("Space Forwarding Queues");
-    space_forwarder_queue_group
-            .add(Trace::OSEG_LOOKUP_FINISHED)
-            .add(Trace::DROPPED)
-            .add(Trace::SPACE_TO_SPACE_ENQUEUED)
-            ;
-
-    StageGroup space_to_space_group("Space -> Space", StageGroup::ORDERED_ALLOW_NEGATIVE);
-    space_to_space_group
-            .add(Trace::SPACE_TO_SPACE_ENQUEUED)
-            .add(Trace::HANDLE_SPACE_MESSAGE)
-            ;
-
-    StageGroup space_to_oh_group("Space -> Object Host", StageGroup::ORDERED_ALLOW_NEGATIVE);
-    space_to_oh_group
-            .add(Trace::SPACE_TO_OH_ENQUEUED)
-            .add(Trace::OH_NET_RECEIVED)
-            ;
-
-    StageGroup oh_receive_group("Object Host Receive");
-    oh_receive_group.add(Trace::DESTROYED)
-            .add(Trace::OH_DROPPED_AT_RECEIVE_QUEUE)
-            .add(Trace::OH_NET_RECEIVED)
-            .add(Trace::OH_RECEIVED)
-            ;
-
-
-    typedef std::vector<StageGroup> StageGroupList;
-    StageGroupList groups;
-    groups.push_back(oh_create_group);
-    groups.push_back(oh_net_exchange_group);
-    groups.push_back(oh_send_group);
-    groups.push_back(oh_to_space_group);
-    groups.push_back(space_from_oh_route_decision_group);
-    groups.push_back(space_from_space_route_decision_group);
-    groups.push_back(space_direct_route_group);
-    groups.push_back(space_slow_direct_route_group);
-    groups.push_back(space_slow_direct_delivery_route_group);
-    groups.push_back(oseg_lookup_group);
-    groups.push_back(space_forwarder_queue_group);
-    groups.push_back(space_to_space_group);
-    groups.push_back(space_to_oh_group);
-    groups.push_back(oh_receive_group);
+    stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
+    stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);
+    stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
+    stage_graph.addEdge(Trace::OH_RECEIVED, Trace::DESTROYED);
 
     // read in all our data
     typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;
@@ -488,7 +625,7 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
                 MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
                 if (tevt != NULL) {
                     PacketData* pd = &packetFlow[tevt->uid];
-                    pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
+                    pd->stamps[server_id].push_back(PacketSample(tevt->begin_time(), server_id, tevt->path));
                     MessageCreationTimestampEvent* cevt = dynamic_cast<MessageCreationTimestampEvent*>(evt);
                     if (cevt != NULL) {
                         if (cevt->srcport!=0) pd->source_port = cevt->srcport;
@@ -500,43 +637,35 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
         }
     }
 
+    // Prepare output data structures
     std::ofstream* stage_dump_file = NULL;
     if (!stage_dump_filename.empty()) {
         stage_dump_file = new std::ofstream(stage_dump_filename.c_str());
     }
-
-    // Compute time diffs for each group x packet
-    typedef std::map<PathPair,Average> PathAverageMap;
     PathAverageMap results;
-    for (PacketMap::iterator iter=packetFlow.begin(),ie=packetFlow.end();
+
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+    ReportPairFunction report_func = std::tr1::bind(&reportPair, _1, _2, &results, stage_dump_file);
+
+
+    // Perform a stable sort for each packet's server timestamp lists, then try
+    // to match it to the graph.
+    // Note that the stable sort is only necessary because the logging is
+    // multithreaded and may not get everything perfectly in order.
+    for (PacketMap::iterator iter = packetFlow.begin(),ie=packetFlow.end();
          iter!=ie;
          ++iter) {
         PacketData& pd = iter->second;
-        if ( !matches(filter, pd) || (pd.mStamps.size() == 0) ) continue;
-        std::stable_sort(pd.mStamps.begin(),pd.mStamps.end());
-        for(StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
-            StageGroup& group = *group_it;
-            // Given our packet list and a set of valid stages, we need to step
-            // through finding "adjacent" pairs of stages, where adjacent means
-            // that tag A and tag B are both in the StageGroup and there is no
-            // tag C that is also in the StageGroup and exists between A and B.
-            std::vector<DTime> filtered_stamps = group.filter(pd.mStamps);
-            for (uint32 idx = 1; idx < filtered_stamps.size(); ++idx) {
-                if (!group.validPair( filtered_stamps[idx-1], filtered_stamps[idx] ))
-                    continue;
-                PathPair pp = group.orderedPair( filtered_stamps[idx-1], filtered_stamps[idx] );
-                Duration diff = group.difference( filtered_stamps[idx-1], filtered_stamps[idx] );
-                results[pp].sample(diff);
+        if ( !matches(filter, pd) || (pd.stamps.size() == 0) ) continue;
 
-                if (stage_dump_file) {
-                    (*stage_dump_file) << pp << " " << diff << std::endl;
-                }
-            }
-        }
-        if (stage_dump_file) {
-            (*stage_dump_file) << std::endl;
+        for(PacketData::ServerPacketMap::iterator server_it = pd.stamps.begin();
+            server_it != pd.stamps.end();
+            server_it++) {
+            std::stable_sort(server_it->second.begin(), server_it->second.end());
         }
 
+        stage_graph.match_path(pd, report_func);
     }
 
     if (stage_dump_file) {
@@ -545,31 +674,10 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
         stage_dump_file = NULL;
     }
 
-    // Report results for each (sensible) pair of stages
-    // Reports are done by groups
-    for (StageGroupList::iterator group_it = groups.begin(); group_it != groups.end(); group_it++) {
-        StageGroup& group = *group_it;
-        SILOG(analysis,info,"Group: " << group.name());
-        // This approach is inefficient but only bad if # of groups sky rockets
-        for (PathAverageMap::iterator resiter=results.begin(),resiterend=results.end();
-             resiter!=resiterend;
-             ++resiter) {
-
-            PathPair path_pair = resiter->first;
-            if (!group.contains(path_pair))
-                continue;
-
-            Average& avg = resiter->second;
-            if (avg.samples() == 0)
-                continue;
-
-            SILOG(analysis,info,
-                  "Stage " << path_pair << ":"
-                  << avg.average() << " stddev " << avg.stddev()
-                  << " #" << avg.samples()
-                  );
-        }
-    }
+    // Report results for all stages which we've found pairs for
+    stage_graph.depth_first_edge_traversal(
+        std::tr1::bind(&reportStats, _1, &results)
+                                           );
 }
 
 } // namespace CBR
