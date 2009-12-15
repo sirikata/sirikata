@@ -37,6 +37,7 @@
 #include "Options.hpp"
 #include "Statistics.hpp"
 #include "Analysis.hpp"
+#include "MessageLatency.hpp"
 #include "Visualization.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"

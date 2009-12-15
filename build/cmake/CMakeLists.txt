@@ -358,6 +358,7 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
+  ${CBR_SOURCE_DIR}/analysis/MessageLatency.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/analysis/main.cpp
 )
@@ -450,7 +451,7 @@ TARGET_LINK_LIBRARIES(oh
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
-      
+
 
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(cseg
