@@ -46,7 +46,7 @@
 //#define TRACE_LOCPROX
 #define TRACE_OSEG
 //#define TRACE_CSEG
-#define TRACE_OSEG_CUMULATIVE
+//#define TRACE_OSEG_CUMULATIVE
 
 #define TRACE_MIGRATION
 //#define TRACE_DATAGRAM
