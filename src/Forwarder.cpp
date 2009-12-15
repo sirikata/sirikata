@@ -311,7 +311,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg);
   if (!send_success) {
       delete svr_obj_msg;
-      TIMESTAMP(obj_msg, Trace::DROPPED);
+      TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
   }else {
       delete obj_msg;
   }
