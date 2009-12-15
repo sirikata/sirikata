@@ -24,7 +24,7 @@ ByteTransferScenario::ByteTransferScenario(const String &options):mStartTime(Tim
     mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
     mPacketSize=optionsSet->referenceOption("packet-size")->as<size_t>();
 
-    mPort=888;
+    mPort=OBJECT_PORT_PING;
     mGeneratePings=std::tr1::bind(&ByteTransferScenario::generatePings,this);
 }
 ByteTransferScenario::~ByteTransferScenario(){
@@ -98,8 +98,8 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
             }else {
                 Time tim(mContext->simTime());
                 mOutstandingPackets[pingNumber].update(tim);
-                SILOG(oh,error,"Ping Return in "<<tim-start);
-                start=tim;
+                //SILOG(oh,error,"Ping Return in "<<tim-start);
+                //start=tim;
             }
         }
     }else {
