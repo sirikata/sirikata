@@ -1205,6 +1205,7 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(HANDLE_SPACE_MESSAGE);
         PACKETSTAGE(FORWARDED_LOCALLY);
         PACKETSTAGE(FORWARDING_STARTED);
+        PACKETSTAGE(FORWARDED_LOCALLY_SLOW_PATH);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
@@ -1253,7 +1254,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
             ;
 
-    StageGroup space_from_oh_route_decision_group("OH Message Routing Decision");
+    StageGroup space_from_oh_route_decision_group("OH Message Routing Decision", StageGroup::ORDERED_STRICT);
     space_from_oh_route_decision_group
             .add(Trace::HANDLE_OBJECT_HOST_MESSAGE)
             .add(Trace::FORWARDED_LOCALLY)
@@ -1278,6 +1279,12 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     space_slow_direct_route_group
             .add(Trace::FORWARDING_STARTED)
             .add(Trace::DROPPED)
+            .add(Trace::FORWARDED_LOCALLY_SLOW_PATH)
+            ;
+
+    StageGroup space_slow_direct_delivery_route_group("Space Slow Direct Delivery Routing");
+    space_slow_direct_delivery_route_group
+            .add(Trace::FORWARDED_LOCALLY_SLOW_PATH)
             .add(Trace::SPACE_TO_OH_ENQUEUED)
             ;
 
@@ -1327,6 +1334,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     groups.push_back(space_from_space_route_decision_group);
     groups.push_back(space_direct_route_group);
     groups.push_back(space_slow_direct_route_group);
+    groups.push_back(space_slow_direct_delivery_route_group);
     groups.push_back(oseg_lookup_group);
     groups.push_back(space_forwarder_queue_group);
     groups.push_back(space_to_space_group);

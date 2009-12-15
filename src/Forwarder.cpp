@@ -259,7 +259,10 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
         else
             send_success = conn->send(msg);
 
-        if (!send_success) {
+        if (send_success) {
+            TIMESTAMP_END(tstamp, Trace::FORWARDED_LOCALLY_SLOW_PATH);
+        }
+        else {
             TIMESTAMP_END(tstamp, Trace::DROPPED);
             delete msg;
         }
