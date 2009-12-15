@@ -99,6 +99,7 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_LOOKUP_FINISHED);
         PACKETSTAGE(SPACE_TO_SPACE_ENQUEUED);
+        PACKETSTAGE(DROPPED_AT_SPACE_ENQUEUED);
         PACKETSTAGE(DROPPED);
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
@@ -232,6 +233,96 @@ bool matches(const MessageLatencyFilters& filters, const PacketData& pd) {
 
 typedef std::tr1::function<void(PathPair, Duration)> ReportPairFunction;
 
+
+class PermutationGenerator {
+    /* Adapted from http://www.merriampark.com/perm.htm */
+  private:
+    std::vector<uint32> a;
+    uint64 numLeft;
+    uint64 total;
+
+    static uint64 getFactorial (int n) {
+        uint64 fact = 1;
+        for (uint64 i = n; i > 1; i--)
+            fact *= i;
+        return fact;
+    }
+
+  public:
+
+    PermutationGenerator (int n) {
+        assert (n >= 1);
+        assert (n <= 5);
+        a.resize(n);
+        total = getFactorial(n);
+        reset();
+    }
+
+    void reset () {
+        for (uint32 i = 0; i < a.size(); i++)
+            a[i] = i;
+        numLeft = total;
+    }
+
+    uint64 getNumLeft () {
+        return numLeft;
+    }
+
+    uint64 getTotal () {
+        return total;
+    }
+
+    bool hasMore () {
+        return numLeft > 0;
+    }
+
+    const std::vector<uint32>& getNext() {
+        if (numLeft == total) {
+            numLeft -= 1;
+            return a;
+        }
+
+        int temp;
+
+        // Find largest index j with a[j] < a[j+1]
+
+        int j = a.size() - 2;
+        while (a[j] > a[j+1]) {
+            j--;
+        }
+
+        // Find index k such that a[k] is smallest integer
+        // greater than a[j] to the right of a[j]
+
+        int k = a.size() - 1;
+        while (a[j] > a[k]) {
+            k--;
+        }
+
+        // Interchange a[j] and a[k]
+
+        temp = a[k];
+        a[k] = a[j];
+        a[j] = temp;
+
+        // Put tail end of permutation after jth position in increasing order
+
+        int r = a.size() - 1;
+        int s = j + 1;
+
+        while (r > s) {
+            temp = a[s];
+            a[s] = a[r];
+            a[r] = temp;
+            r--;
+            s++;
+        }
+
+        numLeft -= 1;
+        return a;
+    }
+}; // PermutationGenerator
+
 /** Represents a graph of packet stages, forming a FSM which packets follow as
  *  they flow through the system.  This graph is a little more complicated than
  *  a regular FSM because as we cross network links we have the possibility that
@@ -327,41 +418,20 @@ class PacketStageGraph {
             return;
         }
 
-        // Now just run through them in order, sanity checking the order and
-        // connections, and generating samples.  Note that we do 2 passes, where
-        // the second one records data if the first pass was successful.
-        // We could try to match subsequences more intelligently, but currently
-        // we're just hoping we're actually slow enough + synchronized enough
-        // for it not to matter.
-        for(uint8 report = 0; report < 2; report++) {
-            PacketSample prev_sample;
+        bool matched = tryPermutations(
+            ordered_list_list,
+            cb
+                                       );
 
-            for(OrderedPacketSampleListList::iterator ordered_it = ordered_list_list.begin(); ordered_it != ordered_list_list.end(); ordered_it++) {
-                PacketSampleList subseq = *ordered_it;
-                for(PacketSampleList::iterator packet_it = subseq.begin(); packet_it != subseq.end(); packet_it++) {
-                    PathPair pp(prev_sample.tag, packet_it->tag);
+        if (!matched) {
+            std::cout << "Couldn't match packet path: " << pd
+                      << std::endl;
 
-                    if (!prev_sample.isNull() &&
-                        !validEdge(prev_sample.tag, packet_it->tag) ) {
-
-                        std::cout << "Couldn't match packet path: " << pd
-                                  << " due to " << pp
-                                  << std::endl;
-
-                        for(OrderedPacketSampleListList::iterator dump_it = ordered_list_list.begin(); dump_it != ordered_list_list.end(); dump_it++) {
-                            PacketSampleList dump_subseq = *dump_it;
-                            std::cout << dump_subseq << std::endl;
-                        }
-                        return;
-                    }
-
-                    if (report) {
-                        Duration diff = (*packet_it - prev_sample);
-                        cb(pp, diff);
-                    }
-                    prev_sample = *packet_it;
-                }
+            for(OrderedPacketSampleListList::iterator dump_it = ordered_list_list.begin(); dump_it != ordered_list_list.end(); dump_it++) {
+                PacketSampleList dump_subseq = *dump_it;
+                std::cout << dump_subseq << std::endl;
             }
+            return;
         }
     }
   private:
@@ -509,8 +579,10 @@ class PacketStageGraph {
             // First *must* be async entry
             PacketSampleList next_set;
             uint32 cur_offset = us.offset;
-            if (!isAsyncEntry(us.list[cur_offset].tag))
+            if (!isAsyncEntry(us.list[cur_offset].tag)) {
+                printf("First entry in list isn't async\n");
                 return false;
+            }
 
             // Then continue until we hit the end or async exit
             while(cur_offset < us.list.size()) {
@@ -536,22 +608,28 @@ class PacketStageGraph {
         int32 starting_samples_idx = -1, ending_samples_idx = -1;
         for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
             if ( isPureEntry(unconstrained_output[ii][0].tag) ) {
-                if (starting_samples_idx != -1)
+                if (starting_samples_idx != -1) {
+                    printf("Found 2 entry points\n");
                     return false; // Found 2 entry points
+                }
                 else
                     starting_samples_idx = ii;
             }
 
             if ( isPureExit(unconstrained_output[ii][ unconstrained_output[ii].size()-1 ].tag) ) {
-                if (ending_samples_idx != -1)
-                    return false; // Found 2 entry points
+                if (ending_samples_idx != -1) {
+                    printf("Found 2 exit points\n");
+                    return false; // Found 2 exit points
+                }
                 else
                     ending_samples_idx = ii;
             }
         }
 
-        if (starting_samples_idx == -1 || ending_samples_idx == -1)
+        if (starting_samples_idx == -1 || ending_samples_idx == -1) {
+            printf("Didn't find both entry and exit point.\n");
             return false;
+        }
 
         output.push_back( unconstrained_output[starting_samples_idx] );
         for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
@@ -561,6 +639,72 @@ class PacketStageGraph {
         output.push_back( unconstrained_output[ending_samples_idx] );
 
         return true;
+    }
+
+
+    bool testPermutation(OrderedPacketSampleListList ordered_list_list, ReportPairFunction cb) const {
+        // Now just run through them in order, sanity checking the order and
+        // connections, and generating samples.  Note that we do 2 passes, where
+        // the second one records data if the first pass was successful.
+        // We could try to match subsequences more intelligently, but currently
+        // we're just hoping we're actually slow enough + synchronized enough
+        // for it not to matter.
+        for(uint8 report = 0; report < 2; report++) {
+            PacketSample prev_sample;
+
+            for(OrderedPacketSampleListList::iterator ordered_it = ordered_list_list.begin(); ordered_it != ordered_list_list.end(); ordered_it++) {
+                PacketSampleList subseq = *ordered_it;
+                for(PacketSampleList::iterator packet_it = subseq.begin(); packet_it != subseq.end(); packet_it++) {
+                    PathPair pp(prev_sample.tag, packet_it->tag);
+
+                    if (!prev_sample.isNull() &&
+                        !validEdge(prev_sample.tag, packet_it->tag) ) {
+
+                        return false;
+                    }
+
+                    if (report) {
+                        Duration diff = (*packet_it - prev_sample);
+                        cb(pp, diff);
+                    }
+                    prev_sample = *packet_it;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // Generates permutations of the subsequences until it finds one that
+    // generates a valid path
+    // FIXME for long paths we should probably do additional sanity checks on
+    // timestamps between stages on each permutation
+    bool tryPermutations(OrderedPacketSampleListList samples, ReportPairFunction cb) const {
+        // The start and end subsequences will always be the same
+        PacketSampleList samples_front = samples.front();
+        PacketSampleList samples_back = samples.back();
+
+        samples.erase(samples.begin());
+        samples.pop_back();
+
+        // Now generate all permutations of interior sample subsequences
+        PermutationGenerator perms(samples.size());
+        while(perms.hasMore()) {
+            // Construct the actual permutation
+            std::vector<uint32> perm = perms.getNext();
+            OrderedPacketSampleListList perm_list;
+            perm_list.push_back(samples_front);
+            for(uint32 ii = 0; ii < perm.size(); ii++)
+                perm_list.push_back( samples[perm[ii]] );
+            perm_list.push_back(samples_back);
+
+            // And test it
+            bool valid = testPermutation(perm_list, cb);
+            if (valid)
+                return true;
+        }
+
+        return false;
     }
 
     typedef uint32 EdgeIndex; // Index of an edge in our list
@@ -652,13 +796,26 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDED_LOCALLY);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDING_STARTED);
 
+    stage_graph.addEdge(Trace::HANDLE_SPACE_MESSAGE, Trace::FORWARDING_STARTED);
+
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::DROPPED);
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::SPACE_TO_OH_ENQUEUED);
 
     stage_graph.addEdge(Trace::FORWARDING_STARTED, Trace::FORWARDED_LOCALLY_SLOW_PATH);
+    stage_graph.addEdge(Trace::FORWARDING_STARTED, Trace::OSEG_LOOKUP_STARTED);
 
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::SPACE_TO_OH_ENQUEUED);
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::DROPPED);
+
+    stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::DROPPED);
+    stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::OSEG_CACHE_LOOKUP_FINISHED);
+    stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::OSEG_SERVER_LOOKUP_FINISHED);
+    stage_graph.addEdge(Trace::OSEG_CACHE_LOOKUP_FINISHED, Trace::OSEG_LOOKUP_FINISHED);
+    stage_graph.addEdge(Trace::OSEG_SERVER_LOOKUP_FINISHED, Trace::OSEG_LOOKUP_FINISHED);
+
+    stage_graph.addEdge(Trace::OSEG_LOOKUP_FINISHED, Trace::SPACE_TO_SPACE_ENQUEUED);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::DROPPED_AT_SPACE_ENQUEUED, PacketStageGraph::ASYNC);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::HANDLE_SPACE_MESSAGE, PacketStageGraph::ASYNC);
 
     stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);
