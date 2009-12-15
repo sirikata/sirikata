@@ -744,12 +744,15 @@ typedef std::map<PathPair,Average> PathAverageMap;
 // pair of stages.  Used as callback in method that maps packet timestamp
 // sequence to stage pairs
 void reportPair(PathPair pp, Duration tdiff, PathAverageMap* pam, std::ostream* stage_dump_file) {
-    if (pam) {
+    if (pam && pp.first != Trace::NUM_PATHS) {
         (*pam)[pp].sample(tdiff);
     }
 
     if (stage_dump_file) {
-        (*stage_dump_file) << pp << " " << tdiff << std::endl;
+        if (pp.first == Trace::NUM_PATHS)
+            (*stage_dump_file) << std::endl;
+        else
+            (*stage_dump_file) << pp << " " << tdiff << std::endl;
     }
 }
 
