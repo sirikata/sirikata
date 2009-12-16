@@ -135,6 +135,21 @@ void ByteTransferScenario::generatePings() {
             objA=objB;
             objB=tmp;
         }
+        if (objA&&!objA->connected())
+            objA=NULL;
+        if (objB&&!objB->connected())
+            objB=NULL;
+        if (objA&&objB) {
+            bool sameServer=(objA->connectedTo()==objB->connectedTo());
+            if (sameServer&&!mSameObjectHostPings) {
+                objA=NULL;
+                objB=NULL;
+            }
+            if(mForceSameObjectHostPings&&!sameServer) {
+                objA=NULL;
+                objB=NULL;
+            }
+        }
         if (objA!=NULL&&objB!=NULL) {
             mSourceObject=objA->uuid();
             mDestinationObject=objB->uuid();

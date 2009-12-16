@@ -110,8 +110,11 @@ public:
 
     virtual void start();
     virtual void stop();
-private:
+    ServerID connectedTo()const {
+        return mConnectedTo;
+    }
     bool connected();
+private:
 
     // Initiate a connection
     void connect();
