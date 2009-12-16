@@ -38,6 +38,7 @@
 
 #include <boost/thread/locks.hpp>
 
+
 namespace CBR {
 
 BatchedBuffer::BatchedBuffer()
@@ -125,6 +126,7 @@ const uint8 Trace::ObjectGeneratedLocationTag;
 const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
 const uint8 Trace::OSegCumulativeTraceAnalysisTag;
+const uint8 Trace::OSegCraqProcessTag;
 
 const uint8 Trace::ObjectConnectedTag;
 
@@ -171,6 +173,7 @@ void Trace::InitOptions() {
         .addOption(mLogMessage)
         ;
 }
+
 
 Trace::Trace(const String& filename)
  : mShuttingDown(false),
@@ -592,5 +595,23 @@ CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSeg, const Time &t, OSegLookupTrac
     };
     writeRecord(OSegCumulativeTraceAnalysisTag, data_vec, num_data);
 }
+
+
+  void Trace::osegProcessedCraqTime(const Time&t , const Duration& dur)
+  {
+
+    if (mShuttingDown)
+      return;
+
+   #ifdef TRACE_OSEG_PROCESS_CRAQ
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+    data.write(&OSegCraqProcessTag, sizeof(OSegCraqProcessTag));
+    data.write(&t,sizeof(t));
+    data.write(&dur, sizeof(Duration));
+   #endif
+  }
+
+  
 
 } // namespace CBR

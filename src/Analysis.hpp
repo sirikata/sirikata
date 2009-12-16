@@ -311,7 +311,7 @@ public:
   class OSegCumulativeTraceAnalysis
   {
   private:
-    static const uint64_t OSEG_CUMULATIVE_ANALYSIS_SECONDS_TO_MICROSECONDS = 1000000;
+    static const uint64 OSEG_CUMULATIVE_ANALYSIS_SECONDS_TO_MICROSECONDS = 1000000;
     std::vector<OSegCumulativeEvent*> allTraces;
     void filterShorterPath(uint64 time_after_microseconds);
     void generateAllData();
@@ -370,6 +370,28 @@ public:
 
 
 
+  class OSegProcessCraqReturnAnalysis
+  {
+  private:
+    static const uint64 OSEG_CRAQ_PROCESS_RETURN_ANALYSIS_ECONDS_TO_MICROSECONDS = 1000000;
+    std::vector<OSegCraqProcEvent*>allProcEvts;
+    uint64 mInitialTime;
+    struct OSegProcessCraqComparator
+    {
+      bool operator()(const OSegCraqProcEvent* lhs, const OSegCraqProcEvent* rhs) const
+      {
+        return (lhs->timeItTook.toMicroseconds() < rhs->timeItTook.toMicroseconds());
+      }
+    };
+    void filterTimeAfter(uint64 tafter_us);
+    void sortAllEvents();
+    
+  public:
+    OSegProcessCraqReturnAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds =  0);
+    ~OSegProcessCraqReturnAnalysis();
+    void printData(std::ostream &fileOut);
+  };
+  
 
 class OSegCacheErrorAnalysis
 {
@@ -387,8 +409,6 @@ public:
     }
 
   };
-
-
   struct Results
   {
     int missesCache;
@@ -396,7 +416,6 @@ public:
     int totalCache;
     int totalLookups;
   };
-
 
 private:
 

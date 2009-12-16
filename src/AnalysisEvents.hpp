@@ -250,6 +250,10 @@ struct OSegCacheResponseEvent : public Event
     OSegLookupTraceToken traceToken;
   };
 
+  struct OSegCraqProcEvent : public Event
+  {
+    Duration timeItTook;
+  };
 
 
 }

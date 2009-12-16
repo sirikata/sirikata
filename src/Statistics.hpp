@@ -119,7 +119,7 @@ public:
     static const uint8 OSegCacheResponseTag = 23;
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
     static const uint8 OSegCumulativeTraceAnalysisTag   = 25;
-
+    static const uint8 OSegCraqProcessTag                 = 26;
     static const uint8 MessageTimestampTag = 30;
     static const uint8 MessageCreationTimestampTag = 31;
 
@@ -228,6 +228,7 @@ public:
     CREATE_TRACE_DECL(osegCumulativeResponse, const Time &t, OSegLookupTraceToken* traceToken);
 
 public:
+
   void prepareShutdown();
   void shutdown();
 

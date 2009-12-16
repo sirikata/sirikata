@@ -15,6 +15,14 @@
 #include "../../Utility.hpp"
 #include "../../OSegLookupTraceToken.hpp"
 
+#include "../../Statistics.hpp"
+
+
+
+
+
+
+
 namespace CBR
 {
 //constructor
@@ -490,6 +498,8 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
   if ( mReceivedStopRequest)
     return true;
 
+  Time t1 = ctx->time;
+  
   //index from stored
   //not_found
   //value
@@ -538,6 +548,10 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
   if ((int)mPrevReadFrag.size() > MAX_GET_PREV_READ_FRAG_SIZE)
     mPrevReadFrag.substr(((int)mPrevReadFrag.size()) - CUT_GET_PREV_READ_FRAG);
 
+  Time t2 = ctx->time;
+  Duration timeTaken = t2 - t1;
+  ctx->trace() -> osegProcessedCraqTime(ctx->time,timeTaken);
+  
   return returner;
 }
 

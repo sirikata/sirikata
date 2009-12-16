@@ -182,6 +182,14 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           evt = cumevt;
         }
         break;
+      case Trace::OSegCraqProcessTag:
+        {
+          OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
+          is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
+          is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
+          evt = craqProcEvt;
+        }
+        break;
       case Trace::ServerDatagramSentTag:
           {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
@@ -2915,6 +2923,81 @@ void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
   }
 }
 
+
+
+OSegProcessCraqReturnAnalysis::OSegProcessCraqReturnAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds)
+  : mInitialTime (0)
+{
+  for(uint32 server_id = 1; server_id <= nservers; server_id++)
+  {
+    String loc_file = GetPerServerFile(opt_name, server_id);
+    std::ifstream is(loc_file.c_str(), std::ios::in);
+
+    while(is)
+    {
+      Event* evt = Event::read(is, server_id);
+      if (evt == NULL)
+        break;
+
+      
+      OSegCraqProcEvent* oseg_craq_proc_evt = dynamic_cast<OSegCraqProcEvent*> (evt);
+      if (oseg_craq_proc_evt != NULL)
+      {
+        if (allProcEvts.size() == 0)
+          mInitialTime = (oseg_craq_proc_evt->time - Time::null()).toMicroseconds();
+        else if (mInitialTime > (uint64) (oseg_craq_proc_evt->time - Time::null()).toMicroseconds())
+          mInitialTime = (oseg_craq_proc_evt->time - Time::null()).toMicroseconds();
+
+        allProcEvts.push_back(oseg_craq_proc_evt);
+        continue;
+      }
+      delete evt;
+    }
+  }
+
+  filterTimeAfter(time_after_seconds*OSEG_CRAQ_PROCESS_RETURN_ANALYSIS_ECONDS_TO_MICROSECONDS);
+}
+
+
+OSegProcessCraqReturnAnalysis::~OSegProcessCraqReturnAnalysis()
+{
+  for (int s=0; s < (int) allProcEvts.size(); ++s)
+  {
+    delete allProcEvts[s];
+  }
+  allProcEvts.clear();
+}
+
+void OSegProcessCraqReturnAnalysis::filterTimeAfter(uint64 time_after_microseconds)
+{
+  std::vector<OSegCraqProcEvent*>::iterator cpIt = allProcEvts.begin();
+
+  while(cpIt != allProcEvts.end())
+  {
+    if (((*cpIt)->time -Time::null()).toMicroseconds()- mInitialTime < time_after_microseconds)
+    {
+      delete (*cpIt);
+      cpIt = allProcEvts.erase(cpIt);
+    }
+    else
+      ++cpIt;
+  }
+}
+
+void OSegProcessCraqReturnAnalysis::printData(std::ostream &fileOut)
+{
+  sortAllEvents();
+  for (int s=0;s < (int) allProcEvts.size(); ++s)
+  {
+    fileOut <<  allProcEvts[s]->timeItTook.toMicroseconds() << ",";
+  }
+  fileOut <<"\n\n\n";
+}
+
+void OSegProcessCraqReturnAnalysis::sortAllEvents()
+{
+  std::sort(allProcEvts.begin(), allProcEvts.end(), OSegProcessCraqComparator());
+}
 
 
 } // namespace CBR
