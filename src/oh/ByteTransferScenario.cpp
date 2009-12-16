@@ -41,6 +41,8 @@ void ByteTransferScenario::addConstructorToFactory(ScenarioFactory*thus){
 }
 
 void ByteTransferScenario::initialize(ObjectHostContext*ctx) {
+    using std::tr1::placeholders::_1;
+
     mContext=ctx;
     mPingProfiler = mContext->profiler->addStage("Object Host Generate TransferBytes ");
     mContext->objectHost->registerService(mPort,std::tr1::bind(&ByteTransferScenario::pingReturn,this,_1));
@@ -85,7 +87,7 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
     static Time start=mContext->simTime();
     if (msg.payload().size()>=8){
         if (msg.payload().size()!=mPacketSize&&mPacketSize>=8) {
-            SILOG(oh,error,"Packet size does not match received packet size "<<msg.payload().size()<< " != "<<mPacketSize);            
+            SILOG(oh,error,"Packet size does not match received packet size "<<msg.payload().size()<< " != "<<mPacketSize);
         }else {
             int64 pingNumber=0;
             for (int i=8;i-->0;) {
@@ -94,7 +96,7 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
                 pingNumber+=val;
             }
             if (pingNumber>=(int64)mOutstandingPackets.size()) {
-                SILOG(oh,error,"Packet received that hasn't been sent yet "<<pingNumber);                
+                SILOG(oh,error,"Packet received that hasn't been sent yet "<<pingNumber);
             }else {
                 Time tim(mContext->simTime());
                 mOutstandingPackets[pingNumber].update(tim);
@@ -103,7 +105,7 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
             }
         }
     }else {
-        SILOG(oh,error,"Runt transfer packet sized "<<msg.payload().size()); 
+        SILOG(oh,error,"Runt transfer packet sized "<<msg.payload().size());
     }
     mGeneratePings();
 }
@@ -128,8 +130,8 @@ void ByteTransferScenario::generatePings() {
                                                                                  false);
         Object * objB=mContext->objectHost->getObjectConnections()->randomObject((ServerID)(minServer+distance),
                                                                                  false);
-        
-        
+
+
         if (rand()<RAND_MAX/2) {
             Object * tmp=objA;
             objA=objB;
