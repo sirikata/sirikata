@@ -110,7 +110,8 @@ if __name__ == "__main__":
         run_ping_trial(cc, cs, rate, True, True)
 
     log_files = [get_logfile_name(x) for x in rates]
-    graph_message_latency(log_files, 'latency_stacked_bar.pdf')
+    labels = ['%s pps'%(x) for x in rates]
+    graph_message_latency(log_files, labels, 'latency_stacked_bar.pdf')
 
     samples_files = zip(
         [get_stage_samples_filename(x) for x in rates],

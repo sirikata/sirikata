@@ -16,27 +16,36 @@ import math
 def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, group_labels):
     random.seed(0)
 
-    plt.figure(1, figsize=(30,15), dpi=600)
+    num_bars = len(indices)
+
+    legend_width = 4.5
+    fig_height = 10
+    fig_width = legend_width + 1 + num_bars
+
+    legend_frac = legend_width / fig_width
+
+    plt.figure(1, figsize=(fig_width, fig_height), dpi=600)
     plt.subplot(1,1,1)
-    plt.subplots_adjust(wspace=.5, top=.95, bottom=.179, left=.25, right=1)
-    sum = [0] * len(indices)
+    #plt.subplots_adjust(top=.95, bottom=.179, left=.25, right=1)
+    plt.subplots_adjust(top=.95, bottom=.05, left=legend_frac, right=.99)
+    sum = [0] * num_bars
     groups = []
-    max_width=0;
-    for widlist in widths:
-        for wid in widlist:
-            if (wid>max_width):
-                max_width=wid;
+
     startList=[]
     widthList=[]
+
+    bar_space = 1.0
+    bar_offset = 0.05
+    bar_width = 0.9
     for x in indices:
-        startList.append((x-1)*max_width);
-        widthList.append((x-1)*max_width+max_width/2);
+        startList.append((x-1)*bar_space+bar_offset);
+        widthList.append((x-1)*bar_space+bar_space/2);
 
     for val,err,width in zip(vals,errors,widths):
         abs_val = [math.fabs(v) for v in val]
 
         col = colors.get_random_color()
-        px = plt.bar(startList, abs_val, bottom=sum, yerr=err, color=col, width=width);
+        px = plt.bar(startList, abs_val, bottom=sum, yerr=err, color=col, width=bar_width);
         groups.append(px[0])
         sum = [pre_sum+x for pre_sum,x in zip(sum,abs_val)]
 
@@ -46,13 +55,13 @@ def stacked_bar(title, xlabel, ylabel, indices, labels, widths, vals, errors, gr
     max_sum = max(sum)
     plt.xticks( widthList, labels)
     plt.ylim( (0, max_sum*1.05) )
-    plt.xlim( (0,len(widthList)*max_width*1.05) )
+    plt.xlim( (0, num_bars*bar_space) )
 
     if (len(groups) > 0):
         groups.reverse()
         group_labels.reverse()
-        leg = plt.legend( groups, group_labels, loc=(-.31,0) )
-        fonts.set_legend_fontsize(leg, 12)
+        leg = plt.legend( groups, group_labels, loc=(-legend_width/(1+num_bars), 0) )
+        fonts.set_legend_fontsize(leg, 10)
 
     return plt;
 

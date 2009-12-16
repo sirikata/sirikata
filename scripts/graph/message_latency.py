@@ -79,7 +79,7 @@ def line_break_stage_name(name, max_chars = 40):
     return '\n'.join( broken_string )
 
 
-def graph_message_latency(log_files, filename=None):
+def graph_message_latency(log_files, labels, filename=None):
     data_srcs = log_files
 
     group_pattern = '^Group: (.*)'
@@ -135,7 +135,6 @@ def graph_message_latency(log_files, filename=None):
     # Now that we've loaded all the data, transform it into a format that can be
     # passed to the stacked bar chart grapher
     ind = range(1,len(data_srcs)+1)
-    labels = data_srcs
 
     stage_labels = []
     avgs = []
