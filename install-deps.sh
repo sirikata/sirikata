@@ -114,17 +114,22 @@ if [ ${opt_components_sirikata} == "true" ]; then
   git submodule update
   cd build/cmake
   # debug
-  rm CMakeCache.txt
-  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Debug .
-  make clean
+  rm -f CMakeCache.txt
+  mkdir -p debugdir
+  cd debugdir
+  rm -f CMakeCache.txt
+  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Debug ..
   make -j2
   make install
+  cd ..
   # release
+  mkdir -p releasedir
+  cd releasedir
   rm CMakeCache.txt
-  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Release .
-  make clean
+  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Release ..
   make -j2
   make install
+  cd ..
   # we need to manually copy over the protobuf libs because sirikata doesn't handle this properly yet
   cp ${deps_dir}/sirikata/dependencies/installed-protobufs/lib/libproto* ${deps_dir}/installed-sirikata/lib/
   cd ../../..
