@@ -680,6 +680,14 @@ class PacketStageGraph {
     // FIXME for long paths we should probably do additional sanity checks on
     // timestamps between stages on each permutation
     bool tryPermutations(OrderedPacketSampleListList samples, ReportPairFunction cb) const {
+        if (samples.empty())
+            return true;
+
+        if (samples.size() == 1) {
+            bool valid = testPermutation(samples, cb);
+            return valid;
+        }
+
         // The start and end subsequences will always be the same
         PacketSampleList samples_front = samples.front();
         PacketSampleList samples_back = samples.back();
