@@ -44,12 +44,17 @@ static OptionSet*optionParser(const String&str) {
     OptionValue *numSockets=new OptionValue("parallel-sockets","3",OptionValueType<unsigned int>(),"Number of parallel streams used to avoid head of line blocking");
     OptionValue *maxSockets=new OptionValue("max-parallel-sockets","8",OptionValueType<unsigned int>(),"Maximum number of parallel streams accepted used to avoid head of line blocking");
     OptionValue *sendBufferSize=new OptionValue("send-buffer-size","0",OptionValueType<unsigned int>(),"Size of send buffer used to accumulate packets during an outgoing send. 0 for unlimited buffer.");
-    
+    OptionValue *kSendBufferSize=new OptionValue("ksend-buffer-size","0",OptionValueType<unsigned int>(),"Size of kernel TCP send buffer used to accumulate packets during an outgoing send. 0 for system default buffer.");
+    OptionValue *kReceiveBufferSize=new OptionValue("kreceive-buffer-size","0",OptionValueType<unsigned int>(),"Size of kernel TCP receive buffer used to accumulate packets during an outgoing send. 0 for system default buffer.");
+    OptionValue *noDelay=new OptionValue("no-delay","false",OptionValueType<bool>(),"Whether the no-delay option is set on the socket");    
     
     InitializeClassOptions("tcpsstoptions",numSockets,
                      numSockets,
                      maxSockets,
                      sendBufferSize,
+                     noDelay,
+                     kSendBufferSize,
+                     kReceiveBufferSize,
                      NULL);
     OptionSet*retval=OptionSet::getOptions("tcpsstoptions",numSockets);
     retval->parse(str);

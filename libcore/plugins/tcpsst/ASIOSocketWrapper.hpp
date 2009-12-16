@@ -213,7 +213,7 @@ public:
     void shutdownAndClose();
 
     ///Creates a lowlevel TCPSocket using the following io service
-    void createSocket(IOService&io);
+    void createSocket(IOService&io, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
     ///Destroys the lowlevel TCPSocket
     void destroySocket();

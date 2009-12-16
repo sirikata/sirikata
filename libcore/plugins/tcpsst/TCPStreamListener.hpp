@@ -57,8 +57,31 @@ public:
     virtual Address listenAddress()const;
     virtual void close();
 
-private:
-    struct Data; // Data which may be needed in callbacks, so is stored separately in shared_ptr
+    struct Data{ // Data which may be needed in callbacks, so is stored separately in shared_ptr
+    private:
+        static void startAccept(std::tr1::shared_ptr<Data>& data);
+        static void handleAccept(std::tr1::shared_ptr<Data>& data, const boost::system::error_code& error);
+    public:
+        Data(IOService& io,
+             uint8 maxSimultaneousSockets,
+             uint32 sendBufferSize,
+             bool noDelay,
+             uint32 kernelSendBufferSize,
+             uint32 kernelReceiveBufferSize);
+        ~Data();
+        ///start the listening process
+        void start(std::tr1::shared_ptr<Data>);
+        IOService& ios;
+        IOStrand* strand;
+        TCPListener* acceptor;
+        TCPSocket* socket;
+        Stream::SubstreamCallback cb;
+        uint8 mMaxSimultaneousSockets;
+        bool mNoDelay;
+        uint32 mSendBufferSize;
+        uint32 mKernelSendBufferSize;
+        uint32 mKernelReceiveBufferSize;        
+    };
     typedef std::tr1::shared_ptr<Data> DataPtr;
     DataPtr mData;
 };

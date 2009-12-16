@@ -38,7 +38,7 @@ namespace ASIOStreamBuilder {
  * Begins a new stream based on a TCPSocket connection acception with the following substream callback for stream creation
  * Only creates the stream if the handshake is complete and it has all the resources (udp, tcp sockets, etc) necessary at the time
  */
-void beginNewStream(TCPSocket *socket, IOService* ioService, const Stream::SubstreamCallback&, unsigned char maxSimultaneousSockets, unsigned int sendBufferSize);
+void beginNewStream(TCPSocket* socket, std::tr1::shared_ptr<TCPStreamListener::Data> data);
 
 } // namespace Sirikata
 } // namespace Network

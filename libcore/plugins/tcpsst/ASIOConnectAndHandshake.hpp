@@ -49,7 +49,8 @@ class ASIOConnectAndHandshake {
     * If anything goes wrong and the first header check integer is already below zero it will decline to take action
     * The buffer passed in will be deleted by this function
     */
-    void checkHeaderContents(unsigned int whichSocket,
+    void checkHeaderContents(bool no_delay, 
+                             unsigned int whichSocket,
                              Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
                              const ErrorCode&error,
                              std::size_t bytes_received);
@@ -57,11 +58,12 @@ class ASIOConnectAndHandshake {
      * This function simply wraps checkHeaderContents having been passed a shared_ptr from an asio_callback
      */
     static void checkHeader(const ASIOConnectAndHandshakePtr& thus,
+                            bool no_delay, 
                             unsigned int whichSocket,
                             Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
                             const ErrorCode&error,
                             std::size_t bytes_received) {
-        thus->checkHeaderContents(whichSocket,buffer,error,bytes_received);
+        thus->checkHeaderContents(no_delay, whichSocket,buffer,error,bytes_received);
     }
 
    /**
@@ -72,6 +74,7 @@ class ASIOConnectAndHandshake {
     * The buffer passed in will be deleted by this function
     */
     static void connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
+                                   bool no_delay, 
                                    unsigned int whichSocket,
                                    const boost::asio::ip::tcp::resolver::iterator &it,
                                    const ErrorCode &error);
@@ -80,6 +83,7 @@ class ASIOConnectAndHandshake {
     * It may get an error if the host was not found or otherwise a valid iterator to a number of ip addresses
     */
     static void handleResolve(const ASIOConnectAndHandshakePtr &thus,
+                              bool no_delay, 
                               const boost::system::error_code &error,
                               boost::asio::ip::tcp::resolver::iterator it);
 public:
@@ -91,7 +95,8 @@ public:
      *    - An ASIOReadBuffer is created for handling future reads
      */
     static void connect(const ASIOConnectAndHandshakePtr &thus,
-                        const Address&address);
+                        const Address&address, 
+                        bool noDelay);
     ASIOConnectAndHandshake(const MultiplexedSocketPtr &connection,
                             const UUID&sharedUuid);
 };

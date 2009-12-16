@@ -36,7 +36,7 @@
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
-
+#include "TCPStreamListener.hpp"
 namespace Sirikata {
 namespace Network {
 namespace ASIOStreamBuilder{
@@ -58,22 +58,19 @@ IncompleteStreamMap sIncompleteStreams;
 ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
 void buildStream(TcpSstHeaderArray *buffer,
                  TCPSocket *socket,
-                 IOService *ioService,
-                 Stream::SubstreamCallback callback,
-                 unsigned char maxSimultaneousSockets,
-                 unsigned int sendBufferSize,
+                 std::tr1::shared_ptr<TCPStreamListener::Data> data,
                  const boost::system::error_code &error,
                  std::size_t bytes_transferred) {
 
     if (error || std::memcmp(buffer->begin(),TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)!=0) {
         SILOG(tcpsst,warning,"Connection received with incomprehensible header");
     }else {
-        boost::asio::ip::tcp::no_delay option(true);
+        boost::asio::ip::tcp::no_delay option(data->mNoDelay);
         socket->set_option(option);
         UUID context=UUID(buffer->begin()+(TCPStream::TcpSstHeaderSize-16),16);
         IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
         unsigned int numConnections=(((*buffer)[TCPStream::STRING_PREFIX_LENGTH]-'0')%10)*10+(((*buffer)[TCPStream::STRING_PREFIX_LENGTH+1]-'0')%10);
-        if (numConnections>maxSimultaneousSockets) numConnections=maxSimultaneousSockets;
+        if (numConnections>data->mMaxSimultaneousSockets) numConnections=data->mMaxSimultaneousSockets;
         if (where==sIncompleteStreams.end()){
             sIncompleteStreams[context].mNumSockets=numConnections;
             where=sIncompleteStreams.find(context);
@@ -86,14 +83,14 @@ void buildStream(TcpSstHeaderArray *buffer,
             where->second.mSockets.push_back(socket);
             if (numConnections==(unsigned int)where->second.mSockets.size()) {
                 MultiplexedSocketPtr shared_socket(
-                    MultiplexedSocket::construct<MultiplexedSocket>(ioService,context,where->second.mSockets,callback,sendBufferSize));
+                    MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,where->second.mSockets,data->cb,data->mSendBufferSize));
                 MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                 sIncompleteStreams.erase(where);
                 Stream::StreamID newID=Stream::StreamID(1);
                 TCPStream * strm=new TCPStream(shared_socket,newID);
 
                 TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
-                callback(strm,setCallbackFunctor);
+                data->cb(strm,setCallbackFunctor);
                 if (setCallbackFunctor.mCallbacks==NULL) {
                     SILOG(tcpsst,error,"Client code for stream "<<newID.read()<<" did not set listener on socket");
                     shared_socket->closeStream(shared_socket,newID);
@@ -106,14 +103,14 @@ void buildStream(TcpSstHeaderArray *buffer,
     delete buffer;
 }
 
-void beginNewStream(TCPSocket* socket, IOService* ioService, const Stream::SubstreamCallback& cb, unsigned char maxSimultaneousSockets, unsigned int sendBufferSize) {
+void beginNewStream(TCPSocket*socket, std::tr1::shared_ptr<TCPStreamListener::Data> data) {
 
     TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
 
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
-                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,ioService,cb,maxSimultaneousSockets,sendBufferSize,_1,_2));
+                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,data,_1,_2));
 }
 
 } // namespace ASIOStreamBuilder

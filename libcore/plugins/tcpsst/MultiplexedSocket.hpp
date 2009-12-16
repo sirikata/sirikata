@@ -257,14 +257,14 @@ public:
  * \param address is a protocol-agnostic string of endpoint and service ID
  * \param numSockets indicates how many TCP sockets should manage the orderlessness of this connection
  */
-    void connect(const Address&address, unsigned int numSockets, size_t maxEnqueuedSendSize);
+    void connect(const Address&address, unsigned int numSockets, size_t maxEnqueuedSendSize, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
 /**
  *  Prepare a socket for an outbound connection.
  *  After this call messages may be queued and number of redundant connections set
  *  Additionally this socket may now be cloned
  */
-    void prepareConnect(unsigned int numSockets, size_t maxEnqueuedSendSize);
+    void prepareConnect(unsigned int numSockets, size_t maxEnqueuedSendSize, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
     unsigned int numSockets() const {
         return mSockets.size();

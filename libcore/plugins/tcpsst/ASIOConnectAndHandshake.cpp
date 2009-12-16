@@ -41,7 +41,8 @@
 #include "ASIOConnectAndHandshake.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
-void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
+void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay, 
+                                                  unsigned int whichSocket,
                                                   Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
                                                   const ErrorCode&error,
                                                   std::size_t bytes_received) {
@@ -59,7 +60,7 @@ void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
                 mFinishedCheckCount-=connection->numSockets();
                 mFinishedCheckCount-=1;
             }else {
-                boost::asio::ip::tcp::no_delay option(true);
+                boost::asio::ip::tcp::no_delay option(noDelay);
                 connection->getASIOSocketWrapper(whichSocket).getSocket().set_option(option);
                 mFinishedCheckCount--;
                 if (mFinishedCheckCount==0) {
@@ -75,6 +76,7 @@ void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
 }
 
 void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
+                                                 bool no_delay,
                                                  unsigned int whichSocket,
                                                  const tcp::resolver::iterator &it,
                                                  const ErrorCode &error) {
@@ -101,13 +103,12 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                 .async_connect(*it,
                                boost::bind(&ASIOConnectAndHandshake::connectToIPAddress,
                                            thus,
+                                           no_delay,
                                            whichSocket,
                                            nextIterator,
                                            boost::asio::placeholders::error));
         }
     } else {
-        connection->getASIOSocketWrapper(whichSocket).getSocket()
-            .set_option(tcp::no_delay(true));
         connection->getASIOSocketWrapper(whichSocket)
             .sendProtocolHeader(connection,
                                 thus->mHeaderUUID,
@@ -118,6 +119,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                                 boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
                                 boost::bind(&ASIOConnectAndHandshake::checkHeader,
                                             thus,
+                                            no_delay,
                                             whichSocket,
                                             header,
                                             boost::asio::placeholders::error,
@@ -126,6 +128,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
 }
 
 void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& thus,
+                                            bool no_delay,
                                             const boost::system::error_code &error,
                                             tcp::resolver::iterator it) {
     MultiplexedSocketPtr connection=thus->mConnection.lock();
@@ -138,6 +141,7 @@ void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& th
         unsigned int numSockets=connection->numSockets();
         for (unsigned int whichSocket=0;whichSocket<numSockets;++whichSocket) {
             connectToIPAddress(thus,
+                               no_delay,
                                whichSocket,
                                it,
                                boost::asio::error::host_not_found);
@@ -147,11 +151,13 @@ void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& th
 }
 
 void ASIOConnectAndHandshake::connect(const ASIOConnectAndHandshakePtr &thus,
-                                      const Address&address){
+                                      const Address&address, 
+                                      bool no_delay){
     tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
     thus->mResolver.async_resolve(query,
                                   boost::bind(&ASIOConnectAndHandshake::handleResolve,
                                               thus,
+                                              no_delay,
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::iterator));
 

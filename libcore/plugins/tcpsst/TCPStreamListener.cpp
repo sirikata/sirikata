@@ -45,53 +45,52 @@ namespace Network {
 
 using namespace boost::asio::ip;
 
-struct TCPStreamListener::Data {
-private:
-    static void startAccept(DataPtr& data);
-    static void handleAccept(DataPtr& data, const boost::system::error_code& error);
-public:
-    Data(IOService& io,
-         uint8 maxSimultaneousSockets,
-         uint32 sendBufferSize)
-     : ios(io),
-       acceptor(NULL),
-       socket(NULL),
-       cb(0),
-       mMaxSimultaneousSockets(maxSimultaneousSockets),
-       mSendBufferSize(sendBufferSize)
-    {
-        strand = ios.createStrand();
-    }
+TCPStreamListener::Data::Data(IOService& io,
+                              uint8 maxSimultaneousSockets,
+                              uint32 sendBufferSize,
+                              bool noDelay,
+                              uint32 kernelSendBufferSize,
+                              uint32 kernelReceiveBufferSize)
+    : ios(io),
+     acceptor(NULL),
+     socket(NULL),
+     cb(0),
+     mMaxSimultaneousSockets(maxSimultaneousSockets),
+     mNoDelay(noDelay),
+     mSendBufferSize(sendBufferSize),
+     mKernelSendBufferSize(kernelSendBufferSize),
+     mKernelReceiveBufferSize(kernelReceiveBufferSize)
+{
+    strand = ios.createStrand();
+}
 
-    ~Data() {
-        delete strand;
-        delete acceptor;
-        delete socket;
-    }
+TCPStreamListener::Data::~Data() {
+    delete strand;
+    delete acceptor;
+    delete socket;
+}
 
-    // Start the listening process.
-    void start(DataPtr shared_this) {
-        assert(shared_this.get() == this);
-        strand->post(
-            std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this)
+// Start the listening process.
+void TCPStreamListener::Data::start(DataPtr shared_this) {
+    assert(shared_this.get() == this);
+    strand->post(
+        std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this)
         );
-    }
-
-    IOService& ios;
-    IOStrand* strand;
-    TCPListener* acceptor;
-    TCPSocket* socket;
-    Stream::SubstreamCallback cb;
-    uint8 mMaxSimultaneousSockets;
-    uint32 mSendBufferSize;
-
-};
+}
 
 // All the real work happens here in these methods
 void TCPStreamListener::Data::startAccept(DataPtr& data) {
     assert(data->socket == NULL);
     data->socket = new TCPSocket(data->ios);
-
+    if (data->mKernelReceiveBufferSize) {
+        boost::asio::socket_base::receive_buffer_size option(data->mKernelReceiveBufferSize);
+        data->socket->set_option(option);
+    }
+    if (data->mKernelSendBufferSize) {
+        boost::asio::socket_base::send_buffer_size optionS(data->mKernelSendBufferSize);
+        data->socket->set_option(optionS);
+    }
+    
     data->acceptor->async_accept(
         *(data->socket),
         data->strand->wrap(std::tr1::bind(&TCPStreamListener::Data::handleAccept, data, _1))
@@ -115,7 +114,7 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
     data->socket = NULL;
 
     // Hand off the new connection for sessions initiation
-    ASIOStreamBuilder::beginNewStream(newSocket, &(data->ios), data->cb, data->mMaxSimultaneousSockets, data->mSendBufferSize);
+    ASIOStreamBuilder::beginNewStream(newSocket, data);
 
     // Continue listening
     startAccept(data);
@@ -126,8 +125,17 @@ TCPStreamListener::TCPStreamListener(IOService& io, OptionSet*options)
 {
     OptionValue *maxSimultSockets=options->referenceOption("max-parallel-sockets");
     OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
+    OptionValue *noDelay=options->referenceOption("no-delay");
+    OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
+    OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
+    
     assert(maxSimultSockets&&sendBufferSize);
-    DataPtr data (new Data(io,(unsigned char)maxSimultSockets->as<unsigned int>(),sendBufferSize->as<unsigned int>()));
+    DataPtr data (new Data(io,
+                           (unsigned char)maxSimultSockets->as<unsigned int>(),
+                           sendBufferSize->as<unsigned int>(),
+                           noDelay->as<bool>(),
+                           kernelSendBufferSize->as<unsigned int>(),
+                           kernelReceiveBufferSize->as<unsigned int>()));
     mData=data;
 }
 

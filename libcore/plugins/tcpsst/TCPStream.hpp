@@ -119,9 +119,13 @@ private:
     ///incremented while sending: or'd in SendStatusClosing when close function triggered so no further packets will be sent using old ID.
     std::tr1::shared_ptr<AtomicValue<int> >mSendStatus;
     unsigned char mNumSimultaneousSockets;
+    bool mNoDelay;
     unsigned int mSendBufferSize;
+    unsigned int mKernelSendBufferSize;
+    unsigned int mKernelReceiveBufferSize;
+
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone() called internally from factory
-    TCPStream(IOService&,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize);
+    TCPStream(IOService&,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
 
 public:

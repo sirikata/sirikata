@@ -50,6 +50,15 @@ TCPStream::TCPStream(const MultiplexedSocketPtr&shared_socket,const Stream::Stre
     mNumSimultaneousSockets=shared_socket->numSockets();
     assert(mNumSimultaneousSockets);
     mSendBufferSize=shared_socket->getASIOSocketWrapper(0).getResourceMonitor().maxSize();
+    boost::asio::socket_base::receive_buffer_size option;
+    shared_socket->getASIOSocketWrapper(0).getSocket().get_option(option);
+    mKernelReceiveBufferSize=option.value();
+    boost::asio::socket_base::send_buffer_size optionS;
+    shared_socket->getASIOSocketWrapper(0).getSocket().get_option(optionS);
+    mKernelSendBufferSize=optionS.value();
+    boost::asio::ip::tcp::no_delay optionND;
+    shared_socket->getASIOSocketWrapper(0).getSocket().get_option(optionND);
+    mNoDelay=optionND.value();
 }
 
 Duration TCPStream::averageSendLatency() const {
@@ -219,17 +228,26 @@ TCPStream::TCPStream(IOService&io,OptionSet*options):mSendStatus(new AtomicValue
     mIO=&io;
     OptionValue *numSimultSockets=options->referenceOption("parallel-sockets");
     OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
+    OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
+    OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
+    OptionValue *noDelay=options->referenceOption("no-delay");
     assert(numSimultSockets&&sendBufferSize);
     mNumSimultaneousSockets=(unsigned char)numSimultSockets->as<unsigned int>();
     assert(mNumSimultaneousSockets);
     mSendBufferSize=sendBufferSize->as<unsigned int>();
+    mKernelSendBufferSize=kernelSendBufferSize->as<unsigned int>();
+    mKernelReceiveBufferSize=kernelReceiveBufferSize->as<unsigned int>();
+    mNoDelay=noDelay->as<bool>();
 }
 
-TCPStream::TCPStream(IOService&io,unsigned char numSimultSockets,unsigned int sendBufferSize):mSendStatus(new AtomicValue<int>(0)) {
+    TCPStream::TCPStream(IOService&io,unsigned char numSimultSockets,unsigned int sendBufferSize,bool noDelay,unsigned int kernelSendBufferSize,unsigned int kernelReceiveBufferSize):mSendStatus(new AtomicValue<int>(0)) {
     mIO=&io;
     mNumSimultaneousSockets=(unsigned char)numSimultSockets;
     assert(mNumSimultaneousSockets);
     mSendBufferSize=sendBufferSize;
+    mNoDelay=noDelay;
+    mKernelSendBufferSize=kernelSendBufferSize;
+    mKernelReceiveBufferSize=kernelReceiveBufferSize;
 }
 
 void TCPStream::connect(const Address&addy,
@@ -245,11 +263,11 @@ void TCPStream::connect(const Address&addy,
                                                 bytesReceivedCallback,
                                                 readySendCallback,
                                                 mSendStatus));
-    socket->connect(addy,mNumSimultaneousSockets,mSendBufferSize);
+    socket->connect(addy,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mKernelSendBufferSize,mKernelReceiveBufferSize);
 }
 
 Stream*TCPStream::factory(){
-    return new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
+    return new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mKernelSendBufferSize,mKernelReceiveBufferSize);
 }
 Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
     MultiplexedSocketPtr socket_copy = mSocket;
@@ -257,7 +275,7 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
         return NULL;
     }
 
-    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
+    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mKernelSendBufferSize,mKernelReceiveBufferSize);
     retval->mSocket = socket_copy;
 
     StreamID newID = socket_copy->getNewID();
@@ -275,7 +293,7 @@ Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
         return NULL;
     }
 
-    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
+    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mKernelSendBufferSize,mKernelReceiveBufferSize);
     retval->mSocket = socket_copy;
 
     StreamID newID = socket_copy->getNewID();

@@ -305,8 +305,16 @@ void ASIOSocketWrapper::shutdownAndClose() {
     }
 }
 
-void ASIOSocketWrapper::createSocket(IOService&io) {
+void ASIOSocketWrapper::createSocket(IOService&io, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize) {
     mSocket=new TCPSocket(io);
+    if (kernelReceiveBufferSize) {
+        boost::asio::socket_base::receive_buffer_size option(kernelReceiveBufferSize);
+        mSocket->set_option(option);
+    }
+    if (kernelSendBufferSize) {
+        boost::asio::socket_base::send_buffer_size optionS(kernelSendBufferSize);
+        mSocket->set_option(optionS);
+    }
 }
 
 void ASIOSocketWrapper::destroySocket() {

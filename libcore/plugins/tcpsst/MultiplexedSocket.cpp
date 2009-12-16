@@ -437,23 +437,23 @@ void MultiplexedSocket::hostDisconnectedCallback(unsigned int whichSocket, const
 }
 
 
-void MultiplexedSocket::prepareConnect(unsigned int numSockets, size_t max_enqueued_send_size) {
+void MultiplexedSocket::prepareConnect(unsigned int numSockets, size_t max_enqueued_send_size, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize) {
     mSocketConnectionPhase=PRECONNECTION;
     unsigned int oldSize=(unsigned int)mSockets.size();
     if (numSockets>mSockets.size()) {
         for (unsigned int i=oldSize;i<numSockets;++i) {
             mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, max_enqueued_send_size>ASIO_SEND_BUFFER_SIZE?max_enqueued_send_size:ASIO_SEND_BUFFER_SIZE));
-            mSockets.back().createSocket(getASIOService());
+            mSockets.back().createSocket(getASIOService(), kernelSendBufferSize, kernelReceiveBufferSize);
         }
     }
 }
-void MultiplexedSocket::connect(const Address&address, unsigned int numSockets, size_t max_enqueued_send_size) {
-    prepareConnect(numSockets,max_enqueued_send_size);
+void MultiplexedSocket::connect(const Address&address, unsigned int numSockets, size_t max_enqueued_send_size, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize) {
+    prepareConnect(numSockets,max_enqueued_send_size,noDelay,kernelSendBufferSize,kernelReceiveBufferSize);
     ASIOConnectAndHandshakePtr
         headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
                                                 UUID::random()));
     //will notify connectionFailureOrSuccessCallback when resolved
-    ASIOConnectAndHandshake::connect(headerCheck,address);
+    ASIOConnectAndHandshake::connect(headerCheck,address,noDelay);
 }
 
 void MultiplexedSocket::ioReactorThreadResumeRead(const MultiplexedSocketWPtr& weak_thus, Stream::StreamID sid){
