@@ -35,9 +35,6 @@
 
 #include "ObjectHostContext.hpp"
 #include "QueueRouterElement.hpp"
-#include "BandwidthShaper.hpp"
-#include "StreamTxElement.hpp"
-#include "TracePacketElement.hpp"
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
 #include "Message.hpp"
@@ -220,11 +217,6 @@ private:
         bool connecting;
 
         // IO Strand
-        TracePacketElement<ObjectMessage> tag_enqueued;
-        QueueRouterElement<ObjectMessage> send_queue;
-        TracePacketElement<ObjectMessage> tag_dequeued;
-        StreamTxElement<ObjectMessage> streamTx;
-
         QueueRouterElement<ObjectMessage> receive_queue;
 
         ReceiveCallback mReceiveCB;

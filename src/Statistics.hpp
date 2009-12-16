@@ -118,10 +118,8 @@ public:
         // Object Host Checkpoints
         CREATED,
         DESTROYED,
-        OH_ENQUEUED,
-        OH_DEQUEUED,
         OH_HIT_NETWORK,
-        OH_DROPPED_AT_OH_ENQUEUED,
+        OH_DROPPED_AT_SEND,
         OH_NET_RECEIVED,
         OH_DROPPED_AT_RECEIVE_QUEUE,
         OH_RECEIVED,

@@ -37,6 +37,7 @@
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include "Statistics.hpp"
+#include <network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)

@@ -39,6 +39,7 @@
 #include "ServerIDMap.hpp"
 #include "Random.hpp"
 #include "Options.hpp"
+#include <network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
@@ -54,20 +55,11 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
    server(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
    connecting(false),
-   tag_enqueued(ctx, Trace::OH_ENQUEUED, Trace::OH_DROPPED_AT_OH_ENQUEUED),
-  send_queue(GetOption("object-host-send-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
-   tag_dequeued(ctx, Trace::OH_DEQUEUED),
-   streamTx(ctx, socket, ioStrand, Duration::milliseconds((int64)0), Trace::OH_HIT_NETWORK),
    receive_queue(GetOption("object-host-receive-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
-
-    tag_enqueued.connect(0, &send_queue, 0);
-    send_queue.connect(0, &tag_dequeued, 0);
-    tag_dequeued.connect(0, &streamTx, 0);
-    streamTx.run();
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -75,7 +67,27 @@ ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
 }
 
 bool ObjectHost::SpaceNodeConnection::push(ObjectMessage* msg) {
-    return tag_enqueued.push(0,msg);
+    std::string* data = msg->serialize();
+
+    TIMESTAMP_START(tstamp, msg);
+
+    // Try to push to the network
+    bool success = socket->send(
+        Sirikata::MemoryReference(&((*data)[0]), data->size()),
+        Sirikata::Network::ReliableOrdered
+                                );
+
+    delete data;
+
+    if (success) {
+        TIMESTAMP_END(tstamp, Trace::OH_HIT_NETWORK);
+        delete msg;
+    }
+    else {
+        TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_SEND);
+    }
+
+    return success;
 }
 
 ObjectMessage* ObjectHost::SpaceNodeConnection::pull() {
@@ -112,7 +124,6 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
 
 
 void ObjectHost::SpaceNodeConnection::shutdown() {
-    streamTx.shutdown();
     socket->close();
 }
 
@@ -682,7 +693,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
         std::tr1::bind(&ObjectHost::SpaceNodeConnection::handleRead,
             conn,
             _1),
-        conn->streamTx.readySendCallback()
+        &Sirikata::Network::Stream::ignoreReadySendCallback
     );
 
     OH_LOG(debug,"Trying to connect to " << addy.toString());

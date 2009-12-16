@@ -80,10 +80,8 @@ const char* getPacketStageName (uint32 path) {
         // Object Host Checkpoints
         PACKETSTAGE(CREATED);
         PACKETSTAGE(DESTROYED);
-        PACKETSTAGE(OH_ENQUEUED);
-        PACKETSTAGE(OH_DEQUEUED);
         PACKETSTAGE(OH_HIT_NETWORK);
-        PACKETSTAGE(OH_DROPPED_AT_OH_ENQUEUED);
+        PACKETSTAGE(OH_DROPPED_AT_SEND);
         PACKETSTAGE(OH_NET_RECEIVED);
         PACKETSTAGE(OH_DROPPED_AT_RECEIVE_QUEUE);
         PACKETSTAGE(OH_RECEIVED);
@@ -799,10 +797,8 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     // Setup the graph of valid stage transitions
     PacketStageGraph stage_graph;
 
-    stage_graph.addEdge(Trace::CREATED, Trace::OH_ENQUEUED);
-    stage_graph.addEdge(Trace::CREATED, Trace::OH_DROPPED_AT_OH_ENQUEUED);
-    stage_graph.addEdge(Trace::OH_ENQUEUED, Trace::OH_DEQUEUED);
-    stage_graph.addEdge(Trace::OH_DEQUEUED, Trace::OH_HIT_NETWORK);
+    stage_graph.addEdge(Trace::CREATED, Trace::OH_HIT_NETWORK);
+    stage_graph.addEdge(Trace::CREATED, Trace::OH_DROPPED_AT_SEND);
 
     stage_graph.addEdge(Trace::OH_HIT_NETWORK, Trace::HANDLE_OBJECT_HOST_MESSAGE, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDED_LOCALLY);
