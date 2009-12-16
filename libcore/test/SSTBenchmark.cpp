@@ -190,7 +190,7 @@ Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::computePingTime(Sirika
         avg/=(double)mPingResponses.size();
         SILOG(benchmark,info,"Test Time: "<<cur-mStartTime);
         SILOG(benchmark,info,"Ping Average "<<avg);
-        SILOG(benchmark,info,"Transfer Rate "<<2*mNumPings*(double)chk.size()/(cur-mStartTime).toSeconds());
+        SILOG(benchmark,info,"Transfer Rate "<<mNumPings*(double)chk.size()/(cur-mStartTime).toSeconds());
         stop();
     }else
     if (mPingRate.toSeconds()==0&&!mFillSendBuffer) {
