@@ -260,7 +260,7 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
             send_success = conn->send(msg);
 
         if(!send_success) {
-            TIMESTAMP_END(tstamp, Trace::DROPPED);
+            TIMESTAMP_END(tstamp, Trace::DROPPED_AT_FORWARDED_LOCALLY_SLOW_PATH);
             delete msg;
         }
 
@@ -278,7 +278,7 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 
 
     if (!accepted) {
-        TIMESTAMP_END(tstamp, Trace::DROPPED);
+        TIMESTAMP_END(tstamp, Trace::DROPPED_AT_OSEG_LOOKUP_STARTED);
     }
 
     return accepted;
@@ -313,6 +313,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       delete svr_obj_msg;
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
   }else {
+      TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ACCEPTED);
       delete obj_msg;
   }
 

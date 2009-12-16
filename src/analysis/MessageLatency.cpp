@@ -91,15 +91,18 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
         PACKETSTAGE(HANDLE_SPACE_MESSAGE);
         PACKETSTAGE(FORWARDED_LOCALLY);
+        PACKETSTAGE(DROPPED_AT_FORWARDED_LOCALLY);
         PACKETSTAGE(FORWARDING_STARTED);
         PACKETSTAGE(FORWARDED_LOCALLY_SLOW_PATH);
+        PACKETSTAGE(DROPPED_AT_FORWARDED_LOCALLY_SLOW_PATH);
         PACKETSTAGE(OSEG_LOOKUP_STARTED);
+        PACKETSTAGE(DROPPED_AT_OSEG_LOOKUP_STARTED);
         PACKETSTAGE(OSEG_CACHE_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_LOOKUP_FINISHED);
         PACKETSTAGE(SPACE_TO_SPACE_ENQUEUED);
+        PACKETSTAGE(SPACE_TO_SPACE_ACCEPTED);
         PACKETSTAGE(DROPPED_AT_SPACE_ENQUEUED);
-        PACKETSTAGE(DROPPED);
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
       default:
@@ -798,37 +801,38 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     PacketStageGraph stage_graph;
 
     stage_graph.addEdge(Trace::CREATED, Trace::OH_HIT_NETWORK);
-    stage_graph.addEdge(Trace::CREATED, Trace::OH_DROPPED_AT_SEND);
+    stage_graph.addEdge(Trace::CREATED, Trace::OH_DROPPED_AT_SEND); // drop
 
     stage_graph.addEdge(Trace::OH_HIT_NETWORK, Trace::HANDLE_OBJECT_HOST_MESSAGE, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDED_LOCALLY);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDING_STARTED);
-    stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
+    stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING); // drop
 
     stage_graph.addEdge(Trace::HANDLE_SPACE_MESSAGE, Trace::FORWARDING_STARTED);
 
-    stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::DROPPED);
+    stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::DROPPED_AT_FORWARDED_LOCALLY); // drop
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY, Trace::SPACE_TO_OH_ENQUEUED);
 
     stage_graph.addEdge(Trace::FORWARDING_STARTED, Trace::FORWARDED_LOCALLY_SLOW_PATH);
     stage_graph.addEdge(Trace::FORWARDING_STARTED, Trace::OSEG_LOOKUP_STARTED);
 
     stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::SPACE_TO_OH_ENQUEUED);
-    stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::DROPPED);
+    stage_graph.addEdge(Trace::FORWARDED_LOCALLY_SLOW_PATH, Trace::DROPPED_AT_FORWARDED_LOCALLY_SLOW_PATH); // drop
 
-    stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::DROPPED);
+    stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::DROPPED_AT_OSEG_LOOKUP_STARTED); // drop
     stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::OSEG_CACHE_LOOKUP_FINISHED);
     stage_graph.addEdge(Trace::OSEG_LOOKUP_STARTED, Trace::OSEG_SERVER_LOOKUP_FINISHED);
     stage_graph.addEdge(Trace::OSEG_CACHE_LOOKUP_FINISHED, Trace::OSEG_LOOKUP_FINISHED);
     stage_graph.addEdge(Trace::OSEG_SERVER_LOOKUP_FINISHED, Trace::OSEG_LOOKUP_FINISHED);
 
     stage_graph.addEdge(Trace::OSEG_LOOKUP_FINISHED, Trace::SPACE_TO_SPACE_ENQUEUED);
-    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::DROPPED_AT_SPACE_ENQUEUED, PacketStageGraph::ASYNC);
-    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::HANDLE_SPACE_MESSAGE, PacketStageGraph::ASYNC);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::DROPPED_AT_SPACE_ENQUEUED); // drop
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::SPACE_TO_SPACE_ACCEPTED);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ACCEPTED, Trace::HANDLE_SPACE_MESSAGE, PacketStageGraph::ASYNC);
 
     stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);
-    stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
+    stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_DROPPED_AT_RECEIVE_QUEUE); // drop
     stage_graph.addEdge(Trace::OH_RECEIVED, Trace::DESTROYED);
     // read in all our data
     typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;

@@ -93,7 +93,7 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
 
     bool send_success = conn->send(msg);
     if (!send_success) {
-        TIMESTAMP_END(tstamp, Trace::DROPPED);
+        TIMESTAMP_END(tstamp, Trace::DROPPED_AT_FORWARDED_LOCALLY);
         // FIXME do anything on failure?
         delete msg;
     }
