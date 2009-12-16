@@ -8,7 +8,7 @@
 #include "ObjectHostConnectionManager.hpp"
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
-
+#include "sirikata/util/SizedThreadSafeQueue.hpp"
 namespace CBR
 {
 class Forwarder;
@@ -66,10 +66,10 @@ private:
     // network strand to allow for fast forwarding, see
     // handleObjectHostMessageRouting for continuation in main strand
     void handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
-    // Perform forwarding for a message from teh object host which
+    // Perform forwarding for a message on the front of mRouteObjectMessage from the object host which
     // couldn't be forwarded directly by the networking code
     // (i.e. needs routing to another node)
-    void handleObjectHostMessageRouting(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    void handleObjectHostMessageRouting();
 
     // Handle Session messages from an object
     void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg);
@@ -154,6 +154,18 @@ private:
 
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;
     StoredConnectionMap  mStoredConnectionData;
+    struct ConnectionIDObjectMessagePair{
+        ObjectHostConnectionManager::ConnectionID conn_id;
+        CBR::Protocol::Object::ObjectMessage* obj_msg;
+        ConnectionIDObjectMessagePair(ObjectHostConnectionManager::ConnectionID conn_id, CBR::Protocol::Object::ObjectMessage*msg) {
+            this->conn_id=conn_id;
+            this->obj_msg=msg;
+        }
+        size_t size() const{
+            return obj_msg->ByteSize();
+        }
+    };
+    Sirikata::SizedThreadSafeQueue<ConnectionIDObjectMessagePair>mRouteObjectMessage;
 }; // class Server
 
 } // namespace CBR

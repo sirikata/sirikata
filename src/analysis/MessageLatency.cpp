@@ -90,6 +90,7 @@ const char* getPacketStageName (uint32 path) {
 
         // Space Checkpoints
         PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
+        PACKETSTAGE(SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
         PACKETSTAGE(HANDLE_SPACE_MESSAGE);
         PACKETSTAGE(FORWARDED_LOCALLY);
         PACKETSTAGE(FORWARDING_STARTED);
@@ -806,6 +807,7 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::OH_HIT_NETWORK, Trace::HANDLE_OBJECT_HOST_MESSAGE, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDED_LOCALLY);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDING_STARTED);
+    stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
 
     stage_graph.addEdge(Trace::HANDLE_SPACE_MESSAGE, Trace::FORWARDING_STARTED);
 
@@ -832,7 +834,6 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
     stage_graph.addEdge(Trace::OH_RECEIVED, Trace::DESTROYED);
-
     // read in all our data
     typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;
     PacketMap packetFlow;

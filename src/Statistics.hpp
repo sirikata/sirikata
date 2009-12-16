@@ -125,7 +125,7 @@ public:
         OH_NET_RECEIVED,
         OH_DROPPED_AT_RECEIVE_QUEUE,
         OH_RECEIVED,
-
+        SPACE_DROPPED_AT_MAIN_STRAND_CROSSING,
         // Space Checkpoints
         HANDLE_OBJECT_HOST_MESSAGE,
         HANDLE_SPACE_MESSAGE,

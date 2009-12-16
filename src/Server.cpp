@@ -35,8 +35,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mMigrationMonitor(),
    mMigrationSendRunning(false),
    mShutdownRequested(false),
-   mObjectHostConnectionManager(NULL)
-{
+   mObjectHostConnectionManager(NULL),
+   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>())) {
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
       mForwarder->registerMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
       mForwarder->registerMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
@@ -118,22 +118,31 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // for handling session messages, messages to the space, or to make a
     // routing decision.
     // FIXME infinite queue!
-    mContext->mainStrand->post(
-        std::tr1::bind(
-            &Server::handleObjectHostMessageRouting,
-            this, conn_id, obj_msg
-                       )
-                               );
+    if (mRouteObjectMessage.push(ConnectionIDObjectMessagePair(conn_id,obj_msg),false)) {
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &Server::handleObjectHostMessageRouting,
+                this));
+    }else {
+        TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
+        
+    }
 }
 
-void Server::handleObjectHostMessageRouting(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+void Server::handleObjectHostMessageRouting() {
+    ConnectionIDObjectMessagePair front(ObjectHostConnectionManager::ConnectionID(),NULL);
+    if (!mRouteObjectMessage.pop(front)) {
+        SILOG(cbr,error,"Got requested to pull an item off mRouteObjectMessage but no message awaited me");
+        return;
+    }
+
     // Take this opportunity to do some sanity checking.
 
     // 1. If the source is the space, somebody is messing with us.
-    bool space_source = (obj_msg->source_object() == UUID::null());
+    bool space_source = (front.obj_msg->source_object() == UUID::null());
     if (space_source) {
         SILOG(cbr,error,"Got message from object host claiming to be from space.");
-        delete obj_msg;
+        delete front.obj_msg;
         return;
     }
 
@@ -141,11 +150,11 @@ void Server::handleObjectHostMessageRouting(const ObjectHostConnectionManager::C
     // Note that we need to check this before the connected sanity check since obviously the object won't
     // be connected yet.  We dispatch directly from here since this needs information about the object host
     // connection to be passed along as well.
-    bool space_dest = (obj_msg->dest_object() == UUID::null());
-    bool session_msg = (obj_msg->dest_port() == OBJECT_PORT_SESSION);
+    bool space_dest = (front.obj_msg->dest_object() == UUID::null());
+    bool session_msg = (front.obj_msg->dest_port() == OBJECT_PORT_SESSION);
     if (space_dest && session_msg)
     {
-        handleSessionMessage(conn_id, obj_msg);
+        handleSessionMessage(front.conn_id, front.obj_msg);
         return;
     }
 
@@ -158,27 +167,27 @@ void Server::handleObjectHostMessageRouting(const ObjectHostConnectionManager::C
     // NOTE that we check connecting objects as well since we need to get past this point to deliver
     // Session messages.
     bool source_connected =
-        mObjects.find(obj_msg->source_object()) != mObjects.end() ||
-        mMigratingConnections.find(obj_msg->source_object()) != mMigratingConnections.end();
+        mObjects.find(front.obj_msg->source_object()) != mObjects.end() ||
+        mMigratingConnections.find(front.obj_msg->source_object()) != mMigratingConnections.end();
     if (!source_connected)
     {
-        if (mObjectsAwaitingMigration.find(obj_msg->source_object()) == mObjectsAwaitingMigration.end() &&
-            mObjectMigrations.find(obj_msg->source_object()) == mObjectMigrations.end())
+        if (mObjectsAwaitingMigration.find(front.obj_msg->source_object()) == mObjectsAwaitingMigration.end() &&
+            mObjectMigrations.find(front.obj_msg->source_object()) == mObjectMigrations.end())
         {
-            SILOG(cbr,warn,"Got message for unknown object: " << obj_msg->source_object().toString());
+            SILOG(cbr,warn,"Got message for unknown object: " << front.obj_msg->source_object().toString());
         }
         else
         {
-            SILOG(cbr,warn,"Server got message from object after migration started: " << obj_msg->source_object().toString());
+            SILOG(cbr,warn,"Server got message from object after migration started: " << front.obj_msg->source_object().toString());
         }
 
-        delete obj_msg;
+        delete front.obj_msg;
 
         return;
     }
 
     // Finally, if we've passed all these tests, then everything looks good and we can route it
-    bool route_success = mForwarder->routeObjectHostMessage(obj_msg);
+    bool route_success = mForwarder->routeObjectHostMessage(front.obj_msg);
     // FIXME handle forwarding failure
 }
 
