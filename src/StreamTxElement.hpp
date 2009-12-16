@@ -189,7 +189,10 @@ private:
             if (mShutdown)
                 return;
 
-            mTimer->wait(mMaxRate);
+            if (mMaxRate == Duration::zero())
+                mStrand->post(readySendCallback());
+            else
+                mTimer->wait(mMaxRate);
         }
 
         StreamTxElement* mParent; // This is the one element which may not always be valid
