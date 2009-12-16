@@ -91,6 +91,7 @@ public:
 void TCPStreamListener::Data::startAccept(DataPtr& data) {
     assert(data->socket == NULL);
     data->socket = new TCPSocket(data->ios);
+
     data->acceptor->async_accept(
         *(data->socket),
         data->strand->wrap(std::tr1::bind(&TCPStreamListener::Data::handleAccept, data, _1))

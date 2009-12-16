@@ -59,6 +59,8 @@ void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
                 mFinishedCheckCount-=connection->numSockets();
                 mFinishedCheckCount-=1;
             }else {
+                boost::asio::ip::tcp::no_delay option(true);
+                connection->getASIOSocketWrapper(whichSocket).getSocket().set_option(option);
                 mFinishedCheckCount--;
                 if (mFinishedCheckCount==0) {
                     connection->connectedCallback();

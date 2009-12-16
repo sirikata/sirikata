@@ -64,9 +64,12 @@ void buildStream(TcpSstHeaderArray *buffer,
                  unsigned int sendBufferSize,
                  const boost::system::error_code &error,
                  std::size_t bytes_transferred) {
+
     if (error || std::memcmp(buffer->begin(),TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)!=0) {
         SILOG(tcpsst,warning,"Connection received with incomprehensible header");
     }else {
+        boost::asio::ip::tcp::no_delay option(true);
+        socket->set_option(option);
         UUID context=UUID(buffer->begin()+(TCPStream::TcpSstHeaderSize-16),16);
         IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
         unsigned int numConnections=(((*buffer)[TCPStream::STRING_PREFIX_LENGTH]-'0')%10)*10+(((*buffer)[TCPStream::STRING_PREFIX_LENGTH+1]-'0')%10);
@@ -104,6 +107,7 @@ void buildStream(TcpSstHeaderArray *buffer,
 }
 
 void beginNewStream(TCPSocket* socket, IOService* ioService, const Stream::SubstreamCallback& cb, unsigned char maxSimultaneousSockets, unsigned int sendBufferSize) {
+
     TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
 
     boost::asio::async_read(*socket,

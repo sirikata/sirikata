@@ -71,7 +71,7 @@ class SSTBenchmark{
                    // unordered appears to be broken
     Duration mPingRate; // Inverse of target ping rate - seconds/ping
     size_t mPingSize;
-
+    bool mFillSendBuffer;
     size_t mNumPings; // Number of pings to collect before exiting and printing
                       // stats
 
