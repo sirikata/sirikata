@@ -685,7 +685,7 @@ class PacketStageGraph {
         if (samples.empty())
             return true;
 
-        if (samples.size() == 1) {
+        if (samples.size() <= 2) {
             bool valid = testPermutation(samples, cb);
             return valid;
         }
