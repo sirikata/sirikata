@@ -634,6 +634,19 @@ class PacketStageGraph {
             return false;
         }
 
+        if (unconstrained_output.size() == 1) {
+            if (starting_samples_idx == ending_samples_idx &&
+                starting_samples_idx != -1 &&
+                ending_samples_idx != -1) {
+                output.push_back( unconstrained_output[0] );
+                return true;
+            }
+            else {
+                printf("One subsequence, but source and sink don't match.\n");
+                return false;
+            }
+        }
+
         output.push_back( unconstrained_output[starting_samples_idx] );
         for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
             if (ii != (uint32)starting_samples_idx && ii != (uint32)ending_samples_idx)
