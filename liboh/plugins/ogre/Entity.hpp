@@ -96,6 +96,9 @@ public:
 
     virtual void destroyed();
 
+    Ogre::SceneNode *getSceneNode() {
+        return mSceneNode;
+    }
     Vector3d getOgrePosition() {
         return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
     }

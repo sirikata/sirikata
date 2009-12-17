@@ -76,6 +76,7 @@ class Entity;
 using Input::SDLInputManager;
 class CameraEntity;
 class CubeMap;
+struct IntersectResult;
 
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedQueryableSimulation {
@@ -129,14 +130,13 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     Vector3d mFloatingPointOffset;
     Ogre::RaySceneQuery* mRayQuery;
     CubeMap *mCubeMap;
-    Entity* internalRayTrace(const Vector3d &position,
-                     const Vector3f &direction,
+    Entity* internalRayTrace(const Ogre::Ray &traceFrom,
                      bool aabbOnly,
                      int&resultCount,
                      double &returnResult,
                      Vector3f &returnNormal,
-                     Ogre::SubEntity*& returnSubMesh,
-                     float *returnTexU, float *returnTexV,
+                     int& returnSubMesh,
+                     IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
 public:
     bool forwardMessagesTo(MessageService*){return false;}
@@ -210,13 +210,13 @@ public:
                      int&resultCount,
                      double &returnResult,
                      Vector3f&returnNormal,
-                     Ogre::SubEntity*&subent,
+                     int&subent,
                      int which=0) const;
     Entity* rayTraceAABB(const Vector3d &position,
                      const Vector3f &direction,
                      int&resultCount,
                      double &returnResult,
-                     Ogre::SubEntity*&subent,
+                     int&subent,
                      int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue

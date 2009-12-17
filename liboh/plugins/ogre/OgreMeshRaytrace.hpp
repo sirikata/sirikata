@@ -16,29 +16,14 @@ struct TriVertex {
   Ogre::Vector3 coord;
   float u;
   float v;
+  TriVertex() {}
   TriVertex(const Ogre::Vector3& coord, float u, float v)
     : coord(coord), u(u), v(v) {
   }
 };
-class Triangle;
-struct IntersectResult {
-	bool intersected;
-	double distance;
-	Vector3f normal;
-	Triangle *tri;
-	float u;
-	float v;
-	IntersectResult()
-	: intersected(false),
-	  distance(std::numeric_limits<Ogre::Real>::max()),
-	  normal(Vector3f(0,0,0)),
-	  tri(NULL),
-	  u(0),
-	  v(0) {}
-};
 
-class Triangle {
-public:
+struct Triangle {
+  Triangle() {}
   Triangle(const TriVertex &v1, const TriVertex &v2, const TriVertex &v3) : v1(v1), v2(v2), v3(v3)
   {
   }
@@ -46,35 +31,32 @@ public:
   TriVertex v1, v2, v3;
 };
 
+struct IntersectResult {
+	bool intersected;
+	double distance;
+	Vector3f normal;
+	Triangle tri;
+	float u;
+	float v;
+	IntersectResult()
+	: intersected(false),
+	  distance(std::numeric_limits<Ogre::Real>::max()),
+	  normal(Vector3f(0,0,0)),
+	  u(0),
+	  v(0) {}
+};
+
 /**
  * This class syncs Ogre::Meshes from the hardware and does ray intersection tests.
  */
 class OgreMesh {
-    class EntitySubmeshPair {
-        void *mEntity;
-        void *mSubmesh;
-      public:
-        EntitySubmeshPair() {
-            mEntity=NULL;
-            mSubmesh=NULL;
-        }
-        EntitySubmeshPair(Ogre::Entity*entity,Ogre::SubMesh*submesh){
-            this->mEntity=entity;
-            this->mSubmesh=submesh;
-        }
-        bool operator==(const EntitySubmeshPair&b)const {
-            return mEntity==b.mEntity&&this->mSubmesh==b.mSubmesh;
-        }
-        bool operator<(const EntitySubmeshPair&b)const {
-            if (mEntity==b.mEntity) return this->mSubmesh<b.mSubmesh;
-            return mEntity<b.mEntity;
-        }
-    };
 public:
-  void  intersect(const Ogre::Ray &ray, IntersectResult &res);
-  OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *submesh, bool texcoord);
+  static Ogre::Ray transformRay(Ogre::Node *entity, const Ogre::Ray &original);
+  static bool intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*itr, bool plane);
+  void  intersect(Ogre::Node *node, const Ogre::Ray &ray, IntersectResult &res);
+  OgreMesh(Ogre::SubMesh *submesh, bool texcoord);
 protected:
-  void syncFromOgreMesh(Ogre::Entity *entity,  Ogre::SubMesh *mSubMesh, bool texcoord);
+  void syncFromOgreMesh(Ogre::SubMesh *mSubMesh, bool texcoord);
   std::vector<Triangle> mTriangles;
 public:
   int64 size()const;

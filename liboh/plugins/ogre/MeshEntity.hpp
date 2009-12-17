@@ -86,7 +86,7 @@ public:
     void bindTexture(const std::string &textureName, const SpaceObjectReference &objId);
     void unbindTexture(const std::string &textureName);
 
-    WebView *getWebView(Ogre::SubEntity *subEnt);
+    WebView *getWebView(int whichSubEnt);
 
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;

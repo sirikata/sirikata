@@ -417,7 +417,7 @@ public:
         camera = info.camera;
         mParent = info.sys;
         double distance;
-        Ogre::SubEntity*subent;
+        int subent;
         Vector3f normal;
         Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
         Location cameraLoc = camera->getProxy().globalLocation(now);
@@ -469,7 +469,7 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     Location cameraLoc = camera->getProxy().extrapolateLocation(now);
     Location cameraGlobalLoc = camera->getProxy().globalLocation(now);
     Vector3d toMove;
-    Ogre::SubEntity*subent;
+    int subent;
 
     toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
 

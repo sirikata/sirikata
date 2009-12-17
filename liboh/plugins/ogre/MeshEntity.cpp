@@ -124,27 +124,18 @@ bool forEachTexture(const Ogre::MaterialPtr &material, Functor func) {
 	return false;
 }
 
-WebView *MeshEntity::getWebView(Ogre::SubEntity *subEnt) {
+WebView *MeshEntity::getWebView(int whichSubEnt) {
 	Ogre::Entity *ent = getOgreEntity();
 	if (!ent) {
 		return NULL;
 	}
-	int numSubEntities = ent->getNumSubEntities();
-	for (ReplacedMaterialMap::iterator iter = mReplacedMaterials.begin();
-			iter != mReplacedMaterials.end();
-			++iter) {
-		int whichSubEntity = iter->first;
-		if (whichSubEntity >= numSubEntities) {
-			SILOG(ogre,fatal,"Original material map not cleared when mesh changed. which = " << whichSubEntity << " num = " << numSubEntities);
-			continue;
-		}
-		if (ent->getSubEntity(whichSubEntity) != subEnt) {
-			continue;
-		}
+	if (whichSubEnt >= (int)(ent->getNumSubEntities()) || whichSubEnt < 0) {
+		return NULL;
+	}
+	ReplacedMaterialMap::iterator iter = mReplacedMaterials.find(whichSubEnt);
+	if (iter != mReplacedMaterials.end()) {
 		WebView *wv = WebViewManager::getSingleton().getWebView(iter->second.first);
-		if (wv != NULL) {
-			return wv;
-		}
+		return wv;
 	}
 	return NULL;
 }

@@ -28,19 +28,15 @@ using Ogre::Real;
 //using Ogre::AxisAlignedBox;
 
 namespace Sirikata { namespace Graphics {
-OgreMesh::OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *subMesh, bool texcoord)
+OgreMesh::OgreMesh(Ogre::SubMesh *subMesh, bool texcoord)
 {
-    syncFromOgreMesh(entity,subMesh, texcoord);
+    syncFromOgreMesh(subMesh, texcoord);
 }
 int64 OgreMesh::size() const{
     return mTriangles.size()*sizeof(Triangle);
 }
-void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh, bool texcoord)
+void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord)
 {
-  const Ogre::Vector3 &position = entity->getParentNode()->_getDerivedPosition();
-  const Ogre::Quaternion &orient = entity->getParentNode()->_getDerivedOrientation();
-  const Ogre::Vector3 &scale = entity->getParentNode()->_getDerivedScale();
-
   VertexData *vertexData = subMesh->vertexData;
   if (vertexData) {
       VertexDeclaration *vertexDecl = vertexData->vertexDeclaration;
@@ -66,7 +62,6 @@ void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh, bool
           y = *vertex++;
           z = *vertex++;
           Ogre::Vector3 vec(x, y, z);
-          vec = (orient * (vec * scale)) + position;
           Ogre::Vector2 texvec(0,0);
           if (texelement) {
               float *texvertex = 0;
@@ -113,12 +108,25 @@ void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh, bool
   }
 }
 
+
+Ogre::Ray OgreMesh::transformRay(Ogre::Node *node, const Ogre::Ray &ray) {
+  return ray;
+  const Ogre::Vector3 &position = node->_getDerivedPosition();
+  const Ogre::Quaternion &orient = node->_getDerivedOrientation();
+  const Ogre::Vector3 &scale = node->_getDerivedScale();
+  Ogre::Vector3 newStart = (orient.Inverse() * (ray.getOrigin() - position)) / scale;
+  Ogre::Vector3 newDirection = orient.Inverse() * ray.getDirection();
+  return Ogre::Ray(newStart, newDirection);
+}
 // http://www.netsoc.tcd.ie/~nash/tangent_note/tangent_note.html
 
-static bool intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*itr) {
-    std::pair<bool, Real> hit = Ogre::Math::intersects(ray,
-      itr->v1.coord, itr->v2.coord,itr->v3.coord, true, false);
-    if (hit.first && hit.second <= rtn.distance) {
+bool OgreMesh::intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*itr, bool isplane) {
+    std::pair<bool, Real> hit = isplane
+      ? Ogre::Math::intersects(ray, Ogre::Plane(itr->v1.coord, itr->v2.coord,itr->v3.coord))
+      : Ogre::Math::intersects(ray, itr->v1.coord, itr->v2.coord,itr->v3.coord, true, false);
+    rtn.u = 0;
+    rtn.v = 0;
+    if (hit.first && hit.second < rtn.distance) {
       rtn.intersected = hit.first;
       rtn.distance = hit.second;
       Ogre::Vector3 nml=(itr->v1.coord-itr->v2.coord).
@@ -126,30 +134,38 @@ static bool intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*it
       rtn.normal.x=nml.x;
       rtn.normal.y=nml.y;
       rtn.normal.z=nml.z;
-      rtn.tri = itr;
-      Ogre::Vector3 intersect = ray.getPoint(rtn.distance) - rtn.tri->v2.coord;
-      Ogre::Vector3 aVec = (rtn.tri->v1.coord - rtn.tri->v2.coord);
-      Ogre::Vector3 bVec = (rtn.tri->v3.coord - rtn.tri->v2.coord);
-      rtn.u = rtn.tri->v2.u + (rtn.tri->v1.u - rtn.tri->v2.u)*cos(aVec.angleBetween(intersect).valueRadians())*intersect.length()/aVec.length();
-      rtn.v = rtn.tri->v2.v + (rtn.tri->v3.v - rtn.tri->v2.v)*cos(bVec.angleBetween(intersect).valueRadians())*intersect.length()/bVec.length();
-      return true;
+      rtn.tri = *itr;
+      Ogre::Vector3 intersect = ray.getPoint(hit.second) - rtn.tri.v2.coord;
+      Ogre::Vector3 aVec = (rtn.tri.v1.coord - rtn.tri.v2.coord);
+      Ogre::Vector3 bVec = (rtn.tri.v3.coord - rtn.tri.v2.coord);
+      if (aVec.length() > 1.0e-10 && bVec.length() > 1.0e-10) {
+        rtn.u = rtn.tri.v2.u + (rtn.tri.v1.u - rtn.tri.v2.u)*cos(aVec.angleBetween(intersect).valueRadians())*intersect.length()/aVec.length();
+        rtn.v = rtn.tri.v2.v + (rtn.tri.v3.v - rtn.tri.v2.v)*cos(bVec.angleBetween(intersect).valueRadians())*intersect.length()/bVec.length();
+      }
     }
-    return false;
+    return rtn.intersected;
 }
 
-void OgreMesh::intersect(const Ogre::Ray &ray, IntersectResult &rtn)
+void OgreMesh::intersect(Ogre::Node *node, const Ogre::Ray &ray, IntersectResult &rtn)
 {
-  if (rtn.intersected) {
-    if (intersectTri(ray, rtn, rtn.tri)) {
-      return;
-    }
-  }
   rtn = IntersectResult();
+  const Ogre::Vector3 &position = node->_getDerivedPosition();
+  const Ogre::Quaternion &orient = node->_getDerivedOrientation();
+  const Ogre::Vector3 &scale = node->_getDerivedScale();
 
   std::vector<Triangle>::iterator itr,itere=mTriangles.end();
-
+  int i = 0;
   for (itr = mTriangles.begin(); itr != itere; itr++) {
-    intersectTri(ray, rtn, &*itr);
+    Triangle newt = *itr;
+    newt.v1.coord = (orient * (newt.v1.coord * scale)) + position;
+    newt.v2.coord = (orient * (newt.v2.coord * scale)) + position;
+    newt.v3.coord = (orient * (newt.v3.coord * scale)) + position;
+    intersectTri(ray, rtn, &newt, false);
+    if (rtn.intersected) { rtn.tri = *itr; }
+    //intersectTri(ray, rtn, &*itr);
+/*    if (i < 10) {
+      std::cout << "c1:"<<newt.v1.coord << " c2:"<<newt.v2.coord << " c3:"<<newt.v3.coord << " u:"<<newt.v2.u<<" v:"<<newt.v2.v<<std::endl
+    }*/
   }
 }
 

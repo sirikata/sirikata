@@ -739,14 +739,11 @@ void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
 struct RayTraceResult {
     Ogre::Real mDistance;
     Ogre::MovableObject *mMovableObject;
-    Vector3f mNormal;
-    float mU,mV;
-    Ogre::SubEntity *mSubMesh;
-    RayTraceResult() { mDistance=3.0e38f;mMovableObject=NULL;mNormal=Vector3f(0,0,0);mU=0;mV=0;mSubMesh=NULL;}
+    IntersectResult mResult;
+    int mSubMesh;
+    RayTraceResult() { mDistance=3.0e38f;mMovableObject=NULL;mSubMesh=-1;}
     RayTraceResult(Ogre::Real distance,
-                   Ogre::MovableObject *moveableObject,
-                   Vector3f normal) {
-        mNormal=normal;
+                   Ogre::MovableObject *moveableObject) {
         mDistance=distance;
         mMovableObject=moveableObject;
     }
@@ -766,18 +763,20 @@ Entity* OgreSystem::rayTrace(const Vector3d &position,
                              int&resultCount,
                              double &returnResult,
                              Vector3f&returnNormal,
-                             Ogre::SubEntity*&subent,
+                             int&subent,
                              int which) const{
-    return internalRayTrace(position,direction,false,resultCount,returnResult,returnNormal, subent,NULL,NULL,which);
+    Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
+    return internalRayTrace(traceFrom,false,resultCount,returnResult,returnNormal, subent,NULL,false,which);
 }
 Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
                      const Vector3f &direction,
                      int&resultCount,
                      double &returnResult,
-                     Ogre::SubEntity*&subent,
+                     int&subent,
                      int which) const{
     Vector3f normal;
-    return internalRayTrace(position,direction,true,resultCount,returnResult,normal,subent,NULL,NULL,which);
+    Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
+    return internalRayTrace(traceFrom,true,resultCount,returnResult,normal,subent,NULL,false,which);
 }
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
@@ -787,16 +786,16 @@ bool OgreSystem::queryRay(const Vector3d&position,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName) {
     int resultCount=0;
-    Ogre::SubEntity *subent;
-    Entity * retval=internalRayTrace(position,direction,false,resultCount,returnDistance,returnNormal,subent,NULL,NULL,0);
+    int subent;
+    Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
+    Entity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0);
     if (retval != NULL) {
         returnName= retval->getProxy().getObjectReference();
         return true;
     }
     return false;
 }
-Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &direction, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, Ogre::SubEntity*& returnSubMesh, float *returnTexU, float *returnTexV, int which) const {
-    Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
+Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which) const {
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
     mRayQuery->setRay(traceFrom);
@@ -813,24 +812,23 @@ Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &d
         Ogre::Entity *foundEntity = dynamic_cast<Ogre::Entity*>(result.movable);
         Entity *ourEntity = Entity::fromMovableObject(result.movable);
         if (foundEntity && ourEntity && ourEntity != mPrimaryCamera ) {
-            RayTraceResult rtr(result.distance,result.movable,Vector3f(0,0,0));
+            RayTraceResult rtr(result.distance,result.movable);
             bool passed=aabbOnly&&result.distance > 0;
             if (aabbOnly==false) {
                 rtr.mDistance=3.0e38f;
+                Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
                 Ogre::Mesh *mesh = foundEntity->getMesh().get();
                 uint16 numSubMeshes = mesh->getNumSubMeshes();
                 for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
                     Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
-                    OgreMesh ogreMesh(foundEntity, submesh, returnTexU&&returnTexV);
-                    IntersectResult curHit;
-                    ogreMesh.intersect(traceFrom, curHit);
-                    if (curHit.intersected && curHit.distance < rtr.mDistance && curHit.distance > 0 ) {
+                    OgreMesh ogreMesh(submesh, texcoord);
+                    IntersectResult intRes;
+                    ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
+                    if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {
+                        rtr.mResult = intRes;
                         rtr.mMovableObject = result.movable;
-                        rtr.mDistance=curHit.distance;
-                        rtr.mNormal=curHit.normal;
-                        rtr.mU=curHit.u;
-                        rtr.mV=curHit.v;
-                        rtr.mSubMesh=foundEntity->getSubEntity(ndx);
+                        rtr.mDistance=intRes.distance;
+                        rtr.mSubMesh=ndx;
                         passed=true;
                     }
                 }
@@ -856,10 +854,9 @@ Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &d
             if (foundEntity) {
                 toReturn = foundEntity;
                 returnresult = result.mDistance;
-                returnNormal=result.mNormal;
+                returnNormal=result.mResult.normal;
                 returnSubMesh=result.mSubMesh;
-                if(returnTexU)*returnTexU=result.mU;
-                if(returnTexV)*returnTexV=result.mV;
+                if(intersectResult)*intersectResult=result.mResult;
                 break;
             }
         }

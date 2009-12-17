@@ -33,6 +33,7 @@
 #include <util/Standard.hh>
 #include <oh/Platform.hpp>
 #include "OgreSystem.hpp"
+#include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
 #include "MeshEntity.hpp"
@@ -123,6 +124,9 @@ class OgreSystem::MouseHandler {
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
     SpaceObjectReference mLastShiftSelected;
+    IntersectResult mMouseDownTri;
+    ProxyObjectWPtr mMouseDownObject;
+    int mMouseDownSubEntity; // not dereferenced.
     int mLastHitCount;
     float mLastHitX;
     float mLastHitY;
@@ -183,35 +187,70 @@ class OgreSystem::MouseHandler {
 
     /////////////////// HELPER FUNCTIONS ///////////////
 
-    Entity *hoverEntity (CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup, int *hitCount,int which=0) {
+    void mouseOverWebView(CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
+        Location location(cam->getProxy().globalLocation(time));
+        Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
+        Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
+        ProxyObjectPtr obj(mMouseDownObject.lock());
+        Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
+        if (mMouseDownTri.intersected && ent) {
+            MeshEntity *me = static_cast<MeshEntity*>(ent);
+            IntersectResult res = mMouseDownTri;
+            res.distance = 1.0e38;
+/* fixme */
+            Ogre::Node *node = ent->getSceneNode();
+            const Ogre::Vector3 &position = node->_getDerivedPosition();
+            const Ogre::Quaternion &orient = node->_getDerivedOrientation();
+            const Ogre::Vector3 &scale = node->_getDerivedScale();
+            Triangle newt = res.tri;
+            newt.v1.coord = (orient * (newt.v1.coord * scale)) + position;
+            newt.v2.coord = (orient * (newt.v2.coord * scale)) + position;
+            newt.v3.coord = (orient * (newt.v3.coord * scale)) + position;
+/* */
+            OgreMesh::intersectTri(OgreMesh::transformRay(ent->getSceneNode(), traceFrom), res, &newt, true); // &res.tri
+            WebView *wv = me->getWebView(mMouseDownSubEntity);
+            if (wv) {
+                unsigned short int wid=0,hei=0;
+                wv->getExtents(wid,hei);
+                int x = res.u * wid;
+                int y = res.v * hei;
+                if (mousedown) {
+                    wv->injectMouseDown(x, y);
+                }
+                if (mouseup) {
+                    wv->injectMouseUp(x, y);
+                }
+                if (!mousedown && !mouseup) {
+                    wv->injectMouseMove(x, y);
+                }
+            }
+        }
+    }
+
+    Entity *hoverEntity (CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
         Location location(cam->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
         double dist;
         Vector3f normal;
-        float u=0,v=0;
-        Ogre::SubEntity *subent=NULL;
-        Entity *mouseOverEntity = mParent->internalRayTrace(location.getPosition(), dir, false, *hitCount, dist, normal, subent, &u, &v, which);
-        if (mouseOverEntity) {
+        IntersectResult res;
+        int subent=-1;
+        Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
+        Entity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
+        if (mousedown && mouseOverEntity) {
             MeshEntity *me = dynamic_cast<MeshEntity*>(mouseOverEntity);
             if (me) {
-                WebView *wv = me->getWebView(subent);
+                mMouseDownTri = res;
+                mMouseDownObject = me->getProxyPtr();
+                mMouseDownSubEntity = subent;
+                WebView *wv = me->getWebView(mMouseDownSubEntity);
                 if (wv) {
-                    unsigned short int wid=0,hei=0;
-                    wv->getExtents(wid,hei);
-                    if (which==0) {*hitCount=-1;}
-                    if (mousedown) {
-                        wv->injectMouseDown(u*wid, v*hei);
-                    }
-                    if (mouseup) {
-                        wv->injectMouseUp(u*wid, v*hei);
-                    }
-                    if (!mousedown && !mouseup) {
-                        wv->injectMouseMove(u*wid, v*hei);
-                    }
+                    //if (which==0) {*hitCount=-1;}
                 }
             }
+        }
+        if (mouseOverEntity) {
             while (!(mouseOverEntity->getProxy().getParent() == mCurrentGroup)) {
                 mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParent());
                 if (mouseOverEntity == NULL) {
@@ -268,7 +307,7 @@ private:
         if (mParent->mInputManager->isModifierDown(Input::MOD_SHIFT)) {
             // add object.
             int numObjectsUnderCursor=0;
-            Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, false, false, &numObjectsUnderCursor, mWhichRayObject);
+            Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, false, &numObjectsUnderCursor, mWhichRayObject);
             if (!mouseOver) {
                 return;
             }
@@ -287,7 +326,7 @@ private:
             }else {
                 mWhichRayObject=0;
             }
-            mouseOver = hoverEntity(camera, time, p.x, p.y, false, false, &mLastHitCount, mWhichRayObject);
+            mouseOver = hoverEntity(camera, time, p.x, p.y, false, &mLastHitCount, mWhichRayObject);
             if (!mouseOver) {
                 return;
             }
@@ -319,11 +358,11 @@ private:
         else {
             // reset selection.
             clearSelection();
-            mWhichRayObject+=direction;
+            //mWhichRayObject+=direction;
             int numObjectsUnderCursor=0;
-            Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, false, false, &numObjectsUnderCursor, mWhichRayObject);
+            Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
             if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount){
-                mouseOver = hoverEntity(camera, time, p.x, p.y, false, false, &mLastHitCount, mWhichRayObject=0);
+                mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0);
             }
             if (mouseOver) {
                 mSelectedObjects.insert(mouseOver->getProxyPtr());
@@ -1021,6 +1060,13 @@ private:
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
 
+        if (mParent->mPrimaryCamera) {
+            CameraEntity *camera = mParent->mPrimaryCamera;
+            Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+            int lhc=mLastHitCount;
+            mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
+        }
+
         return EventResponse::nop();
     }
 
@@ -1041,7 +1087,8 @@ private:
             CameraEntity *camera = mParent->mPrimaryCamera;
             Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
             int lhc=mLastHitCount;
-            hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, false, &lhc, mWhichRayObject);
+            hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
+            mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
         }
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
@@ -1068,8 +1115,9 @@ private:
             CameraEntity *camera = mParent->mPrimaryCamera;
             Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
             int lhc=mLastHitCount;
-            hoverEntity(mParent->mPrimaryCamera, time, mouseev->mX, mouseev->mY, false, true, &lhc, mWhichRayObject);
+            mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
         }
+        mMouseDownObject.reset();
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
@@ -1097,10 +1145,14 @@ private:
             }
         }
 
-        if (mParent->mPrimaryCamera && ev->mType == Input::DRAG_END) {
-            Time time = SpaceTimeOffsetManager::getSingleton().now(mParent->mPrimaryCamera->getProxy().getObjectReference().space());
+        if (mParent->mPrimaryCamera) {
+            CameraEntity *camera = mParent->mPrimaryCamera;
+            Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
             int lhc=mLastHitCount;
-            hoverEntity(mParent->mPrimaryCamera, time, ev->mX, ev->mY, false, true, &lhc, mWhichRayObject);
+            mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
+        }
+        if (ev->mType == Input::DRAG_END) {
+            mMouseDownObject.reset();
         }
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));

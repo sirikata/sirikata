@@ -304,7 +304,7 @@ bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
         }
 	else
 	{
-        if (focusedWebView) {
+        if (focusedWebView && !focusedWebView->isMaterialOnly()) {
             focusedWebView->injectMouseMove(
                 focusedWebView->getRelativeX(coord.x),
                 focusedWebView->getRelativeY(coord.y));
