@@ -121,8 +121,9 @@ private:
 
     // --- Inputs
   public:
-    // Received from OH networking, needs forwarding decision
-    bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
+    // Received from OH networking, needs forwarding decision.  Forwards or
+    // drops -- ownership is given to Forwarder either way
+    void routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
   private:
     // Received from other space server, needs forwarding decision
     void receiveMessage(Message* msg);

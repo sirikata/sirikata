@@ -192,15 +192,19 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
 // -- messages.  Sources include object hosts and other space servers.
 
 // --- From object hosts
-bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
+void Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
     // Messages destined for the space skip the object message queue and just get dispatched
     if (obj_msg->dest_object() == UUID::null()) {
         dispatchMessage(*obj_msg);
         delete obj_msg;
-        return true;
+        return;
     }
 
-    return forward(obj_msg);
+    bool forwarded = forward(obj_msg);
+    if (!forwarded) {
+        TIMESTAMP(obj_msg, Trace::DROPPED_DURING_FORWARDING);
+        delete obj_msg;
+    }
 }
 
 // --- From local space server services
@@ -233,8 +237,11 @@ void Forwarder::receiveMessage(Message* msg) {
 
     // Otherwise, try to forward it
     bool forward_success = forward(obj_msg, msg->source_server());
-    // ignore forward_success.  If it failed, it will have been marked as
-    // dropped in forward()
+
+    if (!forward_success) {
+        TIMESTAMP(obj_msg, Trace::DROPPED_DURING_FORWARDING);
+        delete obj_msg;
+    }
 
     delete msg;
 }
@@ -259,11 +266,6 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
         if (conn->enabled())
             send_success = conn->send(msg);
 
-        if(!send_success) {
-            TIMESTAMP_END(tstamp, Trace::DROPPED_AT_FORWARDED_LOCALLY_SLOW_PATH);
-            delete msg;
-        }
-
         return send_success;
     }
 
@@ -275,11 +277,6 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
         msg,
         boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
                                          );
-
-
-    if (!accepted) {
-        TIMESTAMP_END(tstamp, Trace::DROPPED_AT_OSEG_LOOKUP_STARTED);
-    }
 
     return accepted;
 }

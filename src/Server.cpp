@@ -125,7 +125,7 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
                 this));
     }else {
         TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
-        
+
     }
 }
 
@@ -187,8 +187,7 @@ void Server::handleObjectHostMessageRouting() {
     }
 
     // Finally, if we've passed all these tests, then everything looks good and we can route it
-    bool route_success = mForwarder->routeObjectHostMessage(front.obj_msg);
-    // FIXME handle forwarding failure
+    mForwarder->routeObjectHostMessage(front.obj_msg);
 }
 
 // Handle Session messages from an object
