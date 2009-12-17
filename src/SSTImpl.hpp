@@ -1,6 +1,12 @@
 #ifndef SST_IMPL_HPP
 #define SST_IMPL_HPP
 
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <boost/asio.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include "oh/ObjectHostContext.hpp"
@@ -50,16 +56,25 @@ class BaseDatagramLayer
 
 public:
   BaseDatagramLayer(const ObjectHostContext* ctx) : mContext(ctx) {}
+
+  void send2(EndPoint<EndPointType> src, EndPoint<EndPointType> dest, String dataStr) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    mContext->objectHost->send(
+	    src.port,src.endPoint,
+            dest.port, dest.endPoint,
+            dataStr
+        );
+  }
   
   /* This function will have to be re-implemented to support sending using
      other kinds of packets. For now, I'll implement only for ODP. */
   void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
-    std::string dataStr( (char*) data, len);
-    mContext->objectHost->send(
-            src->port, src->endPoint,
-            dest->port, dest->endPoint,
-            dataStr
-        );
+    mContext->mainStrand->post(
+			       std::tr1::bind(
+				     &(BaseDatagramLayer<EndPointType>::send2),this,
+				     *src, *dest, String((char*)data, len))
+			       );
   }
 
   /* This function will also have to be re-implemented to support receiving
@@ -68,6 +83,8 @@ public:
 
 private: 
   const ObjectHostContext* mContext;
+
+  Sirikata::SerializationCheck mSerialization;
 
 };
 
@@ -112,13 +129,15 @@ private:
     uint8 mLocalChannelID;
 
     uint64 mTransmitSequenceNumber;
-    uint64 mAckSequenceNumber;
+    uint64 mAckSequenceNumber;   //the last sequence number received from the other side
 
    
     std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
     std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
     uint16 mNumStreams;
+
+    
   
     Connection(const ObjectHostContext* ctx, EndPoint<EndPointType> localEndPoint, 
              EndPoint<EndPointType> remoteEndPoint)
@@ -126,13 +145,19 @@ private:
       mDatagramLayer(ctx), mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1), 
       mAckSequenceNumber(0), mNumStreams(0)
-   {  
+   {
    }
 
 public:
 
-  ~Connection() {
 
+
+  ~Connection() {
+    
+
+
+    printf("Connection getting destroyed\n");
+    fflush(stdout);
   }
 
   
@@ -155,6 +180,8 @@ public:
 
   };
 
+  
+
   /* Creates a connection for the application to a remote 
      endpoint. The EndPoint argument specifies the location of the remote
      endpoint. It is templatized to enable it to refer to either IP 
@@ -173,12 +200,19 @@ public:
                ConnectionReturnCallbackFunction should have the signature
                void (boost::shared_ptr<Connection>). If the boost::shared_ptr argument
                is NULL, the connection setup failed.
+
+     @return false if it's not possible to create this connection, e.g. if another connection
+     is already using the same local endpoint; true otherwise.
   */
-  static void createConnection(const ObjectHostContext* ctx, 
+  static bool createConnection(const ObjectHostContext* ctx, 
 			       EndPoint <EndPointType> localEndPoint, 
 			       EndPoint <EndPointType> remoteEndPoint, 
                                ConnectionReturnCallbackFunction cb) 
   {
+    if (mConnectionMap.find(localEndPoint) != mConnectionMap.end()) {
+      return false;
+    }
+    
     boost::shared_ptr<Connection>  conn =  boost::shared_ptr<Connection>(new Connection(ctx, localEndPoint, remoteEndPoint));
     mConnectionMap[localEndPoint] = conn;
 
@@ -193,6 +227,8 @@ public:
     delete payload;
 
     mConnectionReturnCallbackMap[remoteEndPoint] = cb;
+
+    return true;
   }
 
   /* Creates a stream on top of this connection. The function also queues 
@@ -226,6 +262,8 @@ public:
       ( new Stream<EndPointType>(NULL, this, usid, lsid, initial_data, length, false, 0, cb) );
 
     mOutgoingSubstreamMap[lsid]=stream;
+
+    
   }
 
 
@@ -330,8 +368,8 @@ public:
 
     if (mConnectionMap.find(localEndPoint) != mConnectionMap.end()) {
       if (channelID == 0) {
-	//Someone's already connected at this port. Either don't reply or 
-	//send back a request rejected message.
+	/*Someone's already connected at this port. Either don't reply or 
+	  send back a request rejected message. */
 
 	std::cout << "Someone's already connected at this port\n";
 	return;
@@ -343,8 +381,9 @@ public:
     else if (channelID == 0) {
       /* it's a new channel request negotiation protocol
 	 packet ; allocate a new channel.*/
-
+      
       std::cout << "Received a new channel request\n";
+
             
       uint8* received_payload = (uint8*) received_msg->payload().data();
       
@@ -352,7 +391,8 @@ public:
       payload[0] = 2; //getAvailableChannel();      
 
       boost::shared_ptr<Connection>  conn =  
-                   boost::shared_ptr<Connection>(new Connection(ctx, localEndPoint, remoteEndPoint));
+                   boost::shared_ptr<Connection>(
+				    new Connection(ctx, localEndPoint, remoteEndPoint));
       mConnectionMap[localEndPoint] = conn;
 
       conn->setLocalChannelID(2);      
@@ -365,9 +405,9 @@ public:
 
     delete received_msg;
 
-    //receivingObj->handleReceive(remoteEndPoint.endPoint, remoteEndPoint.port, localEndPoint.endPoint,  buffer, len);
+    //receivingObj->handleReceive(remoteEndPoint.endPoint, remoteEndPoint.port, 
+    //                            localEndPoint.endPoint,  buffer, len);
   }
-
 
   uint64 sendData(const void* data, uint32 length) {
     CBR::Protocol::SST::SSTChannelHeader sstMsg;
@@ -427,7 +467,8 @@ private:
                
       sendData( received_payload, 0 );
 
-      if (mConnectionReturnCallbackMap.find(mRemoteEndPoint) != mConnectionReturnCallbackMap.end()) {
+      if (mConnectionReturnCallbackMap.find(mRemoteEndPoint) != mConnectionReturnCallbackMap.end()) 
+      {
 	if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
 	  boost::shared_ptr<Connection> conn = mConnectionMap[mLocalEndPoint];	
 
@@ -499,21 +540,27 @@ private:
       }
     }
     else if (received_stream_msg->type() == received_stream_msg->DATA) {
+      
+      printf("DATA received\n");
+
       if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
 	 boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
 	                                        mIncomingSubstreamMap[incomingLsid];
 	 stream_ptr->receiveData( received_stream_msg->payload().data(),
-				  mAckSequenceNumber,
+				  received_stream_msg->bsn(),
 				  received_stream_msg->payload().size()				  
 				  );
       }
     }
     else if (received_stream_msg->type() == received_stream_msg->ACK) {
+      
+      printf("ACK received : offset = %d\n", (int)received_channel_msg->ack_sequence_number() );
+
       if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
 	 boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
 	                                        mIncomingSubstreamMap[incomingLsid];
 	 stream_ptr->receiveData( received_stream_msg->payload().data(),
-				  mAckSequenceNumber,
+				  received_channel_msg->ack_sequence_number(),
 				  received_stream_msg->payload().size()				  
 				  );
       }
@@ -559,8 +606,9 @@ public:
     mConnection(conn),    
     mUSID(usid),
     mLSID(lsid),
-    MAX_BUFFER_SIZE(1024),
-    MAX_QUEUE_LENGTH(1048576)
+    MAX_BUFFER_SIZE(500),
+    MAX_QUEUE_LENGTH(1000000),
+    mRetransmitTimer(mIOService)
   {
     if (remotelyInitiated) {
       sendReplyPacket(initial_data, length, remoteLSID);
@@ -570,27 +618,79 @@ public:
     }
 
     mCurrentQueueLength = 0;
+    
+    thrd = new Thread(boost::bind(&(Stream<EndPointType>::ioServicingLoop), this));
+    //boost::thread t(boost::bind(&boost::asio::io_service::run, &mIOService));
+  }
 
-    Thread thrd(boost::bind(&Stream<EndPointType>::ioServicingLoop, this));
+  ~Stream() {
+    printf("Stream getting destroyed\n");
+    fflush(stdout);    
+
+    mLooping = false;
+    thrd->join();    
+    
+    //int* x = NULL;
+    //int y=*x;    // for deliberately crashing everything :P       
   }
 
   void ioServicingLoop() {
-    while (true) {
+    mQueuedBuffers.clear();
+
+    Time start_time = Timer::now();
+    mLooping = true;
+    while (mLooping) {
+      boost::this_thread::sleep(boost::posix_time::microseconds(250));
+
       //this should wait for the queue to get occupied... right now it is
       //just polling...
-      if ( mQueuedBuffers.size() > 0) {
+      Time cur_time = Timer::now();
+      if ( (cur_time - start_time).toMilliseconds() > 100) {
+        resendUnackedPackets();
+        start_time = cur_time;
+      }
+      
+      boost::mutex::scoped_lock l(m_mutex);
+
+      if ( !mQueuedBuffers.empty() ) {
 	StreamBuffer* buffer = mQueuedBuffers.front();
 
 	uint64 channelID = sendDataPacket(buffer->mBuffer, 
 					  buffer->mBufferLength,
 					  buffer->mOffset
-					 );
+					  );
 
-	mChannelToBufferMap[channelID] = buffer;
+	if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
+	  printf("Adding to channel-buffer map: channelID=%d, offset=%d\n",
+		 (int) channelID, (int) buffer->mOffset);
+	  mChannelToBufferMap[channelID] = buffer;
+	}
 	
 	mQueuedBuffers.pop_front();
+        start_time = cur_time;
+
+	/*mRetransmitTimer.expires_from_now(boost::posix_time::milliseconds(100));
+	mRetransmitTimer.async_wait(boost::bind(&(Stream<EndPointType>::resendUnackedPackets), 
+                   	            this, boost::asio::placeholders::error));*/
       }
     }
+  }
+
+  void resendUnackedPackets(/*const boost::system::error_code& error*/) {
+    //printf("Called resendUnackedPackets\n");
+     //if (error) {
+     //  printf("timer handler had ERROR\n");
+     //}
+     boost::mutex::scoped_lock l(m_mutex);
+     
+     for(std::map<uint64, StreamBuffer*>::iterator it = mChannelToBufferMap.begin();
+	 it != mChannelToBufferMap.end(); ++it)
+     {
+        mQueuedBuffers.push_back(it->second);
+        printf("Resending unacked packet at offset %d\n", (int)(it->second->mOffset));	
+     }
+
+     mChannelToBufferMap.clear();
   }
 
   /* Writes data bytes to the stream. If not all bytes can be transmitted
@@ -601,6 +701,8 @@ public:
              occurred
   */
   virtual int write(const uint8* data, int len) {
+    boost::mutex::scoped_lock l(m_mutex);
+    int count = 0;
     if (len <= MAX_BUFFER_SIZE) {
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
 	return 0;
@@ -626,8 +728,11 @@ public:
 	currOffset += buffLen;
 	mCurrentQueueLength += buffLen;
 	mNumBytesSent += buffLen;
+
+	count++;
       }
 
+      printf("NUM PKTS GEN = %d, currOffset=%d\n", count, currOffset);
       return currOffset;
     }
 
@@ -768,12 +873,36 @@ public:
 
   }
 
-  void receiveData(const void* buffer, uint64 offset, uint32 len ) {
+  void receiveData( const void* buffer, uint64 offset, uint32 len ) {
     if (len > 0) {
       sendAckPacket();
+      mReceivedSegments[offset] = 1;
+      printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
+      printf("Received Segment at offset = %d\n", (int) offset);      
     }
     else {
-      mChannelToBufferMap.erase(offset);
+      boost::mutex::scoped_lock l(m_mutex);
+      
+      if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
+	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
+	printf("REMOVED ACKED PACKET. Offset: %d\n", (int) mChannelToBufferMap[offset]->mOffset);
+	mChannelToBufferMap.erase(offset);
+
+	std::vector <uint64> channelOffsets;
+	for(std::map<uint64, StreamBuffer*>::iterator it = mChannelToBufferMap.begin();
+	    it != mChannelToBufferMap.end(); ++it)
+	{
+	  if (it->second->mOffset == dataOffset) {
+	    channelOffsets.push_back(it->first);
+	  }	    
+	}
+
+	for (int i=0; i< channelOffsets.size(); i++) {
+	  mChannelToBufferMap.erase(channelOffsets[i]);
+	}
+
+	
+      }
     }
   }
 
@@ -861,6 +990,18 @@ private:
 
   uint16 MAX_BUFFER_SIZE;
   uint32 MAX_QUEUE_LENGTH;
+
+  boost::mutex m_mutex;
+
+  boost::asio::io_service mIOService;
+
+  std::map<uint64, int> mReceivedSegments;
+
+  Thread* thrd;
+
+  bool mLooping;
+
+  boost::asio::deadline_timer mRetransmitTimer;
   
 };
 
