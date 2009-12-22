@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "proxyobject/Platform.hpp"
+#include "util/TemporalValue.hpp"
 #include "WebView.hpp"
 #include <OgreBitwise.h>
 
@@ -140,7 +142,7 @@ WebView::~WebView()
 	setProxyObject(std::tr1::shared_ptr<ProxyWebViewObject>());
 }
 
-void WebView::destroyed() {
+void WebView::destroyed(const Time&) {
 	WebViewManager::getSingleton().destroyWebView(this);
 }
 

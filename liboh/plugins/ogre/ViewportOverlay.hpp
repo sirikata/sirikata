@@ -38,7 +38,7 @@
 #ifdef nil
 #undef nil
 #endif
-#include <oh/OverlayPosition.hpp>
+#include <proxyobject/OverlayPosition.hpp>
 
 namespace Sirikata {
 namespace Graphics {

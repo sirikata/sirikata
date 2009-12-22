@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 
 #include <util/Thread.hpp>
 
@@ -39,10 +39,10 @@
 #include <task/Event.hpp>
 #include <transfer/TransferManager.hpp>
 #include <oh/SpaceTimeOffsetManager.hpp>
-#include <oh/ProxyManager.hpp>
-#include <oh/ProxyCameraObject.hpp>
-#include <oh/ProxyMeshObject.hpp>
-#include <oh/ProxyLightObject.hpp>
+#include <proxyobject/ProxyManager.hpp>
+#include <proxyobject/ProxyCameraObject.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
+#include <proxyobject/ProxyLightObject.hpp>
 #include "CameraEntity.hpp"
 #include "MeshEntity.hpp"
 #include "LightEntity.hpp"

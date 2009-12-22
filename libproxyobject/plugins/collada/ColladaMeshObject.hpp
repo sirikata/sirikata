@@ -33,10 +33,10 @@
 #ifndef _SIRIKATA_COLLADA_MESH_OBJECT_
 #define _SIRIKATA_COLLADA_MESH_OBJECT_
 
-#include <oh/Platform.hpp>
-#include <oh/models/MeshObject.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/models/MeshObject.hpp>
 
-#include <oh/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
+#include <proxyobject/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
 #include <transfer/URI.hpp>
 
 namespace COLLADAFW {

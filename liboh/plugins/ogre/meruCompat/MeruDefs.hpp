@@ -64,12 +64,12 @@
 #include <transfer/TransferData.hpp>
 #include <transfer/URI.hpp>
 #include <options/Options.hpp>
-#include <oh/Platform.hpp>
-#include <oh/ProxyObject.hpp>
-#include <oh/ProxyMeshObject.hpp>
-#include <oh/ProxyLightObject.hpp>
-#include <oh/ProxyCameraObject.hpp>
-#include <oh/LightInfo.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/ProxyObject.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
+#include <proxyobject/ProxyLightObject.hpp>
+#include <proxyobject/ProxyCameraObject.hpp>
+#include <proxyobject/LightInfo.hpp>
 
 /*
 #include <tr1/shared_ptr>

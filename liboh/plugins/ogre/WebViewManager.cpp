@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "proxyobject/Platform.hpp"
+#include "util/TemporalValue.hpp"
 #include "WebViewManager.hpp"
 #include "WebView.hpp"
 #include "input/SDLInputManager.hpp"

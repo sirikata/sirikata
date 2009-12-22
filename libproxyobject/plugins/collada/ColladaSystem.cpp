@@ -38,7 +38,7 @@
 
 #include "ColladaMeshObject.hpp"
 
-#include <oh/ProxyMeshObject.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
 //#include <oh/SimulationFactory.hpp>
 //#include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>

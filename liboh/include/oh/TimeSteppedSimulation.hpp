@@ -32,7 +32,7 @@
 
 #ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 #define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
-#include "ProxyCreationListener.hpp"
+#include "proxyobject/ProxyCreationListener.hpp"
 
 namespace Sirikata {
 

@@ -36,7 +36,7 @@
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedSimulation.hpp>
-#include <oh/ProxyObject.hpp>
+#include <proxyobject/ProxyObject.hpp>
 #include "input/InputEvents.hpp"
 
 namespace Sirikata {

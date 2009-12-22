@@ -33,8 +33,8 @@
 #ifndef _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
 #define _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
 #include "TimeSteppedSimulation.hpp"
-#include <oh/ProxyObject.hpp>
-#include <oh/ProxyMeshObject.hpp>
+#include <proxyobject/ProxyObject.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
 
 namespace Sirikata {
 typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;

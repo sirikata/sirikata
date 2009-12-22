@@ -36,7 +36,7 @@
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedQueryableSimulation.hpp>
-#include <oh/ProxyObject.hpp>
+#include <proxyobject/ProxyObject.hpp>
 #include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>

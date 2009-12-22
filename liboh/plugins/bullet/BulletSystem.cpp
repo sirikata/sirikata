@@ -33,7 +33,7 @@
 #include <fstream>
 #include <oh/Platform.hpp>
 #include <oh/SimulationFactory.hpp>
-#include <oh/ProxyObject.hpp>
+#include <proxyobject/ProxyObject.hpp>
 #include <oh/SpaceTimeOffsetManager.hpp>
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>

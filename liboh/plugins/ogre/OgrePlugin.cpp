@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include <oh/SimulationFactory.hpp>
 #include "OgreSystem.hpp"
 static int core_plugin_refcount = 0;

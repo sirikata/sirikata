@@ -31,7 +31,7 @@
  */
 
 #include <util/Standard.hh>
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"

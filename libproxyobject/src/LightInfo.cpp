@@ -30,10 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Standard.hh>
-#include <oh/Platform.hpp>
-#include "oh/LightInfo.hpp"
-#include <ObjectHost_Sirikata.pbj.hpp>
+#include <proxyobject/Platform.hpp>
+#include "proxyobject/LightInfo.hpp"
+#include <ProxyObject_Sirikata.pbj.hpp>
 
 namespace Sirikata {
 

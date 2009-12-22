@@ -34,7 +34,7 @@
 
 #include "GraphicsResource.hpp"
 #include "MeruDefs.hpp"
-#include <oh/ProxyObject.hpp>
+#include <proxyobject/ProxyObject.hpp>
 #include "Singleton.hpp"
 #include "Event.hpp"
 

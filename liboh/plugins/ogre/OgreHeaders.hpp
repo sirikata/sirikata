@@ -32,7 +32,7 @@
 
 #ifndef _OGRE_HEADERS_HPP_
 #define _OGRE_HEADERS_HPP_
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include <boost/thread.hpp>
 #ifdef _WIN32
 #undef BOOST_ALL_DYN_LINK

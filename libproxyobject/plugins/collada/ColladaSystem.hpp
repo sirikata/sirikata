@@ -35,8 +35,8 @@
 
 #include "ColladaDocument.hpp"
 
-#include <oh/Platform.hpp>
-#include <oh/ModelsSystem.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/ModelsSystem.hpp>
 #include <util/ListenerProvider.hpp>
 
 #include <task/EventManager.hpp>

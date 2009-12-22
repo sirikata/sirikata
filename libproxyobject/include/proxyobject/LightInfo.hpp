@@ -40,7 +40,7 @@ namespace Protocol {
 class LightInfoProperty;
 }
 
-struct LightInfo {
+struct SIRIKATA_PROXYOBJECT_EXPORT LightInfo {
     enum LightTypes {
         POINT,SPOTLIGHT,DIRECTIONAL,NUM_TYPES//defaults to point=0?
     };

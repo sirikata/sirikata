@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include "CameraEntity.hpp"
 #include <options/Options.hpp>
 namespace Sirikata {

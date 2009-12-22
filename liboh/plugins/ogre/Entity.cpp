@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include "Entity.hpp"
 #include <options/Options.hpp>
 
@@ -176,7 +176,7 @@ void Entity::unsetParent(Time ti, const Location &newLocation) {
     addToScene(NULL);
 }
 
-void Entity::destroyed() {
+void Entity::destroyed(const Time&) {
     delete this;
 }
 void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {

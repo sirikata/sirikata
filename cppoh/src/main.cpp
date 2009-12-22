@@ -31,7 +31,7 @@
  */
 
 #include <oh/Platform.hpp>
-#include <oh/ModelsSystemFactory.hpp> // MCB:
+#include <proxyobject/ModelsSystemFactory.hpp> // MCB:
 #include <util/RoutableMessageHeader.hpp>
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
@@ -42,7 +42,7 @@
 #include "CDNConfig.hpp"
 
 #include <oh/ObjectHost.hpp>
-#include <oh/LightInfo.hpp>
+#include <proxyobject/LightInfo.hpp>
 #include <oh/TopLevelSpaceConnection.hpp>
 #include <oh/SpaceConnection.hpp>
 #include <oh/HostedObject.hpp>

@@ -34,8 +34,8 @@
 
 #include "OgreSystem.hpp"
 #include <util/UUID.hpp>
-#include <oh/ProxyObject.hpp>
-#include <oh/ProxyObjectListener.hpp>
+#include <proxyobject/ProxyObject.hpp>
+#include <proxyobject/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
@@ -94,7 +94,7 @@ public:
     virtual void setParent(const ProxyObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation);
     virtual void unsetParent(Time ti, const Location &newLocation);
 
-    virtual void destroyed();
+    virtual void destroyed(const Time&);
 
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;

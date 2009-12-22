@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Standard.hh>
 #include <oh/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
@@ -38,11 +37,11 @@
 #include "LightEntity.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
-#include <oh/ProxyManager.hpp>
-#include <oh/ProxyObject.hpp>
-#include <oh/ProxyWebViewObject.hpp>
-#include <oh/ProxyMeshObject.hpp>
-#include <oh/ProxyLightObject.hpp>
+#include <proxyobject/ProxyManager.hpp>
+#include <proxyobject/ProxyObject.hpp>
+#include <proxyobject/ProxyWebViewObject.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
+#include <proxyobject/ProxyLightObject.hpp>
 #include <oh/SpaceTimeOffsetManager.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"

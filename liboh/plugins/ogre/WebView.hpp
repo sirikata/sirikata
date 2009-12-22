@@ -36,9 +36,9 @@
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "WebViewManager.hpp"
-#include "oh/ProxyObjectListener.hpp"
-#include <oh/WebViewListener.hpp>
-#include <oh/ProxyWebViewObject.hpp>
+#include <proxyobject/ProxyObjectListener.hpp>
+#include <proxyobject/WebViewListener.hpp>
+#include <proxyobject/ProxyWebViewObject.hpp>
 
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
@@ -72,7 +72,7 @@ namespace Graphics {
 	{
 	public:
 
-		void destroyed(); // From ProxyObjectListener
+		void destroyed(const Time&); // From ProxyObjectListener
 
 		void setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject);
 

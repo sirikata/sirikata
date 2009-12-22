@@ -37,11 +37,11 @@
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedQueryableSimulation.hpp>
-#include <oh/ProxyObject.hpp>
+#include <proxyobject/ProxyObject.hpp>
 #include <fstream>
 #include <vector>
 #include <string>
-#include <oh/ProxyMeshObject.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
 #include <task/EventManager.hpp>
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>

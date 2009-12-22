@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/LightListener.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/LightListener.hpp>
 #include "LightEntity.hpp"
-#include <oh/ProxyLightObject.hpp>
+#include <proxyobject/ProxyLightObject.hpp>
 
 namespace Sirikata {
 namespace Graphics {
