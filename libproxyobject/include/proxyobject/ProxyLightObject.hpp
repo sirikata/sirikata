@@ -41,7 +41,7 @@ typedef MarkovianProvider1<LightListener*,LightInfo> LightProvider;
 /**
  * This class represents a ProxyObject that holds a LightInfo
  */
-class SIRIKATA_OH_EXPORT ProxyLightObject
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyLightObject
   : public LightProvider,
     public ProxyObject {
     LightInfo mLastInfo;

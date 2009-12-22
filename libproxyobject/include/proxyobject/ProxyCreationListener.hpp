@@ -35,7 +35,7 @@ namespace Sirikata {
 class ProxyObject;
 
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-class SIRIKATA_OH_EXPORT ProxyCreationListener {
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyCreationListener {
 public:
     virtual ~ProxyCreationListener(){}
     virtual void onCreateProxy ( ProxyObjectPtr ) = 0;

@@ -61,8 +61,8 @@ void ProxyObject::setLocal(bool loc) {
     mLocal = loc;
 }
 
-void ProxyObject::destroy() {
-    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
+void ProxyObject::destroy(const TemporalValue<Location>::Time& when) {
+    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed,when);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
 

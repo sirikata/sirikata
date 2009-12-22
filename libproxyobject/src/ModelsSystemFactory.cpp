@@ -31,7 +31,7 @@
  */
 
 //#include <util/Platform.hpp>
-#include <oh/ModelsSystemFactory.hpp>
+#include <proxyobject/ModelsSystemFactory.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::ModelsSystemFactory);
 

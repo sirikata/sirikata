@@ -38,9 +38,9 @@ ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReferen
     : ProxyObject(man, id) {
 }
 
-void ProxyCameraObject::destroy() {
+void ProxyCameraObject::destroy(const TemporalValue<Location>::Time& when) {
     detach();
-    ProxyObject::destroy();
+    ProxyObject::destroy(when);
 }
 
 void ProxyCameraObject::attach(const String&renderTargetName,

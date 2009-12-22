@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MODELS_SYSTEM_
 #define _SIRIKATA_MODELS_SYSTEM_
 
-#include <oh/ProxyCreationListener.hpp>
+#include <proxyobject/ProxyCreationListener.hpp>
 
 namespace Sirikata {
 

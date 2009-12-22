@@ -39,7 +39,7 @@ class ProxyObject;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 
 
-class SIRIKATA_OH_EXPORT PositionListener {
+class SIRIKATA_PROXYOBJECT_EXPORT PositionListener {
 public:
     virtual ~PositionListener() {}
     virtual void resetLocation  (Time timestamp, const Location &newLocation) = 0;
@@ -56,7 +56,7 @@ public:
 
 };
 
-class SIRIKATA_OH_EXPORT LocationAuthority {
+class SIRIKATA_PROXYOBJECT_EXPORT LocationAuthority {
 public:
     virtual ~LocationAuthority() {}
     virtual void requestLocation (Time timestamp, const Protocol::ObjLoc& reqLoc) = 0;

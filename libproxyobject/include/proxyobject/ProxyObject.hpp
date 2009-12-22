@@ -84,7 +84,7 @@ private:
     bool mLocal;
 protected:
     /// Notification that the Parent has been destroyed.
-    virtual void destroyed();
+    virtual void destroyed(const TemporalValue<Location>::Time& when);
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -104,7 +104,7 @@ public:
     virtual bool hasModelObject () const { return true; }
     
     /// Subclasses can do any necessary cleanup first.
-    virtual void destroy();
+    virtual void destroy(const TemporalValue<Location>::Time& when);
 
     /// Gets a class that can send messages to this Object.
     QueryTracker *getQueryTracker() const;

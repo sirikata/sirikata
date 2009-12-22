@@ -1041,6 +1041,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ModelsSystemFactory.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/LightInfo.cpp
     )
 SET(LIBOH_SOURCES
                   ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
@@ -1051,7 +1052,6 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
-                  ${LIBOH_SOURCE_DIR}/LightInfo.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                    )

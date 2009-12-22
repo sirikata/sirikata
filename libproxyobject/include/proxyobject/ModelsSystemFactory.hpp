@@ -33,16 +33,16 @@
 #ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
 #define _SIRIKATA_MODELS_SYSTEM_FACTORY_
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include <util/ListenerProvider.hpp>
-#include <oh/ModelsSystem.hpp>
+#include <proxyobject/ModelsSystem.hpp>
 
 namespace Sirikata {
 
 /** Class to create models subsystems.
  *
  */
-class SIRIKATA_OH_EXPORT ModelsSystemFactory
+class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystemFactory
     : public AutoSingleton< ModelsSystemFactory >,
       public Factory2<  ModelsSystem*,
                         Provider< ProxyCreationListener* > *,   // the ProxyManager

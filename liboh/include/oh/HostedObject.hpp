@@ -35,7 +35,7 @@
 #include <util/SpaceObjectReference.hpp>
 #include <util/RoutableMessageHeader.hpp>
 #include "oh/TopLevelSpaceConnection.hpp"
-#include "oh/ProxyObject.hpp"
+#include "proxyobject/ProxyObject.hpp"
 #include "util/QueryTracker.hpp"
 
 namespace Sirikata {

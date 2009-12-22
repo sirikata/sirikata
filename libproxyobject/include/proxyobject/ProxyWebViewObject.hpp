@@ -40,7 +40,7 @@ namespace Sirikata {
 
 typedef Provider<WebViewListener*> WebViewProvider;
 
-class SIRIKATA_OH_EXPORT ProxyWebViewObject 
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyWebViewObject 
 	: public ProxyMeshObject, public WebViewProvider
 {
 public:

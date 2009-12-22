@@ -32,11 +32,12 @@
 #include <util/ListenerProvider.hpp>
 
 #include "ProxyObject.hpp"
+#include "ProxyCreationListener.hpp"
 namespace Sirikata {
 
 class QueryTracker;
 /** An interface for a class that keeps track of proxy object references. */
-class SIRIKATA_OH_EXPORT ProxyManager : 
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager : 
 //        public MessageService,
         public Provider<ProxyCreationListener*> {
 public:

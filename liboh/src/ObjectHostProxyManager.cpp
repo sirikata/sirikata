@@ -42,7 +42,7 @@ void ObjectHostProxyManager::destroy() {
     for (ProxyMap::iterator iter = mProxyMap.begin();
          iter != mProxyMap.end();
          ++iter) {
-        iter->second.obj->destroy();
+        iter->second.obj->destroy(SpaceTimeOffsetManager::getSingleton().now(mSpaceID));
     }
     mProxyMap.clear();
 }

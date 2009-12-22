@@ -38,7 +38,7 @@
 
 namespace Sirikata {
 
-class SIRIKATA_OH_EXPORT WebViewListener {
+class SIRIKATA_PROXYOBJECT_EXPORT WebViewListener {
 public:
     virtual ~WebViewListener() {}
 	virtual void loadURL(const std::string& url) = 0;

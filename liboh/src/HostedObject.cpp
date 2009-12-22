@@ -30,8 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
 #include <oh/Platform.hpp>
+#include "proxyobject/ProxyMeshObject.hpp"
+#include "proxyobject/ProxyLightObject.hpp"
+#include "proxyobject/ProxyWebViewObject.hpp"
+#include "proxyobject/ProxyCameraObject.hpp"
+#include "proxyobject/LightInfo.hpp"
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <ObjectHost_Persistence.pbj.hpp>
 #include <task/WorkQueue.hpp>
@@ -45,12 +49,7 @@
 #include "oh/HostedObject.hpp"
 #include "util/SentMessage.hpp"
 #include "oh/ObjectHost.hpp"
-#include "oh/ProxyMeshObject.hpp"
-#include "oh/ProxyLightObject.hpp"
-#include "oh/ProxyWebViewObject.hpp"
-#include "oh/ProxyCameraObject.hpp"
-#include "oh/LightInfo.hpp"
-#include "oh/MeshListener.hpp"
+
 #include "oh/ObjectScriptManager.hpp"
 #include "oh/ObjectScript.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
