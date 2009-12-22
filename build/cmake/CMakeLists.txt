@@ -43,6 +43,12 @@ IF(NOT WIN32 AND NOT APPLE)
   SET(ISLINUX TRUE)
 ENDIF()
 
+IF(APPLE) 
+  SET(CMAKE_CXX_COMPILER g++-4.0)
+  SET(CMAKE_C_COMPILER gcc-4.0)
+ENDIF()
+
+
 IF(APPLE)
   SET( DYLIB_EXT .dylib)
 ELSE()
@@ -77,7 +83,10 @@ STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
 STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
 
 SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -fPIC -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
-
+IF(APPLE)
+SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -isysroot /Developer/SDKs/MacOSX10.5.sdk -arch i386 -mmacosx-version-min=10.5 )
+  SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} -Wl,-syslibroot -Wl,/Developer/SDKs/MacOSX10.5.sdk/")
+ENDIF()
 #-Woverloaded_virtual
 #-Wabi
 #-Wold-style-cast
