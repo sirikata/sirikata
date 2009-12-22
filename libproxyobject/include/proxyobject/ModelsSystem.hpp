@@ -40,7 +40,7 @@ namespace Sirikata {
 /**
  * An interface for a class that is responsible for data model objects.
  */
-class SIRIKATA_OH_EXPORT ModelsSystem
+class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
     :   public ProxyCreationListener
 {
     public:

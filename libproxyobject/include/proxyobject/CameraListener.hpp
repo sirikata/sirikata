@@ -1,5 +1,5 @@
-/*  Sirikata Object Host
- *  LightListener.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  CameraListener.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,14 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_LIGHT_LISTENER_HPP_
-#define _SIRIKATA_LIGHT_LISTENER_HPP_
-#include "LightInfo.hpp"
+#ifndef _SIRIKATA_CAMERA_LISTENER_HPP_
+#define _SIRIKATA_CAMERA_LISTENER_HPP_
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT LightListener {
+
+class SIRIKATA_PROXYOBJECT_EXPORT CameraListener {
 public:
-    virtual ~LightListener() {}
-    virtual void notify (const LightInfo&) =0;
+    virtual ~CameraListener() {}
+    virtual void attach (const String&renderTargetName,
+                         uint32 width,
+                         uint32 height) =0;
+    virtual void detach()=0;
 };
 }
 #endif

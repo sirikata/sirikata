@@ -39,7 +39,7 @@ namespace Sirikata {
 typedef Provider<CameraListener*> CameraProvider;
 
 /** Represents a camera. A camera can be attached to a render target or to the main screen on any client. */
-class SIRIKATA_OH_EXPORT ProxyCameraObject
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyCameraObject
   : public CameraProvider,
     public ProxyObject {
 public:

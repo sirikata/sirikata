@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <util/ListenerProvider.hpp>
-#include "TimeSteppedSimulation.hpp"
+
 #include "ProxyObject.hpp"
 namespace Sirikata {
 

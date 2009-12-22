@@ -30,17 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ProxyObject.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/ProxyObject.hpp>
 #include <util/Extrapolation.hpp>
-#include <oh/PositionListener.hpp>
-#include <oh/ProxyManager.hpp>
-#include "ObjectHost_Sirikata.pbj.hpp"
+#include <proxyobject/PositionListener.hpp>
+#include <proxyobject/ProxyManager.hpp>
+#include "ProxyObject_Sirikata.pbj.hpp"
 
 #include "util/RoutableMessageBody.hpp"
 #include "util/RoutableMessageHeader.hpp"
 #include "util/KnownServices.hpp"
-#include "oh/SpaceTimeOffsetManager.hpp"
 namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
@@ -91,8 +90,8 @@ bool ProxyObject::isStatic(const TemporalValue<Location>::Time& when) const {
 
 // protected:
 // Notification that the Parent has been destroyed
-void ProxyObject::destroyed() {
-    unsetParent(SpaceTimeOffsetManager::getSingleton().now(mID.space()));
+void ProxyObject::destroyed(const TemporalValue<Location>::Time& when) {
+    unsetParent(when);
 }
 
 QueryTracker *ProxyObject::getQueryTracker() const {

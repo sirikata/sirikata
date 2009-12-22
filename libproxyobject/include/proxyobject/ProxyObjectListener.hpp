@@ -35,11 +35,11 @@ namespace Sirikata {
 class ProxyObject;
 
 /** Interface to listen for the destruction of a ProxyObject so one can discard any shared references to it. */
-class SIRIKATA_OH_EXPORT ProxyObjectListener {
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
 public:
     virtual ~ProxyObjectListener(){}
 
-    virtual void destroyed() = 0;
+    virtual void destroyed(const TemporalValue<Location>::Time&/*when it happened*/) = 0;
 };
 }
 #endif

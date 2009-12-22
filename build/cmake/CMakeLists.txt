@@ -745,6 +745,16 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
 
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "ProxyObject"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  OUTPUTCPPFILE ${SirikataProtocolDirectory}/ProxyObject_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  ${PROTOCOLBUFFERS_GENS}
+)
+
+ADD_PBJ_TARGET(${ProtocolBuffersSources}
+  INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "Ogre"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -1024,6 +1034,7 @@ SET(LIBSUBSCRIPTION_SOURCES
  )
 
 SET(LIBPROXYOBJECT_SOURCES
+                  ${SirikataProtocolDirectory}/ProxyObject_protobuf.cc
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp

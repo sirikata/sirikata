@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ProxyMeshObject.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
 
 //#include <util/ListenerProvider.hpp>
 

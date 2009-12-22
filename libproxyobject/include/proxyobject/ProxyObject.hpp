@@ -60,7 +60,7 @@ typedef Provider<PositionListener*> PositionProvider;
  * This class should be casted to the various subclasses (ProxyLightObject,etc)
  * and appropriate listeners be registered.
  */
-class SIRIKATA_OH_EXPORT ProxyObject
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
   : public ProxyObjectProvider,
     public PositionProvider,
     protected ProxyObjectListener // Parent death notification. FIXME: or should we leave the parent here, but ignore it in globalLocation()???
