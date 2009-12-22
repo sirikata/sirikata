@@ -1,7 +1,7 @@
-/*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  Database.hpp
+/*  Sirikata Object Host -- Platform Dependent Definitions
+ *  Platform.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,47 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_DATABASE_HPP_
-#define _SIRIKATA_DATABASE_HPP_
+#ifndef _SIRIKATA_PROXYOBJECT_PLATFORM_HPP_
+#define _SIRIKATA_PROXYOBJECT_PLATFORM_HPP_
 
-namespace Sirikata { namespace Database {
-typedef MemoryBuffer Value;
-class Key {
-    UUID mObject;
-    uint32 mField;
-public:
-    Key(const UUID&obj_uuid, uint32 field)
-        :mObject(obj_uuid),mField(field),mPath(path){
+#include <util/Platform.hpp>
 
-    }
-    class Hasher{
-        const operator()(const Key&key)const {
-            return mObject.hash()^std::tr1::hash<uint32>(mField);
-        }
-    };
-    bool operator <(const Key&other) const{
-        return mObject==other.mObject?mField<other.mField:mObject<other.mObject;
-    }
-    bool operator ==(const Key&other) const{
-        return mObject==other.mObject&&mField==other.mField;
-    }
-};
-
-
-class KeyValueMap {
-    std::map<Key,Value*> mSet;
-public:
-    ///add key-value mapping to the map
-    void insert(const Key&key, const Value&value);
-    ///add key-value mapping to the map, ceding ownership of Value to KeyValueMap
-    void insert(const Key&key, Value*value);
-};
-class Database {
-public:
-
-
-};
-
-}
-}
+#ifndef SIRIKATA_PROXYOBJECT_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_PROXYOBJECT_EXPORT
+#   else
+#     if defined(SIRIKATA_PROXYOBJECT_BUILD)
+#       define SIRIKATA_PROXYOBJECT_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_PROXYOBJECT_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_PROXYOBJECT_PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_PROXYOBJECT_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_PROXYOBJECT_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_PROXYOBJECT_EXPORT
+#     define SIRIKATA_PROXYOBJECT_PLUGIN_EXPORT
+#   endif
+# endif
 #endif
+
+#ifndef SIRIKATA_PROXYOBJECT_EXPORT_C
+# define SIRIKATA_PROXYOBJECT_EXPORT_C extern "C" SIRIKATA_PROXYOBJECT_EXPORT
+#endif
+
+#ifndef SIRIKATA_PROXYOBJECT_PLUGIN_EXPORT_C
+# define SIRIKATA_PROXYOBJECT_PLUGIN_EXPORT_C extern "C" SIRIKATA_PROXYOBJECT_PLUGIN_EXPORT
+#endif
+
+#endif //_SIRIKATA_PROXYOBJECT_PLATFORM_HPP_
