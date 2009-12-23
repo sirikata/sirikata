@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Collada Models System
+/*  Sirikata libproxyobject -- Collada Models System
  *  ColladaSystem.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes

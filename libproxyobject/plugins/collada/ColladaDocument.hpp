@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Models Document
+/*  Sirikata libproxyobject -- COLLADA Models Document
  *  ColladaDocument.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes

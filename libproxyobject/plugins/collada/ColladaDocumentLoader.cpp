@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Models Document Loader
+/*  Sirikata libproxyobject -- COLLADA Models Document Loader
  *  ColladaDocumentLoader.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -37,8 +37,6 @@
 
 //#include "ColladaMeshObject.hpp"
 
-//#include <oh/ProxyMeshObject.hpp>
-//#include <oh/SimulationFactory.hpp>
 //#include <options/Options.hpp>
 //#include <transfer/TransferManager.hpp>
 

@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Error Handler
+/*  Sirikata libproxyobject -- COLLADA Error Handler
  *  ColladaErrorHandler.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes

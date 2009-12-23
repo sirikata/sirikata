@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Collada Models Document Loader
+/*  Sirikata libproxyobject -- Collada Models Document Loader
  *  ColladaDocumentLoader.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -35,11 +35,6 @@
 
 #include "ColladaDocument.hpp"
 
-//#include <oh/Platform.hpp>
-//#include <oh/ModelsSystem.hpp>
-//#include <util/ListenerProvider.hpp>
-
-//#include <task/EventManager.hpp>
 
 /////////////////////////////////////////////////////////////////////
 

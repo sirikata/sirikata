@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Document Importer
+/*  Sirikata libproxyobject -- COLLADA Document Importer
  *  ColladaDocumentImporter.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -34,8 +34,6 @@
 #define _SIRIKATA_COLLADA_DOCUMENT_IMPORTER_
 
 #include "ColladaDocument.hpp"
-
-//#include <oh/Platform.hpp>
 
 //#include <task/EventManager.hpp>
 

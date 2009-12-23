@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Models System
+/*  Sirikata libproxyobject -- COLLADA Models System
  *  ColladaSystem.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -39,7 +39,6 @@
 #include "ColladaMeshObject.hpp"
 
 #include <proxyobject/ProxyMeshObject.hpp>
-//#include <oh/SimulationFactory.hpp>
 //#include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 

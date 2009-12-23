@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Error Handler
+/*  Sirikata libproxyobject -- COLLADA Error Handler
  *  ColladaErrorHandler.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COLLADA_ERROR_HANDLER_
 #define _SIRIKATA_COLLADA_ERROR_HANDLER_
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 
 //#include "COLLADASaxFWLIError.h"
 #include "COLLADASaxFWLIErrorHandler.h"

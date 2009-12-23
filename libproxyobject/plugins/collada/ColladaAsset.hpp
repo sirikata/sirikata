@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Models Asset
+/*  Sirikata libproxyobject -- COLLADA Models Asset
  *  ColladaAsset.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COLLADA_ASSET_
 #define _SIRIKATA_COLLADA_ASSET_
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 
 namespace COLLADAFW {
     

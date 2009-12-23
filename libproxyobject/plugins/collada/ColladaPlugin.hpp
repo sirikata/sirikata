@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Object Host Plugin for COLLADA
+/*  Sirikata libproxyobject -- Object Host Plugin for COLLADA
  *  ColladaPlugin.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COLLADA_PLUGIN_
 #define _SIRIKATA_COLLADA_PLUGIN_
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 
 SIRIKATA_PLUGIN_EXPORT_C int increfcount ();
 SIRIKATA_PLUGIN_EXPORT_C int decrefcount ();

@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- COLLADA Models Asset
+/*  Sirikata libproxyobject -- COLLADA Models Asset
  *  ColladaAsset.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes

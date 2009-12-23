@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Collada Models Mesh Object
+/*  Sirikata libproxyobject -- Collada Models Mesh Object
  *  ColladaMeshObject.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
