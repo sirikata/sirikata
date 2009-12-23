@@ -55,7 +55,7 @@ namespace Models {
  *  Declares the Bridge Pattern Implementor interface for proxy mesh object Abstractions.
  *  Roles are: Abstraction :: ProxyMeshObject, Implementor :: MeshObject, ConcreteImplementor :: [see liboh/plugins/collada]
  */
-class SIRIKATA_OH_EXPORT MeshObject
+class SIRIKATA_PROXYOBJECT_EXPORT MeshObject
 {
     public:
         virtual ~MeshObject () {}

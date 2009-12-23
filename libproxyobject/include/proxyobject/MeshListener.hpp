@@ -39,7 +39,8 @@ namespace Sirikata {
 using Transfer::URI;
 
 // FIX ME: this definition probably doesn't belong here
-struct PhysicalParameters {
+class PhysicalParameters {
+public:
     enum PhysicalMode {
         Disabled = 0,               /// non-active, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
@@ -70,7 +71,7 @@ struct PhysicalParameters {
     }
 };
 
-class SIRIKATA_OH_EXPORT MeshListener
+class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
 {
     public:
         virtual ~MeshListener() {}
