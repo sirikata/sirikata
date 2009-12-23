@@ -40,7 +40,6 @@
 #include <util/RoutableMessageHeader.hpp>
 #include <util/PluginManager.hpp>
 #include <task/WorkQueue.hpp>
-#include "graphics/GraphicsObject.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/ObjectScriptManager.hpp"
 #include "oh/ObjectScript.hpp"
