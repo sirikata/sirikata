@@ -67,7 +67,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
 {
 
 public:
-    class UpdateNeeded {
+    class SIRIKATA_PROXYOBJECT_EXPORT UpdateNeeded {
     public:
         bool operator()(
             const Location&updatedValue,
