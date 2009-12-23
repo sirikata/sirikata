@@ -85,7 +85,7 @@ public:
     void removeFromScene();
     void addToScene(Ogre::SceneNode *newParent=NULL);
 
-    OgreSystem *getScene() {
+    OgreSystem *getScene() const{
         return mScene;
     }
 

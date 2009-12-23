@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Bullet Graphics Plugin
+/*  Sirikata libproxyobject -- Bullet Graphics Plugin
  *  BulletSystem.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn & Daniel Braxton Miller
@@ -31,10 +31,11 @@
  */
 
 #include <fstream>
-#include <oh/Platform.hpp>
-#include <oh/SimulationFactory.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/SimulationFactory.hpp>
 #include <proxyobject/ProxyObject.hpp>
-#include <oh/SpaceTimeOffsetManager.hpp>
+#include <proxyobject/TimeOffsetManager.hpp>
+//#include <oh/SpaceTimeOffsetManager.hpp>
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
@@ -484,7 +485,7 @@ bool BulletSystem::tick() {
                     po = objects[i]->getBulletState();
                     DEBUG_OUTPUT(cout << "    dbm: object, " << objects[i]->mName << ", delta, "
                                  << delta.toSeconds() << ", newpos, " << po.p << "obj: " << objects[i] << endl);
-                    Time remoteNow=Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(objects[i]->mMeshptr->getObjectReference().space()));
+                    Time remoteNow=Time::convertFrom(now,mLocalTimeOffset->offset(*objects[i]->mMeshptr));
                     Location loc (objects[i]->mMeshptr->globalLocation(remoteNow));
                     loc.setPosition(po.p);
                     loc.setOrientation(po.o);
@@ -515,7 +516,7 @@ bool BulletSystem::tick() {
                 BulletObj* b1=i->first.getHigher();
                 ObjectReference b0id=b0->getObjectReference();
                 ObjectReference b1id=b1->getObjectReference();
-                Time spaceNow=Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(b0->getSpaceID()));
+                Time spaceNow=Time::convertFrom(now,mLocalTimeOffset->offset(*b0->mMeshptr));
 
                 if (i->second.collidedThisFrame()) {             /// recently colliding; send msg & change mode
                     if (!i->second.collidedLastFrame()) {
@@ -670,7 +671,8 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
     }
 }
 
-bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, TimeOffsetManager* offset, const String&options) {
+    mLocalTimeOffset=offset;
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
     mTempTferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
@@ -721,6 +723,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 BulletSystem::BulletSystem() :
         mGravity(0, GRAVITY, 0),
         mStartTime(Task::LocalTime::now()) {
+    mLocalTimeOffset=NULL;
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }
 
@@ -734,6 +737,7 @@ BulletSystem::~BulletSystem() {
     delete collisionConfiguration;
     delete groundBody;
     delete groundShape;
+    delete mLocalTimeOffset;
     DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor finished" << endl;)
 }
 

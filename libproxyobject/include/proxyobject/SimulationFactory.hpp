@@ -1,5 +1,5 @@
-/*  Sirikata Graphical Object Host
- *  OgrePlugin.cpp
+/*  Sirikata Object Host -- Proxy Creation and Destruction manager
+ *  SimulationFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,42 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _SIRIKATA_SIMULATION_FACTORY_
+#define _SIRIKATA_SIMULATION_FACTORY_
 #include <proxyobject/Platform.hpp>
-#include <proxyobject/SimulationFactory.hpp>
-#include "OgreSystem.hpp"
-static int core_plugin_refcount = 0;
+#include <util/ListenerProvider.hpp>
+#include <proxyobject/TimeSteppedQueryableSimulation.hpp>
+#include <proxyobject/TimeOffsetManager.hpp>
+namespace Sirikata{
 
-SIRIKATA_PLUGIN_EXPORT_C void init() {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
-    if (core_plugin_refcount==0)
-        SimulationFactory::getSingleton().registerConstructor("ogregraphics",
-                                                            &OgreSystem::create,
-                                                            true);
-    core_plugin_refcount++;
-}
+///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
+class SIRIKATA_OH_EXPORT SimulationFactory
+    : public AutoSingleton<SimulationFactory>,
+      public Factory3<TimeSteppedQueryableSimulation*,
+                      Provider<ProxyCreationListener*>*,//the ProxyManager
+                      TimeOffsetManager*,//so we can get any local time offset for objects
+                      const String&> //options string for the graphics system
+{
+public:
+    static SimulationFactory&getSingleton();
+    static void destroy();
+};
 
-SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
-    return ++core_plugin_refcount;
-}
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
-    assert(core_plugin_refcount>0);
-    return --core_plugin_refcount;
-}
 
-SIRIKATA_PLUGIN_EXPORT_C void destroy() {
-    using namespace Sirikata;
-    if (core_plugin_refcount>0) {
-        core_plugin_refcount--;
-        assert(core_plugin_refcount==0);
-        if (core_plugin_refcount==0)
-            SimulationFactory::getSingleton().unregisterConstructor("ogregraphics");
-    }
 }
-
-SIRIKATA_PLUGIN_EXPORT_C const char* name() {
-    return "ogregraphics";
-}
-SIRIKATA_PLUGIN_EXPORT_C int refcount() {
-    return core_plugin_refcount;
-}
+#endif

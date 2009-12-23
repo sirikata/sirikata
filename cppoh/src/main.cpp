@@ -35,7 +35,7 @@
 #include <util/RoutableMessageHeader.hpp>
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
-#include <oh/SimulationFactory.hpp>
+#include <proxyobject/SimulationFactory.hpp>
 
 #include <task/EventManager.hpp>
 #include <task/WorkQueue.hpp>
@@ -47,6 +47,7 @@
 #include <oh/SpaceConnection.hpp>
 #include <oh/HostedObject.hpp>
 #include <oh/SpaceIDMap.hpp>
+#include <oh/ObjectHostTimeOffsetManager.hpp>
 #include <network/IOServiceFactory.hpp>
 #include <network/IOService.hpp>
 #include <util/KnownServices.hpp>
@@ -295,7 +296,7 @@ int main ( int argc,const char**argv ) {
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( provider,graphicsCommandArguments );
+            .getConstructor ( simName ) ( provider,new ObjectHostTimeOffsetManager, graphicsCommandArguments );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));

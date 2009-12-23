@@ -1,5 +1,5 @@
-/*  Sirikata Graphical Object Host
- *  OgrePlugin.cpp
+/*  Sirikata liboh -- Object Host
+ *  ObjectHostTimeOffsetManager.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,43 +29,16 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SIRIKATA_OBJECTHOST_TIME_OFFSET_MANAGER_HPP_
+#define _SIRIKATA_OBJECTHOST_TIME_OFFSET_MANAGER_HPP_
+#include <util/Singleton.hpp>
+#include <proxyobject/TimeOffsetManager.hpp>
+namespace Sirikata {
+class SIRIKATA_OH_EXPORT ObjectHostTimeOffsetManager :public TimeOffsetManager {
+    virtual ~ObjectHostTimeOffsetManager();
+    virtual Time now(const ProxyObject&obj);
+    virtual Duration offset(const ProxyObject&obj);
+};
+}
+#endif
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/SimulationFactory.hpp>
-#include "OgreSystem.hpp"
-static int core_plugin_refcount = 0;
-
-SIRIKATA_PLUGIN_EXPORT_C void init() {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
-    if (core_plugin_refcount==0)
-        SimulationFactory::getSingleton().registerConstructor("ogregraphics",
-                                                            &OgreSystem::create,
-                                                            true);
-    core_plugin_refcount++;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
-    return ++core_plugin_refcount;
-}
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
-    assert(core_plugin_refcount>0);
-    return --core_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C void destroy() {
-    using namespace Sirikata;
-    if (core_plugin_refcount>0) {
-        core_plugin_refcount--;
-        assert(core_plugin_refcount==0);
-        if (core_plugin_refcount==0)
-            SimulationFactory::getSingleton().unregisterConstructor("ogregraphics");
-    }
-}
-
-SIRIKATA_PLUGIN_EXPORT_C const char* name() {
-    return "ogregraphics";
-}
-SIRIKATA_PLUGIN_EXPORT_C int refcount() {
-    return core_plugin_refcount;
-}

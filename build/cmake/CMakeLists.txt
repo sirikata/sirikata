@@ -1042,6 +1042,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ModelsSystemFactory.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/LightInfo.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
                   ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
@@ -1052,7 +1053,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
-                  ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectHostTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                    )
 
@@ -1376,7 +1377,7 @@ ADD_PLUGIN_TARGET(prox
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox)
 ENDIF(PROX_FOUND)
 
-SET(LIBOH_PLUGIN_BULLETPHYSICS_DIR ${LIBOH_PLUGIN_DIR}/bullet)
+SET(LIBOH_PLUGIN_BULLETPHYSICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/bullet)
 SET(LIBOH_PLUGIN_BULLETPHYSICS_SOURCES
  ${SirikataProtocolDirectory}/Bullet_protobuf.cc
  ${LIBOH_PLUGIN_BULLETPHYSICS_DIR}/BulletSystem.cpp
@@ -1386,8 +1387,8 @@ ADD_PLUGIN_TARGET(bulletphysics
                     SOURCES ${LIBOH_PLUGIN_BULLETPHYSICS_SOURCES}
                     TARGET_CXXFLAGS ${bullet_CFLAGS}
                     TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
+                    TARGET_LIBRARIES ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} bulletphysics)
 ENDIF()
 

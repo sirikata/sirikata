@@ -35,7 +35,7 @@
 #include <util/Platform.hpp>
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
-#include <oh/TimeSteppedSimulation.hpp>
+#include <proxyobject/TimeSteppedSimulation.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include "input/InputEvents.hpp"
 

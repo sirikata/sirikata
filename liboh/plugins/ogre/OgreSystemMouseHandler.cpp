@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
@@ -42,7 +42,7 @@
 #include <proxyobject/ProxyWebViewObject.hpp>
 #include <proxyobject/ProxyMeshObject.hpp>
 #include <proxyobject/ProxyLightObject.hpp>
-#include <oh/SpaceTimeOffsetManager.hpp>
+#include <proxyobject/TimeOffsetManager.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
@@ -89,7 +89,7 @@ bool compareEntity (const Entity* one, const Entity* two) {
     ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
     ProxyLightObject* light1 = dynamic_cast<ProxyLightObject*>(pp);
     ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
-    Time now = SpaceTimeOffsetManager::getSingleton().now(pp->getObjectReference().space());
+    Time now = one->getScene()->getLocalTimeOffset()->now(*pp);
     Location loc1 = pp->globalLocation(now);
     pp = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
@@ -300,7 +300,7 @@ private:
     void selectObjectAction(Vector2f p, int direction) {
         if (!mParent||!mParent->mPrimaryCamera) return;
         CameraEntity *camera = mParent->mPrimaryCamera;
-        Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+        Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
         if (!camera) {
             return;
         }
@@ -461,8 +461,8 @@ private:
             if (!ent) {
                 continue;
             }
-            Entity *newEnt = doCloneObject(ent, ent->getProxy().getParentProxy(), Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(ent->getProxy().getObjectReference().space())));
-            Time objnow=Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(ent->getProxy().getObjectReference().space()));
+            Time objnow=Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy()));
+            Entity *newEnt = doCloneObject(ent, ent->getProxy().getParentProxy(), objnow);
             Location loc (ent->getProxy().extrapolateLocation(objnow));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
             newEnt->getProxy().resetLocation(objnow, loc);
@@ -483,7 +483,7 @@ private:
         SpaceObjectReference parentId = mCurrentGroup;
 
         ProxyManager *proxyMgr = mParent->mPrimaryCamera->getProxy().getProxyManager();
-        Time now(SpaceTimeOffsetManager::getSingleton().now(mParent->mPrimaryCamera->getProxy().getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(mParent->mPrimaryCamera->getProxy()));
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
             ProxyObjectPtr obj(iter->lock());
@@ -545,7 +545,7 @@ private:
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
                 Entity *ent = *subIter;
-                ent->getProxy().setParent(parentParent, Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(ent->getProxy().getObjectReference().space())));
+                ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
                 newSelectedObjects.insert(ent->getProxyPtr());
                 ent->setSelected(true);
             }
@@ -626,7 +626,7 @@ private:
         if (!camera) return;
         SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
         ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
-        Time now(SpaceTimeOffsetManager::getSingleton().now(newId.space()));
+        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
         Location loc (camera->getProxy().globalLocation(now));
         loc.setPosition(loc.getPosition() + Vector3d(direction(loc.getOrientation()))*WORLD_SCALE/3);
         loc.setOrientation(loc.getOrientation());
@@ -661,7 +661,7 @@ private:
 
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (!camera) return;
-        Time now(SpaceTimeOffsetManager::getSingleton().now(camera->id().space()));
+        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
         Location curLoc (camera->getProxy().globalLocation(now));
         Protocol::CreateObject creator;
         Protocol::IConnectToSpace space = creator.add_space_properties();
@@ -734,7 +734,7 @@ private:
     void createLightAction() {
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (!camera) return;
-        createLight(SpaceTimeOffsetManager::getSingleton().now(camera->id().space()));
+        createLight(mParent->getLocalTimeOffset()->now(camera->getProxy()));
     }
 
 	ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy) {
@@ -750,7 +750,7 @@ private:
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
 
-        Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
         Protocol::ObjLoc rloc;
@@ -764,7 +764,7 @@ private:
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -780,7 +780,7 @@ private:
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -907,7 +907,7 @@ private:
     }
     void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames) {
         ProxyObject *pp = e->getProxyPtr().get();
-        Time now(SpaceTimeOffsetManager::getSingleton().now(pp->getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(*pp));
         Location loc = pp->globalLocation(now);
         ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
@@ -1092,7 +1092,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
         }
@@ -1115,7 +1115,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
             int lhc=mLastHitCount;
             hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
             mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
@@ -1143,7 +1143,7 @@ private:
         }
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
         }
@@ -1177,7 +1177,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
+            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
         }
@@ -1233,7 +1233,7 @@ private:
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
 
         loc.setPosition( pos );
@@ -1276,7 +1276,7 @@ private:
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
+        Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
 
         mCameraPathIndex = mCameraPath.insert(mCameraPathIndex, loc.getPosition(), loc.getOrientation(), Task::DeltaTime::seconds(1.0));

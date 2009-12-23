@@ -35,7 +35,7 @@
 #include <util/Platform.hpp>
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
-#include <oh/TimeSteppedQueryableSimulation.hpp>
+#include <proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
@@ -58,6 +58,7 @@ class SubEntity;
 }
 
 namespace Sirikata {
+class TimeOffsetManager;
 class ProxyObject;
 namespace Input {
 class SDLInputManager;
@@ -77,12 +78,12 @@ using Input::SDLInputManager;
 class CameraEntity;
 class CubeMap;
 struct IntersectResult;
-
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedQueryableSimulation {
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
+    TimeOffsetManager *mLocalTimeOffset;
     class Transfer::TransferManager *mTransferManager;
     Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
@@ -113,6 +114,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     bool loadBuiltinPlugins();
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
+                    TimeOffsetManager *localTimeOffset,
                     const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
@@ -141,6 +143,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
 public:
     bool forwardMessagesTo(MessageService*){return false;}
     bool endForwardingMessagesTo(MessageService*){return false;}
+    TimeOffsetManager *getLocalTimeOffset() {
+        return mLocalTimeOffset;
+    }
     /**
      * Process a message that may be meant for this system
      */
@@ -178,9 +183,10 @@ public:
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
-                                         const String&options){
+                                                  TimeOffsetManager *localTimeOffset,
+                                                  const String&options){
         OgreSystem*os= new OgreSystem;
-        if (os->initialize(proxyManager,options))
+        if (os->initialize(proxyManager,localTimeOffset,options))
             return os;
         delete os;
         return NULL;

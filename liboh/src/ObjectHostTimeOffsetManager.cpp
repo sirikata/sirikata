@@ -1,5 +1,5 @@
-/*  Sirikata Object Host
- *  SimulationFactory.cpp
+/*  Sirikata liboh -- Object Host
+ *  ObjectHostTimeOffsetManager.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,14 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
-#include <oh/SimulationFactory.hpp>
-AUTO_SINGLETON_INSTANCE(Sirikata::SimulationFactory);
+#include <oh/Platform.hpp>
+#include <proxyobject/ProxyObject.hpp>
+#include "util/SpaceID.hpp"
+#include "oh/SpaceTimeOffsetManager.hpp"
+#include "oh/ObjectHostTimeOffsetManager.hpp"
 namespace Sirikata {
-SimulationFactory& SimulationFactory::getSingleton() {
-    return AutoSingleton<SimulationFactory>::getSingleton();
+
+ObjectHostTimeOffsetManager::~ObjectHostTimeOffsetManager(){
 }
-void SimulationFactory::destroy() {
-	AutoSingleton<SimulationFactory>::destroy();
+Time ObjectHostTimeOffsetManager::now(const ProxyObject&obj){
+    return SpaceTimeOffsetManager().getSingleton().now(obj.getObjectReference().space());
+}
+Duration ObjectHostTimeOffsetManager::offset(const ProxyObject&obj){
+    return SpaceTimeOffsetManager().getSingleton().getSpaceTimeOffset(obj.getObjectReference().space());
 }
 }

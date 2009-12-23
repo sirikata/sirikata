@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Bullet Graphics Plugin
+/*  Sirikata libproxyobject -- Bullet Graphics Plugin
  *  BulletSystem.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn & Daniel Braxton Miller
@@ -36,7 +36,7 @@
 #include <util/Platform.hpp>
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
-#include <oh/TimeSteppedQueryableSimulation.hpp>
+#include <proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include <fstream>
 #include <vector>
@@ -51,6 +51,8 @@
 
 using namespace std;
 namespace Sirikata {
+
+class TimeOffsetManager;
 
 /*
                  dead simple, brute-force parsing of ogre.mesh to get the precious vertex data for physics
@@ -452,6 +454,7 @@ public:
 
 class BulletSystem: public TimeSteppedQueryableSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
+                    TimeOffsetManager*offset,
                     const String&options);
     Vector3f mGravity;
     double groundlevel;
@@ -459,7 +462,7 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
     OptionValue* mWorkQueue;
     OptionValue* mEventManager;
     Task::LocalTime mStartTime;
-
+    TimeOffsetManager *mLocalTimeOffset;
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;
     customDispatch* dispatcher;
@@ -483,13 +486,15 @@ public:
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(BulletObj*);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
+                                                  TimeOffsetManager *offset,
             const String&options) {
         BulletSystem*os= new BulletSystem;
-        if (os->initialize(proxyManager,options))
+        if (os->initialize(proxyManager,offset,options))
             return os;
         delete os;
         return NULL;
     }
+
     BulletObj* mesh2bullet (ProxyMeshObjectPtr meshptr) {
         BulletObj* bo=0;
         for (unsigned int i=0; i<objects.size(); i++) {

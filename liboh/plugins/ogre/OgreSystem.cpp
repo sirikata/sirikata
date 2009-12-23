@@ -38,7 +38,7 @@
 #include "OgrePlugin.hpp"
 #include <task/Event.hpp>
 #include <transfer/TransferManager.hpp>
-#include <oh/SpaceTimeOffsetManager.hpp>
+#include <proxyobject/TimeOffsetManager.hpp>
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/ProxyCameraObject.hpp>
 #include <proxyobject/ProxyMeshObject.hpp>
@@ -139,6 +139,7 @@ OgreSystem::OgreSystem()
      mFloatingPointOffset(0,0,0),
      mPrimaryCamera(NULL)
 {
+    mLocalTimeOffset=NULL;
     increfcount();
     mCubeMap=NULL;
     mInputManager=NULL;
@@ -344,7 +345,8 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     }
     return mAttachedCameras.end();
 }
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, TimeOffsetManager *localTimeOffset, const String&options) {
+    mLocalTimeOffset=localTimeOffset;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
     //add ogre system options here
@@ -682,6 +684,7 @@ OgreSystem::~OgreSystem() {
     }
     destroyMouseHandler();
     delete mInputManager;
+    delete mLocalTimeOffset;
 }
 
 static void KillWebView(ProxyObjectPtr p) {
@@ -884,7 +887,7 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
         if (success) {
             SILOG(ogre,debug,"Upload of " << (*iter).first.mID << " (hash "<<(*iter).first.mHash << ") was successful.");
             if ((*iter).first.mType == Meru::MESH) {
-                Time now(SpaceTimeOffsetManager::getSingleton().now(mPrimaryCamera->id().space()));
+                Time now(mLocalTimeOffset->now(mPrimaryCamera->getProxy()));
                 SpaceObjectReference newId = SpaceObjectReference(mPrimaryCamera->id().space(), ObjectReference(UUID::random()));
                 Location loc (mPrimaryCamera->getProxy().globalLocation(now).getPosition(), Quaternion::identity(),
                               Vector3f::nil(), Vector3f(0,1,0), 0);
@@ -1026,7 +1029,7 @@ void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
         ++iter;
 //        SILOG(ogre,debug,"Extrapolating "<<current<<" for time "<<(float64)(currentTime-debugStartTime));
         SpaceID space(current->getProxy().getObjectReference().space());
-        current->extrapolateLocation(lastSpace==space?lastTime:(lastTime=Time::convertFrom(currentTime,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(space))));
+        current->extrapolateLocation(lastSpace==space?lastTime:(lastTime=Time::convertFrom(currentTime,mLocalTimeOffset->offset(current->getProxy()))));
         lastSpace=space;
     }
 }

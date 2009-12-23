@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  SimulationFactory.hpp
+/*  Sirikata Object Host
+ *  SimulationFactory.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,25 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SIMULATION_FACTORY_
-#define _SIRIKATA_SIMULATION_FACTORY_
-#include <oh/Platform.hpp>
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedQueryableSimulation.hpp"
-namespace Sirikata{
-
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT SimulationFactory
-    : public AutoSingleton<SimulationFactory>,
-      public Factory2<TimeSteppedQueryableSimulation*,
-                      Provider<ProxyCreationListener*>*,//the ProxyManager
-                      const String&> //options string for the graphics system
-{
-public:
-    static SimulationFactory&getSingleton();
-    static void destroy();
-};
-
-
+#include <util/Platform.hpp>
+#include <proxyobject/SimulationFactory.hpp>
+AUTO_SINGLETON_INSTANCE(Sirikata::SimulationFactory);
+namespace Sirikata {
+SimulationFactory& SimulationFactory::getSingleton() {
+    return AutoSingleton<SimulationFactory>::getSingleton();
 }
-#endif
+void SimulationFactory::destroy() {
+	AutoSingleton<SimulationFactory>::destroy();
+}
+}
