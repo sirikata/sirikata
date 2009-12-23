@@ -104,7 +104,7 @@ std::string getResourcesDir() {
         path("share/ogre/data"),
         path("libproxyobject/plugins/ogre/data")
     };
-    uint32 nsearch_paths = 2;
+    uint32 nsearch_paths = 3;
 
     for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
         for(uint32 spath = 0; spath < nsearch_paths; spath++) {

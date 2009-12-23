@@ -109,24 +109,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 */
         chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         FILE * testfile=NULL;
-        if ((testfile=fopen("../../libproxyobject/plugins/ogre/data/chrome/navbar.html","r"))) {
-            fclose(testfile);
-            chromeWebView->loadFile("../../../libproxyobject/plugins/ogre/data/chrome/navbar.html");
-        } else if ((testfile=fopen("../../../libproxyobject/plugins/ogre/data/chrome/navbar.html","r"))) {
-            fclose(testfile);
-            chromeWebView->loadFile("../../../../libproxyobject/plugins/ogre/data/chrome/navbar.html");
-        } else if ((testfile=fopen("../../../../libproxyobject/plugins/ogre/data/chrome/navbar.html","r"))) {
-            fclose(testfile);
-            chromeWebView->loadFile("../../../../../libproxyobject/plugins/ogre/data/chrome/navbar.html");
-        }else if((testfile=fopen("share/ogre/data/chrome/navbar.html","r"))){
-            fclose(testfile);
-            chromeWebView->loadFile("../share/ogre/data/chrome/navbar.html");
-        }else if((testfile=fopen("../../share/ogre/data/chrome/navbar.html","r"))) {
-            fclose(testfile);
-            chromeWebView->loadFile("../../../share/ogre/data/chrome/navbar.html");
-        }else {
-            chromeWebView->loadFile("../../share/ogre/data/chrome/navbar.html");
-        }
+        chromeWebView->loadFile("navbar.html");
 
         /*
         WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
