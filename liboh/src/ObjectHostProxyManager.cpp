@@ -51,19 +51,23 @@ ObjectHostProxyManager::~ObjectHostProxyManager() {
 }
 
 void ObjectHostProxyManager::createViewedObject(const ProxyObjectPtr &newObj, QueryTracker*viewer) {
-    std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
-        ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
-    if (result.second==true) {
+    ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
+    if (iter == mProxyMap.end()) {
+        std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
+            ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
         notify(&ProxyCreationListener::onCreateProxy,newObj);
+        iter = result.first;
     }
-    result.first->second.viewers.insert(viewer);
+    iter->second.viewers.insert(viewer);
 }
 void ObjectHostProxyManager::destroyViewedObject(const SpaceObjectReference &newObj, QueryTracker*viewer) {
     ProxyMap::iterator iter = mProxyMap.find(newObj.object());
     if (iter != mProxyMap.end()) {
         std::tr1::unordered_multiset<QueryTracker*>::iterator viewiter;
         viewiter = iter->second.viewers.find(viewer);
-        iter->second.viewers.erase(viewiter);
+        if (viewiter != iter->second.viewers.end()) {
+            iter->second.viewers.erase(viewiter);
+        }
         viewiter = iter->second.viewers.find(viewer);
         if (viewiter == iter->second.viewers.end()) {
             iter->second.obj->destroy();
