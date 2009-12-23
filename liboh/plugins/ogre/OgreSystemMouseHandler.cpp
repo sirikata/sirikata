@@ -59,6 +59,7 @@
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
 #include "Ogre_Sirikata.pbj.hpp"
+#include <util/RoutableMessageBody.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -619,7 +620,7 @@ private:
         }
     }
 
-    void createWebviewAction() {
+    void LOCAL_createWebviewAction() {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -654,6 +655,36 @@ private:
         if (ent) {
             ent->setSelected(true);
         }
+    }
+
+    void createWebviewAction() {
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+
+        CameraEntity *camera = mParent->mPrimaryCamera;
+        if (!camera) return;
+        Time now(SpaceTimeOffsetManager::getSingleton().now(camera->id().space()));
+        Location curLoc (camera->getProxy().globalLocation(now));
+        Protocol::CreateObject creator;
+        Protocol::IConnectToSpace space = creator.add_space_properties();
+        Protocol::IObjLoc loc = space.mutable_requested_object_loc();
+        loc.set_position(curLoc.getPosition() + Vector3d(direction(curLoc.getOrientation()))*WORLD_SCALE/3);
+        loc.set_orientation(curLoc.getOrientation());
+        loc.set_velocity(Vector3f(0,0,0));
+        loc.set_angular_speed(0);
+        loc.set_rotational_axis(Vector3f(1,0,0));
+
+        creator.set_mesh("meru:///webview.mesh");
+        creator.set_weburl("http://www.yahoo.com/");
+        creator.set_scale(Vector3f(2,2,2));
+
+        std::string serializedCreate;
+        creator.SerializeToString(&serializedCreate);
+
+        RoutableMessageBody body;
+        body.add_message("CreateObject", serializedCreate);
+        std::string serialized;
+        body.SerializeToString(&serialized);
+        camera->getProxy().sendMessage(MemoryReference(serialized.data(), serialized.length()));
     }
 
     std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {

@@ -43,6 +43,7 @@ class ObjectHost;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
+struct PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
@@ -93,9 +94,14 @@ public:
 //------- Public member functions:
 
     ///makes a new object with the bare minimum--assumed that a script or persistence fills in the rest.
-    void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&);
+    void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&, const UUID&evidence);
     ///makes a new objects with objectName startingLocation mesh and a space to connect to
-    void initializeConnect(const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const LightInfo *lights, const String &weburl, const SpaceID&, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
+    void initializeConnect(
+            const String&mesh,
+            const LightInfo *lightInfo,
+            const String&webViewURL,
+            const Vector3f&meshScale,
+            const PhysicalParameters&physicalParameters);
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
     /// Attempt to restore this item from database including script [not implemented]
@@ -210,10 +216,12 @@ public:
         @see send.
     */
     void sendErrorReply(const RoutableMessageHeader &origHdr, ReturnStatus error) {
-        RoutableMessageHeader replyHeader(origHdr);
-        replyHeader.swap_source_and_destination();
-        replyHeader.set_return_status(error);
-        send(replyHeader, MemoryReference::null());
+        if (origHdr.has_reply_id()) {
+            RoutableMessageHeader replyHeader(origHdr);
+            replyHeader.swap_source_and_destination();
+            replyHeader.set_return_status(error);
+            send(replyHeader, MemoryReference::null());
+        }
     }
 
     /** Handles a single RPC out of a received message.

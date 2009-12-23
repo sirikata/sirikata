@@ -72,7 +72,6 @@ InitializeGlobalOptions main_options("",
     cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
     floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
     dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
-    host=new OptionValue("host","localhost",OptionValueType<String>(),"space address"),
     frameRate=new OptionValue("framerate","60",OptionValueType<double>(),"The desired framerate at which to run the object host"),
     NULL
 );

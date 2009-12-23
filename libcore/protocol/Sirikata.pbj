@@ -286,3 +286,28 @@ message ParentProperty {
 message UUIDListProperty {
     repeated uuid value=10;
 }
+
+// TODO: Move these into a different ObjectHost-specific file.
+
+//New Streams can establish an ObjectConnection
+message ConnectToSpace {
+    optional uuid space_id=1;
+    ///key to indicate how an object's ObjectReference should be restored
+    optional uuid object_uuid_evidence=2;
+    ///The object host may request a position for a newly created object
+    optional ObjLoc requested_object_loc=3;
+    ///the bounding sphere for the mesh, so that proximity detection can begin right away
+    optional boundingsphere3f bounding_sphere=4;
+}
+
+message CreateObject {
+    optional uuid object_uuid=1;
+    repeated ConnectToSpace space_properties=2;
+    optional string mesh=3;
+    optional vector3f scale=4;
+    optional string weburl=5;
+    optional LightInfoProperty light_info=6;
+    optional bool camera=7;
+    optional PhysicalParameters physical=8;
+}
+
