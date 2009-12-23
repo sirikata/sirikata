@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host Graphics Interface
- *  GraphicsObject.cpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  TimeOffsetManager.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include "GraphicsObject.hpp"
+#ifndef _SIRIKATA_LIBPROXYOBJECT_TIME_OFFSET_MANAGER_HPP_
+#define _SIRIKATA_LIBPROXYOBJECT_TIME_OFFSET_MANAGER_HPP_
 namespace Sirikata {
-GraphicsObject::GraphicsObject():mCapabilities(HAS_NO_CAPABILITY) {
-
+class SIRIKATA_PROXYOBJECT_EXPORT TimeOffsetManager {
+  public:
+    virtual Duration offset(const ProxyObject&)=0;
+    virtual Time now(const ProxyObject&)=0;
+    virtual ~TimeOffsetManager(){}
+};
 }
-}
+#endif
