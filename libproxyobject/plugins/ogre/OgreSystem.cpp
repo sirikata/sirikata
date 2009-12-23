@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Ogre Graphics Plugin
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
  *  OgreSystem.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
@@ -102,7 +102,7 @@ std::string getResourcesDir() {
     path search_paths[] = {
         path("ogre/data"),
         path("share/ogre/data"),
-        path("liboh/plugins/ogre/data")
+        path("libproxyobject/plugins/ogre/data")
     };
     uint32 nsearch_paths = 2;
 

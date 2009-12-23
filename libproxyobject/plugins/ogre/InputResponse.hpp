@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Ogre Graphics Plugin
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
  *  InputResponse.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava

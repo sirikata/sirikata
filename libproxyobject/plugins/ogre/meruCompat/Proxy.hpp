@@ -36,7 +36,7 @@
 #include "Event.hpp"
 #include "../OgreSystem.hpp"
 #include "../Entity.hpp"
-#include "oh/SpaceTimeOffsetManager.hpp"
+#include "proxyobject/TimeOffsetManager.hpp"
 namespace Meru {
 
 class ProxyObject;
@@ -100,7 +100,7 @@ public:
 
     void setLocalLocation(const Location &loc);
     const Location getLocation()const {
-        return mEntity->getProxy().extrapolateLocation(Sirikata::SpaceTimeOffsetManager::getSingleton().now(mSpace));
+        return mEntity->getProxy().extrapolateLocation(mEntity->getScene()->getLocalTimeOffset()->now(mEntity->getProxy()));
     }
     void ignoreNetwork(bool ignore);
     const String& getName() const {

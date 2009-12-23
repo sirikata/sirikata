@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Ogre Graphics Plugin
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
  *  ViewportOverlay.cpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons

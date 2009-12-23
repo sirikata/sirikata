@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Ogre Graphics Plugin
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
  *  SDLInputManager.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn

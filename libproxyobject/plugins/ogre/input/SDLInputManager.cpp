@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Ogre Graphics Plugin
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
  *  SDLInputManager.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
@@ -35,7 +35,7 @@
 #define _WIN32_WINNT 0x0501
 #endif
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 #include "../OgreHeaders.hpp"
 #include <OgreRenderWindow.h>
 #include <SDL.h>

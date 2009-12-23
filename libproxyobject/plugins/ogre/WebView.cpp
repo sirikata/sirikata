@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Ogre Graphics Plugin
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
  *  WebView.cpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons

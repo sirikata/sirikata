@@ -37,7 +37,7 @@
 #include "../OgreSystem.hpp"
 #include "../CameraEntity.hpp"
 #include "../MeshEntity.hpp"
-#include "oh/SpaceTimeOffsetManager.hpp"
+#include "proxyobject/TimeOffsetManager.hpp"
 
 using std::set;
 
@@ -62,23 +62,24 @@ float GraphicsResourceEntity::calcBenefit()
     return 0.0f;
   }
   if (MESH_DISTANCE_IS_KING || STANDARD_COST_BENEFIT) {
-    const Location& curLoc = mGraphicsEntity->getProxy().extrapolateLocation(Sirikata::SpaceTimeOffsetManager::getSingleton().now(mGraphicsEntity->getProxy().getObjectReference().space()));
 
     /*****************
      *  Loop through all OgreSystem's, and loop through the list of attached cameras
      *  (will need to change CameraEntity to keep track of this!)
      *****************/
-
+      Sirikata::Task::LocalTime now(Sirikata::Task::LocalTime::now());
     std::list<OgreSystem*>::const_iterator systemIter = OgreSystem::sActiveOgreScenes.begin(),
       systemend = OgreSystem::sActiveOgreScenes.end();
     float best = 0.0f;
     for (; systemIter != systemend; ++systemIter) {
+
       OgreSystem *system = *systemIter;
+      Location curLoc = mGraphicsEntity->getProxy().extrapolateLocation(Time::convertFrom(now,system->getLocalTimeOffset()->offset(mGraphicsEntity->getProxy())));
       std::list<CameraEntity*>::const_iterator cameraIter = system->mAttachedCameras.begin(),
         cameraEnd = system->mAttachedCameras.end();
       for (; cameraIter != cameraEnd; ++cameraIter) {
         CameraEntity *camera = *cameraIter;
-        const Location& avatarLoc = camera->getProxy().extrapolateLocation(Sirikata::SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space()));
+        Location avatarLoc = camera->getProxy().extrapolateLocation(Time::convertFrom(now,system->getLocalTimeOffset()->offset(camera->getProxy())));
         float dist = (curLoc.getPosition() - avatarLoc.getPosition()).length();
         float radius = mGraphicsEntity->getBoundingInfo().radius();
 
