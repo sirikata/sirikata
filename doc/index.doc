@@ -33,4 +33,18 @@
  *  <li> See http://www.sirikata.com/docs/head/ for documentation generated
  *       nightly from the source code repository
  *  </ul>
+ *
+ *  <h2> How to Proceed </h2>
+ *   - \ref architecture - High level description of the architecture of the
+ *          entire system. For more detailed information on each component see:
+ *    - \ref space_architecture - Introduction to the architecture of a space
+ *           server, which simulates and mediates interactions between objects.
+ *    - \ref oh_architecture - Introduction to the architecture of object hosts,
+ *           which simulate individual objects, running their scripts.
+ *    - \ref cdn_architecture - Introduction to the content distribution network
+ *           architecture, which handles long term static storage of content
+ *           such as scripts and meshes.
+ *   - \ref authoritative_state - Explanation of where the authoritative version
+ *          of state is maintained.  For security and consistency, not all state
+ *          for a given object resides with the object itself.
  */
