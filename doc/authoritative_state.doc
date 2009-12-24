@@ -1,0 +1,14 @@
+/** \page authoritative_state Authoritative State
+ *
+ *  TODO: Authoritative State.
+ *   - Most state is pertinent only to objects and maintained by objects (within
+ *  the object host, most likely by the object script itself).
+ *   - Some should be maintained on a per-object basis by the object host in
+ *  order to provide additional services (e.g. mesh URLs to automatically
+ *  maintain mesh, physics bounding mesh, bounding region, and communicate those
+ *  to the space automatically).
+ *   - And finally, some *must* be maintained by the space because it is
+ *  critical that it be consistently seen by all participants and because it
+ *  affects interactions between objects at the lowest level.  Examples include
+ *  object locations and bounding regions.
+ */

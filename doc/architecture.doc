@@ -1,0 +1,153 @@
+/** \page architecture Architecture
+ *
+ * <h2> Introduction </h2>
+ * Sirikata provides the basic services and functionality needed by virtual
+ * world applications.  Applications tie these services together and build on
+ * top of them to provide a unique experience to end users.
+ *
+ * Sirikata breaks an entire virtual world system -- including the components
+ * executed by end users -- into three high level services: the object hosts,
+ * the space, and the content distribution network.  These services loosely
+ * correspond to computation, communication, and storage, respectively.
+ *
+ * To deploy a virtual world application, the application developer will provide
+ * a single space service (possibly distributed across many servers) which is,
+ * in some sense, the "world."  Depending on the application, the provider might
+ * also run object hosts, which connect to the space and run objects provided by
+ * the world (the scenery and bots in a game, for example), and a CDN to handle
+ * storage of large, static data, such as geometry, textures, and prerecorded
+ * audio. As described later, clients connect to the world by running an object
+ * host locally which, at a minimum, simulates their avatar or camera object.
+ *
+ * This high level description leaves out a lot of detail, but gives an idea of
+ * what is involved in building and deploying a virtual world using Sirikata.
+ * Note that this configuration isn't the only one possible -- for instance, a
+ * CDN might not be provided and all resources might either be directly
+ * deivered, as in a procedurally defined world, or the provider might not
+ * provide a CDN, relying on users to find hosting, for example via web
+ * hosting.  In this manual we hope to describe the most common deployment,
+ * making note of alternatives where appropriate.
+ *
+ * With this high level context, the following describes each of these
+ * components in a bit more detail, but focuses on each of their external
+ * interfaces.  For details on the internal architectures of these components,
+ * including ways in which they can be customized and extended, see their
+ * corresponding architecture pages:
+ *  - \ref space_architecture
+ *  - \ref oh_architecture
+ *  - \ref cdn_architecture
+ *
+ * <h2> Space </h2>
+ * In some sense, the space is the actual world: it enables all interaction
+ * between objects, it is the medium by which objects learn about each other and
+ * communicate. From the perspective of objects connected to the space, it
+ * provides three services: presence (also known as space membership, session
+ * management, authentication), physical simulation, and interobject
+ * communication.
+ *
+ * <h3> Authentication and Presence </h3>
+ * Spaces enable objects to communicate and enforce the constraints of the
+ * virtual world. First, when an object wants to enter the world, the space acts
+ * as the guardian, deciding whether or not an object should be able to enter.
+ * The policy for allowing entrance is left up to the application developer.  In
+ * existing systems this step usually only applies to clients connecting to the
+ * world -- most systems conflate the simulation of individual objects with the
+ * simulation of the world, and lack flexible policies on object admission,
+ * aside from user accounts.  One common example of this step in traditional
+ * systems is admission control for load balancing purposes -- a world may only
+ * allow a few hundred players to connect to a given space or region of the
+ * world at a time to control load.
+ *
+ * Once an object has been granted access to the world, it must provide the
+ * space with all the necessary information for the world to simulate it (note
+ * that this might actually occur
+ * as part of the admission process to enable full consistency and
+ * representation as soon as admission is granted). Certain properties of the
+ * object are actually controlled or owned by the space itself -- for instance
+ * the object's position, orientation, and mesh -- so that the space can make
+ * sure the world is simulated consistently.  We defer further discussion
+ * of this issue to \ref authoritative_state.  However, application level state
+ * is maintained in the object itself, so the space maintains (and needs to know
+ * about) relatively little state for each connected object.
+ *
+ * <h3> Discovery </h3>
+ * Once all the necessary proprties of an object are available to the space,
+ * the only barrier to objects communicating with each other is discovery: the
+ * space provides a query mechanism which allows objects to discover other relevant
+ * objects in the space. Objects register a query (its not necessary to
+ * understand the form, a common example from existing systems would be "objects
+ * within 100m"), and the space provides continuous updates, providing each
+ * object with a list of other objects that are currently relevant to it.
+ *
+ * <h3> Communication & Messaging </h3>
+ * Finally, with references to these other objects in hand, a connected object
+ * may communicate with them via messages.  The lowest level communication
+ * between objects is unreliable unordered messages, but Sirikata also provides
+ * higher level transport abstractions to make writing object scripts simpler.
+ *
+ * <h3> Extensions - Other Services </h3>
+ * The above services are the minimum shared services required to run a virtual
+ * world. Note the lack of any discussion of physics simulation, inventory
+ * services, VOIP, or any other complicated services commonly available in
+ * today's virtual worlds. These are higher level services which are not common
+ * to all applications and sometimes do not make sense in some applications.
+ *
+ * For more internal details of the space and how to extend it, see the \ref
+ * space_architecture.
+ *
+ * <h2> Object Host </h2>
+ * The object host handles simulation of objects and provides utilities for them
+ * to interact with the space, other objects, and the CDN. It is where object
+ * scripts (or behaviors) are loaded and run.
+ *
+ * The object host has 3 main duties:
+ *  - Object simulation, including running object scripts, performing any local
+ *    physical simulation that may be necessary
+ *  - Session management for objects, including communication for basic services
+ *    such as location management, proximity queries, and message routing.
+ *  - Expose utilities to objects.  Examples might include persistent storage,
+ *    higher level communication abstractions, timers, an inventory service,
+ *    animation utilities, and so on.
+ *
+ * In some sense, the choice of scripting language is just an extension of the
+ * first and third duties.  Because we define a network protocol which the
+ * components use to communicate, the choice of scripting language is not fixed
+ * -- as long as the language can encode our messages (or connect to our library
+ * which can encode the core set of messages), it can work with the rest of the
+ * system.  Scripts written in a convenient scripting language such as Python,
+ * Lua, or Ruby are just one way to extend objects.  The object host may also
+ * provide other extensions (implemented as plugins) which provide other fixed
+ * functionality for objects via the same extension interface.  Examples of
+ * these might be timers, an interface for web requests, or an inventory
+ * service.
+ *
+ * For more internal details on the object host and how to extend it, see the
+ * \ref oh_architecture.
+ *
+ * <h2> Content Distribution Network </h2>
+ * The content distribution network is used to store and distribute large,
+ * static, long-lived content.  Some examples include meshes, textures, and
+ * object scripts. Although we can take advantage of its use in a virtual world
+ * to optimize it, the content distribution network looks very similar to
+ * existing solutions for other applications. We take advantage of this by
+ * leveraging existing solutions.
+ *
+ * The CDN supports two levels: names and content. The inputs to the CDN are
+ * always URIs. All URIs can respond with data directly.  However, the preferred
+ * organization is to use a hash URI for direct data storage. This allows
+ * efficient storage, replication, and flexibility in the source of the data
+ * (e.g. direct from the provider, via a torrent, etc).  Then, when referring to
+ * the content, for example when specifying a mesh, a human readable URI is
+ * used. This attaches some semantic meaning the URL and allows changes to be
+ * made in hierarchical resources without requiring large adjustments (for
+ * instance, changing a texture only requires pointing the name URI at a
+ * different hash URI; since the mesh refers to the named resource its hash
+ * doesn't change and so the content for the mesh remains the same but now
+ * points to the new texture).
+ *
+ * The CDN should support additional features that are especially useful in this
+ * context -- attaching certain types of standard metadata, range requests, and
+ * hashes on partial data to allow for safe use of partial data for lower levels
+ * of detail.  More information can be found in the detailed \ref
+ * cdn_architecture documentation.
+ */
