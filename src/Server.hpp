@@ -65,7 +65,7 @@ private:
     // before using the forwarder to do routing.  Operates in the
     // network strand to allow for fast forwarding, see
     // handleObjectHostMessageRouting for continuation in main strand
-    void handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    bool handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
     // Perform forwarding for a message on the front of mRouteObjectMessage from the object host which
     // couldn't be forwarded directly by the networking code
     // (i.e. needs routing to another node)

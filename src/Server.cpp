@@ -103,7 +103,7 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::Conn
     }
 }
 
-void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
     // exceptions for bootstrapping purposes (namely session messages to the space).
 
@@ -112,7 +112,7 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // and dest objects, guaranteeing that the appropriate connections
     // exist for both.
     if (mLocalForwarder->tryForward(obj_msg))
-        return;
+        return true;
 
     // 2. Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
@@ -123,9 +123,10 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
             std::tr1::bind(
                 &Server::handleObjectHostMessageRouting,
                 this));
+        return true;
     }else {
         TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
-
+        return false;
     }
 }
 
@@ -135,6 +136,8 @@ void Server::handleObjectHostMessageRouting() {
         SILOG(cbr,error,"Got requested to pull an item off mRouteObjectMessage but no message awaited me");
         return;
     }
+
+    mObjectHostConnectionManager->unpauseObjectStream(front.conn_id);
 
     // Take this opportunity to do some sanity checking.
 

@@ -69,7 +69,7 @@ public:
     /** Callback generated when an object message is received over a connection.  This callback can be generated
      *  from any strand -- use strand->wrap to ensure its handled in your strand.
      */
-    typedef std::tr1::function<void(ConnectionID, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
+    typedef std::tr1::function<bool(ConnectionID, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
 
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
@@ -83,7 +83,9 @@ public:
     IOStrand* const netStrand() const {
         return mIOStrand;
     }
+    void unpauseObjectStream(const ConnectionID&id);
 private:
+    void unpauseObjectStreamOnIOStrand(const ConnectionID&id);
     SpaceContext* mContext;
 
     IOService* mIOService; // FIXME we should be able to use main IOService, but need underlying connections to be stranded
