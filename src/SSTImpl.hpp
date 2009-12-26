@@ -903,8 +903,8 @@ public:
 
         if (mTransmitWindowSize < buffer->mBufferLength) break;
 
-        printf("ioServicingLoop enqueuing packets into send queue\n");
-
+        printf("ioServicingLoop enqueuing packet at offset %d into send queue\n", buffer->mOffset);
+        printf("ioServicingLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
 
 	uint64 channelID = sendDataPacket(buffer->mBuffer, 
 					  buffer->mBufferLength,
@@ -1127,11 +1127,10 @@ public:
   void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len ) 
   {
-    mTransmitWindowSize = pow(2, streamMsg->window());
-
-    printf("receiveData: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
-
     if (len > 0) {
+      mTransmitWindowSize = pow(2, streamMsg->window());
+
+
       printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
 
 
@@ -1192,7 +1191,6 @@ public:
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
           mReceiveWindowSize -= len;
 
-
    	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
 	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
 
@@ -1214,6 +1212,11 @@ public:
       
       if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
 	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
+
+        mTransmitWindowSize = ( pow(2, streamMsg->window()) < mTransmitWindowSize + mChannelToBufferMap[offset]->mBufferLength ) ? 
+					pow(2, streamMsg->window()) : mTransmitWindowSize + mChannelToBufferMap[offset]->mBufferLength;
+
+
 	printf("REMOVED ACKED PACKET. Offset: %d\n", (int) mChannelToBufferMap[offset]->mOffset);
 	mChannelToBufferMap.erase(offset);
 
@@ -1262,13 +1265,14 @@ private:
   }
 
   void sendAckPacket() {
-    printf("Sending Ack packet\n");
 
     CBR::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
     sstMsg.set_flags(0);
     sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
+
+    printf("Sending Ack packet with window %d\n", (int)sstMsg.window());
 
     std::string buffer = serializePBJMessage(sstMsg);
     mConnection->sendData(  buffer.data(), buffer.size());
