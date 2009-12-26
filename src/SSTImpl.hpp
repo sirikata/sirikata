@@ -278,7 +278,7 @@ public:
 
       boost::this_thread::sleep( boost::posix_time::microseconds(mRTO*2) );
       
-      printf("%s mOutstandingSegments.size()=%d\n", mLocalEndPoint.endPoint.toString().c_str() , mOutstandingSegments.size() );
+      printf("%s mOutstandingSegments.size()=%d\n", mLocalEndPoint.endPoint.toString().c_str() , (int) mOutstandingSegments.size() );
 
       bool all_sent_packets_acked = true;
       bool no_packets_acked = true;
@@ -783,8 +783,8 @@ public:
 template <class EndPointType>
 class Stream {
 public:
-
-  StreamReturnCallbackFunction mStreamReturnCallback;
+   StreamReturnCallbackFunction mStreamReturnCallback;
+  
   
    enum StreamStates {
        DISCONNECTED = 1,       
@@ -802,10 +802,21 @@ public:
     mConnection(conn),    
     mUSID(usid),
     mLSID(lsid),
-    MAX_BUFFER_SIZE(500),
+    MAX_PAYLOAD_SIZE(500),
     MAX_QUEUE_LENGTH(1000000),
-    mRetransmitTimer(mIOService)
+    MAX_RECEIVE_WINDOW(15000),
+    mRetransmitTimer(mIOService),
+    mTransmitWindowSize(MAX_RECEIVE_WINDOW),
+    mReceiveWindowSize(MAX_RECEIVE_WINDOW),
+    mNextByteExpected(0),
+    mLastContiguousByteReceived(-1),
+    mLastByteReceived(-1),
+    totalBytesRead(0)
   {
+    mReceiveBuffer = new uint8[mReceiveWindowSize];
+    mReceiveBitmap = new uint8[mReceiveWindowSize];
+    memset(mReceiveBitmap, 0, mReceiveWindowSize);
+
     if (remotelyInitiated) {
       sendReplyPacket(initial_data, length, remoteLSID);
     }
@@ -826,11 +837,49 @@ public:
     mLooping = false;
     thrd->join();    
     
+    delete mReceiveBuffer;
     //int* x = NULL;
     //int y=*x;    // for deliberately crashing everything :P       
   }
 
-  void ioServicingLoop() {
+  void ioServicingLoop()  {
+    /*
+      while (mLooping) {
+        if ( !mQueuedBuffers.empty() ) {
+	  queue_front = mQueuedBuffers.front();
+	  if (mTransmitWindowSize > queue_front.pktSize() ) {
+	    send(queue_front);
+
+	    putBufferInSentMap(queue_front);
+	    mQueuedBuffers.pop_front();
+	    
+	    mTransmitWindowSize -= queue_front.pktSize();
+	  }
+	}
+      }
+
+      onReceivingAck() {
+        getBufferFromSentMapCorrespondingToReceivedAck();
+	
+	mTransmitWindowSize += queue_front.pktSize();
+      
+	mTransmitWindowSize = 2^(received_pkt.window());
+      }
+
+      onReceivingData() {
+        mReceiveWindow -= received_packet.size();
+
+        if (received_packet.byte_sequence_number == next_expected_byte_sequence) {
+           pass_data_up_to_app();
+
+           mReceiveWindow += sizeOf(data_passed_to_app);
+        }
+        sendAckwithNewReceiveWindowSize();
+ 
+      }
+
+     */
+
     mQueuedBuffers.clear();
 
     Time start_time = Timer::now();
@@ -858,9 +907,7 @@ public:
 					  buffer->mOffset
 					  );
 
-	if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
-	  // printf("Adding to channel-buffer map: channelID=%d, offset=%d\n",
- 	  //	 (int) channelID, (int) buffer->mOffset);
+	if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {	  
 	  mChannelToBufferMap[channelID] = buffer;
 	}
 	
@@ -901,7 +948,7 @@ public:
   virtual int write(const uint8* data, int len) {
     boost::mutex::scoped_lock l(m_mutex);
     int count = 0;
-    if (len <= MAX_BUFFER_SIZE) {
+    if (len <= MAX_PAYLOAD_SIZE) {
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
 	return 0;
       }
@@ -914,8 +961,8 @@ public:
     else {      
       int currOffset = 0;
       while (currOffset < len) {	
-	int buffLen = (len-currOffset > MAX_BUFFER_SIZE) ? 
-	              MAX_BUFFER_SIZE : 
+	int buffLen = (len-currOffset > MAX_PAYLOAD_SIZE) ? 
+	              MAX_PAYLOAD_SIZE : 
 	              (len-currOffset);
 
 	if (mCurrentQueueLength + buffLen > MAX_QUEUE_LENGTH) {
@@ -1073,10 +1120,74 @@ public:
 
   void receiveData( const void* buffer, uint64 offset, uint32 len ) {
     if (len > 0) {
-      sendAckPacket();
-      mReceivedSegments[offset] = 1;
-      printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
-      printf("Received Segment at offset = %d\n", (int) offset);      
+      printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
+
+      if (offset == mNextByteExpected) {
+        uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
+        if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
+	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
+	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
+          
+          uint32 readyBufferSize = len;
+
+	  for (uint i=len; i < MAX_RECEIVE_WINDOW; i++) {
+	    if (mReceiveBitmap[i] == 1) {
+	      readyBufferSize++;
+	    }
+	    else if (mReceiveBitmap[i] == 0) {
+	      break;
+	    }
+	  }
+
+	  //pass data up to the app from 0 to readyBufferSize;
+          //
+
+          printf("offset=%d, offsetInBuffer=%d, readyBufferSize=%d, mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset, (int)offsetInBuffer, (int)readyBufferSize, (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
+ 	  fflush(stdout);
+
+	  //now move the window forward...
+	  mLastContiguousByteReceived = mLastContiguousByteReceived + readyBufferSize;
+          mNextByteExpected = mLastContiguousByteReceived + 1;
+          mLastByteReceived = ( offset + len - 1 > mLastByteReceived ) ? offset+len -1 : mLastByteReceived;
+
+          memset(mReceiveBitmap, 0, readyBufferSize);
+          memmove(mReceiveBitmap, mReceiveBitmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
+
+	  memmove(mReceiveBuffer, mReceiveBuffer + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
+
+          sendAckPacket();
+          mReceivedSegments[offset] = 1;
+          printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
+          printf("Received Segment at offset = %d\n", (int) offset);
+
+          totalBytesRead += readyBufferSize;
+          printf("totalBytesRead=%d\n", totalBytesRead);
+	}
+        else {
+           //dont ack this packet.. its falling outside the receive window.
+        }
+      }
+      else {
+        mUnreadReceiveBuffers[offset] = len;
+
+        uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
+        
+        if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
+   	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
+	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
+
+          mLastByteReceived = ( offset+len-1  > mLastByteReceived ) ? offset + len - 1 : mLastByteReceived;
+
+          sendAckPacket();
+          mReceivedSegments[offset] = 1;
+          printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
+          printf("Received Segment at offset = %d\n", (int) offset);
+	}
+	else{
+	  //dont ack this packet; its falling outside the receive window.
+	}
+      }
+
     }
     else {
       boost::mutex::scoped_lock l(m_mutex);
@@ -1174,13 +1285,11 @@ private:
     std::string buffer = serializePBJMessage(sstMsg);
     mConnection->sendData(  buffer.data(), buffer.size());
   }
-
   
   uint32 mNumBytesSent;
 
   Stream<EndPointType>* mParentStream;
   Connection<EndPointType>* mConnection;
-  
 
   std::map<uint64, boost::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
 
@@ -1190,8 +1299,9 @@ private:
   USID mUSID;
   LSID mLSID;
 
-  uint16 MAX_BUFFER_SIZE;
+  uint16 MAX_PAYLOAD_SIZE;
   uint32 MAX_QUEUE_LENGTH;
+  uint32 MAX_RECEIVE_WINDOW;
 
   boost::mutex m_mutex;
 
@@ -1204,7 +1314,20 @@ private:
   bool mLooping;
 
   boost::asio::deadline_timer mRetransmitTimer;
-  
+
+  uint32 mTransmitWindowSize;
+  uint32 mReceiveWindowSize;
+
+  int64 mNextByteExpected;
+  int64 mLastContiguousByteReceived;
+  int64 mLastByteReceived;
+
+  uint8* mReceiveBuffer;
+  uint8* mReceiveBitmap;
+  std::map <int, int> mUnreadReceiveBuffers;   //map buffer offset to buffer length
+
+  //debugging counter
+  int totalBytesRead;
 };
 
 }
