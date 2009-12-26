@@ -16,11 +16,8 @@
 #include <sirikata/util/SerializationCheck.hpp>
 
 
-
 namespace CBR {
 class ServerIDMap;
-
-
 
 template <typename EndObjectType>
 class EndPoint {
@@ -29,7 +26,6 @@ public:
   uint16 port;
 
   EndPoint() {
-
   }
 
   EndPoint(EndObjectType endPoint, uint16 port) {
@@ -742,7 +738,8 @@ private:
       if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
 	 boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
 	                                        mIncomingSubstreamMap[incomingLsid];
-	 stream_ptr->receiveData( received_stream_msg->payload().data(),
+	 stream_ptr->receiveData( received_stream_msg,
+				  received_stream_msg->payload().data(),
 				  received_stream_msg->bsn(),
 				  received_stream_msg->payload().size()				  
 				  );
@@ -755,7 +752,8 @@ private:
       if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
 	 boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
 	                                        mIncomingSubstreamMap[incomingLsid];
-	 stream_ptr->receiveData( received_stream_msg->payload().data(),
+	 stream_ptr->receiveData( received_stream_msg,
+				  received_stream_msg->payload().data(),
 				  received_channel_msg->ack_sequence_number(),
 				  received_stream_msg->payload().size()				  
 				  );
@@ -898,9 +896,15 @@ public:
       boost::mutex::scoped_lock l(m_mutex);
 
       while ( !mQueuedBuffers.empty() ) {
+        boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
+
+        //printf("ioServicingLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
+
+
+        if (mTransmitWindowSize < buffer->mBufferLength) break;
+
         printf("ioServicingLoop enqueuing packets into send queue\n");
- 
-	boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
+
 
 	uint64 channelID = sendDataPacket(buffer->mBuffer, 
 					  buffer->mBufferLength,
@@ -913,6 +917,8 @@ public:
 	
 	mQueuedBuffers.pop_front();
         start_time = cur_time;
+
+	mTransmitWindowSize -= buffer->mBufferLength;
 
 	/*mRetransmitTimer.expires_from_now(boost::posix_time::milliseconds(100));
 	mRetransmitTimer.async_wait(boost::bind(&(Stream<EndPointType>::resendUnackedPackets), 
@@ -1118,13 +1124,22 @@ public:
 
   }
 
-  void receiveData( const void* buffer, uint64 offset, uint32 len ) {
+  void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
+		    const void* buffer, uint64 offset, uint32 len ) 
+  {
+    mTransmitWindowSize = pow(2, streamMsg->window());
+
+    printf("receiveData: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
+
     if (len > 0) {
       printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
+
 
       if (offset == mNextByteExpected) {
         uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
+	  mReceiveWindowSize -= len;
+
 	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
 	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
           
@@ -1155,6 +1170,8 @@ public:
 
 	  memmove(mReceiveBuffer, mReceiveBuffer + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
 
+	  mReceiveWindowSize += readyBufferSize;
+
           sendAckPacket();
           mReceivedSegments[offset] = 1;
           printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
@@ -1173,6 +1190,9 @@ public:
         uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
         
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
+          mReceiveWindowSize -= len;
+
+
    	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
 	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
 
@@ -1248,7 +1268,7 @@ private:
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
     sstMsg.set_flags(0);
-    sstMsg.set_window(1024);
+    sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
 
     std::string buffer = serializePBJMessage(sstMsg);
     mConnection->sendData(  buffer.data(), buffer.size());
@@ -1259,7 +1279,7 @@ private:
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.DATA);
     sstMsg.set_flags(0);
-    sstMsg.set_window(1024);
+    sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
     
     sstMsg.set_bsn(offset);
 
