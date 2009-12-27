@@ -187,6 +187,9 @@ TAB_SIZE               = 4
 # You can put \n's in the value part of an alias to insert newlines.
 
 ALIASES                = 
+ALIASES                += TODO="\todo"
+ALIASES                += fixme="\todo FIXME"
+ALIASES                += FIXME="\fixme"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C 
 # sources only. Doxygen will then generate output that is more tailored for C. 
@@ -540,12 +543,17 @@ INPUT =   doc \
           liboh/src \
           liboh/include/oh \
           \
-          liboh/plugins/ogre \
-          liboh/plugins/ogre/resourceManager \
-          liboh/plugins/ogre/meruCompat liboh/plugins/ogre/input \
-          liboh/plugins/bullet \
-          liboh/plugins/collada \
           liboh/plugins/monoscript \
+          \
+          libproxyobject/include/proxyobject \
+          libproxyobject/src \
+          \
+          libproxyobject/plugins/ogre \
+          libproxyobject/plugins/ogre/resourceManager \
+          libproxyobject/plugins/ogre/meruCompat \
+          libproxyobject/plugins/ogre/input \
+          libproxyobject/plugins/bullet \
+          libproxyobject/plugins/collada \
           \
           space/src \
           libspace/src \
@@ -575,13 +583,7 @@ INPUT =   doc \
           libcore/src/Protocol_MessageHeader.pbj.hpp \
           libcore/src/ObjectHost_Sirikata.pbj.hpp \
           libcore/src/ObjectHost_Subscription.pbj.hpp \
-          \
-          externals/berkelium/include/berkelium \
-          externals/berkelium/src \
-          \
-          externals/prox/libprox/include/prox \
-          \
-          externals/pbj \
+
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
