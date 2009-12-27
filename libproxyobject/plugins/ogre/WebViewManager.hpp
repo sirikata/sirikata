@@ -89,14 +89,15 @@ class WebViewManager : public Ogre::Singleton<WebViewManager>
 public:
 	/**
 	* Creates the WebViewManager singleton.
-	*
-	* @param	defaultViewport		The default Ogre::Viewport to place WebViews in. This can be overriden
-	*								per-WebView via the last parameter of WebViewManager::createWebView.
-	*
-	* @param	baseDirectory		The relative path to your base directory. This directory is used
-	*								by WebView::loadFile and WebView::loadHTML (to resolve relative URLs).
-	*
-	* @throws	Ogre::Exception::ERR_INTERNAL_ERROR		Throws this when LLMozLib fails initialization
+	* @param defaultViewport The default Ogre::Viewport to place WebViews
+	*                        in. This can be overriden per-WebView via the
+	*                        last parameter of
+	*                        WebViewManager::createWebView.
+	* @inputMgr input manager to gather input from
+	* @param baseDirectory The relative path to your base directory. This
+	*                      directory is used by WebView::loadFile and
+	*                      WebView::loadHTML (to resolve relative URLs).
+	* @throws Ogre::Exception::ERR_INTERNAL_ERROR When initialization fails
 	*/
     WebViewManager(Ogre::Viewport* defaultViewport, Input::InputManager* inputMgr = NULL, const std::string &baseDirectory = "WebViewLocal");
 
@@ -160,8 +161,7 @@ public:
 
 	/**
 	* Destroys a WebView.
-	*
-	* @param	webViewName	A pointer to the WebView to destroy.
+        * \param webViewToDestroy pointer to the WebView to be destroyed
 	*/
 	void destroyWebView(WebView* webViewToDestroy);
 

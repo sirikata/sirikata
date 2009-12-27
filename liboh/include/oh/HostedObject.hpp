@@ -240,7 +240,10 @@ public:
     }
 
     /** Handles a single RPC out of a received message.
-        @param msg  A ReceivedMessage struct with sender, message_name, and arguments.
+        @param msg  A ReceivedMessage struct with sender, message_name, and
+                    arguments.
+        @param name the name of the RPC to invoke
+        @param args the serialized RPC arguments
         @param returnValue  A serialized message indicating a return value.
                If NULL, no ID was passed, and no response will be sent.
                If non-NULL, a message is expected to be encoded, but the empty

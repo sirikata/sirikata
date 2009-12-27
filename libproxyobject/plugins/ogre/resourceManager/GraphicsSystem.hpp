@@ -92,6 +92,7 @@ namespace Meru {
     /** Create a graphics light for this specific Graphics system.
      *  \param parentProxyObject the VWObject that has state that the graphics light refers to.
      * \param name a unique name for this light.
+     * \param lightInfo the properties of the light
      * \returns the light
      */
     virtual GraphicsLight* createLight(WeakProxyPtr parentProxyObject, const String& name, const LightInfo &lightInfo) = 0;

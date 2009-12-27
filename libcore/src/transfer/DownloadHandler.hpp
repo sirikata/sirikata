@@ -67,6 +67,9 @@ public:
 	/** Downloads the given range of a file, and calls cb(data, success) upon
 	 * completion or failure.
 	 *
+         * @param ptrRef   Pointer to transfer which can be used to cancel the
+         *                 transfer.
+         * @param params   Map of URIContexts of services to try.
 	 * @param uri      The entire URI to download (from ServiceLookup).
 	 * @param bytes    What range to download. Currently this does not support
 	 *                 multiple byteranges in one request.
@@ -89,6 +92,9 @@ public:
 	 * out-of-order data. This may not make sense for some applications.
 	 * @see inOrderStream()
 	 *
+         * @param ptrRef   Pointer to transfer which can be used to cancel the
+         *                 transfer.
+         * @param params   Map of URIContexts of services to try.
 	 * @param uri      The entire URI to download (from ServiceLookup).
 	 * @param bytes    What range to download. Currently this does not support
 	 *                 multiple byteranges in one request.

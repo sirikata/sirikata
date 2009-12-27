@@ -36,7 +36,7 @@
 namespace Sirikata {
 /**
  * This class gives listeners an interface to register themselves and a mechanism to notify listeners
- * Users of this class should remember to notify new listeners 
+ * Users of this class should remember to notify new listeners
  */
 template <typename ListenerPtr> class Provider {
 protected:
@@ -56,7 +56,7 @@ protected:
    ///This function is called with the defunct listener just before the last listener is removed frmo the callbacks. Override for interesting behavior
     virtual void lastListenerRemoved(ListenerPtr ){}
     /**
-     *  This function notifies all listeners. Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners. Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      */
@@ -67,7 +67,7 @@ protected:
             ((&*mListeners[i])->*func)();
         }
     }    /**
-     *  This function notifies all listeners. Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners. Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the singular argument passed to func
@@ -80,7 +80,7 @@ protected:
         }
     }
     /**
-     *  This function notifies all listeners. Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners. Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the first argument passed to func
@@ -95,13 +95,13 @@ protected:
         }
     }
     /**
-     *  This function notifies all listeners. 
-     *  Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the first argument passed to func
      *  \param newB is the second argument passed to func
-     *  ...
+     *  \param newC is the third argument passed to func
      */
     template <typename T, typename A, typename B, typename C>
       void notify(T func, A newA, B newB, C newC){
@@ -112,15 +112,16 @@ protected:
         }
     }
     /**
-     *  This function notifies all listeners. 
-     *  Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the first argument passed to func
      *  \param newB is the second argument passed to func
-     *  ...
+     *  \param newC is the third argument passed to func
+     *  \param newD is the fourth argument passed to func
      */
-    template <typename T, typename A, typename B, typename C, typename D> 
+    template <typename T, typename A, typename B, typename C, typename D>
       void notify(T func, A newA, B newB, C newC, D newD){
         for (int32 i=(int32)mListeners.size()-1;
              i>=0&&i<(int32)mListeners.size();
@@ -129,15 +130,17 @@ protected:
         }
     }
     /**
-     *  This function notifies all listeners. 
-     *  Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the first argument passed to func
      *  \param newB is the second argument passed to func
-     *  ...
+     *  \param newC is the third argument passed to func
+     *  \param newD is the fourth argument passed to func
+     *  \param newE is the fifth argument passed to func
      */
-    template <typename T, typename A, typename B, typename C, typename D, typename E> 
+    template <typename T, typename A, typename B, typename C, typename D, typename E>
       void notify(T func, A newA, B newB, C newC, D newD, E newE){
         for (int32 i=(int32)mListeners.size()-1;
              i>=0&&i<(int32)mListeners.size();
@@ -146,15 +149,18 @@ protected:
         }
     }
     /**
-     *  This function notifies all listeners. 
-     *  Listeners may add other listeners or remove themselves, 
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the first argument passed to func
      *  \param newB is the second argument passed to func
-     *  ...
+     *  \param newC is the third argument passed to func
+     *  \param newD is the fourth argument passed to func
+     *  \param newE is the fifth argument passed to func
+     *  \param newF is the sixth argument passed to func
      */
-    template <typename T, typename A, typename B, typename C, typename D, typename E, typename F> 
+    template <typename T, typename A, typename B, typename C, typename D, typename E, typename F>
       void notify(T func, A newA, B newB, C newC, D newD, E newE, F newF){
         for (int32 i=(int32)mListeners.size()-1;
              i>=0&&i<(int32)mListeners.size();
@@ -194,7 +200,7 @@ public:
                 mListenerIndex[mListeners.back()]=where->second;
                 mListeners[where->second]=mListeners.back();
             }
-            mListeners.resize(mListeners.size()-1);                
+            mListeners.resize(mListeners.size()-1);
             mListenerIndex.erase(where);
         }else {
             this->lastListenerRemoved(p);
@@ -206,7 +212,7 @@ public:
 };
 
 /**
- * The MarkovianProvider1 provides the Provider interface 
+ * The MarkovianProvider1 provides the Provider interface
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 1 argument
  */
@@ -233,7 +239,7 @@ public:
 };
 
 /**
- * The MarkovianProvider2 provides the Provider interface 
+ * The MarkovianProvider2 provides the Provider interface
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 2 arguments
  */
@@ -262,7 +268,7 @@ public:
 };
 
 /**
- * The MarkovianProvider3 provides the Provider interface 
+ * The MarkovianProvider3 provides the Provider interface
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 3 arguments
  */
@@ -293,7 +299,7 @@ public:
 };
 
 /**
- * The MarkovianProvider4 provides the Provider interface 
+ * The MarkovianProvider4 provides the Provider interface
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 4 arguments
  */
@@ -325,11 +331,11 @@ public:
     }
 };
 /**
- * The MarkovianProvider5 provides the Provider interface 
+ * The MarkovianProvider5 provides the Provider interface
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 5 arguments
  */
-template<typename ListenerPtr, class A, class B, class C, class D, class E> 
+template<typename ListenerPtr, class A, class B, class C, class D, class E>
  class MarkovianProvider5:public Provider<ListenerPtr> {
     A mA;
     B mB;
@@ -361,11 +367,11 @@ public:
 };
 
 /**
- * The MarkovianProvider6 provides the Provider interface 
+ * The MarkovianProvider6 provides the Provider interface
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 6 arguments
  */
-template<typename ListenerPtr, class A, class B, class C, class D, class E, class F> 
+template<typename ListenerPtr, class A, class B, class C, class D, class E, class F>
  class MarkovianProvider6:public Provider<ListenerPtr> {
     A mA;
     B mB;

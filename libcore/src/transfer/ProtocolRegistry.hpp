@@ -87,7 +87,9 @@ public:
 	 *
 	 * Warning: NOT THREAD SAFE! Call this only at the beginning of the application.
 	 *
-	 * @param proto   A string, without a colon (e.g. "http")
+	 * @param proto   A protocol type as a string without a colon (e.g. "http")
+	 * @param mappedproto The protocol to map it to, as a string, without a
+	 *                    colon (e.g. "http")
 	 * @param handler A shared_ptr to a descendent of ProtocolType. It is legal to register
 	 *                the same instance for multiple protocols ("http" and "ftp").
 	 */

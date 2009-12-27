@@ -52,9 +52,9 @@ public:
     static MinitransactionHandler* createMinitransactionHandler(const String& pl);
     virtual ~SQLiteObjectStorage();
 
-    
+
     virtual void destroyResponse(Persistence::Protocol::Response*);
-    
+
     virtual Persistence::Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys);
     virtual void applyInternal(const RoutableMessageHeader&rmh,Protocol::Minitransaction*, void(*minitransactionDestruction)(Protocol::Minitransaction*));
     virtual void applyInternal(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*,void(*)(Protocol::ReadWriteSet*));
@@ -96,7 +96,7 @@ private:
         ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const RoutableMessageHeader&hdr,void (*mDestroyReadWrite)(Protocol::ReadWriteSet*));
         void operator()();
     };
-    
+
     /** Worker method which will be executed in another thread to perform the
      *  application of the Minitransaction.
      */
@@ -164,6 +164,7 @@ private:
      *  has been started.
      *  \param db the database connection
      *  \param rs the ReadSet
+     *  \param retval output response from the operation.
      *  \returns an error code or None if there was no error
      */
     template <class ReadSet> Error applyReadSet(const SQLiteDBPtr& db, const ReadSet& rs, Protocol::Response&retval);

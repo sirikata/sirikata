@@ -49,8 +49,9 @@ typedef SHA256 Fingerprint;
  * URI constructor, and it will compute a new URI based on relative
  * or absolute paths.
  *
- * Does not handle query strings (?param1&param2...) or anchors (#someanchor)
- * although, those would also be forms of relative URIs.*/
+ * Does not handle query strings (?param1&param2...) or anchors (\#someanchor)
+ * although, those would also be forms of relative URIs.
+ */
 class URIContext {
 	friend class URI;
 
@@ -406,7 +407,7 @@ public:
 	 *
 	 * @param parentContext  A URIContext to base relative paths from--
 	 *           this may be the default constructor.
-	 * @param uri   A relative or absolute URI.
+	 * @param url   A relative or absolute URI.
 	 */
 	URI(const URIContext &parentContext, const std::string &url)
 			: mContext(parentContext) {
@@ -416,7 +417,7 @@ public:
 	/** Constructs an absolute URI. To be used when the security
 	 * implications of relative URIs are not clear.
 	 *
-	 * @param uri   An absolute URI.
+	 * @param url   An absolute URI.
 	 */
 	explicit URI(const char *url) {
 		findSlash(url);
@@ -425,7 +426,7 @@ public:
 	/** Constructs an absolute URI. To be used when the security
 	 * implications of relative URIs are not clear.
 	 *
-	 * @param uri   An absolute URI.
+	 * @param url   An absolute URI.
 	 */
 	explicit URI(const std::string &url) {
 		findSlash(url);

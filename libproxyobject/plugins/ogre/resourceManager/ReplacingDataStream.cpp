@@ -267,7 +267,7 @@ void ReplacingDataStream::replace_reference(Ogre::String&retval, const Ogre::Str
           pwhere=return_lexeme_end;
       }
 }
-void ReplacingDataStream::replace_texture_reference(Ogre::String&retval, const Ogre::String&input, Ogre::String::size_type&pwhere,Ogre::String::const_iterator second_input, bool texture_instead_of_source,const Ogre::String&filename) {
+void ReplacingDataStream::replace_texture_reference(Ogre::String&retval, const Ogre::String&input, Ogre::String::size_type&pwhere,Ogre::String::const_iterator second_input, bool texture_instead_of_source, const Ogre::String&filename) {
   if (mTextureAliases) {
     Ogre::String::size_type lexeme_start=second_input-input.begin(),return_lexeme_end;
     find_lexeme(input,lexeme_start,return_lexeme_end);

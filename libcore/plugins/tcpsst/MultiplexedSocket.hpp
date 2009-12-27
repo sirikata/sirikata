@@ -252,11 +252,26 @@ public:
         connectionFailureOrSuccessCallback(CONNECTED,Stream::Connected);
     }
     void unpauseSendStreams(const std::vector<Stream::StreamID>&toUnpause);
-/**
- *  Connect a newly constructed MultiplexedSocket to a given address
- * \param address is a protocol-agnostic string of endpoint and service ID
- * \param numSockets indicates how many TCP sockets should manage the orderlessness of this connection
- */
+
+    /**
+     *  Connect a newly constructed MultiplexedSocket to a given address
+     * \param address is a protocol-agnostic string of endpoint and service ID
+     * \param numSockets indicates how many TCP sockets should manage the
+     *        orderlessness of this connection
+     * \param maxEnqueuedSendSize the maximum number of enqueued bytes for
+     *        sending that have not been committed to the underlying network
+     *        implementation.
+     * \param noDelay if true, disables Nagle's algorithm on the underling
+     *        sockets.
+     * \param kernelSendBufferSize the size of the buffer allocated for
+     *        sending data in the underlying networking implementation. Note
+     *        that this is additional space on top of that allocated by this
+     *        library.
+     * \param kernelReceiveBufferSize the size of the buffer allocated for
+     *        receiving data in the underlying networking implementation. Note
+     *        that this is additional space on top of that allocated by this
+     *        library.
+     */
     void connect(const Address&address, unsigned int numSockets, size_t maxEnqueuedSendSize, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
 /**

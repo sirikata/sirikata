@@ -95,7 +95,7 @@ encode_public_tok (const guchar *token, gint32 len)
 
 /*
  * mono_assembly_name_free:
- * @aname: assembly name to free
+ * @param aname assembly name to free
  *
  */
 void
@@ -333,13 +333,13 @@ mono_assembly_name_parse_full (const char *name, MonoAssemblyName *aname, gboole
 
 /**
  * mono_assembly_name_parse:
- * @name: name to parse
- * @aname: the destination assembly name
+ * @param name name to parse
+ * @param aname the destination assembly name
  *
  * Parses an assembly qualified type name and assigns the name,
  * version, culture and token to the provided assembly name object.
  *
- * Returns: true if the name could be parsed.
+ * @returns true if the name could be parsed.
  */
 gboolean
 mono_assembly_name_parse (const char *name, MonoAssemblyName *aname)

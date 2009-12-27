@@ -207,21 +207,27 @@ public:
 	 * the path of the resulting URI.
 	 *
 	 * Example: meerkat://tux@/ => http://namelookup.com/~tux/dns/
-	 * In addition, meerkat://tux@someserver/ => http://someserver/~tux/dns/
+	 * In addition, meerkat://tux\@someserver/ => http://someserver/~tux/dns/
 	 *
 	 * There could be a wide variety of returned URIs--basically it depends
 	 * on the format of the underlying protocol...
 	 *
 	 * @param context  The SURI Context to lookup.
-     * @param merge    Parts of the URI to append.
 	 * @param cb       A callback to be called. Most lookups will be synchronous.
-     * @param retry    Pointer to the original ServiceLookup if we need to retry.
 	 *
 	 * Default lookup function does nothing except try the next lookup method.
 	 */
 	void lookupService(const URIContext &context, const Callback &cb) {
 		doLookupService(context, std::string(), cb, this);
 	}
+
+    /** Worker for lookupService().
+     *
+     * @param context  The SURI Context to lookup.
+     * @param merge    Parts of the URI to append.
+     * @param cb       A callback to be called. Most lookups will be synchronous.
+     * @param retry    Pointer to the original ServiceLookup if we need to retry.
+     */
 	virtual void doLookupService(const URIContext &context, const std::string &merge, const Callback &cb, ServiceLookup *retry) {
 		if (mNext) {
 			mNext->doLookupService(context, merge, cb, retry);

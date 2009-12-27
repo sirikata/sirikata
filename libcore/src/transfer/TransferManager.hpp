@@ -286,7 +286,12 @@ public:
 	}
 	/** Like the other uploadByHash() function, but computes the hash.
 	 *
-	 * @param hashContext  The URIContext to upload the hash to (e.g. "mhash:")
+	 * @param hashContext  The URIContext to upload the hash to
+	 * (e.g. "mhash:")
+         * @param toUpload     The dense data to upload
+         * @param listener     A listener to receive the UploadEvent.
+         * @param forceIfExists Upload the data even if the file already exists
+	 *        on all known CDN services.
 	 */
 	inline void uploadByHash(const URIContext &hashContext,
 			const DenseDataPtr &toUpload,

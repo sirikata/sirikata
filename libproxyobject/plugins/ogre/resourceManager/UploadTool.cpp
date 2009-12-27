@@ -211,7 +211,7 @@ String stripquotes(String s) {
 }
 /**
  * This fuction finds the name of a file in a directory
- * \param input is the full path of the file
+ * \param inputdp is the full path of the file
  * \returns everything past the last slash if such a slash exists
  */
 String stripslashes (DiskFile inputdp) {
@@ -252,7 +252,7 @@ class ReplaceMaterialOptionsAndReturn :public ReplaceMaterialOptions {public:
 
 /**
  * This function takes in
- * \param usernameAndServer the input to serverHit, email address form of foo@bar.com
+ * \param usernameAndServer the input to serverHit, email address form of foo\@bar.com
  * \param name the filename to be uploaded to the server
  * \param hash the hash of the file to be uploaded and set to the third level name
  * this function will need to be updated to work in conjunction with a file write
@@ -333,7 +333,7 @@ static const Ogre::NameValuePairList nvpl;
 
 /**
  * This function determines whether a first level name should be used for a given asset
- * \param texturename is the filename of the texture file, not including the full path
+ * \param textureName is the filename of the texture file, not including the full path
  * \param input is the entire script where this texture was discovered in a material script
  * \param pwhere is currently unused but contains the location in the input where the texture file itself was found
  * \param second_input is the location in the script after this texture file was discovered
@@ -621,7 +621,7 @@ public:
      * \param where_lexeme_start is passed from ReplacingDataStream as where the current material name was discovered
      * \param return_lexeme_end is returned from this function after find_lexeme is run to tear out the material name
      * \param filename is the name of the current material which is not used in this context
-     * \returns the new name of the material For example if the input was Foo which lives in file meru://foo@bar/baz then the output would be "meru://foo@bar/baz:Foo"
+     * \returns the new name of the material For example if the input was Foo which lives in file meru://foo\@bar/baz then the output would be "meru://foo\@bar/baz:Foo"
      */
   virtual Ogre::String full_replace_lexeme(const Ogre::String &input,
                                            Ogre::String::size_type where_lexeme_start,
@@ -681,7 +681,6 @@ static std::string cutoff;
  * This function opens a file from disk and returns the data within that file
  * it is currently a convenience method but later it will need to handle ogre resource streams
  * \param name is the filename
- * \param len returns the length of the file
  * \returns data malloced to size len filled with the file's contents
  */
 DenseDataPtr getHashFileData(const DiskFile& name) {
@@ -739,15 +738,16 @@ void processFileDependency(ResourceFileUploadData *file,FileMap &filemap, const 
  * This function replaces one dependencies referenced within a file to that dependency's CDN name and in doing so begins to build a list of dependencies this file has for future use
  * This function must be called in dependency order per file (so the files with least dependencies get called first
  * This function then replaces all references to dependent files with the appropriate hash or mangling of those names
- * \param data is the content of the file (the entire file is stored in the data variable
- * \param src is the name as it would appear in this file, whether or not it is binary
+ * \param dataptr is the content of the file (the entire file is stored in the data variable
+ * \param src is the name as it would appear in this file, whether or not it is
+ *            binary
+ * \param strippedsrc
  * \param dst is the name that src name should be replaced with if it is found in the file
  * \param filemap the map of other files that are available to be processed to their hash or high level names. This may modify that map
- * \param materialmap the set of other ogre materials (not scripts, materials within those scripts paired with those respective materials disk filename and third level names
- * \param overarching_dependencies a map from file names to those datafiles' dependencies (be they materials/scripts or texture/source files) This may modify that list due to recursive processing
- * \param firstLevelTextures is a list of textures that must be first level due to their not being tileable (as set by the RecordingDependencyDataStream)
- * \param my_dependencies is the list of dependencies that this current file depends on...this is one of the return values of this function
- * \param username is the list of options that are passed in by the caller of this entire library
+ * \param materialmap the set of other ogre materials (not scripts, materials
+ *                    within those scripts paired with those respective
+ *                    materials disk filename and third level names
+ * \param opts material replacement options
  * \param do_stripslashes is whether the \param src file being passed in may be referenced without a path (due to ogre naming conventions)
  * \param allow_binary is whether this particular file is binary so that dependencies are known to need to replace the length value before the data aspect
  */

@@ -86,6 +86,7 @@ public:
 	 * appropriate set of entries using CachePolicy::allocateSpace().
 	 *
 	 * @param required  The space required for the new entry.
+         * @param writer    Write iterator used to process deletions.
 	 * @returns         if the allocation was successful,
 	 *                  or false if the entry is not to be cached.
 	 */
@@ -280,7 +281,6 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		 * @note  Make sure to call update(totalSize) with the new size.
 		 *
 		 * @param id      The Fingerprint to insert under (or search for).
-		 * @param member  A CacheInfo to insert -- usually the default constructor.
 		 * @param size    The amount of space reserved for this entry--used
 		 *                only if the entry did not exist before.
 		 * @returns       If this element was actually inserted.

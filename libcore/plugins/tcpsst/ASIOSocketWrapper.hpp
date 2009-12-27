@@ -219,7 +219,12 @@ public:
     void destroySocket();
     /**
      * Sends the exact bytes contained within the typedeffed vector
-     * \param chunk is the exact bytes to put on the network (including streamID and framing data)
+     * \param parentMultiSocket the parent multisocket object this socket
+     *                          belongs to
+     * \param chunk is the exact bytes to put on the network (including streamID
+     *              and framing data)
+     * \param force if true, force the data to be enqueued even if the queue
+     *              policy indicates no more space is available.
      */
     bool rawSend(const MultiplexedSocketPtr&parentMultiSocket, Chunk * chunk, bool force);
     bool canSend(size_t dataSize)const;

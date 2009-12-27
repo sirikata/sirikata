@@ -142,10 +142,10 @@ public:
 
 	/** NameLookupManager constructor.
 	 *
-	 * @param nameProtocols  The NameLookupHandler protocol registry to be used.
-	 * @param downloadProto  If non-null, and a mhash://.../ URI is passed into lookupHash, the
-	 *                       input uri will be cast to a RemoteFileId and returned.
-	 *                       If null, lookupHash returns a NULL RemoteFileId if this is not a named URI.
+         * @param nameServ       The name service manager which maps protocols
+         *                       to handlers.
+         * @param downloadServ   The download service manager which maps
+         *                       protocols to handlers.
 	 */
 	NameLookupManager(ServiceManager<NameLookupHandler> *nameServ, ServiceManager<DownloadHandler> *downloadServ=NULL)
 			: mNameServ(nameServ), mDownloadServ(downloadServ) {

@@ -65,14 +65,15 @@ public:
 	 */
 	typedef std::tr1::function<void(bool success)> Callback;
 
-	/** Downloads the given range of a file, and calls cb(data, success) upon
-	 * completion or failure.
+	/** Upload a file asynchronously and invoke a callback upon completion.
 	 *
-	 * @param uri      The entire URI to download (from ServiceLookup).
-	 * @param bytes    What range to download. Currently this does not support
-	 *                 multiple byteranges in one request.
-	 * @param cb       The callback to be called when the download has completed.
-	 *                 FIXME: 'data' may be non-null even if 'success' is false.
+         * @param ptrRef   A pointer to a transfer data, which will allow the
+         *                 transfer to be cancelled.
+         * @param params   Parameters to control the upload.
+	 * @param uri      The entire URI to upload (from ServiceLookup).
+         * @param contents A pointer to the data to be uploaded.
+	 * @param cb       The callback to be called when the upload has
+         *                 completed or failed.
 	 */
 	virtual void upload(TransferDataPtr *ptrRef,
 			const ServiceParams &params,

@@ -98,7 +98,7 @@ namespace Graphics {
 		/**
 		* Evaluates Javascript in the context of the current page.
 		*
-		* @param	script	The Javascript to evaluate/execute.
+		* @param javascript The Javascript to evaluate/execute.
 		*/
 		void evaluateJS(const std::string& javascript);
 
@@ -137,9 +137,8 @@ namespace Graphics {
 		* disable this behavior or redefine the 'transparent' threshold of opacity to something else other
 		* than 5%.
 		*
-		* @param	ignoreTrans		Whether or not this WebView should ignore 'transparent' areas when mouse-picking.
-		*
-		* @param	defineThreshold		Areas with opacity less than this percent will be ignored
+		* @param ignoreTrans Whether or not this WebView should ignore 'transparent' areas when mouse-picking.
+		* @param threshold Areas with opacity less than this percent will be ignored
 		*								(if ignoreTrans is true, of course). Default is 5% (0.05).
 		*/
 		void setIgnoreTransparent(bool ignoreTrans, float threshold = 0.05);
@@ -238,10 +237,8 @@ namespace Graphics {
 
 		/**
 		* Transforms a Y-coordinate in screen-space to that of this WebView's relative space.
-		*
-		* @param	absX	The Y-coordinate in screen-space to transform.
-		*
-		* @return	The Y-coordinate in this WebView's relative space.
+		* @param absY The Y-coordinate in screen-space to transform.
+		* @return The Y-coordinate in this WebView's relative space.
 		*/
 		int getRelativeY(int absY);
 
@@ -304,7 +301,8 @@ namespace Graphics {
 		/**
 		* Injects mouse wheel events into this WebView.
 		*
-		* @param	relScroll	The relative Scroll-Value of the mouse.
+		* @param scrollX scroll distance on X axis
+                * @param scrollY scroll distance on Y axis
 		*/
 		void injectMouseWheel(int scrollX, int scrollY);
 

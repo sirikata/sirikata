@@ -60,7 +60,7 @@ class ResourceManager:public ManualSingleton<ResourceManager> {
 
 public:
     /** Initializes the ResourceManager and starts CacheLevel threads if necessary
-     * \param lvl is the complete specification of this resource manager's cache hierarchy
+     *  \param transfermanager parent TransferManager to use
      */
     ResourceManager(::Sirikata::Transfer::TransferManager *transfermanager);
 
@@ -73,6 +73,7 @@ public:
      * \param resource_id is the string with a URI for the resource
      * In the event that the name is already in a cache or contained in the URI
      * \param result is where it will return the ResourceHash to be downloaded.
+     * \param callback callback to invoke when the lookup is complete
      * \returns true if result is in memory
      */
     bool nameLookup(const URI &resource_id, ResourceHash&result, std::tr1::function<void(const URI&,const ResourceHash*)> callback);
@@ -99,7 +100,7 @@ public:
      *
      *  \param rid the ResourceID of the resource to be downloaded
      *  \param cb Callback containing the Download Event.
-     *  \param range,
+     *  \param range subset of resource to request
      */
     SubscriptionId request (
         const RemoteFileId &rid,

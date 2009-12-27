@@ -171,7 +171,7 @@ public:
 	 * Query this cache layer.  If successful, call callback with the data and also
 	 * call populateCache in order to populate the previous cache levels.
 	 *
-	 * @param uri         A unique identifier corresponding to the file (contains a hash).
+	 * @param fid         A unique identifier corresponding to the file (contains a hash).
 	 * @param requestedRange A Range object specifying a single range that you need.
 	 * @param callback       To be called with the data if successful, or NULL if failed.
 	 * @return          false, if the callback happened synchronously (i.e. in memory cache)

@@ -62,7 +62,7 @@ private:
 	std::string mURIString;
 	std::string mRangeString;
 	std::vector<std::string> mHeaderStorage;
-	
+
 	Range mRequestedRange;
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
@@ -164,7 +164,7 @@ public:
 	inline const Range &getRange() const {return mRequestedRange;}
 
 	/** Returns the length of the file as it exists on the server,
-	 even if the request we sent was a HEAD or contained a Range. 
+	 even if the request we sent was a HEAD or contained a Range.
 	This function may return 0, indicating that the full length is unknown. */
 	inline Range::length_type getFullLength() const { return mFullFilesizeOnServer; }
 
@@ -212,7 +212,7 @@ public:
 	 *                   Note: The form field should end with "[]"
 	 * @param uploadData  A SparseData that represents the file.
 	 *                    Any non-contiguous chunks will be filled with 0's.
-	 * @param filename   The name of the file to be uploaded.
+         * @param contentType Mimetype of this data.
 	 */
 	void addPOSTArray(const std::string &fieldname,
 			const std::vector<std::pair<std::string, DenseDataPtr> > &uploadData,
@@ -228,6 +228,7 @@ public:
 	 * @param filename   The name of the file to be uploaded.
 	 * @param uploadData  A SparseData that represents the file.
 	 *                    Any non-contiguous chunks will be filled with 0's.
+         * @param contentType Mimetype of this data.
 	 */
 	void addPOSTData(const std::string &fieldname,
 			const std::string &filename,
@@ -263,16 +264,22 @@ public:
 	 */
 	void setSimplePOSTString(const std::string &postString);
 
-	/** Note: you are responsible for checking the protocol
+	/** Add a header to this request.
+         * Note: you are responsible for checking the protocol
 	 * and using HTTP headers in the case of http, and valid FTP
 	 * commands in the case of FTP. Not doing so may cause a security bug.
+         *
+         * @param header The string form of the header to add to the
+         *               request. The user should verify that the header is
+         *               appropriate for the request type (e.g. HTTP, FTP,
+         *               etc).
 	 */
 	void addHeader(const std::string &header);
 
 	/**
 	 *  Executes the query.
 	 *
-	 *  @param holdreference If this object was constructed with a shared_ptr,
+	 *  @param holdReference If this object was constructed with a shared_ptr,
 	 *      which it should have been, pass that pointer into holdReference.
 	 *      If you intend to manage memory yourself (this is dangerous), it
 	 *      is wise to pass NULL here.

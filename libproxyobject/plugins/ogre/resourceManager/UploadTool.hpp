@@ -184,17 +184,15 @@ Fingerprint processFileDependency(std::map<String,Fingerprint,SpecialStringSort>
  * \param data is the content of the file (the entire file is stored in the data variable
  * \param filemap the map of other files that are available to be processed to their hash or high level names. This may modify that map
  * \param materialmap the set of other ogre materials (not scripts, materials within those scripts paired with those respective materials disk filename and third level names
- * \param overarching_dependencies a map from file names to those datafiles' dependencies (be they materials/scripts or texture/source files) This may modify that list due to recursive processing
- * \param firstLevelTextures is a list of textures that must be first level due to their not being tileable (as set by the RecordingDependencyDataStream)
  * \param my_dependencies is the list of dependencies that this current file depends on...this is one of the return values of this function
- * \param OptionsAndOutput is the list of options that are passed in by the caller of this entire library. This tool will return all materials to be written in the OptionsAndOutput varialbe
+ * \param opts is the list of options that are passed in by the caller of this entire library. This tool will return all materials to be written in the OptionsAndOutput varialbe
  * \param allow_binary is whether this particular file is binary so that dependencies are known to need to replace the length value before the data aspect
  */
 void replaceAll(DenseDataPtr &data, FileMap &filemap, const MaterialMap&materialmap, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &opts,bool allow_binary);
 /**
  * This function takes in
  * \param filenames the list of file names on the hard disk to be uploaded
- * \param opts a set of options (what the username is, etc)
+ * \param options a set of options (what the username is, etc)
  * \returns a list of files to be uploaded, including their hashes and filenames and data contents These files will have been properly modified to include direct references to
  * hashes of other files passed in as well as 3rd level names where appropriate.  Users can pass in lists of exclusions in the ReplaceMaterialOptions
  */

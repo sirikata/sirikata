@@ -54,9 +54,11 @@ private:
 
 public:
     /** Constructs a QueryTracker.
-     @param timerService  An IOService instance for creating timeouts.
-     If timerService is NULL, timeouts will not be honored.
-    */
+     *
+     *  @param timerService  An IOService instance for creating timeouts. If
+     *                       NULL, timeouts will not be honored.
+     *  @param forwarder     A message service to forward messages to.
+     */
     explicit QueryTracker(Network::IOService *timerService, MessageService *forwarder=NULL) {
         mNextQueryId = 0;
         mIOService = timerService;
@@ -103,4 +105,3 @@ public:
 }
 
 #endif
-

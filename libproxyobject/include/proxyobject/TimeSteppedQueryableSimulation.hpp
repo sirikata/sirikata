@@ -47,6 +47,8 @@ public:
      * Query the scene to look for the first active simulation object that intersects the ray
      * @param position the starting point for the ray query
      * @param direction the normalized direction which the ray continues at
+     * @param maxDistance maximum distance to consider hits
+     * @param ignore an object to ignore hits from
      * @param returnDistance is the length down the ray which hits the object
      * @param returnNormal is the normal of the surface which the ray pierces
      * @param returnName is the space object reference of the object that is pierced

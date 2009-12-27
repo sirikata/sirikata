@@ -173,7 +173,7 @@ public:
     virtual Stream* clone(const SubstreamCallback&cb)=0;
     /** Create a new substream backed by the same connection as this stream.
      *  \param connectionCallback callback to invoke on connection events
-     *  \param receivedCallback callback to invoke when messages are received
+     *  \param chunkReceivedCallback callback to invoke when messages are received
      *  \param readySendCallback callback to invoke when the Stream is ready to accept more data to send
      *  \returns a new Stream, or NULL if the Stream cannot be created
      */

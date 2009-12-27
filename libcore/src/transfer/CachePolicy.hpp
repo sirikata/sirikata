@@ -90,6 +90,7 @@ public:
 	 *  Marks the entry as used
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
+         *  @param size  The size of the file data.
 	 */
 	virtual void use(const Fingerprint &id, Data* data, cache_usize_type size) = 0;
 
@@ -97,7 +98,8 @@ public:
 	 *  Marks the entry as used, and update the space usage
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
-	 *  @param size  The amount of space actually used for this element.
+	 *  @param oldsize The previous size of the data.
+	 *  @param newsize The new size of the data.
 	 */
 	virtual void useAndUpdate(const Fingerprint &id, Data* data, cache_usize_type oldsize, cache_usize_type newsize) = 0;
 
@@ -106,6 +108,7 @@ public:
 	 *
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
+         *  @param size  The size of the file data.
 	 */
 	virtual void destroy(const Fingerprint &id, Data* data, cache_usize_type size) = 0;
 
@@ -125,8 +128,6 @@ public:
 	 *  Allocates a certain number of bytes for use in a new cache entry.
 	 *
 	 *  @param requiredSpace  the amount of space this single entry needs
-	 *  @param iter           A locked CacheMap::write_iterator
-	 *                        (to use to delete large entries)
 	 *  @returns              whether the space could be allocated
 	 */
 	virtual bool cachable(cache_usize_type requiredSpace) {

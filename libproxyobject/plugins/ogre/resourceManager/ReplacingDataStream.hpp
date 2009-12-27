@@ -42,8 +42,8 @@ namespace Meru {
  * Currently does the simple thing by reading the entire document as
  * a string whenever data is requested. This is what the parser down
  * the line does anyway in current ogre so it's not an efficiency issue
- * This class may be inherited and replaceData overwritten 
- * but the default implementation of replaceData works appropriately 
+ * This class may be inherited and replaceData overwritten
+ * but the default implementation of replaceData works appropriately
  * for the meru file naming conventions for ogre materials.
  */
 class ReplacingDataStream : public Ogre::DataStream{
@@ -77,42 +77,43 @@ protected:
      * \param input is passed from ReplacingDataStream as the entire data
      * \param pwhere is the location where the material was discovered and may be shifted to where the next input should be read if something is returned in retval
      * \param second_input is passed from ReplacingDataStream as where the current source or texture file name was discovered
+     * \param texture_instead_of_source currently unused
      * \param filename is the name of the current script which is not used in this context
      */
   virtual void replace_texture_reference(Ogre::String&retval, const Ogre::String&input, Ogre::String::size_type&pwhere,Ogre::String::const_iterator second_input, bool texture_instead_of_source,const Ogre::String&filename);
     /**
      * This function gets a callback from the ReplacingDataStream whenever a material name depended-on is encountered
      * it uses this callback to replace internal material references with the now-known corresponding hash or third level name
-     * Thusly a if a material meru://foo@bar/baz defined program Foo and used it here then it would transform Foo into meru://foo@bar/baz:Foo
+     * Thusly a if a material meru://foo\@bar/baz defined program Foo and used it here then it would transform Foo into meru://foo\@bar/baz:Foo
      * \param input is passed from ReplacingDataStream as the entire data
      * \param where_lexeme_start is passed from ReplacingDataStream as where the current material name was discovered
      * \param return_lexeme_end is returned from this function after find_lexeme is run to tear out the material name
      * \param filename is the name of the current material which is not used in this context
      */
-  virtual Ogre::String full_replace_lexeme(const Ogre::String &input, 
+  virtual Ogre::String full_replace_lexeme(const Ogre::String &input,
                                    Ogre::String::size_type where_lexeme_start,
                                    Ogre::String::size_type &return_lexeme_end,
                                    const Ogre::String &filename);
     /**
      * This function gets a callback from the ReplacingDataStream whenever a material name that the material provides is encountered
-     * it uses this callback to replace the provided material with a mangling such that      
-     * if a material meru://foo@bar/baz defined program Foo and used it later then it would transform Foo into meru://foo@bar/baz:Foo
+     * it uses this callback to replace the provided material with a mangling such that
+     * if a material meru://foo\@bar/baz defined program Foo and used it later then it would transform Foo into meru://foo\@bar/baz:Foo
      * \param input is passed from ReplacingDataStream as the entire data
      * \param where_lexeme_start is passed from ReplacingDataStream as where the current material name was discovered
      * \param return_lexeme_end is returned from this function after find_lexeme is run to tear out the material when replacing it name
      * \param filename is the name of the current script which is not used in this context
      */
-  
-  virtual Ogre::String replace_lexeme(const Ogre::String &input, 
+
+  virtual Ogre::String replace_lexeme(const Ogre::String &input,
                               Ogre::String::size_type where_lexeme_start,
                               Ogre::String::size_type &return_lexeme_end,
                               const Ogre::String &filename);
-  
+
 
 protected:
 /**
- * Replaces items after 
- * Naming-type tokens with the DataStream filename and __ 
+ * Replaces items after
+ * Naming-type tokens with the DataStream filename and __
  * and it replaces references to those likewise.
  * file 0xbadf00d with material hair is transformed as follows:
  * vertex_program swirl cg { }
@@ -150,4 +151,3 @@ public:
 }
 
 #endif //_REPLACING_DATA_STREAM_HPP_
-

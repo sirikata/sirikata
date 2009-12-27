@@ -185,7 +185,7 @@ public:
     Object Vector3(const Sirikata::Vector3d& vec);
 
     /** Create a Mono Color that belongs to this Domain.
-     *  \param vec the Color to copy
+     *  \param color the Color to copy
      */
     Object Color(const Sirikata::Vector4f& color);
 
