@@ -33,7 +33,7 @@
 #include "DistributedCoordinateSegmentation.hpp"
 #include "WorldPopulationBSPTree.hpp"
 #include "Options.hpp"
-
+#include <boost/tokenizer.hpp>
 
 namespace CBR {
 
