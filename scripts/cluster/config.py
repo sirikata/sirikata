@@ -39,6 +39,7 @@ def parse_bool(opt):
 class ClusterConfig:
     def __init__(self):
         #default values
+        self.headnode="meru@meru00.stanford.edu"
         self.nodes = []
         self.deploy_nodes = []
         self.code_dir = "cbr"

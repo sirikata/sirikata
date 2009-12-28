@@ -18,8 +18,8 @@ import threading
 import os
 import time
 from config import ClusterConfig
-
-
+#xforward='-Y'
+xforward='-T'
 class NodeMonitorThread(threading.Thread):
     def __init__(self, node, sp):
         threading.Thread.__init__(self)
@@ -81,12 +81,15 @@ def ClusterRun(cc, command):
     mts = []
     for node in cc.nodes:
         node_command = ClusterSubstitute(command, host=node.node, user=node.user)
-        sp = subprocess.Popen(['ssh', '-Y', node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
+        (outp,inp)=os.pipe();
+        os.write(inp,node_command)
+        os.close(inp)
+        #f.seek(0);
+        sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh'], 0, None, outp, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(node.str(), sp)
         mt.start()
         mts.append(mt)
         time.sleep(.1)
-
     for mt in mts:
         mt.join()
 
@@ -104,9 +107,11 @@ def ClusterDeploymentRun(cc, command, user_params = None):
     index = 1
     for node in cc.deploy_nodes:
         node_command = ClusterSubstitute(command, host=node.node, user=node.user, index=index, user_params=user_params)
-        print node_command
-
-        sp = subprocess.Popen(['ssh', '-Y' , node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
+        (outp,inp)=os.pipe();
+        os.write(inp,node_command)
+        os.close(inp)
+        
+        sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh'], 0, None, outp, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(str(index) + " (" + node.str() + ")", sp)
         mt.start()
         mts.append(mt)
