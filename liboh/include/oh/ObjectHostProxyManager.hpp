@@ -70,7 +70,7 @@ public:
     void createObject(const ProxyObjectPtr &newObj);
     void destroyObject(const ProxyObjectPtr &newObj);
 
-    QueryTracker *getQueryTracker(const SpaceObjectReference &id) const;
+    QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };

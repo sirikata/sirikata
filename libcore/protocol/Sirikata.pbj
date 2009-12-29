@@ -102,12 +102,15 @@ message ReadOnlyMessage {
 /////////////Built-in messages///////////////
 
 message SpaceServices {   
+   optional uint32 rpc_port=32;
    optional uint32 registration_port=33;
    optional uint32 loc_port=34;
    optional uint32 geom_port=35;
    optional uint32 oseg_port=36;
    optional uint32 cseg_port=37;
    optional uint32 router_port=38;
+   optional uint32 persistence_port=39;
+   optional uint32 physics_port=40;
    optional uint64 pre_connection_buffer=64;
    optional uint64 max_pre_connection_messages=65;
 }

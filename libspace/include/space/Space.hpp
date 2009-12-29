@@ -41,6 +41,8 @@ class Oseg;
 class Cseg;
 class MessageRouter;
 class ObjectConnections;
+class ProxyManager;
+
 namespace Proximity{
 class ProximitySystem;
 }
@@ -53,9 +55,15 @@ class ProximitySystem;
  * 
  * Each space has an ID and right now the space is designed to run in a single thread and be waiting on the mIO service
  */
+namespace Space {
 class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     SpaceID mID;
+    ObjectReference mNodeID;
     Network::IOService*mIO;
+    ///The system keeping track of ProxyObjects  
+    MessageService *mPhysics;
+    ///The system that has access to ProxyObjects to bootstrap TimeSteppedSimulations
+    ProxyManager *mPhysicsProxyObjects;
     ///The registration service that allows objects to connect to the space and maps them to consistent ObjectReferences
     MessageService *mRegistration;
     ///The location services system: arbiter of object locations    
@@ -88,9 +96,11 @@ public:
     ~Space();
     ///hands control off to mIO and never returns
     void run();
-
+    const SpaceID& id()const{
+        return mID;
+    }
 }; // class Space
-
+} //namespace Space
 } // namespace Sirikata
 
 #endif //_SIRIKATA_SPACE_HPP

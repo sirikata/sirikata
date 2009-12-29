@@ -51,11 +51,14 @@
 #include <space/Loc.hpp>
 #include <space/Registration.hpp>
 #include <space/Router.hpp>
+#include <space/Physics.hpp>
+#include <proxyobject/Platform.hpp>
 namespace Sirikata {
+namespace Space {
 Time Space::now()const{
     return Time::now(Duration::zero());//FIXME for distribution
 }
-Space::Space(const SpaceID&id, const String&options):mID(id),mIO(Network::IOServiceFactory::makeIOService()) {
+Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::random()),mIO(Network::IOServiceFactory::makeIOService()) {
     unsigned int rsi=Services::REGISTRATION;
     unsigned int lsi=Services::LOC;
     unsigned int gsi=Services::GEOM;
@@ -69,6 +72,9 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mIO(Network::IOServ
     spaceServices.set_registration_port(rsi);
     spaceServices.set_loc_port(lsi);//UUID(lsi,sizeof(lsi)));
     spaceServices.set_geom_port(gsi);//UUID(gsi,sizeof(gsi)));
+    spaceServices.set_persistence_port(Services::PERSISTENCE);//UUID(gsi,sizeof(gsi)));
+    spaceServices.set_rpc_port(Services::RPC);//UUID(gsi,sizeof(gsi)));
+    spaceServices.set_physics_port(Services::PHYSICS);//UUID(gsi,sizeof(gsi)));
     //spaceServices.set_oseg(osi);//UUID(osi,sizeof(osi)));
     //spaceServices.set_cseg(csi);//UUID(csi,sizeof(csi)));
     spaceServices.set_router_port(fsi);//UUID(fsi,sizeof(fsi)));
@@ -77,6 +83,9 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mIO(Network::IOServ
     mLoc=new Loc;
     Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
     mGeom=new Proximity::BridgeProximitySystem(proxCon,spaceServices.registration_port());
+    Physics *physics =new Physics(this,mIO,SpaceObjectReference(mID,mNodeID),spaceServices.physics_port());
+    mPhysics=physics;
+    mPhysicsProxyObjects=physics->getProxyManager();
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
     mObjectSegmentation=NULL;
@@ -104,16 +113,17 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mIO(Network::IOServ
                                              //spaceServicesString
                                              );
     mObjectConnections->forwardMessagesTo(this);
+    mPhysics->forwardMessagesTo(this);
     mServices[spaceServices.registration_port()]=mRegistration;
     mServices[spaceServices.loc_port()]=mLoc;
     mServices[spaceServices.geom_port()]=mGeom;
+    mServices[spaceServices.physics_port()]=mPhysics;
     //mServices[ObjectReference(spaceServices.oseg_port())]=mObjectSegmentation;
     //mServices[ObjectReference(spaceServices.cseg_port())]=mCoordinateSegmentation;
     //mServices[ObjectReference(spaceServices.router_port())]=mRouter;
     mRegistration->forwardMessagesTo(mObjectConnections);
     mRegistration->forwardMessagesTo(mLoc);
     mRegistration->forwardMessagesTo(mGeom);
-
     mGeom->forwardMessagesTo(mObjectConnections);
     mLoc->forwardMessagesTo(mGeom);
 }
@@ -131,7 +141,7 @@ void Space::processMessage(const ObjectReference*ref,MemoryReference message){
 }
 
 void Space::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
-    if (header.destination_object()==ObjectReference::spaceServiceID()) {
+    if (header.destination_object()==ObjectReference::spaceServiceID()||header.destination_object()==mNodeID) {
         std::tr1::unordered_map<unsigned int,MessageService*>::iterator where=mServices.find(header.destination_port());
         if (where!=mServices.end()) {
             where->second->processMessage(header,message_body);
@@ -147,5 +157,5 @@ void Space::processMessage(const RoutableMessageHeader&header,MemoryReference me
 
 Space::~Space() {
 }
-
+}
 } // namespace Sirikata

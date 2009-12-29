@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata Space Physics System -- Manages the creation of proxy objects in a region and ghost volumes around it
+ *  Physics.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,37 +29,38 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
 
-#include "ProxyObject.hpp"
-#include "ProxyCreationListener.hpp"
+#ifndef SIRIKATA_SPACE_SPACE_PHYSICS_HPP_
+#define SIRIKATA_SPACE_SPACE_PHYSICS_HPP_
+
+#include "space/SpaceProxyManager.hpp"
 namespace Sirikata {
+namespace Space {
 
-class QueryTracker;
-/** An interface for a class that keeps track of proxy object references. */
-class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager : 
-//        public MessageService,
-        public Provider<ProxyCreationListener*> {
+class Space;
+
+class Physics : protected SpaceProxyManager, public MessageService {
+    class ReplyMessageService:public MessageService {
+        MessageService *mSpace; 
+        SpaceObjectReference mSenderId;
+        uint32 mPort;
+    public:
+        ReplyMessageService(const SpaceObjectReference &senderId,uint32 port);
+        bool forwardMessagesTo(MessageService*);
+        bool endForwardingMessagesTo(MessageService*);
+        void processMessage(const RoutableMessageHeader&, MemoryReference);        
+    }mReplyMessageService;
 public:
-    ProxyManager() {}
-    virtual ~ProxyManager() {}
-    ///Called after providers attached
-    virtual void initialize()=0;
-    ///Called before providers detatched
-    virtual void destroy()=0;
-
-    ///Gets an object that can send messages to this SpaceObjectReference.
-    virtual QueryTracker *getQueryTracker(const SpaceObjectReference &id)=0;
-
-    ///Adds to internal ProxyObject map and calls creation listeners.
-    virtual void createObject(const ProxyObjectPtr &newObj)=0;
-
-    ///Removes from internal ProxyObject map, calls destruction listeners, and calls newObj->destroy().
-    virtual void destroyObject(const ProxyObjectPtr &newObj)=0;
-
-    /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
-    virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
-
-
+    Physics(Space*space, Network::IOService*io, const SpaceObjectReference&nodeId, uint32 port);
+    ~Physics();
+    bool forwardMessagesTo(MessageService*);
+    bool endForwardingMessagesTo(MessageService*);
+    void processMessage(const RoutableMessageHeader&, MemoryReference);
+    ProxyManager*getProxyManager(){
+        return this;
+    }
 };
 }
+}
+
+#endif

@@ -35,7 +35,9 @@
 #include <space/Platform.hpp>
 #include <network/Stream.hpp>
 namespace Sirikata {
-
+namespace Space {
+class Space;
+}
 /**
  * This class holds all the direct object connections out to actual live objects connected to this space node
  * The class is responsible for temporary streams which have not completed registration as well as active streams
@@ -94,7 +96,7 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     ///Every active stream maps to either a temporary ID in mTemporaryStreams or a permanent ObjectReference in mActiveStreams
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>mStreams;
     ///to forward messages to
-    MessageService * mSpace;
+    Space::Space * mSpace;
     ///the maximum number of bytes allowed to be pending for a temporary object id
     size_t mPerObjectTemporarySizeMaximum;
     ///the maximum number of messages allowed to be pending for a temporary object id

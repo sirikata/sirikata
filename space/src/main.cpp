@@ -50,7 +50,7 @@ int main(int argc,const char**argv) {
     InitializeGlobalOptions gbo("",spaceOption=new OptionValue("space","",OptionValueType<String>(),"Options passed to the space"),NULL);
 
     OptionSet::getOptions("")->parse(argc,argv);
-    Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())),spaceOption->as<String>());
+    Space::Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())),spaceOption->as<String>());
     space.run();
     return 0;
 }

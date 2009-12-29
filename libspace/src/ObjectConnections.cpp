@@ -89,7 +89,7 @@ void processTimePacket(MessageService* mSpace, Network::Stream *stream, const Ro
     retval.SerializeToString(&toSend);
     Network::Protocol::TimeSync sync;
     sync.ParseFromArray(message_body.data(),message_body.size());
-    sync.set_server_time(mSpace!=NULL?static_cast<Space*>(mSpace)->now():Time::now(Duration::zero()));
+    sync.set_server_time(mSpace!=NULL?static_cast<Space::Space*>(mSpace)->now():Time::now(Duration::zero()));
     sync.AppendToString(&toSend);
     Network::StreamReliability rel=Network::Unreliable;
     if (sync.has_return_options()) {
@@ -259,7 +259,7 @@ Network::Stream* ObjectConnections::temporaryConnectionTo(const UUID&ref) {
 
 bool ObjectConnections::forwardMessagesTo(MessageService*ms) {
     if (mSpace==NULL) {
-        mSpace=ms;
+        mSpace=dynamic_cast<Space::Space*>(ms);
         return true;
     }
     return false;

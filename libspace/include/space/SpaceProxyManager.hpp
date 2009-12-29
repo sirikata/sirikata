@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata Space Node -- Proxy Creation and Destruction manager
+ *  SpaceProxyManager.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,37 +29,40 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
+#ifndef SIRIKATA_SPACE_SPACE_PROXY_MANAGER_HPP
+#define SIRIKATA_SPACE_SPACE_PROXY_MANAGER_HPP
 
-#include "ProxyObject.hpp"
-#include "ProxyCreationListener.hpp"
+#include <space/Platform.hpp>
+#include <proxyobject/Platform.hpp>
+#include <proxyobject/ProxyManager.hpp>
 namespace Sirikata {
+namespace Space {
+class Space;
+}
+class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public ProxyManager {
+    typedef std::tr1::unordered_map<ObjectReference, ProxyObjectPtr,ObjectReference::Hasher> ProxyMap;
+  protected:
+    QueryTracker mQueryTracker;
+  private:
+    ProxyMap mProxyMap;
+    Space::Space*mSpace;
+  public:
+    SpaceProxyManager(Space::Space*space, Network::IOService*io);
+	~SpaceProxyManager();
+    void initialize();
+    void destroy();
 
-class QueryTracker;
-/** An interface for a class that keeps track of proxy object references. */
-class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager : 
-//        public MessageService,
-        public Provider<ProxyCreationListener*> {
-public:
-    ProxyManager() {}
-    virtual ~ProxyManager() {}
-    ///Called after providers attached
-    virtual void initialize()=0;
-    ///Called before providers detatched
-    virtual void destroy()=0;
+    void createViewedObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
+    void destroyViewedObject(const SpaceObjectReference &newObj, QueryTracker*viewer);
 
-    ///Gets an object that can send messages to this SpaceObjectReference.
-    virtual QueryTracker *getQueryTracker(const SpaceObjectReference &id)=0;
+    void createObject(const ProxyObjectPtr &newObj);
+    void destroyObject(const ProxyObjectPtr &newObj);
 
-    ///Adds to internal ProxyObject map and calls creation listeners.
-    virtual void createObject(const ProxyObjectPtr &newObj)=0;
+    QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
-    ///Removes from internal ProxyObject map, calls destruction listeners, and calls newObj->destroy().
-    virtual void destroyObject(const ProxyObjectPtr &newObj)=0;
-
-    /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
-    virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
-
-
+    ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
+    
 };
 }
+#endif
+
