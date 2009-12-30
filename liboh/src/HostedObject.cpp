@@ -60,7 +60,6 @@ namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 
-static void parsePhysicalParameters(PhysicalParameters &out, const Protocol::PhysicalParameters &protoPhysical);
 
 class HostedObject::PerSpaceData {
 public:
@@ -125,7 +124,7 @@ public:
 
 
 HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
-    : mTracker(parent->getSpaceIO()),
+    : VWObject(parent->getSpaceIO()),
       mInternalObjectReference(objectName) {
     mSpaceData = new SpaceDataMap;
     mObjectHost=parent;
@@ -150,7 +149,7 @@ HostedObject::~HostedObject() {
                  ++oriter)
             {
                 iter->second.mSpaceConnection.getTopLevelStream()->
-                    destroyViewedObject(SpaceObjectReference(iter->first, *oriter), getTracker());
+                    destroyObject(iter->second.mSpaceConnection.getTopLevelStream()->getProxyObject(SpaceObjectReference(iter->first, *oriter)), getTracker());
             }
         }
     }
@@ -185,7 +184,7 @@ struct HostedObject::PrivateCallbacks {
                 realThis->setProperty(name, msg->body().reads(i).data());
             }
             if (name == "Loc") {
-                ObjLoc loc;
+                Protocol::ObjLoc loc;
                 loc.ParseFromString(msg->body().reads(i).data());
                 SILOG(cppoh,debug,"Creating object "<<ObjectReference(realThis->getUUID())
                       <<" at position "<<loc.position());
@@ -291,16 +290,76 @@ struct HostedObject::PrivateCallbacks {
         }
         realThis->mObjectHost->dequeueAll();
     }
-    static void handlePersistenceMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
-        using namespace Persistence::Protocol;
 
+    static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
+        std::tr1::shared_ptr<HostedObject>thus=weak_thus.lock();
+        if (thus) {
+            SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
+            if (where!=thus->mSpaceData->end()) {
+                thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
+            }
+        }
+    }
+
+    static void connectionEvent(const HostedObjectWPtr&thus,
+                                const SpaceID&sid,
+                                Network::Stream::ConnectionStatus ce,
+                                const String&reason) {
+        if (ce!=Network::Stream::Connected) {
+            disconnectionEvent(thus,sid,reason);
+        }
+    }
+};
+
+
+
+void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
+    HostedObject *realThis=this;
+    /// Parse message_names and message_arguments.
+    
+    RoutableMessageBody msg;
+    msg.ParseFromArray(bodyData.data(), bodyData.length());
+    int numNames = msg.message_size();
+    if (numNames <= 0) {
+        // Invalid message!
+        realThis->sendErrorReply(header, RoutableMessageHeader::PROTOCOL_ERROR);
+        return;
+    }
+    
+    RoutableMessageBody responseMessage;
+    for (int i = 0; i < numNames; ++i) {
+        std::string name = msg.message_names(i);
+        MemoryReference body(msg.message_arguments(i));
+        
+        if (header.has_id()) {
+            std::string response;
+            /// Pass response parameter if we expect a response.
+            realThis->processRPC(header, name, body, &response);
+            responseMessage.add_message_reply(response);
+        } else {
+            /// Return value not needed.
+            realThis->processRPC(header, name, body, NULL);
+        }
+    }
+    
+    if (header.has_id()) {
+        std::string serializedResponse;
+        responseMessage.SerializeToString(&serializedResponse);
+        realThis->sendReply(header, MemoryReference(serializedResponse));
+    }
+}
+
+
+void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
+        using namespace Persistence::Protocol;
+        HostedObject *realThis=this;
         ReadWriteSet rws;
         rws.ParseFromArray(bodyData.data(), bodyData.length());
 
         Response immedResponse;
         int immedIndex = 0;
 
-        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(&realThis->mTracker,std::tr1::bind(&handlePersistenceResponse, realThis, header, _1, _2, _3));
+        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(&realThis->mTracker,std::tr1::bind(&PrivateCallbacks::handlePersistenceResponse, realThis, header, _1, _2, _3));
         int outIndex = 0;
         ReadWriteSet &outMessage = persistenceMsg->body();
         if (rws.has_options()) {
@@ -420,335 +479,8 @@ struct HostedObject::PrivateCallbacks {
         }
         realThis->mObjectHost->dequeueAll();
     }
-    static void handleRPCMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
-        /// Parse message_names and message_arguments.
 
-        RoutableMessageBody msg;
-        msg.ParseFromArray(bodyData.data(), bodyData.length());
-        int numNames = msg.message_size();
-        if (numNames <= 0) {
-            // Invalid message!
-            realThis->sendErrorReply(header, RoutableMessageHeader::PROTOCOL_ERROR);
-            return;
-        }
 
-        if (numNames == 1) {
-            std::string name = msg.message_names(0);
-            if (name == "CreateObject") {
-                Protocol::CreateObject co;
-                co.ParseFromString(msg.message_arguments(0));
-                PhysicalParameters phys;
-                LightInfo light;
-                LightInfo *pLight=NULL;
-                UUID uuid;
-                std::string weburl;
-                std::string mesh;
-                bool camera=false;
-                if (!co.has_object_uuid()) {
-                    uuid = UUID::random();
-                } else {
-                    uuid = co.object_uuid();
-                }
-                if (!co.has_scale()) {
-                    co.set_scale(Vector3f(1,1,1));
-                }
-                if (co.has_weburl()) {
-                    weburl = co.weburl();
-                }
-                if (co.has_mesh()) {
-                    mesh = co.mesh();
-                }
-                if (co.has_physical()) {
-                    parsePhysicalParameters(phys, co.physical());
-                }
-                if (co.has_light_info()) {
-                    pLight=&light;
-                    light = LightInfo(co.light_info());
-                }
-                if (co.has_camera() && co.camera()) {
-                    camera=true;
-                }
-                SILOG(cppoh,info,"Creating new object "<<ObjectReference(uuid));
-                HostedObjectPtr obj = HostedObject::construct<HostedObject>(realThis->mObjectHost, uuid);
-                if (camera) {
-                    obj->initializeConnect("",NULL,"",co.scale(),phys);
-                } else {
-                    obj->initializeConnect(mesh,pLight,weburl,co.scale(),phys);
-                }
-                for (int i = 0; i < co.space_properties_size(); ++i) {
-                    //RoutableMessageHeader connMessage
-                    //obj->processRoutableMessage(connMessageHeader, connMessageData);
-                    Protocol::ConnectToSpace space = co.space_properties(i);
-                    UUID evidence = space.has_object_uuid_evidence()
-                         ? space.object_uuid_evidence()
-                         : uuid;
-                    SpaceID spaceid (space.has_space_id()?space.space_id():header.destination_space().getObjectUUID());
-                    obj->connectToSpace(spaceid, realThis->getSharedPtr());
-                    if (!space.has_bounding_sphere()) {
-                        space.set_bounding_sphere(PBJ::BoundingSphere3f(Vector3f(0,0,0),1));
-                    }
-                    if (space.has_requested_object_loc() && space.has_bounding_sphere()) {
-                        BoundingSphere3f bs (space.bounding_sphere());
-                        Location location(Vector3d::nil(),Quaternion::identity(),Vector3f::nil(),Vector3f(1,0,0),0);
-                        const ObjLoc &loc = space.requested_object_loc();
-                        SILOG(cppoh,debug,"Creating object "<<ObjectReference(realThis->getUUID())
-                                <<" at position "<<loc.position());
-                        if (loc.has_position()) {
-                            location.setPosition(loc.position());
-                        }
-                        if (loc.has_orientation()) {
-                            location.setOrientation(loc.orientation());
-                        }
-                        if (loc.has_velocity()) {
-                            location.setVelocity(loc.velocity());
-                        }
-                        if (loc.has_rotational_axis()) {
-                            location.setAxisOfRotation(loc.rotational_axis());
-                        }
-                        if (loc.has_angular_speed()) {
-                            location.setAngularSpeed(loc.angular_speed());
-                        }
-                        obj->sendNewObj(location, bs, spaceid, evidence);
-                    }
-                }
-                realThis->mObjectHost->dequeueAll(); // don't need to wait until next frame.
-                return;
-            }
-            if (name == "ConnectToSpace") {
-                // Fixme: move connection logic here so it's possible to reply later on.
-                return;
-            }
-        }
-
-        RoutableMessageBody responseMessage;
-        for (int i = 0; i < numNames; ++i) {
-            std::string name = msg.message_names(i);
-            MemoryReference body(msg.message_arguments(i));
-
-            if (header.has_id()) {
-                std::string response;
-                /// Pass response parameter if we expect a response.
-                realThis->processRPC(header, name, body, &response);
-                responseMessage.add_message_reply(response);
-            } else {
-                /// Return value not needed.
-                realThis->processRPC(header, name, body, NULL);
-            }
-        }
-
-        if (header.has_id()) {
-            std::string serializedResponse;
-            responseMessage.SerializeToString(&serializedResponse);
-            realThis->sendReply(header, MemoryReference(serializedResponse));
-        }
-    }
-
-    static void receivedProxObjectLocation(
-        const HostedObjectWPtr &weakThis,
-        SentMessage* sentMessage,
-        const RoutableMessageHeader &hdr,
-        MemoryReference bodyData,
-        int32 queryId)
-    {
-        std::auto_ptr<RPCMessage> destructor(static_cast<RPCMessage*>(sentMessage));
-        HostedObjectPtr realThis(weakThis.lock());
-        if (!realThis) {
-            return;
-        }
-
-        RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
-        if (responseMessage.header().return_status() != RoutableMessageHeader::SUCCESS) {
-            SILOG(cppoh,info,"FAILURE receiving prox object properties "<<sentMessage->getRecipient());
-            return;
-        }
-        ObjLoc objLoc;
-        objLoc.ParseFromString(responseMessage.body().message_arguments(0));
-
-        Persistence::SentReadWriteSet *request = new Persistence::SentReadWriteSet(&realThis->mTracker);
-
-        request->header().set_destination_space(sentMessage->getSpace());
-        request->header().set_destination_object(sentMessage->getRecipient());
-        request->header().set_destination_port(Services::PERSISTENCE);
-
-        request->body().add_reads().set_field_name("MeshURI");
-        request->body().add_reads().set_field_name("WebViewURL");
-        request->body().add_reads().set_field_name("MeshScale");
-        request->body().add_reads().set_field_name("Name");
-        request->body().add_reads().set_field_name("PhysicalParameters");
-        request->body().add_reads().set_field_name("LightInfo");
-        request->body().add_reads().set_field_name("_Passwd");
-        request->body().add_reads().set_field_name("IsCamera");
-        request->body().add_reads().set_field_name("Parent");
-        request->setPersistenceCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectProperties,
-                                            weakThis, _1, _2, _3,
-                                            queryId, objLoc));
-        request->setTimeout(Duration::seconds(5.0));
-        request->serializeSend();
-    }
-    static void receivedProxObjectProperties(
-        const HostedObjectWPtr &weakThis,
-        SentMessage* sentMessageBase,
-        const RoutableMessageHeader &hdr,
-        Persistence::Protocol::Response::ReturnStatus returnStatus,
-        int32 queryId,
-        const ObjLoc &objLoc)
-    {
-        using namespace Persistence::Protocol;
-        std::auto_ptr<Persistence::SentReadWriteSet> sentMessage(Persistence::SentReadWriteSet::cast_sent_message(sentMessageBase));
-        HostedObjectPtr realThis(weakThis.lock());
-        if (!realThis) {
-            return;
-        }
-        SpaceDataMap::iterator iter = realThis->mSpaceData->find(sentMessage->getSpace());
-        if (iter == realThis->mSpaceData->end()) {
-            return;
-        }
-        ObjectHostProxyManager *proxyMgr = iter->second.mSpaceConnection.getTopLevelStream().get();
-        PerSpaceData::ProxQueryMap::iterator qmiter = iter->second.mProxQueryMap.find(queryId);
-        if (qmiter == iter->second.mProxQueryMap.end()) {
-            return;
-        }
-        std::set<ObjectReference>::iterator proxyiter = qmiter->second.find(sentMessage->getRecipient());
-        if (proxyiter == qmiter->second.end()) {
-            return;
-        }
-        SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
-        bool persistence_error = false;
-        if (hdr.return_status() != RoutableMessageHeader::SUCCESS ||returnStatus) {
-            SILOG(cppoh,info,"FAILURE receiving prox object properties "<<
-                  proximateObjectId.object()<<": Error = "<<(int)hdr.return_status());
-            persistence_error = true;
-        }
-        SILOG(cppoh,debug,"Received prox object properties "<<proximateObjectId.object()<<": reads size = ?");
-        int index = 0;
-        bool haveAll = true;
-        for (int i = 0; i < sentMessage->body().reads_size(); i++) {
-            if (!sentMessage->body().reads(i).has_data() && !sentMessage->body().reads(i).has_return_status()) {
-                haveAll = false;
-            }
-        }
-        if (persistence_error || haveAll) {
-
-        } else {
-            assert(false&&"Received incomplete persistence callback for the same read/write set: should only ever get one");
-            return; // More messages would have come before the new design.
-        }
-        bool hasMesh=false;
-        bool hasLight=false;
-        bool isCamera=false;
-        bool isWebView=false;
-        ProxyObjectPtr proxyObj;
-        for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
-            if (sentMessage->body().reads(i).has_return_status()) {
-                continue;
-            }
-            const std::string &field = sentMessage->body().reads(i).field_name();
-            if (field == "MeshURI") {
-                hasMesh = true;
-            }
-            if (field == "LightInfo") {
-                hasLight = true;
-            }
-            if (field == "IsCamera") {
-                isCamera = true;
-            }
-            if (field == "WebViewURL") {
-                isWebView = true;
-            }
-        }
-        ObjectReference myObjectReference;
-        if (isCamera) {
-            SILOG(cppoh,info, "* I found a camera named " << proximateObjectId.object());
-            proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId));
-        } else if (hasLight && !hasMesh) {
-            SILOG(cppoh,info, "* I found a light named " << proximateObjectId.object());
-            proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId));
-        } else if (hasMesh && isWebView){
-            SILOG(cppoh,info,"* I found a WEBVIEW known as "<<proximateObjectId.object());
-            proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, proximateObjectId));
-        } else {
-            SILOG(cppoh,info, "* I found a MESH named " << proximateObjectId.object());
-            proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
-        }
-        proxyObj->setLocal(false);
-        realThis->receivedPositionUpdate(proxyObj, objLoc, true);
-        proxyMgr->createViewedObject(proxyObj, realThis->getTracker());
-        for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
-            if (sentMessage->body().reads(i).has_return_status()) {
-                continue;
-            }
-            const std::string &field = sentMessage->body().reads(i).field_name();
-            realThis->receivedPropertyUpdate(proxyObj, sentMessage->body().reads(i).field_name(), sentMessage->body().reads(i).data());
-        }
-        {
-            RPCMessage *request = new RPCMessage(&realThis->mTracker,std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
-            request->header().set_destination_space(proximateObjectId.space());
-            request->header().set_destination_object(proximateObjectId.object());
-            Protocol::LocRequest loc;
-            loc.SerializeToString(request->body().add_message("LocRequest"));
-            request->serializeSend();
-        }
-        return;
-    }
-
-    static void receivedPositionUpdateResponse(
-        const HostedObjectWPtr &weakThus,
-        SentMessage* sentMessage,
-        const RoutableMessageHeader &hdr,
-        MemoryReference bodyData)
-    {
-        RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
-        HostedObjectPtr thus(weakThus.lock());
-        if (!thus) {
-            delete static_cast<RPCMessage*>(sentMessage);
-        }
-        if (responseMessage.header().return_status()) {
-            return;
-        }
-        Protocol::ObjLoc loc;
-        loc.ParseFromString(responseMessage.body().message_arguments(0));
-
-        const SpaceID &space = sentMessage->getSpace();
-        ProxyManager *pm = thus->getObjectHost()->getProxyManager(space);
-        if (pm) {
-            ProxyObjectPtr obj(pm->getProxyObject(
-                SpaceObjectReference(space, sentMessage->getRecipient())));
-            if (obj) {
-                thus->receivedPositionUpdate(obj,loc,false);
-            }
-        }
-        SpaceDataMap::iterator iter = thus->mSpaceData->find(hdr.destination_space());
-        HostedObjectPtr destHostedObj;
-        if (iter != thus->mSpaceData->end()) {
-            destHostedObj = iter->second.mSpaceConnection.getTopLevelStream()->getHostedObject(hdr.destination_object());
-        }
-        if (destHostedObj) {
-            // This object is local to our object host--no need to query for its position.
-            delete static_cast<RPCMessage*>(sentMessage);
-        } else {
-            static_cast<RPCMessage*>(sentMessage)->serializeSend(); // Resend position update each time we get one.
-        }
-    }
-
-    static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
-        std::tr1::shared_ptr<HostedObject>thus=weak_thus.lock();
-        if (thus) {
-            SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
-            if (where!=thus->mSpaceData->end()) {
-                thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
-            }
-        }
-    }
-
-    static void connectionEvent(const HostedObjectWPtr&thus,
-                                const SpaceID&sid,
-                                Network::Stream::ConnectionStatus ce,
-                                const String&reason) {
-        if (ce!=Network::Stream::Connected) {
-            disconnectionEvent(thus,sid,reason);
-        }
-    }
-};
 
 HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,const std::tr1::shared_ptr<TopLevelSpaceConnection>&tls) {
     using std::tr1::placeholders::_1;
@@ -990,9 +722,9 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     }
 
     if (header.destination_port() == 0) {
-        PrivateCallbacks::handleRPCMessage(this, header, bodyData);
+        handleRPCMessage(header, bodyData);
     } else if (header.destination_port() == Services::PERSISTENCE) {
-        PrivateCallbacks::handlePersistenceMessage(this, header, bodyData);
+        handlePersistenceMessage(header, bodyData);
     } else {
         if (mObjectScript) {
             mObjectScript->processMessage(header, bodyData);
@@ -1048,57 +780,105 @@ void HostedObject::tick() {
     }
 }
 
-void HostedObject::receivedPositionUpdate(
-    const ProxyObjectPtr &proxy,
-    const ObjLoc &objLoc,
-    bool force_reset)
-{
-    if (!proxy) {
-        return;
-    }
-    force_reset = force_reset || (objLoc.update_flags() & ObjLoc::FORCE);
-    if (!objLoc.has_timestamp()) {
-        objLoc.set_timestamp(Time::now(getSpaceTimeOffset(proxy->getObjectReference().space())));
-    }
-    Location currentLoc = proxy->globalLocation(objLoc.timestamp());
-    if (force_reset || objLoc.has_position()) {
-        currentLoc.setPosition(objLoc.position());
-    }
-    if (force_reset || objLoc.has_orientation()) {
-        currentLoc.setOrientation(objLoc.orientation());
-    }
-    if (force_reset || objLoc.has_velocity()) {
-        currentLoc.setVelocity(objLoc.velocity());
-    }
-    if (force_reset || objLoc.has_rotational_axis()) {
-        currentLoc.setAxisOfRotation(objLoc.rotational_axis());
-    }
-    if (force_reset || objLoc.has_angular_speed()) {
-        currentLoc.setAngularSpeed(objLoc.angular_speed());
-    }
-    if (force_reset) {
-        proxy->resetLocation(objLoc.timestamp(), currentLoc);
-    } else {
-        std::ostringstream os;
-        os << "Received position update to "<<currentLoc;
-        SILOG(cppoh,debug,os.str());
-        proxy->setLocation(objLoc.timestamp(), currentLoc);
-    }
-}
-
 
 static int32 query_id = 0;
 using Protocol::LocRequest;
 void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *response) {
+    if (name == "CreateObject") {
+                Protocol::CreateObject co;
+                co.ParseFromArray(args.data(),args.size());
+                PhysicalParameters phys;
+                LightInfo light;
+                LightInfo *pLight=NULL;
+                UUID uuid;
+                std::string weburl;
+                std::string mesh;
+                bool camera=false;
+                if (!co.has_object_uuid()) {
+                    uuid = UUID::random();
+                } else {
+                    uuid = co.object_uuid();
+                }
+                if (!co.has_scale()) {
+                    co.set_scale(Vector3f(1,1,1));
+                }
+                if (co.has_weburl()) {
+                    weburl = co.weburl();
+                }
+                if (co.has_mesh()) {
+                    mesh = co.mesh();
+                }
+                if (co.has_physical()) {
+                    parsePhysicalParameters(phys, co.physical());
+                }
+                if (co.has_light_info()) {
+                    pLight=&light;
+                    light = LightInfo(co.light_info());
+                }
+                if (co.has_camera() && co.camera()) {
+                    camera=true;
+                }
+                SILOG(cppoh,info,"Creating new object "<<ObjectReference(uuid));
+                VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mObjectHost, uuid);
+                std::tr1::shared_ptr<HostedObject>obj=std::tr1::static_pointer_cast<HostedObject>(vwobj);
+                if (camera) {
+                    obj->initializeConnect("",NULL,"",co.scale(),phys);
+                } else {
+                    obj->initializeConnect(mesh,pLight,weburl,co.scale(),phys);
+                }
+                for (int i = 0; i < co.space_properties_size(); ++i) {
+                    //RoutableMessageHeader connMessage
+                    //obj->processRoutableMessage(connMessageHeader, connMessageData);
+                    Protocol::ConnectToSpace space = co.space_properties(i);
+                    UUID evidence = space.has_object_uuid_evidence()
+                         ? space.object_uuid_evidence()
+                         : uuid;
+                    SpaceID spaceid (space.has_space_id()?space.space_id():msg.destination_space().getObjectUUID());
+                    obj->connectToSpace(spaceid, getSharedPtr());
+                    if (!space.has_bounding_sphere()) {
+                        space.set_bounding_sphere(PBJ::BoundingSphere3f(Vector3f(0,0,0),1));
+                    }
+                    if (space.has_requested_object_loc() && space.has_bounding_sphere()) {
+                        BoundingSphere3f bs (space.bounding_sphere());
+                        Location location(Vector3d::nil(),Quaternion::identity(),Vector3f::nil(),Vector3f(1,0,0),0);
+                        const Protocol::ObjLoc &loc = space.requested_object_loc();
+                        SILOG(cppoh,debug,"Creating object "<<ObjectReference(getUUID())
+                                <<" at position "<<loc.position());
+                        if (loc.has_position()) {
+                            location.setPosition(loc.position());
+                        }
+                        if (loc.has_orientation()) {
+                            location.setOrientation(loc.orientation());
+                        }
+                        if (loc.has_velocity()) {
+                            location.setVelocity(loc.velocity());
+                        }
+                        if (loc.has_rotational_axis()) {
+                            location.setAxisOfRotation(loc.rotational_axis());
+                        }
+                        if (loc.has_angular_speed()) {
+                            location.setAngularSpeed(loc.angular_speed());
+                        }
+                        obj->sendNewObj(location, bs, spaceid, evidence);
+                    }
+                }
+                mObjectHost->dequeueAll(); // don't need to wait until next frame.
+                return;
+    }
+    if (name == "ConnectToSpace") {
+        // Fixme: move connection logic here so it's possible to reply later on.
+        return;
+    }
+
     std::ostringstream printstr;
     printstr<<"\t";
     ProxyObjectPtr thisObj = getProxy(msg.source_space());
-
+    VWObject::processRPC(msg,name,args,response);
     if (name == "LocRequest") {
         LocRequest query;
         printstr<<"LocRequest: ";
         query.ParseFromArray(args.data(), args.length());
-        ObjLoc loc;
+        Protocol::ObjLoc loc;
         Time now = Time::now(getSpaceTimeOffset(msg.source_space()));
         if (thisObj) {
             Location globalLoc = thisObj->globalLocation(now);
@@ -1127,21 +907,21 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         return;             /// comment out if we want scripts to see these requests
     }
     else if (name == "SetLoc") {
-        ObjLoc setloc;
+        Protocol::ObjLoc setloc;
         printstr<<"Someone wants to set my position: ";
         setloc.ParseFromArray(args.data(), args.length());
         if (thisObj) {
             printstr<<setloc.position();
-            receivedPositionUpdate(thisObj, setloc, false);
+            applyPositionUpdate(thisObj, setloc, false);
         }
     }
     else if (name == "AddObject") {
-        ObjLoc setloc;
+        Protocol::ObjLoc setloc;
         printstr<<"Someone wants to set my position: ";
         setloc.ParseFromArray(args.data(), args.length());
         if (thisObj) {
             printstr<<setloc.position();
-            receivedPositionUpdate(thisObj, setloc, false);
+            applyPositionUpdate(thisObj, setloc, false);
         }
     }
     else if (name == "DelObj") {
@@ -1191,10 +971,10 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             proxyObj->setLocal(true);
             perSpaceIter->second.mProxyObject = proxyObj;
             proxyMgr->registerHostedObject(objectId.object(), getSharedPtr());
-            receivedPositionUpdate(proxyObj, retObj.location(), true);
+            applyPositionUpdate(proxyObj, retObj.location(), true);
             perSpaceIter->second.locationWasReset(retObj.location().timestamp(), proxyObj->getLastLocation());
             if (proxyMgr) {
-                proxyMgr->createViewedObject(proxyObj, getTracker());
+                proxyMgr->createObject(proxyObj, getTracker());
                 ProxyCameraObject* cam = dynamic_cast<ProxyCameraObject*>(proxyObj.get());
                 if (cam) {
                     /* HACK: Because we have no method of scripting yet, we force
@@ -1224,78 +1004,6 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 }
             }
         }
-    }
-    else if (name == "ProxCall") {
-        ObjectHostProxyManager *proxyMgr;
-        if (false && msg.source_object() != ObjectReference::spaceServiceID()) {
-            SILOG(objecthost, error, "ProxCall message not coming from space: "<<msg.source_object());
-            return;
-        }
-        if (!thisObj) {
-            SILOG(objecthost, error, "ProxCall message with null ProxyManager.");
-            return;
-        }
-
-        SpaceDataMap::iterator sditer = mSpaceData->find(msg.source_space());
-        assert (sditer != mSpaceData->end());
-        proxyMgr = sditer->second.mSpaceConnection.getTopLevelStream().get();
-
-        Protocol::ProxCall proxCall;
-        proxCall.ParseFromArray(args.data(), args.length());
-        SpaceObjectReference proximateObjectId (msg.source_space(), ObjectReference(proxCall.proximate_object()));
-        ProxyObjectPtr proxyObj (proxyMgr->getProxyObject(proximateObjectId));
-        switch (proxCall.proximity_event()) {
-          case Protocol::ProxCall::EXITED_PROXIMITY:
-            printstr<<"ProxCall EXITED "<<proximateObjectId.object();
-            if (proxyObj) {
-                PerSpaceData::ProxQueryMap::iterator iter = sditer->second.mProxQueryMap.find(proxCall.query_id());
-                if (iter != sditer->second.mProxQueryMap.end()) {
-                    std::set<ObjectReference>::iterator proxyiter = iter->second.find(proximateObjectId.object());
-                    assert (proxyiter != iter->second.end());
-                    if (proxyiter != iter->second.end()) {
-                        iter->second.erase(proxyiter);
-                    }
-                }
-                proxyMgr->destroyViewedObject(proxyObj->getObjectReference(), this->getTracker());
-            } else {
-                printstr<<" (unknown obj)";
-            }
-            break;
-          case Protocol::ProxCall::ENTERED_PROXIMITY:
-            printstr<<"ProxCall ENTERED "<<proximateObjectId.object();
-            {
-                PerSpaceData::ProxQueryMap::iterator iter =
-                    sditer->second.mProxQueryMap.insert(
-                        PerSpaceData::ProxQueryMap::value_type(proxCall.query_id(), std::set<ObjectReference>())
-                        ).first;
-                iter->second.insert(proximateObjectId.object());
-            }
-            if (!proxyObj) { // FIXME: We may get one of these for each prox query. Keep track of in-progress queries in ProxyManager.
-                printstr<<" (Requesting information...)";
-
-                {
-                    RPCMessage *locRequest = new RPCMessage(&mTracker,std::tr1::bind(&PrivateCallbacks::receivedProxObjectLocation,
-                                                                                     getWeakPtr(), _1, _2, _3,
-                                                        proxCall.query_id()));
-                    locRequest->header().set_destination_space(proximateObjectId.space());
-                    locRequest->header().set_destination_object(proximateObjectId.object());
-                    LocRequest loc;
-                    loc.SerializeToString(locRequest->body().add_message("LocRequest"));
-
-
-                    locRequest->setTimeout(Duration::seconds(5.0));
-                    locRequest->serializeSend();
-                }
-            } else {
-                printstr<<" (Already known)";
-                proxyMgr->createViewedObject(proxyObj, this->getTracker());
-            }
-            break;
-          case Protocol::ProxCall::STATELESS_PROXIMITY:
-            printstr<<"ProxCall Stateless'ed "<<proximateObjectId.object();
-            // Do not create a proxy object in this case: This message is for one-time queries
-            break;
-        }
     } else {
         printstr<<"Message to be handled in script: "<<name;
     }
@@ -1318,117 +1026,63 @@ const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
     return nil;
 }
 
-static void parsePhysicalParameters(PhysicalParameters &out, const Protocol::PhysicalParameters &parsedProperty) {
-    switch (parsedProperty.mode()) {
-    case Protocol::PhysicalParameters::NONPHYSICAL:
-        out.mode = PhysicalParameters::Disabled;
-        break;
-    case Protocol::PhysicalParameters::STATIC:
-        out.mode = PhysicalParameters::Static;
-        break;
-    case Protocol::PhysicalParameters::DYNAMICBOX:
-        out.mode = PhysicalParameters::DynamicBox;
-        break;
-    case Protocol::PhysicalParameters::DYNAMICSPHERE:
-        out.mode = PhysicalParameters::DynamicSphere;
-        break;
-    case Protocol::PhysicalParameters::DYNAMICCYLINDER:
-        out.mode = PhysicalParameters::DynamicCylinder;
-        break;
-    case Protocol::PhysicalParameters::CHARACTER:
-        out.mode = PhysicalParameters::Character;
-        break;
-    default:
-        out.mode = PhysicalParameters::Disabled;
+ProxyManager* HostedObject::getProxyManager(const SpaceID&space) {
+    SpaceDataMap::iterator iter = mSpaceData->find(space);
+    if (iter == mSpaceData->end()) {
+        return NULL;
     }
-    out.density = parsedProperty.density();
-    out.friction = parsedProperty.friction();
-    out.bounce = parsedProperty.bounce();
-    out.colMsg = parsedProperty.collide_msg();
-    out.colMask = parsedProperty.collide_mask();
-    out.hull = parsedProperty.hull();
-    out.gravity = parsedProperty.gravity();
+    return iter->second.mSpaceConnection.getTopLevelStream().get();
+}
+bool HostedObject::isLocal(const SpaceObjectReference&objref) const{
+    SpaceDataMap::const_iterator iter = mSpaceData->find(objref.space());
+    HostedObjectPtr destHostedObj;
+    if (iter != mSpaceData->end()) {
+        destHostedObj = iter->second.mSpaceConnection.getTopLevelStream()->getHostedObject(objref.object());
+    }
+    if (destHostedObj) {
+        // This object is local to our object host--no need to query for its position.
+        return true;
+    }
+    return false;
 }
 
-void HostedObject::receivedPropertyUpdate(
-        const ProxyObjectPtr &proxy,
-        const std::string &propertyName,
-        const std::string &arguments)
-{
-    if (propertyName == "MeshURI") {
-        Protocol::StringProperty parsedProperty;
-        parsedProperty.ParseFromString(arguments);
-        if (parsedProperty.has_value()) {
-            ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
-            if (proxymesh) {
-                SILOG(cppoh,info, "* Received MESH property update for " << proxy->getObjectReference().object() <<" has mesh URI "<<URI(parsedProperty.value()));
-                proxymesh->setMesh(URI(parsedProperty.value()));
+
+void HostedObject::removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId) {
+    SpaceDataMap::iterator where = mSpaceData->find(proximateObjectId.space());
+    if (where !=mSpaceData->end()) {
+        ProxyManager* proxyMgr=where->second.mSpaceConnection.getTopLevelStream().get();
+        PerSpaceData::ProxQueryMap::iterator iter = where->second.mProxQueryMap.find(query_id);
+        if (iter != where->second.mProxQueryMap.end()) {
+            std::set<ObjectReference>::iterator proxyiter = iter->second.find(proximateObjectId.object());
+            assert (proxyiter != iter->second.end());
+            if (proxyiter != iter->second.end()) {
+                iter->second.erase(proxyiter);
+                //FIXME slow: iterate through all outstanding queries for this object to see if others still refer to this
+                bool otherCopies=false;
+                for (PerSpaceData::ProxQueryMap::const_iterator i= where->second.mProxQueryMap.begin(),
+                         ie=where->second.mProxQueryMap.end();
+                     i!=ie;
+                     ++i) {
+                    if (i->second.find(proximateObjectId.object())!=i->second.end()) {
+                        otherCopies=true;
+                        break;
+                    }
+                }
+                if (!otherCopies) {
+                    proxyMgr->destroyObject(proxyObj, this->getTracker());
+                }
             }
-        }
-    }
-    if (propertyName == "WebViewURL") {
-        Protocol::StringProperty parsedProperty;
-        parsedProperty.ParseFromString(arguments);
-        if (parsedProperty.has_value()) {
-            ProxyWebViewObject *proxywv = dynamic_cast<ProxyWebViewObject*>(proxy.get());
-            if (proxywv) {
-                proxywv->loadURL(parsedProperty.value());
-            }
-        }
-    }
-    if (propertyName == "MeshScale") {
-        Protocol::Vector3fProperty parsedProperty;
-        parsedProperty.ParseFromString(arguments);
-        if (parsedProperty.has_value()) {
-            ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
-            if (proxymesh) {
-                proxymesh->setScale(parsedProperty.value());
-            }
-        }
-    }
-    if (propertyName == "LightInfo") {
-        Protocol::LightInfoProperty parsedLight;
-        parsedLight.ParseFromString(arguments);
-        ProxyLightObject *proxylight = dynamic_cast<ProxyLightObject*>(proxy.get());
-        if (proxylight) {
-            proxylight->update(LightInfo(parsedLight));
-        }
-    }
-    if (propertyName == "PhysicalParameters") {
-        Protocol::PhysicalParameters parsedProperty;
-        parsedProperty.ParseFromString(arguments);
-        ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
-        if (proxymesh) {
-            // FIXME: allow missing fields, and do not hardcode enum values.
-            PhysicalParameters params;
-            parsePhysicalParameters(params, parsedProperty);
-            params.name = proxymesh->getPhysical().name;        /// otherwise setPhysical will wipe it
-            proxymesh->setPhysical(params);
-        }
-    }
-    if (propertyName == "Parent") {
-        Protocol::ParentProperty parsedProperty;
-        parsedProperty.ParseFromString(arguments);
-        if (parsedProperty.has_value()) {
-            ProxyObjectPtr obj =proxy->getProxyManager()->getProxyObject(
-                SpaceObjectReference(
-                    proxy->getObjectReference().space(),
-                    ObjectReference(parsedProperty.value())));
-            if (obj && obj != proxy) {
-                proxy->setParent(obj, Time::now(getSpaceTimeOffset(proxy->getObjectReference().space())));
-            }
-        }
-    }
-    if (propertyName == "Name") {
-        Protocol::StringProperty parsedProperty;
-        ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
-        parsedProperty.ParseFromString(arguments);
-        if (proxymesh && parsedProperty.has_value()) {
-            PhysicalParameters params = proxymesh->getPhysical();
-            params.name = parsedProperty.value();
-            proxymesh->setPhysical(params);
         }
     }
 }
+
+void HostedObject::addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId) {
+    SpaceDataMap::iterator where = mSpaceData->find(proximateObjectId.space());
+    if (where !=mSpaceData->end()) {
+        where->second.mProxQueryMap[query_id].insert(proximateObjectId.object());
+    }
+}
+
+
 
 }

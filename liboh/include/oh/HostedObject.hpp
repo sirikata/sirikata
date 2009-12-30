@@ -37,7 +37,7 @@
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "proxyobject/ProxyObject.hpp"
 #include "util/QueryTracker.hpp"
-
+#include "proxyobject/VWObject.hpp"
 namespace Sirikata {
 class ObjectHost;
 class ProxyObject;
@@ -47,22 +47,17 @@ struct PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
-namespace Protocol {
-class ObjLoc;
-}
-using Protocol::ObjLoc;
 
 class ObjectScript;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
+class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
 //------- Private inner classes
     class PerSpaceData;
     struct PrivateCallbacks;
 protected:
 //------- Members
-    QueryTracker mTracker;
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
@@ -76,7 +71,7 @@ protected:
 
 //------- Constructors/Destructors
 private:
-    friend class ::Sirikata::SelfWeakPtr<HostedObject>;
+    friend class ::Sirikata::SelfWeakPtr<VWObject>;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
     HostedObject(ObjectHost*parent, const UUID &uuid);
 
@@ -89,7 +84,10 @@ private:
     void initializePythonScript();//FIXME this is a temporary function
 //------- Private member functions:
     PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
-
+    ///When a message is destined for the RPC port of 0, split it into submessages and process those
+    void handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
+    ///When a message is destined for the persistence port, handle each persistence object accordingly
+    void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
 public:
 //------- Public member functions:
 
@@ -233,11 +231,16 @@ public:
         @see ReceivedMessage
     */
     void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
-    /// Call if you know that a property from some other ProxyObject has changed. FIXME: should this be made private?
-    void receivedPropertyUpdate(const ProxyObjectPtr &proxy, const String &propertyName, const String &arguments);
-    /// Call if you know that a position for some other ProxyObject has changed. FIXME: should this be made private?
-    void receivedPositionUpdate(const ProxyObjectPtr &proxy, const ObjLoc &objLoc, bool force_reset);
-
+    ProxyManager* getProxyManager(const SpaceID&space);
+    bool isLocal(const SpaceObjectReference&space)const;
+    void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
+    void addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId);
+    std::tr1::shared_ptr<HostedObject> getSharedPtr() {
+        return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
+    }
+    std::tr1::weak_ptr<HostedObject> getWeakPtr() {
+        return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
+    }
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

@@ -386,7 +386,7 @@ private:
             ProxyObjectPtr obj(iter->lock());
             Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (ent) {
-                ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr());
+                ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr(),mParent->mPrimaryCamera->getProxy().getQueryTracker());
             }
         }
         mSelectedObjects.clear();
@@ -415,19 +415,19 @@ private:
                 newMeshObject = std::tr1::shared_ptr<ProxyMeshObject>(new ProxyMeshObject(proxyMgr, newId));
             }
             newObj = newMeshObject;
-            proxyMgr->createObject(newMeshObject);
+            proxyMgr->createObject(newMeshObject,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
             newMeshObject->setMesh(meshObj->getMesh());
             newMeshObject->setScale(meshObj->getScale());
         }
         else if (lightObj) {
             std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
             newObj = newLightObject;
-            proxyMgr->createObject(newLightObject);
+            proxyMgr->createObject(newLightObject,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
             newLightObject->update(lightObj->getLastLightInfo());
         }
         else {
             newObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newId));
-            proxyMgr->createObject(newObj);
+            proxyMgr->createObject(newObj,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         }
         if (newObj) {
             if (parentPtr) {
@@ -508,7 +508,7 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId)));
+        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId)),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         Entity *newParentEntity = mParent->getEntity(newParentId);
         newParentEntity->getProxy().resetLocation(now, totalLocation);
 
@@ -551,7 +551,7 @@ private:
             }
             if (hasSubObjects) {
                 parentEnt->setSelected(false);
-                proxyMgr->destroyObject(parentEnt->getProxyPtr());
+                proxyMgr->destroyObject(parentEnt->getProxyPtr(),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
                 parentEnt = NULL; // dies.
                 numUngrouped++;
             }
@@ -632,7 +632,7 @@ private:
         loc.setOrientation(loc.getOrientation());
 
         std::tr1::shared_ptr<ProxyWebViewObject> newWebObject (new ProxyWebViewObject(proxyMgr, newId));
-        proxyMgr->createObject(newWebObject);
+        proxyMgr->createObject(newWebObject,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         {
             newWebObject->setMesh(URI("meru:///webview.mesh"));
             newWebObject->loadURL("http://www.yahoo.com/");
@@ -698,7 +698,7 @@ private:
         loc.setOrientation(Quaternion(0.886995, 0.000000, -0.461779, 0.000000, Quaternion::WXYZ()));
 
         std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
-        proxyMgr->createObject(newLightObject);
+        proxyMgr->createObject(newLightObject,camera->getProxy().getQueryTracker());
         {
             LightInfo li;
             li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));

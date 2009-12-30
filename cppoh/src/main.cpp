@@ -296,7 +296,7 @@ int main ( int argc,const char**argv ) {
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( provider,new ObjectHostTimeOffsetManager, graphicsCommandArguments );
+            .getConstructor ( simName ) ( provider, provider->getTimeOffsetManager(), graphicsCommandArguments );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));

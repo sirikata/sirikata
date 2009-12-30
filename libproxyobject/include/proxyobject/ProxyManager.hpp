@@ -36,11 +36,14 @@
 namespace Sirikata {
 
 class QueryTracker;
+class TimeOffsetManager;
 /** An interface for a class that keeps track of proxy object references. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager : 
 //        public MessageService,
         public Provider<ProxyCreationListener*> {
 public:
+    ///returns a const reference to a TimeOffsetManager that syncs time with the rest of the system. Guaranteed to live until the ProxyManager is destroyed
+    virtual const TimeOffsetManager *getTimeOffsetManager()const=0;
     ProxyManager() {}
     virtual ~ProxyManager() {}
     ///Called after providers attached
@@ -52,10 +55,10 @@ public:
     virtual QueryTracker *getQueryTracker(const SpaceObjectReference &id)=0;
 
     ///Adds to internal ProxyObject map and calls creation listeners.
-    virtual void createObject(const ProxyObjectPtr &newObj)=0;
+    virtual void createObject(const ProxyObjectPtr &newObj, QueryTracker*)=0;
 
     ///Removes from internal ProxyObject map, calls destruction listeners, and calls newObj->destroy().
-    virtual void destroyObject(const ProxyObjectPtr &newObj)=0;
+    virtual void destroyObject(const ProxyObjectPtr &newObj, QueryTracker*)=0;
 
     /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
     virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;

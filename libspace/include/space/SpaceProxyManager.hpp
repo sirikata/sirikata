@@ -35,6 +35,7 @@
 #include <space/Platform.hpp>
 #include <proxyobject/Platform.hpp>
 #include <proxyobject/ProxyManager.hpp>
+#include <proxyobject/TimeOffsetManager.hpp>
 namespace Sirikata {
 namespace Space {
 class Space;
@@ -43,6 +44,7 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public ProxyManager {
     typedef std::tr1::unordered_map<ObjectReference, ProxyObjectPtr,ObjectReference::Hasher> ProxyMap;
   protected:
     QueryTracker mQueryTracker;
+    SimpleTimeOffsetManager mOffsetManager;
   private:
     ProxyMap mProxyMap;
     Space::Space*mSpace;
@@ -51,12 +53,9 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public ProxyManager {
 	~SpaceProxyManager();
     void initialize();
     void destroy();
-
-    void createViewedObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
-    void destroyViewedObject(const SpaceObjectReference &newObj, QueryTracker*viewer);
-
-    void createObject(const ProxyObjectPtr &newObj);
-    void destroyObject(const ProxyObjectPtr &newObj);
+    const TimeOffsetManager* getTimeOffsetManager()const {return &mOffsetManager;}
+    void createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
+    void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
 
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 

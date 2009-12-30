@@ -35,9 +35,18 @@
 namespace Sirikata {
 class SIRIKATA_PROXYOBJECT_EXPORT TimeOffsetManager {
   public:
-    virtual Duration offset(const ProxyObject&)=0;
-    virtual Time now(const ProxyObject&)=0;
+    virtual Duration offset(const ProxyObject&)const=0;
+    virtual Time now(const ProxyObject&)const=0;
     virtual ~TimeOffsetManager(){}
 };
+class SIRIKATA_PROXYOBJECT_EXPORT SimpleTimeOffsetManager : public TimeOffsetManager {
+  public:
+    virtual Duration offset(const ProxyObject&)const{return Duration::zero();}
+    virtual Time now(const ProxyObject&)const{
+        return Time::now(Duration::zero());
+    }
+    virtual ~SimpleTimeOffsetManager(){}
+};
+
 }
 #endif

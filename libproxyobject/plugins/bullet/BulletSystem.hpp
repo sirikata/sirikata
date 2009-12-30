@@ -454,7 +454,7 @@ public:
 
 class BulletSystem: public TimeSteppedQueryableSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
-                    TimeOffsetManager*offset,
+                    const TimeOffsetManager*offset,
                     const String&options);
     Vector3f mGravity;
     double groundlevel;
@@ -462,7 +462,7 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
     OptionValue* mWorkQueue;
     OptionValue* mEventManager;
     Task::LocalTime mStartTime;
-    TimeOffsetManager *mLocalTimeOffset;
+    const TimeOffsetManager *mLocalTimeOffset;
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;
     customDispatch* dispatcher;
@@ -486,7 +486,7 @@ public:
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(BulletObj*);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
-                                                  TimeOffsetManager *offset,
+                                                  const TimeOffsetManager *offset,
             const String&options) {
         BulletSystem*os= new BulletSystem;
         if (os->initialize(proxyManager,offset,options))

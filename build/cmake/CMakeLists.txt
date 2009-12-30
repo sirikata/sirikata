@@ -1038,6 +1038,7 @@ SET(LIBSUBSCRIPTION_SOURCES
 SET(LIBPROXYOBJECT_SOURCES
                   ${SirikataProtocolDirectory}/ProxyObject_protobuf.cc
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp

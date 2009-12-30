@@ -83,7 +83,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
-    TimeOffsetManager *mLocalTimeOffset;
+    const TimeOffsetManager *mLocalTimeOffset;
     class Transfer::TransferManager *mTransferManager;
     Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
@@ -114,7 +114,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     bool loadBuiltinPlugins();
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
-                    TimeOffsetManager *localTimeOffset,
+                    const TimeOffsetManager *localTimeOffset,
                     const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
@@ -143,7 +143,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
 public:
     bool forwardMessagesTo(MessageService*){return false;}
     bool endForwardingMessagesTo(MessageService*){return false;}
-    TimeOffsetManager *getLocalTimeOffset() {
+    const TimeOffsetManager *getLocalTimeOffset() {
         return mLocalTimeOffset;
     }
     /**
@@ -183,7 +183,7 @@ public:
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
-                                                  TimeOffsetManager *localTimeOffset,
+                                                  const TimeOffsetManager *localTimeOffset,
                                                   const String&options){
         OgreSystem*os= new OgreSystem;
         if (os->initialize(proxyManager,localTimeOffset,options))

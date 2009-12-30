@@ -35,6 +35,7 @@
 #define _SIRIKATA_ObjectHostProxyManager_HPP_
 
 #include <proxyobject/ProxyManager.hpp>
+#include <oh/ObjectHostTimeOffsetManager.hpp>
 
 namespace Sirikata {
 
@@ -58,17 +59,17 @@ protected:
     typedef std::tr1::unordered_map<ObjectReference, ObjectHostProxyInfo, ObjectReference::Hasher> ProxyMap;
     ProxyMap mProxyMap;
     SpaceID mSpaceID;
-
+    ObjectHostTimeOffsetManager mTimeOffsetManager;
 public:
+    const TimeOffsetManager* getTimeOffsetManager()const{
+        return &mTimeOffsetManager;
+    }
 	~ObjectHostProxyManager();
     void initialize();
     void destroy();
 
-    void createViewedObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
-    void destroyViewedObject(const SpaceObjectReference &newObj, QueryTracker*viewer);
-
-    void createObject(const ProxyObjectPtr &newObj);
-    void destroyObject(const ProxyObjectPtr &newObj);
+    void createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
+    void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
 
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 

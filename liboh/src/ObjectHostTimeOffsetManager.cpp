@@ -39,10 +39,10 @@ namespace Sirikata {
 
 ObjectHostTimeOffsetManager::~ObjectHostTimeOffsetManager(){
 }
-Time ObjectHostTimeOffsetManager::now(const ProxyObject&obj){
+Time ObjectHostTimeOffsetManager::now(const ProxyObject&obj)const{
     return SpaceTimeOffsetManager().getSingleton().now(obj.getObjectReference().space());
 }
-Duration ObjectHostTimeOffsetManager::offset(const ProxyObject&obj){
+Duration ObjectHostTimeOffsetManager::offset(const ProxyObject&obj)const{
     return SpaceTimeOffsetManager().getSingleton().getSpaceTimeOffset(obj.getObjectReference().space());
 }
 }

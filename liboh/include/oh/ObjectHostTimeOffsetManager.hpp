@@ -35,9 +35,10 @@
 #include <proxyobject/TimeOffsetManager.hpp>
 namespace Sirikata {
 class SIRIKATA_OH_EXPORT ObjectHostTimeOffsetManager :public TimeOffsetManager {
+  public:
     virtual ~ObjectHostTimeOffsetManager();
-    virtual Time now(const ProxyObject&obj);
-    virtual Duration offset(const ProxyObject&obj);
+    virtual Time now(const ProxyObject&obj)const;
+    virtual Duration offset(const ProxyObject&obj)const;
 };
 }
 #endif

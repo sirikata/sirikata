@@ -671,7 +671,7 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
     }
 }
 
-bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, TimeOffsetManager* offset, const String&options) {
+bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const TimeOffsetManager* offset, const String&options) {
     mLocalTimeOffset=offset;
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
@@ -737,7 +737,6 @@ BulletSystem::~BulletSystem() {
     delete collisionConfiguration;
     delete groundBody;
     delete groundShape;
-    delete mLocalTimeOffset;
     DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor finished" << endl;)
 }
 

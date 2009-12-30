@@ -43,7 +43,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
       public Factory3<TimeSteppedQueryableSimulation*,
                       Provider<ProxyCreationListener*>*,//the ProxyManager
-                      TimeOffsetManager*,//so we can get any local time offset for objects
+                      const TimeOffsetManager*,//so we can get any local time offset for objects
                       const String&> //options string for the graphics system
 {
 public:

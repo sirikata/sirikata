@@ -8,10 +8,10 @@ SpaceProxyManager::~SpaceProxyManager() {
     
 }
 
-void SpaceProxyManager::createObject(const ProxyObjectPtr &obj){
+void SpaceProxyManager::createObject(const ProxyObjectPtr &obj, QueryTracker*){
 
 }
-void SpaceProxyManager::destroyObject(const ProxyObjectPtr &obj){
+void SpaceProxyManager::destroyObject(const ProxyObjectPtr &obj, QueryTracker*){
 
 }
 void SpaceProxyManager::initialize() {

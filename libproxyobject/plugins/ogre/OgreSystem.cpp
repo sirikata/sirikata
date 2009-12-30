@@ -345,7 +345,7 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     }
     return mAttachedCameras.end();
 }
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, TimeOffsetManager *localTimeOffset, const String&options) {
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const TimeOffsetManager *localTimeOffset, const String&options) {
     mLocalTimeOffset=localTimeOffset;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
@@ -684,12 +684,11 @@ OgreSystem::~OgreSystem() {
     }
     destroyMouseHandler();
     delete mInputManager;
-    delete mLocalTimeOffset;
 }
 
-static void KillWebView(ProxyObjectPtr p) {
+static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     std::cout << "Killing WebView!"<<std::endl;
-    p->getProxyManager()->destroyObject(p);
+    p->getProxyManager()->destroyObject(p,ogreSystem->getPrimaryCamera()->getProxy().getQueryTracker());
 }
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
@@ -715,7 +714,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             WebView* view = WebViewManager::getSingleton().createWebViewMaterial(
 				p->getObjectReference().toString(), 512, 512, Ogre::FO_ANISOTROPIC);
             view->setProxyObject(webviewpxy);
-            view->bind("close", std::tr1::bind(&KillWebView, p));
+            view->bind("close", std::tr1::bind(&KillWebView, this, p));
             MeshEntity *mesh=new MeshEntity(this,webviewpxy);
             mesh->bindTexture("webview", p->getObjectReference());
             created = true;
@@ -895,7 +894,7 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
                 loc.setPosition(loc.getPosition()+Vector3d(-scale*loc.getOrientation().zAxis())); // z-axis is backwards.
                 ProxyManager *proxyMgr = mPrimaryCamera->getProxy().getProxyManager();
                 std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
-                proxyMgr->createObject(newMeshObject);
+                proxyMgr->createObject(newMeshObject,mPrimaryCamera->getProxy().getQueryTracker());
                 newMeshObject->setMesh((*iter).first.mID);
                 newMeshObject->resetLocation(now, loc);
                 selectObject(getEntity(newMeshObject));
