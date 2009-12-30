@@ -36,17 +36,19 @@
 #include <proxyobject/Platform.hpp>
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
+#include <proxyobject/VWObject.hpp>
 namespace Sirikata {
 namespace Space {
 class Space;
 }
-class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public ProxyManager {
+class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyManager {
     typedef std::tr1::unordered_map<ObjectReference, ProxyObjectPtr,ObjectReference::Hasher> ProxyMap;
   protected:
     QueryTracker mQueryTracker;
     SimpleTimeOffsetManager mOffsetManager;
   private:
     ProxyMap mProxyMap;
+    std::tr1::unordered_map<ObjectReference,std::set<uint32>, ObjectReference::Hasher > mQueryMap;
     Space::Space*mSpace;
   public:
     SpaceProxyManager(Space::Space*space, Network::IOService*io);
@@ -56,11 +58,15 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public ProxyManager {
     const TimeOffsetManager* getTimeOffsetManager()const {return &mOffsetManager;}
     void createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
     void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
-
+    
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
-    
+    bool isLocal(const SpaceObjectReference&)const;
+    ProxyManager* getProxyManager(const SpaceID&);
+    QueryTracker* getTracker();
+    void addQueryInterest(uint32 query_id, const SpaceObjectReference&);
+    void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&, const SpaceObjectReference&);
 };
 }
 #endif
