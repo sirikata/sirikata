@@ -55,8 +55,12 @@ class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageSer
          */
         virtual void processMessage(const RoutableMessageHeader&hdr,
                                     MemoryReference message_body){
+            RoutableMessageHeader alteredHeader(hdr);
+            alteredHeader.set_source_port(Services::GEOM);
+            alteredHeader.set_source_object(ObjectReference::spaceServiceID());
+            
             for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
-                (*i)->processMessage(hdr,message_body);
+                (*i)->processMessage(alteredHeader,message_body);
             }
         }
         

@@ -148,8 +148,11 @@ HostedObject::~HostedObject() {
                  oriter != qiter->second.end();
                  ++oriter)
             {
-                iter->second.mSpaceConnection.getTopLevelStream()->
-                    destroyObject(iter->second.mSpaceConnection.getTopLevelStream()->getProxyObject(SpaceObjectReference(iter->first, *oriter)), getTracker());
+                ProxyObjectPtr which=iter->second.mSpaceConnection.getTopLevelStream()->getProxyObject(SpaceObjectReference(iter->first, *oriter));
+                if (which) {
+                    iter->second.mSpaceConnection.getTopLevelStream()->
+                        destroyObject(which, getTracker());
+                }
             }
         }
     }
@@ -161,12 +164,16 @@ HostedObject::~HostedObject() {
 struct HostedObject::PrivateCallbacks {
 
     static void initializeDatabaseCallback(
-        HostedObject *realThis,
+        const HostedObjectWPtr &weakThis,
         const SpaceID &spaceID,
         Persistence::SentReadWriteSet *msg,
         const RoutableMessageHeader &lastHeader,
         Persistence::Protocol::Response::ReturnStatus errorCode)
     {
+        HostedObjectPtr realThis=weakThis.lock();
+        if (!realThis) {
+            return;//deleted before database read
+        }
         if (lastHeader.has_return_status() || errorCode) {
             SILOG(cppoh,error,"Database error recieving Loc and scripting info: "<<(int)lastHeader.return_status()<<": "<<(int)errorCode);
             delete msg;
@@ -225,7 +232,7 @@ struct HostedObject::PrivateCallbacks {
             }
         }
         // Temporary Hack because we do not have access to the CDN here.
-        BoundingSphere3f sphere(Vector3f::nil(),1);
+        BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?0.0:1.0);
         realThis->sendNewObj(location, sphere, spaceID, realThis->getUUID());
         delete msg;
         if (!scriptName.empty()) {
@@ -629,7 +636,7 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     msg = new Persistence::SentReadWriteSet(&mTracker);
     msg->setPersistenceCallback(std::tr1::bind(
                          &PrivateCallbacks::initializeDatabaseCallback,
-                         this, spaceID,
+                         getWeakPtr(), spaceID,
                          _1, _2, _3));
     msg->body().add_reads().set_field_name("WebViewURL");
     msg->body().add_reads().set_field_name("MeshURI");

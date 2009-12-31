@@ -122,6 +122,7 @@ void SingleStreamProximityConnection::processMessage(const RoutableMessageHeader
     } else {
         std::string data;
         RoutableMessageHeader rmh;
+        rmh.set_source_port(hdr.source_port());
         rmh.SerializeToString(&data);
         where->second->send(MemoryReference(data),message_body,Network::ReliableOrdered);
     }

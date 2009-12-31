@@ -78,7 +78,7 @@ public:
     Vector3<real> center() const {
         return mMin+Vector3<real>(mAcross * 0.5f);
     }
-    BoundingSphere<real> toBoundingSphere() {
+    BoundingSphere<real> toBoundingSphere() const{
         Vector3<real> center=this->center();
         float maxlen=(this->max()-this->center()).lengthSquared();
         float minlen=(this->min()-this->center()).lengthSquared();
@@ -146,10 +146,10 @@ public:
         return v.max(min()).min(max());
     }
 
-    bool operator==(const BoundingBox& rhs) {
+    bool operator==(const BoundingBox& rhs) const{
         return (mMin == rhs.mMin && mAcross == rhs.mAcross);
     }
-    bool operator!=(const BoundingBox& rhs) {
+    bool operator!=(const BoundingBox& rhs) const{
         return (mMin != rhs.mMin || mAcross != rhs.mAcross);
     }
 

@@ -46,10 +46,10 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
   protected:
     QueryTracker mQueryTracker;
     SimpleTimeOffsetManager mOffsetManager;
+    Space::Space*mSpace;
   private:
     ProxyMap mProxyMap;
     std::tr1::unordered_map<ObjectReference,std::set<uint32>, ObjectReference::Hasher > mQueryMap;
-    Space::Space*mSpace;
   public:
     SpaceProxyManager(Space::Space*space, Network::IOService*io);
 	~SpaceProxyManager();
@@ -58,7 +58,7 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
     const TimeOffsetManager* getTimeOffsetManager()const {return &mOffsetManager;}
     void createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
     void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
-    
+    void clearQuery(uint32 query_id);
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;

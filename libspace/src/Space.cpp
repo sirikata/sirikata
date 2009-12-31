@@ -31,6 +31,7 @@
  */
 
 #include <space/Platform.hpp>
+#include <util/BoundingBox.hpp>
 #include <space/Space.hpp>
 #include <util/ObjectReference.hpp>
 #include <network/Stream.hpp>
@@ -58,7 +59,8 @@ namespace Space {
 Time Space::now()const{
     return Time::now(Duration::zero());//FIXME for distribution
 }
-Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::random()),mIO(Network::IOServiceFactory::makeIOService()) {
+Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::random()),mIO(Network::IOServiceFactory::makeIOService()),mBounds(Vector3d(-1.0e38,-1.0e38,-1.0e38),Vector3d(1.0e38,1.0e38,1.0e38)) {
+
     unsigned int rsi=Services::REGISTRATION;
     unsigned int lsi=Services::LOC;
     unsigned int gsi=Services::GEOM;
@@ -128,6 +130,22 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mLoc->forwardMessagesTo(mGeom);
 }
 void Space::run() {
+    RoutableMessageHeader nodeObjectHeader;
+    RoutableMessageBody body;
+    nodeObjectHeader.set_destination_port(Services::GEOM);
+    nodeObjectHeader.set_source_port(Services::REGISTRATION);
+    nodeObjectHeader.set_source_object(ObjectReference::null());
+    nodeObjectHeader.set_destination_object(ObjectReference::null());
+    nodeObjectHeader.set_destination_space(id());
+    Protocol::RetObj spaceNodeObject;    
+    spaceNodeObject.set_object_reference(mNodeID.getObjectUUID());
+    String newNodeObjStr;
+    spaceNodeObject.SerializeToString(&newNodeObjStr);
+    body.add_message("RetObj", newNodeObjStr);
+    String nodeRegistration;
+    body.SerializeToString(&nodeRegistration);
+    mGeom->processMessage(nodeObjectHeader,MemoryReference(nodeRegistration));
+    mPhysics->setBounds(mBounds);
     mIO->run();
 }
 void Space::processMessage(const ObjectReference*ref,MemoryReference message){
@@ -142,11 +160,12 @@ void Space::processMessage(const ObjectReference*ref,MemoryReference message){
 
 void Space::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
     if (header.destination_object()==ObjectReference::spaceServiceID()||header.destination_object()==mNodeID) {
-        std::tr1::unordered_map<unsigned int,MessageService*>::iterator where=mServices.find(header.destination_port());
+        uint64 port=header.destination_port();
+        std::tr1::unordered_map<unsigned int,MessageService*>::iterator where=mServices.find(port);
         if (where!=mServices.end()) {
             where->second->processMessage(header,message_body);
         }else {
-            SILOG(space,warning,"Do not know where to forward space-destined message to "<<header.destination_port());
+            SILOG(space,warning,"Do not know where to forward space-destined message to "<<header.destination_port()<< " aka "<<port);
         }
     }else if (mRouter) {
         mRouter->processMessage(header,message_body);

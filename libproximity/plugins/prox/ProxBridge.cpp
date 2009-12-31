@@ -144,7 +144,7 @@ void ProxBridge::processMessage(const RoutableMessageHeader&msg,
             where=mObjectStreams.find(ObjectReference(msg.destination_object()));
         }
         std::vector<ObjectReference> newObjectReferences;
-        processOpaqueProximityMessage(newObjectReferences,where,body);
+        processOpaqueProximityMessage(newObjectReferences,where,msg,body);
     }
 }
 
@@ -165,13 +165,14 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
         if (where==mObjectStreams.end()&&msg.has_destination_object()){
             where=mObjectStreams.find(ObjectReference(msg.destination_object()));
         }
-        return processOpaqueProximityMessage(newObjectReferences,where,body);
+        return processOpaqueProximityMessage(newObjectReferences,where,msg,body);
     }
     SILOG(proximity,warning,"Unparseable Message");
     return OBJECT_NOT_DESTROYED;
 }
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                                                     ProxBridge::ObjectStateMap::iterator where,
+                                                                                    const Sirikata::RoutableMessageHeader&hdr,
                                                                                     const Sirikata::RoutableMessageBody&msg) {
     int numMessages=msg.message_size();
     OpaqueMessageReturnValue retval=OBJECT_NOT_DESTROYED;
@@ -187,14 +188,14 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
             if (msg.message_names(i)=="NewProxQuery") {
                 Sirikata::Protocol::NewProxQuery new_query;
                 if (new_query.ParseFromString(msg.message_arguments(i))) {
-                    this->newProxQuery(where,new_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+                    this->newProxQuery(where,hdr.source_port(),new_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
                 }
             }
 
             if (msg.message_names(i)=="DelProxQuery") {
                 Sirikata::Protocol::DelProxQuery del_query;
                 if (del_query.ParseFromString(msg.message_arguments(i))) {
-                    this->delProxQuery(where,del_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+                    this->delProxQuery(where,hdr.source_port(),del_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
                 }
             }
             if (msg.message_names(i)=="ObjLoc"){
@@ -227,14 +228,24 @@ ProxBridge::ObjectStateMap::iterator ProxBridge::newObj(ObjectReference&retval,
                                                         const Sirikata::Protocol::IRetObj&obj_status) {
 
     Sirikata::Protocol::ObjLoc location=obj_status.location();
-
-    BoundingSphere3f sphere=obj_status.bounding_sphere();
+    
+    BoundingSphere3f sphere(Vector3f(0,0,0),0);
+    if(obj_status.has_bounding_sphere())
+        sphere=obj_status.bounding_sphere();
     Prox::BoundingSphere3f boundingSphere(sphere.center().convert<Prox::Vector3<Prox::BoundingSphere3f::real> >(),
                                           sphere.radius());
     ObjectStateMap::iterator where;
     UUID object_reference(obj_status.object_reference());
     retval=ObjectReference(object_reference);
     if ((where=mObjectStreams.find(ObjectReference(object_reference)))!=mObjectStreams.end()) {
+        
+        if (where->second->mObject->bounds().radius()!=0&&boundingSphere.radius()==0) {
+            where->second->mObject->unregister();
+        }
+        if (where->second->mObject->bounds().radius()==0&&boundingSphere.radius()!=0) {
+            mQueryHandler->registerObject(where->second->mObject);            
+        }
+
         where->second->mObject->bounds(boundingSphere);
         objLoc(where,location);
     } else {
@@ -250,7 +261,9 @@ ProxBridge::ObjectStateMap::iterator ProxBridge::newObj(ObjectReference&retval,
         assert(state->mObject==NULL);
         state->mObject=obj;
         state->mQueries.clear();
-        mQueryHandler->registerObject(obj);
+        if (boundingSphere.radius()) {
+            mQueryHandler->registerObject(obj);
+        }
         where=mObjectStreams.find(retval);
     }
     return where;
@@ -273,17 +286,18 @@ void ProxBridge::sendProxCallback(Network::Stream*stream,
 }
 class QueryListener:public Prox::QueryEventListener, public Prox::QueryChangeListener {
     ProxBridge::ObjectState* mState;
-    unsigned int mID;
+    ProxBridge::QueryID mID;
     ProxBridge*mParent;
 public:
-    QueryListener(unsigned int id, ProxBridge::ObjectState*state, ProxBridge*parent):mState(state), mParent(parent) {
-        mID=id;
+    QueryListener(ProxBridge::QueryID id, ProxBridge::ObjectState*state, ProxBridge*parent):mState(state), mID(id),mParent(parent) {
+
     }
     virtual ~QueryListener(){}
     virtual void queryHasEvents(Prox::Query*query){
         Protocol::ProxCall callback_message;
         RoutableMessage message_container;
         message_container.set_destination_object(ObjectReference(convertProxObjectId(mState->mObject->id())));
+        message_container.set_destination_port(mID.port());
         std::deque<Prox::QueryEvent> evts;
         query->popEvents(evts);
         std::deque<Prox::QueryEvent>::const_iterator i=evts.begin(),iend=evts.end();
@@ -291,7 +305,7 @@ public:
             if (i->type()==Prox::QueryEvent::Added||i->type()==Prox::QueryEvent::Removed) {
                 callback_message.set_proximity_event(i->type()==Prox::QueryEvent::Added?Protocol::ProxCall::ENTERED_PROXIMITY:Protocol::ProxCall::EXITED_PROXIMITY);
                 callback_message.set_proximate_object(convertProxObjectId(i->id()));
-                callback_message.set_query_id(mID);
+                callback_message.set_query_id(mID.query_id());
                 callback_message.SerializeToString(message_container.body().add_message("ProxCall", std::string()));
             }
         }
@@ -313,17 +327,19 @@ public:
     virtual void queryDeleted(const Prox::Query* query){delete this;}
 };
 void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
+                              Sirikata::uint32  source_port, 
                               const Sirikata::Protocol::INewProxQuery&new_query,
                               const void *optionalSerializedProximityQuery,
                               size_t optionalSerializedProximitySize){
-    QueryMap::iterator where=source->second->mQueries.find(new_query.query_id());
+    QueryID quid(new_query.query_id(),source_port);
+    QueryMap::iterator where=source->second->mQueries.find(quid);
     if (where!=source->second->mQueries.end()) {
         delete where->second.mQuery;
         source->second->mQueries.erase(where);
     }
     Prox::Query * query=NULL;
     if (new_query.has_min_solid_angle()||new_query.has_max_radius()) {
-        QueryState*queryState=&source->second->mQueries[new_query.query_id()];
+        QueryState*queryState=&source->second->mQueries[quid];
         Prox::Query::PositionVectorType pos(source->second->mObject->position());
         queryState->mOffset=Vector3d(0,0,0);
         queryState->mQueryType=new_query.stateless()?QueryState::RELATIVE_STATELESS:QueryState::RELATIVE_STATEFUL;
@@ -348,16 +364,17 @@ void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
             queryState->mQuery=query=new Prox::Query(pos,Prox::SolidAngle(new_query.min_solid_angle()));
         }
         mQueryHandler->registerQuery(query);
-        QueryListener * ql=new QueryListener(new_query.query_id(),source->second,this);
+        QueryListener * ql=new QueryListener(quid,source->second,this);
         query->addChangeListener(ql);
         query->setEventListener(ql);
     }
 }
 void ProxBridge::delProxQuery(ObjectStateMap::iterator source,
+                              Sirikata::uint32  source_port, 
                               const Sirikata::Protocol::IDelProxQuery&del_query,
                               const void *optionalSerializedDelProxQuery,
                               size_t optionalSerializedDelProxQuerySize) {
-    QueryMap::iterator where=source->second->mQueries.find(del_query.query_id());
+    QueryMap::iterator where=source->second->mQueries.find(QueryID(del_query.query_id(),source_port));
     if (where!=source->second->mQueries.end()) {
         delete where->second.mQuery;
         source->second->mQueries.erase(where);
@@ -377,12 +394,13 @@ void ProxBridge::delObj(ObjectStateMap::iterator source){
      * The callback may come from an ASIO response thread
      */
 void ProxBridge::newProxQuery(const ObjectReference&source,
+                              Sirikata::uint32 source_port,
                               const Sirikata::Protocol::INewProxQuery&new_query,
                               const void *optionalSerializedProximityQuery,
                               size_t optionalSerializedProximitySize){
     ObjectStateMap::iterator where=mObjectStreams.find(source);
     if (where!=mObjectStreams.end())
-        this->newProxQuery(where,new_query,optionalSerializedProximityQuery,optionalSerializedProximitySize);
+        this->newProxQuery(where,source_port,new_query,optionalSerializedProximityQuery,optionalSerializedProximitySize);
     else SILOG(prox,warning,"Cannot create new prox query for nonexistant object "<<source);
 }
     /**
@@ -442,10 +460,10 @@ void ProxBridge::objLoc(const ObjectReference&source, const Sirikata::Protocol::
      * Objects may lose interest in a particular query
      * when this function returns, no more responses will be given
      */
-void ProxBridge::delProxQuery(const ObjectReference&source, const Sirikata::Protocol::IDelProxQuery&del_query,  const void *optionalSerializedDelProxQuery,size_t optionalSerializedDelProxQuerySize){
+void ProxBridge::delProxQuery(const ObjectReference&source, uint32 source_port, const Sirikata::Protocol::IDelProxQuery&del_query,  const void *optionalSerializedDelProxQuery,size_t optionalSerializedDelProxQuerySize){
    ObjectStateMap::iterator where=mObjectStreams.find(source);
    if (where!=mObjectStreams.end()) {
-       this->delProxQuery(where,del_query,optionalSerializedDelProxQuery,optionalSerializedDelProxQuerySize);
+       this->delProxQuery(where,source_port,del_query,optionalSerializedDelProxQuery,optionalSerializedDelProxQuerySize);
    }else SILOG(prox,warning,"Cannot delete query for nonexistant object "<<source);
 }
     /**

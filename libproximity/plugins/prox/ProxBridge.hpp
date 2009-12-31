@@ -60,7 +60,25 @@ class ProxBridge : public ProximitySystem {
             ABSOLUTE_STATELESS=3
         } mQueryType;
     };
-    typedef std::map<uint32,QueryState> QueryMap;
+    class QueryID {
+        Sirikata::uint32 mPort;
+        uint32 mQueryNumber;
+    public:
+        uint32 query_id()const {return mQueryNumber;}
+        Sirikata::uint32 port() const {return mPort;}
+        QueryID(uint32 queryNumber, Sirikata::uint32 port){ 
+            mPort=port;
+            mQueryNumber=queryNumber;
+        }
+        bool operator <(const QueryID&other)const {
+            if (other.mQueryNumber==mQueryNumber) return mPort<other.mPort;
+            return mQueryNumber<other.mQueryNumber;
+        }
+        bool operator ==(const QueryID&other)const {        
+            return other.mQueryNumber==mQueryNumber&&other.mPort==mPort;
+        }
+    };
+    typedef std::map<QueryID,QueryState> QueryMap;
     class ObjectState {
     public:
         Prox::Object * mObject;
@@ -75,13 +93,15 @@ class ProxBridge : public ProximitySystem {
      * \returns whether an object has been deleted, so the previous system can update its records
      */
     OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
-                                       ObjectStateMap::iterator where,
-                                       const Sirikata::RoutableMessageBody&);
+                                                           ObjectStateMap::iterator where,
+                                                           const Sirikata::RoutableMessageHeader&hdr,
+                                                           const Sirikata::RoutableMessageBody&);
     /**
      * Register a new proximity query.
      * The callback may come from an ASIO response thread
      */
     void newProxQuery(ObjectStateMap::iterator where,
+                      Sirikata::uint32 source_port, 
                       const Sirikata::Protocol::INewProxQuery&,
                       const void *optionalSerializedProximityQuery=NULL,
                       size_t optionalSerializedProximitySize=0);
@@ -97,6 +117,7 @@ class ProxBridge : public ProximitySystem {
      * when this function returns, no more responses will be given
      */
     void delProxQuery(ObjectStateMap::iterator where,
+                      Sirikata::uint32 source_port,
                       const Sirikata::Protocol::IDelProxQuery&del_query,
                       const void *optionalSerializedDelProxQuery=NULL,
                       size_t optionalSerializedDelProxQuerySize=0);
@@ -155,6 +176,7 @@ public:
      * The callback may come from an ASIO response thread
      */
     virtual void newProxQuery(const ObjectReference&source,
+                              Sirikata::uint32 source_port,
                               const Sirikata::Protocol::INewProxQuery&,
                               const void *optionalSerializedProximityQuery=NULL,
                               size_t optionalSerializedProximitySize=0);
@@ -176,7 +198,7 @@ public:
      * Objects may lose interest in a particular query
      * when this function returns, no more responses will be given
      */
-    virtual void delProxQuery(const ObjectReference&source, const Sirikata::Protocol::IDelProxQuery&cb,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0);
+    virtual void delProxQuery(const ObjectReference&source, Sirikata::uint32 source_port,const Sirikata::Protocol::IDelProxQuery&cb,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0);
     /**
      * Objects may be destroyed: indicate loss of interest here
      */

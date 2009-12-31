@@ -50,6 +50,8 @@ class Physics : protected SpaceProxyManager, public MessageService {
         bool endForwardingMessagesTo(MessageService*);
         void processMessage(const RoutableMessageHeader&, MemoryReference);        
     }mReplyMessageService;
+    BoundingBox3d3f mBounds;
+    uint32 mQueryId;
 public:
     Physics(Space*space, Network::IOService*io, const SpaceObjectReference&nodeId, uint32 port);
     ~Physics();
@@ -59,6 +61,8 @@ public:
     ProxyManager*getProxyManager(){
         return this;
     }
+    void setBounds(const BoundingBox3d3f &bounds);
+    void addQueryInterest(uint32 query_id, const SpaceObjectReference &id);
 };
 }
 }

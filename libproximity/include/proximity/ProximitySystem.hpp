@@ -59,6 +59,7 @@ public:
      * The callback may come from an ASIO response thread
      */
     virtual void newProxQuery(const ObjectReference&source,
+                              Sirikata::uint32  source_port,
                               const Sirikata::Protocol::INewProxQuery&,
                               const void *optionalSerializedProximityQuery=NULL,
                               size_t optionalSerializedProximitySize=0)=0;
@@ -80,7 +81,7 @@ public:
      * Objects may lose interest in a particular query
      * when this function returns, no more responses will be given
      */
-    virtual void delProxQuery(const ObjectReference&source, const Sirikata::Protocol::IDelProxQuery&cb,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0)=0;
+    virtual void delProxQuery(const ObjectReference&source, Sirikata::uint32  source_port,const Sirikata::Protocol::IDelProxQuery&cb,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0)=0;
     /**
      * Objects may be destroyed: indicate loss of interest here
      */

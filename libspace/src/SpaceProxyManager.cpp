@@ -57,6 +57,23 @@ void SpaceProxyManager::removeQueryInterest(uint32 query_id, const ProxyObjectPt
         SILOG(space,error,"Trying to erase query for object "<<id<<" not in query set");
     }
 }
+void SpaceProxyManager::clearQuery(uint32 query_id){
+    std::vector<ObjectReference>mfd;
+    for (std::tr1::unordered_map<ObjectReference,std::set<uint32> >::iterator i=mQueryMap.begin(),
+             ie=mQueryMap.end();
+         i!=ie;
+         ++i) {
+        if (i->second.find(query_id)!=i->second.end()) {
+            mfd.push_back(i->first);
+        }
+    }
+    {
+        for (std::vector<ObjectReference>::iterator i=mfd.begin(),ie=mfd.end();i!=ie;++i) {
+            SpaceObjectReference id(mSpace->id(),*i);
+            removeQueryInterest(query_id,getProxyObject(id),id);
+        }
+    }
+}
 bool SpaceProxyManager::isLocal(const SpaceObjectReference&id) const{
     return false;
 }

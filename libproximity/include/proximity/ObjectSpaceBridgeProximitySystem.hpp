@@ -245,6 +245,7 @@ public:
      * The callback may come from an ASIO response thread
      */
     virtual void newProxQuery(const ObjectReference&source,
+                              uint32 source_port,
                               const Sirikata::Protocol::INewProxQuery&newProxQueryMsg, 
                               const void *optionalSerializedProximityQuery=NULL,
                               size_t optionalSerializedProximitySize=0){
@@ -276,7 +277,7 @@ public:
      * Objects may lose interest in a particular query
      * when this function returns, no more responses will be given
      */
-    virtual void delProxQuery(const ObjectReference&source, const Sirikata::Protocol::IDelProxQuery&delProx,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0){
+    virtual void delProxQuery(const ObjectReference&source,uint32 source_port,const Sirikata::Protocol::IDelProxQuery&delProx,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0){
         RoutableMessage toSend;
         constructMessage(toSend,&source,NULL,"DelProxQuery",delProx,optionalSerializedDelProxQuery,optionalSerializedDelProxQuerySize);
         sendMessage(source,toSend,NULL,0);
