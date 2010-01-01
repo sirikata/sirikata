@@ -68,6 +68,7 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
+    QueryTracker mTracker;
 
 //------- Constructors/Destructors
 private:

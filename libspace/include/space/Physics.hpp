@@ -39,7 +39,7 @@ namespace Space {
 
 class Space;
 
-class Physics : protected SpaceProxyManager, public MessageService {
+class Physics : public SpaceProxyManager, public MessageService {
     class ReplyMessageService:public MessageService {
         MessageService *mSpace; 
         SpaceObjectReference mSenderId;

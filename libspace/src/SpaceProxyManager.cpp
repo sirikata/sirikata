@@ -1,8 +1,8 @@
 #include "space/SpaceProxyManager.hpp"
 #include "space/Space.hpp"
+#include "proxyobject/ProxyCameraObject.hpp"
 namespace Sirikata {
-SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io):VWObject(io),mQueryTracker(io),mSpace(space){
-    
+SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io):mQueryTracker(io),mSpace(space){
 }
 SpaceProxyManager::~SpaceProxyManager() {
     
@@ -17,6 +17,10 @@ void SpaceProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTracker*
     if (iter == mProxyMap.end()) {
         mProxyMap[newObj->getObjectReference().object()]=newObj;
         notify(&ProxyCreationListener::onCreateProxy,newObj);
+        ProxyCameraObject* cam = dynamic_cast<ProxyCameraObject*>(&*newObj);
+        if (cam) {
+            cam->attach("",0,0);
+        }
     }
 }
 void SpaceProxyManager::destroyObject(const ProxyObjectPtr &obj, QueryTracker*tracker){

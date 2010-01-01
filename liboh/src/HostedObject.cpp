@@ -124,8 +124,8 @@ public:
 
 
 HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
-    : VWObject(parent->getSpaceIO()),
-      mInternalObjectReference(objectName) {
+    : mInternalObjectReference(objectName),
+      mTracker(parent->getSpaceIO()) {
     mSpaceData = new SpaceDataMap;
     mObjectHost=parent;
     mObjectScript=NULL;
@@ -232,7 +232,7 @@ struct HostedObject::PrivateCallbacks {
             }
         }
         // Temporary Hack because we do not have access to the CDN here.
-        BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?0.0:1.0);
+        BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?1.0:1.0);
         realThis->sendNewObj(location, sphere, spaceID, realThis->getUUID());
         delete msg;
         if (!scriptName.empty()) {

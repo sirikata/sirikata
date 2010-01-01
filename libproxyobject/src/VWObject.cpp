@@ -50,7 +50,7 @@ void VWObject::receivedProxObjectLocation(
         ObjLoc objLoc;
         objLoc.ParseFromString(responseMessage.body().message_arguments(0));
         
-        Persistence::SentReadWriteSet *request = new Persistence::SentReadWriteSet(&realThis->mTracker);
+        Persistence::SentReadWriteSet *request = new Persistence::SentReadWriteSet(realThis->getTracker());
         
         request->header().set_destination_space(sentMessage->getSpace());
         request->header().set_destination_object(sentMessage->getRecipient());
@@ -72,7 +72,7 @@ void VWObject::receivedProxObjectLocation(
         request->serializeSend();
 }
 
-VWObject::VWObject(Network::IOService*io):mTracker(io) {
+VWObject::VWObject() {
 
 }
 VWObject::~VWObject(){}
@@ -172,7 +172,7 @@ void VWObject::receivedProxObjectProperties(
             realThis->receivedPropertyUpdate(proxyObj, sentMessage->body().reads(i).field_name(), sentMessage->body().reads(i).data());
     }
     {
-        RPCMessage *request = new RPCMessage(&realThis->mTracker,std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
+        RPCMessage *request = new RPCMessage(realThis->getTracker(),std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
         request->header().set_destination_space(proximateObjectId.space());
         request->header().set_destination_object(proximateObjectId.object());
         Protocol::LocRequest loc;
@@ -394,7 +394,7 @@ void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &na
                 printstr<<" (Requesting information...)";
 
                 {
-                    RPCMessage *locRequest = new RPCMessage(&mTracker,std::tr1::bind(&VWObject::receivedProxObjectLocation,
+                    RPCMessage *locRequest = new RPCMessage(getTracker(),std::tr1::bind(&VWObject::receivedProxObjectLocation,
                                                                                      getWeakPtr(), _1, _2, _3,
                                                         proxCall.query_id()));
                     locRequest->header().set_destination_space(proximateObjectId.space());

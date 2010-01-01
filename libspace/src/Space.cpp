@@ -85,9 +85,8 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mLoc=new Loc;
     Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
     mGeom=new Proximity::BridgeProximitySystem(proxCon,spaceServices.registration_port());
-    Physics *physics =new Physics(this,mIO,SpaceObjectReference(mID,mNodeID),spaceServices.physics_port());
-    mPhysics=physics;
-    mPhysicsProxyObjects=physics->getProxyManager();
+    mPhysics =Physics::construct<Physics>(this,mIO,SpaceObjectReference(mID,mNodeID),spaceServices.physics_port());
+    mPhysicsProxyObjects=mPhysics->getProxyManager();
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
     mObjectSegmentation=NULL;
@@ -115,11 +114,11 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
                                              //spaceServicesString
                                              );
     mObjectConnections->forwardMessagesTo(this);
-    mPhysics->forwardMessagesTo(this);
+    mPhysics->forwardMessagesTo(mObjectConnections);
     mServices[spaceServices.registration_port()]=mRegistration;
     mServices[spaceServices.loc_port()]=mLoc;
     mServices[spaceServices.geom_port()]=mGeom;
-    mServices[spaceServices.physics_port()]=mPhysics;
+    mServices[spaceServices.physics_port()]=&*mPhysics;
     //mServices[ObjectReference(spaceServices.oseg_port())]=mObjectSegmentation;
     //mServices[ObjectReference(spaceServices.cseg_port())]=mCoordinateSegmentation;
     //mServices[ObjectReference(spaceServices.router_port())]=mRouter;
@@ -173,7 +172,9 @@ void Space::processMessage(const RoutableMessageHeader&header,MemoryReference me
         SILOG(space,warning,"Do not know where to forward message to "<<header.destination_object().toString());
     }
 }
-
+ProxyManager *Space::getProxyManager(){
+    return mPhysicsProxyObjects;
+}
 Space::~Space() {
 }
 }

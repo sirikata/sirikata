@@ -50,7 +50,6 @@ typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
 class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>{
 protected:
 //------- Members
-    QueryTracker mTracker;
     /// Call if you know that a position for some other ProxyObject has changed. FIXME: should this be made private?
     void applyPositionUpdate(const ProxyObjectPtr &proxy, const Protocol::ObjLoc &objLoc, bool force_reset);
     static void parsePhysicalParameters(PhysicalParameters &out, const Protocol::PhysicalParameters &parsedProperty);
@@ -61,7 +60,7 @@ public:
     virtual QueryTracker*getTracker()=0;
     virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;
     virtual void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&obj, const SpaceObjectReference&)=0;
-    VWObject(Network::IOService*);
+    VWObject();
     virtual ~VWObject();
     static void receivedProxObjectLocation(
         const VWObjectWPtr &weakThis,

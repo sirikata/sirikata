@@ -65,7 +65,7 @@ class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     
     Network::IOService*mIO;
     ///The system keeping track of ProxyObjects  
-    Physics *mPhysics;
+    std::tr1::shared_ptr<Physics> mPhysics;
     ///The system that has access to ProxyObjects to bootstrap TimeSteppedSimulations
     ProxyManager *mPhysicsProxyObjects;
     ///The registration service that allows objects to connect to the space and maps them to consistent ObjectReferences
@@ -97,9 +97,13 @@ public:
     ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
-
+    ProxyManager *getProxyManager();
     Space(const SpaceID&, const String&options);
     ~Space();
+    Network::IOService*getIOService(){
+        return mIO;
+    }
+        
     ///hands control off to mIO and never returns
     void run();
     const SpaceID& id()const{
