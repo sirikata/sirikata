@@ -42,6 +42,7 @@ class Cseg;
 class MessageRouter;
 class ObjectConnections;
 class ProxyManager;
+class Subscription;
 namespace Proximity{
 class ProximitySystem;
 }
@@ -82,6 +83,8 @@ class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     MessageService *mRouter;
     ///Active connections to object hosts, with streams to individual objects;
     ObjectConnections* mObjectConnections;
+    ///Class to handle subscription and broadcast services. Runs on two ports.
+    Subscription* mSubscription;
     ///map from message port to space service
     std::tr1::unordered_map<unsigned int,MessageService*> mServices;
     ///What region this space node is responsible for

@@ -53,6 +53,7 @@
 #include <space/Registration.hpp>
 #include <space/Router.hpp>
 #include <space/Physics.hpp>
+#include <space/Subscription.hpp>
 #include <proxyobject/Platform.hpp>
 namespace Sirikata {
 namespace Space {
@@ -87,6 +88,7 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mGeom=new Proximity::BridgeProximitySystem(proxCon,spaceServices.registration_port());
     mPhysics =Physics::construct<Physics>(this,mIO,SpaceObjectReference(mID,mNodeID),spaceServices.physics_port());
     mPhysicsProxyObjects=mPhysics->getProxyManager();
+    mSubscription=new Subscription(mIO);
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
     mObjectSegmentation=NULL;
@@ -119,6 +121,8 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mServices[spaceServices.loc_port()]=mLoc;
     mServices[spaceServices.geom_port()]=mGeom;
     mServices[spaceServices.physics_port()]=&*mPhysics;
+    mServices[Services::SUBSCRIPTION]=mSubscription->getSubscriptionService();
+    mServices[Services::BROADCAST]=mSubscription->getBroadcastService();
     //mServices[ObjectReference(spaceServices.oseg_port())]=mObjectSegmentation;
     //mServices[ObjectReference(spaceServices.cseg_port())]=mCoordinateSegmentation;
     //mServices[ObjectReference(spaceServices.router_port())]=mRouter;
@@ -127,6 +131,8 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mRegistration->forwardMessagesTo(mGeom);
     mGeom->forwardMessagesTo(mObjectConnections);
     mLoc->forwardMessagesTo(mGeom);
+    mSubscription->getSubscriptionService()->forwardMessagesTo(mObjectConnections);
+    mSubscription->getBroadcastService()->forwardMessagesTo(mObjectConnections);
 }
 void Space::run() {
     RoutableMessageHeader nodeObjectHeader;

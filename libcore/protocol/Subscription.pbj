@@ -31,28 +31,29 @@
  */
 "pbj-0.0.3"
 
-package Sirikata.Subscription.Protocol;
-message Address {
-  optional string hostname=1;
-  optional string service=2;
-}
+package Sirikata.SubscriptionPBJ.Protocol;
 
+// SUBSCRIPTION port
 message Subscribe {
-    reserve 1 to 6;//in case we ever need to forward these around a bit
-    optional Address broadcast_address=7;
+    reserve 1 to 8;//in case we ever need to forward these around a bit
     ///the name of the specific broadcast to listen to
-    optional uuid broadcast_name=8;
-    ///the maximum frequency to receive updates: empty means every update is broadcast
-    optional duration update_period=9;
+    optional uuid broadcast_name=9;
+    ///the minimum time between updates: 0 means every update is broadcast
+    ///if ommitted, it means that you wish to unsubscribe from the broadcast.
+    optional duration update_period=10;
     
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 }
 
+// BROADCAST port
 message Broadcast {
-    reserve 1 to 6;//in case we ever need to forward these around a bit
+    reserve 1 to 8;//in case we ever need to forward these around a bit
     ///the name of the specific broadcast to listen to
-    optional uuid broadcast_name=7;
+    optional uuid broadcast_name=9;
+    ///the contents of a message to be broadcast (if sent from the creator to subscription),
+    ///or the update (if sent from subscription to the subscribers)
+    optional bytes data=10;
     
     reserve 1536 to 2560;
     reserve 229376 to 294912;
