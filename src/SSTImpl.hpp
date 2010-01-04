@@ -380,7 +380,7 @@ public:
     conn->setState(CONNECTION_PENDING_CONNECT);    
 
     uint8* payload = new uint8[1];
-    payload[0] = 1; //getAvailableChannel(); */    
+    payload[0] = 1; //getAvailableChannel();
     
     conn->setLocalChannelID(1);
     conn->sendData(payload, 1);
@@ -840,6 +840,33 @@ public:
     //int y=*x;    // for deliberately crashing everything :P       
   }
 
+  static bool connectStream(const ObjectHostContext* ctx, 
+			    EndPoint <EndPointType> localEndPoint, 
+			    EndPoint <EndPointType> remoteEndPoint, 
+			    StreamReturnCallbackFunction cb) 
+  {
+    if (mStreamReturnCallbackMap.find(localEndPoint) != mStreamReturnCallbackMap.end()) {
+      return false;
+    }
+
+    Connection<EndPointType>::createConnection(ctx, localEndPoint, 
+					       remoteEndPoint, 
+					       connectionCreated);
+
+    mStreamReturnCallbackMap[localEndPoint] = cb;
+
+    return true;
+  }
+
+private:
+  static void connectionCreated( boost::shared_ptr< Connection<EndPointType> > c) {
+    uint16 f[1];
+    c->stream(mStreamReturnCallbackMap[c->localEndPoint()], f , 0);
+
+    mStreamReturnCallbackMap.erase(c->localEndPoint());
+  }
+
+public:
   void ioServicingLoop()  {
     /*
       while (mLooping) {
@@ -1097,7 +1124,7 @@ public:
      @return a pointer to the connection that created this stream.
   */
   virtual Connection<EndPointType>* connection() {
-    return NULL;
+    return mConnection;
   }
     
   /* Creates a child stream. The function also queues up
@@ -1127,14 +1154,12 @@ public:
   void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len ) 
   {
-    if (len > 0) {
+    if (streamMsg->type() == streamMsg->DATA) {
       mTransmitWindowSize = pow(2, streamMsg->window());
-
 
       printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
 
-
-      if (offset == mNextByteExpected) {
+      if ( (int)(offset) == mNextByteExpected) {
         uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  mReceiveWindowSize -= len;
@@ -1162,7 +1187,7 @@ public:
 	  //now move the window forward...
 	  mLastContiguousByteReceived = mLastContiguousByteReceived + readyBufferSize;
           mNextByteExpected = mLastContiguousByteReceived + 1;
-          mLastByteReceived = ( offset + len - 1 > mLastByteReceived ) ? offset+len -1 : mLastByteReceived;
+          mLastByteReceived = ( (int)(offset + len - 1) > mLastByteReceived ) ? offset+len -1 : mLastByteReceived;
 
           memset(mReceiveBitmap, 0, readyBufferSize);
           memmove(mReceiveBitmap, mReceiveBitmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
@@ -1194,7 +1219,7 @@ public:
    	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
 	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
 
-          mLastByteReceived = ( offset+len-1  > mLastByteReceived ) ? offset + len - 1 : mLastByteReceived;
+          mLastByteReceived = ( (int) (offset+len-1)  > mLastByteReceived ) ? offset + len - 1 : mLastByteReceived;
 
           sendAckPacket();
           mReceivedSegments[offset] = 1;
@@ -1207,7 +1232,7 @@ public:
       }
 
     }
-    else {
+    else if (streamMsg->type() == streamMsg->ACK) {
       boost::mutex::scoped_lock l(m_mutex);
       
       if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
@@ -1352,6 +1377,12 @@ private:
 
   //debugging counter
   int totalBytesRead;
+
+  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction>
+                                                        StreamReturnCallbackMap;
+
+  
+  static StreamReturnCallbackMap mStreamReturnCallbackMap;
 };
 
 }
