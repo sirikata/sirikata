@@ -1464,7 +1464,7 @@ IF(WIN32)
 ENDIF()
 
 
-IF(PYTHON_EXECUTABLE AND IRON_PYTHON_FOUND) #FIXME should work if we have dotnet protobufs (if we can generate pbj.py files)
+IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can generate pbj.py files)
   SET(CSV_CONVERTER_BINARY ${OH_TOOLS_DIR}/csv_converter.py)
   SET(INPUT_SCENE_CSV ${DEMO_SCENES_DIR}/collada.csv)
 
@@ -1479,7 +1479,7 @@ IF(PYTHON_EXECUTABLE AND IRON_PYTHON_FOUND) #FIXME should work if we have dotnet
       COMMAND ${PYTHON_EXECUTABLE} ${CSV_CONVERTER_BINARY} ${INPUT_SCENE_CSV} ${GENERATED_SCENE_DB}
       DEPENDS ${AdditionalProtoDepends}
       COMMENT "Making example scene database from  ${GENERATED_SCENE_DB}")
-
+    INSTALL(FILES ${GENERATED_SCENE_DB} DESTINATION bin)
     MESSAGE(STATUS "Added ${GENERATED_SCENE_DB} target.")
   ENDIF()
 ENDIF()
