@@ -1,0 +1,12 @@
+material baseogremat
+{
+	technique
+	{
+		pass
+		{
+			ambient 0 0 0
+			cull_hardware none
+			cull_software none
+		}
+	}
+}

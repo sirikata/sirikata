@@ -37,75 +37,102 @@ int64 OgreMesh::size() const{
 }
 void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord)
 {
-  VertexData *vertexData = subMesh->vertexData;
-  if (vertexData) {
-      VertexDeclaration *vertexDecl = vertexData->vertexDeclaration;
-      
-      // find the element for position
-      const VertexElement *element = vertexDecl->findElementBySemantic(Ogre::VES_POSITION);
-      const VertexElement *texelement = texcoord ? vertexDecl->findElementBySemantic(Ogre::VES_TEXTURE_COORDINATES) : NULL;
+    VertexData *vertexData = subMesh->vertexData;
+    if (vertexData)
+    {
+        VertexDeclaration *vertexDecl = vertexData->vertexDeclaration;
 
-      // find and lock the buffer containing position information
-      VertexBufferBinding *bufferBinding = vertexData->vertexBufferBinding;
-      HardwareVertexBuffer *buffer = bufferBinding->getBuffer(element->getSource()).get();
-      unsigned char *pVert = static_cast<unsigned char*>(buffer->lock(HardwareBuffer::HBL_READ_ONLY));
-      HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;
-      unsigned char *pTexVert = texbuffer
-          ? (texbuffer == buffer ? pVert : static_cast<unsigned char*>(texbuffer->lock(HardwareBuffer::HBL_READ_ONLY)))
-          : NULL;
-      std::vector<TriVertex> lvertices;
-      for (size_t vert = 0; vert < vertexData->vertexCount; vert++) {
-          float *vertex = 0;
-          Real x, y, z;
-          element->baseVertexPointerToElement(pVert, &vertex);
-          x = *vertex++;
-          y = *vertex++;
-          z = *vertex++;
-          Ogre::Vector3 vec(x, y, z);
-          Ogre::Vector2 texvec(0,0);
-          if (texelement) {
-              float *texvertex = 0;
-              float u, v, w;
-              texelement->baseVertexPointerToElement(pTexVert, &texvertex);
-              u = *texvertex++;
-              v = *texvertex++;
-              texvec = Ogre::Vector2(u, v);
-              pTexVert += texbuffer->getVertexSize();
-          }
-          
-          lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
+        // find the element for position
+        const VertexElement *element = vertexDecl->findElementBySemantic(Ogre::VES_POSITION);
+        const VertexElement *texelement = texcoord ? vertexDecl->findElementBySemantic(Ogre::VES_TEXTURE_COORDINATES) : NULL;
 
-          pVert += buffer->getVertexSize();
-      }
-      buffer->unlock();
-      
-      // find and lock buffer containg vertex indices
-      IndexData * indexData = subMesh->indexData;
-      HardwareIndexBuffer *indexBuffer = indexData->indexBuffer.get();
-      void *pIndex = static_cast<unsigned char *>(indexBuffer->lock(HardwareBuffer::HBL_READ_ONLY));
-      if (indexBuffer->getType() == HardwareIndexBuffer::IT_16BIT) {
-          for (size_t index = indexData->indexStart; index < indexData->indexCount; ) {
-              uint16 *uint16Buffer = (uint16 *) pIndex;
-              uint16 v1 = uint16Buffer[index++];
-              uint16 v2 = uint16Buffer[index++];
-              uint16 v3 = uint16Buffer[index++];
-              
-              mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
-          }
-      } else if (indexBuffer->getType() == HardwareIndexBuffer::IT_32BIT) {
-          for (size_t index = indexData->indexStart; index < indexData->indexCount; ) {
-              uint32 *uint16Buffer = (uint32 *) pIndex;
-              uint32 v1 = uint16Buffer[index++];
-              uint32 v2 = uint16Buffer[index++];
-              uint32 v3 = uint16Buffer[index++];
-              
-              mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
-          }
-      } else {
-          assert(0);
-      }
-      indexBuffer->unlock();
-  }
+        // find and lock the buffer containing position information
+        VertexBufferBinding *bufferBinding = vertexData->vertexBufferBinding;
+        HardwareVertexBuffer *buffer = bufferBinding->getBuffer(element->getSource()).get();
+        unsigned char *pVert = static_cast<unsigned char*>(buffer->lock(HardwareBuffer::HBL_READ_ONLY));
+        HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;
+        unsigned char *pTexVert = texbuffer
+                                  ? (texbuffer == buffer ? pVert : static_cast<unsigned char*>(texbuffer->lock(HardwareBuffer::HBL_READ_ONLY)))
+                                          : NULL;
+        std::vector<TriVertex> lvertices;
+        for (size_t vert = 0; vert < vertexData->vertexCount; vert++)
+        {
+            float *vertex = 0;
+            Real x, y, z;
+            element->baseVertexPointerToElement(pVert, &vertex);
+            x = *vertex++;
+            y = *vertex++;
+            z = *vertex++;
+            Ogre::Vector3 vec(x, y, z);
+            Ogre::Vector2 texvec(0,0);
+            if (texelement)
+            {
+                float *texvertex = 0;
+                float u, v, w;
+                texelement->baseVertexPointerToElement(pTexVert, &texvertex);
+                u = *texvertex++;
+                v = *texvertex++;
+                texvec = Ogre::Vector2(u, v);
+                pTexVert += texbuffer->getVertexSize();
+            }
+
+            lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
+
+            pVert += buffer->getVertexSize();
+        }
+        buffer->unlock();
+
+        // find and lock buffer containg vertex indices
+        IndexData * indexData = subMesh->indexData;
+        HardwareIndexBuffer *indexBuffer = indexData->indexBuffer.get();
+        void *pIndex = static_cast<unsigned char *>(indexBuffer->lock(HardwareBuffer::HBL_READ_ONLY));
+        Ogre::RenderOperation ro;
+        subMesh->_getRenderOperation(ro);
+        std::cout << "dbm debug useIndexes: " << ro.useIndexes << std::endl;
+        if (ro.useIndexes)
+        {
+            IndexData * indexData = subMesh->indexData;
+            HardwareIndexBuffer *indexBuffer = indexData->indexBuffer.get();
+            std::cout << "dbm debug syncFromOgreMesh indexBuffer: " << indexBuffer << std::endl;
+            void *pIndex = static_cast<unsigned char *>(indexBuffer->lock(HardwareBuffer::HBL_READ_ONLY));
+            if (indexBuffer->getType() == HardwareIndexBuffer::IT_16BIT)
+            {
+                for (size_t index = indexData->indexStart; index < indexData->indexCount; )
+                {
+                    uint16 *uint16Buffer = (uint16 *) pIndex;
+                    uint16 v1 = uint16Buffer[index++];
+                    uint16 v2 = uint16Buffer[index++];
+                    uint16 v3 = uint16Buffer[index++];
+
+                    mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
+                }
+            }
+            else if (indexBuffer->getType() == HardwareIndexBuffer::IT_32BIT)
+            {
+                for (size_t index = indexData->indexStart; index < indexData->indexCount; )
+                {
+                    uint32 *uint16Buffer = (uint32 *) pIndex;
+                    uint32 v1 = uint16Buffer[index++];
+                    uint32 v2 = uint16Buffer[index++];
+                    uint32 v3 = uint16Buffer[index++];
+
+                    mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
+                }
+            }
+            else
+            {
+                assert(0);
+            }
+            indexBuffer->unlock();
+        }
+        else
+        {
+            for (unsigned int i=0; i<lvertices.size(); i+=3)
+            {
+                mTriangles.push_back(Triangle(lvertices[i], lvertices[i+1], lvertices[i+2]));
+            }
+        }
+    }
 }
 
 
