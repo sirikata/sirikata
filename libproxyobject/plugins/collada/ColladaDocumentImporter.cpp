@@ -52,7 +52,6 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri )
 //    lastURIString = hash.convertToHexString();
     
 //    lastURIString = uri.toString();
-    std::cout << "dbm debug hash uri-->" << uri.filename() << "<-- hash-->" << mDocument->getURI().toString() << "<--\n";
     meshstore[mDocument->getURI().toString()] = new Meshdata();
     meshstore[mDocument->getURI().toString()]->uri = mDocument->getURI().toString();
 }
@@ -102,7 +101,6 @@ void ColladaDocumentImporter::finish ()
 
     postProcess ();
     if (meshstore[mDocument->getURI().toString()]->positions.size()) {
-        std::cout << "dbm debug3 ::finish mProxyPtr: " << mProxyPtr << " about to call meshParsed for: " << mDocument->getURI().toString() << "\n";
         mProxyPtr->meshParsed( mDocument->getURI().toString(), meshstore[mDocument->getURI().toString()] );
     }
     mState = FINISHED;    
@@ -111,10 +109,6 @@ void ColladaDocumentImporter::finish ()
 bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asset )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered" << std::endl,true));
-    std::cout << "dbm debug writeGlobalAsset, axis: " << asset->getUpAxisType() 
-            << " Yup: " << COLLADAFW::FileInfo::Y_UP 
-            << " Zup: " << COLLADAFW::FileInfo::Z_UP 
-            << std::endl;
     bool ok = mDocument->import ( *this, *asset );
     meshstore[mDocument->getURI().toString()]->up_axis=asset->getUpAxisType();
     return ok;
@@ -145,22 +139,16 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
 {
     String uri = mDocument->getURI().toString();
     assert((std::cout << "MCB: ColladaDocumentImporter::writeGeometry(" << geometry << ") entered" << std::endl,true));
-    std::cout << "dbm debug Geometry original id: " << geometry->getOriginalId() << std::endl;
-    std::cout << "dbm debug uri: " << uri << std::endl;
-    std::cout << "dbm debug Geometry name: " << geometry->getName() << " type: " <<
-    (geometry->getType()==COLLADAFW::Geometry::GEO_TYPE_MESH?"Mesh":"NotMesh") << std::endl;
     COLLADAFW::Mesh const* mesh = dynamic_cast<COLLADAFW::Mesh const*>(geometry);
     if (!mesh) {
         std::cerr << "ERROR: we only support collada Mesh\n";
         assert(false);
     }
-    std::cout << "dbm debug: #faces " << mesh->getFacesCount() << std::endl;
     //COLLADAFW::MeshVertexData const v(mesh->getPositions());            // private data error!
     COLLADAFW::MeshVertexData const* verts(&(mesh->getPositions()));      // but this works?
     COLLADAFW::MeshVertexData const* norms(&(mesh->getNormals()));
     COLLADAFW::MeshVertexData const* UVs(&(mesh->getUVCoords()));
     COLLADAFW::MeshPrimitiveArray const* primitives(&(mesh->getMeshPrimitives()));
-    std::cout << "dbm debug prim type: " << (*primitives)[0]->getPrimitiveType() << " #: " << primitives->getCount() << std::endl;
     if (!(*primitives)[0]->getPrimitiveType()==COLLADAFW::MeshPrimitive::TRIANGLES) {
         std::cerr << "ERROR: we only support collada MeshPrimitive::TRIANGLES\n";
         assert(false);
@@ -169,38 +157,33 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     COLLADAFW::UIntValuesArray const* ni(&((*primitives)[0]->getNormalIndices()));
     int vcnt = verts->getValuesCount();
     int ncnt = norms->getValuesCount();
-    int icnt = pi->getCount();
+    unsigned int icnt = pi->getCount();
     int uvcnt = UVs->getValuesCount();
     if (icnt != ni->getCount()) {
         std::cerr << "ERROR: position indices and normal indices differ in length!\n";
         assert(false);
     }
-    std::cout << "dbm debug, length of verts: " << vcnt << " norms: " << ncnt << " indices: " << icnt << std::endl;
     COLLADAFW::FloatArray const* vdata = verts->getFloatValues();
     COLLADAFW::FloatArray const* ndata = norms->getFloatValues();
     COLLADAFW::FloatArray const* uvdata = UVs->getFloatValues();
     if (vdata && ndata) {
         float const* raw = vdata->getData();
         for (int i=0; i<vcnt; i+=3) {
-            std::cout << "  dbm debug vertex: " << raw[i] <<","<< raw[i+1] <<"," << raw[i+2] << std::endl;
             meshstore[uri]->positions.push_back(Vector3f(raw[i],raw[i+1],raw[i+2]));
         }
         raw = ndata->getData();
         for (int i=0; i<ncnt; i+=3) {
-            std::cout << "  dbm debug normal: " << raw[i] <<","<< raw[i+1] <<"," << raw[i+2] << std::endl;
             meshstore[uri]->normals.push_back(Vector3f(raw[i],raw[i+1],raw[i+2]));
         }
         if (uvdata) {
             raw = uvdata->getData();
             for (int i=0; i<uvcnt; i+=2) {
-                std::cout << "  dbm debug uv: " << raw[i] <<","<< raw[i+1] << std::endl;
                 meshstore[uri]->texUVs.push_back(Vector2f(raw[i],raw[i+1]));
             }
         }
         unsigned int const* praw = pi->getData();
         unsigned int const* nraw = ni->getData();
-        for (int i=0; i<icnt; i++) {
-            std::cout << "  dbm debug position index: " << praw[i] <<","<< " normal index: " << nraw[i] << std::endl;
+        for (unsigned int i=0; i<icnt; i++) {
             meshstore[uri]->position_indices.push_back(praw[i]);
             meshstore[uri]->normal_indices.push_back(nraw[i]);
         }
@@ -222,7 +205,6 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
 bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* material )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeMaterial(" << material << ") entered" << std::endl,true));
-    std::cout << "dbm debug Material name: " << material->getName() << std::endl;
     return true;
 }
 
@@ -244,11 +226,6 @@ bool ColladaDocumentImporter::writeCamera ( COLLADAFW::Camera const* camera )
 bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << image << ") entered" << std::endl,true));
-    std::cout << "dbm debug Image name: " << image->getName() << std::endl;
-    std::cout << "dbm debug Image source type: " << image->getSourceType() << std::endl;
-    std::cout << "dbm debug Image format: " << image->getFormat() << std::endl;
-    std::cout << "dbm debug Image width, height: " << image->getWidth() <<","<< image->getHeight() << std::endl;
-    std::cout << "dbm debug Image URI: " << image->getImageURI().getURIString() << std::endl;
     meshstore[mDocument->getURI().toString()]->texture = image->getImageURI().getURIString();  /// not really -- among other sins, lowercase!
     return true;
 }

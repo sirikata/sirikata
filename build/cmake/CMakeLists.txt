@@ -1466,7 +1466,7 @@ ENDIF()
 
 IF(PYTHON_EXECUTABLE AND IRON_PYTHON_FOUND) #FIXME should work if we have dotnet protobufs (if we can generate pbj.py files)
   SET(CSV_CONVERTER_BINARY ${OH_TOOLS_DIR}/csv_converter.py)
-  SET(INPUT_SCENE_CSV ${DEMO_SCENES_DIR}/scenebig.csv)
+  SET(INPUT_SCENE_CSV ${DEMO_SCENES_DIR}/collada.csv)
 
   IF(EXISTS ${CSV_CONVERTER_BINARY} AND EXISTS ${INPUT_SCENE_CSV})
     SET(GENERATED_SCENE_DB ${CMAKE_CURRENT_BINARY_DIR}/scene.db)

@@ -105,7 +105,6 @@ bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::M
 
 void ColladaMeshObject::setMesh ( URI const& rhs )
 {
-    std::cout << "dbm debug Collada setMesh: " << rhs << std::endl;
     mMeshURI = rhs;
     // MCB: trigger importation of mesh content
     

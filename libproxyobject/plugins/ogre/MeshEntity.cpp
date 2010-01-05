@@ -199,8 +199,6 @@ void MeshEntity::unbindTexture(const std::string &textureName) {
 
 void MeshEntity::loadMesh(const String& meshname)
 {
-    std::cout << "dbm debug loadMesh: " << meshname << " movable: " << ogreMovableName() <<  std::endl;
-//    std::cout << "dbm debug loadMesh: " << meshname << std::endl;
     Ogre::Entity * oldMeshObj=getOgreEntity();
     mReplacedMaterials.clear();
 
@@ -291,15 +289,12 @@ void MeshEntity::onSetMesh ( URI const& meshFile )
     String fn=meshFile.filename();
     bool is_collada=false;
     if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
-    std::cout << "dbm debug onSetMesh ogre: " << fn << " is_collada: " << is_collada << std::endl;
     if (is_collada) {
-        std::cout << "dbm debug onSetMesh ogre -- get collada mesh data from Model\n";
         Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
         Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset ( meshFile, Meru::GraphicsResource::MODEL );
         mResource->setMeshResource ( newModelPtr );
     }
     else {
-        std::cout << "dbm debug onSetMesh ogre -- old skool\n";
         Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
         Meru::SharedResourcePtr newMeshPtr = grm->getResourceAsset ( meshFile, Meru::GraphicsResource::MESH );
         mResource->setMeshResource ( newMeshPtr );
@@ -315,6 +310,7 @@ Vector3f fixUp(int up, Vector3f v) {
 
 Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata& md) {
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
+    /*
     std::cout << "dbm debug MeshEntity::downloadFinished for: " << md.uri
             << " status: " << (int)ev->getStatus()
             << " == " << (int)Transfer::TransferManager::SUCCESS
@@ -322,14 +318,14 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
             << " fingerprint: " << ev->fingerprint()
             << " length: " << (int)ev->data().length() 
             << std::endl;
+    */
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
-    std::cout << "dbm debug onMeshParsed hash: " << hash << "\n";
     int up = md.up_axis;
     int vertcount = md.positions.size();
     int normcount = md.normals.size();
     int indexcount = md.position_indices.size();
-    std::cout << "dbm debug get model data, create manual object here positions-length: " << vertcount << std::endl;
+    /*
     std::cout << "dbm debug vertex data:\n";
     for (int i=0; i<vertcount; i++) {
         std::cout << "  dbm debug vertex (ogre): " << md.positions[i] << std::endl;
@@ -338,8 +334,9 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
     for (int i=0; i<normcount; i++) {
         std::cout << "  dbm debug normal (ogre): " << md.normals[i] << std::endl;
     }
+    */
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-//        // set bounds, bounding radius here
+    /// FIXME: set bounds, bounding radius here
     Ogre::ManualObject mo(hash);
     mo.clear();
 
@@ -349,27 +346,20 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
     std::string matname = hash + "_texture";
     mat = mat->clone(matname);
 
-    /// er, ok, yeah this needs to change
-    //mat->getTechnique(0)->getPass(0)->createTextureUnitState("data/" + md.texture, 0);
-    std::cout << "dbm debug MeshEntity::downloadFinished tex in Cache: " << "Cache/" + ev->fingerprint().convertToHexString() <<"\n";
+    /// FIXME: only support one texture!
     mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + ev->fingerprint().convertToHexString(), 0);
     mo.begin(matname);
-    std::cout << "dbm debug triangle data:\n";
+//    std::cout << "dbm debug triangle data:\n";
     float tu, tv;
     for (int i=0; i<indexcount; i++) {
-        std::cout << "  dbm debug triangle (ogre): "
-//                    << md.position_indices[i]
-//                    << ", "
-//                    << md.normal_indices[i]
-//                    << std::endl
-                ;
+//        std::cout << "  dbm debug triangle (ogre): ";
         int j = md.position_indices[i];
         Vector3f v = fixUp(up, md.positions[j]);
         mo.position(v[0], v[1], v[2]);
-        std::cout << " pos: " << v;
+//        std::cout << " pos: " << v;
         j = md.normal_indices[i];
         v = fixUp(up, md.normals[j]);
-        std::cout << " norm: " << v;
+//        std::cout << " norm: " << v;
         mo.normal(v[0], v[1], v[2]);
         mo.colour(1.0,1.0,1.0,1.0);
         if (md.texUVs.size()==0) {
@@ -389,26 +379,17 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
         }
         else {
             Sirikata::Vector2f uv = md.texUVs[i];
-            std::cout << " tex: " << uv;
+//            std::cout << " tex: " << uv;
             tu=uv[0];
             tv=1.0-uv[1];           //  why you gotta be like that?
         }
         mo.textureCoord(tu, tv);
-        std::cout << std::endl;
+//        std::cout << std::endl;
     }
     mo.end();
     mo.setVisible(true);
     Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     bool check = mm.resourceExists(hash);
-    std::cout << "dbm debug check if manual object got to meshMgr: " << check << std::endl;
-    /*
-    std::cout << "dbm debug downloadFinished: test delay start\n";
-    for(double n=0.0; n< 1.0; n+= double(0.000000001)) {
-        double m = n*n*n;
-        if(m>=double(0.5) && m<=double(0.500000001)) std::cout << "dbm debug delay halfway: " << m << std::endl;
-    }
-    std::cout << "dbm debug downloadFinished: test delay done\n";
-    */
     loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
     return Task::EventResponse::del();
 }
@@ -417,9 +398,8 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
     if (md.texture=="") {
         md.texture="BumpyMetal.jpg";
     }
-    /// attempt download of texture
+    /// attempt download of texture FIXME: only covers single texture case
     String texURI=uri.substr(0, uri.rfind("/")+1) + md.texture;
-    std::cout << "dbm debug MeshEntity::onMeshParsed, uri: " << uri << " texture to dl: " << texURI << " this: " << this << "\n";
     mScene->mTransferManager->download(Transfer::URI(texURI), std::tr1::bind(&MeshEntity::downloadFinished,
                                        this,_1,md), Transfer::Range(true));
 }

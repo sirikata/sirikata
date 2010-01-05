@@ -130,7 +130,6 @@ ResourceDependencyTask* GraphicsResourceModel::createDependencyTask(DependencyMa
 
 ResourceLoadTask* GraphicsResourceModel::createLoadTask(DependencyManager *manager)
 {
-    std::cout << "dbm debug: createLoadTask uri: " << getURI() << std::endl;
     return new ModelLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
 }
 
@@ -215,8 +214,6 @@ ModelLoadTask::ModelLoadTask(DependencyManager *mgr, SharedResourcePtr resourceP
 }
 
 void ModelLoadTask::doRun() {
-    std::cout << "dbm debug: manual object creation moved to MeshEntity::onMeshParsed(), asset: " << mHash 
-            << " epoch: " << mEpoch << "\n";
     /// FIXME: can we just skip this?  Maybe we need to get rid of Model completely?
 //    mResource->loaded(true, mEpoch);
 }

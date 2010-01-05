@@ -85,12 +85,10 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord)
         // find and lock buffer containg vertex indices
         Ogre::RenderOperation ro;
         subMesh->_getRenderOperation(ro);
-        std::cout << "dbm debug useIndexes: " << ro.useIndexes << std::endl;
         if (ro.useIndexes)
         {
             IndexData * indexData = subMesh->indexData;
             HardwareIndexBuffer *indexBuffer = indexData->indexBuffer.get();
-            std::cout << "dbm debug syncFromOgreMesh indexBuffer: " << indexBuffer << std::endl;
             void *pIndex = static_cast<unsigned char *>(indexBuffer->lock(HardwareBuffer::HBL_READ_ONLY));
             if (indexBuffer->getType() == HardwareIndexBuffer::IT_16BIT)
             {

@@ -98,7 +98,6 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
         // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
         // MCB: Serialized because OpenCOLLADA thread safety is unknown
         ColladaDocumentLoader loader ( what );
-        std::cout << "dbm debug3 setting loader.mProxyPtr: " << proxy << "\n";
         loader.setProxyPtr(proxy);
 
         char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );
@@ -106,7 +105,6 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
         {
             // finally we can add the Product to our set of completed documents
             mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
-            std::cout << "dbm debug ColladaSystem loader.load done, mDocuments appended\n";
         }
         else
         {
@@ -169,7 +167,6 @@ void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
         
         ColladaMeshObject* cmo = new ColladaMeshObject ( *this );
         cmo->mProxyPtr = asMesh.get();
-        std::cout << "dbm debug3 set cmo->proxy: " << cmo->mProxyPtr << "\n";
         ProxyMeshObject::ModelObjectPtr mesh ( cmo );
         
         // try to supply the proxy with a data model

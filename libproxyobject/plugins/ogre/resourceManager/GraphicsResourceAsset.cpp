@@ -84,7 +84,6 @@ void GraphicsResourceAsset::doLoad()
   GraphicsResourceManager* grm = GraphicsResourceManager::getSingletonPtr();
   DependencyManager* depMgr = grm->getDependencyManager();
 
-  std::cout << "dbm debug createLoadTask\n";
   mLoadTask = createLoadTask(depMgr);
   DependencyTask *downloadTask = createDownloadTask(depMgr, mLoadTask);
   depMgr->establishDependencyRelationship(mLoadTask, downloadTask);

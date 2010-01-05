@@ -15,7 +15,6 @@ struct Meshdata {
    
     Meshdata() {
         id=Meshdata_counter++;
-        std::cout << "dbm debug Meshdata ctor id: " << id << "\n";
     }
 };
 
