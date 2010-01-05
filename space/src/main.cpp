@@ -89,7 +89,7 @@ int main(int argc,const char**argv) {
             fgetc(stdin);
             return 1;
         }
-        
+        initializeProtocols();
         String graphicsCommandArguments;
         {
             std::ostringstream os;
