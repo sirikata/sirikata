@@ -103,7 +103,7 @@ void SpaceProxyManager::destroy() {
 ProxyObjectPtr SpaceProxyManager::getProxyObject(const Sirikata::SpaceObjectReference&id) const{
     ProxyMap::const_iterator where=mProxyMap.find(id.object());
     if (where!=mProxyMap.end()) {
-        if(id.space()!=mSpace->id()){
+        if(id.space()==mSpace->id()){
             return where->second;
         }
     }
