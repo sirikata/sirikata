@@ -693,7 +693,7 @@ void HostedObject::connectToSpace(const SpaceID&id,const HostedObjectPtr&spaceCo
         //bind script to object...script might be a remote ID, so need to bind download target, etc
         std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection;
         SpaceDataMap::iterator where;
-        if (spaceConnectionHint&&(where=spaceConnectionHint->mSpaceData->find(id))!=mSpaceData->end()) {
+        if (spaceConnectionHint&&(where=spaceConnectionHint->mSpaceData->find(id))!=spaceConnectionHint->mSpaceData->end()) {
             topLevelConnection=where->second.mSpaceConnection.getTopLevelStream();
         }else {
             topLevelConnection=mObjectHost->connectToSpace(id);
