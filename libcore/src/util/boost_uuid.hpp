@@ -400,7 +400,14 @@ uuid uuid::create_random_based(Engine& engine)
     {
         //unsigned long number = detail::random_number(engine);
         //memcpy(&data[i], &number, sizeof(unsigned long));
-        *reinterpret_cast<unsigned long*>(&data[i]) = detail::random_number(engine);
+        //void * data_ptr=&data[i];
+        //*reinterpret_cast<unsigned long*>(data_ptr) = detail::random_number(engine);
+        unsigned long number = detail::random_number(engine);
+        for (size_t j=i;j<i+sizeof(unsigned long);++j){
+            data[j]=number&255;
+            number/=256;
+        }
+        //memcpy(&data[i], &number, sizeof(unsigned long));
     }
 
     // set variant
@@ -462,7 +469,7 @@ template <typename ch, typename char_traits>
 		typedef std::ctype<ch> ctype_t;
 		ctype_t const& ctype = std::use_facet<ctype_t>(is.getloc());
 
-        ch xdigits[16];
+        ch xdigits[17];
         {
             char szdigits[17] = "0123456789ABCDEF";
             ctype.widen(szdigits, szdigits+16, xdigits);

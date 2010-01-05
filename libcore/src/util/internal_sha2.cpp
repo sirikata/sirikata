@@ -606,7 +606,7 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 			*context->buffer = 0x80;
 		}
 		/* Set the bit count: */
-		*(sha2_word64*)&context->buffer[SHA256_SHORT_BLOCK_LENGTH] = context->bitcount;
+        memcpy(&context->buffer[SHA256_SHORT_BLOCK_LENGTH], &context->bitcount,sizeof(context->bitcount));
 
 		/* Final transform: */
 		SHA256_Transform(context, (sha2_word32*)context->buffer);
@@ -923,8 +923,8 @@ void SHA512_Last(SHA512_CTX* context) {
 		*context->buffer = 0x80;
 	}
 	/* Store the length of input data (in bits): */
-	*(sha2_word64*)&context->buffer[SHA512_SHORT_BLOCK_LENGTH] = context->bitcount[1];
-	*(sha2_word64*)&context->buffer[SHA512_SHORT_BLOCK_LENGTH+8] = context->bitcount[0];
+	memcpy(&context->buffer[SHA512_SHORT_BLOCK_LENGTH],&context->bitcount[1],sizeof(sha2_word64));
+	memcpy(&context->buffer[SHA512_SHORT_BLOCK_LENGTH+8],&context->bitcount[0],sizeof(sha2_word64));
 
 	/* Final transform: */
 	SHA512_Transform(context, (sha2_word64*)context->buffer);

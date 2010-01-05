@@ -418,7 +418,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
-            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getResourcesDir(), "FileSystem", "General");
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");//FIXME get rid of this line of code: we don't want to load resources from $PWD
 
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==>
                                                                                       /// setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");

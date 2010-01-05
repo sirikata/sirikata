@@ -36,7 +36,7 @@
 #include "ColladaDocument.hpp"
 
 //#include <task/EventManager.hpp>
-
+#include "COLLADABUhash_map.h"
 #include "COLLADAFWIWriter.h"
 #include "COLLADAFWGeometry.h"
 #include "COLLADAFWMesh.h"
