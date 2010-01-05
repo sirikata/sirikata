@@ -52,15 +52,22 @@ void tickSim(Network::IOService*io,TimeSteppedSimulation*sim) {
 }
 int main(int argc,const char**argv) {
     using namespace Sirikata;
-    PluginManager plugins;
-    const char* pluginNames[] = { "tcpsst", "prox", "ogregraphics", "bulletphysics","colladamodels", NULL};
-    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
-        plugins.load( DynamicLibrary::filename(*plugin_name) );
 
     OptionValue *spaceOption;
-    InitializeGlobalOptions gbo("",spaceOption=new OptionValue("space","",OptionValueType<String>(),"Options passed to the space"),NULL);
+    OptionValue *loadGraphics;
+    OptionValue *loadPhysics;
+    InitializeGlobalOptions gbo("",spaceOption=new OptionValue("space","",OptionValueType<String>(),"Options passed to the space"),loadGraphics=new OptionValue("graphics","false",OptionValueType<bool>(),"Load the graphics plugin on the space"),loadPhysics=new OptionValue("physics","false",OptionValueType<bool>(),"Load the physics plugin on the space"),NULL);
 
     OptionSet::getOptions("")->parse(argc,argv);
+    PluginManager plugins;
+    
+    const char* pluginNames[] = { "tcpsst", "prox", "colladamodels", "ogregraphics", "bulletphysics", NULL};
+    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++) {
+        if (strcmp(*plugin_name,"ogregraphics")!=0||loadGraphics->as<bool>())
+            if (strcmp(*plugin_name,"bulletphysics")!=0||loadPhysics->as<bool>())
+                plugins.load( DynamicLibrary::filename(*plugin_name) );
+    }
+
     Space::Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())),spaceOption->as<String>());
     ProxyManager *provider=space.getProxyManager();
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
@@ -122,10 +129,6 @@ int main(int argc,const char**argv) {
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
-                std::cout << "Press enter to continue" << std::endl;
-                std::cerr << "Press enter to continue" << std::endl;
-                fgetc(stdin);
-                continue_simulation = false;
             }
             else {
                 SILOG(cppoh,info,String("Couldn't load ") + simName + String(" plugin."));
