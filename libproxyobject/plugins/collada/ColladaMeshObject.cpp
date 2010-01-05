@@ -44,8 +44,9 @@
 namespace Sirikata { namespace Models {
     
 ColladaMeshObject::ColladaMeshObject ( ColladaSystem& system )
-    :   MeshObject (),
-        mSystem ( system )
+        :   MeshObject (),
+        mSystem ( system ),
+        mProxyPtr()
 {
 
 }
@@ -104,9 +105,14 @@ bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::M
 
 void ColladaMeshObject::setMesh ( URI const& rhs )
 {
+    std::cout << "dbm debug Collada setMesh: " << rhs << std::endl;
     mMeshURI = rhs;
     // MCB: trigger importation of mesh content
-    mSystem.loadDocument ( rhs );
+    
+    /// dbm: this is what triggers Collada download.
+    /// dbm: ColladaSystem::loadDocument initiates a download using transferManager;
+    /// dbm: ColladaSystem:downloadFinished is the callback
+    mSystem.loadDocument ( rhs, mProxyPtr );
 }
     
 URI const& ColladaMeshObject::getMesh () const

@@ -38,6 +38,12 @@
 //#include <task/EventManager.hpp>
 
 #include "COLLADAFWIWriter.h"
+#include "COLLADAFWGeometry.h"
+#include "COLLADAFWMesh.h"
+#include "COLLADAFWImage.h"
+#include "COLLADAFWMaterial.h"
+#include "COLLADAFWFileInfo.h"
+#include <proxyobject/ProxyMeshObject.hpp>
 
 /////////////////////////////////////////////////////////////////////
 
@@ -65,7 +71,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         ~ColladaDocumentImporter ();
 
         ColladaDocumentPtr getDocument () const;
-        
+        ProxyMeshObject* mProxyPtr; 
+
     protected:
 
     private:

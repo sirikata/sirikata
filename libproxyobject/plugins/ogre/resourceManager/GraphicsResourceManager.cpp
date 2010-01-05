@@ -33,6 +33,7 @@
 #include "GraphicsResourceManager.hpp"
 #include "GraphicsResourceMaterial.hpp"
 #include "GraphicsResourceMesh.hpp"
+#include "GraphicsResourceModel.hpp"
 #include "GraphicsResourceName.hpp"
 #include "GraphicsResourceEntity.hpp"
 #include "GraphicsResourceSkeleton.hpp"
@@ -117,6 +118,9 @@ SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const Resource
   }
   if (resourceType == GraphicsResource::MESH) {
     curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(resourceId);
+  }
+  else if (resourceType == GraphicsResource::MODEL) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceModel>(resourceId);
   }
   else if (resourceType == GraphicsResource::MATERIAL) {
     curSharedPtr = GraphicsResource::construct<GraphicsResourceMaterial>(resourceId);

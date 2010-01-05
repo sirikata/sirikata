@@ -46,6 +46,7 @@
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
+#include <proxyobject/Meshdata.hpp>
 
 #define GRAVITY (-9.8f)
 
@@ -363,6 +364,7 @@ public:
     // interface from MeshListener
     public:
         virtual void onSetMesh ( URI const& meshFile );
+        virtual void onMeshParsed (String const& hash, Meshdata& md);
         virtual void onSetScale ( Vector3f const& scale );
         virtual void onSetPhysical ( PhysicalParameters const& pp );
 

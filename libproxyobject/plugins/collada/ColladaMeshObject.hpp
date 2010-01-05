@@ -37,6 +37,7 @@
 #include <proxyobject/models/MeshObject.hpp>
 
 #include <proxyobject/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
+#include <proxyobject/ProxyMeshObject.hpp>
 #include <transfer/URI.hpp>
 
 namespace COLLADAFW {
@@ -84,6 +85,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         
         virtual void setPhysical ( PhysicalParameters const& rhs );
         virtual PhysicalParameters const& getPhysical () const;
+        
+        ProxyMeshObject* mProxyPtr;
         
     protected:
     

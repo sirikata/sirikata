@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  MeshListener.hpp
+/*  Meru
+ *  GraphicsResourceModel.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,60 +29,32 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_MESH_LISTENER_HPP_
-#define _SIRIKATA_MESH_LISTENER_HPP_
+#ifndef _GRAPHICS_RESOURCE_MODEL_HPP
+#define _GRAPHICS_RESOURCE_MODEL_HPP
 
-#include "transfer/URI.hpp"
-#include <proxyobject/Meshdata.hpp>
+#include "MeruDefs.hpp"
+#include "GraphicsResourceAsset.hpp"
 
-namespace Sirikata {
+namespace Meru {
 
-using Transfer::URI;
-
-// FIX ME: this definition probably doesn't belong here
-class PhysicalParameters {
+class GraphicsResourceModel : public GraphicsResourceAsset {
 public:
-    enum PhysicalMode {
-        Disabled = 0,               /// non-active, remove from physics
-        Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        DynamicBox,                 /// fully physical -- collision & dynamics
-        DynamicSphere,
-        DynamicCylinder,
-        Character
-    };
+  GraphicsResourceModel(const RemoteFileId &resourceID);
+  virtual ~GraphicsResourceModel();
 
-    std::string name;
-    PhysicalMode mode;
-    float density;
-    float friction;
-    float bounce;
-    float gravity;
-    int colMask;
-    int colMsg;
-    Vector3f hull;
-    PhysicalParameters() :
-        mode(Disabled),
-        density(0),
-        friction(0),
-        bounce(0),
-        gravity(0),
-        colMask(0),
-        colMsg(0),
-        hull() {
-    }
+  virtual void resolveName(const URI& id, const ResourceHash& hash);
+
+  virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
+  virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
+  virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
+  virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);
+
+  static void setMaterialNames(GraphicsResourceModel* resourcePtr);
+
+protected:
+  std::map<String, String> mMaterialNames;
 };
 
-class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
-{
-    public:
-        virtual ~MeshListener() {}
-
-        virtual void onSetMesh ( URI const& newMesh) = 0;
-        virtual void onMeshParsed (String const& hash, Meshdata& md) = 0;
-        virtual void onSetScale ( Vector3f const& newScale ) = 0;
-        virtual void onSetPhysical ( PhysicalParameters const& pp ) = 0;
-};
-
-} // namespace Sirikata
+}
 
 #endif

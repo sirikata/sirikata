@@ -37,6 +37,7 @@
 
 #include <proxyobject/Platform.hpp>
 #include <proxyobject/ModelsSystem.hpp>
+#include <proxyobject/ProxyMeshObject.hpp>
 #include <util/ListenerProvider.hpp>
 
 #include <task/EventManager.hpp>
@@ -61,7 +62,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
-        void loadDocument ( Transfer::URI const& what );
+        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
         
     protected:
 
@@ -72,7 +73,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
-        Task::EventResponse downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what );
+        Task::EventResponse downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what, ProxyMeshObject* proxy );
 
         // things we need to integrate with Sirikata
         OptionValue* mEventManager; // MCB: managed object

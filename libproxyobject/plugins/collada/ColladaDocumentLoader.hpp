@@ -34,6 +34,7 @@
 #define _SIRIKATA_COLLADA_DOCUMENT_LOADER_
 
 #include "ColladaDocument.hpp"
+#include <proxyobject/ProxyMeshObject.hpp>
 
 
 /////////////////////////////////////////////////////////////////////
@@ -70,6 +71,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
 
         bool load ( char const* buffer, size_t bufferLength );
         ColladaDocumentPtr getDocument () const;
+        void setProxyPtr (ProxyMeshObject* pp);
 
     protected:
 

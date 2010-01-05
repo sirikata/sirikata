@@ -106,6 +106,10 @@ void BulletObj::onSetMesh (const URI &newMesh) {
     mMeshname = newMesh;
 }
 
+void BulletObj::onMeshParsed (String const& hash, Meshdata& md) {
+    std::cout << "dbm debug BulletObj::onMeshParsed! " << hash << "\n";
+}
+
 void BulletObj::onSetScale (const Vector3f &newScale) {
     if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;

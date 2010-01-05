@@ -84,6 +84,12 @@ ColladaDocumentPtr ColladaDocumentLoader::getDocument () const
     return mDocumentImporter->getDocument ();
 }
 
+void ColladaDocumentLoader::setProxyPtr (ProxyMeshObject* pp)
+{
+    std::cout << "dbm debug3 ColladaDocumentLoader::setProxyPtr: " << pp << "\n";
+    mDocumentImporter->mProxyPtr=pp;
+};
+
 /////////////////////////////////////////////////////////////////////
 
 

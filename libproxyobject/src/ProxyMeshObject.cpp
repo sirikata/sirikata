@@ -65,6 +65,10 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
 {
     if (hasModelObject())
         mModelObject->setMesh ( mesh );
+    std::cout << "dbm debug setMesh on " << mesh << std::endl;
+    
+    /// dbm: this is what triggers Ogre mesh download [and Model for now]
+    
     MeshProvider::notify ( &MeshListener::onSetMesh, mesh );
 }
 
@@ -108,6 +112,12 @@ PhysicalParameters const& ProxyMeshObject::getPhysical () const
 
     return mModelObject->getPhysical ();
 }
+
+void ProxyMeshObject::meshParsed (String hash, Meshdata* md)
+{
+    MeshProvider::notify ( &MeshListener::onMeshParsed, hash, *md );
+}
+
 
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshProvider

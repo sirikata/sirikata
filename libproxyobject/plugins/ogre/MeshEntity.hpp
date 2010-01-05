@@ -111,6 +111,8 @@ public:
         mResource = resourcePtr;
     }
 
+    Task::EventResponse downloadFinished(Task::EventPtr evbase, Meshdata& md);
+
 /*
     virtual bool loadMesh(const String&name){
         return false;
@@ -120,6 +122,7 @@ public:
     // interface from MeshListener
     public:
         virtual void onSetMesh ( URI const& meshFile );
+        virtual void onMeshParsed (String const& hash, Meshdata& md);
         virtual void onSetScale ( Vector3f const& scale );
         virtual void onSetPhysical ( PhysicalParameters const& pp );
     

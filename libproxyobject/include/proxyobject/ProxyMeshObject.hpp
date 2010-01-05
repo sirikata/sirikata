@@ -37,6 +37,7 @@
 
 #include "MeshListener.hpp"
 #include "ProxyObject.hpp"
+#include <proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
 
@@ -72,6 +73,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
         
         virtual void setPhysical ( PhysicalParameters const& rhs );
         virtual PhysicalParameters const& getPhysical () const;
+        
+        void meshParsed(String s, Meshdata* md);
     
     protected:
     

@@ -66,14 +66,14 @@ ColladaSystem::~ColladaSystem ()
 
 /////////////////////////////////////////////////////////////////////
 
-void ColladaSystem::loadDocument ( Transfer::URI const& what )
+void ColladaSystem::loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy )
 {
     // Use our TransferManager to async download the data into memory.
     Transfer::TransferManager* transferManager = static_cast< Transfer::TransferManager* > ( mTransferManager->as< void* > () );
 
     if ( transferManager )
     {
-        Transfer::TransferManager::EventListener listener ( std::tr1::bind ( &ColladaSystem::downloadFinished, this, _1, what ) );
+        Transfer::TransferManager::EventListener listener ( std::tr1::bind ( &ColladaSystem::downloadFinished, this, _1, what, proxy ) );
         
         transferManager->download ( what, listener, Transfer::Range ( true ) );
     }
@@ -81,13 +81,14 @@ void ColladaSystem::loadDocument ( Transfer::URI const& what )
         throw std::logic_error ( "ColladaSystem::loadDocument() needs a TransferManager" );
 }
 
-Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what )
+Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what, ProxyMeshObject* proxy )
 {
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast< Transfer::DownloadEvent > ( evbase );
 
     assert((std::cout << "MCB: ColladaSystem::downloadFinished()"
             << " status: " <<  (int)(ev->getStatus ())
             << " length: " <<  ev->data ().length ()
+            << " what: " << what
             << std::endl,true));
 
     if ( ev->getStatus () == Transfer::TransferManager::SUCCESS )
@@ -97,12 +98,15 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
         // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
         // MCB: Serialized because OpenCOLLADA thread safety is unknown
         ColladaDocumentLoader loader ( what );
+        std::cout << "dbm debug3 setting loader.mProxyPtr: " << proxy << "\n";
+        loader.setProxyPtr(proxy);
 
         char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );
         if ( loader.load ( buffer , flatData->length () ) )
         {
             // finally we can add the Product to our set of completed documents
             mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
+            std::cout << "dbm debug ColladaSystem loader.load done, mDocuments appended\n";
         }
         else
         {
@@ -163,7 +167,10 @@ void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
     {
         assert((std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl,true));
         
-        ProxyMeshObject::ModelObjectPtr mesh ( new ColladaMeshObject ( *this ) );
+        ColladaMeshObject* cmo = new ColladaMeshObject ( *this );
+        cmo->mProxyPtr = asMesh.get();
+        std::cout << "dbm debug3 set cmo->proxy: " << cmo->mProxyPtr << "\n";
+        ProxyMeshObject::ModelObjectPtr mesh ( cmo );
         
         // try to supply the proxy with a data model
         if ( ! proxy->hasModelObject () )

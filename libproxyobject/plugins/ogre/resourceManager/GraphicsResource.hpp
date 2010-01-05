@@ -50,7 +50,8 @@ public:
     MATERIAL,
     SKELETON,
     TEXTURE,
-    SHADER
+    SHADER,
+    MODEL
   };
 
   enum ParseState {

@@ -84,7 +84,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
     const TimeOffsetManager *mLocalTimeOffset;
-    class Transfer::TransferManager *mTransferManager;
     Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
     void destroyMouseHandler();
@@ -141,6 +140,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
 public:
+    class Transfer::TransferManager *mTransferManager;          /// FIXME: need a better way to get this
     bool forwardMessagesTo(MessageService*){return false;}
     bool endForwardingMessagesTo(MessageService*){return false;}
     const TimeOffsetManager *getLocalTimeOffset() {
