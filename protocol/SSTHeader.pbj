@@ -51,6 +51,7 @@ message SSTStreamHeader {
 	      REPLY = 2;
 	      DATA = 3;
 	      ACK = 4;
+	      DATAGRAM = 5;
         }
 
         required  uint16 lsid = 1;	
