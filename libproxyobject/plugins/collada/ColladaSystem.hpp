@@ -62,7 +62,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
-        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
+//        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
+        void loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy  );
         
     protected:
 
@@ -73,7 +74,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
-        Task::EventResponse downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what, ProxyMeshObject* proxy );
+        Task::EventResponse downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject>(proxy) );
 
         // things we need to integrate with Sirikata
         OptionValue* mEventManager; // MCB: managed object

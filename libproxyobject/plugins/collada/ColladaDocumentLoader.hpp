@@ -66,12 +66,11 @@ class ColladaErrorHandler;
 class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
 {
     public:
-        explicit ColladaDocumentLoader ( Transfer::URI const& uri );
+        explicit ColladaDocumentLoader ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp  );
         ~ColladaDocumentLoader ();
 
         bool load ( char const* buffer, size_t bufferLength );
         ColladaDocumentPtr getDocument () const;
-        void setProxyPtr (ProxyMeshObject* pp);
 
     protected:
 
@@ -84,6 +83,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
         COLLADASaxFWL::Loader* mSaxLoader; // next
         ColladaDocumentImporter* mDocumentImporter; // next
         COLLADAFW::Root* mFramework; // last
+        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr); 
 };
 
 

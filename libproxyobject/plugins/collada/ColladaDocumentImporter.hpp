@@ -67,11 +67,10 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     :   public COLLADAFW::IWriter
 {
     public:
-        explicit ColladaDocumentImporter ( Transfer::URI const& uri );
+        explicit ColladaDocumentImporter ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp );
         ~ColladaDocumentImporter ();
 
         ColladaDocumentPtr getDocument () const;
-        ProxyMeshObject* mProxyPtr; 
 
     protected:
 
@@ -86,6 +85,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         enum State { CANCELLED = -1, IDLE, STARTED, FINISHED };
         State mState;
     
+        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr); 
     
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter

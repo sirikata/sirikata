@@ -67,7 +67,7 @@ ColladaSystem::~ColladaSystem ()
 
 /////////////////////////////////////////////////////////////////////
 
-void ColladaSystem::loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy )
+void ColladaSystem::loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy )
 {
     // Use our TransferManager to async download the data into memory.
     Transfer::TransferManager* transferManager = static_cast< Transfer::TransferManager* > ( mTransferManager->as< void* > () );
@@ -82,7 +82,8 @@ void ColladaSystem::loadDocument ( Transfer::URI const& what, ProxyMeshObject* p
         throw std::logic_error ( "ColladaSystem::loadDocument() needs a TransferManager" );
 }
 
-Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what, ProxyMeshObject* proxy )
+Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what,
+        std::tr1::weak_ptr<ProxyMeshObject>(proxy) )
 {
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast< Transfer::DownloadEvent > ( evbase );
 
@@ -98,8 +99,8 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
 
         // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
         // MCB: Serialized because OpenCOLLADA thread safety is unknown
-        ColladaDocumentLoader loader ( what );
-        loader.setProxyPtr(proxy);
+        ColladaDocumentLoader loader ( what, proxy );
+//        loader.setProxyPtr(proxy);
 
         char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );
         if ( loader.load ( buffer , flatData->length () ) )
@@ -166,8 +167,7 @@ void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
     {
         assert((std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl,true));
         
-        ColladaMeshObject* cmo = new ColladaMeshObject ( *this );
-        cmo->mProxyPtr = asMesh.get();
+        ColladaMeshObject* cmo = new ColladaMeshObject ( *this, std::tr1::shared_ptr<ProxyMeshObject>(asMesh) );
         ProxyMeshObject::ModelObjectPtr mesh ( cmo );
         
         // try to supply the proxy with a data model

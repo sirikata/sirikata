@@ -58,7 +58,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
     : public MeshObject
 {
     public:
-        explicit ColladaMeshObject ( ColladaSystem& system );
+        explicit ColladaMeshObject ( ColladaSystem& system, std::tr1::shared_ptr<ProxyMeshObject>pp);
         ColladaMeshObject ( ColladaMeshObject const& rhs );
         ColladaMeshObject& operator = ( ColladaMeshObject const& rhs );
         virtual ~ColladaMeshObject ();
@@ -74,8 +74,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         URI mMeshURI;
         Vector3f mScale;
         PhysicalParameters mPhysical;
+        std::tr1::shared_ptr<ProxyMeshObject> mProxyPtr;
     
-    // interface from MeshObject
     public:
         virtual void setMesh ( URI const& rhs );
         virtual URI const& getMesh () const;
@@ -85,9 +85,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         
         virtual void setPhysical ( PhysicalParameters const& rhs );
         virtual PhysicalParameters const& getPhysical () const;
-        
-        ProxyMeshObject* mProxyPtr;
-        
+                
     protected:
     
 };

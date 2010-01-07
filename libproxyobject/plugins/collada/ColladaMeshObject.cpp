@@ -43,12 +43,11 @@
 
 namespace Sirikata { namespace Models {
     
-ColladaMeshObject::ColladaMeshObject ( ColladaSystem& system )
+    ColladaMeshObject::ColladaMeshObject ( ColladaSystem& system, std::tr1::shared_ptr<ProxyMeshObject>pp )
         :   MeshObject (),
         mSystem ( system ),
-        mProxyPtr()
+        mProxyPtr(pp)
 {
-
 }
 
 //ColladaMeshObject::ColladaMeshObject ( ColladaMeshObject const& rhs )

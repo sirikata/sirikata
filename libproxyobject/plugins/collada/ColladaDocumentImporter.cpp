@@ -42,9 +42,10 @@ long Meshdata_counter=1000;
 
 namespace Sirikata { namespace Models {
 
-ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri )
+ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp )
     :   mDocument ( new ColladaDocument ( uri ) ),
-        mState ( IDLE )
+        mState ( IDLE ),
+        mProxyPtr(pp)
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri << std::endl,true));
     
@@ -101,7 +102,10 @@ void ColladaDocumentImporter::finish ()
 
     postProcess ();
     if (meshstore[mDocument->getURI().toString()]->positions.size()) {
-        mProxyPtr->meshParsed( mDocument->getURI().toString(), meshstore[mDocument->getURI().toString()] );
+    //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
+    //                                          meshstore[mDocument->getURI().toString()] );
+        std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
+        spp->meshParsed( mDocument->getURI().toString(), meshstore[mDocument->getURI().toString()] );
     }
     mState = FINISHED;    
 }
