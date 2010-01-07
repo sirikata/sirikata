@@ -310,15 +310,16 @@ Vector3f fixUp(int up, Vector3f v) {
 
 Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata& md) {
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
-    /*
-    std::cout << "dbm debug MeshEntity::downloadFinished for: " << md.uri
-            << " status: " << (int)ev->getStatus()
-            << " == " << (int)Transfer::TransferManager::SUCCESS
-            << " texture: " << md.texture
-            << " fingerprint: " << ev->fingerprint()
-            << " length: " << (int)ev->data().length() 
-            << std::endl;
-    */
+    if ((int)ev->getStatus())
+    {
+        std::cerr << "dbm debug ERROR MeshEntity::downloadFinished for: " << md.uri
+        << " status: " << (int)ev->getStatus()
+        << " == " << (int)Transfer::TransferManager::SUCCESS
+        << " texture: " << md.texture
+        << " fingerprint: " << ev->fingerprint()
+        << " length: " << (int)ev->data().length()
+        << std::endl;
+    }
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
     int up = md.up_axis;

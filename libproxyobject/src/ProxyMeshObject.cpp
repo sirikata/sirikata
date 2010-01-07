@@ -65,7 +65,6 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
 {
     if (hasModelObject())
         mModelObject->setMesh ( mesh );
-    std::cout << "dbm debug setMesh on " << mesh << std::endl;
     
     /// dbm: this is what triggers Ogre mesh download [and Model for now]
     
