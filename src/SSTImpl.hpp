@@ -602,7 +602,7 @@ public:
       std::string buffer = serializePBJMessage(sstMsg);
       mDatagramLayer.send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
                         buffer.size());
-    }    
+    }
 
     mTransmitSequenceNumber++;
 
@@ -775,6 +775,20 @@ private:
       for (uint i=0 ; i < mReadDatagramCallbacks.size(); i++) {
 	mReadDatagramCallbacks[i](payload, payload_size);
       }
+
+      CBR::Protocol::SST::SSTChannelHeader sstMsg;
+      sstMsg.set_channel_id( mRemoteChannelID );
+      sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
+      sstMsg.set_ack_count(1);
+      sstMsg.set_ack_sequence_number(mAckSequenceNumber);
+
+      sstMsg.set_payload(payload, 0);
+
+      std::string buffer = serializePBJMessage(sstMsg);
+      mDatagramLayer.send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
+                        buffer.size());    
+
+      mTransmitSequenceNumber++;      
     }
   }
 
@@ -849,12 +863,12 @@ public:
 
     mNumInitRetransmissions = 1;
     mNumBytesSent = mInitialDataLength;
+
+    mCurrentQueueLength = 0;
    
     if (length > mInitialDataLength) {
       write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
-    }
-
-    mCurrentQueueLength = 0;
+    }    
     
     thrd = new Thread(boost::bind(&(Stream<EndPointType>::ioServicingLoop), this));
     //boost::thread t(boost::bind(&boost::asio::io_service::run, &mIOService));
@@ -911,7 +925,7 @@ public:
         sendInitPacket(mInitialData, mInitialDataLength); 
         start_time = cur_time;
 	mNumInitRetransmissions++;
-      }      
+      }
     }
 
     delete mInitialData;
@@ -922,6 +936,7 @@ public:
       //with an error code.
     }
 
+    start_time = Timer::now();
     mLooping = true;
     while (mLooping) {
       //boost::this_thread::sleep(boost::posix_time::microseconds(250));
@@ -939,10 +954,9 @@ public:
       while ( !mQueuedBuffers.empty() ) {
         boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
-        //printf("ioServicingLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
-
-
-        if (mTransmitWindowSize < buffer->mBufferLength) break;
+        if (mTransmitWindowSize < buffer->mBufferLength) {
+	  break;
+	}
 
         printf("ioServicingLoop enqueuing packet at offset %d into send queue\n", buffer->mOffset);
         printf("ioServicingLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
@@ -980,6 +994,10 @@ public:
      {
         mQueuedBuffers.push_back(it->second);
         printf("Resending unacked packet at offset %d\n", (int)(it->second->mOffset));	
+
+	if (mTransmitWindowSize < it->second->mBufferLength){
+	  mTransmitWindowSize = it->second->mBufferLength;
+	}
      }
 
      mChannelToBufferMap.clear();
@@ -1015,6 +1033,7 @@ public:
 	              MAX_PAYLOAD_SIZE : 
 	              (len-currOffset);
 
+	printf("NUM PKTS GEN = %d, currOffset=%d, mCurrentQueueLength=%d\n", count, currOffset, mCurrentQueueLength);
 	if (mCurrentQueueLength + buffLen > MAX_QUEUE_LENGTH) {
 	  return currOffset;
 	}
@@ -1184,11 +1203,11 @@ public:
       if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
 	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
 
+	/* TODO: This logic needs to be fixed */
         mTransmitWindowSize = ( pow(2, streamMsg->window()) < mTransmitWindowSize + mChannelToBufferMap[offset]->mBufferLength ) ? 
 					pow(2, streamMsg->window()) : mTransmitWindowSize + mChannelToBufferMap[offset]->mBufferLength;
 
-
-	printf("REMOVED ACKED PACKET. Offset: %d\n", (int) mChannelToBufferMap[offset]->mOffset);
+	printf("REMOVED ACKED PACKET. Offset: %d, mTransmitWindowSize=%d\n", (int) mChannelToBufferMap[offset]->mOffset,(int) mTransmitWindowSize);
 	mChannelToBufferMap.erase(offset);
 
 	std::vector <uint64> channelOffsets;
@@ -1281,6 +1300,10 @@ public:
           mReceivedSegments[offset] = 1;
           printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
           printf("Received Segment at offset = %d\n", (int) offset);
+	}
+	else if ( (int)(offset+len-1) <= (int)mLastContiguousByteReceived) {
+	  printf("Acking packet which we had already received previously\n");
+	  sendAckPacket();
 	}
 	else{
 	  //dont ack this packet; its falling outside the receive window.
