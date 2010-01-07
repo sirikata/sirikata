@@ -113,6 +113,7 @@ void InitOptions() {
         .addOption(new OptionValue(OBJECT_PACK_OFFSET, "0", Sirikata::OptionValueType<uint32>(), "Offset into the object pack to start generating objects at."))
         .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
         .addOption(new OptionValue(SERVER_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each server."))
+        .addOption(new OptionValue(SERVER_RECEIVER, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageReceiver to use for routing."))
 
         .addOption(new OptionValue(NETWORK_TYPE, "sst", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
@@ -124,7 +125,7 @@ void InitOptions() {
 
 
         .addOption(new OptionValue(OSEG_LOOKUP_QUEUE_SIZE, "2000", Sirikata::OptionValueType<uint32>(), "Number of new lookups you can have on oseg lookup queue."))
-      
+
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
         .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))
         .addOption(new OptionValue(LOC_MAX_PER_RESULT, "10", Sirikata::OptionValueType<uint32>(), "Maximum number of loc updates to report in each result message."))

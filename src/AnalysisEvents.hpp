@@ -84,9 +84,6 @@ struct ServerDatagramQueueInfoEvent : public Event {
     uint32 send_size;
     uint32 send_queued;
     float send_weight;
-    uint32 receive_size;
-    uint32 receive_queued;
-    float receive_weight;
 };
 
 

@@ -7,28 +7,21 @@
 
 namespace CBR{
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second)
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second)
  : ServerMessageQueue(ctx, net, sidmap),
    mServerQueues(),
-   mReceiveQueues(),
    mLastServiceTime(ctx->time),
    mRate(send_bytes_per_second),
-   mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
-   mRemainderReceiveBytes(0),
-   mLastSendEndTime(ctx->time),
-   mLastReceiveEndTime(ctx->time)
+   mLastSendEndTime(ctx->time)
 {
 }
 
 bool FairServerMessageQueue::canAddMessage(const Message* msg) {
     ServerID destinationServer = msg->dest_server();
 
-    // If its just coming back here, we'll always accept it
-    if (mContext->id() == destinationServer) {
-        return true;
-    }
-    assert(destinationServer!=mContext->id());
+    // We won't handle routing to ourselves, the layer above us should handle this
+    assert (mContext->id() != destinationServer);
 
     uint32 offset = msg->serializedSize();
 
@@ -45,35 +38,19 @@ bool FairServerMessageQueue::canAddMessage(const Message* msg) {
 bool FairServerMessageQueue::addMessage(Message* msg){
     ServerID destinationServer = msg->dest_server();
 
-    // If its just coming back here, skip routing and just push the payload onto the receive queue
-    if (mContext->id() == destinationServer) {
-        mReceiveQueue.push(msg);
-        return true;
-    }
+    // We won't handle routing to ourselves, the layer above us should handle this
+    assert (mContext->id() != destinationServer);
 
     // Otherwise, store for push to network
     bool success = mServerQueues.push(destinationServer,msg)==QueueEnum::PushSucceeded;
     return success;
 }
 
-bool FairServerMessageQueue::receive(Message** msg_out) {
-    if (mReceiveQueue.empty()) {
-        *msg_out = NULL;
-        return false;
-    }
-
-    *msg_out = mReceiveQueue.front();
-    mReceiveQueue.pop();
-    return true;
-}
-
-
 void FairServerMessageQueue::service(){
     mProfiler->started();
 
     Duration since_last = mContext->time - mLastServiceTime;
     uint64 send_bytes = since_last.toSeconds() * mRate + mRemainderSendBytes;
-    uint64 recv_bytes = since_last.toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
     // Send
 
@@ -131,34 +108,7 @@ void FairServerMessageQueue::service(){
         }
     }
 
-    // Receive
-    Message* next_recv_msg = NULL;
-    mReceiveQueues.service(); // FIXME this shouldn't be necessary if NetworkQueueWrapper could notify the FairQueue
-    while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
-        Message* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
-        assert(next_recv_msg_popped == next_recv_msg);
-
-        uint32 packet_size = next_recv_msg->serializedSize();
-        Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
-        Time start_time = mLastReceiveEndTime;
-        Time end_time = mLastReceiveEndTime + recv_duration;
-        mLastReceiveEndTime = end_time;
-
-        /*
-           FIXME at some point we should record this here instead of in Server.cpp
-        mContext->trace()->serverDatagramReceived();
-        */
-        mReceiveQueue.push(next_recv_msg);
-    }
-
-    if (mReceiveQueues.empty()) {
-        mRemainderReceiveBytes = 0;
-        mLastReceiveEndTime = mContext->time;
-    }
-    else {
-        mRemainderReceiveBytes = recv_bytes;
-        //mLastReceiveEndTime = already recorded, last end receive time
-    }
+    mLastServiceTime = mContext->time;
 
     mProfiler->finished();
 }
@@ -170,16 +120,6 @@ void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     }
     else
         mServerQueues.setQueueWeight(sid, weight);
-
-    // receive weight
-    if (!mReceiveQueues.hasQueue(sid)) {
-        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);
-    }
-    else
-        mReceiveQueues.setQueueWeight(sid, weight);
-
-    // add to the receive set
-    mReceiveSet.insert(sid);
 }
 
 float FairServerMessageQueue::getServerWeight(ServerID sid) {
@@ -190,36 +130,23 @@ float FairServerMessageQueue::getServerWeight(ServerID sid) {
 }
 
 void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
-    for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
+    for(FairSendQueue::const_iterator it = mServerQueues.keyBegin(); it != mServerQueues.keyEnd(); it++) {
         uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
         float tx_weight = mServerQueues.getQueueWeight(*it);
-        uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
-        float rx_weight = mReceiveQueues.getQueueWeight(*it);
-        mContext->trace()->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+        mContext->trace()->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight);
     }
 }
 
 void FairServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) const  {
     queue_info.clear();
 
-    for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
+    for(FairSendQueue::const_iterator it = mServerQueues.keyBegin(); it != mServerQueues.keyEnd(); it++) {
         uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
         float tx_weight = mServerQueues.getQueueWeight(*it);
-        uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
-        float rx_weight = mReceiveQueues.getQueueWeight(*it);
 
-
-	QueueInfo qInfo(tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+	QueueInfo qInfo(tx_size, tx_used, tx_weight);
 	queue_info.push_back(qInfo);
     }
-}
-
-ServerMessageQueue::KnownServerIterator FairServerMessageQueue::knownServersBegin() {
-    return mReceiveSet.begin();
-}
-
-ServerMessageQueue::KnownServerIterator FairServerMessageQueue::knownServersEnd() {
-    return mReceiveSet.end();
 }
 
 }

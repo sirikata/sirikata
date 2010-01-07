@@ -286,6 +286,48 @@ public:
         }
         empty_keys.clear();
     }
+
+
+    // Key iteration support
+    class const_iterator {
+      public:
+        Key operator*() const {
+            return internal_it->first;
+        }
+
+        void operator++() {
+            ++internal_it;
+        }
+        void operator++(int) {
+            internal_it++;
+        }
+
+        bool operator==(const const_iterator& rhs) const {
+            return internal_it == rhs.internal_it;
+        }
+        bool operator!=(const const_iterator& rhs) const {
+            return internal_it != rhs.internal_it;
+        }
+      private:
+        friend class FairQueue;
+
+        const_iterator(const typename QueueInfoByKey::const_iterator& it)
+                : internal_it(it)
+        {
+        }
+
+        const_iterator();
+
+        typename QueueInfoByKey::const_iterator internal_it;
+    };
+
+    const_iterator keyBegin() const {
+        return const_iterator(mQueuesByKey.begin());
+    }
+    const_iterator keyEnd() const {
+        return const_iterator(mQueuesByKey.end());
+    }
+
 protected:
     // Checks if the given queue is satisfactory.  Returns false if the queue would violate a constraint, and the
     // consideration of any later queues should stop.  Otherwise it returns true.  The other outputs indicate whether

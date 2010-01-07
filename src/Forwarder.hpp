@@ -24,6 +24,7 @@ namespace CBR
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class ServerMessageQueue;
+  class ServerMessageReceiver;
   class Network;
   class Trace;
   class ObjectConnection;
@@ -70,7 +71,7 @@ private:
     SpaceContext* mContext;
     ForwarderQueue *mOutgoingMessages;
     ServerMessageQueue* mServerMessageQueue;
-
+    ServerMessageReceiver* mServerMessageReceiver;
 
     OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
 
@@ -98,7 +99,7 @@ private:
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
-    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, uint32 oseg_lookup_queue_size);
+    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size);
 
   protected:
 

@@ -148,9 +148,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
               is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
               is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
-              is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
-              is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
-              is.read( (char*)&pqievt->receive_weight, sizeof(pqievt->receive_weight) );
               evt = pqievt;
           }
           break;
@@ -1058,8 +1055,20 @@ void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const Event
     //summary_out << std::endl;
 }
 
+template<typename EventType, typename EventIteratorType>
+void dumpQueueInfoSend(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
+    EventType* q_evt = NULL;
+    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
+
+    while((q_evt = event_it.current()) != NULL) {
+        detail_out << sender << " " << receiver << " " << (q_evt->time-Time::null()).toMilliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << std::endl;
+        event_it.next();
+    }
+    //summary_out << std::endl;
+}
+
 void BandwidthAnalysis::dumpDatagramQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
-    dumpQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
+    dumpQueueInfoSend<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
 }
 
 void BandwidthAnalysis::dumpPacketQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
@@ -1153,17 +1162,6 @@ void BandwidthAnalysis::windowedDatagramSendQueueInfo(const ServerID& sender, co
         window, sample_rate, start_time, end_time,
         summary_out, detail_out,
         false
-    );
-}
-
-void BandwidthAnalysis::windowedDatagramReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    windowedQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator, ReceiveQueueFunctor<ServerDatagramQueueInfoEvent> >(
-        sender, receiver,
-        datagramQueueInfoBegin(receiver), datagramQueueInfoEnd(receiver),
-        ReceiveQueueFunctor<ServerDatagramQueueInfoEvent>(),
-        window, sample_rate, start_time, end_time,
-        summary_out, detail_out,
-        true
     );
 }
 

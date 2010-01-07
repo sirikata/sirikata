@@ -284,9 +284,7 @@ int main(int argc, char** argv) {
         //  * Receive
         for(ServerID sender = 1; sender <= max_space_servers; sender++) {
             for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.windowedDatagramReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
-                else if (windowed_analysis_type == "packet")
+                if (windowed_analysis_type == "packet")
                     ba.windowedPacketReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
             }
         }

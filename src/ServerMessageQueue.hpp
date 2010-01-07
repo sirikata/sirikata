@@ -13,61 +13,43 @@ typedef struct QueueInfo{
   uint32 mTXUsed;
   float mTXWeight;
 
-  uint32 mRXSize;
-  uint32 mRXUsed;
-  float mRXWeight;
-
-  QueueInfo(uint32 tx_size, uint32 tx_used, float tx_weight,
-	    uint32 rx_size, uint32 rx_used, float rx_weight
-	   )
+  QueueInfo(uint32 tx_size, uint32 tx_used, float tx_weight)
   {
     mTXSize = tx_size;
     mTXUsed = tx_used;
     mTXWeight = tx_weight;
-
-    mRXSize = rx_size;
-    mRXUsed = rx_used;
-    mRXWeight = rx_weight;
   }
-
-
 } QueueInfo;
 
 class ServerMessageQueue {
-protected:
-    typedef std::set<ServerID> KnownServerSet;
 public:
-    typedef KnownServerSet::const_iterator KnownServerIterator;
-
     ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap)
      : mContext(ctx),
        mNetwork(net),
        mServerIDMap(sidmap)
     {
         mProfiler = mContext->profiler->addStage("Server Message Queue");
-        // start the network listening
-        Address4* listen_addy = mServerIDMap->lookupInternal(mContext->id());
-        assert(listen_addy != NULL);
-        net->listen(*listen_addy);
     }
 
     virtual ~ServerMessageQueue(){}
 
-    /** Try to add the given message to this queue.
+    /** Try to add the given message to this queue.  Note that only messages
+     *  destined for other servers should be enqueued.  This class will not
+     *  route messages to the ServerMessageReceiver.
      *  \param msg the message to try to push onto the queue.
      *  \returns true if the message was added, false otherwise
      *  \note If successful, the queue takes possession of the message and ensures it is disposed of.
      *        If unsuccessful, the message is still owned by the caller.
      */
     virtual bool addMessage(Message* msg)=0;
-    /** Check if a message could be pushed on the queue.  If this returns true, an immediate subsequent
-     *  call to addMessage() will always be successful.
+    /** Check if a message could be pushed on the queue.  If this returns true,
+     *  an immediate subsequent call to addMessage() will always be
+     *  successful. The message should not be destined for this server.
      *  \param msg the message to try to push onto the queue.
      *  \returns true if the message was added, false otherwise
      */
     virtual bool canAddMessage(const Message* msg)=0;
 
-    virtual bool receive(Message** msg_out) = 0;
     virtual void service() = 0;
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
@@ -83,13 +65,7 @@ public:
         return mNetwork->canSend(*addy,msg->serializedSize(),false,true,1);
     }
 
-    /** Get a begin iterator over known Servers (ServerIDs). */
-    virtual KnownServerIterator knownServersBegin() = 0;
-    /** Get an end iterator over known Servers (ServerIDs). */
-    virtual KnownServerIterator knownServersEnd() = 0;
-
 protected:
-
     SpaceContext* mContext;
     Network* mNetwork;
     ServerIDMap* mServerIDMap;

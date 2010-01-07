@@ -51,6 +51,7 @@
 #include "Test.hpp"
 #include "SSTNetwork.hpp"
 #include "TCPNetwork.hpp"
+#include "FairServerMessageReceiver.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
@@ -181,13 +182,24 @@ void *main_loop(void *) {
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(space_context, gNetwork, server_id_map, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+        sq = new FairServerMessageQueue(space_context, gNetwork, server_id_map, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);
     }
+
+    ServerMessageReceiver* server_message_receiver = NULL;
+    String server_receiver_type = GetOption(SERVER_RECEIVER)->as<String>();
+    if (server_queue_type == "fair")
+        server_message_receiver =
+                new FairServerMessageReceiver(space_context, gNetwork, server_id_map, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+    else {
+        assert(false);
+        exit(-1);
+    }
+
 
 
     String cseg_type = GetOption(CSEG)->as<String>();
@@ -273,9 +285,9 @@ void *main_loop(void *) {
 
     // We have all the info to initialize the forwarder now
     uint32 oseg_lookup_queue_size = (uint32) GetOption("oseg_lookup_queue_size")->as<uint32>();
-    forwarder->initialize(oseg, sq, oseg_lookup_queue_size);
+    forwarder->initialize(oseg, sq, server_message_receiver, oseg_lookup_queue_size);
 
-    
+
     Proximity* prox = new Proximity(space_context, loc_service);
 
 

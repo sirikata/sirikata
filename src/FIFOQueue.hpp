@@ -123,6 +123,46 @@ public:
         return it->second;
     }
 
+    // Key iteration support
+    class const_iterator {
+      public:
+        Key operator*() const {
+            return internal_it->first;
+        }
+
+        void operator++() {
+            ++internal_it;
+        }
+        void operator++(int) {
+            internal_it++;
+        }
+
+        bool operator==(const const_iterator& rhs) const {
+            return internal_it == rhs.internal_it;
+        }
+        bool operator!=(const const_iterator& rhs) const {
+            return internal_it != rhs.internal_it;
+        }
+      private:
+        friend class FIFOQueue;
+
+        const_iterator(const typename SizeMap::const_iterator& it)
+                : internal_it(it)
+        {
+        }
+
+        const_iterator();
+
+        typename SizeMap::const_iterator internal_it;
+    };
+
+    const_iterator keyBegin() const {
+        return const_iterator(mDestSizes.begin());
+    }
+    const_iterator keyEnd() const {
+        return const_iterator(mDestSizes.end());
+    }
+
 protected:
     MessageQueue mMessages;
     SizeMap mDestSizes;

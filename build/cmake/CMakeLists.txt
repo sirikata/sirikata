@@ -304,6 +304,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/SqrIntegral.cpp
+  ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
+  ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp

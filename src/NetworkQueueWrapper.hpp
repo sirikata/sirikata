@@ -3,6 +3,7 @@
 
 #include "Network.hpp"
 #include "Message.hpp"
+#include "ServerIDMap.hpp"
 
 namespace CBR {
 class NetworkQueueWrapper {

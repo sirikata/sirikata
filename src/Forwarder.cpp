@@ -5,6 +5,7 @@
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
 #include "ServerMessageQueue.hpp"
+#include "ServerMessageReceiver.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
 
@@ -52,6 +53,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mContext(ctx),
    mOutgoingMessages(NULL),
    mServerMessageQueue(NULL),
+   mServerMessageReceiver(NULL),
    mOSegLookups(NULL),
    mSampler(NULL),
    mUniqueConnIDs(0)
@@ -81,10 +83,11 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-  void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, uint32 oseg_lookup_queue_size)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size)
   {
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush, oseg_lookup_queue_size);
     mServerMessageQueue = smq;
+    mServerMessageReceiver = smr;
     mOutgoingMessages = new ForwarderQueue(smq,16384);
 
     Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
@@ -379,8 +382,9 @@ void Forwarder::serviceSendQueues() {
 
 void Forwarder::serviceReceiveQueues() {
     mReceiveStage->started();
+    mServerMessageReceiver->service();
     Message* next_msg = NULL;
-    while(mServerMessageQueue->receive(&next_msg)) {
+    while(mServerMessageReceiver->receive(&next_msg)) {
         dispatchMessage(next_msg);
     }
     mReceiveStage->finished();

@@ -314,7 +314,7 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
 #endif
 }
 
-void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
+void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight) {
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
@@ -325,9 +325,6 @@ void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 
     data.write( &send_size, sizeof(send_size) );
     data.write( &send_queued, sizeof(send_queued) );
     data.write( &send_weight, sizeof(send_weight) );
-    data.write( &receive_size, sizeof(receive_size) );
-    data.write( &receive_queued, sizeof(receive_queued) );
-    data.write( &receive_weight, sizeof(receive_weight) );
 #endif
 }
 
