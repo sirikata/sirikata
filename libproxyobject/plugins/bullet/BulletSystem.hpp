@@ -287,6 +287,7 @@ Vector3f normalFromBullet(const btVector3&bt) {
 class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
     friend class BulletSystem;
     enum shapeID {
+        ShapeNull,
         ShapeMesh,
         ShapeBox,
         ShapeSphere,
@@ -326,6 +327,7 @@ class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
     bool mPIDControlEnabled;
     btVector3 mDesiredLinearVelocity;
     btVector3 mDesiredAngularVelocity;
+    Meshdata* mMeshdata;
 
 public:
     /// public members -- yes, I use 'em.  No, I don't always thicken my code with gettr/settr's
@@ -339,6 +341,7 @@ public:
             mMotionState(NULL),
             mActive(false),
             mDynamic(false),
+            mShape(ShapeNull),
             mVelocity(Vector3d()),
             mBulletBodyPtr(NULL),
             mColShape(NULL),
@@ -347,7 +350,8 @@ public:
             mSizeZ(0),
             mName(""),
             mGravity(0, GRAVITY, 0),
-            mPIDControlEnabled(false) {
+            mPIDControlEnabled(false),
+            mMeshdata() {
         system = sys;
     }
     ~BulletObj();
@@ -355,8 +359,8 @@ public:
     const SpaceID& getSpaceID()const;
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
-    void buildBulletBody(const unsigned char*, int);
-    void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
+    void buildBulletBody(const unsigned char*, int, bool is_collada);
+    void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass, bool is_collada);
     BulletSystem * getBulletSystem() {
         return system;
     }

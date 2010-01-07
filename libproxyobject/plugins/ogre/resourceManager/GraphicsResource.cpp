@@ -293,7 +293,6 @@ void GraphicsResource::checkDependenciesLoaded()
 
     if (loaded) {
       mLoadState = LOAD_LOADING;
-      std::cout << "dbm debug2 calling doLoad\n";
       doLoad();
     }
   }
@@ -305,21 +304,8 @@ void GraphicsResource::dependencyLoaded(bool success)
     checkDependenciesLoaded();
 }
 
-char* type_look[] = {    
-    "NAME",
-    "ENTITY",
-    "MESH",
-    "MATERIAL",
-    "SKELETON",
-    "TEXTURE",
-    "SHADER",
-    "MODEL"
-};
-
 void GraphicsResource::loaded(bool success, unsigned int epoch)
 {
-    std::cout << "dbm debug2 GraphicsResource::loaded " << success << " type: " << type_look[mType] << " ID: " 
-            << mID <<  " epoch: " << epoch << "\n";
   if (mLoadEpoch == epoch) {
     if (success)
       mLoadState = LOAD_LOADED;

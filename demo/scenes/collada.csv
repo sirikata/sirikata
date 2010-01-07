@@ -5,4 +5,4 @@
 "mesh","graphiconly","cube_collada",,,,740,3048,975,0,0,0,,0,0,0,0,1,0,0,1,1,1,2,2,2,1,0.5,0.3,0,0,1,"http://www.sirikata.com/content/assets/cube.dae",,,,,,,,,,,,,,,,,
 "mesh","dynamicbox","rectilinear",,,,745,3050,975,90,20,0,,0,0,0,0,1,0,0,1,1,1,4,2,8,1,0.3,0.1,0,0,1,"http://www.sirikata.com/content/assets/rect124.dae",,,,,,,,,,,,,,,,,
 "mesh","graphiconly","tetrahedron",,,,750,3050,975,0,0,0,,0,0,0,0,1,0,0.3,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"http://www.sirikata.com/content/assets/tetra.dae",,,,,,,,,,,,,,,,,
-"mesh","staticmesh","floor",,,,745,3045,975,0,0,0,,,,,,,,,20,0.2,20,1,1,1,0,0.5,0.5,0,0,1,"meru:///cube.mesh",,,,,,,,,,,,,,,,,
+"mesh","staticmesh","floor",,,,745,3045,975,0,0,0,,,,,,,,,10,0.5,10,1,1,1,0,0.5,0.5,0,0,1,"http://www.sirikata.com/content/assets/cube.dae",,,,,,,,,,,,,,,,,

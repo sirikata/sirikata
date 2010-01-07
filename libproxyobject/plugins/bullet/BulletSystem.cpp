@@ -50,8 +50,8 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
-//#define DEBUG_OUTPUT(x) x
-#define DEBUG_OUTPUT(x)
+#define DEBUG_OUTPUT(x) x
+//#define DEBUG_OUTPUT(x)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -107,7 +107,12 @@ void BulletObj::onSetMesh (const URI &newMesh) {
 }
 
 void BulletObj::onMeshParsed (String const& hash, Meshdata& md) {
-    std::cout << "dbm debug BulletObj::onMeshParsed! " << hash << "\n";
+    mMeshdata = &md;
+    if (!mActive) {
+        if (mShape==BulletObj::ShapeMesh) {
+            buildBulletBody(0, 0, true);
+        }
+    }
 }
 
 void BulletObj::onSetScale (const Vector3f &newScale) {
@@ -120,7 +125,7 @@ void BulletObj::onSetScale (const Vector3f &newScale) {
     mSizeZ = newScale.z;
     float mass;
     btVector3 localInertia(0,0,0);
-    buildBulletShape(NULL, 0, mass);        /// null, 0 means re-use original vertices
+    buildBulletShape(NULL, 0, mass, mMeshdata!=0);        /// null, 0 means re-use original vertices
     if (mDynamic) {                          /// inertia meaningless for static objects
         if (!mShape==ShapeMesh) {
             mColShape->calculateLocalInertia(mass,localInertia);
@@ -140,7 +145,8 @@ void BulletObj::onSetScale (const Vector3f &newScale) {
 }    
 
 void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
+    DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << (unsigned int)pp.mode 
+            << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
     mGravity = system->getGravity() * pp.gravity;
@@ -216,7 +222,7 @@ void BulletObj::setBulletState(positionOrientation po) {
     mBulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
-void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
+void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass, bool is_collada) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
     if (mColShape) delete mColShape;
     if (mDynamic) {
@@ -249,12 +255,24 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             btAlignedFree(mBtVertices);
         mBtVertices=NULL;
         unsigned int i,j;
-
-        if (meshbytes) {
+        
+        if (meshbytes || is_collada) {
             mVertices.clear();
             mIndices.clear();
-            parseOgreMesh parser;
-            parser.parseData(meshdata, meshbytes, mVertices, mIndices, bounds);
+            if (is_collada) {
+                for (i=0; i<mMeshdata->positions.size();i++) {
+                    mVertices.push_back((double)mMeshdata->positions[i][0]);
+                    mVertices.push_back((double)mMeshdata->positions[i][1]);
+                    mVertices.push_back((double)mMeshdata->positions[i][2]);
+                }
+                for (i=0; i<mMeshdata->position_indices.size();i++) {
+                    mIndices.push_back((double)mMeshdata->position_indices[i]);
+                }
+            }
+            else {
+                parseOgreMesh parser;
+                parser.parseData(meshdata, meshbytes, mVertices, mIndices, bounds);
+            }
         }
         DEBUG_OUTPUT (cout << "dbm:mesh " << mVertices.size() << " vertices:" << endl);
         mBtVertices=(btScalar*)btAlignedAlloc(mVertices.size()/3*sizeof(btScalar)*4,16);
@@ -306,13 +324,13 @@ BulletObj::~BulletObj() {
     if (mBulletBodyPtr!=NULL) delete mBulletBodyPtr;
 }
 
-void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
+void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes, bool is_collada) {
     float mass;
     btTransform startTransform;
     btVector3 localInertia(0,0,0);
     btRigidBody* body;
 
-    buildBulletShape(meshdata, meshbytes, mass);
+    buildBulletShape(meshdata, meshbytes, mass, is_collada);
 
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
     if (mDynamic) {
@@ -380,7 +398,7 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, Bullet
         Transfer::DenseDataPtr flatData = ev->data().flatten();
         const unsigned char* realData = flatData->data();
         DEBUG_OUTPUT (cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl);
-        bullobj->buildBulletBody(realData, ev->data().length());
+        bullobj->buildBulletBody(realData, ev->data().length(), false);
     }
     return Task::EventResponse::del();
 }
@@ -400,14 +418,26 @@ void BulletSystem::addPhysicalObject(BulletObj* obj,
     obj->mInitialPo = po;
     obj->mHull = hull;
     DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->mShape << endl);
+    String fn = obj->mMeshptr->getMesh().toString();
+    bool is_collada=false;
+    if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
     if (obj->mDynamic) {
         /// create the object now
-        obj->buildBulletBody(NULL, 0);                /// no mesh data
+        obj->buildBulletBody(NULL, 0, is_collada);                /// no mesh data
     }
     else {
-        /// set up a mesh download; callback (downloadFinished) calls buildBulletBody and completes object
-        transferManager->download(obj->mMeshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
+        if (is_collada) {
+            /// FIXME: not threadsafe -- need a lock.  This can race with onMeshParsed and no one calls buildBulletBody
+            /// but -- DH says it's OK, we're always called from a single thread, so whatever
+            if (obj->mMeshdata) {
+                obj->buildBulletBody(0, 0, true);
+            }
+        }
+        else {
+            /// set up a mesh download; callback (downloadFinished) calls buildBulletBody and completes object
+            transferManager->download(obj->mMeshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
                                   this, _1, obj), Transfer::Range(true));
+        }
     }
 }
 
