@@ -46,33 +46,24 @@ typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
 /// weak_ptr, to be used to hold onto a VWObject reference. @see SelfWeakPtr.
 typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
 
-
+/**
+ * An interface that all virtual world objects that wish to relate to ProxyObjects should provide
+ * These objects must be able to keep data on outstanding queries using the QueryTracker
+ * They must be able to get a ProxyManager per space to which they are connected:
+ *   In general any camera-like VWObject will be a ProxyManager for ProxyObjects it makes in a space
+ * The HostedObject must be able to track reported interest in a given object based on that object's query id
+ *   The addQueryInterest function will be called when 
+ *   the processRPC function determines that a ProxCall method has returned a particular SpaceObjectReference
+ *   The remoteQueryInterest function will be called when
+ *   the processRPC function determines that a ProxCall method has invalidated a paricular SpaceObjectReference
+ */
 class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>{
-protected:
-//------- Members
-    /// Call if you know that a position for some other ProxyObject has changed. FIXME: should this be made private?
-    void applyPositionUpdate(const ProxyObjectPtr &proxy, const Protocol::ObjLoc &objLoc, bool force_reset);
-    static void parsePhysicalParameters(PhysicalParameters &out, const Protocol::PhysicalParameters &parsedProperty);
-public:
-    ///determine if this object is an object hosted by this computer
-    virtual bool isLocal(const SpaceObjectReference&)const=0;
-    virtual ProxyManager*getProxyManager(const SpaceID&space)=0;
-    virtual QueryTracker*getTracker()=0;
-    virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;
-    virtual void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&obj, const SpaceObjectReference&)=0;
-    VWObject();
-    virtual ~VWObject();
-    static void receivedProxObjectLocation(
-        const VWObjectWPtr &weakThis,
-        SentMessage* sentMessage,
-        const RoutableMessageHeader &hdr,
-        MemoryReference bodyData,
-        int32 queryId);
+private:
     static void receivedProxObjectProperties( 
             const VWObjectWPtr &weakThis,
             SentMessage* sentMessageBase,
             const RoutableMessageHeader &hdr,
-            uint64 returnStatus,//type Persistence::Protocol::Response::ReturnStatus
+            uint64 returnStatus,
             int32 queryId,
             const Protocol::ObjLoc &objLoc);
     static void receivedPositionUpdateResponse(
@@ -80,12 +71,40 @@ public:
         SentMessage* sentMessage,
         const RoutableMessageHeader &hdr,
         MemoryReference bodyData);
+    static void receivedProxObjectLocation(
+        const VWObjectWPtr &weakThis,
+        SentMessage* sentMessage,
+        const RoutableMessageHeader &hdr,
+        MemoryReference bodyData,
+        int32 queryId);
+protected:
+    ///This convenience function takes a recently deserialized property argument and applies it to a ProxyObject, notifying the ProxyObject's listeners about relevent changes 
     void receivedPropertyUpdate(
         const ProxyObjectPtr &proxy,
         const std::string &propertyName,
         const std::string &arguments);
-
+    ///This convenience function takes a recently deserialized objLoc struct and applies it to a ProxyObject notifying the ProxyObject's listeners of changes
+    void applyPositionUpdate(const ProxyObjectPtr &proxy, const Protocol::ObjLoc &objLoc, bool force_reset);
+    ///This function translates Protobuf parsedProperties into a structure of them for making a ProxyObject that can be physical
+    static void parsePhysicalParameters(PhysicalParameters &out, const Protocol::PhysicalParameters &parsedProperty);
+    ///This must be called when a HostedObject has received an RPC message and pulled it apart into its respective args
     void processRPC(const RoutableMessageHeader&msg, const std::string &name, MemoryReference args, String *response);
+
+public:
+    VWObject();
+    virtual ~VWObject();
+    ///The tracker managing state for outstanding requests this object has made
+    virtual QueryTracker*getTracker()=0;
+    ///The ProxyManager this VWObject is responsible for (or partially responsible as in the current OH design) given the space ID
+    virtual ProxyManager*getProxyManager(const SpaceID&space)=0;
+    ///determine if objectId is an object hosted by this computer so messages to it may directly reach it
+    virtual bool isLocal(const SpaceObjectReference&objectId)const=0;
+
+    ///a callback to this object telling it that an object has entered its region of interest for query query_id
+    virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;
+    ///a callback to this object telling it that an object with an instantiated ProxyObject has exited its region of interest for query query_id
+    virtual void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&obj, const SpaceObjectReference&)=0;
+
     
 };
 

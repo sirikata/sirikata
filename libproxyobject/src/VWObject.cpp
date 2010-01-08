@@ -19,15 +19,6 @@ namespace Sirikata {
 using Protocol::ObjLoc;
 
 
-static void receivedProxObjectPropertiesWrapper( 
-            const VWObjectWPtr &weakThis,
-            SentMessage* sentMessageBase,
-            const RoutableMessageHeader &hdr,
-            Persistence::Protocol::Response::ReturnStatus returnStatus,
-            int32 queryId,
-            const Protocol::ObjLoc &objLoc){
-    VWObject::receivedProxObjectProperties(weakThis,sentMessageBase,hdr,returnStatus,queryId,objLoc);
-}
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 
 void VWObject::receivedProxObjectLocation(
@@ -80,7 +71,7 @@ void VWObject::receivedProxObjectProperties(
         const VWObjectWPtr &weakThis,
         SentMessage* sentMessageBase,
         const RoutableMessageHeader &hdr,
-        uint64 returnStatus,
+        uint64 returnStatus,//type Persistence::Protocol::Response::ReturnStatus
         int32 queryId,
         const ObjLoc &objLoc) {
     using namespace Persistence::Protocol;
@@ -93,16 +84,6 @@ void VWObject::receivedProxObjectProperties(
     if (!proxyMgr) {
         return;
     }
-/*
-    PerSpaceData::ProxQueryMap::iterator qmiter = iter->second.mProxQueryMap.find(queryId);
-    if (qmiter == iter->second.mProxQueryMap.end()) {
-        return;
-    }
-    std::set<ObjectReference>::iterator proxyiter = qmiter->second.find(sentMessage->getRecipient());
-    if (proxyiter == qmiter->second.end()) {
-        return;
-    }
-*/
     SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
     bool persistence_error = false;
     if (hdr.return_status() != RoutableMessageHeader::SUCCESS ||returnStatus!=Persistence::Protocol::Response::SUCCESS) {
@@ -368,7 +349,6 @@ void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &na
     printstr<<"\t";
 
     if (name == "ProxCall") {
-        //FIXME FIXME FIXME factor this out
         if (false && msg.source_object() != ObjectReference::spaceServiceID()) {
             SILOG(objecthost, error, "ProxCall message not coming from space: "<<msg.source_object());
             return;
