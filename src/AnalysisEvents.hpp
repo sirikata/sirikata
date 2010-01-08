@@ -43,9 +43,6 @@ struct LocationEvent : public ObjectEvent {
     TimedMotionVector3f loc;
 };
 
-struct SubscriptionEvent : public ObjectEvent {
-    bool started;
-};
 struct PingEvent : public ObjectEvent {
     Time sentTime;
     //ping count

@@ -113,7 +113,6 @@ const uint8 Trace::MessageCreationTimestampTag;
 const uint8 Trace::ObjectPingTag;
 const uint8 Trace::ProximityTag;
 const uint8 Trace::ObjectLocationTag;
-const uint8 Trace::SubscriptionTag;
 const uint8 Trace::ServerDatagramQueueInfoTag;
 const uint8 Trace::ServerDatagramQueuedTag;
 const uint8 Trace::ServerDatagramSentTag;
@@ -226,19 +225,6 @@ void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, c
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
     data.write( &loc, sizeof(loc) );
-#endif
-}
-
-void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
-#ifdef TRACE_OBJECT
-    if (mShuttingDown) return;
-
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &receiver, sizeof(receiver) );
-    data.write( &source, sizeof(source) );
-    data.write( &start, sizeof(start) );
 #endif
 }
 

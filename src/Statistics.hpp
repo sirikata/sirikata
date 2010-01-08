@@ -84,7 +84,6 @@ class Trace {
 public:
     static const uint8 ProximityTag = 0;
     static const uint8 ObjectLocationTag = 1;
-    static const uint8 SubscriptionTag = 2;
     static const uint8 ServerDatagramQueueInfoTag = 3;
     static const uint8 ServerDatagramQueuedTag = 4;
     static const uint8 ServerDatagramSentTag = 5;
@@ -162,7 +161,6 @@ public:
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void objectGenLoc(const Time& t, const UUID& source, const TimedMotionVector3f& loc);
-    void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
     // Server received a loc update
     void serverLoc(const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);

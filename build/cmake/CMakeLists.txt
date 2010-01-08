@@ -366,7 +366,6 @@ SET(CBR_PROTOCOLS
   ServerMessage.pbj
   Loc.pbj
   Prox.pbj
-  Subscription.pbj
   Migration.pbj
   CSeg.pbj
   Session.pbj

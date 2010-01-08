@@ -42,7 +42,6 @@
 
 #include "CBR_Prox.pbj.hpp"
 #include "CBR_Loc.pbj.hpp"
-#include "CBR_Subscription.pbj.hpp"
 
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)
 
@@ -130,17 +129,6 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 }
 
 
-void Object::addSubscriber(const UUID& sub) {
-    if (mSubscribers.find(sub) == mSubscribers.end())
-        mSubscribers.insert(sub);
-}
-
-void Object::removeSubscriber(const UUID& sub) {
-    ObjectSet::iterator it = mSubscribers.find(sub);
-    if (it != mSubscribers.end())
-        mSubscribers.erase(it);
-}
-
 const TimedMotionVector3f Object::location() const {
     return mLocation.read();
 }
@@ -212,9 +200,6 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
       case OBJECT_PORT_LOCATION:
         locationMessage(*msg);
         break;
-      case OBJECT_PORT_SUBSCRIPTION:
-        subscriptionMessage(*msg);
-        break;
       default:
         printf("Warning: Tried to deliver unknown message type through ObjectConnection.\n");
         break;
@@ -266,15 +251,6 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             loc
         );
 
-        CBR::Protocol::Subscription::SubscriptionMessage subs;
-        subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
-
-        bool success = mContext->objectHost->send(
-            this, OBJECT_PORT_SUBSCRIPTION,
-            addition.object(), OBJECT_PORT_SUBSCRIPTION,
-            serializePBJMessage(subs)
-        );
-        // FIXME do something on failure
     }
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
@@ -286,35 +262,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             false,
             TimedMotionVector3f()
         );
-
-        CBR::Protocol::Subscription::SubscriptionMessage subs;
-        subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
-
-        bool success = mContext->objectHost->send(
-            this, OBJECT_PORT_SUBSCRIPTION,
-            removal.object(), OBJECT_PORT_SUBSCRIPTION,
-            serializePBJMessage(subs)
-        );
-        // FIXME do something on failure
     }
-}
-
-void Object::subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
-    CBR::Protocol::Subscription::SubscriptionMessage contents;
-    bool parse_success = contents.ParseFromString(msg.payload());
-    assert(parse_success);
-
-    mContext->trace()->subscription(
-        mContext->simTime(),
-        msg.dest_object(),
-        msg.source_object(),
-        (contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false
-    );
-
-    if ( contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe )
-        addSubscriber(msg.source_object());
-    else
-        removeSubscriber(msg.source_object());
 }
 
 } // namespace CBR

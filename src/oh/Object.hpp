@@ -126,10 +126,6 @@ private:
 
     void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
-    void subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg);
-
-    void addSubscriber(const UUID& sub);
-    void removeSubscriber(const UUID& sub);
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(ServerID sid);
@@ -152,7 +148,6 @@ private:
     // Only accessed by object simulation operations
     MotionPath* mMotion;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
-    ObjectSet mSubscribers;
     bool mRegisterQuery;
     SolidAngle mQueryAngle;
 

@@ -39,7 +39,6 @@
 
 #include "CBR_ServerMessage.pbj.hpp"
 #include "CBR_ObjectMessage.pbj.hpp"
-#include "CBR_Subscription.pbj.hpp"
 #include "CBR_SSTHeader.pbj.hpp"
 
 
@@ -69,7 +68,6 @@ typedef uint16 ObjectMessagePort;
 #define OBJECT_PORT_SESSION       1
 #define OBJECT_PORT_PROXIMITY     2
 #define OBJECT_PORT_LOCATION      3
-#define OBJECT_PORT_SUBSCRIPTION  4
 #define OBJECT_PORT_PING          254
 
 

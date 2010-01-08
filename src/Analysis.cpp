@@ -96,16 +96,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = levt;
           }
           break;
-      case Trace::SubscriptionTag:
-          {
-              SubscriptionEvent* sevt = new SubscriptionEvent;
-              is.read( (char*)&sevt->time, sizeof(sevt->time) );
-              is.read( (char*)&sevt->receiver, sizeof(sevt->receiver) );
-              is.read( (char*)&sevt->source, sizeof(sevt->source) );
-              is.read( (char*)&sevt->started, sizeof(sevt->started) );
-              evt = sevt;
-          }
-          break;
       case Trace::ObjectPingTag:
           {
               PingEvent *pevt = new PingEvent;
