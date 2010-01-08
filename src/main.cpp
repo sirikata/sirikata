@@ -49,7 +49,6 @@
 #include "Statistics.hpp"
 #include "StandardLocationService.hpp"
 #include "Test.hpp"
-#include "SSTNetwork.hpp"
 #include "TCPNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 #include "FIFOServerMessageQueue.hpp"
@@ -113,9 +112,7 @@ int main(int argc, char** argv) {
     gSpaceContext = space_context;
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
-    if (network_type == "sst")
-        gNetwork = new SSTNetwork(space_context);
-    else if (network_type == "tcp")
+    if (network_type == "tcp")
       gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
 
 

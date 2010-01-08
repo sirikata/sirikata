@@ -200,23 +200,6 @@ IF(NOT GLUT_FOUND)
   MESSAGE(SEND_ERROR "Couldn't find GLUT.")
 ENDIF(NOT GLUT_FOUND)
 
-#dependency: qt
-IF(EXISTS ${DEPENDENCIES_ROOT}/qt/qt)
-  SET(Qt4_ROOT ${DEPENDENCIES_ROOT}/qt/qt)
-ELSE()
-  SET(Qt4_ROOT ${DEPENDENCIES_ROOT})
-ENDIF()
-FIND_PACKAGE(Qt4 REQUIRED)
-ADD_DEFINITIONS(${QT_DEFINITIONS})
-
-#dependency: sst
-IF(EXISTS ${DEPENDENCIES_ROOT}/installed-sst)
-  SET(SST_ROOT ${DEPENDENCIES_ROOT}/installed-sst)
-ELSE()
-  SET(SST_ROOT ${DEPENDENCIES_ROOT})
-ENDIF()
-FIND_PACKAGE(SST REQUIRED)
-
 #dependency: prox
 IF(EXISTS ${DEPENDENCIES_ROOT}/installed-prox)
   SET(PROX_ROOT ${DEPENDENCIES_ROOT}/installed-prox)
@@ -258,9 +241,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Sirikata_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Sirikata_PBJ_ROOT}
-        ${QT_INCLUDES}
         ${GSL_INCLUDE_DIR}
-        ${SST_INCLUDE_DIRS}
         ${PROX_INCLUDE_DIRS}
         ${PROTOCOLBUFFERS_INCLUDE_DIRS}
         ${GCRYPT_INCLUDE_DIRS}
@@ -324,8 +305,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
   ${CBR_SOURCE_DIR}/TCPNetwork.cpp
-  ${CBR_SOURCE_DIR}/SSTNetwork.cpp
-  ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
@@ -379,13 +358,6 @@ SET(BENCH_SOURCES
 )
 
 
-
-SET(CBR_MOC_HEADERS
-  ${CBR_SOURCE_DIR}/SSTNetworkImpl.h
-)
-
-QT4_WRAP_CPP(CBR_MOC_SOURCES ${CBR_MOC_HEADERS})
-
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(CBR_PROTOCOLS
@@ -429,7 +401,7 @@ LINK_DIRECTORIES(
 ADD_LIBRARY(cbr-core STATIC ${CBR_CORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
 
 #binaries
-ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES})
+ADD_EXECUTABLE(cbr ${CBR_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
   cbr-core
         ${GSL_CONFIG_LIBS}
@@ -438,8 +410,6 @@ TARGET_LINK_LIBRARIES(cbr
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
         ${Boost_REGEX_LIBRARY}
         ${SirikataCore_LIBRARIES}
-        ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
-        ${SST_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
         ${GCRYPT_LIBRARIES}
         )

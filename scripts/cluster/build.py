@@ -23,9 +23,6 @@ class ClusterBuild:
     def cd_to_scripts(self):
         return "cd scripts"
 
-    def cd_to_sst_build(self):
-        return ClusterRunConcatCommands( [self.cd_to_code(), "cd dependencies/sst"] )
-
     def destroy(self):
         destroy_cmd = "rm -rf " + self.config.code_dir
         retcodes = ClusterRun(self.config, destroy_cmd)
@@ -93,24 +90,6 @@ class ClusterBuild:
                 update_cmd += " " + dep
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, update_cmd]))
         return ClusterRunSummaryCode(retcodes)
-
-    def patch_build_sst(self, patch_file):
-        ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/dependencies/sst/"+patch_file])
-        cd_cmd = self.cd_to_sst_build()
-        reset_cmd = "git reset --hard HEAD"
-        patch_cmd = "patch -p1 < " + patch_file
-        build_cmd = "make; make install"
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd, patch_cmd, build_cmd]))
-        # doing this implies we need to rebuild cbr
-        if (ClusterRunFailed(retcodes)):
-            return ClusterRunSummaryCode(retcodes)
-
-        clean_ret = self.clean()
-        if (clean_ret != 0):
-            return clean_ret
-
-        return self.build()
-
 
     def ccache_args(self):
         if (not self.config.ccache):
@@ -233,20 +212,16 @@ if __name__ == "__main__":
             retval = cluster_build.update()
         elif cmd == 'dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['sst', 'sirikata', 'prox']:
+            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['sirikata', 'prox']:
                 deps.append(sys.argv[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.dependencies(deps)
         elif cmd == 'update_dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['sst', 'sirikata', 'prox']:
+            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['sirikata', 'prox']:
                 deps.append(sys.argv[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.update_dependencies(deps)
-        elif cmd == 'patch_build_sst':
-            patch_file = sys.argv[cur_arg_idx]
-            cur_arg_idx += 1
-            retval = cluster_build.patch_build_sst(patch_file)
         elif cmd == 'build':
             build_type = 'Debug'
             with_timestamp = True

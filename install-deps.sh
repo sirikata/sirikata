@@ -2,7 +2,6 @@
 
 opt_update="false"
 opt_components_all="true"
-opt_components_sst="false"
 opt_components_sirikata="false"
 opt_components_prox="false"
 
@@ -12,9 +11,6 @@ do
   if [ "$1" == "update" ]; then
     opt_update="true"
     echo "Performing update"
-  elif [ "$1" == "sst" ]; then
-    opt_components_all="false"
-    opt_components_sst="true"
   elif [ "$1" == "sirikata" ]; then
     opt_components_all="false"
     opt_components_sirikata="true"
@@ -29,13 +25,12 @@ done
 
 # if opt_components_all is still marked, mark all for processing
 if [ ${opt_components_all} == "true" ]; then
-  opt_components_sst="true"
   opt_components_sirikata="true"
   opt_components_prox="true"
 
   # when we're installing everything and not updating, perform basic system installation tasks
   if [ ${opt_update} == "false" ]; then
-    echo formerly sudo apt-get install libtool automake1.9 autoconf patch unzip g++ cmake qt4-dev-tools qt4-qmake qt4-qtconfig freeglut-dev jgraph python-pydot
+    echo formerly sudo apt-get install libtool automake1.9 autoconf patch unzip g++ cmake freeglut-dev jgraph python-pydot
   fi
 fi
 
@@ -47,36 +42,6 @@ fi
 cd dependencies
 
 deps_dir=`pwd`
-
-
-# sst
-if [ ${opt_components_sst} == "true" ]; then
-
-  if [ ${opt_update} != "true" ]; then
-    if [ -e sst ]; then
-      rm -rf sst
-    fi
-    if [ -e installed-sst ]; then
-      rm -rf installed-sst
-    fi
-    #svn co svn://svn.pdos.csail.mit.edu/uia/trunk/uia/sst
-    git clone git@ahoy.stanford.edu:sst.git
-    cd sst
-    git branch stanford origin/stanford
-    git checkout stanford
-  else
-    cd sst
-    git reset --hard HEAD
-    git pull origin stanford:stanford
-  fi
-
-  misc/setup
-  ./configure --prefix=${deps_dir}/installed-sst
-  make
-  make install
-  cd ..
-
-fi # opt_components_sst
 
 
 # sirikata
