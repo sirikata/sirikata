@@ -36,6 +36,8 @@
 #include "LocationService.hpp"
 #include "Options.hpp"
 
+#include "CBR_Loc.pbj.hpp"
+
 namespace CBR {
 
 /** A LocationUpdatePolicy which always sends a location
@@ -155,7 +157,7 @@ private:
             while(!subs->subscribedTo.empty()) {
                 UUID tmp=*(subs->subscribedTo.begin());
                 unsubscribe(remote, tmp);
-                
+
             }
 
             // Might have outstanding updates, so leave it in place and

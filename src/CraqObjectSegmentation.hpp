@@ -21,6 +21,7 @@
 #include <boost/thread/mutex.hpp>
 #include "OSegLookupTraceToken.hpp"
 
+#include "CBR_OSeg.pbj.hpp"
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
@@ -35,7 +36,7 @@ namespace CBR
     int timeAdmitted;
   };
 
-  
+
   const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
   static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
 
@@ -47,7 +48,7 @@ namespace CBR
     double checkOwnTimeDur;
     int checkOwnTimeCount;
 
-    
+
     //debugging:
 
     char myUniquePrefixKey; //should just be one character long.
@@ -104,11 +105,11 @@ namespace CBR
     AsyncCraqHybrid craqDhtSet;
 
 
-    
+
     int mAtomicTrackID;
     boost::mutex atomic_track_id_m;
     int getUniqueTrackID();
-    
+
     IOStrand* postingStrand;
     IOStrand* mStrand;
 
@@ -133,7 +134,7 @@ namespace CBR
     CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id);
     //end message addition.
 
-    
+
 
     //building for the cache
     ServerID satisfiesCache(const UUID& obj_id);
@@ -152,12 +153,12 @@ namespace CBR
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
     void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken);
 
-    
+
     virtual void poll();
 
     SpaceContext* ctx;
     bool mReceivedStopRequest;
-    
+
   public:
     CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
 
@@ -175,9 +176,9 @@ namespace CBR
     virtual std::vector<PollingService*> getNestedPollers();
     virtual void stop();
 
-    
-    
-    
+
+
+
     CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
     void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
     void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);

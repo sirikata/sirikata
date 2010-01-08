@@ -17,6 +17,10 @@
 
 #include "Random.hpp"
 
+// FIXME we shouldn't have oseg specific things here, this should be delegated
+// to OSeg as necessary
+#include "CBR_OSeg.pbj.hpp"
+
 namespace CBR
 {
 

@@ -38,6 +38,8 @@
 #include "Message.hpp"
 #include "PollingService.hpp"
 
+#include "CBR_CSeg.pbj.hpp"
+
 namespace CBR {
 
 class ServerMessageQueue;

@@ -39,14 +39,7 @@
 
 #include "CBR_ServerMessage.pbj.hpp"
 #include "CBR_ObjectMessage.pbj.hpp"
-#include "CBR_Loc.pbj.hpp"
-#include "CBR_Prox.pbj.hpp"
 #include "CBR_Subscription.pbj.hpp"
-#include "CBR_Migration.pbj.hpp"
-#include "CBR_CSeg.pbj.hpp"
-#include "CBR_Session.pbj.hpp"
-#include "CBR_OSeg.pbj.hpp"
-#include "CBR_ObjConnKill.pbj.hpp"
 #include "CBR_SSTHeader.pbj.hpp"
 
 

@@ -40,6 +40,10 @@
 #include <network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
+#include "CBR_Prox.pbj.hpp"
+#include "CBR_Loc.pbj.hpp"
+#include "CBR_Subscription.pbj.hpp"
+
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)
 
 namespace CBR {

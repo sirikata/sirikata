@@ -9,6 +9,10 @@
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
 #include "sirikata/util/SizedThreadSafeQueue.hpp"
+
+#include "CBR_Session.pbj.hpp"
+#include "CBR_Migration.pbj.hpp"
+
 namespace CBR
 {
 class Forwarder;

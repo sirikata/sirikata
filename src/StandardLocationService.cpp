@@ -33,6 +33,8 @@
 #include "StandardLocationService.hpp"
 #include "Statistics.hpp"
 
+#include "CBR_Loc.pbj.hpp"
+
 namespace CBR {
 
 StandardLocationService::StandardLocationService(SpaceContext* ctx)

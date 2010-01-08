@@ -38,6 +38,8 @@
 #include <prox/BruteForceQueryHandler.hpp>
 #include <prox/RTreeQueryHandler.hpp>
 
+#include "CBR_Prox.pbj.hpp"
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace CBR {

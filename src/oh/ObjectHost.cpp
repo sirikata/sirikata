@@ -42,6 +42,8 @@
 #include <network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
+#include "CBR_Session.pbj.hpp"
+
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
 
 using namespace Sirikata;
