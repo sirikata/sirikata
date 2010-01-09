@@ -79,10 +79,12 @@ void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj, QueryTr
 }
 QueryTracker *ObjectHostProxyManager::getQueryTracker(const SpaceObjectReference &id) {
     ProxyMap::const_iterator iter = mProxyMap.find(id.object());  
-    if (iter == mProxyMap.end()){
-        return 0;
+    if (iter != mProxyMap.end()){
+        if (!iter->second.viewers.empty()) {
+            return *(iter->second.viewers.begin());
+        }
     }
-    return *(iter->second.viewers.begin());
+    return 0;
 }
 
 ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {
