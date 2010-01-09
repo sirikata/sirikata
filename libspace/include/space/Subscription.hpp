@@ -55,6 +55,17 @@ class Subscriber;
 class Broadcast;
 class Subscription;
 
+typedef int32 subint;
+
+typedef std::pair<ObjectReference, subint> SubscriptionID;
+class SubscriptionIDHasher {
+    ObjectReference::Hasher orHash;
+public:
+    size_t operator() (const SubscriptionID &toHash) const {
+        return orHash(toHash.first) ^ std::tr1::hash<subint>()(toHash.second);
+    }
+};
+
 class Subscriber {
     const ObjectReference mObject;
     Broadcast *const mBroadcast;
@@ -83,52 +94,71 @@ class Broadcast {
     typedef std::tr1::unordered_map<ObjectReference, Subscriber*, ObjectReference::Hasher> SubscriberMap;
 
     SubscriberMap mSubscribers;
-    UUID mID;
-    const ObjectReference mOwner;
+    SubscriptionID mID;
     std::string mMessage;
     Subscription *mSubscriptionService;
 public:
-    Broadcast(Subscription *subService, const UUID &uuid, const ObjectReference &owner);
+    Broadcast(Subscription *subService, const SubscriptionID &id);
     ~Broadcast();
     void subscribe(const ObjectReference &subscriber, Duration period);
     void broadcast(const std::string &message);
     void makeBroadcastMessage(std::string *serializedMsg);
-    const ObjectReference &owner() {return mOwner;}
+    const ObjectReference &owner() {return mID.first;}
+    subint getNumber() const { return mID.second; }
     Subscription *getSubscriptionService() {
         return mSubscriptionService;
     }
 };
 
 class SIRIKATA_SPACE_EXPORT Subscription {
-    struct SubscriptionService : public MessageService {
+    class SubscriptionService : public MessageService {
         Subscription *mParent;
-        bool forwardMessagesTo(MessageService*);
-        bool endForwardingMessagesTo(MessageService*);
+    public:
+        bool forwardMessagesTo(MessageService*) { return false; }
+        bool endForwardingMessagesTo(MessageService*) { return false; }
         void processMessage(const RoutableMessageHeader&header,
                             MemoryReference message_body);
-        void init (Subscription *parent) { mParent = parent; }
+        SubscriptionService (Subscription *parent) {
+            mParent = parent;
+        }
     } mSubscription;
-    struct BroadcastService : public MessageService {
+    class BroadcastService : public MessageService {
         Subscription *mParent;
+        bool mTrusted;
+    public:
+        bool forwardMessagesTo(MessageService*) { return false; }
+        bool endForwardingMessagesTo(MessageService*) { return false; }
+        void processMessage(const RoutableMessageHeader&header,
+                            MemoryReference message_body);
+        BroadcastService (Subscription *parent, bool trusted) {
+            mParent = parent;
+            mTrusted = trusted;
+        }
+    } mBroadcastFromObject, mBroadcastFromSpace;
+    class SendService : public MessageService {
         std::vector<MessageService*> mServices;
+    public:
         bool forwardMessagesTo(MessageService*);
         bool endForwardingMessagesTo(MessageService*);
         void processMessage(const RoutableMessageHeader&header,
                             MemoryReference message_body);
-        void init (Subscription *parent) { mParent = parent; }
-    } mBroadcast;
-    typedef std::tr1::unordered_map<UUID, Broadcast*, UUID::Hasher> BroadcastMap;
+    } mSendService;
+    typedef std::tr1::unordered_map<SubscriptionID, Broadcast*, SubscriptionIDHasher> BroadcastMap;
 
     BroadcastMap mBroadcasts;
     Network::IOService *mIOService;
 private:
     void processMessage(const ObjectReference&object_reference,const Protocol::Subscribe&loc);
-    void processMessage(const ObjectReference&object_reference,const Protocol::Broadcast&loc);
+    void processMessage(const ObjectReference&object_reference,bool isTrusted,const Protocol::Broadcast&loc);
 public:
     Subscription(Network::IOService *ioServ);
     ~Subscription();
-    void sendMessage(const RoutableMessageHeader&header,
-                        MemoryReference message_body);
+
+    inline void sendMessage(
+            const RoutableMessageHeader&header,
+            MemoryReference message_body) {
+        getSendService()->processMessage(header, message_body);
+    }
 
     Network::IOService *getIOService() {
         return mIOService;
@@ -138,7 +168,13 @@ public:
         return &mSubscription;
     }
     MessageService *getBroadcastService() {
-        return &mBroadcast;
+        return &mBroadcastFromObject;
+    }
+    MessageService *getSpaceBroadcastService() {
+        return &mBroadcastFromSpace;
+    }
+    MessageService *getSendService() {
+        return &mSendService;
     }
 
 }; // class Space

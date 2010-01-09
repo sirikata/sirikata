@@ -131,7 +131,7 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mRegistration->forwardMessagesTo(mGeom);
     mGeom->forwardMessagesTo(mObjectConnections);
     mLoc->forwardMessagesTo(mGeom);
-    mSubscription->getSubscriptionService()->forwardMessagesTo(mObjectConnections);
+    mSubscription->getSendService()->forwardMessagesTo(mObjectConnections);
     mSubscription->getBroadcastService()->forwardMessagesTo(mObjectConnections);
 }
 void Space::run() {

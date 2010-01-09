@@ -30,11 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Subscription.hpp>
-#include <space/Registration.hpp>
 #include "Space_Subscription.pbj.hpp"
 #include "util/RoutableMessageHeader.hpp"
 #include "util/KnownServices.hpp"
+#include "space/Subscription.hpp"
 namespace Sirikata {
 
 
@@ -66,7 +65,7 @@ void Subscriber::doSend(MemoryReference body) {
     destination_header.set_source_object(ObjectReference::spaceServiceID());
     destination_header.set_source_port(Services::BROADCAST);
     destination_header.set_destination_object(mObject);
-    
+
     mBroadcast->getSubscriptionService()->sendMessage(destination_header,body);
 }
 
@@ -98,8 +97,8 @@ void Subscriber::cancelTimer() {
     mTimerIsActive = false;
 }
 
-Broadcast::Broadcast(Subscription *sub, const UUID &id, const ObjectReference &owner)
-    : mID(id), mOwner(owner), mSubscriptionService(sub) {
+Broadcast::Broadcast(Subscription *sub, const SubscriptionID &id)
+    : mID(id), mSubscriptionService(sub) {
 }
 
 Broadcast::~Broadcast() {
@@ -112,7 +111,7 @@ void Broadcast::subscribe(const ObjectReference &subscriber, Duration period) {
 
 void Broadcast::makeBroadcastMessage(std::string *serializedMsg) {
     Protocol::Broadcast msg;
-    msg.set_broadcast_name(mID);
+    msg.set_broadcast_name(getNumber());
     msg.set_data(mMessage);
     msg.SerializeToString(serializedMsg);
 }
@@ -132,33 +131,41 @@ void Broadcast::broadcast(const std::string &message) {
     }
 }
 
-Subscription::Subscription(Network::IOService *ioServ) {
+Subscription::Subscription(Network::IOService *ioServ)
+    : mSubscription(this),
+      mBroadcastFromObject(this, false),
+      mBroadcastFromSpace(this, true) {
     mIOService = ioServ;
-    mSubscription.init(this);
-    mBroadcast.init(this);
 }
 
 Subscription::~Subscription() {
 }
 
-void Subscription::processMessage(const ObjectReference&object_reference,const Protocol::Subscribe&sub){
-    UUID broadcast = sub.broadcast_name();
+void Subscription::processMessage(const ObjectReference&src, const Protocol::Subscribe&sub){
+    ObjectReference object_reference(sub.object());
+    SubscriptionID broadcast (object_reference, sub.broadcast_name());
     Duration period = sub.update_period();
-    BroadcastMap::iterator iter = mBroadcasts.find(broadcast);
-    if (iter != mBroadcasts.end()) {
-        iter->second->subscribe(object_reference, period);
-    }
-}
-
-void Subscription::processMessage(const ObjectReference&object_reference,const Protocol::Broadcast&sub){
-    UUID broadcast = sub.broadcast_name();
     BroadcastMap::iterator iter = mBroadcasts.find(broadcast);
     if (iter == mBroadcasts.end()) {
         iter = mBroadcasts.insert(BroadcastMap::value_type(
             broadcast,
-            new Broadcast(this, broadcast, object_reference))).first;
-    } else if (iter->second->owner() != object_reference) {
-        return; // Someone other than owner is trying to broadcast.
+            new Broadcast(this, broadcast))).first;
+    }
+    iter->second->subscribe(object_reference, period);
+}
+
+void Subscription::processMessage(const ObjectReference&src, bool isTrusted, const Protocol::Broadcast&sub){
+    ObjectReference object_reference(sub.object());
+    if (ObjectReference(sub.object()) != src && !isTrusted) {
+        return; // Src object and broadcast object do not match
+    }
+    SubscriptionID broadcast (ObjectReference(sub.object()), sub.broadcast_name());
+    BroadcastMap::iterator iter = mBroadcasts.find(broadcast);
+    if (iter == mBroadcasts.end() &&
+            (sub.broadcast_name()>=0 || isTrusted)) {
+        iter = mBroadcasts.insert(BroadcastMap::value_type(
+            broadcast,
+            new Broadcast(this, broadcast))).first;
     }
     if (sub.has_data()) {
         iter->second->broadcast(sub.data());
@@ -169,12 +176,6 @@ void Subscription::SubscriptionService::processMessage(const RoutableMessageHead
     subMsg.ParseFromArray(message_body.data(),message_body.size());
     mParent->processMessage(header.source_object(), subMsg);
 }
-bool Subscription::SubscriptionService::forwardMessagesTo(MessageService*ms) {
-    return false;
-}
-bool Subscription::SubscriptionService::endForwardingMessagesTo(MessageService*ms) {
-    return false;
-}
 
 void Subscription::BroadcastService::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
     if (header.reply_id()) {
@@ -183,25 +184,23 @@ void Subscription::BroadcastService::processMessage(const RoutableMessageHeader&
     }
     Protocol::Broadcast broadMsg;
     broadMsg.ParseFromArray(message_body.data(),message_body.size());
-    mParent->processMessage(header.source_object(), broadMsg);
+    mParent->processMessage(header.source_object(), mTrusted, broadMsg);
 }
-bool Subscription::BroadcastService::forwardMessagesTo(MessageService*ms) {
+void Subscription::SendService::processMessage(const RoutableMessageHeader&header, MemoryReference message_body) {
+    for (size_t i = 0; i < mServices.size(); ++i) {
+        mServices[i]->processMessage(header, message_body);
+    }
+}
+bool Subscription::SendService::forwardMessagesTo(MessageService*ms) {
     mServices.push_back(ms);
     return true;
 }
-bool Subscription::BroadcastService::endForwardingMessagesTo(MessageService*ms) {
+bool Subscription::SendService::endForwardingMessagesTo(MessageService*ms) {
     std::vector<MessageService*>::iterator where=std::find(mServices.begin(),mServices.end(),ms);
     if (where==mServices.end())
         return false;
     mServices.erase(where);
     return true;
-}
-
-void Subscription::sendMessage(const RoutableMessageHeader&header,
-                 MemoryReference message_body) {
-    for (size_t i = 0; i < mBroadcast.mServices.size(); ++i) {
-        mBroadcast.mServices[i]->processMessage(header, message_body);
-    }
 }
 
 }

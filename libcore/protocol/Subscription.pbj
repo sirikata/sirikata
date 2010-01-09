@@ -36,11 +36,13 @@ package Sirikata.SubscriptionPBJ.Protocol;
 // SUBSCRIPTION port
 message Subscribe {
     reserve 1 to 8;//in case we ever need to forward these around a bit
-    ///the name of the specific broadcast to listen to
-    optional uuid broadcast_name=9;
+    ///the name of the specific broadcast to listen to, negative are owned by the space (position, space)
+    optional sint32 broadcast_name=9;
     ///the minimum time between updates: 0 means every update is broadcast
     ///if ommitted, it means that you wish to unsubscribe from the broadcast.
     optional duration update_period=10;
+
+    optional uuid object=11;
     
     reserve 1536 to 2560;
     reserve 229376 to 294912;
@@ -49,11 +51,13 @@ message Subscribe {
 // BROADCAST port
 message Broadcast {
     reserve 1 to 8;//in case we ever need to forward these around a bit
-    ///the name of the specific broadcast to listen to
-    optional uuid broadcast_name=9;
+    ///the name of the specific broadcast to listen to, negative are owned by the space (position, scale)
+    optional sint32 broadcast_name=9;
     ///the contents of a message to be broadcast (if sent from the creator to subscription),
     ///or the update (if sent from subscription to the subscribers)
     optional bytes data=10;
+
+    optional uuid object=11;
     
     reserve 1536 to 2560;
     reserve 229376 to 294912;
