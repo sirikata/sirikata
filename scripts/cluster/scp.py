@@ -19,6 +19,14 @@ import sys
 import subprocess
 from config import ClusterConfig
 
+def append_file_if_directory(dest, source_filename):
+    source_dest = dest
+    if (source_dest.endswith('/')):
+        return source_dest + source_filename
+    if (source_dest == '.' or source_dest == '..'):
+        return source_dest + '/' + source_filename
+    return source_dest
+
 # Takes a cluster config and the source and destination filename formats
 def ClusterSCP(cc, params):
     deployment_nodes = cc.deploy_nodes
@@ -28,42 +36,51 @@ def ClusterSCP(cc, params):
     index = 1
     for node in deployment_nodes:
         subs_dict = { 'host' : node.node, 'user' : node.user, 'node' : index }
+        # Since we need to pipe through another server we need to construct a
+        # sequence of commands that look like:
+        #  cat src_file | ssh gateway ssh dest_server dd of=dest_file_or_dir
+        # This loop does that, and collects them into a single large command
+        # chained with &&'s to allow for early failure.
         scp_command = []
-        firstParam=True
-        fileName=''
-        for param in params:
-            subs_param = param % subs_dict
-            optionalCommand=''
-            command='cat'
-            if not firstParam:
-                optionalCommand='of='
-                command='dd'
-            if (subs_param.endswith('/')):
-                subs_param+=fileName;
-            if (subs_param=='.'):
-                subs_param=fileName;
-            if (subs_param=='remote:.'):
-                subs_param='remote:'+fileName;
-            if (subs_param.startswith("remote:")):
-                subs_param=subs_param.split(':',1)[1]
-                scp_command+=['ssh',cc.headnode,'ssh',node.str(),command,optionalCommand+subs_param]
-            else:
-                scp_command+=[command,optionalCommand+subs_param]
 
-            if firstParam:
-                fileName=subs_param
-                where=fileName.rfind('/')
-                if where!=-1:
-                    fileName=fileName[where+1:]
-                firstParam=False
-                scp_command+=['|']
-        sh_command=['sh','-c',''];
-        for arg in scp_command:
-            if (len(sh_command[2])):
-                sh_command[2]+=' '
-            sh_command[2]+=arg
-        #print "running ",sh_command
-        subprocess.call(sh_command)
+        sources = params[:-1]
+        dest = params[-1]
+
+        dest_remote = dest.startswith("remote:")
+        if dest_remote:
+            dest = dest.split(':',1)[1]
+
+        for source in sources:
+            source_remote = source.startswith("remote:")
+            if source_remote:
+                source = source.split(':',1)[1]
+
+            if (source_remote and dest_remote):
+                print "Source and dest cannot both be remote"
+                return -1
+
+            # extract just the filename, without preceding dirs
+            source_filename = source
+            where = source_filename.rfind('/')
+            if where != -1:
+                source_filename = source_filename[where+1:]
+
+            # construct the destination filename
+            source_dest = append_file_if_directory(dest, source_filename)
+
+            # and generate the actual command to execute
+            if (source_remote):
+                # In this case we cat on the remote server and dd locally
+                cmd = '(ssh ' + cc.headnode + ' ssh ' + node.str() + ' cat ' + source + ') | dd of=' + source_dest
+            elif (dest_remote):
+                # And here we cat locally, dd remotely
+                cmd = 'cat ' + source + ' | ssh ' + cc.headnode + ' ssh ' + node.str() + ' dd of=' + source_dest
+            else: # both local, just cp
+                cmd = 'cp ' + source + ' ' + source_dest
+
+            sh_command = ['sh', '-c', cmd % subs_dict]
+            subprocess.call(sh_command)
+
         index = index + 1
 
 
