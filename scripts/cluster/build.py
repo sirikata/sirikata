@@ -125,6 +125,7 @@ class ClusterBuild:
         # first generate a patchmail
         commits_patch_file = open(self.patchmail_file, 'w')
         formatpatch_ret = subprocess.call(['git', 'format-patch', '--stdout', 'origin/master'], 0, None, None, commits_patch_file)
+        commits_patch_file.close()
         if (formatpatch_ret != 0):
             return formatpatch_ret
 
