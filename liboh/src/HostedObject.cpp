@@ -135,8 +135,14 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
 }
 
 HostedObject::~HostedObject() {
+    destroy();
+    delete mSpaceData;
+}
+
+void HostedObject::destroy() {
     if (mObjectScript) {
         delete mObjectScript;
+        mObjectScript=NULL;
     }
     for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
          iter != mSpaceData->end();
@@ -158,7 +164,7 @@ HostedObject::~HostedObject() {
     }
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
     mTracker.endForwardingMessagesTo(&mSendService);
-    delete mSpaceData;
+    mSpaceData->clear();
 }
 
 struct HostedObject::PrivateCallbacks {
@@ -166,6 +172,7 @@ struct HostedObject::PrivateCallbacks {
     static void initializeDatabaseCallback(
         const HostedObjectWPtr &weakThis,
         const SpaceID &spaceID,
+        const HostedObjectPtr&spaceConnectionHint,
         Persistence::SentReadWriteSet *msg,
         const RoutableMessageHeader &lastHeader,
         Persistence::Protocol::Response::ReturnStatus errorCode)
@@ -233,7 +240,7 @@ struct HostedObject::PrivateCallbacks {
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?1.0:1.0);
-        realThis->sendNewObj(location, sphere, spaceID, realThis->getUUID());
+        realThis->connectToSpace(spaceID, spaceConnectionHint, location, sphere, realThis->getUUID());
         delete msg;
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
@@ -580,7 +587,7 @@ void HostedObject::sendNewObj(
     sendViaSpace(messageHeader, MemoryReference(serializedBody));
 }
 
-void HostedObject::initializeConnect(
+void HostedObject::initializeDefault(
     const String&mesh,
     const LightInfo *lightInfo,
     const String&webViewURL,
@@ -610,8 +617,7 @@ void HostedObject::initializeConnect(
     } else {
         setProperty("IsCamera");
     }
-    //connectToSpace(spaceID, spaceConnectionHint);
-    //sendNewObj(startingLocation, meshBounds, spaceID);
+    //connectToSpace(spaceID, spaceConnectionHint, startingLocation, meshBounds, getUUID());
     //mObjectHost->dequeueAll(); // don't need to wait until next frame.
 }
 void HostedObject::initializePythonScript() {
@@ -630,13 +636,12 @@ void HostedObject::initializePythonScript() {
 
 void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint) {
     mObjectHost->registerHostedObject(getSharedPtr());
-    connectToSpace(spaceID, spaceConnectionHint);
 
     Persistence::SentReadWriteSet *msg;
     msg = new Persistence::SentReadWriteSet(&mTracker);
     msg->setPersistenceCallback(std::tr1::bind(
                          &PrivateCallbacks::initializeDatabaseCallback,
-                         getWeakPtr(), spaceID,
+                         getWeakPtr(), spaceID, spaceConnectionHint,
                          _1, _2, _3));
     msg->body().add_reads().set_field_name("WebViewURL");
     msg->body().add_reads().set_field_name("MeshURI");
@@ -688,21 +693,38 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
         mObjectScript = mgr->createObjectScript(this, args);
     }
 }
-void HostedObject::connectToSpace(const SpaceID&id,const HostedObjectPtr&spaceConnectionHint) {
-    if (id!=SpaceID::null()) {
+void HostedObject::connectToSpace(
+        const SpaceID&spaceID,
+        const HostedObjectPtr&spaceConnectionHint,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
+        const UUID&object_uuid_evidence)
+{
+    if (spaceID!=SpaceID::null()) {
         //bind script to object...script might be a remote ID, so need to bind download target, etc
         std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection;
         SpaceDataMap::iterator where;
-        if (spaceConnectionHint&&(where=spaceConnectionHint->mSpaceData->find(id))!=spaceConnectionHint->mSpaceData->end()) {
+        if (spaceConnectionHint&&(where=spaceConnectionHint->mSpaceData->find(spaceID))!=spaceConnectionHint->mSpaceData->end()) {
             topLevelConnection=where->second.mSpaceConnection.getTopLevelStream();
         }else {
-            topLevelConnection=mObjectHost->connectToSpace(id);
+            topLevelConnection=mObjectHost->connectToSpace(spaceID);
         }
 
         // sending initial packet is done by the script!
         //conn->send(initializationPacket,Network::ReliableOrdered);
-        PerSpaceData &psd = cloneTopLevelStream(id,topLevelConnection);
+        PerSpaceData &psd = cloneTopLevelStream(spaceID,topLevelConnection);
         // return &(psd.mSpaceConnection);
+        sendNewObj(startingLocation, meshBounds, spaceID, object_uuid_evidence);
+    }
+}
+
+void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
+    SpaceDataMap::iterator where;
+    where=mSpaceData->find(spaceID);
+    if (where!=mSpaceData->end()) {
+        mSpaceData->erase(where);
+    } else {
+        SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
     }
 }
 
@@ -829,9 +851,9 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mObjectHost, uuid);
                 std::tr1::shared_ptr<HostedObject>obj=std::tr1::static_pointer_cast<HostedObject>(vwobj);
                 if (camera) {
-                    obj->initializeConnect("",NULL,"",co.scale(),phys);
+                    obj->initializeDefault("",NULL,"",co.scale(),phys);
                 } else {
-                    obj->initializeConnect(mesh,pLight,weburl,co.scale(),phys);
+                    obj->initializeDefault(mesh,pLight,weburl,co.scale(),phys);
                 }
                 for (int i = 0; i < co.space_properties_size(); ++i) {
                     //RoutableMessageHeader connMessage
@@ -841,7 +863,6 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                          ? space.object_uuid_evidence()
                          : uuid;
                     SpaceID spaceid (space.has_space_id()?space.space_id():msg.destination_space().getObjectUUID());
-                    obj->connectToSpace(spaceid, getSharedPtr());
                     if (!space.has_bounding_sphere()) {
                         space.set_bounding_sphere(PBJ::BoundingSphere3f(Vector3f(0,0,0),1));
                     }
@@ -866,7 +887,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                         if (loc.has_angular_speed()) {
                             location.setAngularSpeed(loc.angular_speed());
                         }
-                        obj->sendNewObj(location, bs, spaceid, evidence);
+                        obj->connectToSpace(spaceid, getSharedPtr(), location, bs, evidence);
                     }
                 }
                 mObjectHost->dequeueAll(); // don't need to wait until next frame.

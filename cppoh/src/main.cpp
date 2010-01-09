@@ -231,7 +231,7 @@ int main ( int argc,const char**argv ) {
         lister.goWait(ioServ, workQueue);
     }
 
-    ProxyManager *provider = oh->getProxyManager(mainSpace);
+    std::tr1::shared_ptr<ProxyManager> provider = oh->connectToSpace(mainSpace);
     if (!provider) {
         SILOG(cppoh,error,String("Unable to load database in ") + String(dbFile->as<String>()));
         std::cout << "Press enter to continue" << std::endl;
@@ -262,7 +262,7 @@ int main ( int argc,const char**argv ) {
     }
 
     // MCB: seems like a good place to initialize models system
-    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider, graphicsCommandArguments ) );
+    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider.get(), graphicsCommandArguments ) );
 
     if ( mm )
     {
@@ -296,7 +296,7 @@ int main ( int argc,const char**argv ) {
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( provider, provider->getTimeOffsetManager(), graphicsCommandArguments );
+            .getConstructor ( simName ) ( provider.get(), provider->getTimeOffsetManager(), graphicsCommandArguments );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -344,6 +344,7 @@ int main ( int argc,const char**argv ) {
 	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
 		(*it)->endForwardingMessagesTo(oh);
 	}
+    provider.reset();
     delete oh;
 
     // delete after OH in case objects want to do last-minute state flushes

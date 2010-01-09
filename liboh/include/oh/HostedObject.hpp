@@ -43,7 +43,7 @@ class ObjectHost;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
-struct PhysicalParameters;
+class PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
@@ -89,13 +89,12 @@ private:
     void handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
     ///When a message is destined for the persistence port, handle each persistence object accordingly
     void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
-public:
-//------- Public member functions:
-
     ///makes a new object with the bare minimum--assumed that a script or persistence fills in the rest.
     void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&, const UUID&evidence);
-    ///makes a new objects with objectName startingLocation mesh and a space to connect to
-    void initializeConnect(
+public:
+//------- Public member functions:
+    ///makes a new object that is not in the persistence database.
+    void initializeDefault(
             const String&mesh,
             const LightInfo *lightInfo,
             const String&webViewURL,
@@ -103,8 +102,12 @@ public:
             const PhysicalParameters&physicalParameters);
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
-    /// Attempt to restore this item from database including script [not implemented]
+    /// Attempt to restore this item from database including script
     void initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
+    /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
+      * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
+      */
+    void destroy();
     /** Gets the ObjectHost (usually one per host).
         See getProxy(space)->getProxyManger() for the per-space object.
     */
@@ -180,8 +183,21 @@ public:
         After calling connectToSpace, it is immediately possible to send() a NewObj
         message, however any other message must wait until you receive the RetObj
         for that space.
+        @param spaceID  The UUID of the space you connect to.
+        @param spaceConnectionHint  Another nearby object; may be set to null HostedObjectPtr().
+        @param startingLocation  The initial location of this object. Must be known at connection time?
+        @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
+        @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
     */
-    void connectToSpace(const SpaceID&id,const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr() );
+    void connectToSpace(
+        const SpaceID&spaceID,
+        const HostedObjectPtr&spaceConnectionHint,
+        const Location&startingLocation,
+        const BoundingSphere3f&meshBounds,
+        const UUID&evidence);
+
+    /// Disconnects from the given space by terminating the corresponding substream.
+    void disconnectFromSpace(const SpaceID&id);
 
     /** Handles an incoming message, then passes the message to the scripting language. */
     void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
