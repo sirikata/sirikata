@@ -33,6 +33,17 @@
 #include <oh/Platform.hpp>
 #include <util/SpaceID.hpp>
 #include "oh/SpaceConnection.hpp"
+#include <network/Stream.hpp>
 
 namespace Sirikata {
+SpaceConnection::SpaceConnection(
+        const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,
+        Network::Stream*stream)
+    : mTopLevelStream(topLevel),
+      mStream(stream) {
+}
+
+SpaceConnection::~SpaceConnection() {
+}
+
 }

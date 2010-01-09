@@ -207,6 +207,7 @@ void ObjectHost::registerHostedObject(const HostedObjectPtr &obj) {
 void ObjectHost::unregisterHostedObject(const UUID &objID) {
     HostedObjectMap::iterator iter = mHostedObjects.find(objID);
     if (iter != mHostedObjects.end()) {
+        HostedObjectPtr obj (iter->second);
         mHostedObjects.erase(iter);
     }
 }

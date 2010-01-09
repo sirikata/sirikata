@@ -119,6 +119,29 @@ public:
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()) {
     }
+    void destroy(QueryTracker *tracker) const {
+        if (mProxyObject) {
+            mSpaceConnection.getTopLevelStream()->
+                destroyObject(mProxyObject, tracker);
+        }
+        for (PerSpaceData::ProxQueryMap::const_iterator qiter = mProxQueryMap.begin();
+             qiter != mProxQueryMap.end();
+             ++qiter) {
+            for (std::set<ObjectReference>::const_iterator oriter = qiter->second.begin();
+                 oriter != qiter->second.end();
+                 ++oriter)
+            {
+                ProxyObjectPtr which=mSpaceConnection.getTopLevelStream()->
+                    getProxyObject(SpaceObjectReference(
+                                       mSpaceConnection.getTopLevelStream()->id(),
+                                       *oriter));
+                if (which) {
+                    mSpaceConnection.getTopLevelStream()->
+                        destroyObject(which, tracker);
+                }
+            }
+        }
+    }
 };
 
 
@@ -147,24 +170,11 @@ void HostedObject::destroy() {
     for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
          iter != mSpaceData->end();
          ++iter) {
-        for (PerSpaceData::ProxQueryMap::const_iterator qiter = iter->second.mProxQueryMap.begin();
-             qiter != iter->second.mProxQueryMap.end();
-             ++qiter) {
-            for (std::set<ObjectReference>::const_iterator oriter = qiter->second.begin();
-                 oriter != qiter->second.end();
-                 ++oriter)
-            {
-                ProxyObjectPtr which=iter->second.mSpaceConnection.getTopLevelStream()->getProxyObject(SpaceObjectReference(iter->first, *oriter));
-                if (which) {
-                    iter->second.mSpaceConnection.getTopLevelStream()->
-                        destroyObject(which, getTracker());
-                }
-            }
-        }
+        iter->second.destroy(getTracker());
     }
-    mObjectHost->unregisterHostedObject(mInternalObjectReference);
     mTracker.endForwardingMessagesTo(&mSendService);
     mSpaceData->clear();
+    mObjectHost->unregisterHostedObject(mInternalObjectReference);
 }
 
 struct HostedObject::PrivateCallbacks {
@@ -310,6 +320,7 @@ struct HostedObject::PrivateCallbacks {
         if (thus) {
             SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
             if (where!=thus->mSpaceData->end()) {
+                where->second.destroy(thus->getTracker());
                 thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
             }
         }
@@ -722,6 +733,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     SpaceDataMap::iterator where;
     where=mSpaceData->find(spaceID);
     if (where!=mSpaceData->end()) {
+        where->second.destroy(getTracker());
         mSpaceData->erase(where);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");

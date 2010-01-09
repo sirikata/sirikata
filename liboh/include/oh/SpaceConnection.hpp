@@ -42,20 +42,18 @@ class TopLevelSpaceConnection;
 
 class SIRIKATA_OH_EXPORT SpaceConnection {
     std::tr1::shared_ptr<TopLevelSpaceConnection> mTopLevelStream;
-    mutable Network::Stream *mStream;
+    // unique, but unique_ptr doesn't work in all compilers!
+    std::tr1::shared_ptr<Network::Stream> mStream;
   public:
-    SpaceConnection(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream):
-        mTopLevelStream(topLevel),mStream(stream){}
-/*
-    Network::Stream * operator->()const{return mStream;}
-*/
+    SpaceConnection(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
+    ~SpaceConnection();
+
     Network::Stream & operator*()const{return *mStream;}
-    Network::Stream * getStream()const{return mStream;}
+    Network::Stream * getStream()const{return mStream.get();}
     const std::tr1::shared_ptr<TopLevelSpaceConnection>&getTopLevelStream()const{return mTopLevelStream;}
-    //std::tr1::shared_ptr<TopLevelSpaceConnection>&getTopLevelStream(){return mTopLevelStream;}
     class SIRIKATA_OH_EXPORT Hasher {
         size_t operator() (const SpaceConnection&sc) const{
-            return std::tr1::hash<void*>()(sc.mStream);
+            return std::tr1::hash<void*>()(sc.mStream.get());
         }
     };
     bool operator < (const SpaceConnection&other) const {
