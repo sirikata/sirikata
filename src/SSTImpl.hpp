@@ -53,7 +53,7 @@ class BaseDatagramLayer
 public:
   BaseDatagramLayer(const ObjectHostContext* ctx) : mContext(ctx) {}
 
-  void send2(EndPoint<EndPointType> src, EndPoint<EndPointType> dest, String dataStr) {
+  void send(EndPoint<EndPointType> src, EndPoint<EndPointType> dest, String dataStr) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     mContext->objectHost->send(
@@ -65,10 +65,10 @@ public:
   
   /* This function will have to be re-implemented to support sending using
      other kinds of packets. For now, I'll implement only for ODP. */
-  void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+  void asyncSend(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
     mContext->mainStrand->post(
 			       std::tr1::bind(
-				     &(BaseDatagramLayer<EndPointType>::send2),this,
+				     &(BaseDatagramLayer<EndPointType>::send),this,
 				     *src, *dest, String((char*)data, len))
 			      );
   }
@@ -141,94 +141,70 @@ public:
 template <class EndPointType>
 class Connection {
 private:
-    typedef std::map<EndPoint<EndPointType>, boost::shared_ptr<Connection> >  ConnectionMap;
-    typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>
-                                                        ConnectionReturnCallbackMap;
+  typedef std::map<EndPoint<EndPointType>, boost::shared_ptr<Connection> >  ConnectionMap;
+  typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>
+  ConnectionReturnCallbackMap;
 
-    static ConnectionMap mConnectionMap;
-    static ConnectionReturnCallbackMap mConnectionReturnCallbackMap;
+  static ConnectionMap mConnectionMap;
+  static ConnectionReturnCallbackMap mConnectionReturnCallbackMap;
     
-    ObjectHostContext* mContext;
-    EndPoint<EndPointType> mLocalEndPoint;
-    EndPoint<EndPointType> mRemoteEndPoint;
+  ObjectHostContext* mContext;
+  EndPoint<EndPointType> mLocalEndPoint;
+  EndPoint<EndPointType> mRemoteEndPoint;
 
-    BaseDatagramLayer<UUID> mDatagramLayer;
+  BaseDatagramLayer<UUID> mDatagramLayer;
 
-    int mState;
-    uint8 mRemoteChannelID;
-    uint8 mLocalChannelID;
+  int mState;
+  uint8 mRemoteChannelID;
+  uint8 mLocalChannelID;
 
-    uint64 mTransmitSequenceNumber;
-    uint64 mAckSequenceNumber;   //the last transmit sequence number received from the other side
+  uint64 mTransmitSequenceNumber;
+  uint64 mAckSequenceNumber;   //the last transmit sequence number received from the other side
 
    
-    std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
-    std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
+  std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
+  std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
-    std::vector<ReadDatagramCallback> mReadDatagramCallbacks;
+  std::vector<ReadDatagramCallback> mReadDatagramCallbacks;
 
-    uint16 mNumStreams;
+  uint16 mNumStreams;
 
-    std::deque< boost::shared_ptr<ChannelSegment> > mQueuedSegments;
+  std::deque< boost::shared_ptr<ChannelSegment> > mQueuedSegments;
   
-    std::deque< boost::shared_ptr<ChannelSegment> > mOutstandingSegments;
+  std::deque< boost::shared_ptr<ChannelSegment> > mOutstandingSegments;
 
-    uint16 mCwnd;
+  uint16 mCwnd;
    
-    uint64 mRTO; // RTO in microseconds
-    bool mFirstRTO;
+  uint64 mRTO; // RTO in microseconds
+  bool mFirstRTO;
 
-    bool mLooping;
-    Thread* mThread;
+  bool mLooping;
+  Thread* mThread;
 
-    boost::mutex mMutex;
+  boost::mutex mMutex;  
+  boost::condition_variable mQueueEmptyCondVar;
 
-    uint16 MAX_DATAGRAM_SIZE;
-    uint16 MAX_PAYLOAD_SIZE;
+  uint16 MAX_DATAGRAM_SIZE;
+  uint16 MAX_PAYLOAD_SIZE;
+  float  CC_ALPHA;
 
-    Connection(const ObjectHostContext* ctx, EndPoint<EndPointType> localEndPoint, 
+  Connection(const ObjectHostContext* ctx, EndPoint<EndPointType> localEndPoint, 
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
       mDatagramLayer(ctx), mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1), 
       mAckSequenceNumber(1), mNumStreams(0), mCwnd(1), mRTO(20000), mFirstRTO(true),
-      mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300)
-   {
-     mThread = new Thread(boost::bind(&(Connection<EndPointType>::dataSendingLoop), this));
-   }
-
-public:
-
-  ~Connection() {
-    mLooping = false;
-    mThread->join();
-
-    delete mThread;
-
-    printf("Connection getting destroyed\n");
-    fflush(stdout);
+      mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
+      CC_ALPHA(0.8)
+  {
+    mThread = new Thread(boost::bind(&(Connection<EndPointType>::dataSendingLoop), this));
   }
-
   
-  enum ConnectionStates {
-       CONNECTION_DISCONNECTED = 1,      // no network connectivity for this connection. 
-                              // It has either never been connected or has 
-                              // been fully disconnected.
-       CONNECTION_PENDING_CONNECT = 2,   // this connection is in the process of setting
-                              // up a connection. The connection setup will be
-                              // complete (or fail with an error) when the 
-                              // application-specified callback is invoked.
-       CONNECTION_PENDING_RECEIVE_CONNECT = 3,// connection received an initial 
-                                              // channel negotiation request, but the 
-                                              // negotiation has not completed yet.
-
-       CONNECTION_CONNECTED=4,           // The connection is connected to a remote end 
-                              // point.
-       CONNECTION_PENDING_DISCONNECT=5,  // The connection is in the process of 
-                              // disconnecting from the remote end point.
-
-  };
-
+  void sendSSTChannelPacket(CBR::Protocol::SST::SSTChannelHeader& sstMsg) {
+    std::string buffer = serializePBJMessage(sstMsg);
+    mDatagramLayer.asyncSend(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
+				       buffer.size());
+  }
 
   void dataSendingLoop() {
     // should start from ssthresh, the slow start lower threshold, but starting
@@ -236,11 +212,19 @@ public:
     while (mLooping) {
       uint16 numSegmentsSent = 0;
       {
-	boost::mutex::scoped_lock l(mMutex);
+	//boost::mutex::scoped_lock lock(mMutex);
+	boost::unique_lock<boost::mutex> lock(mMutex);
 
-	if (mQueuedSegments.empty() ) continue;
+	//if (mQueuedSegments.empty() ) continue;	
+        while (mQueuedSegments.empty()){
+          printf("Waiting on lock\n");
+          mQueueEmptyCondVar.wait(lock);
+
+	  if (!mLooping) return;
+        }
+        
 	
-	printf("%s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
+	printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
 	
 	for (int i = 0; i < mCwnd; i++) {
 	  if ( !mQueuedSegments.empty() ) {
@@ -254,9 +238,7 @@ public:
 	    
 	    sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
 	    
-	    std::string buffer = serializePBJMessage(sstMsg);
-	    mDatagramLayer.send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
-				buffer.size());
+	    sendSSTChannelPacket(sstMsg);
 	    
 	    printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
 	    
@@ -286,30 +268,29 @@ public:
 	  all_sent_packets_acked = false;
 	}
 	else {
-          no_packets_acked = false;
+	  no_packets_acked = false;
 	  if (mFirstRTO ) {
 	    mRTO = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds());
-            mFirstRTO = false;
+	    mFirstRTO = false;
 	  }
 	  else {
-	    mRTO = 0.8 * mRTO + 0.2 * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
+	    mRTO = CC_ALPHA * mRTO + (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
 	  }
 	}
       }
-   
 
       printf("mRTO=%d\n", (int) mRTO);
 
       if (numSegmentsSent >= mCwnd) {
-        if (all_sent_packets_acked) {
-          mCwnd += 1;
-        }
+	if (all_sent_packets_acked) {
+	  mCwnd += 1;
+	}
 	else {
 	  mCwnd /= 2;
 	}
       }
       else {
-        if (all_sent_packets_acked) {
+	if (all_sent_packets_acked) {
 	  mCwnd = (mCwnd + numSegmentsSent) / 2;
 	}
 	else {
@@ -318,13 +299,49 @@ public:
       }
 
       if (mCwnd < 1) {
-        mCwnd = 1;
+	mCwnd = 1;
       }
 
 
       mOutstandingSegments.clear();
-    }  
+    }
   }
+
+
+public:
+
+  ~Connection() {
+    mLooping = false;
+    mQueueEmptyCondVar.notify_all();
+    
+    mThread->join();
+
+    delete mThread;
+
+    printf("Connection getting destroyed\n");
+    fflush(stdout);
+  }
+
+  
+  enum ConnectionStates {
+       CONNECTION_DISCONNECTED = 1,      // no network connectivity for this connection. 
+                              // It has either never been connected or has 
+                              // been fully disconnected.
+       CONNECTION_PENDING_CONNECT = 2,   // this connection is in the process of setting
+                              // up a connection. The connection setup will be
+                              // complete (or fail with an error) when the 
+                              // application-specified callback is invoked.
+       CONNECTION_PENDING_RECEIVE_CONNECT = 3,// connection received an initial 
+                                              // channel negotiation request, but the 
+                                              // negotiation has not completed yet.
+
+       CONNECTION_CONNECTED=4,           // The connection is connected to a remote end 
+                              // point.
+       CONNECTION_PENDING_DISCONNECT=5,  // The connection is in the process of 
+                              // disconnecting from the remote end point.
+
+  };
+
 
   /* Creates a connection for the application to a remote 
      endpoint. The EndPoint argument specifies the location of the remote
@@ -363,13 +380,13 @@ public:
 
     conn->setState(CONNECTION_PENDING_CONNECT);    
 
-    uint8* payload = new uint8[1];
+    uint8 payload[1];
     payload[0] = 1; //getAvailableChannel();
     
     conn->setLocalChannelID(1);
     conn->sendData(payload, 1);
 
-    delete payload;
+    
 
     mConnectionReturnCallbackMap[remoteEndPoint] = cb;
 
@@ -470,7 +487,6 @@ public:
     return true;
   }
  
-
   /*
     Register a callback which will be called when there is a new 
     datagram available to be read. In other words, datagrams we have
@@ -565,14 +581,14 @@ public:
 
       conn->sendData(payload, 1);
 
-      delete payload;
+      delete [] payload;
     }
 
     delete received_msg;    
   }
 
   uint64 sendData(const void* data2, uint32 length) {
-    boost::mutex::scoped_lock l(mMutex);
+    boost::lock_guard<boost::mutex> lock(mMutex);
 
     assert(length <= MAX_PAYLOAD_SIZE);
 
@@ -585,10 +601,15 @@ public:
     std::string str = std::string( (char*)data, length);
 
     bool parsed = parsePBJMessage(stream_msg, str);
- 
+
+    uint64 transmitSequenceNumber =  mTransmitSequenceNumber;
+
+    bool pushedIntoQueue = false;
+
     if ( stream_msg->type() !=  stream_msg->ACK) { 
       mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>( 
                     new ChannelSegment(data, length, mTransmitSequenceNumber, mAckSequenceNumber) ) );
+      pushedIntoQueue = true;
     }
     else {
       CBR::Protocol::SST::SSTChannelHeader sstMsg;
@@ -598,15 +619,17 @@ public:
       sstMsg.set_ack_sequence_number(mAckSequenceNumber);
 
       sstMsg.set_payload(data, length);
-
-      std::string buffer = serializePBJMessage(sstMsg);
-      mDatagramLayer.send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
-                        buffer.size());
+      
+      sendSSTChannelPacket(sstMsg);
+      
     }
 
-    mTransmitSequenceNumber++;
-
-    return mTransmitSequenceNumber-1;
+    mTransmitSequenceNumber++;    
+    
+    if (pushedIntoQueue) {
+      mQueueEmptyCondVar.notify_all();
+    }
+    return transmitSequenceNumber;    
   }
 
 private:
@@ -630,6 +653,19 @@ private:
     return id;
   }
 
+  void markAcknowledgedPacket(uint64 receivedAckNum) {
+    if (mOutstandingSegments.size() > 0){
+      printf("%s mOutstandingSegments[0]->mChannelSequenceNumber=%d, receivedAckNum=%d\n", mLocalEndPoint.endPoint.toString().c_str(), (int)(mOutstandingSegments[0]->mChannelSequenceNumber), (int)(receivedAckNum) );
+    }
+
+    for (uint i = 0; i < mOutstandingSegments.size(); i++) {
+      if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
+        printf("Packet acked at %s\n", mLocalEndPoint.endPoint.toString().c_str());
+	mOutstandingSegments[i]->mAckTime = Timer::now();
+      }
+    }
+  }
+
   void receiveMessage(void* recv_buff, int len) {
     uint8* data = (uint8*) recv_buff;
     std::string str = std::string((char*) data, len);
@@ -642,16 +678,7 @@ private:
 
     uint64 receivedAckNum = received_msg->ack_sequence_number();
 
-    if (mOutstandingSegments.size() > 0){
-      printf("%s mOutstandingSegments[0]->mChannelSequenceNumber=%d, receivedAckNum=%d\n", mLocalEndPoint.endPoint.toString().c_str(), (int)(mOutstandingSegments[0]->mChannelSequenceNumber), (int)(receivedAckNum) );
-    }
-
-    for (uint i = 0; i < mOutstandingSegments.size(); i++) {
-      if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
-        printf("Packet acked at %s\n", mLocalEndPoint.endPoint.toString().c_str());
-	mOutstandingSegments[i]->mAckTime = Timer::now();
-      }
-    }
+    markAcknowledgedPacket(receivedAckNum);
 
     if (mState == CONNECTION_PENDING_CONNECT) {
       mState = CONNECTION_CONNECTED;
@@ -697,101 +724,125 @@ private:
                        new CBR::Protocol::SST::SSTStreamHeader();
     parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
 
-    LSID incomingLsid = received_stream_msg->lsid();
+    
     if (received_stream_msg->type() == received_stream_msg->INIT) {
-      std::cout << "INIT packet received\n";      
-      
-      if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
-	uint8 buf[1];
-	//create a new stream
-	USID usid = createNewUSID();
-	LSID newLSID = ++mNumStreams;
-	boost::shared_ptr<Stream<EndPointType> > stream = 
-	  boost::shared_ptr<Stream<EndPointType> > 
-	      (new Stream<EndPointType>(NULL, this, usid, newLSID,
-				        buf, 0, true, incomingLsid, NULL));
-	mOutgoingSubstreamMap[newLSID] = stream;
-        mIncomingSubstreamMap[incomingLsid] = stream;
-
-	stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
-			    received_stream_msg->bsn(),
-			    received_stream_msg->payload().size() );
-      }
+      handleInitPacket(received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->REPLY) {
-      
-      if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
-        LSID initiatingLSID = received_stream_msg->rsid();
-
-        if (mOutgoingSubstreamMap.find(initiatingLSID) != mOutgoingSubstreamMap.end()) {
-	  boost::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
-          mIncomingSubstreamMap[incomingLsid] = stream;
-          std::cout << "REPLY packet received\n";
-
-	  if (stream->mStreamReturnCallback != NULL){
-	    stream->mStreamReturnCallback(stream);
-	    stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
-				received_stream_msg->bsn(),
-				received_stream_msg->payload().size() );
-	  }
-        }
-        else {
-          std::cout << "Received reply packet for unknown stream\n";
-        }
-      }
+      handleReplyPacket(received_stream_msg);      
     }
     else if (received_stream_msg->type() == received_stream_msg->DATA) {
-      printf("DATA received\n");
-
-      if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
-	 boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
-	                                        mIncomingSubstreamMap[incomingLsid];
-	 stream_ptr->receiveData( received_stream_msg,
-				  received_stream_msg->payload().data(),
-				  received_stream_msg->bsn(),
-				  received_stream_msg->payload().size()				  
-				  );
-      }
+      handleDataPacket(received_stream_msg);
     }
-    else if (received_stream_msg->type() == received_stream_msg->ACK) {      
-      printf("ACK received : offset = %d\n", (int)received_channel_msg->ack_sequence_number() );
-
-      if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
-	 boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
-	                                        mIncomingSubstreamMap[incomingLsid];
-	 stream_ptr->receiveData( received_stream_msg,
-				  received_stream_msg->payload().data(),
-				  received_channel_msg->ack_sequence_number(),
-				  received_stream_msg->payload().size()				  
-				  );
-      }
+    else if (received_stream_msg->type() == received_stream_msg->ACK) {       
+      handleAckPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATAGRAM) {      
-      printf("DATAGRAM received\n" );
-
-      uint8* payload = (uint8*) received_stream_msg->payload().data();
-      uint payload_size = received_stream_msg->payload().size();
-      
-      for (uint i=0 ; i < mReadDatagramCallbacks.size(); i++) {
-	mReadDatagramCallbacks[i](payload, payload_size);
-      }
-
-      CBR::Protocol::SST::SSTChannelHeader sstMsg;
-      sstMsg.set_channel_id( mRemoteChannelID );
-      sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
-      sstMsg.set_ack_count(1);
-      sstMsg.set_ack_sequence_number(mAckSequenceNumber);
-
-      sstMsg.set_payload(payload, 0);
-
-      std::string buffer = serializePBJMessage(sstMsg);
-      mDatagramLayer.send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
-                        buffer.size());    
-
-      mTransmitSequenceNumber++;      
+      handleDatagram(received_stream_msg);
     }
   }
 
+  void handleInitPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+    std::cout << "INIT packet received\n"; 
+    LSID incomingLsid = received_stream_msg->lsid();
+    
+    if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
+      uint8 buf[1];
+      //create a new stream
+      USID usid = createNewUSID();
+      LSID newLSID = ++mNumStreams;
+      boost::shared_ptr<Stream<EndPointType> > stream = 
+	boost::shared_ptr<Stream<EndPointType> > 
+	(new Stream<EndPointType>(NULL, this, usid, newLSID,
+				  buf, 0, true, incomingLsid, NULL));
+      mOutgoingSubstreamMap[newLSID] = stream;
+      mIncomingSubstreamMap[incomingLsid] = stream;
+      
+      stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
+			  received_stream_msg->bsn(),
+			  received_stream_msg->payload().size() );
+    }
+  }
+
+  void handleReplyPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+    LSID incomingLsid = received_stream_msg->lsid();
+
+    if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
+      LSID initiatingLSID = received_stream_msg->rsid();
+      
+      if (mOutgoingSubstreamMap.find(initiatingLSID) != mOutgoingSubstreamMap.end()) {
+	boost::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
+	mIncomingSubstreamMap[incomingLsid] = stream;
+	std::cout << "REPLY packet received\n";
+	
+	if (stream->mStreamReturnCallback != NULL){
+	  stream->mStreamReturnCallback(stream);
+	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
+			      received_stream_msg->bsn(),
+			      received_stream_msg->payload().size() );
+	}
+      }
+      else {
+	std::cout << "Received reply packet for unknown stream\n";
+      }
+    }
+  }
+
+  void handleDataPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+    printf("DATA received\n");
+    LSID incomingLsid = received_stream_msg->lsid();
+
+    if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
+      boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
+	mIncomingSubstreamMap[incomingLsid];
+      stream_ptr->receiveData( received_stream_msg,
+			       received_stream_msg->payload().data(),
+			       received_stream_msg->bsn(),
+			       received_stream_msg->payload().size()				  
+			       );
+    }
+  }
+
+  void handleAckPacket(CBR::Protocol::SST::SSTChannelHeader* received_channel_msg,
+		       CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) 
+  {
+    printf("ACK received : offset = %d\n", (int)received_channel_msg->ack_sequence_number() );
+    LSID incomingLsid = received_stream_msg->lsid();
+    
+    if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
+      boost::shared_ptr< Stream<EndPointType> > stream_ptr = 
+	mIncomingSubstreamMap[incomingLsid];
+      stream_ptr->receiveData( received_stream_msg,
+			       received_stream_msg->payload().data(),
+			       received_channel_msg->ack_sequence_number(),
+			       received_stream_msg->payload().size()				  
+			       );
+    }
+  }
+
+  void handleDatagram(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+    printf("DATAGRAM received\n" );
+
+    uint8* payload = (uint8*) received_stream_msg->payload().data();
+    uint payload_size = received_stream_msg->payload().size();
+      
+    for (uint i=0 ; i < mReadDatagramCallbacks.size(); i++) {
+      mReadDatagramCallbacks[i](payload, payload_size);
+    }
+    
+    CBR::Protocol::SST::SSTChannelHeader sstMsg;
+    sstMsg.set_channel_id( mRemoteChannelID );
+    sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
+    sstMsg.set_ack_count(1);
+    sstMsg.set_ack_sequence_number(mAckSequenceNumber);
+    
+    sstMsg.set_payload(payload, 0);
+    
+    sendSSTChannelPacket(sstMsg);       
+    
+    mTransmitSequenceNumber++;    
+  }
+  
 };
 
 
@@ -810,7 +861,7 @@ public:
 };
 
 template <class EndPointType>
-class Stream {
+class Stream  {
 public:
    StreamReturnCallbackFunction mStreamReturnCallback;
   
@@ -836,6 +887,7 @@ public:
     mRetransmitTimer(mIOService),
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
+    mNumOutstandingBytes(0),
     mNextByteExpected(0),
     mLastContiguousByteReceived(-1),
     mLastByteReceived(-1),
@@ -879,9 +931,11 @@ public:
     fflush(stdout);    
 
     mLooping = false;
-    thrd->join();    
+    thrd->join();
+
+    delete thrd;
     
-    delete mReceiveBuffer;      
+    delete [] mReceiveBuffer;
   }
 
   static bool connectStream(const ObjectHostContext* ctx, 
@@ -928,7 +982,7 @@ public:
       }
     }
 
-    delete mInitialData;
+    delete [] mInitialData;
     mInitialDataLength = 0;
 
     if (!mConnected) {
@@ -951,7 +1005,7 @@ public:
       
       boost::mutex::scoped_lock l(m_mutex);
 
-      while ( !mQueuedBuffers.empty() ) {
+      while ( !mQueuedBuffers.empty() && mLooping ) {
         boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
         if (mTransmitWindowSize < buffer->mBufferLength) {
@@ -974,6 +1028,7 @@ public:
         start_time = cur_time;
 
 	mTransmitWindowSize -= buffer->mBufferLength;
+	mNumOutstandingBytes += buffer->mBufferLength;
 
 	/*mRetransmitTimer.expires_from_now(boost::posix_time::milliseconds(100));
 	mRetransmitTimer.async_wait(boost::bind(&(Stream<EndPointType>::resendUnackedPackets), 
@@ -992,7 +1047,7 @@ public:
      for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::iterator it=mChannelToBufferMap.begin();
 	 it != mChannelToBufferMap.end(); ++it)
      {
-        mQueuedBuffers.push_back(it->second);
+        mQueuedBuffers.push_front(it->second);
         printf("Resending unacked packet at offset %d\n", (int)(it->second->mOffset));	
 
 	if (mTransmitWindowSize < it->second->mBufferLength){
@@ -1000,6 +1055,7 @@ public:
 	}
      }
 
+     mNumOutstandingBytes = 0;
      mChannelToBufferMap.clear();
   }
 
@@ -1202,11 +1258,18 @@ public:
       
       if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
 	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
+	mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
 
-	/* TODO: This logic needs to be fixed */
-        mTransmitWindowSize = ( pow(2, streamMsg->window()) < mTransmitWindowSize + mChannelToBufferMap[offset]->mBufferLength ) ? 
-					pow(2, streamMsg->window()) : mTransmitWindowSize + mChannelToBufferMap[offset]->mBufferLength;
+	printf("mNumOutstandingBytes=%d, (pow(2, streamMsg->window())=%f\n", mNumOutstandingBytes,
+	                                                                     (pow(2, streamMsg->window())));
 
+	if ( (int) (pow(2, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
+	  mTransmitWindowSize = pow(2, streamMsg->window()) - mNumOutstandingBytes;
+	}
+	else {
+	  mTransmitWindowSize = 0;
+	}
+        
 	printf("REMOVED ACKED PACKET. Offset: %d, mTransmitWindowSize=%d\n", (int) mChannelToBufferMap[offset]->mOffset,(int) mTransmitWindowSize);
 	mChannelToBufferMap.erase(offset);
 
@@ -1225,7 +1288,7 @@ public:
       }
     }
     else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
-      mTransmitWindowSize = pow(2, streamMsg->window());
+      mTransmitWindowSize = pow(2, streamMsg->window()) - mNumOutstandingBytes;
 
       printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
 
@@ -1252,7 +1315,7 @@ public:
           //
 	  if (mReadCallback != NULL) {
 	    mReadCallback(mReceiveBuffer, readyBufferSize);
-	  }	  
+	  }
 
           printf("offset=%d, offsetInBuffer=%d, readyBufferSize=%d, mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset, (int)offsetInBuffer, (int)readyBufferSize, (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
  	  fflush(stdout);
@@ -1264,7 +1327,6 @@ public:
 
           memset(mReceiveBitmap, 0, readyBufferSize);
           memmove(mReceiveBitmap, mReceiveBitmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
-
 	  memmove(mReceiveBuffer, mReceiveBuffer + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
 
 	  mReceiveWindowSize += readyBufferSize;
@@ -1309,9 +1371,7 @@ public:
 	  //dont ack this packet; its falling outside the receive window.
 	}
       }
-
     }
-    
   }
 
 private:
@@ -1418,6 +1478,7 @@ private:
 
   uint32 mTransmitWindowSize;
   uint32 mReceiveWindowSize;
+  uint32 mNumOutstandingBytes;
 
   int64 mNextByteExpected;
   int64 mLastContiguousByteReceived;
