@@ -87,7 +87,13 @@ void TopLevelSpaceConnection::remoteDisconnection(const std::string&reason) {
         //maybe resolution is to connect nowhere?
         Network::Stream *topLevel=mTopLevelStream;
         mTopLevelStream=NULL;
-        topLevel->close();
+        std::tr1::weak_ptr<Network::TimeSync> weakTimeSync(mTimeSync);
+        mTimeSync=std::tr1::shared_ptr<Network::TimeSync>();
+        while (weakTimeSync.lock()) {
+        }
+        if (topLevel) {
+            topLevel->close();
+        }
         delete topLevel;
     }
 }
@@ -146,7 +152,6 @@ HostedObjectPtr TopLevelSpaceConnection::getHostedObject(const ObjectReference &
     HostedObjectMap::const_iterator iter = mHostedObjects.find(mref);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj(iter->second.lock());
-        assert(obj);
         return obj;
     }
     return HostedObjectPtr();

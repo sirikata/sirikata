@@ -163,7 +163,6 @@ public:
             if (!tlsc) {
                 SILOG(cppoh, error, "Invalid destination space in ObjectHost::processMessage");
                 // ERROR: the space does not exist on this OH.
-                assert(tlsc);
                 return;
             }
             if (header.destination_object() != ObjectReference::spaceServiceID()) {
@@ -215,7 +214,6 @@ HostedObjectPtr ObjectHost::getHostedObject(const UUID &id) const {
     HostedObjectMap::const_iterator iter = mHostedObjects.find(id);
     if (iter != mHostedObjects.end()) {
 //        HostedObjectPtr obj(iter->second.lock());
-//        assert(obj);
 //        return obj;
         return iter->second;
     }

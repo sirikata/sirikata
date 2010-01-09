@@ -175,6 +175,7 @@ void HostedObject::destroy() {
     mTracker.endForwardingMessagesTo(&mSendService);
     mSpaceData->clear();
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
+    mProperties.clear();
 }
 
 struct HostedObject::PrivateCallbacks {
