@@ -1724,7 +1724,7 @@ IF(MONO_FOUND)
           ${IRON_PYTHON_ROOT}/
           FILE_PERMISSIONS ${EXEC_PERMS}
           DESTINATION lib/)
-  IF(MONO_ROOT)
+  IF(MONO_ROOT AND EXISTS ${MONO_ROOT})
     INSTALL(PROGRAMS
         ${MONO_ROOT}/lib/mono/2.0/System.Xml.dll
         DESTINATION lib/)
