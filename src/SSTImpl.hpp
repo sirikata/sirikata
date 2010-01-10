@@ -141,6 +141,8 @@ public:
 template <class EndPointType>
 class Connection {
 private:
+  friend class Stream<EndPointType>;
+
   typedef std::map<EndPoint<EndPointType>, boost::shared_ptr<Connection> >  ConnectionMap;
   typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>
   ConnectionReturnCallbackMap;
@@ -212,7 +214,6 @@ private:
     while (mLooping) {
       uint16 numSegmentsSent = 0;
       {
-	//boost::mutex::scoped_lock lock(mMutex);
 	boost::unique_lock<boost::mutex> lock(mMutex);
 
 	//if (mQueuedSegments.empty() ) continue;	
@@ -417,11 +418,17 @@ public:
                                  
   */
   virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length) {
+    stream(cb, initial_data, length, NULL);
+  }
+
+  virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length, 
+                      Stream<EndPointType>* parentStream) {
     USID usid = createNewUSID();
     LSID lsid = ++mNumStreams;
-    boost::shared_ptr<Stream<EndPointType> > stream = 
-      boost::shared_ptr<Stream<EndPointType> > 
-      ( new Stream<EndPointType>(NULL, this, usid, lsid, initial_data, length, false, 0, cb) );
+
+    boost::shared_ptr<Stream<EndPointType> > stream =
+      boost::shared_ptr<Stream<EndPointType> >
+      ( new Stream<EndPointType>(parentStream, this, usid, lsid, initial_data, length, false, 0, cb) );
 
     mOutgoingSubstreamMap[lsid]=stream;
   }
@@ -863,8 +870,9 @@ public:
 template <class EndPointType>
 class Stream  {
 public:
+   friend class Connection<EndPointType>;
+
    StreamReturnCallbackFunction mStreamReturnCallback;
-  
   
    enum StreamStates {
        DISCONNECTED = 1,       
@@ -876,7 +884,8 @@ public:
 	 USID usid, LSID lsid, void* initial_data, uint32 length, 
 	 bool remotelyInitiated, LSID remoteLSID, StreamReturnCallbackFunction cb)
   : 
-    mStreamReturnCallback(cb),    
+    mStreamReturnCallback(cb),
+    mState(CONNECTED),
     mParentStream(parent),
     mConnection(conn),    
     mUSID(usid),
@@ -993,7 +1002,6 @@ public:
     start_time = Timer::now();
     mLooping = true;
     while (mLooping) {
-      //boost::this_thread::sleep(boost::posix_time::microseconds(250));
 
       //this should wait for the queue to get occupied... right now it is
       //just polling...
@@ -1001,6 +1009,16 @@ public:
       if ( (cur_time - start_time).toMilliseconds() > 1000) {
         resendUnackedPackets();
         start_time = cur_time;
+      }
+
+      if (mState == PENDING_DISCONNECT && 
+          mQueuedBuffers.empty()  && 
+          mChannelToBufferMap.empty() ) 
+      {
+        mLooping = false;
+        mState = DISCONNECTED;
+
+        break;
       }
       
       boost::mutex::scoped_lock l(m_mutex);
@@ -1035,6 +1053,8 @@ public:
                    	            this, boost::asio::placeholders::error));*/
       }
     }
+
+    printf("ioServiceLoop exited\n");
   }
 
   void resendUnackedPackets(/*const boost::system::error_code& error*/) {
@@ -1067,6 +1087,10 @@ public:
              occurred
   */
   virtual int write(const uint8* data, int len) {
+    if (mState != CONNECTED) {
+      return -1;
+    }
+
     boost::mutex::scoped_lock l(m_mutex);
     int count = 0;
 
@@ -1141,21 +1165,6 @@ public:
     return totalBytesWritten;
   }
 
-  /* Reads data from stream and scatters it into the buffers
-     described in 'vec', which is taken to be 'count' structures
-     long. As each buffer is filled, data is sent to the next.
-
-      Note that readv is not guaranteed to fill all the buffers.
-      It may stop at any point, for the same reasons read would.
-
-     @param vec the array containing the iovec buffers to be read into
-     @param count the number of iovec buffers in the array
-     @return the number of bytes read, or -1 if an error  
-             occurred
-  */
-  virtual int readv(const struct iovec* vec, int count) {
-    return 0;
-  }
 
   /*
     Returns true if there are bytes available to read from the stream.
@@ -1194,7 +1203,16 @@ public:
      
   */
   virtual bool close(bool force) {
-    return true;
+    if (force) {
+      mLooping = false;
+      thrd->join();
+      mState = DISCONNECTED;
+      return true;
+    }
+    else {
+      mState = PENDING_DISCONNECT;
+      return true;
+    }
   }
 
   /* 
@@ -1231,9 +1249,6 @@ public:
      shared-pointer to the stream. If this connection hasn't synchronized with 
      the remote endpoint yet, this function will also take care of doing that.
 
-     All the callbacks registered on the child stream will also be registered on the
-     parent stream, but not vice versa. 
- 
      @data A pointer to the initial data buffer that needs to be sent on this stream.
          Having this pointer removes the need for the application to enqueue data
          until the stream is actually created.
@@ -1243,10 +1258,11 @@ public:
                                   (or actually sent?). The function will provide  a 
                                   reference counted, shared pointer to the  connection.
   */
-  virtual void createChildStream(StreamReturnCallbackFunction, void* data, int length) {
-
+  virtual void createChildStream(StreamReturnCallbackFunction cb, void* data, int length) {
+    mConnection->stream(cb, data, length, this);
   }
 
+private:
   void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len ) 
   {
@@ -1334,7 +1350,7 @@ public:
 	  //send back an ack.
           sendAckPacket();
           mReceivedSegments[offset] = 1;
-          printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
+          printf("On %d, mReceivedSegments.size() = %d\n", (int) mLSID, (int)mReceivedSegments.size());
           printf("Received Segment at offset = %d\n", (int) offset);
 
 	  //accounting for debugging...
@@ -1360,7 +1376,7 @@ public:
 
           sendAckPacket();
           mReceivedSegments[offset] = 1;
-          printf("mReceivedSegments.size() = %d\n", (int)mReceivedSegments.size());
+          printf("On %d, mReceivedSegments.size() = %d\n", (int)mLSID , (int)mReceivedSegments.size());
           printf("Received Segment at offset = %d\n", (int) offset);
 	}
 	else if ( (int)(offset+len-1) <= (int)mLastContiguousByteReceived) {
@@ -1376,7 +1392,7 @@ public:
 
 private:
   LSID getLSID() {
-    return mParentStream->getLSID();
+    return mLSID;
   }
 
   void sendInitPacket(void* data, uint32 len) {
@@ -1447,6 +1463,8 @@ private:
     mConnection->sendData(  buffer.data(), buffer.size());
   }
   
+  uint8 mState;
+
   uint32 mNumBytesSent;
 
   Stream<EndPointType>* mParentStream;
@@ -1497,7 +1515,6 @@ private:
                                                         StreamReturnCallbackMap;  
   static StreamReturnCallbackMap mStreamReturnCallbackMap;
 
-
   /* Variables required for the initial connection */  
   bool mConnected;  
   
@@ -1505,7 +1522,6 @@ private:
   uint16 mInitialDataLength;
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
-
 
 };
 
