@@ -53,6 +53,8 @@ public:
 
     typedef Time TimeType;
     typedef Duration DurationType;
+
+    const static realType InfiniteRadius; // Storate in Proximity.cpp
 }; // class ProxSimulationTraits
 
 } // namespace CBR

@@ -40,9 +40,13 @@
 
 #include "CBR_Prox.pbj.hpp"
 
+#include <float.h>
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace CBR {
+
+const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_MAX;
 
 static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
 
