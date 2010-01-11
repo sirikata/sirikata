@@ -90,9 +90,9 @@ class Connection;
 template <class EndPointType>
 class Stream;
 
-typedef std::tr1::function< void(boost::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
+typedef std::tr1::function< void(int, boost::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
 
-typedef std::tr1::function< void(boost::shared_ptr< Stream<UUID> >) >  StreamReturnCallbackFunction;
+typedef std::tr1::function< void(int, boost::shared_ptr< Stream<UUID> >) >  StreamReturnCallbackFunction;
 typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
 
 typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
@@ -144,11 +144,11 @@ private:
   friend class Stream<EndPointType>;
 
   typedef std::map<EndPoint<EndPointType>, boost::shared_ptr<Connection> >  ConnectionMap;
-  typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>
-  ConnectionReturnCallbackMap;
+  typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;
 
   static ConnectionMap mConnectionMap;
   static ConnectionReturnCallbackMap mConnectionReturnCallbackMap;
+  static ConnectionReturnCallbackMap  mListeningConnectionsCallbackMap;
     
   ObjectHostContext* mContext;
   EndPoint<EndPointType> mLocalEndPoint;
@@ -190,6 +190,8 @@ private:
   uint16 MAX_PAYLOAD_SIZE;
   float  CC_ALPHA;
 
+  boost::weak_ptr<Connection<EndPointType> > weak_this;
+
   Connection(const ObjectHostContext* ctx, EndPoint<EndPointType> localEndPoint, 
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
@@ -216,14 +218,12 @@ private:
       {
 	boost::unique_lock<boost::mutex> lock(mMutex);
 
-	//if (mQueuedSegments.empty() ) continue;	
         while (mQueuedSegments.empty()){
           printf("Waiting on lock\n");
           mQueueEmptyCondVar.wait(lock);
 
 	  if (!mLooping) return;
         }
-        
 	
 	printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
 	
@@ -257,6 +257,13 @@ private:
       }
 
       boost::this_thread::sleep( boost::posix_time::microseconds(mRTO*2) );
+
+      if (mState == CONNECTION_PENDING_CONNECT) {
+        printf("Remote endpoint not available to connect\n");
+        mConnectionReturnCallbackMap[mRemoteEndPoint](-1, 
+                                                boost::shared_ptr<Connection<EndPointType> > (weak_this) ); 
+        return;
+      }
       
       printf("%s mOutstandingSegments.size()=%d\n", mLocalEndPoint.endPoint.toString().c_str() , (int) mOutstandingSegments.size() );
 
@@ -302,7 +309,6 @@ private:
       if (mCwnd < 1) {
 	mCwnd = 1;
       }
-
 
       mOutstandingSegments.clear();
     }
@@ -377,6 +383,7 @@ public:
     
     boost::shared_ptr<Connection>  conn =  boost::shared_ptr<Connection> (
 						           new Connection(ctx, localEndPoint, remoteEndPoint));
+    conn->weak_this = conn;
     mConnectionMap[localEndPoint] = conn;
 
     conn->setState(CONNECTION_PENDING_CONNECT);    
@@ -387,9 +394,13 @@ public:
     conn->setLocalChannelID(1);
     conn->sendData(payload, 1);
 
-    
-
     mConnectionReturnCallbackMap[remoteEndPoint] = cb;
+
+    return true;
+  }
+
+  static bool listen(ConnectionReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
+    mListeningConnectionsCallbackMap[listeningEndPoint] = cb;
 
     return true;
   }
@@ -414,7 +425,7 @@ public:
                                  sent?). The function will provide a 
                                  reference counted, shared pointer to the
                                  connection. StreamReturnCallbackFunction
-                                 should have the signature void (boost::shared_ptr<Stream>).
+                                 should have the signature void (int,boost::shared_ptr<Stream>).
                                  
   */
   virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length) {
@@ -569,26 +580,35 @@ public:
     else if (channelID == 0) {
       /* it's a new channel request negotiation protocol
 	 packet ; allocate a new channel.*/
-      
       std::cout << "Received a new channel request\n";
-            
-      uint8* received_payload = (uint8*) received_msg->payload().data();
-      
-      uint8* payload = new uint8[1];
-      payload[0] = 2; //getAvailableChannel();      
 
-      boost::shared_ptr<Connection>  conn =  
+      if (mListeningConnectionsCallbackMap.find(localEndPoint) != mListeningConnectionsCallbackMap.end()) {
+        uint8* received_payload = (uint8*) received_msg->payload().data();
+      
+        uint8* payload = new uint8[1];
+        payload[0] = 2; //getAvailableChannel();      
+
+        boost::shared_ptr<Connection>  conn =  
                    boost::shared_ptr<Connection>(
 				    new Connection(ctx, localEndPoint, remoteEndPoint));
-      mConnectionMap[localEndPoint] = conn;
+        conn->weak_this = conn;
+        mConnectionMap[localEndPoint] = conn;
 
-      conn->setLocalChannelID(2);      
-      conn->setRemoteChannelID(received_payload[0]);
-      conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
+        conn->setLocalChannelID(2);      
+        conn->setRemoteChannelID(received_payload[0]);
+        conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
-      conn->sendData(payload, 1);
+        conn->sendData(payload, 1);
 
-      delete [] payload;
+        delete [] payload;
+
+        mListeningConnectionsCallbackMap[localEndPoint](0, conn);
+
+        //mListeningConnectionsCallbackMap.erase(localEndPoint);
+      }
+      else {
+        std::cout << "No one listening on this connection\n";
+      }
     }
 
     delete received_msg;    
@@ -701,7 +721,7 @@ private:
 	if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
 	  boost::shared_ptr<Connection> conn = mConnectionMap[mLocalEndPoint];	
 
-	  mConnectionReturnCallbackMap[mRemoteEndPoint] (conn);
+	  mConnectionReturnCallbackMap[mRemoteEndPoint] (0, conn);
 	}
       }
 
@@ -783,7 +803,7 @@ private:
 	std::cout << "REPLY packet received\n";
 	
 	if (stream->mStreamReturnCallback != NULL){
-	  stream->mStreamReturnCallback(stream);
+	  stream->mStreamReturnCallback(0, stream);
 	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
@@ -904,10 +924,20 @@ public:
     mConnected (false),           
     MAX_INIT_RETRANSMISSIONS(10)
   {
+    if (remotelyInitiated) {
+      mConnected = true;
+    }
+
     mInitialDataLength = (length <= MAX_PAYLOAD_SIZE) ? length : MAX_PAYLOAD_SIZE;
 
-    mInitialData = new uint8[mInitialDataLength];
-    memcpy(mInitialData, initial_data, mInitialDataLength);
+    if (initial_data != NULL) {
+      mInitialData = new uint8[mInitialDataLength];
+   
+      memcpy(mInitialData, initial_data, mInitialDataLength);
+    }
+    else {
+      mInitialDataLength = 0;
+    }
 
     mReceiveBuffer = new uint8[mReceiveWindowSize];
     mReceiveBitmap = new uint8[mReceiveWindowSize];
@@ -956,17 +986,37 @@ public:
       return false;
     }
 
-    Connection<EndPointType>::createConnection(ctx, localEndPoint, 
+    mStreamReturnCallbackMap[localEndPoint] = cb;
+
+    bool result = Connection<EndPointType>::createConnection(ctx, localEndPoint, 
 					       remoteEndPoint, 
 					       connectionCreated);
 
-    mStreamReturnCallbackMap[localEndPoint] = cb;
+    return result;
+  }
+
+  static bool listen(StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
+    if (mStreamReturnCallbackMap.find(listeningEndPoint) != mStreamReturnCallbackMap.end()) {
+      return false;
+    }
+ 
+    mStreamReturnCallbackMap[listeningEndPoint] = cb;
+
+    Connection<EndPointType>::listen(connectionReceived, listeningEndPoint);
 
     return true;
   }
 
 private:
-  static void connectionCreated( boost::shared_ptr< Connection<EndPointType> > c) {
+  static void connectionCreated( int errCode, boost::shared_ptr<Connection<EndPointType> > c) {
+    if (errCode != 0) {
+      mStreamReturnCallbackMap[c->localEndPoint()](-1, boost::shared_ptr<Stream<EndPointType> >() );
+      
+      mStreamReturnCallbackMap.erase(c->localEndPoint());
+
+      return;
+    }
+
     uint8* f = new uint8[1000000];
     for (int i=0; i<1000000; i++) {
       f[i] = i % 255;
@@ -977,26 +1027,41 @@ private:
     mStreamReturnCallbackMap.erase(c->localEndPoint());
   }
 
+  static void connectionReceived( int errCode, boost::shared_ptr< Connection<EndPointType> > c) {
+    if (errCode != 0) return;
+
+    if (mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end()) {
+      c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL, 0);
+
+      mStreamReturnCallbackMap[c->localEndPoint()];
+    }
+  }
+
 public:
   void ioServicingLoop() {
-
     Time start_time = Timer::now();
+
     while (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
       Time cur_time = Timer::now();
 
-      if ( (cur_time - start_time).toMilliseconds() > 100) {	
+      if ( (cur_time - start_time).toMilliseconds() > 200) {	
         sendInitPacket(mInitialData, mInitialDataLength); 
         start_time = cur_time;
 	mNumInitRetransmissions++;
       }
     }
 
-    delete [] mInitialData;
-    mInitialDataLength = 0;
+    if (mInitialDataLength > 0) {
+      delete [] mInitialData;
+      mInitialDataLength = 0;
+    }
 
     if (!mConnected) {
+      std::cout << mConnection->localEndPoint().endPoint.toString() << " not connected!!\n";
+
       //send back an error to the app by calling mStreamReturnCallback
       //with an error code.
+      mStreamReturnCallback(-1, boost::shared_ptr<Stream<UUID> >() );
     }
 
     start_time = Timer::now();
@@ -1259,6 +1324,9 @@ public:
                                   reference counted, shared pointer to the  connection.
   */
   virtual void createChildStream(StreamReturnCallbackFunction cb, void* data, int length) {
+    printf("Creating child stream\n");
+    fflush(stdout);
+
     mConnection->stream(cb, data, length, this);
   }
 
@@ -1266,7 +1334,9 @@ private:
   void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len ) 
   {
-    if (streamMsg->type() == streamMsg->REPLY) {
+    if (streamMsg->type() == streamMsg->REPLY) { 
+      if (!mConnected) printf("Connected NOW!\n");
+
       mConnected = true;
     }
     else if (streamMsg->type() == streamMsg->ACK) {
