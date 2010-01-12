@@ -56,10 +56,12 @@ void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTra
     if (iter == mProxyMap.end()) {
         std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
             ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
-        notify(&ProxyCreationListener::onCreateProxy,newObj);
         iter = result.first;
+        iter->second.viewers.insert(viewer);
+        notify(&ProxyCreationListener::onCreateProxy,newObj);
     }
-    iter->second.viewers.insert(viewer);
+    else
+        iter->second.viewers.insert(viewer);
 }
 void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer) {
     ProxyMap::iterator iter = mProxyMap.find(delObj->getObjectReference().object());
