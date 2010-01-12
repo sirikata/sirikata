@@ -136,8 +136,8 @@ public:
     virtual ~TCPNetwork();
 
     // Checks if this chunk, when passed to send, would be successfully pushed.
-    virtual bool canSend(const Address4&,uint32 size, bool reliable, bool ordered, int priority);
-    virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority);
+    virtual bool canSend(const Address4&,uint32 size);
+    virtual bool send(const Address4&,const Chunk&);
 
     virtual void listen (const Address4&);
     virtual Chunk* front(const Address4& from, uint32 max_size);

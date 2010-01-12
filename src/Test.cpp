@@ -13,7 +13,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
     IOStrand* mainStrand = ios->createStrand();
 
 
-    
+
     SpaceContext ctx(0, ios, mainStrand, Time::null(), Time::null(), &trace, Duration::seconds(0));
     TCPNetwork rn(&ctx, 65536, 1000000, 1000000);
     rn.listen(Address4(Sirikata::Network::Address("localhost", "6666")));
@@ -39,7 +39,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
             unsigned int network=htonl(mine);
             mine+=offset;
             memcpy(&*toSend.begin(),&network,4);
-            rn.send(Address4(Sirikata::Network::Address(hostname,port)),toSend,true,true,0);
+            rn.send(Address4(Sirikata::Network::Address(hostname,port)),toSend);
         }
     }
     sleep (1);

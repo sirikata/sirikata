@@ -61,7 +61,7 @@ void FIFOServerMessageQueue::service(){
         Network::Chunk serialized;
         next_msg->serialize(&serialized);
 
-        sent_success = mNetwork->send(*addy,serialized,false,true,1);
+        sent_success = mNetwork->send(*addy,serialized);
 
         if (!sent_success) break;
 

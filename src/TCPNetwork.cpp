@@ -371,7 +371,7 @@ void TCPNetwork::clearReceiveQueue(const Address4& addr) {
 
 
 
-bool TCPNetwork::canSend(const Address4& addr, uint32 size, bool reliable, bool ordered, int priority) {
+bool TCPNetwork::canSend(const Address4& addr, uint32 size) {
     RemoteStreamMap::iterator where = mRemoteStreams.find(addr);
 
     // If we don't have a connection yet, we'll use this as a hint to make the
@@ -416,7 +416,7 @@ bool TCPNetwork::canSend(const Address4& addr, uint32 size, bool reliable, bool 
     return false;
 }
 
-bool TCPNetwork::send(const Address4&addr, const Chunk& data, bool reliable, bool ordered, int priority) {
+bool TCPNetwork::send(const Address4&addr, const Chunk& data) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 

@@ -63,7 +63,7 @@ void FairServerMessageQueue::service(){
 
         Network::Chunk serialized;
         next_msg->serialize(&serialized);
-        bool sent_success = mNetwork->send(*addy, serialized, false, true, 1);
+        bool sent_success = mNetwork->send(*addy, serialized);
         if (!sent_success)
             break;
 

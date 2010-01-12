@@ -62,7 +62,7 @@ public:
         Address4* addy = mServerIDMap->lookupInternal(msg->dest_server());
 
         assert(addy != NULL);
-        return mNetwork->canSend(*addy,msg->serializedSize(),false,true,1);
+        return mNetwork->canSend(*addy,msg->serializedSize());
     }
 
 protected:
