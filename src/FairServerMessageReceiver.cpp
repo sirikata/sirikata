@@ -44,7 +44,7 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
                   ctx->mainStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
                               )
                         ),
-          mLastServiceTime(ctx->time),
+          mLastServiceTime(ctx->simTime()),
           mReceiveQueues(),
           mRemainderReceiveBytes(0),
           mLastReceiveEndTime(ctx->time),
@@ -71,7 +71,8 @@ void FairServerMessageReceiver::handleReceived(const Address4& from) {
 void FairServerMessageReceiver::service() {
     mProfiler->started();
 
-    Duration since_last = mContext->time - mLastServiceTime;
+    Time tcur = mContext->simTime();
+    Duration since_last = tcur - mLastServiceTime;
     uint64 recv_bytes = since_last.toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
     // Receive
@@ -96,7 +97,7 @@ void FairServerMessageReceiver::service() {
 
     if (mReceiveQueues.empty()) {
         mRemainderReceiveBytes = 0;
-        mLastReceiveEndTime = mContext->time;
+        mLastReceiveEndTime = tcur;
     }
     else {
         mRemainderReceiveBytes = recv_bytes;
@@ -109,7 +110,7 @@ void FairServerMessageReceiver::service() {
         mServiceTimer->wait( Duration::microseconds(100) );
     }
 
-    mLastServiceTime = mContext->time;
+    mLastServiceTime = tcur;
 
     mProfiler->finished();
 }

@@ -14,7 +14,7 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, 
    mLastServiceTime(ctx->time),
    mSendRate(send_bytes_per_second),
    mRemainderSendBytes(0),
-   mLastSendEndTime(mContext->time)
+   mLastSendEndTime(mContext->simTime())
 {
 }
 
@@ -47,7 +47,8 @@ bool FIFOServerMessageQueue::addMessage(Message* msg){
 }
 
 void FIFOServerMessageQueue::service(){
-    Duration since_last = mContext->time - mLastServiceTime;
+    Time tcur = mContext->simTime();
+    Duration since_last = tcur - mLastServiceTime;
     uint64 send_bytes = since_last.toSeconds() * mSendRate + mRemainderSendBytes;
 
     // Send
@@ -82,14 +83,14 @@ void FIFOServerMessageQueue::service(){
 
     if (!sent_success || mQueue.empty()) {
         mRemainderSendBytes = 0;
-        mLastSendEndTime = mContext->time;
+        mLastSendEndTime = tcur;
     }
     else {
         mRemainderSendBytes = send_bytes;
         //mLastSendEndTime = already recorded, last end send time
     }
 
-    mLastServiceTime = mContext->time;
+    mLastServiceTime = tcur;
 
     mProfiler->finished();
 }

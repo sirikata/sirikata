@@ -13,7 +13,7 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
    mLastServiceTime(ctx->time),
    mRate(send_bytes_per_second),
    mRemainderSendBytes(0),
-   mLastSendEndTime(ctx->time)
+   mLastSendEndTime(ctx->simTime())
 {
 }
 
@@ -49,7 +49,8 @@ bool FairServerMessageQueue::addMessage(Message* msg){
 void FairServerMessageQueue::service(){
     mProfiler->started();
 
-    Duration since_last = mContext->time - mLastServiceTime;
+    Time tcur = mContext->simTime();
+    Duration since_last = tcur - mLastServiceTime;
     uint64 send_bytes = since_last.toSeconds() * mRate + mRemainderSendBytes;
 
     // Send
@@ -88,7 +89,7 @@ void FairServerMessageQueue::service(){
 
     if (mServerQueues.empty()) {
         mRemainderSendBytes = 0;
-        mLastSendEndTime = mContext->time;
+        mLastSendEndTime = tcur;
     }
     else {
         // NOTE: we used to just leave mLastSendEndTime at the last time recorded since the leftover
@@ -105,11 +106,11 @@ void FairServerMessageQueue::service(){
         }
         else {
             mRemainderSendBytes = 0;
-            mLastSendEndTime = mContext->time;
+            mLastSendEndTime = tcur;
         }
     }
 
-    mLastServiceTime = mContext->time;
+    mLastServiceTime = tcur;
 
     mProfiler->finished();
 }
