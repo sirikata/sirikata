@@ -37,10 +37,11 @@
 
 namespace CBR {
 
-ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap)
+ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener)
         : mContext(ctx),
           mNetwork(net),
-          mServerIDMap(sidmap)
+          mServerIDMap(sidmap),
+          mListener(listener)
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
     // start the network listening

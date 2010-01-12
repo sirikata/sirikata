@@ -52,10 +52,15 @@ class Message;
  */
 class ServerMessageReceiver : public Network::ReceiveListener {
 public:
-    ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap);
-    virtual ~ServerMessageReceiver();
+    class Listener {
+      public:
+        virtual ~Listener() {}
 
-    virtual bool receive(Message** msg_out) = 0;
+        virtual void serverMessageReceived(Message* msg) = 0;
+    };
+
+    ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener);
+    virtual ~ServerMessageReceiver();
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
 protected:
@@ -65,6 +70,7 @@ protected:
     Network* mNetwork;
     ServerIDMap* mServerIDMap;
     TimeProfiler::Stage* mProfiler;
+    Listener* mListener;
 };
 
 } // namespace CBR

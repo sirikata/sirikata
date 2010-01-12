@@ -73,7 +73,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
 
     mForwarderQueueStage = mContext->profiler->addStage("Forwarder Queue");
-    mReceiveStage = mContext->profiler->addStage("Forwarder Receive");
 }
 
   //Don't need to do anything special for destructor
@@ -111,7 +110,6 @@ void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) 
 
 void Forwarder::poll() {
     serviceSendQueues();
-    serviceReceiveQueues();
 }
 
 // -- Object Connection Management - Object connections are available locally,
@@ -384,13 +382,9 @@ void Forwarder::serviceSendQueues() {
     mServerMessageQueue->service();
 }
 
-void Forwarder::serviceReceiveQueues() {
-    mReceiveStage->started();
-    Message* next_msg = NULL;
-    while(mServerMessageReceiver->receive(&next_msg)) {
-        dispatchMessage(next_msg);
-    }
-    mReceiveStage->finished();
+void Forwarder::serverMessageReceived(Message* msg) {
+    assert(msg != NULL);
+    dispatchMessage(msg);
 }
 
 } //end namespace

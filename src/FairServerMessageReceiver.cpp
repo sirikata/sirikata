@@ -35,8 +35,8 @@
 
 namespace CBR {
 
-FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 recv_bytes_per_sec)
-        : ServerMessageReceiver(ctx, net, sidmap),
+FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 recv_bytes_per_sec)
+        : ServerMessageReceiver(ctx, net, sidmap, listener),
           mRecvRate(recv_bytes_per_sec),
           mServiceTimer(
               IOTimer::create(
@@ -48,23 +48,11 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
           mReceiveQueues(),
           mRemainderReceiveBytes(0),
           mLastReceiveEndTime(ctx->time),
-          mReceiveSet(),
-          mReceiveQueue()
+          mReceiveSet()
 {
 }
 
 FairServerMessageReceiver::~FairServerMessageReceiver() {
-}
-
-bool FairServerMessageReceiver::receive(Message** msg_out) {
-    if (mReceiveQueue.empty()) {
-        *msg_out = NULL;
-        return false;
-    }
-
-    *msg_out = mReceiveQueue.front();
-    mReceiveQueue.pop();
-    return true;
 }
 
 void FairServerMessageReceiver::handleReceived(const Address4& from) {
@@ -103,7 +91,7 @@ void FairServerMessageReceiver::service() {
            FIXME at some point we should record this here instead of in Server.cpp
         mContext->trace()->serverDatagramReceived();
         */
-        mReceiveQueue.push(next_recv_msg);
+        mListener->serverMessageReceived(next_recv_msg);
     }
 
     if (mReceiveQueues.empty()) {

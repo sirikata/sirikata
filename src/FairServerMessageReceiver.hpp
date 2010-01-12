@@ -46,10 +46,9 @@ namespace CBR {
  */
 class FairServerMessageReceiver : public ServerMessageReceiver {
 public:
-    FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 recv_bytes_per_sec);
+    FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 recv_bytes_per_sec);
     virtual ~FairServerMessageReceiver();
 
-    virtual bool receive(Message** msg_out);
     virtual void setServerWeight(ServerID sid, float weight);
 private:
     // Callback from Network indicating that a new queue has become active
@@ -78,8 +77,6 @@ private:
 
     typedef std::set<ServerID> ReceiveServerSet;
     ReceiveServerSet mReceiveSet;
-    std::queue<Message*> mReceiveQueue;
-
 };
 
 } // namespace CBR

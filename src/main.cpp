@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
     String server_receiver_type = GetOption(SERVER_RECEIVER)->as<String>();
     if (server_queue_type == "fair")
         server_message_receiver =
-                new FairServerMessageReceiver(space_context, gNetwork, server_id_map, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+                new FairServerMessageReceiver(space_context, gNetwork, server_id_map, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);
