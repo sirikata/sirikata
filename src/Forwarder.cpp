@@ -386,7 +386,6 @@ void Forwarder::serviceSendQueues() {
 
 void Forwarder::serviceReceiveQueues() {
     mReceiveStage->started();
-    mServerMessageReceiver->service();
     Message* next_msg = NULL;
     while(mServerMessageReceiver->receive(&next_msg)) {
         dispatchMessage(next_msg);

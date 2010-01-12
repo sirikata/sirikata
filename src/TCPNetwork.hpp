@@ -27,6 +27,7 @@ class TCPNetwork : public Network {
 
         Sirikata::Network::Stream* stream;
 
+        Address4 endpoint; // The remote endpoint we're talking to.
         bool connected; // Indicates if the initial header specifying
                         // the remote endpoint has been sent or
                         // received (depending on which side initiated
@@ -85,6 +86,8 @@ class TCPNetwork : public Network {
                                    // the closing or active stream may change
                                    // between calls to front() and receiveOne().
 
+    ReceiveListener* mReceiveListener; // Listener for our receive events
+
     // Main Thread/Strand Methods, allowed to access all the core data structures.  These are mainly utility methods
     // posted by the IO thread.
 
@@ -139,7 +142,7 @@ public:
     virtual bool canSend(const Address4&,uint32 size);
     virtual bool send(const Address4&,const Chunk&);
 
-    virtual void listen (const Address4&);
+    virtual void listen (const Address4& addr, ReceiveListener* receive_listener);
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size);
 };

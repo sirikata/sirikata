@@ -46,7 +46,7 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Se
     // start the network listening
     Address4* listen_addy = mServerIDMap->lookupInternal(mContext->id());
     assert(listen_addy != NULL);
-    net->listen(*listen_addy);
+    net->listen(*listen_addy, this);
 }
 
 ServerMessageReceiver::~ServerMessageReceiver() {

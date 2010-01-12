@@ -50,11 +50,24 @@ public:
     virtual ~FairServerMessageReceiver();
 
     virtual bool receive(Message** msg_out);
-    virtual void service();
     virtual void setServerWeight(ServerID sid, float weight);
-protected:
+private:
+    // Callback from Network indicating that a new queue has become active
+    virtual void networkReceivedData(const Address4& from);
+
+    // Handles
+    void handleReceived(const Address4& from);
+
+    // Internal service call -- generated either by a networkReceivedData event
+    // or by a timer as we wait for enough bandwidth to be available to service
+    // the next packet.
+    void service();
+
     uint32 mRecvRate;
 
+    IOTimerPtr mServiceTimer; // Timer used to generate another service callback
+                              // when waiting for enough bytes to service next
+                              // packet
     Time mLastServiceTime; // last time we called service, to properly track
                            // rate limiting
 

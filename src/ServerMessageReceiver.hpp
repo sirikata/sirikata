@@ -36,11 +36,11 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "TimeProfiler.hpp"
+#include "Network.hpp"
 
 namespace CBR{
 
 class SpaceContext;
-class Network;
 class ServerIDMap;
 class Message;
 
@@ -50,16 +50,17 @@ class Message;
  *  are received from the network it pushes them up to a listener which can
  *  handle them -- no queueing is performed internally.
  */
-class ServerMessageReceiver {
+class ServerMessageReceiver : public Network::ReceiveListener {
 public:
     ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap);
     virtual ~ServerMessageReceiver();
 
     virtual bool receive(Message** msg_out) = 0;
-    virtual void service() = 0;
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
 protected:
+    virtual void networkReceivedData(const Address4& from) = 0;
+
     SpaceContext* mContext;
     Network* mNetwork;
     ServerIDMap* mServerIDMap;

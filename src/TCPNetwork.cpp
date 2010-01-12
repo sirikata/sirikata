@@ -34,7 +34,8 @@ TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 in
  : Network(ctx),
    mIncomingBufferLength(incomingBufferLength),
    mIncomingBandwidth(incomingBandwidth),
-   mOutgoingBandwidth(outgoingBandwidth)
+   mOutgoingBandwidth(outgoingBandwidth),
+   mReceiveListener(NULL)
 {
     mStreamPlugin = GetOption("spacestreamlib")->as<String>();
     mPluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
@@ -173,6 +174,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
         Address4* remote_endpoint = mServerIDMap->lookupInternal( intro.id() );
         assert(remote_endpoint != NULL);
 
+        remote_stream->endpoint = *remote_endpoint;
         remote_stream->connected = true;
         mContext->mainStrand->post(
             std::tr1::bind(&TCPNetwork::addNewStream,
@@ -186,11 +188,18 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
         // Normal case, we can just handle the message
         Chunk* tmp = new Chunk;
         tmp->swap(data);
+        uint32 data_size = tmp->size();
         if (!remote_stream->buffer.push(tmp,false)) {
             remote_stream->paused = true;
             tmp->swap(data);
             delete tmp;
             return Sirikata::Network::Stream::PauseReceive;
+        }
+        else {
+            // Check if this is the only thing on the queue implying it is the
+            // now the front item and that we should send a notification
+            if (remote_stream->buffer.getResourceMonitor().filledSize() == data_size)
+                mReceiveListener->networkReceivedData( remote_stream->endpoint );
         }
     }
 
@@ -389,6 +398,7 @@ bool TCPNetwork::canSend(const Address4& addr, uint32 size) {
         // Insert before calling connect to ensure data is in place when event
         // occurs.  Note that remote->connected is still false here so we won't
         // prematurely use the connection for sending
+        remote->endpoint = addr;
         mRemoteStreams.insert(std::pair<Address4,RemoteStreamPtr>(addr, remote));
         where = mRemoteStreams.find(addr);
 
@@ -433,9 +443,11 @@ bool TCPNetwork::send(const Address4&addr, const Chunk& data) {
 }
 
 
-void TCPNetwork::listen(const Address4& as_server) {
+void TCPNetwork::listen(const Address4& as_server, ReceiveListener* receive_listener) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
+
+    mReceiveListener = receive_listener;
 
     mListenAddress = as_server;
     Address listenAddress(convertAddress4ToSirikata(as_server));

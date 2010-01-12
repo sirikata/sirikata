@@ -15,13 +15,31 @@ class Network : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
+    /** The Network::ReceiveListener interface should be implemented by the
+     *  object receiving data from the network.  The listener must actively pull
+     *  data from the Network queues, but the Listener interface allows this
+     *  process to be event driven by notifying the object when new data has
+     *  been received.
+     */
+    class ReceiveListener {
+      public:
+        virtual ~ReceiveListener() {}
+
+        /** Invoked by the Network when data has been received on a queue that
+         * was previously empty, i.e. when data is received taht causes
+         * front(from) to change.
+         */
+        virtual void networkReceivedData(const Address4& from) = 0;
+    };
+
+
     virtual ~Network();
 
     // Checks if this chunk, when passed to send, would be successfully pushed.
     virtual bool canSend(const Address4&, uint32 size)=0;
     virtual bool send(const Address4&, const Chunk&)=0;
 
-    virtual void listen (const Address4&)=0;
+    virtual void listen (const Address4& addr, ReceiveListener* receive_listener)=0;
     virtual Chunk* front(const Address4& from, uint32 max_size)=0;
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
 

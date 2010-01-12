@@ -31,12 +31,19 @@
  */
 
 #include "FairServerMessageReceiver.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
 FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 recv_bytes_per_sec)
         : ServerMessageReceiver(ctx, net, sidmap),
           mRecvRate(recv_bytes_per_sec),
+          mServiceTimer(
+              IOTimer::create(
+                  ctx->ioService,
+                  ctx->mainStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
+                              )
+                        ),
           mLastServiceTime(ctx->time),
           mReceiveQueues(),
           mRemainderReceiveBytes(0),
@@ -60,6 +67,19 @@ bool FairServerMessageReceiver::receive(Message** msg_out) {
     return true;
 }
 
+void FairServerMessageReceiver::handleReceived(const Address4& from) {
+    // Given the new data we need to update our view of the world
+    // FIXME this should be specific to the address we were notified got updated
+    mReceiveQueues.service();
+
+    // Cancel any outstanding work callbacks
+    mServiceTimer->cancel();
+
+    // And run service (which will handle setting up
+    // any new service callbacks that may be needed).
+    service();
+}
+
 void FairServerMessageReceiver::service() {
     mProfiler->started();
 
@@ -69,7 +89,6 @@ void FairServerMessageReceiver::service() {
     // Receive
     ServerID sid;
     Message* next_recv_msg = NULL;
-    mReceiveQueues.service(); // FIXME this shouldn't be necessary if NetworkQueueWrapper could notify the FairQueue
     while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
         Message* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
         assert(next_recv_msg_popped == next_recv_msg);
@@ -94,6 +113,12 @@ void FairServerMessageReceiver::service() {
     else {
         mRemainderReceiveBytes = recv_bytes;
         //mLastReceiveEndTime = already recorded, last end receive time
+
+        // Since the queues are not empty that means we must have stopped due to
+        // insufficient budget of bytes.  Setup a timer to let us check again
+        // soon.
+        // FIXME we should calculate an exact duration instead of making it up
+        mServiceTimer->wait( Duration::microseconds(100) );
     }
 
     mLastServiceTime = mContext->time;
@@ -112,5 +137,13 @@ void FairServerMessageReceiver::setServerWeight(ServerID sid, float weight) {
     mReceiveSet.insert(sid);
 }
 
+void FairServerMessageReceiver::networkReceivedData(const Address4& from) {
+    SILOG(fairreceiver,insane,"Received network data from " << from.ip << " - " << from.port);
+
+    // No matter what, we'll post an event.  Since a new front() is available
+    // this could completely change the amount of time we're waiting so the main
+    // strand always needs to know.
+    mContext->mainStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceived, this, from) );
+}
 
 } // namespace CBR
