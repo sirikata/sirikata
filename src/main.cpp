@@ -65,17 +65,6 @@
 #include "SpaceContext.hpp"
 
 
-namespace {
-CBR::Network* gNetwork = NULL;
-CBR::Trace* gTrace = NULL;
-CBR::SpaceContext* gSpaceContext = NULL;
-CBR::Time g_start_time( CBR::Time::null() );
-}
-
-
-
-void *main_loop(void *);
-
 int main(int argc, char** argv) {
 
     using namespace CBR;
@@ -91,12 +80,11 @@ int main(int argc, char** argv) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    gTrace = new Trace(trace_file);
+    CBR::Trace* gTrace = new Trace(trace_file);
 
     // Compute the starting date/time
     String start_time_str = GetOption("wait-until")->as<String>();
-    g_start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    Time start_time = g_start_time;
+    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
     start_time += GetOption("wait-additional")->as<Duration>();
 
     Duration duration = GetOption("duration")->as<Duration>();
@@ -109,26 +97,10 @@ int main(int argc, char** argv) {
 
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
 
-    gSpaceContext = space_context;
-
+    CBR::Network* gNetwork = NULL;
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "tcp")
       gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
-
-
-    gNetwork->init(&main_loop);
-
-    sync.stop();
-
-
-
-
-    return 0;
-}
-void *main_loop(void *) {
-    using namespace CBR;
-
-    ServerID server_id = GetOption("id")->as<ServerID>();
 
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
@@ -155,11 +127,8 @@ void *main_loop(void *) {
 
 
 
-    Duration duration = GetOption("duration")->as<Duration>();
-
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    SpaceContext* space_context = gSpaceContext;
     Forwarder* forwarder = new Forwarder(space_context);
 
     LocationService* loc_service = NULL;
@@ -292,7 +261,6 @@ void *main_loop(void *) {
 
       prox->initialize(cseg);
 
-      Time start_time = g_start_time;
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
         Time now_time = Timer::now();
@@ -304,8 +272,6 @@ void *main_loop(void *) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
-
-    gNetwork->begin();
 
     space_context->add(space_context);
     space_context->add(gNetwork);
@@ -354,8 +320,6 @@ void *main_loop(void *) {
     delete gTrace;
     gTrace = NULL;
 
-    IOStrand* mainStrand = space_context->mainStrand;
-    IOService* ios = space_context->ioService;
 
     delete space_context;
     space_context = NULL;
@@ -364,6 +328,9 @@ void *main_loop(void *) {
     delete osegStrand;
 
     IOServiceFactory::destroyIOService(ios);
+
+
+    sync.stop();
 
     return 0;
 }

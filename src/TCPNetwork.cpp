@@ -446,17 +446,6 @@ void TCPNetwork::listen(const Address4& as_server) {
 }
 
 
-void TCPNetwork::init(void *(*x)(void*data)) {
-    x(NULL);
-}
-
-void TCPNetwork::begin() {
-}
-
-void TCPNetwork::reportQueueInfo() const {
-}
-
-
 Chunk* TCPNetwork::front(const Address4& from, uint32 max_size) {
     RemoteStreamPtr stream(getReceiveQueue(from));
 

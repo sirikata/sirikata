@@ -17,10 +17,6 @@ public:
 
     virtual ~Network();
 
-    virtual void init(void*(*)(void*))=0;
-    // Called right before we start the simulation, useful for syncing network timing info to Time(0)
-    virtual void begin() = 0;
-
     // Checks if this chunk, when passed to send, would be successfully pushed.
     virtual bool canSend(const Address4&,uint32 size, bool reliable, bool ordered, int priority)=0;
     virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
@@ -38,16 +34,12 @@ public:
 protected:
     Network(SpaceContext* ctx);
 
-    virtual void reportQueueInfo() const = 0;
-
     // Service Interface
     virtual void start();
     virtual void stop();
 
     SpaceContext* mContext;
     ServerIDMap* mServerIDMap;
-private:
-    Poller* mStatsPoller;
 };
 }
 #endif //_CBR_NETWORK_HPP_

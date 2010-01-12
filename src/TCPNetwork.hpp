@@ -135,10 +135,6 @@ public:
     TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);
     virtual ~TCPNetwork();
 
-    virtual void init(void*(*)(void*));
-    // Called right before we start the simulation, useful for syncing network timing info to Time(0)
-    virtual void begin();
-
     // Checks if this chunk, when passed to send, would be successfully pushed.
     virtual bool canSend(const Address4&,uint32 size, bool reliable, bool ordered, int priority);
     virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority);
@@ -146,7 +142,6 @@ public:
     virtual void listen (const Address4&);
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size);
-    virtual void reportQueueInfo() const;
 };
 
 } // namespace CBR
