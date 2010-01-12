@@ -35,7 +35,6 @@ void VWObject::receivedProxObjectLocation(
         
         RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
         if (responseMessage.header().return_status() != RoutableMessageHeader::SUCCESS) {
-            SILOG(cppoh,info,"FAILURE receiving prox object properties "<<sentMessage->getRecipient());
             return;
         }
         ObjLoc objLoc;
@@ -306,9 +305,9 @@ void VWObject::receivedPositionUpdateResponse(
         }
     }
     if(thus->isLocal(SpaceObjectReference(hdr.destination_space(),hdr.source_object()))) {
-        static_cast<RPCMessage*>(sentMessage)->serializeSend(); // Resend position update each time we get one.
-    }else {
         delete static_cast<RPCMessage*>(sentMessage);
+    }else {
+        static_cast<RPCMessage*>(sentMessage)->serializeSend(); // Resend position update each time we get one.
     }
 
 }
