@@ -94,6 +94,11 @@ ObjectHost::~ObjectHost() {
     {
         HostedObjectMap objs;
         mHostedObjects.swap(objs);
+        for (HostedObjectMap::iterator iter = mHostedObjects.begin();
+                 iter != mHostedObjects.end();
+                 ++iter) {
+            iter->second->destroy();
+        }
         objs.clear(); // The HostedObject destructor will attempt to delete from mHostedObjects
     }
     delete mScriptPlugins;
