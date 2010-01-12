@@ -8,8 +8,8 @@
 
 namespace CBR {
 
-FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second)
- : ServerMessageQueue(ctx, net, sidmap),
+FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 send_bytes_per_second)
+ : ServerMessageQueue(ctx, net, sidmap, listener),
    mQueue(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>() * 32), //FIXME * nobjects?
    mLastServiceTime(ctx->time),
    mSendRate(send_bytes_per_second),
@@ -75,6 +75,7 @@ void FIFOServerMessageQueue::service(){
         mLastSendEndTime = end_time;
 
         mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest_server(), next_msg->id(), serialized.size());
+        mListener->serverMessageSent(next_msg);
 
         delete next_msg;
     }

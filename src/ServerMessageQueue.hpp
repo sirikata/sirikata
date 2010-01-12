@@ -23,10 +23,22 @@ typedef struct QueueInfo{
 
 class ServerMessageQueue {
 public:
-    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap)
+    class Listener {
+      public:
+        virtual ~Listener() {}
+
+        /** Invoked when a server Message is successfully pushed to the
+         *  network. The pointer will only be valid for the duration of the call
+         *  -- it should not be saved and used later by the recipient.
+         */
+        virtual void serverMessageSent(Message* msg) = 0;
+    };
+
+    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener)
      : mContext(ctx),
        mNetwork(net),
-       mServerIDMap(sidmap)
+       mServerIDMap(sidmap),
+       mListener(listener)
     {
         mProfiler = mContext->profiler->addStage("Server Message Queue");
     }
@@ -70,6 +82,7 @@ protected:
     Network* mNetwork;
     ServerIDMap* mServerIDMap;
     TimeProfiler::Stage* mProfiler;
+    Listener* mListener;
 };
 }
 

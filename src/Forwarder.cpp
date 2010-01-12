@@ -71,8 +71,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
-
-    mForwarderQueueStage = mContext->profiler->addStage("Forwarder Queue");
 }
 
   //Don't need to do anything special for destructor
@@ -188,6 +186,8 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
     {
         QueueEnum::PushResult push_result = mOutgoingMessages->getFairQueue(dest_server).push(svc, msg);
         success = (push_result == QueueEnum::PushSucceeded);
+        if (success)
+            trySendToServer(dest_server);
     }
     return success;
   }
@@ -353,33 +353,38 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   return send_success;
 }
 
-void Forwarder::serviceSendQueues() {
-    mForwarderQueueStage->started();
-    for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
-        while(true)
-        {
-            uint64 size=1<<30;
-            MessageRouter::SERVICES svc;
-            Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
-            if (!next_msg)
-                break;
+void Forwarder::trySendToServer(ServerID sid) {
+    while(true) {
+        uint64 size=1<<30;
+        MessageRouter::SERVICES svc;
+        Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
+        if (!next_msg)
+            break;
 
-            if (!mServerMessageQueue->canSend(next_msg))
-                break;
+        if (!mServerMessageQueue->canSend(next_msg))
+            break;
 
-            mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
-            bool send_success = mServerMessageQueue->addMessage(next_msg);
-            if (!send_success)
-                break;
+        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+        bool send_success = mServerMessageQueue->addMessage(next_msg);
+        if (!send_success)
+            break;
 
-            Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(&size);
-            assert(pop_msg == next_msg);
-        }
+        Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(&size);
+        assert(pop_msg == next_msg);
     }
-    mForwarderQueueStage->finished();
+}
 
-    // Try to push things from the server message queues down to the network
+void Forwarder::serviceSendQueues() {
+    // Try to push things from the server message queues down to the network,
+    // possibly in turn triggering callbacks which allow us to try to push
+    // messages into the server message queue
     mServerMessageQueue->service();
+}
+
+void Forwarder::serverMessageSent(Message* msg) {
+    assert(msg != NULL);
+    ServerID dest_server_free = msg->dest_server();
+    trySendToServer(dest_server_free);
 }
 
 void Forwarder::serverMessageReceived(Message* msg) {

@@ -18,7 +18,7 @@ protected:
     Time mLastSendEndTime; // last packet send finish time, if there are still messages waiting
 public:
 
-    FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second);
+    FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 send_bytes_per_second);
 
     virtual bool addMessage(Message* msg);
     virtual bool canAddMessage(const Message* msg);

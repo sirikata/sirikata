@@ -148,9 +148,9 @@ int main(int argc, char** argv) {
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map, (ServerMessageQueue::Listener*)forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(space_context, gNetwork, server_id_map, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        sq = new FairServerMessageQueue(space_context, gNetwork, server_id_map, (ServerMessageQueue::Listener*)forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);

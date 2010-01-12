@@ -18,7 +18,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     Time mLastSendEndTime; // the time at which the last send ended, if there are messages that are too big left in the queue
 
 public:
-    FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second);
+    FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 send_bytes_per_second);
 
     virtual bool addMessage(Message* msg);
     virtual bool canAddMessage(const Message* msg);

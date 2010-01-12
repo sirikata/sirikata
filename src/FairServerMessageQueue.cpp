@@ -7,8 +7,8 @@
 
 namespace CBR{
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second)
- : ServerMessageQueue(ctx, net, sidmap),
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 send_bytes_per_second)
+ : ServerMessageQueue(ctx, net, sidmap, listener),
    mServerQueues(),
    mLastServiceTime(ctx->time),
    mRate(send_bytes_per_second),
@@ -81,6 +81,7 @@ void FairServerMessageQueue::service(){
         mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), serialized.size());
 
+        mListener->serverMessageSent(next_msg);
         // Get rid of the message
         delete next_msg;
     }

@@ -17,6 +17,7 @@
 
 #include "OSegLookupQueue.hpp"
 
+#include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 
 namespace CBR
@@ -25,7 +26,6 @@ namespace CBR
   class ServerIDMap;
   class ObjectSegmentation;
   class CoordinateSegmentation;
-  class ServerMessageQueue;
   class Network;
   class Trace;
   class ObjectConnection;
@@ -67,7 +67,7 @@ public:
 
 class ForwarderSampler;
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient, public PollingService,
-                  public ServerMessageReceiver::Listener
+                  public ServerMessageQueue::Listener, public ServerMessageReceiver::Listener
 {
 private:
     SpaceContext* mContext;
@@ -94,7 +94,6 @@ private:
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate; // Map of object id -> servers which should be notified of new result
 
-    TimeProfiler::Stage* mForwarderQueueStage;
 
     // -- Boiler plate stuff - initialization, destruction, methods to satisfy interfaces
   public:
@@ -147,6 +146,12 @@ private:
     // Services forwarder queues
     // FIXME this should be changed to be fully event driven
     void serviceSendQueues();
+    // Try to pull messages from the Forwarder queue and push them into the
+    // ServerMessageQueue
+    void trySendToServer(ServerID sid);
+
+    // ServerMessageQueue::Listener Interface
+    virtual void serverMessageSent(Message* msg);
     // ServerMessageReceiver::Listener Interface
     virtual void serverMessageReceived(Message* msg);
 
