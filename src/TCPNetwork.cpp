@@ -499,10 +499,7 @@ Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
 
     // Unmark this queue as the front queue
     clearReceiveQueue(from);
-    // Pop and verify the chunk
-    Chunk* popped;
-    stream->buffer.pop(popped);
-    assert(popped == result);
+    // Was already popped by front, just zero out the front ptr
     stream->front = NULL;
     // Unpause receiving if necessary
     if (stream->paused) {
