@@ -25,10 +25,16 @@ template <> std::map<EndPoint<Sirikata::UUID>  , ConnectionReturnCallbackFunctio
 
 template <> std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > Connection<Sirikata::UUID>::mListeningConnectionsCallbackMap = std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > ();
 
+template <> std::bitset<256> Connection<Sirikata::UUID>::mAvailableChannels = std::bitset<256> ();
+
+
 
 template <> std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > Stream<Sirikata::UUID>::mStreamReturnCallbackMap = std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > ();
 
 
 template <> Mutex Stream<Sirikata::UUID>::mStreamCreationMutex = Mutex();
+
+template <> Mutex Connection<Sirikata::UUID>::mStaticMembersLock = Mutex();
+
 
 }

@@ -12,6 +12,7 @@
 #include "oh/ObjectHostContext.hpp"
 #include "oh/ObjectHost.hpp"
 #include "Utility.hpp"
+#include <bitset>
 
 #include <sirikata/util/SerializationCheck.hpp>
 
@@ -43,7 +44,6 @@ public:
 
 };
 
-
 class Mutex {
 public:
 
@@ -57,7 +57,7 @@ public:
 
 private:
   boost::mutex mMutex;
-
+ 
 };
 
 
@@ -165,8 +165,12 @@ private:
   
 
   static ConnectionMap mConnectionMap;
+  static std::bitset<256> mAvailableChannels;
+
   static ConnectionReturnCallbackMap mConnectionReturnCallbackMap;
   static StreamReturnCallbackMap  mListeningConnectionsCallbackMap;
+
+  static Mutex mStaticMembersLock;
     
   ObjectHostContext* mContext;
   EndPoint<EndPointType> mLocalEndPoint;
@@ -180,7 +184,6 @@ private:
 
   uint64 mTransmitSequenceNumber;
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
-
    
   std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
   std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
@@ -201,11 +204,12 @@ private:
   bool mLooping;
   Thread* mThread;
 
-  boost::mutex mMutex;  
+  boost::mutex mQueueMutex;  
   boost::condition_variable mQueueEmptyCondVar;
 
   uint16 MAX_DATAGRAM_SIZE;
   uint16 MAX_PAYLOAD_SIZE;
+  uint32 MAX_QUEUED_SEGMENTS;
   float  CC_ALPHA;
 
   boost::weak_ptr<Connection<EndPointType> > weak_this;
@@ -217,9 +221,10 @@ private:
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1), 
       mLastReceivedSequenceNumber(1), mNumStreams(0), mCwnd(1), mRTO(20000), mFirstRTO(true),
       mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
+      MAX_QUEUED_SEGMENTS(300),
       CC_ALPHA(0.8)
   {
-    mThread = new Thread(boost::bind(&(Connection<EndPointType>::dataSendingLoop), this));
+    mThread = new Thread(boost::bind(&(Connection<EndPointType>::sendChannelSegmentLoop), this));
   }
   
   void sendSSTChannelPacket(CBR::Protocol::SST::SSTChannelHeader& sstMsg) {
@@ -228,13 +233,32 @@ private:
 				       buffer.size());
   }
 
-  void dataSendingLoop() {
+  /* Returns -1 if no channel is available. Otherwise returns the lowest
+     available channel. */
+  static int getAvailableChannel() {
+    //TODO: faster implementation.
+    for (uint i=1; i<mAvailableChannels.size(); i++) {
+      if (mAvailableChannels.test(i)) {	
+	mAvailableChannels.set(i, 1);
+	return i;
+      }
+    }
+
+    return -1;
+  }
+
+  static void releaseChannel(uint8 channel) {
+    assert(channel > 0);
+    mAvailableChannels.set(channel, 0);
+  }
+
+  void sendChannelSegmentLoop() {
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
     while (mLooping) {
       uint16 numSegmentsSent = 0;
       {
-	boost::unique_lock<boost::mutex> lock(mMutex);	
+	boost::unique_lock<boost::mutex> lock(mQueueMutex);	
 	
         while (mQueuedSegments.empty()){
           printf("Waiting on lock\n");
@@ -277,6 +301,8 @@ private:
       boost::this_thread::sleep( boost::posix_time::microseconds(mRTO*2) );
 
       if (mState == CONNECTION_PENDING_CONNECT) {
+	boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
+	
         printf("Remote endpoint not available to connect\n");
         mConnectionReturnCallbackMap[mRemoteEndPoint](-1, 
                                                 boost::shared_ptr<Connection<EndPointType> > (weak_this) ); 
@@ -380,6 +406,8 @@ private:
 			       EndPoint <EndPointType> remoteEndPoint, 
                                ConnectionReturnCallbackFunction cb) 
   {
+    boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
+    
     if (mConnectionMap.find(localEndPoint) != mConnectionMap.end()) {
       return false;
     }
@@ -392,7 +420,7 @@ private:
     conn->setState(CONNECTION_PENDING_CONNECT);    
 
     uint8 payload[1];
-    payload[0] = 1; //getAvailableChannel();
+    payload[0] = getAvailableChannel();
     
     conn->setLocalChannelID(1);
     conn->sendData(payload, 1);
@@ -403,6 +431,8 @@ private:
   }
 
   static bool listen(StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
+    boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
+    
     mListeningConnectionsCallbackMap[listeningEndPoint] = cb;
 
     return true;
@@ -447,9 +477,8 @@ private:
     mOutgoingSubstreamMap[lsid]=stream;
   }
 
-
   uint64 sendData(const void* data2, uint32 length) {
-    boost::lock_guard<boost::mutex> lock(mMutex);
+    boost::lock_guard<boost::mutex> lock(mQueueMutex);
 
     assert(length <= MAX_PAYLOAD_SIZE);
 
@@ -467,10 +496,12 @@ private:
 
     bool pushedIntoQueue = false;
 
-    if ( stream_msg->type() !=  stream_msg->ACK) { 
-      mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>( 
+    if ( stream_msg->type() !=  stream_msg->ACK) {
+      if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) { 
+	mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>( 
                     new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
-      pushedIntoQueue = true;
+	pushedIntoQueue = true;
+      }
     }
     else {
       CBR::Protocol::SST::SSTChannelHeader sstMsg;
@@ -698,7 +729,7 @@ private:
       mReadDatagramCallbacks[i](payload, payload_size);
     }
  
-    boost::lock_guard<boost::mutex> lock(mMutex);
+    boost::lock_guard<boost::mutex> lock(mQueueMutex);
    
     CBR::Protocol::SST::SSTChannelHeader sstMsg;
     sstMsg.set_channel_id( mRemoteChannelID );
@@ -840,6 +871,8 @@ public:
   static void handleReceive(const ObjectHostContext* ctx, EndPoint<EndPointType> remoteEndPoint, 
                             EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len) 
   {
+    boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
+
     char* data = (char*) recv_buffer;
     std::string str = std::string(data, len);
 
@@ -869,7 +902,7 @@ public:
         uint8* received_payload = (uint8*) received_msg->payload().data();
       
         uint8 payload[1];
-        payload[0] = 2; //getAvailableChannel();      
+        payload[0] = getAvailableChannel();      
 
         boost::shared_ptr<Connection>  conn =  
                    boost::shared_ptr<Connection>(
@@ -1209,7 +1242,7 @@ private:
       write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
     }    
     
-    mThread = new Thread(boost::bind(&(Stream<EndPointType>::ioServicingLoop), this));
+    mThread = new Thread(boost::bind(&(Stream<EndPointType>::sendStreamSegmentLoop), this));
     //boost::thread t(boost::bind(&boost::asio::io_service::run, &mIOService));
   }
 
@@ -1224,7 +1257,7 @@ private:
       return;
     }
 
-    int length = 1000000;
+    int length = 2000000;
     uint8* f = new uint8[length];
     for (int i=0; i<length; i++) {
       f[i] = i % 255;
@@ -1239,7 +1272,7 @@ private:
   }  
 
 
-  void ioServicingLoop() {
+  void sendStreamSegmentLoop() {
     Time start_time = Timer::now();
 
     while (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
@@ -1607,7 +1640,7 @@ private:
   StreamReturnCallbackFunction mStreamReturnCallback;
 
 
-  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction>   StreamReturnCallbackMap;  
+  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;  
   static StreamReturnCallbackMap mStreamReturnCallbackMap;
   static Mutex mStreamCreationMutex;
   
