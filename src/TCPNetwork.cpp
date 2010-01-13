@@ -11,6 +11,8 @@
 using namespace Sirikata::Network;
 using namespace Sirikata;
 
+#define TCPNET_LOG(level,msg) SILOG(tcpnetwork,level,"[TCPNET] " << msg)
+
 namespace CBR {
 
 TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::Stream*strm)
@@ -101,6 +103,7 @@ void TCPNetwork::newStreamCallback(Stream* newStream, Stream::SetCallbacks&setCa
         return;
     }
 
+    TCPNET_LOG(info,"New stream accepted.");
     // A new stream was initiated by a remote endpoint.  We need to
     // set up our basic storage and then wait for the specification of
     // the remote endpoint ID before allowing use of the connection
@@ -122,8 +125,12 @@ void TCPNetwork::newStreamCallback(Stream* newStream, Stream::SetCallbacks&setCa
 void TCPNetwork::connectionCallback(const Address4& remote_addr, const RemoteStreamWPtr& rwstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
     RemoteStreamPtr remote_stream(rwstream);
 
+    if (!remote_stream)
+        TCPNET_LOG(warning,"Got connection callback on stream that is no longer referenced.");
+
     if (status == Sirikata::Network::Stream::Disconnected ||
         status == Sirikata::Network::Stream::ConnectionFailed) {
+        TCPNET_LOG(info,"Got disconnection event.");
         if (remote_stream) {
             remote_stream->connected = false;
             remote_stream->shutting_down = true;
@@ -135,6 +142,7 @@ void TCPNetwork::connectionCallback(const Address4& remote_addr, const RemoteStr
     else if (status == Sirikata::Network::Stream::Connected) {
         // Note: We should only get Connected for connections we initiated.
         if (remote_stream) {
+            TCPNET_LOG(info,"Sending intro and marking stream as connected.");
             // The first message needs to be our introduction
             sendServerIntro(remote_stream);
             // And after we're sure its sent, open things up for everybody else
@@ -142,7 +150,7 @@ void TCPNetwork::connectionCallback(const Address4& remote_addr, const RemoteStr
         }
     }
     else {
-        SILOG(tcpnetwork,warning,"Unhandled send stream connection status: " << status << " -- " << reason);
+        TCPNET_LOG(error,"Unhandled send stream connection status: " << status << " -- " << reason);
     }
 }
 
@@ -150,17 +158,20 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
     RemoteStreamPtr remote_stream(rwstream);
 
     // If we've lost all references to the RemoteStream just ignore
-    if (!remote_stream)
+    if (!remote_stream) {
+        TCPNET_LOG(error,"Ignoring received data; invalid weak reference to remote stream.");
         return Sirikata::Network::Stream::AcceptedData;
+    }
 
     // If the stream hasn't been marked as connected, this *should* be
     // the initial header
     if (remote_stream->connected == false) {
         // Remove from the list of pending connections
+        TCPNET_LOG(info,"Parsing endpoint information for incomplete remote-initiated remote stream.");
         Address4 source_addr = remote_stream->stream->getRemoteEndpoint();
         RemoteStreamMap::iterator it = mPendingStreams.find(source_addr);
         if (it == mPendingStreams.end()) {
-            SILOG(tcpnetwork,error,"Address for connection not found in pending receive buffers"); // FIXME print addr
+            TCPNET_LOG(error,"Address for connection not found in pending receive buffers"); // FIXME print addr
         }
         else {
             mPendingStreams.erase(it);
@@ -185,6 +196,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
                                    );
     }
     else {
+        TCPNET_LOG(insane,"Handling regular received data.");
         // Normal case, we can just handle the message
         Chunk* tmp = new Chunk;
         tmp->swap(data);
@@ -196,10 +208,13 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
             return Sirikata::Network::Stream::PauseReceive;
         }
         else {
+            TCPNET_LOG(insane,"Passing data up to next layer.");
             // Check if this is the only thing on the queue implying it is the
             // now the front item and that we should send a notification
-            if (remote_stream->buffer.getResourceMonitor().filledSize() == data_size)
+            if (remote_stream->buffer.getResourceMonitor().filledSize() == data_size) {
+                TCPNET_LOG(insane,"Invoked networkReceivedData.");
                 mReceiveListener->networkReceivedData( remote_stream->endpoint );
+            }
         }
     }
 
@@ -275,7 +290,7 @@ void TCPNetwork::addNewStream(const Address4& remote_endpoint, RemoteStreamPtr r
     // with one we started in the outgoing direction.  We need to cancel one and
     // save the other in our map.
     if (it != mRemoteStreams.end()) {
-        SILOG(tcpnetwork,insane,"Resolving multiple conflicting connections.");
+        TCPNET_LOG(info,"Resolving multiple conflicting connections.");
 
         RemoteStreamPtr new_remote_stream = remote_stream;
         RemoteStreamPtr existing_remote_stream = it->second;
@@ -317,7 +332,7 @@ void TCPNetwork::addNewStream(const Address4& remote_endpoint, RemoteStreamPtr r
 }
 
 void TCPNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, const Address4& remote_endpoint) {
-    SILOG(tcpnetwork,insane,"Closing stream due to timeout.");
+    TCPNET_LOG(info,"Closing stream due to timeout.");
 
     mClosingStreamTimers.erase(timer);
 
@@ -379,14 +394,13 @@ void TCPNetwork::clearReceiveQueue(const Address4& addr) {
 }
 
 
-
 bool TCPNetwork::canSend(const Address4& addr, uint32 size) {
     RemoteStreamMap::iterator where = mRemoteStreams.find(addr);
 
     // If we don't have a connection yet, we'll use this as a hint to make the
     // connection, but return false since a call to send() would fail
     if (where == mRemoteStreams.end()) {
-        SILOG(tcpnetwork,insane,"Initiating new connection in canSend()");
+        TCPNET_LOG(info,"Initiating new connection in canSend()");
 
         RemoteStreamPtr remote(
             new RemoteStream(
@@ -449,6 +463,7 @@ void TCPNetwork::listen(const Address4& as_server, ReceiveListener* receive_list
 
     mReceiveListener = receive_listener;
 
+    TCPNET_LOG(info,"Listening for remote space servers.");
     mListenAddress = as_server;
     Address listenAddress(convertAddress4ToSirikata(as_server));
     mListener->listen(

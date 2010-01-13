@@ -142,7 +142,7 @@ public:
     virtual bool canSend(const Address4&,uint32 size);
     virtual bool send(const Address4&,const Chunk&);
 
-    virtual void listen (const Address4& addr, ReceiveListener* receive_listener);
+    virtual void listen(const Address4& addr, ReceiveListener* receive_listener);
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size);
 };
