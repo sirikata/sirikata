@@ -31,16 +31,19 @@
  */
 
 #include "ServerWeightCalculator.hpp"
+#include "ServerMessageQueue.hpp"
+#include "ServerMessageReceiver.hpp"
 
 namespace CBR {
 
 #define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
 
-ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq)
+ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq, ServerMessageReceiver* sr)
  : mServerID(id),
    mCSeg(cseg),
    mWeightFunc(weightFunc),
-   mSendQueue(sq)
+   mSendQueue(sq),
+   mReceiver(sr)
 {
 
     // compute initial weights
@@ -94,6 +97,7 @@ void ServerWeightCalculator::calculateWeight(ServerID source, ServerID dest, Nor
         break;
     }
     mSendQueue->setServerWeight(dest, result);
+    mReceiver->setServerWeight(dest, result);
 
     printf("src_server=%d, dest=%d, weight=%f\n", source, dest, result );
 }

@@ -234,7 +234,8 @@ int main(int argc, char** argv) {
                     std::tr1::placeholders::_2,
                     std::tr1::placeholders::_3,
                     std::tr1::placeholders::_4),
-                sq
+                sq,
+                server_message_receiver
             );
     }else {
         weight_calc =
@@ -246,7 +247,9 @@ int main(int argc, char** argv) {
                     std::tr1::placeholders::_2,
                     std::tr1::placeholders::_3,
                     std::tr1::placeholders::_4),
-                sq);
+                sq,
+                server_message_receiver
+                                       );
     }
 
     // We have all the info to initialize the forwarder now
