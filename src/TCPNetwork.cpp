@@ -53,6 +53,8 @@ TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 in
 }
 
 TCPNetwork::~TCPNetwork() {
+    delete mListener;
+
     // Cancel close timers
     for(TimerSet::iterator it = mClosingStreamTimers.begin(); it != mClosingStreamTimers.end(); it++) {
         Sirikata::Network::IOTimerPtr timer = *it;
