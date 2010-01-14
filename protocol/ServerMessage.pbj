@@ -42,7 +42,12 @@ message ServerMessage {
     // Unique ID for this message, maintained during forwarding so the
     // message contained inside can be tracked through the system
     optional uint64 id = 5;
-    optional bytes payload = 6;
+    // Unique ID for the payload. This is provided to allow tracing while
+    // the packet is in flight, across multiple hops. If set to 0, it will
+    // be ignored (e.g. for space node service messages, which can never
+    // go more than one hop).
+    optional uint64 payload_id = 6;
+    optional bytes payload = 7;
 }
 
 

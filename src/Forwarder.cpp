@@ -307,7 +307,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
       dest_serv,
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-      serializePBJMessage(*obj_msg)
+      obj_msg
   );
 
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
@@ -317,7 +317,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       delete svr_obj_msg;
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
   }else {
-      TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ACCEPTED);
+      // timestamping handled by Message routing code
       delete obj_msg;
   }
 
@@ -365,12 +365,16 @@ void Forwarder::trySendToServer(ServerID sid) {
             break;
 
         mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+        TIMESTAMP_PAYLOAD_START(tstamp, next_msg);
         bool send_success = mServerMessageQueue->addMessage(next_msg);
         if (!send_success)
             break;
 
+        TIMESTAMP_PAYLOAD_END(tstamp, Trace::SPACE_TO_SPACE_SMQ_ENQUEUED);
+
         Message* pop_msg = mOutgoingMessages->pop(sid);
         assert(pop_msg == next_msg);
+
     }
 }
 

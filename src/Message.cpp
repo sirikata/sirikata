@@ -68,18 +68,17 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 
 }
 
-/* Helper methods for filling in message data in a single line. */
-inline void fillMessage(Message* outmsg, ServerID src, uint16 src_port, ServerID dest, uint16 dest_port) {
-    outmsg->set_source_server(src);
-    outmsg->set_source_port(src_port);
-    outmsg->set_dest_server(dest);
-    outmsg->set_dest_port(dest_port);
-}
-inline void fillMessage(Message* outmsg, ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl) {
-    fillMessage(outmsg, src, src_port, dest, dest_port);
-    outmsg->set_payload(pl);
+void Message::fillMessage(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port) {
+    set_source_server(src);
+    set_source_port(src_port);
+    set_dest_server(dest);
+    set_dest_port(dest_port);
 }
 
+void Message::fillMessage(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl) {
+    fillMessage(src, src_port, dest, dest_port);
+    set_payload(pl);
+}
 
 Message::Message() {
 }
@@ -89,11 +88,17 @@ Message::Message(const ServerID& src) {
 }
 
 Message::Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port) {
-    fillMessage(this, src, src_port, dest, dest_port);
+    fillMessage(src, src_port, dest, dest_port);
 }
 
+
 Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl) {
-    fillMessage(this, src, src_port, dest, dest_port, pl);
+    fillMessage(src, src_port, dest, dest_port, pl);
+}
+
+Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const CBR::Protocol::Object::ObjectMessage* pl) {
+    fillMessage(src, src_port, dest, dest_port, serializePBJMessage(*pl));
+    set_payload_id(pl->unique());
 }
 
 void Message::set_source_server(const ServerID sid) {
