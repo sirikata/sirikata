@@ -384,10 +384,14 @@ private:
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
             ProxyObjectPtr obj(iter->lock());
-            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-            if (ent) {
-                ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr(),mParent->mPrimaryCamera->getProxy().getQueryTracker());
-            }
+            std::string serializedDestroy;
+            
+            RoutableMessageBody body;
+            body.add_message("DestroyObject", serializedDestroy);
+            std::string serialized;
+            body.SerializeToString(&serialized);
+            
+            obj->sendMessage(MemoryReference(serialized.data(),serialized.length()));
         }
         mSelectedObjects.clear();
     }

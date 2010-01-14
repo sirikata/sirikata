@@ -303,6 +303,11 @@ message ConnectToSpace {
     optional boundingsphere3f bounding_sphere=4;
 }
 
+//New Streams can establish an ObjectConnection
+message DisconnectFromSpace {
+    optional uuid space_id=1;
+}
+
 message CreateObject {
     optional uuid object_uuid=1;
     repeated ConnectToSpace space_properties=2;

@@ -256,7 +256,7 @@ struct HostedObject::PrivateCallbacks {
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
         }
-        realThis->mObjectHost->dequeueAll();
+        //realThis->mObjectHost->dequeueAll();
     }
 
     static Network::Stream::ReceivedResponse receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
@@ -313,7 +313,7 @@ struct HostedObject::PrivateCallbacks {
         } else {
             realThis->sendReply(origHeader, bodyData);
         }
-        realThis->mObjectHost->dequeueAll();
+        //realThis->mObjectHost->dequeueAll();
     }
 
     static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
@@ -503,7 +503,7 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
         } else {
             delete persistenceMsg;
         }
-        realThis->mObjectHost->dequeueAll();
+        //realThis->mObjectHost->dequeueAll();
     }
 
 
@@ -672,7 +672,7 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     msg->header().set_destination_object(ObjectReference::spaceServiceID());
     msg->header().set_destination_port(Services::PERSISTENCE);
     msg->serializeSend();
-    mObjectHost->dequeueAll(); // don't need to wait until next frame.
+    //mObjectHost->dequeueAll(); // don't need to wait until next frame.
 }
 namespace {
 bool myisalphanum(char c) {
@@ -742,20 +742,15 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
 }
 
 void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
-    std::string myself_name;
     {
-        std::ostringstream os;
-        if (header.has_destination_object()) {
-            os << header.destination_object();
-        } else {
-            os << "[Temporary UUID " << mInternalObjectReference.toString() << "]";
-        }
-        myself_name = os.str();
-    }
-    {
-        std::ostringstream os;
-        os << "** Message from: " << header.source_object() << " port " << header.source_port() << " to "<<myself_name<<" port " << header.destination_port();
-        SILOG(cppoh,debug,os.str());
+        SILOG(cppoh,debug,
+              '['<<(mInternalObjectReference.toString())<<']'
+              << "** Message from: " << header.source_object() 
+              << " port " << header.source_port() 
+              << " to "<<(header.has_destination_object()
+                          ?  header.destination_object().toString()
+                          :  ("[Temporary UUID " + mInternalObjectReference.toString() +"]"))
+              << " port " << header.destination_port());
     }
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {
@@ -903,14 +898,22 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                         obj->connectToSpace(spaceid, getSharedPtr(), location, bs, evidence);
                     }
                 }
-                mObjectHost->dequeueAll(); // don't need to wait until next frame.
                 return;
     }
     if (name == "ConnectToSpace") {
         // Fixme: move connection logic here so it's possible to reply later on.
         return;
     }
-
+    if (name == "DisconnectFromSpace") {
+        Protocol::DisconnectFromSpace disCon;
+        disCon.ParseFromArray(args.data(),args.size());
+        this->disconnectFromSpace(SpaceID(disCon.space_id()));
+        return;
+    }
+    if (name=="DestroyObject") {
+        this->destroy();
+        return;
+    }
     std::ostringstream printstr;
     printstr<<"\t";
     ProxyObjectPtr thisObj = getProxy(msg.source_space());
