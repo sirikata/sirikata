@@ -169,7 +169,12 @@ Address TCPStreamListener::listenAddress() const {
 
 void TCPStreamListener::close(){
     if (mData->acceptor != NULL) {
-        mData->acceptor->cancel();
+
+		boost::system::error_code ec;
+        mData->acceptor->cancel(ec);
+		if (ec) {
+			SILOG(tcpsst,error,"Error closing listener "<<ec);
+		}
         mData->acceptor->close();
 
         delete mData->acceptor;

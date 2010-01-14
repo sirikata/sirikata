@@ -196,7 +196,7 @@ public:
                 if (mReceiversData[i].read()!=mBytes*2+1) {
                     done=false;
                     if (counter>3) {
-                        printf("Data %d only %d != %d\n",i,mReceiversData[i].read(),mBytes*2+1);
+                        SILOG(ssttest,error,"Data "<<i<<" only "<<mReceiversData[i].read()<<" != "<<mBytes*2+1);
                     }
                 }
             }
