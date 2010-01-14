@@ -57,14 +57,47 @@ class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
     class PerSpaceData;
     struct PrivateCallbacks;
 protected:
+
+    struct PropertyCacheValue {
+    private:
+        /// TODO: Make this be a set of spaces with an associated subscription.
+        bool mHasSubscription;
+        int mSubscriptionID;
+    public:
+        String mData;
+        Duration mTTL;
+        PropertyCacheValue() : mHasSubscription(false), mTTL(Duration::zero()) {}
+        PropertyCacheValue(String data, Duration TTL)
+            : mHasSubscription(false), mData(data), mTTL(TTL) {
+        }
+        bool hasSubscriptionID() {
+            return mHasSubscription;
+        }
+        int getSubscriptionID() {
+            if (!mHasSubscription) {
+                SILOG(cppoh,fatal,"getSubscriptionID called with no subscription!");
+                return 0;
+            }
+            return mSubscriptionID;
+        }
+        void setSubscriptionID(int newID) {
+            mHasSubscription=true;
+            mSubscriptionID=newID;
+        }
+        void clearSubscriptionID() {
+            mHasSubscription=false;
+        }
+    };
+
 //------- Members
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
     // name -> encoded property message
-    typedef std::map<String, String> PropertyMap;
+    typedef std::tr1::unordered_map<String, PropertyCacheValue> PropertyMap;
     PropertyMap mProperties;
+    int mNextSubscriptionID;
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
@@ -124,20 +157,26 @@ public:
         return 0;
     }
 
-    /// Checks for a pulbic property named propName.
+protected:
+
+    /// Checks for a public cached property named propName.
     bool hasProperty(const String &propName) const;
-    /// Gets the protobuf encoded value of a pulbic property named propName.
+    /// Gets the protobuf encoded value of a public cached property named propName.
     const String &getProperty(const String &propName) const;
 
-    /** Gets a modifiable value for a (often new) public property.
+    /** Gets a modifiable value in the cache for a (often new) public property.
         Is usually used in conjunction with google::protobuf::message::SerializeToString:
         myMessage.SerializeToString(propertyPtr("SomeProperty"));
+        -- Note: this will not update the Subscription --
     */
-    String *propertyPtr(const String &propName);
-    /// Sets a property with an optional encoded value.
-    void setProperty(const String &propName, const String &encodedValue=String());
-    /// Deletes a public property from this object.
-    void unsetProperty(const String &propName);
+    String *propertyPtr(const String &propName, Duration ttl);
+    /** Sets a cached property with an optional encoded value.
+        -- Note: this will not update the Subscription --
+     */
+    void setProperty(const String &propName, Duration ttl, const String &encodedValue=String());
+    /** Deletes a public property from this object cache. It may still remain in the database.
+     */
+    void unsetCachedPropertyAndSubscription(const String &propName);
 
     //FIXME implement SpaceConnection& connect(const SpaceID&space);
     //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
@@ -161,6 +200,7 @@ public:
         bool endForwardingMessagesTo(MessageService*) { return false; }
     } mReceiveService;
 
+public:
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
         persistence messages.

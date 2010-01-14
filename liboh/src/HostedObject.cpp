@@ -37,6 +37,7 @@
 #include "proxyobject/ProxyCameraObject.hpp"
 #include "proxyobject/LightInfo.hpp"
 #include <ObjectHost_Sirikata.pbj.hpp>
+#include <ObjectHost_Subscription.pbj.hpp>
 #include <ObjectHost_Persistence.pbj.hpp>
 #include <task/WorkQueue.hpp>
 #include "util/RoutableMessage.hpp"
@@ -51,6 +52,7 @@
 #include "oh/ObjectHost.hpp"
 
 #include "oh/ObjectScriptManager.hpp"
+#include "options/Options.hpp"
 #include "oh/ObjectScript.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
 #include <util/KnownServices.hpp>
@@ -60,9 +62,16 @@ namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 
+OptionValue *defaultTTL;
+
+InitializeGlobalOptions hostedobject_props("",
+    defaultTTL=new OptionValue("defaultTTL",".1",OptionValueType<Duration>(),"Default TTL for HostedObject properties"),
+    NULL
+);
 
 class HostedObject::PerSpaceData {
 public:
+
     SpaceConnection mSpaceConnection;
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
@@ -150,6 +159,7 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     : mInternalObjectReference(objectName),
       mTracker(parent->getSpaceIO()) {
     mSpaceData = new SpaceDataMap;
+    mNextSubscriptionID = 0;
     mObjectHost=parent;
     mObjectScript=NULL;
     mSendService.ho = this;
@@ -180,6 +190,10 @@ void HostedObject::destroy() {
 
 struct HostedObject::PrivateCallbacks {
 
+    static bool needsSubscription(const PropertyCacheValue &pcv) {
+        return pcv.mTTL != Duration::zero();
+    }
+
     static void initializeDatabaseCallback(
         const HostedObjectWPtr &weakThis,
         const SpaceID &spaceID,
@@ -205,8 +219,9 @@ struct HostedObject::PrivateCallbacks {
             if (msg->body().reads(i).has_return_status() || !msg->body().reads(i).has_data()) {
                 continue;
             }
+            Duration ttl = msg->body().reads(i).has_ttl() ? msg->body().reads(i).ttl() : defaultTTL->as<Duration>();
             if (!name.empty() && name[0] != '_') {
-                realThis->setProperty(name, msg->body().reads(i).data());
+                realThis->setProperty(name, ttl, msg->body().reads(i).data());
             }
             if (name == "Loc") {
                 Protocol::ObjLoc loc;
@@ -311,7 +326,33 @@ struct HostedObject::PrivateCallbacks {
             resp.SerializeToString(&errorData);
             realThis->sendReply(origHeader, MemoryReference(errorData));
         } else {
-            realThis->sendReply(origHeader, bodyData);
+            Persistence::Protocol::Response resp;
+            resp.ParseFromArray(bodyData.data(), bodyData.length());
+            for (int i = 0, respIndex=0; i < resp.reads_size(); i++, respIndex++) {
+                if (resp.reads(i).has_index()) {
+                    respIndex=resp.reads(i).index();
+                }
+                const Persistence::Protocol::StorageElement &field = resp.reads(i);
+                if (respIndex >= 0 && respIndex < sentDestruct->body().reads_size()) {
+                    const Persistence::Protocol::StorageElement &sentField = sentDestruct->body().reads(i);
+                    const std::string &fieldName = sentField.field_name();
+                    Duration ttl = field.has_ttl() ? field.ttl() : defaultTTL->as<Duration>();
+                    if (field.has_data()) {
+                        realThis->setProperty(fieldName, ttl, field.data());
+                        PropertyCacheValue &cachedProp = realThis->mProperties[fieldName];
+                        if (!cachedProp.hasSubscriptionID() && needsSubscription(cachedProp)) {
+                            cachedProp.setSubscriptionID(realThis->mNextSubscriptionID++);
+                        }
+                        if (cachedProp.hasSubscriptionID()) {
+                            resp.reads(i).set_subscription_id(cachedProp.getSubscriptionID());
+                        }
+                    }
+                }
+                ++respIndex;
+            }
+            std::string newBodyData;
+            resp.SerializeToString(&newBodyData);
+            realThis->sendReply(origHeader, MemoryReference(newBodyData.data(), newBodyData.length()));
         }
         //realThis->mObjectHost->dequeueAll();
     }
@@ -408,6 +449,7 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
                 fail = true;
             } else {
                 if (realThis->hasProperty(name)) {
+                    PropertyCacheValue &cachedProp = realThis->mProperties[name];
                     // Cached property--respond immediately.
                     SILOG(cppoh,debug,"Cached GetProp: "<<name<<" = "<<realThis->getProperty(name));
                     IStorageElement el = immedResponse.add_reads();
@@ -418,7 +460,14 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
                     if (rws.options() & ReadWriteSet::RETURN_READ_NAMES) {
                         el.set_field_name(rws.reads(i).field_name());
                     }
-                    el.set_data(realThis->getProperty(name));
+                    el.set_ttl(cachedProp.mTTL);
+                    el.set_data(cachedProp.mData);
+                    if (!cachedProp.hasSubscriptionID() && PrivateCallbacks::needsSubscription(cachedProp)) {
+                        cachedProp.setSubscriptionID(mNextSubscriptionID++);
+                    }
+                    if (cachedProp.hasSubscriptionID()) {
+                        el.set_subscription_id(cachedProp.getSubscriptionID());
+                    }
                 } else {
                     SILOG(cppoh,debug,"Forward GetProp: "<<name<<" to Persistence");
                     IStorageElement el = outMessage.add_reads();
@@ -457,7 +506,25 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
                 fail = true;
             } else {
                 if (rws.writes(i).has_data()) {
-                    realThis->setProperty(name, rws.writes(i).data());
+                    Duration ttl = rws.writes(i).has_ttl() ? rws.writes(i).ttl() : defaultTTL->as<Duration>();
+                    realThis->setProperty(name, ttl, rws.writes(i).data());
+                    PropertyCacheValue &cachedProp = mProperties[name];
+                    if (cachedProp.hasSubscriptionID()) {
+                        SpaceDataMap::const_iterator spaceiter = mSpaceData->begin();
+                        for (;spaceiter != mSpaceData->end(); ++spaceiter) {
+                            int subID = cachedProp.getSubscriptionID();
+                            Protocol::Broadcast subMsg;
+                            std::string subStr;
+                            subMsg.set_broadcast_name(subID);
+                            subMsg.set_data(cachedProp.mData);
+                            subMsg.SerializeToString(&subStr);
+                            RoutableMessageHeader header;
+                            header.set_destination_port(Services::BROADCAST);
+                            header.set_destination_space(spaceiter->first);
+                            header.set_destination_object(ObjectReference::spaceServiceID());
+                            sendViaSpace(header, MemoryReference(subStr.data(), subStr.length()));
+                        }
+                    }
                     SpaceDataMap::iterator iter;
                     for (iter = realThis->mSpaceData->begin();
                          iter != realThis->mSpaceData->end();
@@ -467,7 +534,7 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
                 } else {
                     if (name != "LightInfo" && name != "MeshURI" && name != "IsCamera" && name != "WebViewURL") {
                         // changing the type of this object has to wait until we reload from database.
-                        realThis->unsetProperty(name);
+                        realThis->unsetCachedPropertyAndSubscription(name);
                     }
                 }
                 SILOG(cppoh,debug,"Forward SetProp: "<<name<<" to Persistence");
@@ -538,19 +605,40 @@ bool HostedObject::hasProperty(const String &propName) const {
 const String &HostedObject::getProperty(const String &propName) const {
     PropertyMap::const_iterator iter = mProperties.find(propName);
     if (iter != mProperties.end()) {
-        return (*iter).second;
+        return (*iter).second.mData;
     }
     return nullProperty;
 }
-String *HostedObject::propertyPtr(const String &propName) {
-    return &(mProperties[propName]);
+String *HostedObject::propertyPtr(const String &propName, Duration ttl) {
+    PropertyCacheValue &pcv = mProperties[propName];
+    pcv.mTTL = ttl;
+    return &(pcv.mData);
 }
-void HostedObject::setProperty(const String &propName, const String &encodedValue) {
-    mProperties.insert(PropertyMap::value_type(propName, encodedValue));
+void HostedObject::setProperty(const String &propName, Duration ttl, const String &encodedValue) {
+    PropertyMap::iterator iter = mProperties.find(propName);
+    if (iter == mProperties.end()) {
+        iter = mProperties.insert(PropertyMap::value_type(propName,
+            PropertyCacheValue(encodedValue, ttl))).first;
+    }
 }
-void HostedObject::unsetProperty(const String &propName) {
+void HostedObject::unsetCachedPropertyAndSubscription(const String &propName) {
     PropertyMap::iterator iter = mProperties.find(propName);
     if (iter != mProperties.end()) {
+        if (iter->second.hasSubscriptionID()) {
+            SpaceDataMap::const_iterator spaceiter = mSpaceData->begin();
+            for (;spaceiter != mSpaceData->end(); ++spaceiter) {
+                int subID = iter->second.getSubscriptionID();
+                Protocol::Broadcast subMsg;
+                std::string subStr;
+                subMsg.set_broadcast_name(subID);
+                subMsg.SerializeToString(&subStr);
+                RoutableMessageHeader header;
+                header.set_destination_port(Services::BROADCAST);
+                header.set_destination_space(spaceiter->first);
+                header.set_destination_object(ObjectReference::spaceServiceID());
+                sendViaSpace(header, MemoryReference(subStr.data(), subStr.length()));
+            }
+        }
         mProperties.erase(iter);
     }
 }
@@ -607,27 +695,28 @@ void HostedObject::initializeDefault(
     const PhysicalParameters&physicalParameters)
 {
     mObjectHost->registerHostedObject(getSharedPtr());
+    Duration ttl = defaultTTL->as<Duration>();
     if (!mesh.empty()) {
         Protocol::StringProperty meshprop;
         meshprop.set_value(mesh);
-        meshprop.SerializeToString(propertyPtr("MeshURI"));
+        meshprop.SerializeToString(propertyPtr("MeshURI", ttl));
         Protocol::Vector3fProperty scaleprop;
         scaleprop.set_value(Vector3f(1,1,1)); // default value, set it manually if you want different.
-        scaleprop.SerializeToString(propertyPtr("MeshScale"));
+        scaleprop.SerializeToString(propertyPtr("MeshScale", ttl));
         Protocol::PhysicalParameters physicalprop;
         physicalprop.set_mode(Protocol::PhysicalParameters::NONPHYSICAL);
-        physicalprop.SerializeToString(propertyPtr("PhysicalParameters"));
+        physicalprop.SerializeToString(propertyPtr("PhysicalParameters", ttl));
         if (!webViewURL.empty()) {
             Protocol::StringProperty meshprop;
             meshprop.set_value(webViewURL);
-            meshprop.SerializeToString(propertyPtr("WebViewURL"));
+            meshprop.SerializeToString(propertyPtr("WebViewURL", ttl));
         }
     } else if (lightInfo) {
         Protocol::LightInfoProperty lightProp;
         lightInfo->toProtocol(lightProp);
-        lightProp.SerializeToString(propertyPtr("LightInfo"));
+        lightProp.SerializeToString(propertyPtr("LightInfo", ttl));
     } else {
-        setProperty("IsCamera");
+        setProperty("IsCamera", ttl);
     }
     //connectToSpace(spaceID, spaceConnectionHint, startingLocation, meshBounds, getUUID());
     //mObjectHost->dequeueAll(); // don't need to wait until next frame.
@@ -1044,7 +1133,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 for (PropertyMap::const_iterator iter = mProperties.begin();
                         iter != mProperties.end();
                         ++iter) {
-                    receivedPropertyUpdate(proxyObj, iter->first, iter->second);
+                    receivedPropertyUpdate(proxyObj, iter->first, iter->second.mData);
                 }
             }
         }

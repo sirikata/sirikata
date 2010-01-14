@@ -36,6 +36,17 @@
 
 namespace Sirikata {
 class PhysicalParameters;
+
+namespace SubscriptionPBJ {
+namespace Protocol {
+class Subscribe;
+class Broadcast;
+}
+}
+namespace Protocol {
+using namespace ::Sirikata::SubscriptionPBJ::Protocol;
+}
+
 namespace Protocol {
 class ObjLoc;
 class PhysicalParameters;
