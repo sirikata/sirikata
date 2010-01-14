@@ -59,23 +59,20 @@ void FIFOServerMessageQueue::service(){
         Address4* addy = mServerIDMap->lookupInternal(next_msg->dest_server());
         assert(addy != NULL);
 
-        Network::Chunk serialized;
-        next_msg->serialize(&serialized);
-
-        sent_success = mNetwork->send(*addy,serialized);
-
-        if (!sent_success) break;
+        bool sent_success = trySend(*addy, next_msg);
+        if (!sent_success)
+            break;
 
         Message* next_msg_popped = mQueue.pop(&send_bytes);
         assert(next_msg_popped == next_msg);
 
-        uint32 packet_size = serialized.size();
+        uint32 packet_size = next_msg->serializedSize();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mSendRate);
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest_server(), next_msg->id(), serialized.size());
+        mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest_server(), next_msg->id(), packet_size);
         mListener->serverMessageSent(next_msg);
 
         delete next_msg;

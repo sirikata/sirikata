@@ -105,6 +105,7 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(DROPPED_AT_SPACE_ENQUEUED);
 
         PACKETSTAGE(SPACE_TO_SPACE_SMQ_ENQUEUED);
+        PACKETSTAGE(SPACE_TO_SPACE_HIT_NETWORK);
 
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
@@ -844,7 +845,8 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::OSEG_LOOKUP_FINISHED, Trace::SPACE_TO_SPACE_ENQUEUED);
     stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::DROPPED_AT_SPACE_ENQUEUED); // drop
     stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::SPACE_TO_SPACE_SMQ_ENQUEUED);
-    stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMQ_ENQUEUED, Trace::HANDLE_SPACE_MESSAGE, PacketStageGraph::ASYNC);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMQ_ENQUEUED, Trace::SPACE_TO_SPACE_HIT_NETWORK);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_HIT_NETWORK, Trace::HANDLE_SPACE_MESSAGE, PacketStageGraph::ASYNC);
 
     stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);

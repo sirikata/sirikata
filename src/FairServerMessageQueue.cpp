@@ -62,9 +62,7 @@ void FairServerMessageQueue::service(){
         Address4* addy = mServerIDMap->lookupInternal(next_msg->dest_server());
         assert(addy != NULL);
 
-        Network::Chunk serialized;
-        next_msg->serialize(&serialized);
-        bool sent_success = mNetwork->send(*addy, serialized);
+        bool sent_success = trySend(*addy, next_msg);
         if (!sent_success)
             break;
 
@@ -74,13 +72,13 @@ void FairServerMessageQueue::service(){
         save_bytes = false;
 
         // Record trace send times
-        uint32 packet_size = serialized.size();
+        uint32 packet_size = next_msg->serializedSize();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
         mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest_server()),
-            next_msg->dest_server(), next_msg->id(), serialized.size());
+            next_msg->dest_server(), next_msg->id(), packet_size);
 
         mListener->serverMessageSent(next_msg);
         // Get rid of the message

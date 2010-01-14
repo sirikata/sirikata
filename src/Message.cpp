@@ -106,7 +106,7 @@ void Message::set_source_server(const ServerID sid) {
     set_id( GenerateUniqueID(sid) );
 }
 
-bool Message::serialize(Network::Chunk* output) {
+bool Message::serialize(Network::Chunk* output) const {
     // FIXME having to copy here sucks
     std::string result;
     bool success = serializePBJMessage(&result, mImpl);

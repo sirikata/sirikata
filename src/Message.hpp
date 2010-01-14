@@ -145,7 +145,7 @@ public:
     }
 
     // Deprecated. Remains for backwards compatibility.
-    bool serialize(Network::Chunk* result);
+    bool serialize(Network::Chunk* result) const;
     static Message* deserialize(const Network::Chunk& wire);
 
     // Deprecated. Remains for backwards compatibility.
