@@ -59,7 +59,10 @@ void runWrapper(IOService* ios) {
     ios->run();
 }
 }
-
+void IOServicePool::reset() {
+    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
+        it->ios->reset();
+}
 void IOServicePool::run() {
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
         it->thread = new Thread( std::tr1::bind(runWrapper, it->ios) );

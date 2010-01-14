@@ -38,6 +38,28 @@
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
+char toHex(unsigned char a) {
+    if (a>=10) {
+        return 'A'+(a-10);
+    }
+    return '0'+a;
+}
+void BufferPrint(const void * vbuf, size_t size) {
+    if (false) {
+        const unsigned char *buf=(const unsigned char*)vbuf;
+        char *obuf=(char*)malloc(size*2+1);
+        for (int i=0;i<size;++i){
+            unsigned char c= buf[i];
+            unsigned char a=c/16;
+            unsigned char b=c%16;
+            obuf[i*2]=(toHex(a));
+            obuf[i*2+1]=(toHex(b));
+        }
+        obuf[size*2]='\0';
+        SILOG(tcpsst,error,obuf);
+        free(obuf);
+    }
+}
 
 namespace Sirikata { namespace Network {
 
@@ -147,6 +169,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiS
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent!=bufferSize) {
         //if the previous send was not able to push the whole buffer out to the network, the rest must be sent
+        BufferPrint(currentBuffer+bytes_sent,bufferSize-bytes_sent);
         mSocket->async_send(ASIOSocketWrapperBuffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
                             std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                         this,
@@ -184,7 +207,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiS
 
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t bytesSent) {
     //sending a single chunk is a straightforward call directly to asio
-
+    BufferPrint(&*toSend.chunk->begin()+bytesSent,toSend.size()-bytesSent);
     mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend.chunk->begin()+bytesSent,toSend.size()-bytesSent),
                         std::tr1::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                     this,
@@ -198,6 +221,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&const_toSend, size_t bytesSent){
     if (const_toSend.front().size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
         //if there's but a single packet, or a single big packet that is bigger than the mBuffer's size...send that one by itself
+        BufferPrint(&*const_toSend.front().chunk->begin()+bytesSent,const_toSend.front().size()-bytesSent);
         mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front().chunk->begin()+bytesSent,const_toSend.front().size()-bytesSent),
                             std::tr1::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                         this,
@@ -230,6 +254,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
             }
         }
         //send the buffer filled with possibly many packets
+        BufferPrint(mBuffer,bufferLocation);
         mSocket->async_send(ASIOSocketWrapperBuffer(mBuffer,bufferLocation),
                             std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                           this,

@@ -183,6 +183,7 @@ void MultiplexedSocket::closeStream(const MultiplexedSocketPtr& thus,const Strea
     closeRequest.unordered=false;
     closeRequest.unreliable=false;
     closeRequest.data=ASIOSocketWrapper::constructControlPacket(code,sid);
+    
     sendBytes(thus,closeRequest);
 }
 
@@ -413,6 +414,10 @@ void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase
     if (actuallyDoSend) {
         for (CallbackMap::iterator i=mCallbacks.begin(),ie=mCallbacks.end();i!=ie;++i) {
             i->second->mConnectionCallback(stat,errorMessage);
+            if (reportedProblem!=Stream::Connected) {
+                //i->second->mConnectionCallback=&Stream::ignoreConnectionCallback;
+            }
+
         }
     }else {
         //SILOG(tcpsst,debug,"Did not call callbacks because callback message already sent for "<<errorMessage);

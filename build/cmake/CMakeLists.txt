@@ -1159,6 +1159,7 @@ libcore/test/ReadWriteHandlerTest.hpp
 libcore/test/RoutableMessageTest.hpp
 libcore/test/SQLiteMinitransactionTest.hpp
 libcore/test/SQLiteReadWriteTest.hpp
+libcore/test/SstCloseTest.hpp
 libcore/test/SstTest.hpp
 libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp

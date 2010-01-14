@@ -52,6 +52,9 @@ class SIRIKATA_EXPORT IOServicePool {
     /** Run the */
     void run();
 
+    /** Reset stopped state */
+    void reset();
+
     /** Block until all the child threads exit. */
     void join();
 
