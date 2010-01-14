@@ -250,6 +250,34 @@ void hexPrint(const char *name, const Chunk&data) {
 
 } // namespace
 
+void TCPNetwork::openConnection(const Address4& addr) {
+    TCPNET_LOG(info,"Initiating new connection.");
+
+    RemoteStreamPtr remote(
+        new RemoteStream(
+            this, StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions)
+                         )
+                           );
+    RemoteStreamWPtr weak_remote(remote);
+
+    // Insert before calling connect to ensure data is in place when event
+    // occurs.  Note that remote->connected is still false here so we won't
+    // prematurely use the connection for sending
+    remote->endpoint = addr;
+    mRemoteStreams.insert(std::pair<Address4,RemoteStreamPtr>(addr, remote));
+
+    Stream::SubstreamCallback sscb(&Stream::ignoreSubstreamCallback);
+    Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, addr, weak_remote, _1, _2));
+    Stream::ReceivedCallback br(&Stream::ignoreReceivedCallback);
+    Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, addr));
+    remote->stream->connect(convertAddress4ToSirikata(addr),
+                            sscb,
+                            connCallback,
+                            br,
+                            readySendCallback);
+
+    // Note: Initial connection header is sent upon successful connection
+}
 
 void TCPNetwork::markDisconnected(const Address4& addr) {
     // When we get a disconnection signal, there's nothing we can even do
@@ -402,34 +430,7 @@ bool TCPNetwork::canSend(const Address4& addr, uint32 size) {
     // If we don't have a connection yet, we'll use this as a hint to make the
     // connection, but return false since a call to send() would fail
     if (where == mRemoteStreams.end()) {
-        TCPNET_LOG(info,"Initiating new connection in canSend()");
-
-        RemoteStreamPtr remote(
-            new RemoteStream(
-                this, StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions)
-                             )
-                               );
-        RemoteStreamWPtr weak_remote(remote);
-
-        // Insert before calling connect to ensure data is in place when event
-        // occurs.  Note that remote->connected is still false here so we won't
-        // prematurely use the connection for sending
-        remote->endpoint = addr;
-        mRemoteStreams.insert(std::pair<Address4,RemoteStreamPtr>(addr, remote));
-        where = mRemoteStreams.find(addr);
-
-        Stream::SubstreamCallback sscb(&Stream::ignoreSubstreamCallback);
-        Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, addr, weak_remote, _1, _2));
-        Stream::ReceivedCallback br(&Stream::ignoreReceivedCallback);
-        Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, addr));
-        remote->stream->connect(convertAddress4ToSirikata(addr),
-                                sscb,
-                                connCallback,
-                                br,
-                                readySendCallback);
-
-        // Note: Initial connection header is sent upon successful connection
-
+        openConnection(addr);
         return false;
     }
 
@@ -448,8 +449,10 @@ bool TCPNetwork::send(const Address4&addr, const Chunk& data) {
 
     RemoteStreamMap::iterator where = mRemoteStreams.find(addr);
 
-    if (where == mRemoteStreams.end())
+    if (where == mRemoteStreams.end()) {
+        openConnection(addr);
         return false;
+    }
 
     RemoteStreamPtr remote(where->second);
     bool success = (remote->connected &&

@@ -361,7 +361,7 @@ void Forwarder::trySendToServer(ServerID sid) {
         if (!next_msg)
             break;
 
-        if (!mServerMessageQueue->canSend(next_msg))
+        if (!mServerMessageQueue->canAddMessage(next_msg))
             break;
 
         mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());

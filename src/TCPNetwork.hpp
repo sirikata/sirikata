@@ -91,6 +91,10 @@ class TCPNetwork : public Network {
     // Main Thread/Strand Methods, allowed to access all the core data structures.  These are mainly utility methods
     // posted by the IO thread.
 
+    // Open a new connection.  Should be called when an existing connection
+    // couldn't be found in mRemoteStreams.
+    void openConnection(const Address4& addr);
+
     // Mark a send stream as disconnected
     void markDisconnected(const Address4& addr);
 

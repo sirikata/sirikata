@@ -102,7 +102,6 @@ public:
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
 
-    bool canSend(const Message* msg);
 protected:
     // Tries to send the Message to the Network, and tags it for analysis if
     // successful. Helper method for implementations.

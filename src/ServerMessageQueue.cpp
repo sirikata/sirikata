@@ -35,14 +35,6 @@
 
 namespace CBR {
 
-bool ServerMessageQueue::canSend(const Message* msg) {
-    if (msg->dest_server()==mContext->id()) return true;
-    Address4* addy = mServerIDMap->lookupInternal(msg->dest_server());
-
-    assert(addy != NULL);
-    return mNetwork->canSend(*addy,msg->serializedSize());
-}
-
 bool ServerMessageQueue::trySend(const Address4& addr, const Message* msg) {
     Network::Chunk serialized;
     msg->serialize(&serialized);
