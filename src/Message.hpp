@@ -112,6 +112,7 @@ public:
     Message(const ServerID& origin);
     Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port);
     Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl);
+    Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const CBR::Protocol::Object::ObjectMessage* pl);
 
     ServerID source_server() const { return mImpl.source_server(); }
     void set_source_server(const ServerID sid);
@@ -128,6 +129,10 @@ public:
     UniqueMessageID id() const { return mImpl.id(); }
     // NOTE: We don't expose set_id() so we can guarantee they will be unique
 
+    UniqueMessageID payload_id() const { return mImpl.payload_id(); }
+    // NOTE: We don't expose set_id() so we guarantee it gets created properly.
+    // Use the constructor taking an ObjectMessage to ensure this works properly.
+
     std::string payload() const { return mImpl.payload(); }
     void set_payload(const std::string& pl) { mImpl.set_payload(pl); }
 
@@ -140,7 +145,7 @@ public:
     }
 
     // Deprecated. Remains for backwards compatibility.
-    bool serialize(Network::Chunk* result);
+    bool serialize(Network::Chunk* result) const;
     static Message* deserialize(const Network::Chunk& wire);
 
     // Deprecated. Remains for backwards compatibility.
@@ -152,7 +157,12 @@ protected:
     Message();
 
     void set_id(const UniqueMessageID _id) { mImpl.set_id(_id); }
+    void set_payload_id(const UniqueMessageID _id) { mImpl.set_payload_id(_id); }
 private:
+    // Helper methods to fill in message data
+    void fillMessage(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port);
+    void fillMessage(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl);
+
     CBR::Protocol::Server::ServerMessage mImpl;
 }; // class Message
 

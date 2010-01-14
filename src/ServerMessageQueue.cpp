@@ -1,7 +1,7 @@
-/*  CBR
- *  ObjectMessage.pbj
+/*  cbr
+ *  ServerMessageQueue.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
+ *  * Neither the name of cbr nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,29 +30,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-"pbj-0.0.3"
+#include "ServerMessageQueue.hpp"
+#include "Statistics.hpp"
 
-package CBR.Protocol.Server;
+namespace CBR {
 
-message ServerMessage {
-    required uint64 source_server = 1;
-    required uint16 source_port = 2;
-    required uint64 dest_server = 3;
-    required uint16 dest_port = 4;
-    // Unique ID for this message, maintained during forwarding so the
-    // message contained inside can be tracked through the system
-    optional uint64 id = 5;
-    // Unique ID for the payload. This is provided to allow tracing while
-    // the packet is in flight, across multiple hops. If set to 0, it will
-    // be ignored (e.g. for space node service messages, which can never
-    // go more than one hop).
-    optional uint64 payload_id = 6;
-    optional bytes payload = 7;
+bool ServerMessageQueue::canSend(const Message* msg) {
+    if (msg->dest_server()==mContext->id()) return true;
+    Address4* addy = mServerIDMap->lookupInternal(msg->dest_server());
+
+    assert(addy != NULL);
+    return mNetwork->canSend(*addy,msg->serializedSize());
 }
 
+bool ServerMessageQueue::trySend(const Address4& addr, const Message* msg) {
+    Network::Chunk serialized;
+    msg->serialize(&serialized);
+    bool sent_success = mNetwork->send(addr, serialized);
 
-// Introduces one server to another.  Must be the first message sent over
-// the connection.
-message ServerIntro {
-    required uint64 id = 1;
+    if (sent_success)
+        TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_HIT_NETWORK);
+
+    return sent_success;
 }
+
+} // namespace CBR

@@ -144,7 +144,12 @@ public:
 
         SPACE_TO_SPACE_ENQUEUED,
         DROPPED_AT_SPACE_ENQUEUED,
-        SPACE_TO_SPACE_ACCEPTED,
+
+        SPACE_TO_SPACE_SMQ_ENQUEUED,
+        SPACE_TO_SPACE_HIT_NETWORK,
+
+        SPACE_TO_SPACE_READ_FROM_NET,
+        SPACE_TO_SPACE_SMR_DEQUEUED,
 
         SPACE_TO_OH_ENQUEUED,
 
@@ -240,6 +245,17 @@ private:
 
 #define TIMESTAMP_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path)
 
+// When the message has been wrapped in a space node -> space node message, we
+// need to use a special form, using the payload_id recorded in that message's
+// header
+#define TIMESTAMP_PAYLOAD(packet, path) TIMESTAMP_SIMPLE(packet->payload_id(), path)
+
+#define TIMESTAMP_PAYLOAD_START(prefix, packet)                                 \
+    Sirikata::uint64 prefix ## _uniq = packet->payload_id();
+
+#define TIMESTAMP_PAYLOAD_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path)
+
+
 #define TIMESTAMP_CREATED(packet, path) mContext->trace()->timestampMessageCreation(mContext->simTime(), packet->unique(), path, packet->source_port(), packet->dest_port())
 
 #else //CBR_TIMESTAMP_PACKETS
@@ -248,6 +264,9 @@ private:
 #define TIMESTAMP(packet, path)
 #define TIMESTAMP_START(prefix, packet)
 #define TIMESTAMP_END(prefix, path)
+#define TIMESTAMP_PAYLOAD(packet, path)
+#define TIMESTAMP_PAYLOAD_START(prefix, packet)
+#define TIMESTAMP_PAYLOAD_END(prefix, path)
 #define TIMESTAMP_CREATED(packet, path)
 #endif //CBR_TIMESTAMP_PACKETS
 

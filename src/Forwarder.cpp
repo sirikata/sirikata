@@ -15,6 +15,8 @@
 
 #include "ObjectConnection.hpp"
 
+#include "ForwarderServiceQueue.hpp"
+
 #include "Random.hpp"
 
 // FIXME we shouldn't have oseg specific things here, this should be delegated
@@ -89,7 +91,7 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush, oseg_lookup_queue_size);
     mServerMessageQueue = smq;
     mServerMessageReceiver = smr;
-    mOutgoingMessages = new ForwarderQueue(smq,16384);
+    mOutgoingMessages = new ForwarderServiceQueue(16384);
 
     Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
     mSampler = new ForwarderSampler(mContext, sample_rate, mServerMessageQueue);
@@ -184,7 +186,7 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
     }
     else
     {
-        QueueEnum::PushResult push_result = mOutgoingMessages->getFairQueue(dest_server).push(svc, msg);
+        QueueEnum::PushResult push_result = mOutgoingMessages->push(dest_server, svc, msg);
         success = (push_result == QueueEnum::PushSucceeded);
         if (success)
             trySendToServer(dest_server);
@@ -305,7 +307,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
       dest_serv,
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-      serializePBJMessage(*obj_msg)
+      obj_msg
   );
 
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
@@ -315,7 +317,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       delete svr_obj_msg;
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
   }else {
-      TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ACCEPTED);
+      // timestamping handled by Message routing code
       delete obj_msg;
   }
 
@@ -355,9 +357,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
 void Forwarder::trySendToServer(ServerID sid) {
     while(true) {
-        uint64 size=1<<30;
-        MessageRouter::SERVICES svc;
-        Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
+        Message* next_msg = mOutgoingMessages->front(sid);
         if (!next_msg)
             break;
 
@@ -365,12 +365,16 @@ void Forwarder::trySendToServer(ServerID sid) {
             break;
 
         mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+        TIMESTAMP_PAYLOAD_START(tstamp, next_msg);
         bool send_success = mServerMessageQueue->addMessage(next_msg);
         if (!send_success)
             break;
 
-        Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(&size);
+        TIMESTAMP_PAYLOAD_END(tstamp, Trace::SPACE_TO_SPACE_SMQ_ENQUEUED);
+
+        Message* pop_msg = mOutgoingMessages->pop(sid);
         assert(pop_msg == next_msg);
+
     }
 }
 
@@ -389,6 +393,7 @@ void Forwarder::serverMessageSent(Message* msg) {
 
 void Forwarder::serverMessageReceived(Message* msg) {
     assert(msg != NULL);
+    TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
     dispatchMessage(msg);
 }
 

@@ -102,8 +102,14 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(OSEG_SERVER_LOOKUP_FINISHED);
         PACKETSTAGE(OSEG_LOOKUP_FINISHED);
         PACKETSTAGE(SPACE_TO_SPACE_ENQUEUED);
-        PACKETSTAGE(SPACE_TO_SPACE_ACCEPTED);
         PACKETSTAGE(DROPPED_AT_SPACE_ENQUEUED);
+
+        PACKETSTAGE(SPACE_TO_SPACE_SMQ_ENQUEUED);
+        PACKETSTAGE(SPACE_TO_SPACE_HIT_NETWORK);
+
+        PACKETSTAGE(SPACE_TO_SPACE_READ_FROM_NET);
+        PACKETSTAGE(SPACE_TO_SPACE_SMR_DEQUEUED);
+
         PACKETSTAGE(SPACE_TO_OH_ENQUEUED);
 
       default:
@@ -841,8 +847,12 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
 
     stage_graph.addEdge(Trace::OSEG_LOOKUP_FINISHED, Trace::SPACE_TO_SPACE_ENQUEUED);
     stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::DROPPED_AT_SPACE_ENQUEUED); // drop
-    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::SPACE_TO_SPACE_ACCEPTED);
-    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ACCEPTED, Trace::HANDLE_SPACE_MESSAGE, PacketStageGraph::ASYNC);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_ENQUEUED, Trace::SPACE_TO_SPACE_SMQ_ENQUEUED);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMQ_ENQUEUED, Trace::SPACE_TO_SPACE_HIT_NETWORK);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_HIT_NETWORK, Trace::SPACE_TO_SPACE_READ_FROM_NET, PacketStageGraph::ASYNC);
+
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_READ_FROM_NET, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMR_DEQUEUED, Trace::HANDLE_SPACE_MESSAGE);
 
     stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);

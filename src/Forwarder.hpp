@@ -30,48 +30,15 @@ namespace CBR
   class Trace;
   class ObjectConnection;
   class OSegLookupQueue;
-
-class ForwarderQueue{
-public:
-    typedef FairQueue<Message, MessageRouter::SERVICES, AbstractQueue<Message*> > OutgoingFairQueue;
-    std::vector<OutgoingFairQueue*> mQueues;
-    uint32 mQueueSize;
-    ServerMessageQueue *mServerMessageQueue;
-    ForwarderQueue(ServerMessageQueue*smq, uint32 size){
-        mServerMessageQueue=smq;
-        mQueueSize=size;
-    }
-    size_t numServerQueues()const {
-        return mQueues.size();
-    }
-    OutgoingFairQueue& getFairQueue(ServerID sid) {
-        while (mQueues.size()<=sid) {
-            mQueues.push_back(NULL);
-        }
-        if(!mQueues[sid]) {
-            mQueues[sid]=new OutgoingFairQueue();
-            for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
-                mQueues[sid]->addQueue(new Queue<Message*>(mQueueSize),(MessageRouter::SERVICES)i,1.0);
-            }
-        }
-        return *mQueues[sid];
-    }
-    ~ForwarderQueue (){
-        for(unsigned int i=0;i<mQueues.size();++i) {
-            if(mQueues[i]) {
-                delete mQueues[i];
-            }
-        }
-    }
-};
-
+class ForwarderServiceQueue;
 class ForwarderSampler;
+
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient, public PollingService,
                   public ServerMessageQueue::Listener, public ServerMessageReceiver::Listener
 {
 private:
     SpaceContext* mContext;
-    ForwarderQueue *mOutgoingMessages;
+    ForwarderServiceQueue *mOutgoingMessages;
     ServerMessageQueue* mServerMessageQueue;
     ServerMessageReceiver* mServerMessageReceiver;
 
