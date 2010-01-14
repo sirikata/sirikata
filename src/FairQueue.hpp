@@ -201,7 +201,7 @@ public:
     // \param bytes number of bytes available; updated appropriately when returns
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
     //          given the number of bytes allotted
-    Message* pop(uint64* bytes) {
+    Message* pop(uint64* bytes, Key* keyAtFront = NULL) {
         Message* result = NULL;
         Time vftime(Time::null());
 
@@ -221,6 +221,9 @@ public:
             mCurrentVirtualTime = std::max(vftime, mCurrentVirtualTime);
 
             assert(mFrontQueue != NULL);
+
+            if (keyAtFront != NULL)
+                *keyAtFront = mFrontQueue->key;
 
             assert( *bytes >= result->size() );
             *bytes -= result->size();
