@@ -74,6 +74,9 @@ public:
     void disconnect(Object* obj);
 
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+
+    bool send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload);
+
     /* Ping Utility Methods. */
     bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
 

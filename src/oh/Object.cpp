@@ -43,6 +43,8 @@
 #include "CBR_Prox.pbj.hpp"
 #include "CBR_Loc.pbj.hpp"
 
+#include "SSTImpl.hpp"
+
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)
 
 namespace CBR {
@@ -202,6 +204,11 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
         break;
       default:
         printf("Warning: Tried to deliver unknown message type through ObjectConnection.\n");
+        Connection<UUID>::handleReceive(mContext, 
+                                  EndPoint<UUID> (msg->source_object(), msg->source_port()),
+                                  EndPoint<UUID> (msg->dest_object(), msg->dest_port()),
+                                  (void*) msg->payload().data(), msg->payload().size() );
+
         break;
     }
 

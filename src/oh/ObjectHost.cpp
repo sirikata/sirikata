@@ -536,6 +536,13 @@ bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest
     return send(src->uuid(), src_port, dest, dest_port, payload);
 }
 
+bool ObjectHost::send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    return send(src, src_port, dest, dest_port, payload);
+}
+
+
 bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -610,7 +617,7 @@ bool ObjectHost::randomPing(const Time& t) {
 
     if (a != NULL && b != NULL)
         return ping(t, a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
-
+    
     return false;
 }
 
