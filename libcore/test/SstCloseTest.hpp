@@ -12,7 +12,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <time.h>
-#include <execinfo.h>
+
 using namespace Sirikata::Network;
 using namespace Sirikata;
 class SstCloseTest : public CxxTest::TestSuite
