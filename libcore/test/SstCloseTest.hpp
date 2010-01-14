@@ -111,6 +111,9 @@ private:
     }
 public:
     void closeStreamRun(bool fork, bool doSleep=false) {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
         for(int i=0;i<NUM_TEST_STREAMS;++i) {
             mReceivers[i]=mSenders[i]=NULL;        
             mSendReceiveMap[i]=-1;
