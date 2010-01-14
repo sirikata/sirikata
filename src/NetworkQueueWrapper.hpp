@@ -4,14 +4,17 @@
 #include "Network.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
+#include "Statistics.hpp"
 
 namespace CBR {
 class NetworkQueueWrapper {
+    Context* mContext;
     Network* mNetwork;
     ServerID mServerID;
     uint32 mMaxRecvSize;
     Address4 mServerAddress;
     Message* mFront;
+    Trace::MessagePath mPathTag;
     typedef Network::Chunk Chunk;
 
     Message* parse(Chunk* c) {
@@ -30,17 +33,21 @@ class NetworkQueueWrapper {
             return NULL;
         }
 
+        TIMESTAMP_PAYLOAD(msg, mPathTag);
+
         return msg;
     }
 public:
     typedef Message* ElementType;
 
-    NetworkQueueWrapper(ServerID sid, Network*net,ServerIDMap*idmap) {
+    NetworkQueueWrapper(Context* ctx, ServerID sid, Network*net,ServerIDMap*idmap, Trace::MessagePath tag) {
+        mContext = ctx;
         mServerID=sid;
         mNetwork=net;
         mMaxRecvSize=(1<<30);
         mServerAddress=*idmap->lookupInternal(sid);
         mFront = NULL;
+        mPathTag = tag;
     }
     ~NetworkQueueWrapper(){}
 

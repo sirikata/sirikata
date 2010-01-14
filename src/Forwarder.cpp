@@ -393,6 +393,7 @@ void Forwarder::serverMessageSent(Message* msg) {
 
 void Forwarder::serverMessageReceived(Message* msg) {
     assert(msg != NULL);
+    TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
     dispatchMessage(msg);
 }
 

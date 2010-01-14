@@ -117,7 +117,10 @@ void FairServerMessageReceiver::service() {
 
 void FairServerMessageReceiver::setServerWeight(ServerID sid, float weight) {
     if (!mReceiveQueues.hasQueue(sid)) {
-        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);
+        mReceiveQueues.addQueue(
+            new NetworkQueueWrapper(mContext, sid, mNetwork, mServerIDMap, Trace::SPACE_TO_SPACE_READ_FROM_NET),
+            sid,
+            weight);
     }
     else
         mReceiveQueues.setQueueWeight(sid, weight);
