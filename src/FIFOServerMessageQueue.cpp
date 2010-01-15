@@ -115,4 +115,8 @@ void FIFOServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) co
   }
 }
 
+void FIFOServerMessageQueue::networkReadyToSend(const Address4& from) {
+    // Ignored.
+}
+
 }

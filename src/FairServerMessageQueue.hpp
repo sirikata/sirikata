@@ -31,6 +31,8 @@ public:
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const;
 
 protected:
+    virtual void networkReadyToSend(const Address4& from);
+
     float getServerWeight(ServerID);
 
     virtual void aggregateLocationMessages() { }

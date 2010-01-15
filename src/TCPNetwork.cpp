@@ -33,6 +33,7 @@ TCPNetwork::RemoteStream::~RemoteStream() {
 
 TCPNetwork::TCPNetwork(SpaceContext* ctx)
  : Network(ctx),
+   mSendListener(NULL),
    mReceiveListener(NULL)
 {
     mStreamPlugin = GetOption("spacestreamlib")->as<String>();
@@ -145,6 +146,11 @@ void TCPNetwork::connectionCallback(const Address4& remote_addr, const RemoteStr
             sendServerIntro(remote_stream);
             // And after we're sure its sent, open things up for everybody else
             remote_stream->connected = true;
+            // And notify listeners.  We *must* do this here because the initial
+            // send may have failed due to not having a connection so the normal
+            // readySend callback will not occur since we couldn't register for
+            // it yet.
+            mSendListener->networkReadyToSend(remote_addr);
         }
     }
     else {
@@ -217,7 +223,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
 }
 
 void TCPNetwork::readySendCallback(const Address4 &addr) {
-    //not sure what to do here since we don't have the push/pull style notifications
+    mSendListener->networkReadyToSend(addr);
 }
 
 
@@ -417,6 +423,10 @@ void TCPNetwork::clearReceiveQueue(const Address4& addr) {
 }
 
 
+void TCPNetwork::setSendListener(SendListener* sl) {
+    mSendListener = sl;
+}
+
 bool TCPNetwork::canSend(const Address4& addr, uint32 size) {
     RemoteStreamMap::iterator where = mRemoteStreams.find(addr);
 
@@ -451,6 +461,8 @@ bool TCPNetwork::send(const Address4&addr, const Chunk& data) {
     bool success = (remote->connected &&
                     !remote->shutting_down &&
                     remote->stream->send(data,ReliableOrdered));
+    if (!success)
+        remote->stream->requestReadySendCallback();
     return success;
 }
 

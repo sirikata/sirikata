@@ -15,6 +15,21 @@ class Network : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
+    /** The Network::SendListener interface should be implemented by the object
+     *  sending data to the network.  The listener actively pushes data to the
+     *  Network queues, but this interface allows it to be notified when it is
+     *  going to be able to successfully push more data.
+     */
+    class SendListener {
+      public:
+        virtual ~SendListener() {}
+
+        /** Invoked when, after a call to Network::send() fails, the network
+         *  determines it can accept more data.
+         */
+        virtual void networkReadyToSend(const Address4& from) = 0;
+    };
+
     /** The Network::ReceiveListener interface should be implemented by the
      *  object receiving data from the network.  The listener must actively pull
      *  data from the Network queues, but the Listener interface allows this
@@ -35,6 +50,7 @@ public:
 
     virtual ~Network();
 
+    virtual void setSendListener(SendListener* sl) = 0;
     // Checks if this chunk, when passed to send, would be successfully pushed.
     virtual bool canSend(const Address4&, uint32 size)=0;
     virtual bool send(const Address4&, const Chunk&)=0;

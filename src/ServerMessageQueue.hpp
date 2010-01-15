@@ -53,7 +53,7 @@ typedef struct QueueInfo{
   }
 } QueueInfo;
 
-class ServerMessageQueue {
+class ServerMessageQueue : public Network::SendListener {
 public:
     class Listener {
       public:
@@ -73,6 +73,7 @@ public:
        mListener(listener)
     {
         mProfiler = mContext->profiler->addStage("Server Message Queue");
+        mNetwork->setSendListener(this);
     }
 
     virtual ~ServerMessageQueue(){}
@@ -103,6 +104,9 @@ public:
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
 
 protected:
+    // Network::SendListener Interface
+    virtual void networkReadyToSend(const Address4& from) = 0;
+
     // Tries to send the Message to the Network, and tags it for analysis if
     // successful. Helper method for implementations.
     bool trySend(const Address4& addr, const Message* msg);

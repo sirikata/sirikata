@@ -77,6 +77,7 @@ class TCPNetwork : public Network {
                                    // the closing or active stream may change
                                    // between calls to front() and receiveOne().
 
+    SendListener* mSendListener; // Listener for our send events
     ReceiveListener* mReceiveListener; // Listener for our receive events
 
     // Main Thread/Strand Methods, allowed to access all the core data structures.  These are mainly utility methods
@@ -133,6 +134,7 @@ public:
     TCPNetwork(SpaceContext* ctx);
     virtual ~TCPNetwork();
 
+    virtual void setSendListener(SendListener* sl);
     // Checks if this chunk, when passed to send, would be successfully pushed.
     virtual bool canSend(const Address4&,uint32 size);
     virtual bool send(const Address4&,const Chunk&);

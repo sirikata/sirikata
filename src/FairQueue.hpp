@@ -52,7 +52,8 @@ private:
            weight(1.f),
            nextFinishMessage(NULL),
            nextFinishStartTime(Time::null()),
-           nextFinishTime(Time::null())
+           nextFinishTime(Time::null()),
+           enabled(true)
         {
         }
     public:
@@ -62,7 +63,8 @@ private:
            weight(w),
            nextFinishMessage(NULL),
            nextFinishStartTime(Time::null()),
-           nextFinishTime(Time::null())
+           nextFinishTime(Time::null()),
+           enabled(true)
         {}
 
         ~QueueInfo() {
@@ -75,6 +77,7 @@ private:
         Message* nextFinishMessage; // Need to verify this matches when we pop it off
         Time nextFinishStartTime; // The time the next message to finish started at, used to recompute if front() changed
         Time nextFinishTime;
+        bool enabled;
     };
 
     typedef std::map<Key, QueueInfo*> QueueInfoByKey; // NOTE: this could be unordered, but must be unique associative container
@@ -154,6 +157,40 @@ public:
         return true;
     }
 
+    // NOTE: Enabling and disabling only affects the computation of front() and
+    // pop() by setting a flag. Otherwise disabled queues are treated just like
+    // enabled queues, just ignored when looking for the next item.  Both
+    // operations, under certain conditions, need to reset the previously
+    // computed front queue because they can affect this computation by adding
+    // or removing options.
+    void enableQueue(Key key) {
+        ByKeyIterator it = mQueuesByKey.find(key);
+        assert(it != mQueuesByKey.end());
+        QueueInfo* qi = it->second;
+        qi->enabled = true;
+        // Enabling a queue *might* affect the choice of the front queue if
+        //  a. another queue is currently selected as the front
+        //  b. the enabled queue is non-empty
+        //  c. the next finish time of the enabled queue is less than that of
+        //     the currently selected front item
+        if (mFrontQueue != NULL && // a
+            !qi->messageQueue->empty() && // b
+            qi->nextFinishTime < mFrontQueue->nextFinishTime) // c
+            mFrontQueue = NULL;
+    }
+
+    void disableQueue(Key key) {
+        ByKeyIterator it = mQueuesByKey.find(key);
+        assert(it != mQueuesByKey.end());
+        QueueInfo* qi = it->second;
+        qi->enabled = false;
+
+        // Disabling a queue will only affect the choice of front queue if the
+        // one disabled *was* the front queue.
+        if (mFrontQueue == qi)
+            mFrontQueue = NULL;
+    }
+
     bool hasQueue(Key key) const{
         return ( mQueuesByKey.find(key) != mQueuesByKey.end() );
     }
@@ -191,6 +228,7 @@ public:
         if (result != NULL) {
             assert( *bytes >= result->size() );
             *keyAtFront = mFrontQueue->key;
+            assert(mFrontQueue->enabled);
             return result;
         }
 
@@ -221,6 +259,7 @@ public:
             mCurrentVirtualTime = std::max(vftime, mCurrentVirtualTime);
 
             assert(mFrontQueue != NULL);
+            assert(mFrontQueue->enabled);
 
             if (keyAtFront != NULL)
                 *keyAtFront = mFrontQueue->key;
@@ -369,6 +408,10 @@ protected:
             QueueInfo* min_queue_info = it->second;
 
             advance = true;
+
+            // First, check if this queue is even enabled
+            if (!min_queue_info->enabled)
+                continue;
 
             // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
             // strict queue semantics, e.g. the FairQueue itself

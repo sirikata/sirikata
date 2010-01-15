@@ -63,8 +63,10 @@ void FairServerMessageQueue::service(){
         assert(addy != NULL);
 
         bool sent_success = trySend(*addy, next_msg);
-        if (!sent_success)
-            break;
+        if (!sent_success) {
+            mServerQueues.disableQueue(sid);
+            continue;
+        }
 
         // Pop the message
         Message* next_msg_popped = mServerQueues.pop(&send_bytes);
@@ -111,6 +113,17 @@ void FairServerMessageQueue::service(){
     mLastServiceTime = tcur;
 
     mProfiler->finished();
+}
+
+void FairServerMessageQueue::networkReadyToSend(const Address4& from) {
+    // The connection is ready to send again, enable the input queue associated
+    // with it.
+    ServerID* sid = mServerIDMap->lookupInternal(from);
+    assert(sid != NULL);
+
+    mContext->mainStrand->post(
+        std::tr1::bind(&FairSendQueue::enableQueue, &mServerQueues, *sid)
+                               );
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {

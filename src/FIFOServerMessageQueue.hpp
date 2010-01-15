@@ -29,6 +29,8 @@ public:
     virtual void reportQueueInfo(const Time& t) const;
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const;
+  private:
+    virtual void networkReadyToSend(const Address4& from);
 };
 }
 #endif
