@@ -215,6 +215,27 @@ public:
         return pushResult;
     }
 
+    // An alternative to push(key,msg) for input queue types that may not allow
+    // manual pushing of data, e.g. a network queue.  This instead allows the
+    // user to notify the queue that data was pushed onto the queue.  Note that
+    // the name is notifyPushFront, not notifyPush: it is only necessary to call
+    // this when the item at the front of the queue has changed (either by going
+    // from empty -> one or more elements, or because the "queue" got
+    // rearranged).  However, it is safe to call this method when any new
+    // elements are pushed.  In this case of the network example, we only need
+    // to know when data becomes available when none was left in the network
+    // buffer, but it is safe to call notifyPushFront on every data received
+    // callback.
+    void notifyPushFront(Key key) {
+        ByKeyIterator qi_it = mQueuesByKey.find(key);
+        assert( qi_it != mQueuesByKey.end() );
+
+        // We just need to (re)compute the next finish time.
+        QueueInfo* queue_info = qi_it->second;
+        removeFromTimeIndex(queue_info);
+        computeNextFinishTime(queue_info);
+    }
+
     // Returns the next message to deliver, given the number of bytes available for transmission
     // \param bytes number of bytes available; updated appropriately for intermediate null messages when returns
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
@@ -312,23 +333,6 @@ public:
         if (it == mQueuesByKey.end()) return 0;
         return it->second->messageQueue->size();
     }
-
-    // FIXME This shouldn't exist, but is needed to handle queues which get
-    // data pushed to them without going through this class. Currently this
-    // is only caused by NetworkQueueWrapper and should be fixed.
-    void service() {
-        // FIXME It sucks that we have to do this, but we need to iterate through queues we think
-        // are empty and double check them.  NetworkQueueWrapper doesn't behave properly (pushes
-        // occur without our knowledge), so we have no choice here.
-        KeySet empty_keys;
-        empty_keys.swap(mEmptyQueues);
-        for(typename KeySet::iterator it = empty_keys.begin(); it != empty_keys.end(); it++) {
-            Key key = *it;
-            computeNextFinishTime( mQueuesByKey.find(key)->second );
-        }
-        empty_keys.clear();
-    }
-
 
     // Key iteration support
     class const_iterator {

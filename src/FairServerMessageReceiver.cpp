@@ -56,9 +56,11 @@ FairServerMessageReceiver::~FairServerMessageReceiver() {
 }
 
 void FairServerMessageReceiver::handleReceived(const Address4& from) {
+    ServerID* sid = mServerIDMap->lookupInternal(from);
+    assert(sid != NULL);
+
     // Given the new data we need to update our view of the world
-    // FIXME this should be specific to the address we were notified got updated
-    mReceiveQueues.service();
+    mReceiveQueues.notifyPushFront(*sid);
 
     // Cancel any outstanding work callbacks
     mServiceTimer->cancel();
