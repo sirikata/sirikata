@@ -20,7 +20,6 @@ TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::St
           connected(false),
           shutting_down(false),
           front(NULL),
-          buffer(Sirikata::SizedResourceMonitor(parent->mIncomingBufferLength)),
           paused(false)
 {
 }
@@ -32,11 +31,8 @@ TCPNetwork::RemoteStream::~RemoteStream() {
 
 
 
-TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 incomingBandwidth, uint32 outgoingBandwidth)
+TCPNetwork::TCPNetwork(SpaceContext* ctx)
  : Network(ctx),
-   mIncomingBufferLength(incomingBufferLength),
-   mIncomingBandwidth(incomingBandwidth),
-   mOutgoingBandwidth(outgoingBandwidth),
    mReceiveListener(NULL)
 {
     mStreamPlugin = GetOption("spacestreamlib")->as<String>();
@@ -200,23 +196,20 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
     else {
         TCPNET_LOG(insane,"Handling regular received data.");
         // Normal case, we can just handle the message
-        Chunk* tmp = new Chunk;
-        tmp->swap(data);
-        uint32 data_size = tmp->size();
-        if (!remote_stream->buffer.push(tmp,false)) {
+        if (remote_stream->front != NULL) {
+            // Space is occupied, pause and ignore
+            TCPNET_LOG(insane,"Pausing receive.");
             remote_stream->paused = true;
-            tmp->swap(data);
-            delete tmp;
             return Sirikata::Network::Stream::PauseReceive;
         }
         else {
+            // Otherwise, give it its own chunk and push it up
             TCPNET_LOG(insane,"Passing data up to next layer.");
-            // Check if this is the only thing on the queue implying it is the
-            // now the front item and that we should send a notification
-            if (remote_stream->buffer.getResourceMonitor().filledSize() == data_size) {
-                TCPNET_LOG(insane,"Invoked networkReceivedData.");
-                mReceiveListener->networkReceivedData( remote_stream->endpoint );
-            }
+            Chunk* tmp = new Chunk;
+            tmp->swap(data);
+            remote_stream->front = tmp;
+            // Note that the notification happens on the IO thread
+            mReceiveListener->networkReceivedData( remote_stream->endpoint );
         }
     }
 
@@ -396,7 +389,7 @@ TCPNetwork::RemoteStreamPtr TCPNetwork::getReceiveQueue(const Address4& addr) {
     if (closing_it != mClosingStreams.end()) {
         RemoteStreamPtr result = closing_it->second;
         if (result &&
-            result->buffer.getResourceMonitor().filledSize() > 0 &&
+            result->front != NULL &&
             (result->connected || result->shutting_down)
             ) {
             mFrontStreams[addr] = result;
@@ -408,7 +401,7 @@ TCPNetwork::RemoteStreamPtr TCPNetwork::getReceiveQueue(const Address4& addr) {
     if (active_it != mRemoteStreams.end()) {
         RemoteStreamPtr result = active_it->second;
         if (result &&
-            result->buffer.getResourceMonitor().filledSize() > 0 &&
+            result->front != NULL &&
             (result->connected || result->shutting_down)
             ) {
             mFrontStreams[addr] = result;
@@ -481,26 +474,15 @@ void TCPNetwork::listen(const Address4& as_server, ReceiveListener* receive_list
 Chunk* TCPNetwork::front(const Address4& from, uint32 max_size) {
     RemoteStreamPtr stream(getReceiveQueue(from));
 
-    if (!stream)
+    if (!stream || !stream->front)
         return NULL;
 
-    // If we need to pull into the front buffer, do so
-    if (!stream->front)  {
-        Chunk **frontptr = &stream->front;
-        bool popped = stream->buffer.pop(*frontptr);
-        if (stream->paused) {
-            stream->paused = false;
-            stream->stream->readyRead();
-        }
-    }
-
+    Chunk* result = stream->front;
     // Only return the front item if it doesn't violate size requirements
-    if (stream->front &&
-        stream->front->size() <= max_size) {
-        return stream->front;
-    }
+    if (result->size() > max_size)
+        return NULL;
 
-    return NULL;
+    return result;
 }
 
 Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {

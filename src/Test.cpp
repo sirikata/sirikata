@@ -15,7 +15,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
 
 
     SpaceContext ctx(0, ios, mainStrand, Time::null(), Time::null(), &trace, Duration::seconds(0));
-    TCPNetwork rn(&ctx, 65536, 1000000, 1000000);
+    TCPNetwork rn(&ctx);
     rn.listen(Address4(Sirikata::Network::Address("localhost", "6666")), NULL);
     bool canSend=!server;
     unsigned int mine=0;

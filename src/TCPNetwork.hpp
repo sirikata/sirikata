@@ -5,7 +5,6 @@
 #include <sirikata/network/Stream.hpp>
 #include <sirikata/network/StreamListener.hpp>
 #include <sirikata/util/PluginManager.hpp>
-#include <sirikata/util/SizedThreadSafeQueue.hpp>
 
 namespace CBR {
 
@@ -17,8 +16,6 @@ class TCPNetwork : public Network {
     // endpoint, so we maintain a bit more bookkeeping information to
     // manage that possibility.
     struct RemoteStream {
-        typedef Sirikata::SizedThreadSafeQueue<Chunk*> SizedChunkBuffer;
-
         // parent is used to set the buffer size, stream is the
         // underlying stream
         RemoteStream(TCPNetwork* parent, Sirikata::Network::Stream*strm);
@@ -39,13 +36,11 @@ class TCPNetwork : public Network {
                             // currently being shutdown. Will be true
                             // if another stream to the same endpoint
                             // was preferred over this one.
-
-        Chunk *front; // A single buffered chunk. We buffer this since
-                      // we need to be able to pass the front item up
-                      // to the user, meaning it has to be available
-                      // and stored.
-        SizedChunkBuffer buffer; // Sized buffer, the main queue for
-                                 // storing incoming packets.
+        Sirikata::AtomicValue<Chunk*> front; // A single buffered, thread-safe chunk. We
+                                   // buffer this since we need to be able to
+                                   // pass the front item up to the user,
+                                   // meaning it has to be available and
+                                   // stored.
         bool paused; // Indicates if receiving is currently paused for
                      // this stream.  If true, the stream must be
                      // unpaused the next time someone calls
@@ -69,10 +64,6 @@ class TCPNetwork : public Network {
     Thread* mThread;
 
     Address4 mListenAddress;
-
-    uint32 mIncomingBufferLength;
-    uint32 mIncomingBandwidth;
-    uint32 mOutgoingBandwidth;
 
     Sirikata::Network::StreamListener *mListener;
 
@@ -139,7 +130,7 @@ class TCPNetwork : public Network {
     void readySendCallback(const Address4& addr);
 
 public:
-    TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);
+    TCPNetwork(SpaceContext* ctx);
     virtual ~TCPNetwork();
 
     // Checks if this chunk, when passed to send, would be successfully pushed.

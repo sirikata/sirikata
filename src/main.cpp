@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     CBR::Network* gNetwork = NULL;
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "tcp")
-      gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+      gNetwork = new TCPNetwork(space_context);
 
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
