@@ -142,24 +142,4 @@ float FairServerMessageQueue::getServerWeight(ServerID sid) {
     return 0;
 }
 
-void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
-    for(FairSendQueue::const_iterator it = mServerQueues.keyBegin(); it != mServerQueues.keyEnd(); it++) {
-        uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
-        float tx_weight = mServerQueues.getQueueWeight(*it);
-        mContext->trace()->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight);
-    }
-}
-
-void FairServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) const  {
-    queue_info.clear();
-
-    for(FairSendQueue::const_iterator it = mServerQueues.keyBegin(); it != mServerQueues.keyEnd(); it++) {
-        uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
-        float tx_weight = mServerQueues.getQueueWeight(*it);
-
-	QueueInfo qInfo(tx_size, tx_used, tx_weight);
-	queue_info.push_back(qInfo);
-    }
-}
-
 }

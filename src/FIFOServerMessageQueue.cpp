@@ -95,26 +95,6 @@ void FIFOServerMessageQueue::service(){
 void FIFOServerMessageQueue::setServerWeight(ServerID sid, float weight) {
 }
 
-void FIFOServerMessageQueue::reportQueueInfo(const Time& t) const {
-    for(FIFOSendQueue::const_iterator it = mQueue.keyBegin(); it != mQueue.keyEnd(); it++) {
-        uint32 tx_size = mQueue.maxSize(*it), tx_used = mQueue.size(*it);
-        float tx_weight = 0;
-        mContext->trace()->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight);
-    }
-}
-
-void FIFOServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) const  {
-  queue_info.clear();
-
-  for(FIFOSendQueue::const_iterator it = mQueue.keyBegin(); it != mQueue.keyEnd(); it++) {
-    uint32 tx_size = mQueue.maxSize(*it), tx_used = mQueue.size(*it);
-    float tx_weight = 0;
-
-    QueueInfo qInfo(tx_size, tx_used, tx_weight);
-    queue_info.push_back(qInfo);
-  }
-}
-
 void FIFOServerMessageQueue::networkReadyToSend(const Address4& from) {
     // Ignored.
 }

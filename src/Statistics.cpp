@@ -113,7 +113,6 @@ const uint8 Trace::MessageCreationTimestampTag;
 const uint8 Trace::ObjectPingTag;
 const uint8 Trace::ProximityTag;
 const uint8 Trace::ObjectLocationTag;
-const uint8 Trace::ServerDatagramQueueInfoTag;
 const uint8 Trace::ServerDatagramQueuedTag;
 const uint8 Trace::ServerDatagramSentTag;
 const uint8 Trace::ServerDatagramReceivedTag;
@@ -297,20 +296,6 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
     uint8 raw_added = (added ? 1 : 0);
     data.write( &raw_added, sizeof(raw_added) );
     data.write( &loc, sizeof(loc) );
-#endif
-}
-
-void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight) {
-#ifdef TRACE_DATAGRAM
-    if (mShuttingDown) return;
-
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ServerDatagramQueueInfoTag, sizeof(ServerDatagramQueueInfoTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &dest, sizeof(dest) );
-    data.write( &send_size, sizeof(send_size) );
-    data.write( &send_queued, sizeof(send_queued) );
-    data.write( &send_weight, sizeof(send_weight) );
 #endif
 }
 

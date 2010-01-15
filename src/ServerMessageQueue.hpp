@@ -40,19 +40,6 @@
 
 namespace CBR{
 
-typedef struct QueueInfo{
-  uint32 mTXSize;
-  uint32 mTXUsed;
-  float mTXWeight;
-
-  QueueInfo(uint32 tx_size, uint32 tx_used, float tx_weight)
-  {
-    mTXSize = tx_size;
-    mTXUsed = tx_used;
-    mTXWeight = tx_weight;
-  }
-} QueueInfo;
-
 class ServerMessageQueue : public Network::SendListener {
 public:
     class Listener {
@@ -98,11 +85,6 @@ public:
     virtual void service() = 0;
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
-
-    virtual void reportQueueInfo(const Time& t) const = 0;
-
-    virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
-
 protected:
     // Network::SendListener Interface
     virtual void networkReadyToSend(const Address4& from) = 0;

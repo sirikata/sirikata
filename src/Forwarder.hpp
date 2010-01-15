@@ -31,7 +31,6 @@ namespace CBR
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;
-class ForwarderSampler;
 
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient, public PollingService,
                   public ServerMessageQueue::Listener, public ServerMessageReceiver::Listener
@@ -43,8 +42,6 @@ private:
     ServerMessageReceiver* mServerMessageReceiver;
 
     OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
-
-    ForwarderSampler* mSampler;
 
 
     // Object connections, identified by a separate unique ID to handle fast migrations

@@ -129,18 +129,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt=pevt;
           }
         break;
-      case Trace::ServerDatagramQueueInfoTag:
-          {
-              ServerDatagramQueueInfoEvent* pqievt = new ServerDatagramQueueInfoEvent;
-              is.read( (char*)&pqievt->time, sizeof(pqievt->time) );
-              pqievt->source = trace_server_id;
-              is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
-              is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
-              is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
-              is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
-              evt = pqievt;
-          }
-          break;
       case Trace::ServerDatagramQueuedTag:
           {
               ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;

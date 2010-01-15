@@ -63,6 +63,9 @@ LoadMonitor::~LoadMonitor() {
 }
 
 void LoadMonitor::addLoadReading() {
+    /* FIXME load reading of server message queue is now gone, not sure what we
+     * want to measure instead, or maybe augment server message queue to provide
+     * different statistics.
   std::vector<QueueInfo> qInfo;
   mServerMsgQueue->getQueueInfo(qInfo);
 
@@ -74,7 +77,7 @@ void LoadMonitor::addLoadReading() {
   }
 
   mCurrentLoadReading = currentLoad;
-
+    */
   mAveragedLoadReading = ALPHA * mAveragedLoadReading +
                          (1.0-ALPHA) * mCurrentLoadReading;
 

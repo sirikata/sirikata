@@ -84,7 +84,6 @@ class Trace {
 public:
     static const uint8 ProximityTag = 0;
     static const uint8 ObjectLocationTag = 1;
-    static const uint8 ServerDatagramQueueInfoTag = 3;
     static const uint8 ServerDatagramQueuedTag = 4;
     static const uint8 ServerDatagramSentTag = 5;
     static const uint8 ServerDatagramReceivedTag = 6;
@@ -173,7 +172,6 @@ public:
     void serverObjectEvent(const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc);
 
 
-    void serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight);
     void serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size);
     void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);

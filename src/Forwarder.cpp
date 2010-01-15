@@ -28,26 +28,6 @@ namespace CBR
 
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
 
-/** Automatically samples and logs current queue information for the ServerMessageQueue. */
-class ForwarderSampler : public PollingService {
-public:
-    ForwarderSampler(SpaceContext* ctx, const Duration& rate, ServerMessageQueue* smq)
-     : PollingService(ctx->mainStrand, rate),
-       mContext(ctx),
-       mServerMessageQueue(smq)
-    {
-    }
-private:
-    virtual void poll() {
-        mServerMessageQueue->reportQueueInfo(mContext->time);
-
-    }
-
-    SpaceContext* mContext;
-    ServerMessageQueue* mServerMessageQueue;
-}; // class Sampler
-
-
 // -- First, all the boring boiler plate type stuff; initialization,
 // -- destruction, delegation to base classes
 
@@ -61,7 +41,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mServerMessageQueue(NULL),
    mServerMessageReceiver(NULL),
    mOSegLookups(NULL),
-   mSampler(NULL),
    mUniqueConnIDs(0)
 {
     //no need to initialize mOutgoingMessages.
@@ -78,8 +57,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
-      delete mSampler;
-
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
   }
 
@@ -94,8 +71,6 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
     mOutgoingMessages = new ForwarderServiceQueue(16384);
 
     Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
-    mSampler = new ForwarderSampler(mContext, sample_rate, mServerMessageQueue);
-    mContext->add(mSampler);
   }
 
 void Forwarder::dispatchMessage(Message*msg) const {
