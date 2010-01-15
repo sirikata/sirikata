@@ -84,6 +84,18 @@ class ASIOReadBuffer {
                           unsigned int whichSocket,
                           const Stream::StreamID& sid,
                           Chunk&newChunk);
+
+    /**
+     * This function passes the contents of a chunk to the multiplexed socket for callback handling
+     * \param parentSocket is the MultiplexedSocket responsible for this stream with the relevant callback information
+     * \param whichSocket is the current ASIO socket responsible for having read the data. It must equal mWhichBuffer
+     * \param bufferStart is the start of the chunk that was sent from the other side to this side and is ready for client processing (or server processing if sid==Stream::StreamID())
+     * \param bufferEnd is the end of the chunk that was sent from the other side to this side and is ready for processing
+     * \returns whether the host can accept a packet into a lower queue
+     */
+    Network::Stream::ReceivedResponse processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket,
+                                                                unsigned int whichSocket,
+                                                                const uint8*bufferStart,const uint8*bufferEnd);
     /**
      *  This function is called when either 0 information is known about the data to be read (such as size, etc)
      *  or if the data is known but the packet is sufficiently small that other packets may be conjoined with it in the buffer
@@ -95,6 +107,13 @@ class ASIOReadBuffer {
      *  This function will tell ASIO to read directly into the mNewChunk class, offset by the mBufferPos upto the value of mNewChunk.size()
      */
     void readIntoChunk(const MultiplexedSocketPtr &parentSocket);
+
+    /**
+     *  This function is called when a sufficiently large chunk needs to be filled up from a previous readIntoFixedBuffer call.
+     *  This function will tell ASIO to read directly into the mNewChunk class, offset by the mBufferPos to an unknown length
+     *  Can be called with size 0 to resume a read on a zero delimited chunk
+     */
+    void readIntoZeroDelimChunk(const MultiplexedSocketPtr &parentSocket);
 
     /**
      * Examines a buffer of bytes and converts it into a partially or totally filled chunk
@@ -123,6 +142,17 @@ class ASIOReadBuffer {
      *     a full packet by calling processFullChunk to invoke appropriate callbacks then readIntoFixedBuffer
      */
     void asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read);
+
+    /**
+     * The ASIO callback when ASIO was reading into a singleChunk
+     * The function reacts to errors by calling processErrors or a missing MultiplexedSocket by deleting this
+     * Otherwise the function reacts to
+     *     a partially full packet by calling readIntoFixedChunk and
+     *     a full packet by calling processFullChunk to invoke appropriate callbacks then readIntoFixedBuffer
+     */
+    void asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_t bytes_read);
+
+
     /**
      * The ASIO callback when ASIO was reading into the mBuffer from mBufferPos
      * The function reacts to errors by calling processErrors or a missing MultiplexedSocket by deleting this
