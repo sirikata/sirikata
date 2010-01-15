@@ -200,7 +200,7 @@ private:
 
   uint16 mCwnd;
    
-  uint64 mRTO; // RTO in microseconds
+  uint64 mRTOMicroseconds; // RTO in microseconds
   bool mFirstRTO;
 
   bool mLooping;
@@ -221,8 +221,8 @@ private:
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
       mDatagramLayer(ctx), mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1), 
-      mLastReceivedSequenceNumber(1), mNumStreams(0), mCwnd(1), mRTO(20000), mFirstRTO(true),
-      mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
+      mLastReceivedSequenceNumber(1), mNumStreams(0), mCwnd(1), mRTOMicroseconds(20000),
+      mFirstRTO(true), mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(300),
       CC_ALPHA(0.8)
   {
@@ -305,7 +305,7 @@ private:
 	}	
       }
 
-      boost::this_thread::sleep( boost::posix_time::microseconds(mRTO*2) );
+      boost::this_thread::sleep( boost::posix_time::microseconds(mRTOMicroseconds) );
 
       if (mState == CONNECTION_PENDING_CONNECT) {
 	boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
@@ -329,16 +329,18 @@ private:
 	else {
 	  no_packets_acked = false;
 	  if (mFirstRTO ) {
-	    mRTO = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds());
+	    mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
 	    mFirstRTO = false;
 	  }
 	  else {
-	    mRTO = CC_ALPHA * mRTO + (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
+	    mRTOMicroseconds = CC_ALPHA * mRTOMicroseconds + 
+	                    (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
+
 	  }
 	}
       }
 
-      printf("mRTO=%d\n", (int) mRTO);
+      printf("mRTOMicroseconds=%d\n", (int) mRTOMicroseconds);
 
       if (numSegmentsSent >= mCwnd) {
 	if (all_sent_packets_acked) {
@@ -754,6 +756,10 @@ private:
     mTransmitSequenceNumber++;    
   }
 
+  uint64 getRTOMicroseconds() {
+    return mRTOMicroseconds;
+  }
+
 public:
 
   ~Connection() {
@@ -961,7 +967,13 @@ public:
   uint16 mBufferLength;
   uint32 mOffset;
 
-  StreamBuffer(const uint8* data, int len, int offset){
+  Time mTransmitTime;
+  Time mAckTime;
+  
+
+  StreamBuffer(const uint8* data, int len, int offset) : 
+    mTransmitTime(Time::null()), mAckTime(Time::null())
+  {
     assert(len > 0);
     
     mBuffer = data;     
@@ -1222,6 +1234,8 @@ private:
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
     MAX_RECEIVE_WINDOW(15000),
+    mStreamRTOMicroseconds(200000),
+    CC_ALPHA(0.8),
     mRetransmitTimer(mIOService),
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
@@ -1309,18 +1323,17 @@ private:
 
     while (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
       Time cur_time = Timer::now();
+      
 
-      if ( (cur_time - start_time).toMilliseconds() > 200) {	
+      if ( (cur_time - start_time).toMicroseconds() >  2*mStreamRTOMicroseconds) {	
         sendInitPacket(mInitialData, mInitialDataLength); 
         start_time = cur_time;
 	mNumInitRetransmissions++;
       }
     }
-
     
     delete [] mInitialData;
-    mInitialDataLength = 0;
-    
+    mInitialDataLength = 0;    
 
     if (!mConnected) {
       std::cout << mConnection.lock()->localEndPoint().endPoint.toString() << " not connected!!\n";
@@ -1342,7 +1355,8 @@ private:
       //this should wait for the queue to get occupied... right now it is
       //just polling...
       Time cur_time = Timer::now();
-      if ( (cur_time - start_time).toMilliseconds() > 1000) {
+
+      if ( (cur_time - start_time).toMicroseconds() > 2*mStreamRTOMicroseconds) {
         resendUnackedPackets();
         start_time = cur_time;
       }
@@ -1356,7 +1370,6 @@ private:
 
         break;
       }
-
       
       
       boost::mutex::scoped_lock l(mQueueMutex);
@@ -1368,13 +1381,15 @@ private:
 	  break;
 	}
 
-        printf("ioServicingLoop enqueuing packet at offset %d into send queue\n", buffer->mOffset);
-        printf("ioServicingLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
+        printf("sendStreamSegmentLoop enqueuing packet at offset %d into send queue\n", buffer->mOffset);
+        printf("sendStreamSegmentLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
 
 	uint64 channelID = sendDataPacket(buffer->mBuffer, 
 					  buffer->mBufferLength,
 					  buffer->mOffset
 					  );
+
+	buffer->mTransmitTime = Timer::now();	
 
 	if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {	  
 	  mChannelToBufferMap[channelID] = buffer;
@@ -1393,7 +1408,7 @@ private:
       }
     }
 
-    printf("ioServiceLoop exited\n");
+    printf("sendStreamSegmentLoop exited\n");
   }
 
   void resendUnackedPackets(/*const boost::system::error_code& error*/) {
@@ -1441,6 +1456,11 @@ private:
       if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
 	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
 	mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
+
+	mChannelToBufferMap[offset]->mAckTime = Timer::now();
+
+	
+	updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
 
 	printf("mNumOutstandingBytes=%d, (pow(2, streamMsg->window())=%f\n", mNumOutstandingBytes,
 	                                                                     (pow(2, streamMsg->window())));
@@ -1561,6 +1581,25 @@ private:
     return mLSID;
   }
 
+  void updateRTO(Time sampleStartTime, Time sampleEndTime) {
+    static bool firstRTO = true;
+
+    if (sampleStartTime > sampleEndTime ) {
+      std::cout << "Bad sample\n";
+      return;
+    }
+
+    if (firstRTO) {
+      mStreamRTOMicroseconds = (sampleEndTime - sampleStartTime).toMicroseconds() ;
+      firstRTO = false;
+    }
+    else {    
+      
+      mStreamRTOMicroseconds = CC_ALPHA * mStreamRTOMicroseconds + 
+	(1.0-CC_ALPHA) * (sampleEndTime - sampleStartTime).toMicroseconds();
+    }            
+  }
+
   void sendInitPacket(void* data, uint32 len) {
     printf("Sending Init packet\n");
 
@@ -1656,6 +1695,8 @@ private:
   std::map<uint64, int> mReceivedSegments;
 
   Thread* mThread;
+  int64 mStreamRTOMicroseconds;
+  float CC_ALPHA;
 
   bool mLooping;
 
