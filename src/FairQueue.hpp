@@ -96,7 +96,6 @@ public:
      :mCurrentVirtualTime(Time::null()),
       mQueuesByKey(),
       mQueuesByTime(),
-      mEmptyQueues(),
       mFrontQueue(NULL)
     {
     }
@@ -146,9 +145,6 @@ public:
         // If its the front queue, reset it
         if (mFrontQueue == qi)
             mFrontQueue = NULL;
-
-        // Remove from the empty queue list
-        mEmptyQueues.erase(key);
 
         // Clean up queue and main entry
         mQueuesByKey.erase(it);
@@ -515,7 +511,6 @@ protected:
     ByTimeIterator computeNextFinishTime(QueueInfo* qi, const Time& last_finish_time) {
         if ( qi->messageQueue->empty() ) {
             qi->nextFinishMessage = NULL;
-            mEmptyQueues.insert(qi->key);
             return mQueuesByTime.end();
         }
 
@@ -525,7 +520,6 @@ protected:
         Message* front_msg = qi->messageQueue->front();
         if ( front_msg == NULL ) {
             qi->nextFinishMessage = NULL;
-            mEmptyQueues.insert(qi->key);
             return mQueuesByTime.end();
         }
 
@@ -534,8 +528,6 @@ protected:
         qi->nextFinishStartTime = last_finish_time;
 
         ByTimeIterator new_it = mQueuesByTime.insert( typename QueueInfoByFinishTime::value_type(qi->nextFinishTime, qi) );
-        // In case it was an empty queue, remove it
-        mEmptyQueues.erase(qi->key);
 
         return new_it;
     }
@@ -565,8 +557,6 @@ protected:
     // FIXME if I could get the templates to work, using multi_index_container instead of 2 containers would be preferable
     QueueInfoByKey mQueuesByKey;
     QueueInfoByFinishTime mQueuesByTime;
-    KeySet mEmptyQueues; // FIXME everything but NetworkQueueWrapper works without tracking these, it only requires
-                         // it because "pushing" to the NetworkQueue doesn't go through this FairQueue
     QueueInfo* mFrontQueue; // Queue holding the front item
 }; // class FairQueue
 
