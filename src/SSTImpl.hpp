@@ -263,7 +263,7 @@ private:
 	boost::unique_lock<boost::mutex> lock(mQueueMutex);	
 	
         while (mQueuedSegments.empty()){
-          printf("Waiting on lock\n");
+          //printf("Waiting on lock\n");
 
 	  if (mState == CONNECTION_PENDING_DISCONNECT) {
 	    return;
@@ -274,7 +274,7 @@ private:
 	  if (!mLooping) return;
 	}	
 	
-	printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
+	//printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
 	
 	for (int i = 0; i < mCwnd; i++) {
 	  if ( !mQueuedSegments.empty() ) {
@@ -290,7 +290,7 @@ private:
 	    
 	    sendSSTChannelPacket(sstMsg);
 	    
-	    printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
+	    //printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
 	    
 	    segment->mTransmitTime = Timer::now();
 	    mOutstandingSegments.push_back(segment);
@@ -316,7 +316,7 @@ private:
         return;
       }
       
-      printf("%s mOutstandingSegments.size()=%d\n", mLocalEndPoint.endPoint.toString().c_str() , (int) mOutstandingSegments.size() );
+      //printf("%s mOutstandingSegments.size()=%d\n", mLocalEndPoint.endPoint.toString().c_str() , (int) mOutstandingSegments.size() );
 
       bool all_sent_packets_acked = true;
       bool no_packets_acked = true;
@@ -340,7 +340,7 @@ private:
 	}
       }
 
-      printf("mRTOMicroseconds=%d\n", (int) mRTOMicroseconds);
+      //printf("mRTOMicroseconds=%d\n", (int) mRTOMicroseconds);
 
       if (numSegmentsSent >= mCwnd) {
 	if (all_sent_packets_acked) {
@@ -431,7 +431,7 @@ private:
     uint8 payload[1];
     payload[0] = getAvailableChannel();
    
-    std::cout << "create connection: " <<  (int)payload[0] << "\n"; 
+    //std::cout << "create connection: " <<  (int)payload[0] << "\n"; 
     conn->setLocalChannelID(payload[0]);
     conn->sendData(payload, sizeof(payload));
 
@@ -529,7 +529,7 @@ private:
     mTransmitSequenceNumber++;    
     
     if (pushedIntoQueue) {
-      mQueueEmptyCondVar.notify_all();
+      mQueueEmptyCondVar.notify_one();
     }
 
     delete stream_msg;
@@ -559,12 +559,12 @@ private:
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
     if (mOutstandingSegments.size() > 0){
-      printf("%s mOutstandingSegments[0]->mChannelSequenceNumber=%d, receivedAckNum=%d\n", mLocalEndPoint.endPoint.toString().c_str(), (int)(mOutstandingSegments[0]->mChannelSequenceNumber), (int)(receivedAckNum) );
+      //printf("%s mOutstandingSegments[0]->mChannelSequenceNumber=%d, receivedAckNum=%d\n", mLocalEndPoint.endPoint.toString().c_str(), (int)(mOutstandingSegments[0]->mChannelSequenceNumber), (int)(receivedAckNum) );
     }
 
     for (uint i = 0; i < mOutstandingSegments.size(); i++) {
       if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
-        printf("Packet acked at %s\n", mLocalEndPoint.endPoint.toString().c_str());
+        //printf("Packet acked at %s\n", mLocalEndPoint.endPoint.toString().c_str());
 	mOutstandingSegments[i]->mAckTime = Timer::now();
       }
     }
@@ -652,7 +652,7 @@ private:
   }
 
   void handleInitPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
-    std::cout << "INIT packet received\n"; 
+    //std::cout << "INIT packet received\n"; 
     LSID incomingLsid = received_stream_msg->lsid();
     
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -686,7 +686,7 @@ private:
       if (mOutgoingSubstreamMap.find(initiatingLSID) != mOutgoingSubstreamMap.end()) {
 	boost::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
 	mIncomingSubstreamMap[incomingLsid] = stream;
-	std::cout << "REPLY packet received\n";
+	//std::cout << "REPLY packet received\n";
 	
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SUCCESS, stream);
@@ -696,13 +696,13 @@ private:
 	}
       }
       else {
-	std::cout << "Received reply packet for unknown stream\n";
+	//std::cout << "Received reply packet for unknown stream\n";
       }
     }
   }
 
   void handleDataPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
-    printf("DATA received\n");
+    //printf("DATA received\n");
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
@@ -719,7 +719,7 @@ private:
   void handleAckPacket(CBR::Protocol::SST::SSTChannelHeader* received_channel_msg,
 		       CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) 
   {
-    printf("ACK received : offset = %d\n", (int)received_channel_msg->ack_sequence_number() );
+    //printf("ACK received : offset = %d\n", (int)received_channel_msg->ack_sequence_number() );
     LSID incomingLsid = received_stream_msg->lsid();
     
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
@@ -803,7 +803,7 @@ public:
 	            MAX_PAYLOAD_SIZE : 
            	    (length-currOffset);
 
-      printf("buffLen=%d\n", buffLen);
+      //printf("buffLen=%d\n", buffLen);
 
       CBR::Protocol::SST::SSTStreamHeader sstMsg;
       sstMsg.set_lsid( lsid );
@@ -1054,15 +1054,16 @@ public:
              occurred
   */
   virtual int write(const uint8* data, int len) {
-    if (mState == DISCONNECTED) {
+    if (mState == DISCONNECTED || mState == PENDING_DISCONNECT) {
       return -1;
     }
 
-    boost::mutex::scoped_lock l(mQueueMutex);
+    boost::lock_guard<boost::mutex> lock(mQueueMutex);
     int count = 0;
 
-    printf("Calling write with len=%d\n", len);
+    //printf("Calling write with len=%d\n", len);
 
+    mCondVar.notify_one();
     if (len <= MAX_PAYLOAD_SIZE) {
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
 	return 0;
@@ -1080,7 +1081,7 @@ public:
 	              MAX_PAYLOAD_SIZE : 
 	              (len-currOffset);
 
-	printf("NUM PKTS GEN = %d, currOffset=%d, mCurrentQueueLength=%d\n", count, currOffset, mCurrentQueueLength);
+	//printf("NUM PKTS GEN = %d, currOffset=%d, mCurrentQueueLength=%d\n", count, currOffset, mCurrentQueueLength);
 	if (mCurrentQueueLength + buffLen > MAX_QUEUE_LENGTH) {
 	  return currOffset;
 	}
@@ -1093,7 +1094,7 @@ public:
 	count++;
       }
 
-      printf("NUM PKTS GEN = %d, currOffset=%d\n", count, currOffset);
+      //printf("NUM PKTS GEN = %d, currOffset=%d\n", count, currOffset);
       return currOffset;
     }
 
@@ -1161,6 +1162,9 @@ public:
   virtual bool close(bool force) {
     if (force) {
       mLooping = false;
+
+      mCondVar.notify_all();
+
       mThread->join();
       mState = DISCONNECTED;
       return true;
@@ -1235,8 +1239,7 @@ private:
     MAX_QUEUE_LENGTH(4000000),
     MAX_RECEIVE_WINDOW(15000),
     mStreamRTOMicroseconds(200000),
-    CC_ALPHA(0.8),
-    mRetransmitTimer(mIOService),
+    CC_ALPHA(0.8),    
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
     mNumOutstandingBytes(0),
@@ -1288,8 +1291,7 @@ private:
       write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
     }    
     
-    mThread = new Thread(boost::bind(&(Stream<EndPointType>::sendStreamSegmentLoop), this));
-    //boost::thread t(boost::bind(&boost::asio::io_service::run, &mIOService));
+    mThread = new Thread(boost::bind(&(Stream<EndPointType>::sendStreamSegmentLoop), this));    
   }
 
   static void connectionCreated( int errCode, boost::shared_ptr<Connection<EndPointType> > c) {
@@ -1303,7 +1305,7 @@ private:
       return;
     }
 
-    int length = 2000000;
+    int length = 0;
     uint8* f = new uint8[length];
     for (int i=0; i<length; i++) {
       f[i] = i % 255;
@@ -1315,21 +1317,17 @@ private:
     c->stream(mStreamReturnCallbackMap[c->localEndPoint()], f , length);
 
     mStreamReturnCallbackMap.erase(c->localEndPoint());
-  }  
+  }
 
 
   void sendStreamSegmentLoop() {
-    Time start_time = Timer::now();
+   
+    while (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {      
+      boost::this_thread::sleep( boost::posix_time::microseconds(2*mStreamRTOMicroseconds) );
 
-    while (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
-      Time cur_time = Timer::now();
+      sendInitPacket(mInitialData, mInitialDataLength); 
       
-
-      if ( (cur_time - start_time).toMicroseconds() >  2*mStreamRTOMicroseconds) {	
-        sendInitPacket(mInitialData, mInitialDataLength); 
-        start_time = cur_time;
-	mNumInitRetransmissions++;
-      }
+      mNumInitRetransmissions++;
     }
     
     delete [] mInitialData;
@@ -1348,10 +1346,13 @@ private:
       mState = CONNECTED;
     }
 
-    start_time = Timer::now();
+    Time start_time = Timer::now();
     mLooping = true;
-    while (mLooping) {
 
+    boost::system_time timeout = boost::get_system_time() + 
+                                 boost::posix_time::microseconds(2*mStreamRTOMicroseconds); 
+
+    while (mLooping) {
       //this should wait for the queue to get occupied... right now it is
       //just polling...
       Time cur_time = Timer::now();
@@ -1359,6 +1360,8 @@ private:
       if ( (cur_time - start_time).toMicroseconds() > 2*mStreamRTOMicroseconds) {
         resendUnackedPackets();
         start_time = cur_time;
+	timeout = boost::get_system_time() + 
+                  boost::posix_time::microseconds(2*mStreamRTOMicroseconds);
       }
 
       if (mState == PENDING_DISCONNECT && 
@@ -1371,9 +1374,8 @@ private:
         break;
       }
       
-      
-      boost::mutex::scoped_lock l(mQueueMutex);
-
+      boost::unique_lock<boost::mutex> lock(mQueueMutex);
+     
       while ( !mQueuedBuffers.empty() && mLooping ) {
         boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
@@ -1381,13 +1383,13 @@ private:
 	  break;
 	}
 
-        printf("sendStreamSegmentLoop enqueuing packet at offset %d into send queue\n", buffer->mOffset);
-        printf("sendStreamSegmentLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
+        //printf("sendStreamSegmentLoop enqueuing packet at offset %d into send queue\n", buffer->mOffset);
+        //printf("sendStreamSegmentLoop: mTransmitWindowSize=%d\n", (int) mTransmitWindowSize);
 
 	uint64 channelID = sendDataPacket(buffer->mBuffer, 
 					  buffer->mBufferLength,
 					  buffer->mOffset
-					  );
+					 );
 
 	buffer->mTransmitTime = Timer::now();	
 
@@ -1398,25 +1400,32 @@ private:
 	mQueuedBuffers.pop_front();
         start_time = cur_time;
 
+	timeout = boost::get_system_time() + 
+                  boost::posix_time::microseconds(2*mStreamRTOMicroseconds); 
+
 	assert(buffer->mBufferLength <= mTransmitWindowSize);
 	mTransmitWindowSize -= buffer->mBufferLength;
-	mNumOutstandingBytes += buffer->mBufferLength;
+	mNumOutstandingBytes += buffer->mBufferLength;	
+      }
 
-	/*mRetransmitTimer.expires_from_now(boost::posix_time::milliseconds(100));
-	mRetransmitTimer.async_wait(boost::bind(&(Stream<EndPointType>::resendUnackedPackets), 
-                   	            this, boost::asio::placeholders::error));*/
+      while (mQueuedBuffers.empty() || (mTransmitWindowSize < mQueuedBuffers.front()->mBufferLength)) {	
+	bool timeoutExpired = !(mCondVar.timed_wait(lock, timeout));
+
+	if (timeoutExpired)
+	  break;
+
+	if (!mLooping) return;
       }
     }
-
-    printf("sendStreamSegmentLoop exited\n");
   }
 
   void resendUnackedPackets(/*const boost::system::error_code& error*/) {
-     //printf("Called resendUnackedPackets\n");
-     //if (error) {
-     //  printf("timer handler had ERROR\n");
-     //}
-     boost::mutex::scoped_lock l(mQueueMutex);     
+    /*printf("Called resendUnackedPackets\n");
+     if (error) {
+       printf("timer handler had ERROR\n");
+     }*/
+
+    boost::lock_guard<boost::mutex> lock(mQueueMutex);
      
      for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::iterator it=mChannelToBufferMap.begin();
 	 it != mChannelToBufferMap.end(); ++it)
@@ -1439,9 +1448,8 @@ private:
      }
 
      mNumOutstandingBytes = 0;
-     mChannelToBufferMap.clear();
-  }
-  
+     mChannelToBufferMap.clear();     
+  }  
 
 
   void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
@@ -1451,7 +1459,7 @@ private:
       mConnected = true;
     }
     else if (streamMsg->type() == streamMsg->ACK) {
-      boost::mutex::scoped_lock l(mQueueMutex);
+      boost::lock_guard<boost::mutex> lock(mQueueMutex);
       
       if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
 	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
@@ -1462,8 +1470,8 @@ private:
 	
 	updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
 
-	printf("mNumOutstandingBytes=%d, (pow(2, streamMsg->window())=%f\n", mNumOutstandingBytes,
-	                                                                     (pow(2, streamMsg->window())));
+	/*printf("mNumOutstandingBytes=%d, (pow(2, streamMsg->window())=%f\n", mNumOutstandingBytes,
+   	                                   (pow(2, streamMsg->window())));*/
 
 	if ( (int) (pow(2, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
 	  assert( pow(2, streamMsg->window()) - mNumOutstandingBytes > 0);
@@ -1471,9 +1479,9 @@ private:
 	}
 	else {
 	  mTransmitWindowSize = 0;
-	}
+	}	
         
-	printf("REMOVED ACKED PACKET. Offset: %d, mTransmitWindowSize=%d\n", (int) mChannelToBufferMap[offset]->mOffset,(int) mTransmitWindowSize);
+	//printf("REMOVED ACKED PACKET. Offset: %d, mTransmitWindowSize=%d\n", (int) mChannelToBufferMap[offset]->mOffset,(int) mTransmitWindowSize);
 	mChannelToBufferMap.erase(offset);
 
 	std::vector <uint64> channelOffsets;
@@ -1489,12 +1497,14 @@ private:
 	  mChannelToBufferMap.erase(channelOffsets[i]);
 	}	
       }
+
+      mCondVar.notify_one();
     }
     else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
       assert ( pow(2, streamMsg->window()) - mNumOutstandingBytes > 0);
-      mTransmitWindowSize = pow(2, streamMsg->window()) - mNumOutstandingBytes;
+      mTransmitWindowSize = pow(2, streamMsg->window()) - mNumOutstandingBytes;      
 
-      printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
+      //printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
 
       if ( (int)(offset) == mNextByteExpected) {
         uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
@@ -1521,8 +1531,8 @@ private:
 	    mReadCallback(mReceiveBuffer, readyBufferSize);
 	  }
 
-          printf("offset=%d, offsetInBuffer=%d, readyBufferSize=%d, mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset, (int)offsetInBuffer, (int)readyBufferSize, (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
- 	  fflush(stdout);
+          //printf("offset=%d, offsetInBuffer=%d, readyBufferSize=%d, mLastContiguousByteReceived=%d, mNextByteExpected=%d, mLastByteReceived=%d\n", (int)offset, (int)offsetInBuffer, (int)readyBufferSize, (int)mLastContiguousByteReceived, (int)mNextByteExpected, (int)mLastByteReceived);
+ 	  
 
 	  //now move the window forward...
 	  mLastContiguousByteReceived = mLastContiguousByteReceived + readyBufferSize;
@@ -1540,16 +1550,17 @@ private:
           mReceivedSegments[offset] = 1;
           printf("On %d, mReceivedSegments.size() = %d\n", (int) mLSID, (int)mReceivedSegments.size());
           printf("Received Segment at offset = %d\n", (int) offset);	  
+	  fflush(stdout);
 	}
         else {
            //dont ack this packet.. its falling outside the receive window.
         }
       }
-      else {        
+      else {
 
         int32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;	
 
-	std::cout << offsetInBuffer << "  ,  " << offsetInBuffer+len << "\n";
+	//std::cout << offsetInBuffer << "  ,  " << offsetInBuffer+len << "\n";
 
 	if ( (int)(offset+len-1) <= (int)mLastContiguousByteReceived) {
 	  printf("Acking packet which we had already received previously\n");
@@ -1569,12 +1580,15 @@ private:
           mReceivedSegments[offset] = 1;
           printf("On %d, mReceivedSegments.size() = %d\n", (int)mLSID , (int)mReceivedSegments.size() );
           printf("Received Non-Contiguous Segment at offset = %d\n", (int) offset);
+	  fflush(stdout);
 	}	
 	else{
 	  //dont ack this packet; its falling outside the receive window.
 	}
       }
-    }
+
+      mCondVar.notify_one();
+    }    
   }
 
   LSID getLSID() {
@@ -1630,7 +1644,7 @@ private:
     sstMsg.set_flags(0);
     sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
 
-    printf("Sending Ack packet with window %d\n", (int)sstMsg.window());
+    //printf("Sending Ack packet with window %d\n", (int)sstMsg.window());
 
     std::string buffer = serializePBJMessage(sstMsg);
     mConnection.lock()->sendData(  buffer.data(), buffer.size());
@@ -1689,8 +1703,8 @@ private:
   uint32 MAX_RECEIVE_WINDOW;
 
   boost::mutex mQueueMutex;
+  boost::condition_variable mCondVar;
 
-  boost::asio::io_service mIOService;
 
   std::map<uint64, int> mReceivedSegments;
 
@@ -1700,7 +1714,7 @@ private:
 
   bool mLooping;
 
-  boost::asio::deadline_timer mRetransmitTimer;
+
 
   uint32 mTransmitWindowSize;
   uint32 mReceiveWindowSize;
