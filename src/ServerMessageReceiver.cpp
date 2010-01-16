@@ -53,5 +53,8 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Se
 ServerMessageReceiver::~ServerMessageReceiver() {
 }
 
+void ServerMessageReceiver::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
+    NOT_IMPLEMENTED();
+}
 
 } // namespace CBR

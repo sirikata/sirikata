@@ -24,7 +24,9 @@ public:
     virtual bool canAddMessage(const Message* msg);
     virtual void service();
 
-    virtual void setServerWeight(ServerID sid, float weight);
+    virtual void addInputQueue(ServerID sid, float weight);
+    virtual void updateInputQueueWeight(ServerID sid, float weight);
+    virtual void removeInputQueue(ServerID sid);
   private:
     virtual void networkReadyToSend(const Address4& from);
 };

@@ -379,6 +379,7 @@ protected:
     bool satisfies(QueueInfo* qi, uint64* bytes, QueueInfo** qiout, Message** result_out, Time* vftime_out) {
         *result_out = NULL;
 
+        assert(qi->nextFinishMessage != NULL);
         // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
         // would violate the ordering.
         if (*bytes < qi->nextFinishMessage->size())
@@ -436,7 +437,7 @@ protected:
                 //    case we'll consider the option immediately, and be sure to fix up the by-time-list.
 
                 // Log to insane just for debugging purposes.
-                SILOG(fairqueue,insane,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front");
+                SILOG(fairqueue,error,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front");
 
                 // Advance iterator to make it safe, update entry for this queue (includes fixing up empty queues)
                 advance = false;
@@ -467,7 +468,7 @@ protected:
                 }
                 else {
                     // Case 3 -- log to debug, since this is the only case that actually causes problems
-                    SILOG(fairqueue,debug,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front to earlier virtual finish time.");
+                    SILOG(fairqueue,error,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front to earlier virtual finish time.");
 
                     // It should have been moved earlier, check if its satisfactory
                     bool satis = satisfies(

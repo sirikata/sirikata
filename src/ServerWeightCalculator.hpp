@@ -36,12 +36,11 @@
 #include "Utility.hpp"
 #include "CoordinateSegmentation.hpp"
 
+#define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
+
 namespace CBR {
 
-class ServerMessageQueue;
-class ServerMessageReceiver;
-
-class ServerWeightCalculator : public CoordinateSegmentation::Listener {
+class ServerWeightCalculator {
 public:
     enum Normalization{
         NORMALIZE_BY_SEND_RATE,
@@ -52,17 +51,14 @@ public:
 
     typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> WeightFunction;
 
-    ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq, ServerMessageReceiver* sr);
+    ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc);
     ~ServerWeightCalculator();
-    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
-private:
-    void calculateWeight(ServerID source, ServerID dest, Normalization norm);
 
+    float64 weight(ServerID source, ServerID dest, Normalization norm = NORMALIZE_MODE);
+private:
     ServerID mServerID;
     CoordinateSegmentation* mCSeg;
     WeightFunction mWeightFunc;
-    ServerMessageQueue* mSendQueue;
-    ServerMessageReceiver* mReceiver;
 }; // class ServerWeightCalculator
 
 } // namespace CBR

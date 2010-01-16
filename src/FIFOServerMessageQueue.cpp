@@ -92,7 +92,14 @@ void FIFOServerMessageQueue::service(){
     mProfiler->finished();
 }
 
-void FIFOServerMessageQueue::setServerWeight(ServerID sid, float weight) {
+void FIFOServerMessageQueue::addInputQueue(ServerID sid, float weight) {
+    // NOTE might want to track these and verify in update and remove in debug mode
+}
+
+void FIFOServerMessageQueue::updateInputQueueWeight(ServerID sid, float weight) {
+}
+
+void FIFOServerMessageQueue::removeInputQueue(ServerID sid) {
 }
 
 void FIFOServerMessageQueue::networkReadyToSend(const Address4& from) {

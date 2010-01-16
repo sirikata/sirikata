@@ -35,6 +35,24 @@
 
 namespace CBR {
 
+ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener)
+        : mContext(ctx),
+          mNetwork(net),
+          mServerIDMap(sidmap),
+          mListener(listener)
+{
+    mProfiler = mContext->profiler->addStage("Server Message Queue");
+    mNetwork->setSendListener(this);
+}
+
+ServerMessageQueue::~ServerMessageQueue(){}
+
+
+void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
+    NOT_IMPLEMENTED();
+}
+
+
 bool ServerMessageQueue::trySend(const Address4& addr, const Message* msg) {
     Network::Chunk serialized;
     msg->serialize(&serialized);

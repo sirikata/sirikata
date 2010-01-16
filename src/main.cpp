@@ -129,7 +129,55 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
+
+    String filehandle = GetOption("serverips")->as<String>();
+    std::ifstream ipConfigFileHandle(filehandle.c_str());
+    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    gTrace->setServerIDMap(server_id_map);
+    gNetwork->setServerIDMap(server_id_map);
+
+
     Forwarder* forwarder = new Forwarder(space_context);
+
+
+    String cseg_type = GetOption(CSEG)->as<String>();
+    CoordinateSegmentation* cseg = NULL;
+    if (cseg_type == "uniform")
+        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
+    else if (cseg_type == "client") {
+      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
+    }
+    else {
+        assert(false);
+        exit(-1);
+    }
+
+
+    ServerWeightCalculator* weight_calc = NULL;
+    if (GetOption("gaussian")->as<bool>()) {
+        weight_calc =
+            new ServerWeightCalculator(
+                server_id,
+                cseg,
+                std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
+                    std::tr1::placeholders::_1,
+                    std::tr1::placeholders::_2,
+                    std::tr1::placeholders::_3,
+                    std::tr1::placeholders::_4)
+            );
+    }else {
+        weight_calc =
+            new ServerWeightCalculator(
+                server_id,
+                cseg,
+                std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
+                    std::tr1::placeholders::_1,
+                    std::tr1::placeholders::_2,
+                    std::tr1::placeholders::_3,
+                    std::tr1::placeholders::_4)
+                                       );
+    }
+
 
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
@@ -137,12 +185,6 @@ int main(int argc, char** argv) {
         loc_service = new StandardLocationService(space_context);
     else
         assert(false);
-
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    gTrace->setServerIDMap(server_id_map);
-    gNetwork->setServerIDMap(server_id_map);
 
 
     ServerMessageQueue* sq = NULL;
@@ -160,25 +202,12 @@ int main(int argc, char** argv) {
     String server_receiver_type = GetOption(SERVER_RECEIVER)->as<String>();
     if (server_queue_type == "fair")
         server_message_receiver =
-                new FairServerMessageReceiver(space_context, gNetwork, server_id_map, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+                new FairServerMessageReceiver(space_context, gNetwork, server_id_map, weight_calc, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);
     }
 
-
-
-    String cseg_type = GetOption(CSEG)->as<String>();
-    CoordinateSegmentation* cseg = NULL;
-    if (cseg_type == "uniform")
-        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
-    else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
-    }
-    else {
-        assert(false);
-        exit(-1);
-    }
 
 
     LoadMonitor* loadMonitor = new LoadMonitor(space_context, sq, cseg);
@@ -222,39 +251,9 @@ int main(int argc, char** argv) {
     //end create oseg
 
 
-    ServerWeightCalculator* weight_calc = NULL;
-    if (GetOption("gaussian")->as<bool>()) {
-        weight_calc =
-            new ServerWeightCalculator(
-                server_id,
-                cseg,
-
-                std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
-                    std::tr1::placeholders::_1,
-                    std::tr1::placeholders::_2,
-                    std::tr1::placeholders::_3,
-                    std::tr1::placeholders::_4),
-                sq,
-                server_message_receiver
-            );
-    }else {
-        weight_calc =
-            new ServerWeightCalculator(
-                server_id,
-                cseg,
-                std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
-                    std::tr1::placeholders::_1,
-                    std::tr1::placeholders::_2,
-                    std::tr1::placeholders::_3,
-                    std::tr1::placeholders::_4),
-                sq,
-                server_message_receiver
-                                       );
-    }
-
     // We have all the info to initialize the forwarder now
     uint32 oseg_lookup_queue_size = (uint32) GetOption("oseg_lookup_queue_size")->as<uint32>();
-    forwarder->initialize(oseg, sq, server_message_receiver, oseg_lookup_queue_size);
+    forwarder->initialize(oseg, weight_calc, sq, server_message_receiver, oseg_lookup_queue_size);
 
 
     Proximity* prox = new Proximity(space_context, loc_service);

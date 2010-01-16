@@ -79,7 +79,7 @@ void FairServerMessageQueue::service(){
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
-        mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest_server()),
+        mContext->trace()->serverDatagramSent(start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), packet_size);
 
         mListener->serverMessageSent(next_msg);
@@ -126,20 +126,20 @@ void FairServerMessageQueue::networkReadyToSend(const Address4& from) {
                                );
 }
 
-void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
-    // send weight
-    if (!mServerQueues.hasQueue(sid)) {
-        mServerQueues.addQueue(new Queue<Message*>(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>()),sid,weight);
-    }
-    else
-        mServerQueues.setQueueWeight(sid, weight);
+void FairServerMessageQueue::addInputQueue(ServerID sid, float weight) {
+    assert( !mServerQueues.hasQueue(sid) );
+    SILOG(fairsender,info,"Adding input queue for " << sid);
+    mServerQueues.addQueue(new Queue<Message*>(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>()),sid,weight);
 }
 
-float FairServerMessageQueue::getServerWeight(ServerID sid) {
-    if (mServerQueues.hasQueue(sid))
-        return mServerQueues.getQueueWeight(sid);
+void FairServerMessageQueue::updateInputQueueWeight(ServerID sid, float weight) {
+    assert( mServerQueues.hasQueue(sid) );
+    mServerQueues.setQueueWeight(sid, weight);
+}
 
-    return 0;
+void FairServerMessageQueue::removeInputQueue(ServerID sid) {
+    assert( mServerQueues.hasQueue(sid) );
+    mServerQueues.removeQueue(sid);
 }
 
 }

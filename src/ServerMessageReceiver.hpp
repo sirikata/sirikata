@@ -37,6 +37,7 @@
 #include "SpaceContext.hpp"
 #include "TimeProfiler.hpp"
 #include "Network.hpp"
+#include "CoordinateSegmentation.hpp"
 
 namespace CBR{
 
@@ -50,7 +51,7 @@ class Message;
  *  are received from the network it pushes them up to a listener which can
  *  handle them -- no queueing is performed internally.
  */
-class ServerMessageReceiver : public Network::ReceiveListener {
+class ServerMessageReceiver : public Network::ReceiveListener, CoordinateSegmentation::Listener {
 public:
     class Listener {
       public:
@@ -62,9 +63,14 @@ public:
     ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener);
     virtual ~ServerMessageReceiver();
 
-    virtual void setServerWeight(ServerID sid, float weight) = 0;
 protected:
+    virtual void setServerWeight(ServerID sid, float weight) = 0;
+
+    // Network::ReceiveListener Interface
+    virtual void networkReceivedConnection(const Address4& from) = 0;
     virtual void networkReceivedData(const Address4& from) = 0;
+    // CoordinateSegmentation::Listener Interface
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 
     SpaceContext* mContext;
     Network* mNetwork;

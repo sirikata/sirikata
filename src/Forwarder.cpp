@@ -4,6 +4,7 @@
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
+#include "ServerWeightCalculator.hpp"
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 #include "Statistics.hpp"
@@ -38,6 +39,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
  : PollingService(ctx->mainStrand),
    mContext(ctx),
    mOutgoingMessages(NULL),
+   mServerWeightCalculator(NULL),
    mServerMessageQueue(NULL),
    mServerMessageReceiver(NULL),
    mOSegLookups(NULL),
@@ -63,9 +65,10 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerWeightCalculator* swc, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size)
   {
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush, oseg_lookup_queue_size);
+    mServerWeightCalculator = swc;
     mServerMessageQueue = smq;
     mServerMessageReceiver = smr;
     mOutgoingMessages = new ForwarderServiceQueue(16384);
@@ -161,6 +164,7 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
     }
     else
     {
+        checkDestWeight(dest_server);
         QueueEnum::PushResult push_result = mOutgoingMessages->push(dest_server, svc, msg);
         success = (push_result == QueueEnum::PushSucceeded);
         if (success)
@@ -168,6 +172,16 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
     }
     return success;
   }
+
+void Forwarder::checkDestWeight(ServerID sid) {
+    if (mSetDests.find(sid) == mSetDests.end()) {
+        mSetDests.insert(sid);
+        mServerMessageQueue->addInputQueue(
+            sid,
+            mServerWeightCalculator->weight(mContext->id(), sid)
+                                           );
+    }
+}
 
 
 // -- Object Message Entry Points - entry points into the forwarder for object

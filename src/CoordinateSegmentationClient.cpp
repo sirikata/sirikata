@@ -38,6 +38,7 @@
 #include "Options.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
+#include "ServerIDMap.hpp"
 #include <boost/bind.hpp>
 
 #include <gcrypt.h>

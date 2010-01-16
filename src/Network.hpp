@@ -40,6 +40,12 @@ public:
       public:
         virtual ~ReceiveListener() {}
 
+        /** Invoked when a new connection is received from a remote host. This
+         *  should be used as an indication that a receive queue should be
+         *  allocated and serviced for that connection.
+         */
+        virtual void networkReceivedConnection(const Address4& from) = 0;
+
         /** Invoked by the Network when data has been received on a queue that
          * was previously empty, i.e. when data is received taht causes
          * front(from) to change.

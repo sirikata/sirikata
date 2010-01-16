@@ -36,37 +36,17 @@
 
 namespace CBR {
 
-#define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
-
-ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq, ServerMessageReceiver* sr)
+ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc)
  : mServerID(id),
    mCSeg(cseg),
-   mWeightFunc(weightFunc),
-   mSendQueue(sq),
-   mReceiver(sr)
+   mWeightFunc(weightFunc)
 {
-
-    // compute initial weights
-    for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-        if (sid == mServerID) continue;
-        calculateWeight(mServerID, sid, NORMALIZE_MODE);
-    }
-
-    mCSeg->addListener(this);
 }
 
 ServerWeightCalculator::~ServerWeightCalculator() {
-    mCSeg->removeListener(this);
 }
 
-void ServerWeightCalculator::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
-    for(std::vector<SegmentationInfo>::const_iterator it = new_segmentation.begin(); it != new_segmentation.end(); it++) {
-        if (it->server == mServerID) continue;
-        calculateWeight(mServerID, it->server, NORMALIZE_MODE);
-    }
-}
-
-void ServerWeightCalculator::calculateWeight(ServerID source, ServerID dest, Normalization norm) {
+float64 ServerWeightCalculator::weight(ServerID source, ServerID dest, Normalization norm) {
     BoundingBox3f source_bbox = mCSeg->serverRegion(source)[0];
     BoundingBox3f dest_bbox = mCSeg->serverRegion(dest)[0];
     //how much data am I able to send if I was sending everywhere
@@ -96,10 +76,8 @@ void ServerWeightCalculator::calculateWeight(ServerID source, ServerID dest, Nor
         assert(false);
         break;
     }
-    mSendQueue->setServerWeight(dest, result);
-    mReceiver->setServerWeight(dest, result);
 
-    printf("src_server=%d, dest=%d, weight=%f\n", source, dest, result );
+    return result;
 }
 
 } // namespace CBR

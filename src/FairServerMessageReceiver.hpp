@@ -39,6 +39,8 @@
 
 namespace CBR {
 
+class ServerWeightCalculator;
+
 /** FairServerMessageReceiver implements the ServerMessageReceiver interface
  *  using a FairQueue (without internal storage, using the Network layer as the
  *  queue storage) to fairly distribute receive bandwidth based on the specified
@@ -46,15 +48,17 @@ namespace CBR {
  */
 class FairServerMessageReceiver : public ServerMessageReceiver {
 public:
-    FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 recv_bytes_per_sec);
+    FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, ServerWeightCalculator* swc, Listener* listener, uint32 recv_bytes_per_sec);
     virtual ~FairServerMessageReceiver();
 
-    virtual void setServerWeight(ServerID sid, float weight);
 private:
-    // Callback from Network indicating that a new queue has become active
+    virtual void setServerWeight(ServerID sid, float weight);
+
+    virtual void networkReceivedConnection(const Address4& from);
     virtual void networkReceivedData(const Address4& from);
 
     // Handles
+    void handleReceivedConnection(const Address4& from);
     void handleReceived(const Address4& from);
 
     // Internal service call -- generated either by a networkReceivedData event
@@ -63,6 +67,7 @@ private:
     void service();
 
     uint32 mRecvRate;
+    ServerWeightCalculator* mServerWeightCalculator;
 
     IOTimerPtr mServiceTimer; // Timer used to generate another service callback
                               // when waiting for enough bytes to service next

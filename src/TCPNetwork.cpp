@@ -198,6 +198,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
                            remote_stream
                            )
                                    );
+        mReceiveListener->networkReceivedConnection(*remote_endpoint);
     }
     else {
         TCPNET_LOG(insane,"Handling regular received data.");

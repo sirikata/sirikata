@@ -42,7 +42,7 @@
 #include "Network.hpp"
 #include "Message.hpp"
 #include "WorldPopulationBSPTree.hpp"
-
+#include "ServerIDMap.hpp"
 
 namespace CBR {
 

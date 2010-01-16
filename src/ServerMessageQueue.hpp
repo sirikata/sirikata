@@ -36,11 +36,13 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "Network.hpp"
-#include "ServerIDMap.hpp"
+#include "CoordinateSegmentation.hpp"
 
 namespace CBR{
 
-class ServerMessageQueue : public Network::SendListener {
+class ServerIDMap;
+
+class ServerMessageQueue : public Network::SendListener, CoordinateSegmentation::Listener {
 public:
     class Listener {
       public:
@@ -53,17 +55,8 @@ public:
         virtual void serverMessageSent(Message* msg) = 0;
     };
 
-    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener)
-     : mContext(ctx),
-       mNetwork(net),
-       mServerIDMap(sidmap),
-       mListener(listener)
-    {
-        mProfiler = mContext->profiler->addStage("Server Message Queue");
-        mNetwork->setSendListener(this);
-    }
-
-    virtual ~ServerMessageQueue(){}
+    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener);
+    virtual ~ServerMessageQueue();
 
     /** Try to add the given message to this queue.  Note that only messages
      *  destined for other servers should be enqueued.  This class will not
@@ -84,10 +77,17 @@ public:
 
     virtual void service() = 0;
 
-    virtual void setServerWeight(ServerID sid, float weight) = 0;
-protected:
+    /** Add an input queue using the specified weight. */
+    virtual void addInputQueue(ServerID sid, float weight) = 0;
+    /** Update the weight on an input queue. */
+    virtual void updateInputQueueWeight(ServerID sid, float weight) = 0;
+    /** Remove the specified input queue. */
+    virtual void removeInputQueue(ServerID sid) = 0;
+  protected:
     // Network::SendListener Interface
     virtual void networkReadyToSend(const Address4& from) = 0;
+    // CoordinateSegmentation::Listener Interface
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 
     // Tries to send the Message to the Network, and tags it for analysis if
     // successful. Helper method for implementations.

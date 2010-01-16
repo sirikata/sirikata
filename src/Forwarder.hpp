@@ -31,6 +31,7 @@ namespace CBR
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;
+class ServerWeightCalculator;
 
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient, public PollingService,
                   public ServerMessageQueue::Listener, public ServerMessageReceiver::Listener
@@ -38,6 +39,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 private:
     SpaceContext* mContext;
     ForwarderServiceQueue *mOutgoingMessages;
+    ServerWeightCalculator* mServerWeightCalculator;
     ServerMessageQueue* mServerMessageQueue;
     ServerMessageReceiver* mServerMessageReceiver;
 
@@ -63,7 +65,7 @@ private:
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
-    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size);
+    void initialize(ObjectSegmentation* oseg, ServerWeightCalculator* swc, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size);
 
   protected:
 
@@ -106,6 +108,11 @@ private:
     // This version is provided if you already know which server the message should be sent to
     WARN_UNUSED
     bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+
+    // FIXME this is not the ideal place for this -- checks if dest queue/weight
+    // has been added to ServerMessageQueue, adds it if its missing
+    void checkDestWeight(ServerID sid);
+    std::set<ServerID> mSetDests;
 
     // Services forwarder queues
     // FIXME this should be changed to be fully event driven

@@ -34,7 +34,6 @@
 #define _CBR_LOAD_MONITOR_HPP_
 
 
-#include "ServerMessageQueue.hpp"
 #include "Message.hpp"
 #include "PollingService.hpp"
 
