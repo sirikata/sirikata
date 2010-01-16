@@ -228,13 +228,13 @@ public:
      */
     bool rawSend(const MultiplexedSocketPtr&parentMultiSocket, Chunk * chunk, bool force);
     bool canSend(size_t dataSize)const;
-    static Chunk*constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid);
+    static Chunk*constructControlPacket(const MultiplexedSocketPtr&parentMultiSocket, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid);
     /**
      *  Sends a streamID #0 packet with further control data on it.
      *  To start with only stream disconnect and the ack thereof are allowed
      */
     void sendControlPacket(const MultiplexedSocketPtr&parentMultiSocket, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid) {
-        rawSend(parentMultiSocket,constructControlPacket(code,sid),true);
+        rawSend(parentMultiSocket,constructControlPacket(parentMultiSocket, code,sid),true);
     }
     /**
      * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
@@ -248,6 +248,9 @@ public:
     // -- Statistics
     Duration averageSendLatency() const;
     Duration averageReceiveLatency() const;
-
+    //converts 3 arrays into a contiguous array of base64 numbers, delimited with a '\0' at the end.
+    static Chunk* toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c);
+    ///makes sure the UUID only consists of unicode-allowed characters and has no null values inside
+    static UUID massageUUID(const UUID&);
 };
 } }

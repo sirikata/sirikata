@@ -174,9 +174,9 @@ public:
     ///function that searches mFreeStreamIDs or uses the mHighestStreamID to find the next unused free stream ID
     Stream::StreamID getNewID();
     ///Constructor for a connecting stream
-    MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback);
+    MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelimitedStream);
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
-    MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t maxSendBufferSize);
+    MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t maxSendBufferSize, bool zeroDelimitedStream);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
     static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID);
     ///erase all sockets and callbacks since the refcount is now zero;

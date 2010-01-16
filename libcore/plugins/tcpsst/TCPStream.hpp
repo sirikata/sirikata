@@ -93,6 +93,9 @@ public:
     static const char * STRING_PREFIX() {
         return "SSTTCP";
     }
+    static const char * WEBSOCKET_STRING_PREFIX() {
+        return "SST:WS";
+    }
     enum HeaderSizeEnumerant {
         STRING_PREFIX_LENGTH=6,
         TcpSstHeaderSize=24
@@ -120,12 +123,13 @@ private:
     std::tr1::shared_ptr<AtomicValue<int> >mSendStatus;
     unsigned char mNumSimultaneousSockets;
     bool mNoDelay;
+    bool mZeroDelim;
     unsigned int mSendBufferSize;
     unsigned int mKernelSendBufferSize;
     unsigned int mKernelReceiveBufferSize;
 
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone() called internally from factory
-    TCPStream(IOService&,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
+    TCPStream(IOService&,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, bool zeroDelim, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
 
 public:

@@ -47,12 +47,14 @@ static OptionSet*optionParser(const String&str) {
     OptionValue *kSendBufferSize=new OptionValue("ksend-buffer-size","0",OptionValueType<unsigned int>(),"Size of kernel TCP send buffer used to accumulate packets during an outgoing send. 0 for system default buffer.");
     OptionValue *kReceiveBufferSize=new OptionValue("kreceive-buffer-size","0",OptionValueType<unsigned int>(),"Size of kernel TCP receive buffer used to accumulate packets during an outgoing send. 0 for system default buffer.");
     OptionValue *noDelay=new OptionValue("no-delay","false",OptionValueType<bool>(),"Whether the no-delay option is set on the socket");    
+    OptionValue *zeroDelim=new OptionValue("base64","false",OptionValueType<bool>(),"Whether the stream should be base64 and zero delimited (eg websocket compat)");    
     
     InitializeClassOptions("tcpsstoptions",numSockets,
                      numSockets,
                      maxSockets,
                      sendBufferSize,
                      noDelay,
+                     zeroDelim,
                      kSendBufferSize,
                      kReceiveBufferSize,
                      NULL);

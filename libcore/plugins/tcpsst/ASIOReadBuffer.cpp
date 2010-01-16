@@ -114,7 +114,20 @@ static signed char URLSAFEDECODABET [] = {
         39,40,41,42,43,44,45,46,47,48,49,50,51,     // Letters 'n' through 'z'
         -9,-9,-9,-9,-9                                 // Decimal 123 - 127
 };
+static Stream::StreamID parseId(Chunk&newChunk,int&outBuffPosn) {
+    Stream::StreamID id;
+    unsigned int headerLength=outBuffPosn;
+    id.unserialize(&*newChunk.begin(),headerLength);
+    if ((int)headerLength!=outBuffPosn) {
+        std::memmove(&*newChunk.begin(),&*(newChunk.begin()+headerLength),outBuffPosn-headerLength);//move the rest of the packet out
+    }
+    outBuffPosn-=headerLength;
+    return id;
+}
 Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket,const uint8*begin, const uint8*end){
+    bool parsedId=false;
+    Stream::StreamID id;
+
     Chunk newChunk(((end-begin)*3)/4+3);//maximum of the size;
     int remainderShift=0;
     int currentValue=0;
@@ -135,7 +148,10 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
                 if( b4Posn > 3 ) {                  // Time to decode?
                     outBuffPosn += decode4to3( b4, newChunk, outBuffPosn );
                     b4Posn = 0;
-                    
+                    if (outBuffPosn>5) {
+                        id=parseId(newChunk,outBuffPosn);
+                        parsedId=true;
+                    }
                     // If that was the equals sign, break out of 'for' loop
                     if( sbiDecode == EQUALS_SIGN_ENC ) {
                         break;
@@ -144,9 +160,11 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
             }   // end if: equals sign or better
         }   // end if: white space, equals sign or better
     }
-    assert(outBuffPosn<=newChunk.size());
+    assert(outBuffPosn<=(int)newChunk.size());
+    if (!parsedId) {
+        id=parseId(newChunk,outBuffPosn);
+    }
     newChunk.resize(outBuffPosn);
-    //FIXME compute ID from first bytes of chunk
     return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
 }
 
@@ -249,11 +267,12 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
         unsigned int remainder = bufferPos-chunkPos;
         if (remainder>sBufferLength/2&&!readBufferFull) {//FIXME should be smarter...definitely if remainder==sBufferLength
             mBufferPos=remainder;
-            mNewChunk=std::vector(&mBuffer[chunkPos],&mBuffer[bufferPos]);
+            mNewChunk.resize(0);
+            mNewChunk.insert(mNewChunk.end(),&mBuffer[chunkPos],&mBuffer[mBufferPos]);
             readIntoZeroDelimChunk(thus);
         }else {
             if (remainder) {
-                std::memmov(mBuffer,mBuffer+chunkPos,remainder);
+                std::memmove(mBuffer,mBuffer+chunkPos,remainder);
             }
             mBufferPos=remainder;
             if (!readBufferFull) {
@@ -353,7 +372,7 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
                         readBufferFull=true;
                         mReadStatus=PAUSED_NEW_CHUNK;    
                     }else {//will definitely fit in the static buffer
-                        assert(mBufferPos-curOffset<=sBufferSize);
+                        assert(mBufferPos-curOffset<=sBufferLength);
                         if (mBufferPos!=curOffset) {
                             std::memcpy(mBuffer,&*(mNewChunk.begin()+curOffset),mBufferPos-curOffset);
                         }
@@ -366,7 +385,7 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
             if (curOffset==0) {//no packet processed, still large
                 readIntoZeroDelimChunk(thus);
             } else {
-                assert (mBufferPos-curOffset<=sBufferSize);//only read that much in--would only have read it in if there was one less byte for the last zero delim of the big
+                assert (mBufferPos-curOffset<=sBufferLength);//only read that much in--would only have read it in if there was one less byte for the last zero delim of the big
                                                            //packet, so we should need to read in at least one byte
                 if (mBufferPos!=curOffset) {
                     std::memcpy(mBuffer,&*(mNewChunk.begin()+curOffset),mBufferPos-curOffset);

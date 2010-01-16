@@ -48,7 +48,7 @@ void BufferPrint(const void * vbuf, size_t size) {
     if (false) {
         const unsigned char *buf=(const unsigned char*)vbuf;
         char *obuf=(char*)malloc(size*2+1);
-        for (int i=0;i<size;++i){
+        for (size_t i=0;i<size;++i){
             unsigned char c= buf[i];
             unsigned char a=c/16;
             unsigned char b=c%16;
@@ -71,14 +71,93 @@ void ASIOLogBuffer(void * pointerkey, const char extension[16], const uint8* buf
     fclose(fp);
 
 }
-void copyHeader(void * destination, const UUID&key, unsigned int num) {
-    std::memcpy(destination,TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH);
+void copyHeader(void * destination, const char * stringPrefix,const UUID&key, unsigned int num) {
+    std::memcpy(destination,stringPrefix,TCPStream::STRING_PREFIX_LENGTH);
     ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH]='0'+(num/10)%10;
     ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH+1]='0'+(num%10);
     std::memcpy(((char*)destination)+TCPStream::STRING_PREFIX_LENGTH+2,
                 key.getArray().begin(),
                 UUID::static_size);
 }
+static uint32 conservativeBase64Size(size_t x) {
+    return (x+2)*4/3+6+x/64+(x%64?1:0);
+}
+static const uint _URL_SAFE_ALPHABET []= {
+        (byte)'A', (byte)'B', (byte)'C', (byte)'D', (byte)'E', (byte)'F', (byte)'G',
+        (byte)'H', (byte)'I', (byte)'J', (byte)'K', (byte)'L', (byte)'M', (byte)'N',
+        (byte)'O', (byte)'P', (byte)'Q', (byte)'R', (byte)'S', (byte)'T', (byte)'U', 
+        (byte)'V', (byte)'W', (byte)'X', (byte)'Y', (byte)'Z',
+        (byte)'a', (byte)'b', (byte)'c', (byte)'d', (byte)'e', (byte)'f', (byte)'g',
+        (byte)'h', (byte)'i', (byte)'j', (byte)'k', (byte)'l', (byte)'m', (byte)'n',
+        (byte)'o', (byte)'p', (byte)'q', (byte)'r', (byte)'s', (byte)'t', (byte)'u', 
+        (byte)'v', (byte)'w', (byte)'x', (byte)'y', (byte)'z',
+        (byte)'0', (byte)'1', (byte)'2', (byte)'3', (byte)'4', (byte)'5', 
+        (byte)'6', (byte)'7', (byte)'8', (byte)'9', (byte)'-', (byte)'_'
+    };
+	
+int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
+    uint8 temp[4];
+    uint32 inBuff =   ( numSigBytes > 0 ? ((source[ 0 ] << 24) / 256) : 0 )
+                     | ( numSigBytes > 1 ? ((source[ 1 ] << 24) / 65536) : 0 )
+                     | ( numSigBytes > 2 ? ((source[ 2 ] << 24) / 65536/ 256) : 0 );
+
+    destination[ 0 ] = _URL_SAFE_ALPHABET[ (inBuff >> 18)        ];
+    destination[ 1 ] = _URL_SAFE_ALPHABET[ (inBuff >> 12) & 0x3f ];
+
+    switch( numSigBytes )
+    {
+      case 3:
+        destination[ 2 ] = _URL_SAFE_ALPHABET[ (inBuff >>  6) & 0x3f ];
+        destination[ 3 ] = _URL_SAFE_ALPHABET[ (inBuff      ) & 0x3f ];
+        return 4;
+      case 2:
+        destination[ 2 ] = _URL_SAFE_ALPHABET[ (inBuff >>  6) & 0x3f ];
+        destination[ 3 ] = '=';
+        return 4;
+        
+      case 1:
+        destination[ 2 ] = '=';
+        destination[ 3 ] = '=';
+        return 4;
+
+      default:
+        return 0;
+    }   // end switch
+    
+}
+
+Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c) {
+    const MemoryReference*refs[3]; refs[0]=&a; refs[1]=&b; refs[2]=&c;
+    unsigned int datalen=0;
+    unsigned int curPlace=0;
+    uint8 data[3];
+    Chunk * retval= new Chunk(conservativeBase64Size(a.size()+b.size()+c.size()));
+    size_t retvalSize=retval->size();
+    for (int i=0;i<3;++i) {
+        const uint8*dat=(const uint8*)refs[i]->data();
+        uint32 size=refs[i]->size();
+        for (uint32 j=0;j<size;++j) {
+            data[datalen++]=dat[j];
+            if (datalen==3) {
+                if (retvalSize<=curPlace+5) {
+                    retval->resize(curPlace+5);
+                }
+                curPlace+=translateBase64(&*(retval->begin()+curPlace),data,datalen);
+                datalen=0;
+            }
+        }
+    }
+    if (datalen) {
+        if (retvalSize<=curPlace+5) {
+            retval->resize(curPlace+5);
+            SILOG(tcpsst,error,"conservative size estimate incorrect");
+        }        
+        curPlace+=translateBase64(&*(retval->begin()+curPlace),data,datalen);
+    }
+    retval->resize(curPlace);
+    return retval;
+}
+
 
 void ASIOSocketWrapper::finishedSendingChunk(const TimestampedChunk& tc) {
     mAverageSendLatency.sample( tc.sinceCreation() );
@@ -371,32 +450,55 @@ bool ASIOSocketWrapper::rawSend(const MultiplexedSocketPtr&parentMultiSocket, Ch
     }
     return retval;
 }
-Chunk*ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid){
+Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid){
     const unsigned int max_size=16;
-    uint8 dataStream[max_size+2*vuint32::MAX_SERIALIZED_LENGTH];
-    unsigned int size=max_size;
-    Stream::StreamID controlStream;//control packet
-    size=controlStream.serialize(&dataStream[vuint32::MAX_SERIALIZED_LENGTH],size);
-    assert(size<max_size);
-    dataStream[vuint32::MAX_SERIALIZED_LENGTH+size++]=code;
-    unsigned int cur=vuint32::MAX_SERIALIZED_LENGTH+size;
-    size=max_size-cur;
-    size=sid.serialize(&dataStream[cur],size);
-    assert(size+cur<=max_size);
-    vuint32 streamSize=vuint32(size+cur-vuint32::MAX_SERIALIZED_LENGTH);
-    unsigned int actualHeaderLength=streamSize.serialize(dataStream,vuint32::MAX_SERIALIZED_LENGTH);
-    if (actualHeaderLength!=vuint32::MAX_SERIALIZED_LENGTH) {
-        unsigned int retval=streamSize.serialize(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,vuint32::MAX_SERIALIZED_LENGTH);
-        assert(retval==actualHeaderLength);
+    if (thus->isZeroDelim()) {
+        uint8 dataStream[max_size+vuint32::MAX_SERIALIZED_LENGTH+1];
+        Stream::StreamID controlStream;//control packet
+        unsigned int size=controlStream.serialize(&dataStream[0],max_size);
+        assert(size<max_size);
+        dataStream[size++]=code;
+        unsigned int cur=size;
+        size=max_size-cur;
+        size=sid.serialize(&dataStream[cur],size);
+        assert(size+cur<=max_size);
+        return toBase64ZeroDelim(MemoryReference(dataStream,size+cur),MemoryReference(NULL,0),MemoryReference(NULL,0));
+    }else {
+        uint8 dataStream[max_size+2*vuint32::MAX_SERIALIZED_LENGTH];
+        unsigned int size=max_size;
+        Stream::StreamID controlStream;//control packet
+        size=controlStream.serialize(&dataStream[vuint32::MAX_SERIALIZED_LENGTH],size);
+        assert(size<max_size);
+        dataStream[vuint32::MAX_SERIALIZED_LENGTH+size++]=code;
+        unsigned int cur=vuint32::MAX_SERIALIZED_LENGTH+size;
+        size=max_size-cur;
+        size=sid.serialize(&dataStream[cur],size);
+        assert(size+cur<=max_size);
+        vuint32 streamSize=vuint32(size+cur-vuint32::MAX_SERIALIZED_LENGTH);
+        unsigned int actualHeaderLength=streamSize.serialize(dataStream,vuint32::MAX_SERIALIZED_LENGTH);
+        if (actualHeaderLength!=vuint32::MAX_SERIALIZED_LENGTH) {
+            unsigned int retval=streamSize.serialize(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,vuint32::MAX_SERIALIZED_LENGTH);
+            assert(retval==actualHeaderLength);
+        }
+        return new Chunk(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
     }
-    return new Chunk(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
 }
-
+UUID ASIOSocketWrapper::massageUUID(const UUID&uuid) {
+    unsigned char data[UUID::static_size];
+    for (int i=0;i<UUID::static_size;++i) {
+        unsigned char tmp=*(uuid.getArray().begin()+i);
+        tmp&=127;
+        if (tmp==0)
+            tmp=1;
+        data[i]=tmp;
+    }
+    return UUID(data,UUID::static_size);
+}
 void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const UUID&value, unsigned int numConnections) {
-    UUID return_value=UUID::random();
-
+    UUID return_value=(parentMultiSocket->isZeroDelim()?massageUUID(UUID::random()):UUID::random());
+    
     Chunk *headerData=new Chunk(TCPStream::TcpSstHeaderSize);
-    copyHeader(&*headerData->begin(),value,numConnections);
+    copyHeader(&*headerData->begin(),parentMultiSocket->isZeroDelim()?TCPStream::WEBSOCKET_STRING_PREFIX():TCPStream::STRING_PREFIX(),value,numConnections);
     rawSend(parentMultiSocket,headerData,true);
 }
 void ASIOSocketWrapper::ioReactorThreadPauseStream(const MultiplexedSocketPtr&parentMultiSocket, Stream::StreamID sid){

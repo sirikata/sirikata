@@ -61,8 +61,9 @@ void buildStream(TcpSstHeaderArray *buffer,
                  std::tr1::shared_ptr<TCPStreamListener::Data> data,
                  const boost::system::error_code &error,
                  std::size_t bytes_transferred) {
-
-    if (error || std::memcmp(buffer->begin(),TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)!=0) {
+    bool binaryStream=(std::memcmp(buffer->begin(),TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)==0);
+    bool base64Stream=(std::memcmp(buffer->begin(),TCPStream::WEBSOCKET_STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)==0);
+    if (error || (binaryStream==false&&base64Stream==false) ) {
         SILOG(tcpsst,warning,"Connection received with incomprehensible header");
     }else {
         boost::asio::ip::tcp::no_delay option(data->mNoDelay);
@@ -83,8 +84,8 @@ void buildStream(TcpSstHeaderArray *buffer,
             where->second.mSockets.push_back(socket);
             if (numConnections==(unsigned int)where->second.mSockets.size()) {
                 MultiplexedSocketPtr shared_socket(
-                    MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,where->second.mSockets,data->cb,data->mSendBufferSize));
-                MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
+                    MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,where->second.mSockets,data->cb,data->mSendBufferSize, base64Stream));
+                MultiplexedSocket::sendAllProtocolHeaders(shared_socket,base64Stream?ASIOSocketWrapper::massageUUID(UUID::random()):UUID::random());
                 sIncompleteStreams.erase(where);
                 Stream::StreamID newID=Stream::StreamID(1);
                 TCPStream * strm=new TCPStream(shared_socket,newID);

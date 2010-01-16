@@ -182,7 +182,7 @@ void MultiplexedSocket::closeStream(const MultiplexedSocketPtr& thus,const Strea
     closeRequest.originStream=Stream::StreamID();//control packet
     closeRequest.unordered=false;
     closeRequest.unreliable=false;
-    closeRequest.data=ASIOSocketWrapper::constructControlPacket(code,sid);
+    closeRequest.data=ASIOSocketWrapper::constructControlPacket(thus, code,sid);
     
     sendBytes(thus,closeRequest);
 }
@@ -249,20 +249,22 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     assert(retval>1);
     return Stream::StreamID(retval);
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback)
+MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelim)
  : SerializationCheck(),
    mIO(io),
    mNewSubstreamCallback(substreamCallback),
    mHighestStreamID(1)
 {
+    mZeroDelim=false;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t max_send_buffer_size)
+MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t max_send_buffer_size, bool zeroDelimited)
  :SerializationCheck(),
   mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
+    mZeroDelim=zeroDelimited;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
     for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
