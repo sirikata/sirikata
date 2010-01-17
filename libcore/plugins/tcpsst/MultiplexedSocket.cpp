@@ -271,15 +271,15 @@ MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vec
         mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,max_send_buffer_size>ASIO_SEND_BUFFER_SIZE?max_send_buffer_size:ASIO_SEND_BUFFER_SIZE));
     }
 }
-void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID) {
+void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol){
     unsigned int numSockets=(unsigned int)thus->mSockets.size();
     for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
-        i->sendProtocolHeader(thus,syncedUUID,numSockets);
+        i->sendServerProtocolHeader(thus,origin,host,port,resource_name,subprotocol);
     }
     boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
     thus->mSocketConnectionPhase=CONNECTED;
     for (unsigned int i=0,ie=thus->mSockets.size();i!=ie;++i) {
-        MakeASIOReadBuffer(thus,i);
+        MakeASIOReadBuffer(thus,i,MemoryReference(NULL,0));
     }
     assert (thus->mNewRequests==NULL||thus->mNewRequests->probablyEmpty());//would otherwise need to empty out new requests--but no one should have a reference to us here
 }

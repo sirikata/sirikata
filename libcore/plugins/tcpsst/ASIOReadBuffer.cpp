@@ -39,8 +39,15 @@
 #include "MultiplexedSocket.hpp"
 #include "ASIOReadBuffer.hpp"
 namespace Sirikata { namespace Network {
-ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket) {
-    return parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
+ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader) {
+    ASIOReadBuffer *retval= parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
+    if (strayBytesAfterHeader.size()) {
+        memcpy(retval->mBuffer, strayBytesAfterHeader.data(),strayBytesAfterHeader.size());
+        retval->asioReadIntoFixedBuffer(ASIOReadBuffer::ErrorCode(),strayBytesAfterHeader.size());//fake callback with real data from past header
+    }else {
+        retval->readIntoFixedBuffer(parentSocket);
+    }
+    return retval;
 }
 void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
     //parentSocket->hostDisconnectedCallback(mWhichBuffer,error);
@@ -421,7 +428,6 @@ ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;
-    readIntoFixedBuffer(parentSocket);
 }
 
 } }

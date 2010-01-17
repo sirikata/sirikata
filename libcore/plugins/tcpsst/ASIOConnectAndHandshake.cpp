@@ -43,39 +43,53 @@ namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
 void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay, 
                                                   unsigned int whichSocket,
-                                                  Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
+                                                  Array<uint8,TCPStream::MaxWebSocketHeaderSize>* buffer,
                                                   const ErrorCode&error,
                                                   std::size_t bytes_received) {
     MultiplexedSocketPtr connection=mConnection.lock();
     if (connection) {
-        if (mFinishedCheckCount==(int)connection->numSockets()) {
-            mFirstReceivedHeader=*buffer;
+        char normalMode[]={0x48, 0x54, 0x54, 0x50, 0x2F, 0x31, 0x2E, 0x31, 0x20, 0x31, 0x30, 0x31, 0x20, 0x57, 0x65, 0x62,
+                           0x20, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x20, 0x50, 0x72, 0x6F, 0x74, 0x6F, 0x63, 0x6F, 0x6C,
+                           0x20, 0x48, 0x61, 0x6E, 0x64, 0x73, 0x68, 0x61, 0x6B, 0x65, 0x0D, 0x0A,'\0'};
+        size_t whereHeaderEnds=3;
+        for (;whereHeaderEnds<bytes_received;++whereHeaderEnds) {
+            if ((*buffer)[whereHeaderEnds]=='\n'&&
+                (*buffer)[whereHeaderEnds-1]=='\r'&&
+                (*buffer)[whereHeaderEnds-2]=='\n'&&
+                (*buffer)[whereHeaderEnds-3]=='\r') {
+                break;
+            }
         }
-        if (mFinishedCheckCount>=1) {
-            if (mFirstReceivedHeader!=*buffer) {
-                connection->connectionFailedCallback(whichSocket,"Bad header comparison "
-                                                     +std::string((char*)buffer->begin(),TCPStream::TcpSstHeaderSize)
-                                                     +" does not match "
-                                                     +std::string((char*)mFirstReceivedHeader.begin(),TCPStream::TcpSstHeaderSize));
-                mFinishedCheckCount-=connection->numSockets();
-                mFinishedCheckCount-=1;
-            }else {
+        if (!memcmp(buffer,normalMode,sizeof(normalMode))) {
+            if (mFinishedCheckCount==(int)connection->numSockets()) {
+                mFirstReceivedHeader=*buffer;
+            }
+            if (mFinishedCheckCount>=1) {
                 boost::asio::ip::tcp::no_delay option(noDelay);
                 connection->getASIOSocketWrapper(whichSocket).getSocket().set_option(option);
                 mFinishedCheckCount--;
                 if (mFinishedCheckCount==0) {
                     connection->connectedCallback();
                 }
-                MakeASIOReadBuffer(connection,whichSocket);
+                
+                MemoryReference mb(buffer->begin()+whereHeaderEnds,bytes_received-whereHeaderEnds);
+                MakeASIOReadBuffer(connection,whichSocket,mb);
+            }else {
+                mFinishedCheckCount-=1;
             }
         }else {
-            mFinishedCheckCount-=1;
+                connection->connectionFailedCallback(whichSocket,"Bad header comparison "
+                                                     +std::string((char*)buffer->begin(),bytes_received)
+                                                     +" does not match "
+                                                     +std::string(normalMode));
+                mFinishedCheckCount-=connection->numSockets();
+                mFinishedCheckCount-=1;
         }
     }
     delete buffer;
 }
-
 void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
+                                                 const Address& address,
                                                  bool no_delay,
                                                  unsigned int whichSocket,
                                                  const tcp::resolver::iterator &it,
@@ -103,6 +117,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                 .async_connect(*it,
                                boost::bind(&ASIOConnectAndHandshake::connectToIPAddress,
                                            thus,
+                                           address,
                                            no_delay,
                                            whichSocket,
                                            nextIterator,
@@ -111,12 +126,14 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
     } else {
         connection->getASIOSocketWrapper(whichSocket)
             .sendProtocolHeader(connection,
+                                address,
                                 thus->mHeaderUUID,
                                 connection->numSockets());
-        Array<uint8,TCPStream::TcpSstHeaderSize> *header=new Array<uint8,TCPStream::TcpSstHeaderSize>;
+        Array<uint8,TCPStream::MaxWebSocketHeaderSize> *header=new Array<uint8,TCPStream::MaxWebSocketHeaderSize>;
+        ASIOSocketWrapper::CheckCRLF headerCheck(header);
         boost::asio::async_read(connection->getASIOSocketWrapper(whichSocket).getSocket(),
-                                boost::asio::buffer(header->begin(),TCPStream::TcpSstHeaderSize),
-                                boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
+                                boost::asio::buffer(header->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
+                                headerCheck,
                                 boost::bind(&ASIOConnectAndHandshake::checkHeader,
                                             thus,
                                             no_delay,
@@ -128,6 +145,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
 }
 
 void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& thus,
+                                            const Address&address, 
                                             bool no_delay,
                                             const boost::system::error_code &error,
                                             tcp::resolver::iterator it) {
@@ -141,6 +159,7 @@ void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& th
         unsigned int numSockets=connection->numSockets();
         for (unsigned int whichSocket=0;whichSocket<numSockets;++whichSocket) {
             connectToIPAddress(thus,
+                               address,
                                no_delay,
                                whichSocket,
                                it,
@@ -157,6 +176,7 @@ void ASIOConnectAndHandshake::connect(const ASIOConnectAndHandshakePtr &thus,
     thus->mResolver.async_resolve(query,
                                   boost::bind(&ASIOConnectAndHandshake::handleResolve,
                                               thus,
+                                              address,
                                               no_delay,
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::iterator));

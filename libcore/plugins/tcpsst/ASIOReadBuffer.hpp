@@ -34,8 +34,16 @@
 
 namespace Sirikata {
 namespace Network {
-
+class ASIOReadBuffer;
+    /**
+     *  The only public interface to TCPReadBuffer is the constructor-like-function which takes in a MultiplexedSocket and an integer offset
+     *  \param parentSocket the MultiplexedSocket which defines the whole connection (if the weak_ptr fails, the connection is bunk
+     *  \param whichSocket indicates which substream this read buffer is for, so the appropriate ASIO socket can be retrieved
+     */
+ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader);
 class ASIOReadBuffer {
+    friend ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader);
+public:
     enum {
         ///The length of the fixed buffer.  This should only affect the largest chunk of data delivered at once,
         ///since async_receive should return as soon as data is available.  Therefore we use a relatively large
@@ -48,6 +56,7 @@ class ASIOReadBuffer {
         ///real packet), we set this to be as large as possible, sBufferLength.
         sLowWaterMark=sBufferLength
     };
+private:
     enum ReadStatus{
         PAUSED_FIXED_BUFFER=0x0,
         READING_FIXED_BUFFER=0x1,
@@ -159,13 +168,9 @@ class ASIOReadBuffer {
      * Otherwise the function farms work off to translateBuffer
      */
     void asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read);
-public:
-    /**
-     *  The only public interface to TCPReadBuffer is the constructor which takes in a MultiplexedSocket and an integer offset
-     *  \param parentSocket the MultiplexedSocket which defines the whole connection (if the weak_ptr fails, the connection is bunk
-     *  \param whichSocket indicates which substream this read buffer is for, so the appropriate ASIO socket can be retrieved
-     */
+
     ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket);
+public:
     /**
      *  If read was paused by a user that could not proocess a packet
      *  This call attempts to deliver the packet to a user again
@@ -176,7 +181,7 @@ public:
     ~ASIOReadBuffer();
 };
 
-ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket);
+
 
 } // namespace Network
 } // namespace Sirikata

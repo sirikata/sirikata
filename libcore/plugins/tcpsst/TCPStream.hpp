@@ -98,7 +98,8 @@ public:
     }
     enum HeaderSizeEnumerant {
         STRING_PREFIX_LENGTH=6,
-        TcpSstHeaderSize=24
+        TcpSstHeaderSize=24,
+        MaxWebSocketHeaderSize=2048
     };
     enum TCPStreamControlCodes {
         TCPStreamCloseStream=1,

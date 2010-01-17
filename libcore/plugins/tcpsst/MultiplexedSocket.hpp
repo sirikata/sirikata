@@ -178,7 +178,7 @@ public:
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
     MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t maxSendBufferSize, bool zeroDelimitedStream);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
-    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID);
+    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol);
     ///erase all sockets and callbacks since the refcount is now zero;
     ~MultiplexedSocket();
     ///a stream that has been closed and the other side has agreed not to send any more packets using that ID

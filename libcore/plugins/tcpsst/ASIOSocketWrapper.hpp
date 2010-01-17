@@ -239,7 +239,9 @@ public:
     /**
      * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
      */
-    void sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const UUID&value, unsigned int numConnections);
+    void sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const Address& address, const UUID&value, unsigned int numConnections);
+    void sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol);
+    
     void ioReactorThreadPauseStream(const MultiplexedSocketPtr&parentMultiSocket, Stream::StreamID sid);
     void unpauseSendStreams(const MultiplexedSocketPtr&parentMultiSocket);
     Address getRemoteEndpoint()const;
@@ -252,5 +254,21 @@ public:
     static Chunk* toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c);
     ///makes sure the UUID only consists of unicode-allowed characters and has no null values inside
     static UUID massageUUID(const UUID&);
+class CheckCRLF {
+    const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
+    unsigned int mLastTransferred;
+public:
+    CheckCRLF(const Array<uint8,TCPStream::MaxWebSocketHeaderSize>*array) {
+        mArray=array;
+        mLastTransferred=0;
+        
+    }
+    size_t operator() (const ErrorCode&error, size_t bytes_transferred);
 };
+
+
+};
+
+
+
 } }

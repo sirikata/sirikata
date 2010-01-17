@@ -38,7 +38,7 @@ class ASIOConnectAndHandshake {
     ///num positive checks remaining (or -n for n sockets of which at least 1 failed)
     int mFinishedCheckCount;
     UUID mHeaderUUID;
-    Array<uint8,TCPStream::TcpSstHeaderSize> mFirstReceivedHeader;
+    Array<uint8,TCPStream::MaxWebSocketHeaderSize> mFirstReceivedHeader;
     typedef boost::system::error_code ErrorCode;
 
    /**
@@ -51,7 +51,7 @@ class ASIOConnectAndHandshake {
     */
     void checkHeaderContents(bool no_delay, 
                              unsigned int whichSocket,
-                             Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
+                             Array<uint8,TCPStream::MaxWebSocketHeaderSize>* buffer,
                              const ErrorCode&error,
                              std::size_t bytes_received);
     /**
@@ -60,7 +60,7 @@ class ASIOConnectAndHandshake {
     static void checkHeader(const ASIOConnectAndHandshakePtr& thus,
                             bool no_delay, 
                             unsigned int whichSocket,
-                            Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
+                            Array<uint8,TCPStream::MaxWebSocketHeaderSize>* buffer,
                             const ErrorCode&error,
                             std::size_t bytes_received) {
         thus->checkHeaderContents(no_delay, whichSocket,buffer,error,bytes_received);
@@ -74,6 +74,7 @@ class ASIOConnectAndHandshake {
     * The buffer passed in will be deleted by this function
     */
     static void connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
+                                   const Address& address,
                                    bool no_delay, 
                                    unsigned int whichSocket,
                                    const boost::asio::ip::tcp::resolver::iterator &it,
@@ -83,7 +84,8 @@ class ASIOConnectAndHandshake {
     * It may get an error if the host was not found or otherwise a valid iterator to a number of ip addresses
     */
     static void handleResolve(const ASIOConnectAndHandshakePtr &thus,
-                              bool no_delay, 
+                              const Address&address, 
+                              bool no_delay,
                               const boost::system::error_code &error,
                               boost::asio::ip::tcp::resolver::iterator it);
 public:
