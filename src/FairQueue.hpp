@@ -418,6 +418,8 @@ protected:
             // strict queue semantics, e.g. the FairQueue itself
             Message* min_queue_front = min_queue_info->messageQueue->front();
 
+            assert(min_queue_info->nextFinishMessage != NULL);
+
             // NOTE: We would like to assert this:
             // assert(min_queue_front == min_queue_info->nextFinishMessage);
             // but doing so is not safe.  During operations, a queue may have pushed downstream
@@ -483,6 +485,7 @@ protected:
                 }
             }
 
+            assert(min_queue_info->nextFinishMessage != NULL);
             bool satis = satisfies(
                 min_queue_info, bytes,
                 min_queue_info_out, result_out, vftime_out
