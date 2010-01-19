@@ -7,43 +7,22 @@
 
 namespace CBR{
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 send_bytes_per_second)
- : ServerMessageQueue(ctx, net, sidmap, listener),
-   mServerQueues(),
-   mLastServiceTime(ctx->time),
-   mRate(send_bytes_per_second),
-   mRemainderSendBytes(0),
-   mLastSendEndTime(ctx->simTime())
+
+FairServerMessageQueue::SenderAdapterQueue::SenderAdapterQueue(Sender* sender, ServerID sid)
+        : mSender(sender),
+          mDestServer(sid)
 {
 }
 
-bool FairServerMessageQueue::canAddMessage(const Message* msg) {
-    ServerID destinationServer = msg->dest_server();
 
-    // We won't handle routing to ourselves, the layer above us should handle this
-    assert (mContext->id() != destinationServer);
-
-    uint32 offset = msg->serializedSize();
-
-    size_t size = mServerQueues.size(destinationServer);
-    size_t maxsize = mServerQueues.maxSize(destinationServer);
-    if (size+offset<=maxsize) return true;
-
-    if (offset > maxsize) SILOG(queue,fatal,"Checked push message that's too large on to FairServerMessageQueue: " << offset << " > " << maxsize);
-
-
-    return false;
-}
-
-bool FairServerMessageQueue::addMessage(Message* msg){
-    ServerID destinationServer = msg->dest_server();
-
-    // We won't handle routing to ourselves, the layer above us should handle this
-    assert (mContext->id() != destinationServer);
-
-    // Otherwise, store for push to network
-    bool success = mServerQueues.push(destinationServer,msg)==QueueEnum::PushSucceeded;
-    return success;
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender, uint32 send_bytes_per_second)
+        : ServerMessageQueue(ctx, net, sidmap, sender),
+          mServerQueues(),
+          mLastServiceTime(ctx->time),
+          mRate(send_bytes_per_second),
+          mRemainderSendBytes(0),
+          mLastSendEndTime(ctx->simTime())
+{
 }
 
 void FairServerMessageQueue::service(){
@@ -64,7 +43,7 @@ void FairServerMessageQueue::service(){
 
         bool sent_success = trySend(*addy, next_msg);
         if (!sent_success) {
-            mServerQueues.disableQueue(sid);
+            disableDownstream(sid);
             continue;
         }
 
@@ -82,7 +61,6 @@ void FairServerMessageQueue::service(){
         mContext->trace()->serverDatagramSent(start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), packet_size);
 
-        mListener->serverMessageSent(next_msg);
         // Get rid of the message
         delete next_msg;
     }
@@ -115,6 +93,13 @@ void FairServerMessageQueue::service(){
     mProfiler->finished();
 }
 
+
+void FairServerMessageQueue::messageReady(ServerID sid) {
+    mServerQueues.notifyPushFront(sid);
+
+    service();
+}
+
 void FairServerMessageQueue::networkReadyToSend(const Address4& from) {
     // The connection is ready to send again, enable the input queue associated
     // with it.
@@ -122,14 +107,14 @@ void FairServerMessageQueue::networkReadyToSend(const Address4& from) {
     assert(sid != NULL);
 
     mContext->mainStrand->post(
-        std::tr1::bind(&FairSendQueue::enableQueue, &mServerQueues, *sid)
+        std::tr1::bind(&FairServerMessageQueue::enableDownstream, this, *sid)
                                );
 }
 
 void FairServerMessageQueue::addInputQueue(ServerID sid, float weight) {
     assert( !mServerQueues.hasQueue(sid) );
     SILOG(fairsender,info,"Adding input queue for " << sid);
-    mServerQueues.addQueue(new Queue<Message*>(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>()),sid,weight);
+    mServerQueues.addQueue(new SenderAdapterQueue(mSender,sid),sid,weight);
 }
 
 void FairServerMessageQueue::updateInputQueueWeight(ServerID sid, float weight) {
@@ -140,6 +125,19 @@ void FairServerMessageQueue::updateInputQueueWeight(ServerID sid, float weight) 
 void FairServerMessageQueue::removeInputQueue(ServerID sid) {
     assert( mServerQueues.hasQueue(sid) );
     mServerQueues.removeQueue(sid);
+}
+
+void FairServerMessageQueue::enableDownstream(ServerID sid) {
+    if (mDownstreamReady.find(sid) == mDownstreamReady.end())
+        mDownstreamReady.insert(sid);
+
+    mServerQueues.enableQueue(sid);
+
+    service();
+}
+
+void FairServerMessageQueue::disableDownstream(ServerID sid) {
+    mServerQueues.disableQueue(sid);
 }
 
 }

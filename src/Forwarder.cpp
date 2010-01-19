@@ -36,14 +36,13 @@ bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
     Constructor for Forwarder
   */
 Forwarder::Forwarder(SpaceContext* ctx)
- : PollingService(ctx->mainStrand),
-   mContext(ctx),
-   mOutgoingMessages(NULL),
-   mServerWeightCalculator(NULL),
-   mServerMessageQueue(NULL),
-   mServerMessageReceiver(NULL),
-   mOSegLookups(NULL),
-   mUniqueConnIDs(0)
+        :    mContext(ctx),
+             mOutgoingMessages(NULL),
+             mServerWeightCalculator(NULL),
+             mServerMessageQueue(NULL),
+             mServerMessageReceiver(NULL),
+             mOSegLookups(NULL),
+             mUniqueConnIDs(0)
 {
     //no need to initialize mOutgoingMessages.
 
@@ -84,10 +83,6 @@ void Forwarder::dispatchMessage(Message*msg) const {
 
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
     MessageDispatcher::dispatchMessage(msg);
-}
-
-void Forwarder::poll() {
-    serviceSendQueues();
 }
 
 // -- Object Connection Management - Object connections are available locally,
@@ -168,7 +163,9 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
         QueueEnum::PushResult push_result = mOutgoingMessages->push(dest_server, svc, msg);
         success = (push_result == QueueEnum::PushSucceeded);
         if (success)
-            trySendToServer(dest_server);
+            mServerMessageQueue->messageReady(dest_server); // FIXME only notify
+                                                            // when this causes
+                                                            // a new front()
     }
     return success;
   }
@@ -344,40 +341,21 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   return send_success;
 }
 
-void Forwarder::trySendToServer(ServerID sid) {
-    while(true) {
-        Message* next_msg = mOutgoingMessages->front(sid);
-        if (!next_msg)
-            break;
-
-        if (!mServerMessageQueue->canAddMessage(next_msg))
-            break;
-
-        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
-        TIMESTAMP_PAYLOAD_START(tstamp, next_msg);
-        bool send_success = mServerMessageQueue->addMessage(next_msg);
-        if (!send_success)
-            break;
-
-        TIMESTAMP_PAYLOAD_END(tstamp, Trace::SPACE_TO_SPACE_SMQ_ENQUEUED);
-
-        Message* pop_msg = mOutgoingMessages->pop(sid);
-        assert(pop_msg == next_msg);
-
-    }
+Message* Forwarder::serverMessageFront(ServerID dest) {
+    Message* next_msg = mOutgoingMessages->front(dest);
+    return next_msg;
 }
 
-void Forwarder::serviceSendQueues() {
-    // Try to push things from the server message queues down to the network,
-    // possibly in turn triggering callbacks which allow us to try to push
-    // messages into the server message queue
-    mServerMessageQueue->service();
-}
+Message* Forwarder::serverMessagePull(ServerID dest) {
+    Message* next_msg = mOutgoingMessages->front(dest);
+    if (next_msg == NULL)
+        return NULL;
 
-void Forwarder::serverMessageSent(Message* msg) {
-    assert(msg != NULL);
-    ServerID dest_server_free = msg->dest_server();
-    trySendToServer(dest_server_free);
+    mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+
+    Message* pop_msg = mOutgoingMessages->pop(dest);
+    assert(pop_msg == next_msg);
+    return pop_msg;
 }
 
 void Forwarder::serverMessageReceived(Message* msg) {

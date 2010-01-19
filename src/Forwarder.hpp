@@ -13,8 +13,6 @@
 
 #include "TimeProfiler.hpp"
 
-#include "PollingService.hpp"
-
 #include "OSegLookupQueue.hpp"
 
 #include "ServerMessageQueue.hpp"
@@ -33,8 +31,9 @@ namespace CBR
 class ForwarderServiceQueue;
 class ServerWeightCalculator;
 
-class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient, public PollingService,
-                  public ServerMessageQueue::Listener, public ServerMessageReceiver::Listener
+class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient,
+                  public ServerMessageQueue::Sender,
+                  public ServerMessageReceiver::Listener
 {
 private:
     SpaceContext* mContext;
@@ -73,8 +72,6 @@ private:
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
   private:
-    virtual void poll();
-
     // -- Public routing interface
   public:
     WARN_UNUSED
@@ -114,15 +111,10 @@ private:
     void checkDestWeight(ServerID sid);
     std::set<ServerID> mSetDests;
 
-    // Services forwarder queues
-    // FIXME this should be changed to be fully event driven
-    void serviceSendQueues();
-    // Try to pull messages from the Forwarder queue and push them into the
-    // ServerMessageQueue
-    void trySendToServer(ServerID sid);
 
-    // ServerMessageQueue::Listener Interface
-    virtual void serverMessageSent(Message* msg);
+    // ServerMessageQueue::Sender Interface
+    virtual Message* serverMessageFront(ServerID dest);
+    virtual Message* serverMessagePull(ServerID dest);
     // ServerMessageReceiver::Listener Interface
     virtual void serverMessageReceived(Message* msg);
 

@@ -8,31 +8,61 @@
 namespace CBR {
 class FairServerMessageQueue:public ServerMessageQueue {
 protected:
-    typedef FairQueue<Message, ServerID, Queue<Message*> > FairSendQueue;
+    struct SenderAdapterQueue {
+        SenderAdapterQueue(Sender* sender, ServerID sid);
+
+        Message* front() {
+            return mSender->serverMessageFront(mDestServer);
+        }
+
+        Message* pop() {
+            return mSender->serverMessagePull(mDestServer);
+        }
+
+        bool empty() {
+            return front() == NULL;
+        }
+      private:
+        Sender* mSender;
+        ServerID mDestServer;
+    };
+
+    typedef FairQueue<Message, ServerID, SenderAdapterQueue> FairSendQueue;
     FairSendQueue mServerQueues;
 
     Time mLastServiceTime;
 
     uint32 mRate;
     uint32 mRemainderSendBytes;
-    Time mLastSendEndTime; // last packet send finish time, if there are still messages waiting
-public:
+    Time mLastSendEndTime; // last packet send finish time, if there are still
+                           // messages waiting
 
-    FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener, uint32 send_bytes_per_second);
+    typedef std::set<ServerID> ServerSet;
+    ServerSet mDownstreamReady;
 
-    virtual bool addMessage(Message* msg);
-    virtual bool canAddMessage(const Message* msg);
-    virtual void service();
+  public:
+    FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender, uint32 send_bytes_per_second);
 
     virtual void addInputQueue(ServerID sid, float weight);
     virtual void updateInputQueueWeight(ServerID sid, float weight);
     virtual void removeInputQueue(ServerID sid);
-protected:
+
+  protected:
+    virtual void messageReady(ServerID sid);
+
     virtual void networkReadyToSend(const Address4& from);
 
     float getServerWeight(ServerID);
 
-    virtual void aggregateLocationMessages() { }
+    void enableDownstream(ServerID sid);
+    void disableDownstream(ServerID sid);
+
+    // Services the queue, will be called in response to network ready events
+    // and message ready events since one of those conditions must have changed
+    // in order to make any additional progress.
+    void service();
 };
+
 }
+
 #endif

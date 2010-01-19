@@ -35,11 +35,11 @@
 
 namespace CBR {
 
-ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener)
+ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender)
         : mContext(ctx),
           mNetwork(net),
           mServerIDMap(sidmap),
-          mListener(listener)
+          mSender(sender)
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
     mNetwork->setSendListener(this);

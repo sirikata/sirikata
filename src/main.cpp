@@ -51,7 +51,7 @@
 #include "Test.hpp"
 #include "TCPNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
-#include "FIFOServerMessageQueue.hpp"
+//#include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
@@ -189,10 +189,18 @@ int main(int argc, char** argv) {
 
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
-    if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map, (ServerMessageQueue::Listener*)forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
-    else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(space_context, gNetwork, server_id_map, (ServerMessageQueue::Listener*)forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
+    if (server_queue_type == "fair") {
+        sq = new FairServerMessageQueue(
+            space_context, gNetwork, server_id_map,
+            (ServerMessageQueue::Sender*)forwarder,
+            GetOption(SEND_BANDWIDTH)->as<uint32>());
+    }
+    /*
+    else if (server_queue_type == "fifo")
+        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map,
+        (ServerMessageQueue::Listener*)forwarder,
+        GetOption(SEND_BANDWIDTH)->as<uint32>());
+    */
     else {
         assert(false);
         exit(-1);
@@ -282,7 +290,6 @@ int main(int argc, char** argv) {
     space_context->add(prox);
     space_context->add(server);
     space_context->add(oseg);
-    space_context->add(forwarder);
     space_context->add(loadMonitor);
 
 

@@ -44,38 +44,26 @@ class ServerIDMap;
 
 class ServerMessageQueue : public Network::SendListener, CoordinateSegmentation::Listener {
 public:
-    class Listener {
+    /** Implement the Sender interface to set a class up to feed messages into
+     *  the ServerMessageQueue.
+     */
+    class Sender {
       public:
-        virtual ~Listener() {}
+        virtual ~Sender() {}
 
-        /** Invoked when a server Message is successfully pushed to the
-         *  network. The pointer will only be valid for the duration of the call
-         *  -- it should not be saved and used later by the recipient.
+        /** Invoked to check what the item returned would be if
+         *  serverMessagePull were called.
          */
-        virtual void serverMessageSent(Message* msg) = 0;
+        virtual Message* serverMessageFront(ServerID dest) = 0;
+        /** Invoked when the ServerMessageQueue is ready to accept a message
+         *  from the sender, destined for the specified server. Return NULL if
+         *  no elements are available.
+         */
+        virtual Message* serverMessagePull(ServerID dest) = 0;
     };
 
-    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener);
+    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender);
     virtual ~ServerMessageQueue();
-
-    /** Try to add the given message to this queue.  Note that only messages
-     *  destined for other servers should be enqueued.  This class will not
-     *  route messages to the ServerMessageReceiver.
-     *  \param msg the message to try to push onto the queue.
-     *  \returns true if the message was added, false otherwise
-     *  \note If successful, the queue takes possession of the message and ensures it is disposed of.
-     *        If unsuccessful, the message is still owned by the caller.
-     */
-    virtual bool addMessage(Message* msg)=0;
-    /** Check if a message could be pushed on the queue.  If this returns true,
-     *  an immediate subsequent call to addMessage() will always be
-     *  successful. The message should not be destined for this server.
-     *  \param msg the message to try to push onto the queue.
-     *  \returns true if the message was added, false otherwise
-     */
-    virtual bool canAddMessage(const Message* msg)=0;
-
-    virtual void service() = 0;
 
     /** Add an input queue using the specified weight. */
     virtual void addInputQueue(ServerID sid, float weight) = 0;
@@ -83,6 +71,11 @@ public:
     virtual void updateInputQueueWeight(ServerID sid, float weight) = 0;
     /** Remove the specified input queue. */
     virtual void removeInputQueue(ServerID sid) = 0;
+
+    /** Indicate that a new message is available upstream, destined for the
+     *   specified server.
+     */
+    virtual void messageReady(ServerID sid) = 0;
   protected:
     // Network::SendListener Interface
     virtual void networkReadyToSend(const Address4& from) = 0;
@@ -97,7 +90,7 @@ public:
     Network* mNetwork;
     ServerIDMap* mServerIDMap;
     TimeProfiler::Stage* mProfiler;
-    Listener* mListener;
+    Sender* mSender;
 };
 }
 
