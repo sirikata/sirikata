@@ -61,13 +61,12 @@ class SstCloseTest : public CxxTest::TestSuite
             mSendReceiveMap[id]=(unsigned char)data[0];
         }
         static bool pause=true;
-        pause=!pause;
+        if (rand()<RAND_MAX/5||pause) 
+            pause=!pause;
         if (pause) {
-            printf("Ignored %d bytes\n",(int)data.size());
             mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s));
             return Network::Stream::PauseReceive;
         }
-        printf("Received %d bytes\n",(int)data.size());
         mReceiversData[mSendReceiveMap[id]]+=(int)(data.size()*2);
         return Network::Stream::AcceptedData;
     }

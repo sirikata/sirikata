@@ -83,8 +83,6 @@ class ASIOSocketWrapper {
 		QUEUE_CHECK_FLAG=(1<<30),
 
 	};
-    unsigned int PACKET_BUFFER_SIZE;
-    uint8 *mBuffer;
     EWA<Duration> mAverageSendLatency;
 
     std::vector<Stream::StreamID> mPausedSendStreams;
@@ -102,41 +100,22 @@ class ASIOSocketWrapper {
     void finishAsyncSend(const MultiplexedSocketPtr&parentMultiSocket);
 
     /**
-     * The callback for when a single Chunk was sent.
-     * If the whole Chunk was not sent then the rest of the Chunk is passed back to sendToWire
-     * If the whole Chunk was shipped off, the finishAsyncSend function is called
-     */
-    void sendLargeChunkItem(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent);
-
-    /**
      * The callback for when a single large Chunk at the front of a chunk deque was sent.
      * If the whole large Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the sendToWire function is called with the rest of the queue unless it is empty in which case the finishAsyncSend is called
      */
-    void sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent);
-
-    /**
-     * The callback for when a static buffer was shipped to the network.
-     * If the whole static buffer was not sent then the rest of the static buffer is passed back to async_send and the currentBuffer is offset by the necessary ammt to finish off
-     * sending it. This could be slightly inefficient if there are tons of other packets in the deque toSend but generally the buffer size should be chosen so that it can be sent
-     * in one go.
-     * If the whole buffer was shipped off, the sendToWire function is called with the rest of the queue unless it is empty
-     */
-    void sendStaticBuffer(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&toSend, const std::deque<TimestampedChunk>& workingSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent);
+    void sendManyDequeItems(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk> &const_toSend, const ErrorCode &error, std::size_t bytes_sent);
 
 /**
  * When there's a single packet to be sent to the network, mSocket->async_send is simply called upon the Chunk to be sent
  */
-    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t bytesSent=0);
+    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend);
 
 /**
  *  This function sends a while queue of packets to the network
- * The function first checks to see if the front packet is too large to fit in the packet-sized buffer.
- * If it's too large it sends the packet individually much like a chunk would be sent individually and it is left on the queue for data storage purposes
- * If the packet is not too large it and all subsequent packets that can fit are jammed into the packet sized mBuffer
- *  and then those packets are deleted from the queue and shipped to the network partial packets are left on the queue in that case
+ * The function sends each item using a vector of asio::buffers made from the passed in deque
  */
-    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&const_toSend, size_t bytesSent=0);
+    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&const_toSend);
 
 /**
  * If another thread claimed to be sending data asynchronously
@@ -156,8 +135,6 @@ public:
        mReadBuffer(NULL),
        mSendingStatus(0),
        mSendQueue(SizedResourceMonitor(queuedBufferSize)),
-       PACKET_BUFFER_SIZE(sendBufferSize),
-       mBuffer(new uint8[sendBufferSize]),
        mAverageSendLatency(SEND_LATENCY_EWA_ALPHA)
     {
         //mPacketLogger.reserve(268435456);
@@ -168,8 +145,6 @@ public:
        mReadBuffer(NULL),
        mSendingStatus(0),
        mSendQueue(socket.getResourceMonitor()),
-       PACKET_BUFFER_SIZE(socket.PACKET_BUFFER_SIZE),
-       mBuffer(new uint8[socket.PACKET_BUFFER_SIZE]),
        mAverageSendLatency(SEND_LATENCY_EWA_ALPHA)
     {
         //mPacketLogger.reserve(268435456);
@@ -180,14 +155,12 @@ public:
        mReadBuffer(NULL),
        mSendingStatus(0),
        mSendQueue(SizedResourceMonitor(queuedBufferSize)),
-       PACKET_BUFFER_SIZE(sendBufferSize),
-       mBuffer(new uint8[sendBufferSize]),
        mAverageSendLatency(SEND_LATENCY_EWA_ALPHA)
     {
     }
 
     ~ASIOSocketWrapper() {
-        delete []mBuffer;
+
     }
 
     ASIOSocketWrapper&operator=(const ASIOSocketWrapper& socket){

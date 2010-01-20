@@ -33,6 +33,7 @@
 
 namespace Sirikata {
 template <class T> class VInt : public TotallyOrdered<T> {
+protected:
     T mData;
 public:
     enum MaxSerializedLengthConstraints {

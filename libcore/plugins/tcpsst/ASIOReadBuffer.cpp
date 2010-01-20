@@ -38,6 +38,7 @@
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "ASIOReadBuffer.hpp"
+#include "VariableLength.hpp"
 namespace Sirikata { namespace Network {
 void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
 ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader) {
@@ -133,12 +134,21 @@ static Stream::StreamID parseId(Chunk&newChunk,int&outBuffPosn) {
     return id;
 }
 Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket,const uint8*begin, const uint8*end){
+    if (mCachedRejectedChunk) {
+        Network::Stream::ReceivedResponse resp=parentSocket->receiveFullChunk(whichSocket,mNewChunkID,*mCachedRejectedChunk);
+        if (resp==Network::Stream::AcceptedData) {
+            delete mCachedRejectedChunk;
+            mCachedRejectedChunk=NULL;
+        }
+        return resp;
+    }
     bool parsedId=false;
     Stream::StreamID id;
-
+    assert(begin!=end&&*begin<=127);
+    ++begin;//begin should have 0x00-0x7f as initial byte to indicate 0xff delimitation
     Chunk newChunk(((end-begin)*3)/4+3);//maximum of the size;
     int remainderShift=0;
-    int currentValue=0;
+    
     int outBuffPosn=0;
     signed char b4[4];
     uint8 b4Posn=0;
@@ -173,7 +183,13 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
         id=parseId(newChunk,outBuffPosn);
     }
     newChunk.resize(outBuffPosn);
-    return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
+    Network::Stream::ReceivedResponse resp=parentSocket->receiveFullChunk(whichSocket,id,newChunk);
+    if (resp!=Network::Stream::AcceptedData) {
+        mCachedRejectedChunk=new Chunk;
+        mCachedRejectedChunk->swap(newChunk);
+        mNewChunkID=id;
+    }
+    return resp;
 }
 
 
@@ -195,19 +211,19 @@ void ASIOReadBuffer::ioReactorThreadResumeRead(MultiplexedSocketPtr&thus) {
       case PAUSED_FIXED_BUFFER:
         translateBuffer(thus);
         break;
-      case PAUSED_NEW_CHUNK:
-        if (thus->isZeroDelim()) {
+      case PAUSED_NEW_DELIM_CHUNK:
             asioReadIntoZeroDelimChunk(ErrorCode(),0);
-        }else {
-            if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk) == Stream::AcceptedData) {
-                mNewChunk.resize(0);
-                mBufferPos=0;
-                readIntoFixedBuffer(thus);
-            }
+            break;
+      case PAUSED_NEW_CHUNK:
+        if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk) == Stream::AcceptedData) {
+            mNewChunk.resize(0);
+            mBufferPos=0;
+            readIntoFixedBuffer(thus);
         }
         break;
       case READING_FIXED_BUFFER:
       case READING_NEW_CHUNK:
+      case READING_NEW_DELIM_CHUNK:
         break;
     }
 }
@@ -228,7 +244,7 @@ void ASIOReadBuffer::readIntoChunk(const MultiplexedSocketPtr &parentSocket){
 
 void ASIOReadBuffer::readIntoZeroDelimChunk(const MultiplexedSocketPtr &parentSocket){
 
-    mReadStatus=READING_NEW_CHUNK;
+    mReadStatus=READING_NEW_DELIM_CHUNK;
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
     mNewChunk.resize(mBufferPos+sBufferLength);
     parentSocket
@@ -256,79 +272,72 @@ Stream::StreamID ASIOReadBuffer::processPartialChunk(uint8* dataBuffer, uint32 p
     return retid;
 }
 void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
-    if (thus->isZeroDelim()) {
-        bool readBufferFull=false;
-        unsigned int chunkPos=0;
-        unsigned int bufferPos=mBufferPos;
-        for (unsigned int i=0;i<mBufferPos;++i) {
-            if (mBuffer[i]==0) {
-                //delimiter
-                if (processFullZeroDelimChunk(thus,mWhichBuffer,mBuffer+chunkPos,mBuffer+i) == Stream::AcceptedData) {
-                    chunkPos=i+1;
-                }else {                    
-                    mReadStatus=PAUSED_FIXED_BUFFER;
-                    readBufferFull=true;
-                    break;
-                }
-            }
-        }
-        unsigned int remainder = bufferPos-chunkPos;
-        if (remainder>sBufferLength/2&&!readBufferFull) {//FIXME should be smarter...definitely if remainder==sBufferLength
-            mNewChunk.resize(0);
-            mNewChunk.insert(mNewChunk.end(),&mBuffer[chunkPos],&mBuffer[mBufferPos]);
-            if (mBufferPos!=chunkPos) {
-                BufferPrint(this,".rcx",&*mNewChunk.begin(),mBufferPos-chunkPos);
-            }
-            mBufferPos=remainder;
-            readIntoZeroDelimChunk(thus);
-        }else {
-            if (remainder) {
-                std::memmove(mBuffer,mBuffer+chunkPos,remainder);
-            }
-            mBufferPos=remainder;
-            if (!readBufferFull) {
-                readIntoFixedBuffer(thus);
-            }
-        }
-    }else {
-        unsigned int chunkPos=0;
-        unsigned int packetHeaderLength;
-        vuint32 packetLength;
-        bool readBufferFull=false;
-        while ((packetHeaderLength=mBufferPos-chunkPos)!=0&&packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {
-            if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
-                if (mBufferPos-chunkPos<sLowWaterMark) {
-                    break;//go directly to memmov code and move remnants to beginning of buffer to read a large portion at a time
-                }else {
-                    mBufferPos-=chunkPos;
-                    mBufferPos-=packetHeaderLength;
-                    assert(mNewChunk.size()==0);
-                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),mBufferPos,mNewChunk);
-                    readIntoChunk(thus);
+    bool readBufferFull=false;
+    unsigned int chunkPos=0;
+    VariableLength packetLength;
+    bool delimitedPacket=false;
+    while (mBufferPos!=chunkPos) {
+        if (mBuffer[chunkPos]<=127) {//if this is a 0xff delimited packet
+            uint8*where=std::find(mBuffer+chunkPos+1,mBuffer+mBufferPos,0xff);
+            if (where==mBuffer+mBufferPos) {
+                unsigned int remainder = mBufferPos-chunkPos;
+                if (remainder>sBufferLength/2) {
+                    mNewChunk.resize(0);
+                    mNewChunk.insert(mNewChunk.end(),mBuffer+chunkPos,mBuffer+mBufferPos);
+                    BufferPrint(this,".rcx",&*mNewChunk.begin(),mBufferPos-chunkPos);
+                    mBufferPos=remainder;
+                    readIntoZeroDelimChunk(thus);                    
                     return;
-                }
-            }else {
-                uint32 chunkLength=packetLength.read();
-                Chunk resultChunk;
-                Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
-                size_t vectorSize=resultChunk.size();
-                if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk) == Stream::AcceptedData) {
-                    chunkPos+=packetHeaderLength+packetLength.read();
                 }else {
-                    assert(resultChunk.size()==vectorSize);//if the user rejects the packet they should not munge it
-                    mReadStatus=PAUSED_FIXED_BUFFER;
-                    readBufferFull=true;
                     break;
                 }
+            }else if (processFullZeroDelimChunk(thus,mWhichBuffer,mBuffer+chunkPos,where) == Stream::AcceptedData) {
+                chunkPos=(where-mBuffer)+1;
+            }else {          
+                mReadStatus=PAUSED_FIXED_BUFFER;
+                readBufferFull=true;
+                break;                    
+            }
+            
+        }else {
+            unsigned int packetHeaderLength= mBufferPos-chunkPos;    
+            if (packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {//if there is enough room to parse the length of the length-delimited packet
+                if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
+                    if (mBufferPos-chunkPos<sLowWaterMark) {
+                        break;//go directly to memmov code and move remnants to beginning of buffer to read a large portion at a time
+                    }else {
+                        mBufferPos-=chunkPos;
+                        mBufferPos-=packetHeaderLength;
+                        assert(mNewChunk.size()==0);
+                        mNewChunkID = processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),mBufferPos,mNewChunk);
+                        readIntoChunk(thus);
+                        return;
+                    }
+                }else {
+                    uint32 chunkLength=packetLength.read();
+                    Chunk resultChunk;
+                    Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
+                    size_t vectorSize=resultChunk.size();
+                    if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk) == Stream::AcceptedData) {
+                        chunkPos+=packetHeaderLength+packetLength.read();
+                    }else {
+                        assert(resultChunk.size()==vectorSize);//if the user rejects the packet they should not munge it
+                        mReadStatus=PAUSED_FIXED_BUFFER;
+                        readBufferFull=true;
+                        break;
+                    }
+                }
+            }else {//length delimited packet without sufficient data to determine the length
+                break;
             }
         }
-        if (chunkPos!=0&&mBufferPos!=chunkPos) {//move partial bytes to beginning
-            std::memmove(mBuffer,mBuffer+chunkPos,mBufferPos-chunkPos);
-        }
-        mBufferPos-=chunkPos;
-        if (!readBufferFull) {
-            readIntoFixedBuffer(thus);
-        }
+    }
+    if (chunkPos!=0&&mBufferPos!=chunkPos) {//move partial bytes to beginning
+        std::memmove(mBuffer,mBuffer+chunkPos,mBufferPos-chunkPos);
+    }
+    mBufferPos-=chunkPos;
+    if (!readBufferFull) {
+        readIntoFixedBuffer(thus);
     }
 }
 ASIOReadBuffer::~ASIOReadBuffer() {
@@ -372,21 +381,30 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
 
     TCPSSTLOG(this,"rcv",&mNewChunk[mBufferPos],bytes_read,error);
     unsigned int curOffset=0;
-    unsigned int curZeroScanLocation=0;//FIXME n^2 algorithm on packet size
+    unsigned int curZeroScanLocation=(bytes_read==0/*if the packet was rejected before*/?0:mBufferPos);
     bool readBufferFull=false;
     mBufferPos+=bytes_read;
+    bool additionalLengthDelimMessagesToParse=false;//set to true if the user has sent length delimited packets after a large zero delim packets
     MultiplexedSocketPtr thus(mParentSocket.lock());
     if (thus) {
         if (error){
             processError(&*thus,error);
         }else {
             for (unsigned int i=curZeroScanLocation;i<mBufferPos;++i) {
-                if (mNewChunk[i]==0) {
+                if (mNewChunk[i]==0xff) {
                     if (processFullZeroDelimChunk(thus,mWhichBuffer,&*(mNewChunk.begin()+curOffset),&*(mNewChunk.begin()+i)) == Stream::AcceptedData) {    
                         curOffset=i+1;
+                        if (curOffset<mBufferPos&&mNewChunk[curOffset]>=128) {
+                            //switch from zero delim mode to length mode, handled in translateBuffer loop
+                            //eliminates need for duplicate length parsing code
+                            //and since it's a rare case that users switch modes midstream, 
+                            //we can afford an extra copy during the transition for simpler code
+                            additionalLengthDelimMessagesToParse=true;
+                            break;
+                        }
                     }else if (curOffset==0) {//still a single large chunk
                         readBufferFull=true;
-                        mReadStatus=PAUSED_NEW_CHUNK;   
+                        mReadStatus=PAUSED_NEW_DELIM_CHUNK;   
                         break;
                     }else {//will definitely fit in the static buffer
                         readBufferFull=true;
@@ -406,8 +424,14 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
                 }
                 mBufferPos-=curOffset;
                 mNewChunk.clear();
-                if(!readBufferFull)
-                    readIntoFixedBuffer(thus);
+                
+                if(!readBufferFull) {
+                    if (additionalLengthDelimMessagesToParse) {
+                        translateBuffer(thus);
+                    }else {
+                        readIntoFixedBuffer(thus);
+                    }
+                }
             }
         }
     }else {
@@ -439,6 +463,7 @@ ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;
+    mCachedRejectedChunk=NULL;
 }
 
 } }

@@ -42,6 +42,7 @@
 #include "network/IOServiceFactory.hpp"
 #include "network/IOService.hpp"
 #include "options/Options.hpp"
+#include "VariableLength.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 
@@ -108,9 +109,9 @@ bool TCPStream::canSend(const size_t dataSize)const {
     unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
     unsigned int successLengthNeeded=mID.serialize(serializedStreamId,streamIdLength);
     size_t totalSize=dataSize+successLengthNeeded;
-    vuint32 packetLength=vuint32(totalSize);
-    uint8 packetLengthSerialized[vuint32::MAX_SERIALIZED_LENGTH];
-    unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,vuint32::MAX_SERIALIZED_LENGTH);
+    VariableLength packetLength=VariableLength(totalSize);
+    uint8 packetLengthSerialized[VariableLength::MAX_SERIALIZED_LENGTH];
+    unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,VariableLength::MAX_SERIALIZED_LENGTH);
     totalSize+=packetHeaderLength;
     return socket_copy->canSendBytes(mID,totalSize);
 }
@@ -151,9 +152,9 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
         streamIdLength=successLengthNeeded;
         size_t totalSize=firstChunk.size()+secondChunk.size();
         totalSize+=streamIdLength;
-        vuint32 packetLength=vuint32(totalSize);
-        uint8 packetLengthSerialized[vuint32::MAX_SERIALIZED_LENGTH];
-        unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,vuint32::MAX_SERIALIZED_LENGTH);
+        VariableLength packetLength=VariableLength(totalSize);
+        uint8 packetLengthSerialized[VariableLength::MAX_SERIALIZED_LENGTH];
+        unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,VariableLength::MAX_SERIALIZED_LENGTH);
         //allocate a packet long enough to take both the length of the packet and the stream id as well as the packet data. totalSize = size of streamID + size of data and
         //packetHeaderLength = the length of the length component of the packet
         toBeSent.data=new Chunk(totalSize+packetHeaderLength);

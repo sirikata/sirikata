@@ -61,7 +61,9 @@ private:
         PAUSED_FIXED_BUFFER=0x0,
         READING_FIXED_BUFFER=0x1,
         PAUSED_NEW_CHUNK=0x2,
-        READING_NEW_CHUNK=0x3
+        READING_NEW_CHUNK=0x3,
+        PAUSED_NEW_DELIM_CHUNK=0x4,
+        READING_NEW_DELIM_CHUNK=0x7
     }mReadStatus;
     ///A fixed length buffer to read incoming requests when the data is unknown in size or so far small in size
     uint8 mBuffer[sBufferLength];
@@ -71,6 +73,7 @@ private:
     unsigned int mWhichBuffer;
     ///A new chunk being read directly into--usually this member is only used to hold a large packet of information, otherwise the fixed length buffer is used
     Chunk mNewChunk;
+    Chunk *mCachedRejectedChunk;
     ///The StreamID of a new, partially examined new chunk
     Stream::StreamID mNewChunkID;
     ///The shared structure responsible for holding state about the associated TCPStream that this class reads and interprets data from

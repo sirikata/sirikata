@@ -84,7 +84,7 @@ public:
     Network::Stream::ReceivedResponse dataRecvCallback(Stream *s,int id, const Chunk&data) {
         static bool dopause=false;
         dopause=!dopause;
-        if (true||rand()>RAND_MAX/10) {
+        if (dopause) {//rand()>RAND_MAX/10) {
             mDataMap[id].push_back(data);
             bool found=false;
             if (data.size()) {
@@ -275,30 +275,29 @@ public:
             mMessagesToSend.push_back(ToChunk("U:1"));
             mMessagesToSend.push_back(ToChunk("U:2"));
         }
-/*
-        mMessagesToSend.push_back("T0th");
-        mMessagesToSend.push_back("T1st");
-        mMessagesToSend.push_back("T2nd");
-        mMessagesToSend.push_back("T3rd");
-        mMessagesToSend.push_back("T4th");
-        mMessagesToSend.push_back("T5th");
+        mMessagesToSend.push_back(ToChunk("T0th"));
+        mMessagesToSend.push_back(ToChunk("T1st"));
+        mMessagesToSend.push_back(ToChunk("T2nd"));
+        mMessagesToSend.push_back(ToChunk("T3rd"));
+        mMessagesToSend.push_back(ToChunk("T4th"));
+        mMessagesToSend.push_back(ToChunk("T5th"));
         if (doUnorderedTest){
-            mMessagesToSend.push_back("U:3");
-            mMessagesToSend.push_back("U:4");
-            mMessagesToSend.push_back("U:5");
+            mMessagesToSend.push_back(ToChunk("U:3"));
+            mMessagesToSend.push_back(ToChunk("U:4"));
+            mMessagesToSend.push_back(ToChunk("U:5"));
         }
-        mMessagesToSend.push_back("T6th");
-        mMessagesToSend.push_back("T7th");
-        mMessagesToSend.push_back("T8th");
-        mMessagesToSend.push_back("T9th");
+        mMessagesToSend.push_back(ToChunk("T6th"));
+        mMessagesToSend.push_back(ToChunk("T7th"));
+        mMessagesToSend.push_back(ToChunk("T8th"));
+        mMessagesToSend.push_back(ToChunk("T9th"));
         if (!doShortTest) {
-*/
+
         Chunk test;
         test.push_back('T');
         for (unsigned int i=0;i<16385;++i) {
-            test.push_back('a');//(char)((i+5)%128);
+            test.push_back((char)(rand()%256));
         }
-        //mMessagesToSend.push_back(test);
+        mMessagesToSend.push_back(test);
         if (doUnorderedTest){
         test[0]='U';
         mMessagesToSend.push_back(test);
@@ -314,7 +313,7 @@ public:
 }
 
         test[0]='T';
-        //mMessagesToSend.push_back(test);
+        mMessagesToSend.push_back(test);
 
         int pattern[]={32768};
         for (size_t i=0;i<sizeof(pattern)/sizeof(pattern[0]);++i) {
@@ -323,9 +322,9 @@ public:
             for (int j=0;j<pattern[i];++j) {
                 pat.push_back('\0');//'~'-(i%((pattern[i]%90)+3));
             }
-            //mMessagesToSend.push_back(pat);
+            mMessagesToSend.push_back(pat);
             pat[0]='U';
-            //mMessagesToSend.push_back(pat);
+            mMessagesToSend.push_back(pat);
         }
 
         mMessagesToSend.push_back(ToChunk("T_0th"));
@@ -344,44 +343,44 @@ public:
         }
         mMessagesToSend.push_back(ToChunk("T_6th"));
         mMessagesToSend.push_back(ToChunk("T_7th"));
-/*
-        if (doUnorderedTest){
-            mMessagesToSend.push_back("U:B");
-        }
-        mMessagesToSend.push_back("T_8th");
-        if (doUnorderedTest){
-            mMessagesToSend.push_back("U:C");
-        }
-        mMessagesToSend.push_back("T_9th");
-        if (doUnorderedTest){
-            mMessagesToSend.push_back("U:D");
-        }
-        mMessagesToSend.push_back("The green grasshopper fetched.");
-        if (doUnorderedTest){
-            mMessagesToSend.push_back("U:E");
-            mMessagesToSend.push_back("U:F");
-            mMessagesToSend.push_back("U:G");
-        }
-
-        mMessagesToSend.push_back("T A blade of grass.");
-        mMessagesToSend.push_back("T From the playground .");
-        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite long enough to trigger the high water mark--well now it is I believe to the best of my abilities");
-        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite");
 
         if (doUnorderedTest){
-            mMessagesToSend.push_back("U:H");
-            mMessagesToSend.push_back("U:I");
-            mMessagesToSend.push_back("U:J");
-            mMessagesToSend.push_back("U:K");
-            mMessagesToSend.push_back("U:L");
-            mMessagesToSend.push_back("U:M");
-            mMessagesToSend.push_back("U:N");
-            mMessagesToSend.push_back("U:O");
-            mMessagesToSend.push_back("U:P");
-            mMessagesToSend.push_back("U:Q");
+            mMessagesToSend.push_back(ToChunk("U:B"));
+        }
+            mMessagesToSend.push_back(ToChunk("T_8th"));
+        if (doUnorderedTest){
+            mMessagesToSend.push_back(ToChunk("U:C"));
+        }
+        mMessagesToSend.push_back(ToChunk("T_9th"));
+        if (doUnorderedTest){
+            mMessagesToSend.push_back(ToChunk("U:D"));
+        }
+        mMessagesToSend.push_back(ToChunk("The green grasshopper fetched."));
+        if (doUnorderedTest){
+            mMessagesToSend.push_back(ToChunk("U:E"));
+            mMessagesToSend.push_back(ToChunk("U:F"));
+            mMessagesToSend.push_back(ToChunk("U:G"));
+        }
+
+        mMessagesToSend.push_back(ToChunk("T A blade of grass."));
+        mMessagesToSend.push_back(ToChunk("T From the playground ."));
+        mMessagesToSend.push_back(ToChunk("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite long enough to trigger the high water mark--well now it is I believe to the best of my abilities"));
+        mMessagesToSend.push_back(ToChunk("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite"));
+
+        if (doUnorderedTest){
+            mMessagesToSend.push_back(ToChunk("U:H"));
+            mMessagesToSend.push_back(ToChunk("U:I"));
+            mMessagesToSend.push_back(ToChunk("U:J"));
+            mMessagesToSend.push_back(ToChunk("U:K"));
+            mMessagesToSend.push_back(ToChunk("U:L"));
+            mMessagesToSend.push_back(ToChunk("U:M"));
+            mMessagesToSend.push_back(ToChunk("U:N"));
+            mMessagesToSend.push_back(ToChunk("U:O"));
+            mMessagesToSend.push_back(ToChunk("U:P"));
+            mMessagesToSend.push_back(ToChunk("U:Q"));
         }
         }
-*/
+
         mMessagesToSend.push_back(ToChunk(ENDSTRING));
 
     }
@@ -511,7 +510,7 @@ public:
             runRoutine(r);
             if (doSubstreams) {
 
-                if (0){
+                if (true){
                     Stream*zz=r->factory();
                     zz = r->clone(&SstTest::noopSubstream);
                     if (zz) {
@@ -532,8 +531,8 @@ public:
             //wait until done
             time_t last_time=time(NULL);
             int retry_count=20;
-            while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?4:2))&&!mAbortTest) {
-                if(0)if (rand()<RAND_MAX/10) {
+            while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
+                if (rand()<RAND_MAX/10) {
                     if (r)
                         r->readyRead();
                     if(z)
@@ -552,7 +551,7 @@ public:
                     last_time=this_time;
                     if (--retry_count<=0) {
                         TS_FAIL("Timeout  in receiving messages");
-                        TS_ASSERT_EQUALS(mCount.read(),(int)(mMessagesToSend.size()*(doSubstreams?4:2)));
+                        TS_ASSERT_EQUALS(mCount.read(),(int)(mMessagesToSend.size()*(doSubstreams?5:2)));
                         break;
                     }
                 }
