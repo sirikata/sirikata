@@ -98,7 +98,7 @@ void TCPStream::requestReadySendCallback() {
                                               mpsocket,
                                               mID));
 }
-bool TCPStream::canSend(const size_t dataSize)const {
+bool TCPStream::canSend(size_t dataSize)const {
     MultiplexedSocketPtr socket_copy = mSocket;
     if (socket_copy.get() == NULL) {
         SILOG(tcpsst,debug,"Called TCPStream::canSend() on closed stream." << getID().read());

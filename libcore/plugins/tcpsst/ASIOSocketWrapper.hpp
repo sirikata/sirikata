@@ -34,7 +34,7 @@
 #include <util/Time.hpp>
 #include <util/EWA.hpp>
 
-#define SEND_LATENCY_EWA_ALPHA .1
+#define SEND_LATENCY_EWA_ALPHA .10f
 
 namespace Sirikata { namespace Network {
 class ASIOSocketWrapper;

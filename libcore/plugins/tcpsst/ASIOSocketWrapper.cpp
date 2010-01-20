@@ -86,17 +86,17 @@ void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf,
 static uint32 conservativeBase64Size(size_t x) {
     return (x+2)*4/3+6+x/64+(x%64?1:0);
 }
-static const uint _URL_SAFE_ALPHABET []= {
-        (byte)'A', (byte)'B', (byte)'C', (byte)'D', (byte)'E', (byte)'F', (byte)'G',
-        (byte)'H', (byte)'I', (byte)'J', (byte)'K', (byte)'L', (byte)'M', (byte)'N',
-        (byte)'O', (byte)'P', (byte)'Q', (byte)'R', (byte)'S', (byte)'T', (byte)'U', 
-        (byte)'V', (byte)'W', (byte)'X', (byte)'Y', (byte)'Z',
-        (byte)'a', (byte)'b', (byte)'c', (byte)'d', (byte)'e', (byte)'f', (byte)'g',
-        (byte)'h', (byte)'i', (byte)'j', (byte)'k', (byte)'l', (byte)'m', (byte)'n',
-        (byte)'o', (byte)'p', (byte)'q', (byte)'r', (byte)'s', (byte)'t', (byte)'u', 
-        (byte)'v', (byte)'w', (byte)'x', (byte)'y', (byte)'z',
-        (byte)'0', (byte)'1', (byte)'2', (byte)'3', (byte)'4', (byte)'5', 
-        (byte)'6', (byte)'7', (byte)'8', (byte)'9', (byte)'-', (byte)'_'
+static const uint8 _URL_SAFE_ALPHABET []= {
+        (uint8)'A', (uint8)'B', (uint8)'C', (uint8)'D', (uint8)'E', (uint8)'F', (uint8)'G',
+        (uint8)'H', (uint8)'I', (uint8)'J', (uint8)'K', (uint8)'L', (uint8)'M', (uint8)'N',
+        (uint8)'O', (uint8)'P', (uint8)'Q', (uint8)'R', (uint8)'S', (uint8)'T', (uint8)'U', 
+        (uint8)'V', (uint8)'W', (uint8)'X', (uint8)'Y', (uint8)'Z',
+        (uint8)'a', (uint8)'b', (uint8)'c', (uint8)'d', (uint8)'e', (uint8)'f', (uint8)'g',
+        (uint8)'h', (uint8)'i', (uint8)'j', (uint8)'k', (uint8)'l', (uint8)'m', (uint8)'n',
+        (uint8)'o', (uint8)'p', (uint8)'q', (uint8)'r', (uint8)'s', (uint8)'t', (uint8)'u', 
+        (uint8)'v', (uint8)'w', (uint8)'x', (uint8)'y', (uint8)'z',
+        (uint8)'0', (uint8)'1', (uint8)'2', (uint8)'3', (uint8)'4', (uint8)'5', 
+        (uint8)'6', (uint8)'7', (uint8)'8', (uint8)'9', (uint8)'-', (uint8)'_'
     };
 	
 int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
