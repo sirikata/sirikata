@@ -78,7 +78,8 @@ void MultiplexedSocket::ioReactorThreadCommitCallback(StreamIDCallbackPair& newc
             delete where->second;
             mCallbacks.erase(where);
         }else {
-            assert("ERROR in finding callback to erase for stream ID"&&false);
+            SILOG(tcpsst,error,"ERROR in finding callback to erase for stream ID "<<newcallback.mID.read());
+            //assert("ERROR in finding callback to erase for stream ID"&&false);
         }
     }else {
         mCallbacks.insert(newcallback.pair());
@@ -141,8 +142,10 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
 }
 
 size_t MultiplexedSocket::leastBusyStream(size_t favored) {
+   
+    
     size_t retval=rand()%mSockets.size();
-    if (favored==retval||mSockets[favored].getResourceMonitor().filledSize()<mSockets[retval].getResourceMonitor().filledSize()) {
+    if(0)if (favored==retval||mSockets[favored].getResourceMonitor().filledSize()<mSockets[retval].getResourceMonitor().filledSize()) {
         return favored;
     }
     return retval;
@@ -255,7 +258,7 @@ MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallba
    mNewSubstreamCallback(substreamCallback),
    mHighestStreamID(1)
 {
-    mZeroDelim=false;
+    mZeroDelim=zeroDelim;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }

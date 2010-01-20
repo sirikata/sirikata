@@ -94,7 +94,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             std::string origin;
             bool headerError=false;
             for (int i=1;i<=5;++i) {
-                nameValueFieldStart[i]=nameValueFieldEnd[i-1]+1;
+                nameValueFieldStart[i]=nameValueFieldEnd[i-1]+2;
                 if (nameValueFieldStart[i]<buffer->begin()+whereHeaderEnds) {
                     nameValueFieldEnd[i]=std::find(nameValueFieldStart[i],(const uint8*)(buffer->begin()+whereHeaderEnds),'\r');
                 }else {
@@ -105,81 +105,97 @@ void buildStream(TcpSstHeaderArray *buffer,
                 }else {
                     nameValueFieldStart[i]=nameValueFieldEnd[i];
                     if (i!=5) {
+                        SILOG(tcpsst,warning,"Bad Header: "<<std::string((const char*)nameValueFieldStart[i],nameValueFieldEnd[i]-nameValueFieldStart[i])<<" should start with: "<<validBeginnings[i]);
                         headerError=true;
+                        break;
                     }
                 }
             }
-            UUID context (std::string((const char*)requestStart+1,16),UUID::HumanReadable());
-
+            UUID context;
+            std::string humanReadableUUID((const char*)requestStart+1,requestEnd-(requestStart+1));
+            {
+                size_t humanReadableUUIDEnd=humanReadableUUID.find(' ');
+                if (humanReadableUUIDEnd!=std::string::npos) {
+                    humanReadableUUID=humanReadableUUID.substr(0,humanReadableUUIDEnd);
+                }
+            }
+            try {
+                context =UUID(humanReadableUUID,UUID::HumanReadable());
+            }catch(...) {
+                SILOG(tcpsst,warning,"Bad Header UUID "<<humanReadableUUID);
+                headerError=true;
+            }
             if (headerError) {
                 SILOG(tcpsst,warning,"Connection received with header missing required fields "<<std::string((const char*)buffer->begin(),bytes_transferred));
+                delete socket;
+            }else {
                 if (nameValueFieldEnd[3]!=nameValueFieldStart[3]) {
-                    host=std::string((const char*)nameValueFieldStart[5],nameValueFieldEnd[5]-nameValueFieldStart[5]);
+                    host=std::string((const char*)nameValueFieldStart[3],nameValueFieldEnd[3]-nameValueFieldStart[3]);
                 }
                 if (nameValueFieldEnd[5]!=nameValueFieldStart[5]) {
                     protocol=std::string((const char*)nameValueFieldStart[5],nameValueFieldEnd[5]-nameValueFieldStart[5]);
                 }
                 if (nameValueFieldEnd[4]!=nameValueFieldStart[4]) {
-                    origin=std::string((const char*)nameValueFieldStart[5],nameValueFieldEnd[5]-nameValueFieldStart[5]);
+                    origin=std::string((const char*)nameValueFieldStart[4],nameValueFieldEnd[4]-nameValueFieldStart[4]);
                 }
-            }
             
-            bool binaryStream=protocol.find("sst")==0;
-            bool base64Stream=!binaryStream;
-            boost::asio::ip::tcp::no_delay option(data->mNoDelay);
-            socket->set_option(option);
-            IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
-
-            unsigned int numConnections=1;
-            
-            for (std::string::iterator i=protocol.begin(),ie=protocol.end();i!=ie;++i) {
-                if (*i>='0'&&*i<='9') {
-                    char* endptr=NULL;
-                    const char *start=protocol.c_str();
-                    size_t offset=(i-protocol.begin());
-                    start+=offset;
-                    numConnections=strtol(start,&endptr,10);
-                    size_t numberlen=endptr-start;
-                    if (numConnections>data->mMaxSimultaneousSockets) {
-                        numConnections=data->mMaxSimultaneousSockets;
-                        char numcon[256];
-                        sprintf(numcon,"%d",numConnections);
-                        protocol=protocol.substr(0,offset)+numcon+protocol.substr(offset+numberlen);
+                bool binaryStream=protocol.find("sst")==0;
+                bool base64Stream=!binaryStream;
+                boost::asio::ip::tcp::no_delay option(data->mNoDelay);
+                socket->set_option(option);
+                IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
+                
+                unsigned int numConnections=1;
+                
+                for (std::string::iterator i=protocol.begin(),ie=protocol.end();i!=ie;++i) {
+                    if (*i>='0'&&*i<='9') {
+                        char* endptr=NULL;
+                        const char *start=protocol.c_str();
+                        size_t offset=(i-protocol.begin());
+                        start+=offset;
+                        numConnections=strtol(start,&endptr,10);
+                        size_t numberlen=endptr-start;
+                        if (numConnections>data->mMaxSimultaneousSockets) {
+                            numConnections=data->mMaxSimultaneousSockets;
+                            char numcon[256];
+                            sprintf(numcon,"%d",numConnections);
+                            protocol=protocol.substr(0,offset)+numcon+protocol.substr(offset+numberlen);
+                        }
+                        break;
                     }
-                    break;
                 }
-            }
-
-            if (where==sIncompleteStreams.end()){
-                sIncompleteStreams[context].mNumSockets=numConnections;
-                where=sIncompleteStreams.find(context);
-                assert(where!=sIncompleteStreams.end());
-            }
-            if ((int)numConnections!=where->second.mNumSockets) {
-                SILOG(tcpsst,warning,"Single client disagrees on number of connections to establish: "<<numConnections<<" != "<<where->second.mNumSockets);
-                sIncompleteStreams.erase(where);
-            }else {
-                where->second.mSockets.push_back(socket);
-                if (numConnections==(unsigned int)where->second.mSockets.size()) {
-                    MultiplexedSocketPtr shared_socket(
-                        MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,where->second.mSockets,data->cb,data->mSendBufferSize, base64Stream));
-                    std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
-                    std::string resource_name=std::string((const char*)requestStart,requestEnd-requestStart);
-                    MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol);
+                
+                if (where==sIncompleteStreams.end()){
+                    sIncompleteStreams[context].mNumSockets=numConnections;
+                    where=sIncompleteStreams.find(context);
+                    assert(where!=sIncompleteStreams.end());
+                }
+                if ((int)numConnections!=where->second.mNumSockets) {
+                    SILOG(tcpsst,warning,"Single client disagrees on number of connections to establish: "<<numConnections<<" != "<<where->second.mNumSockets);
                     sIncompleteStreams.erase(where);
-                    
-
-                    Stream::StreamID newID=Stream::StreamID(1);
-                    TCPStream * strm=new TCPStream(shared_socket,newID);
-                    
-                    TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
-                    data->cb(strm,setCallbackFunctor);
-                    if (setCallbackFunctor.mCallbacks==NULL) {
-                        SILOG(tcpsst,error,"Client code for stream "<<newID.read()<<" did not set listener on socket");
-                        shared_socket->closeStream(shared_socket,newID);
+                }else {
+                    where->second.mSockets.push_back(socket);
+                    if (numConnections==(unsigned int)where->second.mSockets.size()) {
+                        MultiplexedSocketPtr shared_socket(
+                            MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,where->second.mSockets,data->cb,data->mSendBufferSize, base64Stream));
+                        std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
+                        std::string resource_name='/'+humanReadableUUID;
+                        MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol);
+                        sIncompleteStreams.erase(where);
+                        
+                        
+                        Stream::StreamID newID=Stream::StreamID(1);
+                        TCPStream * strm=new TCPStream(shared_socket,newID);
+                        
+                        TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
+                        data->cb(strm,setCallbackFunctor);
+                        if (setCallbackFunctor.mCallbacks==NULL) {
+                            SILOG(tcpsst,error,"Client code for stream "<<newID.read()<<" did not set listener on socket");
+                            shared_socket->closeStream(shared_socket,newID);
+                        }
+                    }else{
+                        sStaleUUIDs.push_back(context);
                     }
-                }else{
-                    sStaleUUIDs.push_back(context);
                 }
             }
         }

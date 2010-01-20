@@ -60,7 +60,7 @@ void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay,
                 break;
             }
         }
-        if (!memcmp(buffer,normalMode,sizeof(normalMode))) {
+        if (!memcmp(buffer->begin(),normalMode,sizeof(normalMode)-1/*not including null*/)) {
             if (mFinishedCheckCount==(int)connection->numSockets()) {
                 mFirstReceivedHeader=*buffer;
             }
@@ -72,7 +72,7 @@ void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay,
                     connection->connectedCallback();
                 }
                 
-                MemoryReference mb(buffer->begin()+whereHeaderEnds,bytes_received-whereHeaderEnds);
+                MemoryReference mb(buffer->begin()+whereHeaderEnds+1,bytes_received-(whereHeaderEnds+1));
                 MakeASIOReadBuffer(connection,whichSocket,mb);
             }else {
                 mFinishedCheckCount-=1;

@@ -38,13 +38,27 @@
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
+
+
+namespace Sirikata { namespace Network {
+
+void ASIOLogBuffer(void * pointerkey, const char extension[16], const uint8* buffer, size_t buffersize){
+    static AtomicValue<int> counter(0);
+    char filename[1024];
+    int cur=++counter;
+    sprintf(filename,"%02d_%d%s",cur,(unsigned int)(intptr_t)pointerkey,extension);
+    FILE*fp=fopen(filename,"ab");
+    fwrite(buffer,buffersize,1,fp);
+    fclose(fp);
+
+}
 char toHex(unsigned char a) {
     if (a>=10) {
         return 'A'+(a-10);
     }
     return '0'+a;
 }
-void BufferPrint(const void * vbuf, size_t size) {
+void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) {
     if (false) {
         const unsigned char *buf=(const unsigned char*)vbuf;
         char *obuf=(char*)malloc(size*2+1);
@@ -58,20 +72,10 @@ void BufferPrint(const void * vbuf, size_t size) {
         obuf[size*2]='\0';
         SILOG(tcpsst,error,obuf);
         free(obuf);
+    }else if(false){
+        ASIOLogBuffer(pointerkey,extension,(uint8*)vbuf,size);
     }
-}
-
-namespace Sirikata { namespace Network {
-
-void ASIOLogBuffer(void * pointerkey, const char extension[16], const uint8* buffer, size_t buffersize){
-    char filename[1024];
-    sprintf(filename,"%x.%s",(unsigned int)(intptr_t)pointerkey,extension);
-    FILE*fp=fopen(filename,"ab");
-    fwrite(buffer,buffersize,1,fp);
-    fclose(fp);
-
-}
-void copyHeader(void * destination, const char * stringPrefix,const UUID&key, unsigned int num) {
+}void copyHeader(void * destination, const char * stringPrefix,const UUID&key, unsigned int num) {
     std::memcpy(destination,stringPrefix,TCPStream::STRING_PREFIX_LENGTH);
     ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH]='0'+(num/10)%10;
     ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH+1]='0'+(num%10);
@@ -97,9 +101,12 @@ static const uint _URL_SAFE_ALPHABET []= {
 	
 int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
     uint8 temp[4];
-    uint32 inBuff =   ( numSigBytes > 0 ? ((source[ 0 ] << 24) / 256) : 0 )
-                     | ( numSigBytes > 1 ? ((source[ 1 ] << 24) / 65536) : 0 )
-                     | ( numSigBytes > 2 ? ((source[ 2 ] << 24) / 65536/ 256) : 0 );
+    uint32 source0=source[0];
+    uint32 source1=source[1];
+    uint32 source2=source[2];
+    uint32 inBuff =   ( numSigBytes > 0 ? ((source0 << 24) / 256) : 0 )
+                     | ( numSigBytes > 1 ? ((source1 << 24) / 65536) : 0 )
+                     | ( numSigBytes > 2 ? ((source2 << 24) / 65536/ 256) : 0 );
 
     destination[ 0 ] = _URL_SAFE_ALPHABET[ (inBuff >> 18)        ];
     destination[ 1 ] = _URL_SAFE_ALPHABET[ (inBuff >> 12) & 0x3f ];
@@ -131,7 +138,7 @@ Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const Memor
     unsigned int datalen=0;
     unsigned int curPlace=0;
     uint8 data[3];
-    Chunk * retval= new Chunk(conservativeBase64Size(a.size()+b.size()+c.size()));
+    Chunk * retval= new Chunk(conservativeBase64Size(a.size()+b.size()+c.size())+1);
     size_t retvalSize=retval->size();
     for (int i=0;i<3;++i) {
         const uint8*dat=(const uint8*)refs[i]->data();
@@ -154,7 +161,8 @@ Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const Memor
         }        
         curPlace+=translateBase64(&*(retval->begin()+curPlace),data,datalen);
     }
-    retval->resize(curPlace);
+    (*retval)[curPlace]='\0';//NULL DELIMITED
+    retval->resize(curPlace+1);
     return retval;
 }
 
@@ -194,11 +202,13 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
     unpauseSendStreams(parentMultiSocket);
 }
 void ASIOSocketWrapper::sendLargeChunkItem(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+    BufferPrint(this,".sec",&*toSend.chunk->begin()+originalOffset,bytes_sent);
     TCPSSTLOG(this,"snd",&*toSend.chunk->begin()+originalOffset,bytes_sent,error);
     if (error)  {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent+originalOffset!=toSend.size()) {
+        assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
         sendToWire(parentMultiSocket,toSend,originalOffset+bytes_sent);
     }else {
         finishedSendingChunk(toSend);
@@ -207,12 +217,14 @@ void ASIOSocketWrapper::sendLargeChunkItem(const MultiplexedSocketPtr&parentMult
     }
 }
 
-void ASIOSocketWrapper::sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+void ASIOSocketWrapper::sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) { 
+    BufferPrint(this,".sed",&*const_toSend.front().chunk->begin()+originalOffset,bytes_sent);
     TCPSSTLOG(this,"snd",&*const_toSend.front()->begin()+originalOffset,bytes_sent,error);
     if (error )   {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     } else if (bytes_sent+originalOffset!=const_toSend.front().size()) {
+        assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
         sendToWire(parentMultiSocket,const_toSend,originalOffset+bytes_sent);
     } else {
         finishedSendingChunk(const_toSend.front());
@@ -239,6 +251,7 @@ void ASIOSocketWrapper::sendLargeDequeItem(const MultiplexedSocketPtr&parentMult
 }
 #define ASIOSocketWrapperBuffer(pointer,size) boost::asio::buffer(pointer,(size))
 void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&toSend, const std::deque<TimestampedChunk>& workingSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
+    BufferPrint(this,".seb",currentBuffer,bytes_sent);
     TCPSSTLOG(this,"snd",current_buffer,bytes_sent,error);
     if (!error) {
         //mPacketLogger.insert(mPacketLogger.end(),currentBuffer,currentBuffer+bytes_sent);
@@ -248,7 +261,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiS
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent!=bufferSize) {
         //if the previous send was not able to push the whole buffer out to the network, the rest must be sent
-        BufferPrint(currentBuffer+bytes_sent,bufferSize-bytes_sent);
+        BufferPrint(this,".bus",currentBuffer+bytes_sent,bufferSize-bytes_sent);
         mSocket->async_send(ASIOSocketWrapperBuffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
                             std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                         this,
@@ -286,7 +299,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiS
 
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, TimestampedChunk toSend, size_t bytesSent) {
     //sending a single chunk is a straightforward call directly to asio
-    BufferPrint(&*toSend.chunk->begin()+bytesSent,toSend.size()-bytesSent);
+    BufferPrint(this,".buw",&*toSend.chunk->begin()+bytesSent,toSend.size()-bytesSent);
     mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend.chunk->begin()+bytesSent,toSend.size()-bytesSent),
                         std::tr1::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                     this,
@@ -300,7 +313,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&const_toSend, size_t bytesSent){
     if (const_toSend.front().size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
         //if there's but a single packet, or a single big packet that is bigger than the mBuffer's size...send that one by itself
-        BufferPrint(&*const_toSend.front().chunk->begin()+bytesSent,const_toSend.front().size()-bytesSent);
+        BufferPrint(this,".buW",&*const_toSend.front().chunk->begin()+bytesSent,const_toSend.front().size()-bytesSent);
         mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front().chunk->begin()+bytesSent,const_toSend.front().size()-bytesSent),
                             std::tr1::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                         this,
@@ -333,7 +346,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
             }
         }
         //send the buffer filled with possibly many packets
-        BufferPrint(mBuffer,bufferLocation);
+        BufferPrint(this,".buS",mBuffer,bufferLocation);
         mSocket->async_send(ASIOSocketWrapperBuffer(mBuffer,bufferLocation),
                             std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                           this,
@@ -526,10 +539,10 @@ void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thu
     char postfix[]={0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x4C, 0x6F, 0x63, 0x61
                     , 0x74, 0x69, 0x6F, 0x6E, 0x3A, 0x20, '\0'};
     
-    header << prefix<<origin<<postfix<<"ws://"<<host<<":"<<port<<resource_name;
+    header << prefix<<origin<<postfix<<"ws://"<<host<<resource_name;
     char protoprefix[]={0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x50, 0x72, 0x6F, 0x74
                         , 0x6F, 0x63, 0x6F, 0x6C, 0x3A, 0x20,'\0'};
-    char crlf[]={0x0d,0x0a,0x0d,0x0a,'\0'};
+    char crlf[]={0x0d,0x0a,'\0'};
     header <<protoprefix<<subprotocol<<crlf<<crlf;
     std::string finalHeader(header.str());
     Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());

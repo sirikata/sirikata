@@ -39,6 +39,7 @@
 #include "MultiplexedSocket.hpp"
 #include "ASIOReadBuffer.hpp"
 namespace Sirikata { namespace Network {
+void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
 ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader) {
     ASIOReadBuffer *retval= parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
     if (strayBytesAfterHeader.size()) {
@@ -155,7 +156,7 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
                 if( b4Posn > 3 ) {                  // Time to decode?
                     outBuffPosn += decode4to3( b4, newChunk, outBuffPosn );
                     b4Posn = 0;
-                    if (outBuffPosn>5) {
+                    if (parsedId==false&&outBuffPosn>5) {
                         id=parseId(newChunk,outBuffPosn);
                         parsedId=true;
                     }
@@ -273,9 +274,12 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
         }
         unsigned int remainder = bufferPos-chunkPos;
         if (remainder>sBufferLength/2&&!readBufferFull) {//FIXME should be smarter...definitely if remainder==sBufferLength
-            mBufferPos=remainder;
             mNewChunk.resize(0);
             mNewChunk.insert(mNewChunk.end(),&mBuffer[chunkPos],&mBuffer[mBufferPos]);
+            if (mBufferPos!=chunkPos) {
+                BufferPrint(this,".rcx",&*mNewChunk.begin(),mBufferPos-chunkPos);
+            }
+            mBufferPos=remainder;
             readIntoZeroDelimChunk(thus);
         }else {
             if (remainder) {
@@ -331,6 +335,8 @@ ASIOReadBuffer::~ASIOReadBuffer() {
 }
 
 void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read){
+    if (bytes_read)
+        BufferPrint(this, ".rcc", &*mNewChunk.begin()+mBufferPos, bytes_read);
     TCPSSTLOG(this,"rcv",&mNewChunk[mBufferPos],bytes_read,error);
     mBufferPos+=bytes_read;
     MultiplexedSocketPtr thus(mParentSocket.lock());
@@ -361,9 +367,12 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
 
 
 void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_t bytes_read){
+    if (bytes_read)
+        BufferPrint(this, ".rcz", &*(mNewChunk.begin()+mBufferPos), bytes_read);
+
     TCPSSTLOG(this,"rcv",&mNewChunk[mBufferPos],bytes_read,error);
     unsigned int curOffset=0;
-    unsigned int curZeroScanLocation=mBufferPos;
+    unsigned int curZeroScanLocation=0;//FIXME n^2 algorithm on packet size
     bool readBufferFull=false;
     mBufferPos+=bytes_read;
     MultiplexedSocketPtr thus(mParentSocket.lock());
@@ -377,20 +386,18 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
                         curOffset=i+1;
                     }else if (curOffset==0) {//still a single large chunk
                         readBufferFull=true;
-                        mReadStatus=PAUSED_NEW_CHUNK;    
+                        mReadStatus=PAUSED_NEW_CHUNK;   
+                        break;
                     }else {//will definitely fit in the static buffer
-                        assert(mBufferPos-curOffset<=sBufferLength);
-                        if (mBufferPos!=curOffset) {
-                            std::memcpy(mBuffer,&*(mNewChunk.begin()+curOffset),mBufferPos-curOffset);
-                        }
-                        mNewChunk.clear();
-                        mBufferPos-=curOffset;
+                        readBufferFull=true;
                         mReadStatus=PAUSED_FIXED_BUFFER;
+                        break;
                     }
                 }
             }
             if (curOffset==0) {//no packet processed, still large
-                readIntoZeroDelimChunk(thus);
+                if (!readBufferFull)
+                    readIntoZeroDelimChunk(thus);
             } else {
                 assert (mBufferPos-curOffset<=sBufferLength);//only read that much in--would only have read it in if there was one less byte for the last zero delim of the big
                                                            //packet, so we should need to read in at least one byte
@@ -399,7 +406,8 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
                 }
                 mBufferPos-=curOffset;
                 mNewChunk.clear();
-                readIntoFixedBuffer(thus);
+                if(!readBufferFull)
+                    readIntoFixedBuffer(thus);
             }
         }
     }else {
@@ -411,6 +419,9 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
 
 void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read){
     TCPSSTLOG(this,"rcv",&mBuffer[mBufferPos],bytes_read,error);
+    if (bytes_read)
+        BufferPrint(this, ".rcv", &(mBuffer[mBufferPos]), bytes_read);
+
     mBufferPos+=bytes_read;
     MultiplexedSocketPtr thus(mParentSocket.lock());
 
