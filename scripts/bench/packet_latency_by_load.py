@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     rates = sys.argv[1:]
     for rate in rates:
-        run_ping_trial(cc, cs, rate, True, True)
+        run_ping_trial(cc, cs, rate, True, False)
 
     log_files = [get_logfile_name(x) for x in rates]
     labels = ['%s pps'%(x) for x in rates]
