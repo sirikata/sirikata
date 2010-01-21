@@ -41,7 +41,7 @@ namespace CBR {
  */
 class ForwarderServiceQueue {
   private:
-    typedef FairQueue<Message, MessageRouter::SERVICES, AbstractQueue<Message*> > OutgoingFairQueue;
+    typedef FairQueue<Message, ServerMessageRouter::SERVICES, AbstractQueue<Message*> > OutgoingFairQueue;
     std::vector<OutgoingFairQueue*> mQueues;
     uint32 mQueueSize;
 
@@ -58,14 +58,14 @@ class ForwarderServiceQueue {
         }
     }
 
-    QueueEnum::PushResult push(ServerID sid, MessageRouter::SERVICES svc, Message* msg) {
+    QueueEnum::PushResult push(ServerID sid, ServerMessageRouter::SERVICES svc, Message* msg) {
         return getFairQueue(sid).push(svc, msg);
     }
 
     // Get the front element and service it camef
     Message* front(ServerID sid) {
         uint64 size=1<<30;
-        MessageRouter::SERVICES svc;
+        ServerMessageRouter::SERVICES svc;
 
         return getFairQueue(sid).front(&size, &svc);
     }
@@ -82,8 +82,8 @@ class ForwarderServiceQueue {
         }
         if(!mQueues[sid]) {
             mQueues[sid]=new OutgoingFairQueue();
-            for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
-                mQueues[sid]->addQueue(new Queue<Message*>(mQueueSize),(MessageRouter::SERVICES)i,1.0);
+            for(unsigned int i=0;i<ServerMessageRouter::NUM_SERVICES;++i) {
+                mQueues[sid]->addQueue(new Queue<Message*>(mQueueSize),(ServerMessageRouter::SERVICES)i,1.0);
             }
         }
         return *mQueues[sid];

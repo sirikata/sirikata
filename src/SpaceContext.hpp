@@ -38,8 +38,11 @@
 
 namespace CBR {
 
-class MessageRouter;
-class MessageDispatcher;
+class ServerMessageRouter;
+class ObjectMessageRouter;
+class ServerMessageDispatcher;
+class ObjectMessageDispatcher;
+
 class Forwarder;
 class MockForwarder;
 
@@ -56,8 +59,11 @@ public:
        lastTime(curtime),
        time(curtime),
        mID(_id),
-       mRouter(NULL),
-       mDispatcher(NULL)
+       mServerRouter(NULL),
+       mObjectRouter(NULL),
+       mServerDispatcher(NULL),
+       mObjectDispatcher(NULL)
+
     {
         mIterationProfiler = profiler->addStage("Context Iteration");
         mIterationProfiler->started();
@@ -73,11 +79,19 @@ public:
         return mID.read();
     }
 
-    MessageRouter* router() const {
-        return mRouter.read();
+    ServerMessageRouter* serverRouter() const {
+        return mServerRouter.read();
     }
-    MessageDispatcher* dispatcher() const {
-        return mDispatcher.read();
+
+    ObjectMessageRouter* objectRouter() const {
+        return mObjectRouter.read();
+    }
+
+    ServerMessageDispatcher* serverDispatcher() const {
+        return mServerDispatcher.read();
+    }
+    ObjectMessageDispatcher* objectDispatcher() const {
+        return mObjectDispatcher.read();
     }
 
     // FIXME only used by vis code because it is out of date and horrible
@@ -114,8 +128,10 @@ private:
 
     Sirikata::AtomicValue<ServerID> mID;
 
-    Sirikata::AtomicValue<MessageRouter*> mRouter;
-    Sirikata::AtomicValue<MessageDispatcher*> mDispatcher;
+    Sirikata::AtomicValue<ServerMessageRouter*> mServerRouter;
+    Sirikata::AtomicValue<ObjectMessageRouter*> mObjectRouter;
+    Sirikata::AtomicValue<ServerMessageDispatcher*> mServerDispatcher;
+    Sirikata::AtomicValue<ObjectMessageDispatcher*> mObjectDispatcher;
 
     TimeProfiler::Stage* mIterationProfiler;
     TimeProfiler::Stage* mWorkProfiler;

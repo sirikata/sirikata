@@ -148,7 +148,7 @@ uint32 Message::serializedSize() const {
 
 
 
-void MessageDispatcher::registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient) {
+void ServerMessageDispatcher::registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient) {
     MessageRecipientMap::iterator it = mMessageRecipients.find(type);
     if (it != mMessageRecipients.end()) {
         // FIXME warn that we are overriding old recipient
@@ -157,7 +157,7 @@ void MessageDispatcher::registerMessageRecipient(ServerMessagePort type, Message
     mMessageRecipients[type] = recipient;
 }
 
-void MessageDispatcher::unregisterMessageRecipient(ServerMessagePort type, MessageRecipient* recipient) {
+void ServerMessageDispatcher::unregisterMessageRecipient(ServerMessagePort type, MessageRecipient* recipient) {
     MessageRecipientMap::iterator it = mMessageRecipients.find(type);
     if (it == mMessageRecipients.end()) {
         // FIXME warn that we are trying to remove an recipient that hasn't been registered
@@ -172,7 +172,7 @@ void MessageDispatcher::unregisterMessageRecipient(ServerMessagePort type, Messa
     mMessageRecipients.erase(it);
 }
 
-void MessageDispatcher::registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient) {
+void ObjectMessageDispatcher::registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient) {
     ObjectMessageRecipientMap::iterator it = mObjectMessageRecipients.find(port);
     if (it != mObjectMessageRecipients.end()) {
         // FIXME warn that we are overriding old recipient
@@ -181,7 +181,7 @@ void MessageDispatcher::registerObjectMessageRecipient(ObjectMessagePort port, O
     mObjectMessageRecipients[port] = recipient;
 }
 
-void MessageDispatcher::unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient) {
+void ObjectMessageDispatcher::unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient) {
     ObjectMessageRecipientMap::iterator it = mObjectMessageRecipients.find(port);
     if (it == mObjectMessageRecipients.end()) {
         // FIXME warn that we are trying to remove an recipient that hasn't been registered
@@ -196,7 +196,7 @@ void MessageDispatcher::unregisterObjectMessageRecipient(ObjectMessagePort port,
     mObjectMessageRecipients.erase(it);
 }
 
-void MessageDispatcher::dispatchMessage(Message* msg) const {
+void ServerMessageDispatcher::dispatchMessage(Message* msg) const {
     if (msg == NULL) return;
 
     MessageRecipientMap::const_iterator it = mMessageRecipients.find(msg->dest_port());
@@ -211,7 +211,7 @@ void MessageDispatcher::dispatchMessage(Message* msg) const {
     recipient->receiveMessage(msg);
 }
 
-void MessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const {
+void ObjectMessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const {
     // This is on the space server, so we should only be calling this if the dest is the space
     assert(msg.dest_object() == UUID::null());
     ObjectMessageRecipientMap::const_iterator it = mObjectMessageRecipients.find(msg.dest_port());

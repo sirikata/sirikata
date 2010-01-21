@@ -658,7 +658,7 @@ void Server::trySendMigrationMessages() {
 
     // Send what we can right now
     while(!mMigrateMessages.empty()) {
-        bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front());
+        bool sent = mForwarder->route(ServerMessageRouter::MIGRATES, mMigrateMessages.front());
         if (!sent)
             break;
         mMigrateMessages.pop();

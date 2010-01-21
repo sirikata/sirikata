@@ -55,11 +55,16 @@ CBR::SpaceContext* gSpaceContext = NULL;
 
 namespace CBR {
 /** Mock forwarder class, neeeded because CoordinateSegmentation uses it via SpaceContext. */
-class MockForwarder : public CBR::MessageDispatcher, public CBR::MessageRouter {
+  class MockForwarder : public CBR::ServerMessageDispatcher, 
+			public CBR::ServerMessageRouter, 
+			public CBR::ObjectMessageRouter, 
+			public CBR::ObjectMessageDispatcher {
 public:
     MockForwarder(CBR::SpaceContext* ctx) {
-        ctx->mRouter = this;
-        ctx->mDispatcher = this;
+        ctx->mObjectRouter = this;
+	ctx->mServerRouter = this;
+        ctx->mServerDispatcher = this;
+	ctx->mObjectDispatcher = this;
     }
 
     virtual bool route(SERVICES svc, CBR::Message* msg) {

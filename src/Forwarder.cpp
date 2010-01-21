@@ -47,8 +47,10 @@ Forwarder::Forwarder(SpaceContext* ctx)
     //no need to initialize mOutgoingMessages.
 
     // Fill in the rest of the context
-    mContext->mRouter = this;
-    mContext->mDispatcher = this;
+    mContext->mServerRouter = this;
+    mContext->mObjectRouter = this;
+    mContext->mServerDispatcher = this;
+    mContext->mObjectDispatcher = this;
 
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
@@ -78,11 +80,11 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerWeightCalculator* swc
 void Forwarder::dispatchMessage(Message*msg) const {
     mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
 
-    MessageDispatcher::dispatchMessage(msg);
+    ServerMessageDispatcher::dispatchMessage(msg);
 }
 
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
-    MessageDispatcher::dispatchMessage(msg);
+    ObjectMessageDispatcher::dispatchMessage(msg);
 }
 
 // -- Object Connection Management - Object connections are available locally,
@@ -143,7 +145,7 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
   // for either servers or objects.  The second form will simply automatically do the destination
   // server lookup.
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg)
+  bool Forwarder::route(ServerMessageRouter::SERVICES svc, Message* msg)
   {
       assert(msg->source_server() == mContext->id());
       assert(msg->dest_server() != NullServerID);
@@ -333,7 +335,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
           serializePBJMessage(contents)
       );
 
-      bool oseg_cache_msg_success = route(MessageRouter::OSEG_CACHE_UPDATE, up_os);
+      bool oseg_cache_msg_success = route(ServerMessageRouter::OSEG_CACHE_UPDATE, up_os);
       // Ignore the success of this send.  If it failed the remote ends cache
       // will just continue to be incorrect, but forwarding will cover the error
   }

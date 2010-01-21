@@ -262,8 +262,7 @@ private:
       {
 	boost::unique_lock<boost::mutex> lock(mQueueMutex);	
 	
-        while (mQueuedSegments.empty()){
-          //printf("Waiting on lock\n");
+        while (mQueuedSegments.empty()){          
 
 	  if (mState == CONNECTION_PENDING_DISCONNECT) {
 	    return;
@@ -431,7 +430,7 @@ private:
     uint8 payload[1];
     payload[0] = getAvailableChannel();
    
-    //std::cout << "create connection: " <<  (int)payload[0] << "\n"; 
+    
     conn->setLocalChannelID(payload[0]);
     conn->sendData(payload, sizeof(payload));
 
@@ -559,7 +558,6 @@ private:
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
     
-
     for (uint i = 0; i < mOutstandingSegments.size(); i++) {
       if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
         //printf("Packet acked at %s\n", mLocalEndPoint.endPoint.toString().c_str());
@@ -700,7 +698,7 @@ private:
   }
 
   void handleDataPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
-    //printf("DATA received\n");
+    
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
@@ -799,9 +797,7 @@ public:
     while (currOffset < length) {	
       int buffLen = (length-currOffset > MAX_PAYLOAD_SIZE) ? 
 	            MAX_PAYLOAD_SIZE : 
-           	    (length-currOffset);
-
-      //printf("buffLen=%d\n", buffLen);
+           	    (length-currOffset);      
 
       CBR::Protocol::SST::SSTStreamHeader sstMsg;
       sstMsg.set_lsid( lsid );
@@ -1058,7 +1054,6 @@ public:
 
     boost::lock_guard<boost::mutex> lock(mQueueMutex);
     int count = 0;
-
     
 
     mCondVar.notify_one();
@@ -1219,9 +1214,6 @@ public:
                                   reference counted, shared pointer to the  connection.
   */
   virtual void createChildStream(StreamReturnCallbackFunction cb, void* data, int length) {
-    printf("Creating child stream\n");
-    fflush(stdout);
-
     mConnection.lock()->stream(cb, data, length, this);
   }
 
@@ -1249,8 +1241,7 @@ private:
     mConnected (false),           
     MAX_INIT_RETRANSMISSIONS(10)
   {
-    
-    
+
     if (remotelyInitiated) {
       mConnected = true;
       mState = CONNECTED;
@@ -1304,7 +1295,7 @@ private:
       return;
     }
 
-    int length = 2000000;
+    int length = 0;
     uint8* f = new uint8[length];
     for (int i=0; i<length; i++) {
       f[i] = i % 255;
@@ -1444,7 +1435,7 @@ private:
 
      mNumOutstandingBytes = 0;
      mChannelToBufferMap.clear();     
-  }  
+  }
 
   /* This function sends received data up to the application interface. 
      mReceiveBufferMutex must be locked before calling this function. */

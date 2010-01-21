@@ -44,9 +44,9 @@ namespace CBR
   {
 
     //registering with the dispatcher.  can now receive messages addressed to it.
-    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
-    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
-    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
+    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
+    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
+    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
     craqDhtGet.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
@@ -86,9 +86,9 @@ namespace CBR
   */
   CraqObjectSegmentation::~CraqObjectSegmentation()
   {
-    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
-    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
-    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
+    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
+    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
+    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
     //    should delete not found queue;
     while (mNfData.size() != 0)
@@ -709,7 +709,7 @@ namespace CBR
         SERVER_PORT_KILL_OBJ_CONN,
         serializePBJMessage(kill_msg_contents)
     );
-    bool sent = mContext->router()->route(MessageRouter::MIGRATES, kill_msg);//this will route the message to the server so that this computer can disconnect from the object connection.
+    bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES, kill_msg);//this will route the message to the server so that this computer can disconnect from the object connection.
 
     if (!sent)
       reTryKillConnMessage.push_back(kill_msg);
@@ -736,7 +736,7 @@ namespace CBR
     //trying to resend faild added messages
     for (int s=0;s < (int)reTryAddedMessage.size(); ++s)
     {
-      bool sent = mContext->router()->route(MessageRouter::MIGRATES,reTryAddedMessage[s]);
+      bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryAddedMessage[s]);
 
       if (!sent)
         reReTryAddedMessage.push_back(reTryAddedMessage[s]);
@@ -747,7 +747,7 @@ namespace CBR
     //trying to re-send failed mig ack messages
     for (int s=0; s< (int)reTryMigAckMessage.size(); ++s)
     {
-      bool sent= mContext->router()->route(MessageRouter::MIGRATES,reTryMigAckMessage[s]);
+      bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryMigAckMessage[s]);
       if (!sent)
         reReTryMigAckMessage.push_back(reTryMigAckMessage[s]);
 
@@ -756,7 +756,7 @@ namespace CBR
     //trying to re-send failed kill conn messages
     for (int s=0; s <(int) reTryKillConnMessage.size(); ++s)
     {
-      bool sent = mContext->router()->route(MessageRouter::MIGRATES,reTryKillConnMessage[s]);//this will route the message to the server so that this computer can disconnect from the object connection.
+      bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryKillConnMessage[s]);//this will route the message to the server so that this computer can disconnect from the object connection.
 
       if (!sent)
         reTryKillConnMessage.push_back(reTryKillConnMessage[s]);
@@ -1008,7 +1008,7 @@ namespace CBR
                                      serializePBJMessage( *(trackingMessages[trackedSetResult->trackedMessage].migAckMsg) )
                                      );
 
-      bool sent= mContext->router()->route(MessageRouter::MIGRATES,to_send);
+      bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,to_send);
 
       if (!sent)
         reTryMigAckMessage.push_back(to_send); //will try to re-send the tracking message
@@ -1029,7 +1029,7 @@ namespace CBR
                                      serializePBJMessage( *(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded) )
                                      );
 
-      bool sent = mContext->router()->route(MessageRouter::MIGRATES, to_send);
+      bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES, to_send);
 
       if (!sent)
         reTryAddedMessage.push_back(to_send);  //will try to re-send the add message

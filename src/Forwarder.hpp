@@ -31,9 +31,11 @@ namespace CBR
 class ForwarderServiceQueue;
 class ServerWeightCalculator;
 
-class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient,
-                  public ServerMessageQueue::Sender,
-                  public ServerMessageReceiver::Listener
+  class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
+		    public ServerMessageRouter, public ObjectMessageRouter,
+                    public MessageRecipient,
+                    public ServerMessageQueue::Sender,
+                    public ServerMessageReceiver::Listener
 {
 private:
     SpaceContext* mContext;
@@ -75,7 +77,7 @@ private:
     // -- Public routing interface
   public:
     WARN_UNUSED
-    bool route(MessageRouter::SERVICES svc, Message* msg);
+    bool route(ServerMessageRouter::SERVICES svc, Message* msg);
 
     WARN_UNUSED
     bool route(CBR::Protocol::Object::ObjectMessage* msg);

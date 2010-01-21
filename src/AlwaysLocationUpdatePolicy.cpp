@@ -118,7 +118,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
         serializePBJMessage(blu)
     );
 
-    return mLocService->context()->router()->route(obj_msg);
+    return mLocService->context()->objectRouter()->route(obj_msg);
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
@@ -129,7 +129,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protoc
         SERVER_PORT_LOCATION,
         serializePBJMessage(blu)
     );
-    return mLocService->context()->router()->route(MessageRouter::LOCS, msg);
+    return mLocService->context()->serverRouter()->route(ServerMessageRouter::LOCS, msg);
 }
 
 } // namespace CBR
