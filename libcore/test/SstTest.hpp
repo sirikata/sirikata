@@ -107,6 +107,8 @@ public:
             ++mCount;
             return Network::Stream::AcceptedData;
         }
+		mServicePool->service()->post(Duration::microseconds(100),
+			std::tr1::bind(&Stream::readyRead,s));
         return Network::Stream::PauseReceive;
     }
     Network::Stream::ReceivedResponse connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
@@ -532,7 +534,7 @@ public:
             time_t last_time=time(NULL);
             int retry_count=20;
             while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
-                if (rand()<RAND_MAX/10) {
+                if (0&&rand()<RAND_MAX/10) {
                     if (r)
                         r->readyRead();
                     if(z)
@@ -568,7 +570,7 @@ public:
         if( doSubstreams){
             z->close();
             time_t last_time=time(NULL);
-            int retry_count=6;
+            int retry_count=8;
             while(mDisconCount.read()<2){
                 if (rand()<RAND_MAX/10) {
                     z->readyRead();

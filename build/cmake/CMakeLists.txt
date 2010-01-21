@@ -1155,10 +1155,7 @@ libcore/test/ObjectStorageTest.hpp
 libcore/test/OptionTest.hpp
 #libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp
-libcore/test/ReadWriteHandlerTest.hpp
 libcore/test/RoutableMessageTest.hpp
-libcore/test/SQLiteMinitransactionTest.hpp
-libcore/test/SQLiteReadWriteTest.hpp
 libcore/test/SstCloseTest.hpp
 libcore/test/SstTest.hpp
 libcore/test/SubscriptionTest.hpp
@@ -1167,6 +1164,9 @@ libcore/test/TR1Test.hpp
 #libcore/test/UploadTest.hpp
 libcore/test/Vector3Test.hpp
  )
+IF(NOT WIN32)
+SET(CXXTESTSources ${CXXTESTSources} libcore/test/ReadWriteHandlerTest.hpp libcore/test/SQLiteMinitransactionTest.hpp libcore/test/SQLiteReadWriteTest.hpp)
+ENDIF()
 #  libcore/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 	LIBRARYDIR ${CXXTESTRoot})
