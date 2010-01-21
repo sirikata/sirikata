@@ -52,7 +52,7 @@ ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsi
     return retval;
 }
 void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
-    //parentSocket->hostDisconnectedCallback(mWhichBuffer,error);
+    parentSocket->hostDisconnectedCallback(mWhichBuffer,error);
     parentSocket->getASIOSocketWrapper(mWhichBuffer).clearReadBuffer();
     delete this;
 }

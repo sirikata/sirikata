@@ -334,8 +334,10 @@ void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stre
 
             CommitCallbacks(registrations,CONNECTED,false);//just in case stream committed new callbacks during callback
             where=mCallbacks.find(id);
-            delete where->second;
-            mCallbacks.erase(where);
+			if (where!=mCallbacks.end()) {//may have gotten erased in CommitCallback by a concurrent close request
+                delete where->second;
+                mCallbacks.erase(where);
+			}
         }
     }
     std::tr1::unordered_set<Stream::StreamID>::iterator where=mOneSidedClosingStreams.find(id);
@@ -420,7 +422,7 @@ void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase
         for (CallbackMap::iterator i=mCallbacks.begin(),ie=mCallbacks.end();i!=ie;++i) {
             i->second->mConnectionCallback(stat,errorMessage);
             if (reportedProblem!=Stream::Connected) {
-                //i->second->mConnectionCallback=&Stream::ignoreConnectionCallback;
+                i->second->mConnectionCallback=&Stream::ignoreConnectionCallback;
             }
 
         }
