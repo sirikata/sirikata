@@ -371,7 +371,7 @@ class ClusterSim:
         GraphWindowedJFI('windowed_bandwidth_packet_send.dat', 'windowed_queue_info_send_packet.dat', 'jfi_packet_send')
         GraphWindowedJFI('windowed_bandwidth_packet_receive.dat', 'windowed_queue_info_receive_packet.dat', 'jfi_packet_receive')
         GraphWindowedJFI('windowed_bandwidth_datagram_send.dat', 'windowed_queue_info_send_datagram.dat', 'jfi_datagram_send')
-        GraphWindowedJFI('windowed_bandwidth_datagram_receive.dat', 'windowed_queue_info_receive_datagram.dat', 'jfi_datagram_receive')
+        #GraphWindowedJFI('windowed_bandwidth_datagram_receive.dat', 'windowed_queue_info_receive_datagram.dat', 'jfi_datagram_receive')
 
 
     def latency_analysis(self):
