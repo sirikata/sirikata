@@ -75,6 +75,10 @@ class ForwarderServiceQueue {
         return getFairQueue(sid).pop(&size);
     }
 
+    uint32 size(ServerID sid, ServerMessageRouter::SERVICES svc) {
+        return getFairQueue(sid).size(svc);
+    }
+
   private:
     OutgoingFairQueue& getFairQueue(ServerID sid) {
         while (mQueues.size()<=sid) {

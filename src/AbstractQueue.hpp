@@ -28,7 +28,7 @@ public:
 
     virtual bool empty() const=0;
 
-
+    virtual uint32 size() const=0;
 /** FIXME this is unsafe since we need to track the size of all messages
     virtual std::deque<ElementType>& messages()=0;
 */
