@@ -2,6 +2,7 @@
 #define _CBR_TCP_NETWORK_HPP_
 
 #include "Network.hpp"
+#include "Address4.hpp"
 #include <sirikata/network/Stream.hpp>
 #include <sirikata/network/StreamListener.hpp>
 #include <sirikata/util/PluginManager.hpp>
@@ -24,7 +25,8 @@ class TCPNetwork : public Network {
 
         Sirikata::Network::Stream* stream;
 
-        Address4 endpoint; // The remote endpoint we're talking to.
+        Address4 network_endpoint; // The remote endpoint we're talking to.
+        ServerID logical_endpoint; // The remote endpoint we're talking to.
         bool connected; // Indicates if the initial header specifying
                         // the remote endpoint has been sent or
                         // received (depending on which side initiated
@@ -49,7 +51,8 @@ class TCPNetwork : public Network {
 
     typedef std::tr1::shared_ptr<RemoteStream> RemoteStreamPtr;
     typedef std::tr1::weak_ptr<RemoteStream> RemoteStreamWPtr;
-    typedef std::tr1::unordered_map<Address4, RemoteStreamPtr, Address4::Hasher> RemoteStreamMap;
+    typedef std::tr1::unordered_map<ServerID, RemoteStreamPtr> RemoteStreamMap;
+    typedef std::tr1::unordered_map<Address4, RemoteStreamPtr, Address4::Hasher> RemoteNetStreamMap;
 
     typedef std::set<Sirikata::Network::IOTimerPtr> TimerSet;
 
@@ -85,21 +88,21 @@ class TCPNetwork : public Network {
 
     // Open a new connection.  Should be called when an existing connection
     // couldn't be found in mRemoteStreams.
-    void openConnection(const Address4& addr);
+    void openConnection(const ServerID& dest);
 
     // Mark a send stream as disconnected
-    void markDisconnected(const Address4& addr);
+    void markDisconnected(const RemoteStreamWPtr& wstream);
 
     // Sends the introduction of this server to the remote server.  Should be
     // used for connections allocated when trying to send.
     void sendServerIntro(const RemoteStreamPtr& out_stream);
 
     // Handles the identification of a receive stream as a specific endpoint, adding it to the list of full connections
-    void addNewStream(const Address4& remote_endpoint, RemoteStreamPtr source_stream);
+    void addNewStream(RemoteStreamPtr source_stream);
 
     // Handles timeouts for closing streams -- forcibly closes them, removes
     // them from the closing set.
-    void handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, const Address4& remote_endpoint);
+    void handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, RemoteStreamWPtr& wstream);
 
     // Get the current queue for receiving data from the address.
     // This considers any closing streams first, then the main stream
@@ -108,27 +111,26 @@ class TCPNetwork : public Network {
     // available on the stream as well, so a closing stream with no
     // data available will *not* be returned when an active stream
     // with data available also exists.
-    RemoteStreamPtr getReceiveQueue(const Address4& addr);
+    RemoteStreamPtr getReceiveQueue(const ServerID& addr);
     // Clears the current front() queue for the address.  Should be called when
     // the front item is removed, allowing the selection of the front queue to
     // change.
-    void clearReceiveQueue(const Address4& addr);
+    void clearReceiveQueue(const ServerID& from);
 
     // IO Thread/Strand.  They must be certain not to call any main thread methods or access any main thread data.
     // These are all callbacks from the network, so mostly they should
     // just be posting the results to the main thread.
 
-    RemoteStreamMap mPendingStreams; // Streams initiated by the
-                                     // remote endpoint that are
-                                     // waiting for the initial
-                                     // message specifying the remote
-                                     // endpoint ID
+    RemoteNetStreamMap mPendingStreams; // Streams initiated by the remote
+                                        // endpoint that are waiting for the
+                                        // initial message specifying the remote
+                                        // endpoint ID
 
     void newStreamCallback(Sirikata::Network::Stream* strm, Sirikata::Network::Stream::SetCallbacks& cb);
 
-    void connectionCallback(const Address4& remote_addr, const RemoteStreamWPtr& rwstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason);
+    void connectionCallback(const RemoteStreamWPtr& rwstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason);
     Sirikata::Network::Stream::ReceivedResponse bytesReceivedCallback(const RemoteStreamWPtr& rwstream, Chunk& data);
-    void readySendCallback(const Address4& addr);
+    void readySendCallback(const ServerID& addr);
 
 public:
     TCPNetwork(SpaceContext* ctx);
@@ -136,12 +138,12 @@ public:
 
     virtual void setSendListener(SendListener* sl);
     // Checks if this chunk, when passed to send, would be successfully pushed.
-    virtual bool canSend(const Address4&,uint32 size);
-    virtual bool send(const Address4&,const Chunk&);
+    virtual bool canSend(const ServerID&,uint32 size);
+    virtual bool send(const ServerID&,const Chunk&);
 
-    virtual void listen(const Address4& addr, ReceiveListener* receive_listener);
-    virtual Chunk* front(const Address4& from, uint32 max_size);
-    virtual Chunk* receiveOne(const Address4& from, uint32 max_size);
+    virtual void listen(const ServerID& addr, ReceiveListener* receive_listener);
+    virtual Chunk* front(const ServerID& from, uint32 max_size);
+    virtual Chunk* receiveOne(const ServerID& from, uint32 max_size);
 };
 
 } // namespace CBR

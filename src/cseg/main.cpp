@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
 
-    
+
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, trace, duration);
 
@@ -75,7 +75,6 @@ int main(int argc, char** argv) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    trace->setServerIDMap(server_id_map);
 
     String cseg_type = GetOption(CSEG)->as<String>();
     CoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers, server_id_map);

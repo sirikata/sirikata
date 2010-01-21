@@ -33,8 +33,9 @@
 #ifndef _CBR_SERVERID_MAP_HPP_
 #define _CBR_SERVERID_MAP_HPP_
 
-#include "Server.hpp"
-#include "Network.hpp"
+#include "VWTypes.hpp"
+#include "Address4.hpp"
+
 namespace CBR {
 
 /* Represents the physical network addresses of servers

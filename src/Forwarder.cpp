@@ -3,7 +3,6 @@
 #include "Server.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
-#include "ServerIDMap.hpp"
 #include "ServerWeightCalculator.hpp"
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"

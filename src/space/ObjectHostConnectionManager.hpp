@@ -37,6 +37,7 @@
 #include "SpaceContext.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
+#include "Address4.hpp"
 #include <sirikata/network/IOService.hpp>
 #include <sirikata/network/StreamListener.hpp>
 

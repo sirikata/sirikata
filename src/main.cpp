@@ -48,7 +48,6 @@
 #include "Options.hpp"
 #include "Statistics.hpp"
 #include "StandardLocationService.hpp"
-#include "Test.hpp"
 #include "TCPNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 //#include "FIFOServerMessageQueue.hpp"
@@ -102,6 +101,7 @@ int main(int argc, char** argv) {
     if (network_type == "tcp")
       gNetwork = new TCPNetwork(space_context);
 
+    /*
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
         String server_port = GetOption("server-port")->as<String>();
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
             CBR::testClient(client_port.c_str(), host.c_str(), server_port.c_str());
         return 0;
     }
-
+    */
 
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
@@ -133,7 +133,6 @@ int main(int argc, char** argv) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    gTrace->setServerIDMap(server_id_map);
     gNetwork->setServerIDMap(server_id_map);
 
 
@@ -191,7 +190,7 @@ int main(int argc, char** argv) {
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fair") {
         sq = new FairServerMessageQueue(
-            space_context, gNetwork, server_id_map,
+            space_context, gNetwork,
             (ServerMessageQueue::Sender*)forwarder,
             GetOption(SEND_BANDWIDTH)->as<uint32>());
     }
@@ -210,7 +209,7 @@ int main(int argc, char** argv) {
     String server_receiver_type = GetOption(SERVER_RECEIVER)->as<String>();
     if (server_queue_type == "fair")
         server_message_receiver =
-                new FairServerMessageReceiver(space_context, gNetwork, server_id_map, weight_calc, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+                new FairServerMessageReceiver(space_context, gNetwork, weight_calc, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);

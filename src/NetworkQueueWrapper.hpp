@@ -3,7 +3,6 @@
 
 #include "Network.hpp"
 #include "Message.hpp"
-#include "ServerIDMap.hpp"
 #include "Statistics.hpp"
 
 namespace CBR {
@@ -12,7 +11,6 @@ class NetworkQueueWrapper {
     Network* mNetwork;
     ServerID mServerID;
     uint32 mMaxRecvSize;
-    Address4 mServerAddress;
     Message* mFront;
     Trace::MessagePath mPathTag;
     typedef Network::Chunk Chunk;
@@ -40,12 +38,11 @@ class NetworkQueueWrapper {
 public:
     typedef Message* ElementType;
 
-    NetworkQueueWrapper(Context* ctx, ServerID sid, Network*net,ServerIDMap*idmap, Trace::MessagePath tag) {
+    NetworkQueueWrapper(Context* ctx, ServerID sid, Network* net, Trace::MessagePath tag) {
         mContext = ctx;
         mServerID=sid;
         mNetwork=net;
         mMaxRecvSize=(1<<30);
-        mServerAddress=*idmap->lookupInternal(sid);
         mFront = NULL;
         mPathTag = tag;
     }
@@ -57,7 +54,7 @@ public:
 
     Message* front() {
         if (mFront == NULL) {
-            Chunk* c = mNetwork->front(mServerAddress, mMaxRecvSize);
+            Chunk* c = mNetwork->front(mServerID, mMaxRecvSize);
             if (c != NULL)
                 mFront = parse(c);
         }
@@ -66,7 +63,7 @@ public:
     }
 
     Message* pop(){
-        Chunk* c = mNetwork->receiveOne(mServerAddress,mMaxRecvSize);
+        Chunk* c = mNetwork->receiveOne(mServerID, mMaxRecvSize);
 
         if (c == NULL) {
             assert(mFront == NULL);
@@ -87,7 +84,7 @@ public:
     }
 
     bool empty() const{
-        return mNetwork->front(mServerAddress,mMaxRecvSize)==NULL;
+        return mNetwork->front(mServerID, mMaxRecvSize)==NULL;
     }
 
     uint32 size() const {

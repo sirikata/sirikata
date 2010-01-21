@@ -28,8 +28,6 @@ class ObjectSegmentation;
 class ObjectConnection;
 class ObjectHostConnectionManager;
 
-class ServerIDMap;
-
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
    *  object -> server mapping.  This is a singleton for each simulated

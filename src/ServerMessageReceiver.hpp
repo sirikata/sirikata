@@ -42,7 +42,6 @@
 namespace CBR{
 
 class SpaceContext;
-class ServerIDMap;
 class Message;
 
 /** ServerMessageReceiver handles receiving ServerMessages from the Network.  It
@@ -60,21 +59,20 @@ public:
         virtual void serverMessageReceived(Message* msg) = 0;
     };
 
-    ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener);
+    ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener);
     virtual ~ServerMessageReceiver();
 
 protected:
     virtual void setServerWeight(ServerID sid, float weight) = 0;
 
     // Network::ReceiveListener Interface
-    virtual void networkReceivedConnection(const Address4& from) = 0;
-    virtual void networkReceivedData(const Address4& from) = 0;
+    virtual void networkReceivedConnection(const ServerID& from) = 0;
+    virtual void networkReceivedData(const ServerID& from) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 
     SpaceContext* mContext;
     Network* mNetwork;
-    ServerIDMap* mServerIDMap;
     TimeProfiler::Stage* mProfiler;
     Listener* mListener;
 };

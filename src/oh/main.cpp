@@ -61,7 +61,6 @@ int main(int argc, char** argv) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    gTrace->setServerIDMap(server_id_map);
 
 
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();

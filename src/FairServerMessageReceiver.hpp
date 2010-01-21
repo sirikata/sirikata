@@ -48,18 +48,18 @@ class ServerWeightCalculator;
  */
 class FairServerMessageReceiver : public ServerMessageReceiver {
 public:
-    FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, ServerWeightCalculator* swc, Listener* listener, uint32 recv_bytes_per_sec);
+    FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerWeightCalculator* swc, Listener* listener, uint32 recv_bytes_per_sec);
     virtual ~FairServerMessageReceiver();
 
 private:
     virtual void setServerWeight(ServerID sid, float weight);
 
-    virtual void networkReceivedConnection(const Address4& from);
-    virtual void networkReceivedData(const Address4& from);
+    virtual void networkReceivedConnection(const ServerID& from);
+    virtual void networkReceivedData(const ServerID& from);
 
     // Handles
-    void handleReceivedConnection(const Address4& from);
-    void handleReceived(const Address4& from);
+    void handleReceivedConnection(const ServerID& from);
+    void handleReceived(const ServerID& from);
 
     // Internal service call -- generated either by a networkReceivedData event
     // or by a timer as we wait for enough bandwidth to be available to service

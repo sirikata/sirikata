@@ -36,8 +36,6 @@
 #include "CBR_Header.pbj.hpp"
 #include <iostream>
 
-#include "ServerIDMap.hpp"
-
 #include <boost/thread/locks.hpp>
 
 
@@ -140,16 +138,11 @@ const uint8 Trace::OSegCumulativeTraceAnalysisTag;
 
 
 Trace::Trace(const String& filename)
- : mServerIDMap(NULL),
-   mShuttingDown(false),
+ : mShuttingDown(false),
    mStorageThread(NULL),
    mFinishStorage(false)
 {
     mStorageThread = new Thread( std::tr1::bind(&Trace::storageThread, this, filename) );
-}
-
-void Trace::setServerIDMap(ServerIDMap* sidmap) {
-    mServerIDMap = sidmap;
 }
 
 void Trace::prepareShutdown() {
@@ -343,16 +336,14 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
 #endif
 }
 
-void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
+void Trace::packetQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
     data.write( &t, sizeof(t) );
-    ServerID* dest_server_id = mServerIDMap->lookupInternal(dest);
-    assert(dest_server_id);
-    data.write( dest_server_id, sizeof(ServerID) );
+    data.write( &dest, sizeof(ServerID) );
     data.write( &send_size, sizeof(send_size) );
     data.write( &send_queued, sizeof(send_queued) );
     data.write( &send_weight, sizeof(send_weight) );
@@ -362,32 +353,26 @@ void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_siz
 #endif
 }
 
-void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
+void Trace::packetSent(const Time& t, const ServerID& dest, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
     data.write( &t, sizeof(t) );
-    assert(mServerIDMap);
-    ServerID* dest_server_id = mServerIDMap->lookupInternal(dest);
-    assert(dest_server_id);
-    data.write( dest_server_id, sizeof(ServerID) );
+    data.write( &dest, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
 #endif
 }
 
-void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
+void Trace::packetReceived(const Time& t, const ServerID& src, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
     data.write( &t, sizeof(t) );
-    assert(mServerIDMap);
-    ServerID* src_server_id = mServerIDMap->lookupInternal(src);
-    assert(src_server_id);
-    data.write( src_server_id, sizeof(ServerID) );
+    data.write( &src, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
 #endif
 }

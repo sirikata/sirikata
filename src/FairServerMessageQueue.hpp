@@ -3,7 +3,6 @@
 
 #include "FairQueue.hpp"
 #include "ServerMessageQueue.hpp"
-#include "NetworkQueueWrapper.hpp"
 
 namespace CBR {
 class FairServerMessageQueue:public ServerMessageQueue {
@@ -41,7 +40,7 @@ protected:
     ServerSet mDownstreamReady;
 
   public:
-    FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender, uint32 send_bytes_per_second);
+    FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second);
 
     virtual void addInputQueue(ServerID sid, float weight);
     virtual void updateInputQueueWeight(ServerID sid, float weight);
@@ -50,7 +49,7 @@ protected:
   protected:
     virtual void messageReady(ServerID sid);
 
-    virtual void networkReadyToSend(const Address4& from);
+    virtual void networkReadyToSend(const ServerID& from);
 
     float getServerWeight(ServerID);
 

@@ -1,6 +1,5 @@
-#include "Network.hpp"
-#include "Server.hpp"
 #include "FairServerMessageQueue.hpp"
+#include "Network.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
 #include "Statistics.hpp"
@@ -15,8 +14,8 @@ FairServerMessageQueue::SenderAdapterQueue::SenderAdapterQueue(Sender* sender, S
 }
 
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender, uint32 send_bytes_per_second)
-        : ServerMessageQueue(ctx, net, sidmap, sender),
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second)
+        : ServerMessageQueue(ctx, net, sender),
           mServerQueues(),
           mLastServiceTime(ctx->time),
           mRate(send_bytes_per_second),
@@ -38,10 +37,7 @@ void FairServerMessageQueue::service(){
     ServerID sid;
     bool save_bytes = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
-        Address4* addy = mServerIDMap->lookupInternal(next_msg->dest_server());
-        assert(addy != NULL);
-
-        bool sent_success = trySend(*addy, next_msg);
+        bool sent_success = trySend(sid, next_msg);
         if (!sent_success) {
             disableDownstream(sid);
             continue;
@@ -100,14 +96,11 @@ void FairServerMessageQueue::messageReady(ServerID sid) {
     service();
 }
 
-void FairServerMessageQueue::networkReadyToSend(const Address4& from) {
+void FairServerMessageQueue::networkReadyToSend(const ServerID& from) {
     // The connection is ready to send again, enable the input queue associated
     // with it.
-    ServerID* sid = mServerIDMap->lookupInternal(from);
-    assert(sid != NULL);
-
     mContext->mainStrand->post(
-        std::tr1::bind(&FairServerMessageQueue::enableDownstream, this, *sid)
+        std::tr1::bind(&FairServerMessageQueue::enableDownstream, this, from)
                                );
 }
 

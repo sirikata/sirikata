@@ -78,8 +78,6 @@ private:
 };
 
 
-class ServerIDMap;
-
 class Trace {
 public:
     static const uint8 ProximityTag = 0;
@@ -156,8 +154,6 @@ public:
 
     Trace(const String& filename);
 
-    void setServerIDMap(ServerIDMap* sidmap);
-
     void timestampMessageCreation(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
     void timestampMessage(const Time&t, uint64 packetId, MessagePath path);
 
@@ -175,11 +171,11 @@ public:
     void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
-    void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
+    void packetQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
 
     void ping(const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId);
-    void packetSent(const Time& t, const Address4& dest, uint32 size);
-    void packetReceived(const Time& t, const Address4& src, uint32 size);
+    void packetSent(const Time& t, const ServerID& dest, uint32 size);
+    void packetReceived(const Time& t, const ServerID& src, uint32 size);
 
     void segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
@@ -210,7 +206,6 @@ private:
     void storageThread(const String& filename);
 
     BatchedBuffer data;
-    ServerIDMap* mServerIDMap;
     bool mShuttingDown;
 
     Thread* mStorageThread;

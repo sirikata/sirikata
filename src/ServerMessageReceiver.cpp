@@ -33,21 +33,16 @@
 #include "ServerMessageReceiver.hpp"
 #include "SpaceContext.hpp"
 #include "Network.hpp"
-#include "ServerIDMap.hpp"
 
 namespace CBR {
 
-ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Listener* listener)
+ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
         : mContext(ctx),
           mNetwork(net),
-          mServerIDMap(sidmap),
           mListener(listener)
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
-    // start the network listening
-    Address4* listen_addy = mServerIDMap->lookupInternal(mContext->id());
-    assert(listen_addy != NULL);
-    net->listen(*listen_addy, this);
+    net->listen(mContext->id(), this);
 }
 
 ServerMessageReceiver::~ServerMessageReceiver() {

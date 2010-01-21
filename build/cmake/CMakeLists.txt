@@ -307,7 +307,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
   ${CBR_SOURCE_DIR}/SSTImpl.cpp
   ${CBR_SOURCE_DIR}/TCPNetwork.cpp
-  ${CBR_SOURCE_DIR}/Test.cpp
+#  ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CBR_SOURCE_DIR}/main.cpp

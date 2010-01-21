@@ -23,7 +23,6 @@
 namespace CBR
 {
   class Object;
-  class ServerIDMap;
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class Network;

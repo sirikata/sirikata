@@ -35,10 +35,9 @@
 
 namespace CBR {
 
-ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender)
+ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender)
         : mContext(ctx),
           mNetwork(net),
-          mServerIDMap(sidmap),
           mSender(sender)
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
@@ -53,10 +52,10 @@ void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const
 }
 
 
-bool ServerMessageQueue::trySend(const Address4& addr, const Message* msg) {
+bool ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
     Network::Chunk serialized;
     msg->serialize(&serialized);
-    bool sent_success = mNetwork->send(addr, serialized);
+    bool sent_success = mNetwork->send(dest, serialized);
 
     if (sent_success)
         TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_HIT_NETWORK);

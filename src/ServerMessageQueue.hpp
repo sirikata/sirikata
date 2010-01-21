@@ -40,8 +40,6 @@
 
 namespace CBR{
 
-class ServerIDMap;
-
 class ServerMessageQueue : public Network::SendListener, CoordinateSegmentation::Listener {
 public:
     /** Implement the Sender interface to set a class up to feed messages into
@@ -62,7 +60,7 @@ public:
         virtual Message* serverMessagePull(ServerID dest) = 0;
     };
 
-    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, Sender* sender);
+    ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender);
     virtual ~ServerMessageQueue();
 
     /** Add an input queue using the specified weight. */
@@ -78,17 +76,16 @@ public:
     virtual void messageReady(ServerID sid) = 0;
   protected:
     // Network::SendListener Interface
-    virtual void networkReadyToSend(const Address4& from) = 0;
+    virtual void networkReadyToSend(const ServerID& from) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 
     // Tries to send the Message to the Network, and tags it for analysis if
     // successful. Helper method for implementations.
-    bool trySend(const Address4& addr, const Message* msg);
+    bool trySend(const ServerID& addr, const Message* msg);
 
     SpaceContext* mContext;
     Network* mNetwork;
-    ServerIDMap* mServerIDMap;
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;
 };

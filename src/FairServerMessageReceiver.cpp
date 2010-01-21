@@ -36,8 +36,8 @@
 
 namespace CBR {
 
-FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, ServerWeightCalculator* swc, Listener* listener, uint32 recv_bytes_per_sec)
-        : ServerMessageReceiver(ctx, net, sidmap, listener),
+FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerWeightCalculator* swc, Listener* listener, uint32 recv_bytes_per_sec)
+        : ServerMessageReceiver(ctx, net, listener),
           mRecvRate(recv_bytes_per_sec),
           mServerWeightCalculator(swc),
           mServiceTimer(
@@ -57,12 +57,9 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
 FairServerMessageReceiver::~FairServerMessageReceiver() {
 }
 
-void FairServerMessageReceiver::handleReceived(const Address4& from) {
-    ServerID* sid = mServerIDMap->lookupInternal(from);
-    assert(sid != NULL);
-
+void FairServerMessageReceiver::handleReceived(const ServerID& from) {
     // Given the new data we need to update our view of the world
-    mReceiveQueues.notifyPushFront(*sid);
+    mReceiveQueues.notifyPushFront(from);
 
     // Cancel any outstanding work callbacks
     mServiceTimer->cancel();
@@ -122,7 +119,7 @@ void FairServerMessageReceiver::service() {
 void FairServerMessageReceiver::setServerWeight(ServerID sid, float weight) {
     if (!mReceiveQueues.hasQueue(sid)) {
         mReceiveQueues.addQueue(
-            new NetworkQueueWrapper(mContext, sid, mNetwork, mServerIDMap, Trace::SPACE_TO_SPACE_READ_FROM_NET),
+            new NetworkQueueWrapper(mContext, sid, mNetwork, Trace::SPACE_TO_SPACE_READ_FROM_NET),
             sid,
             weight);
     }
@@ -133,23 +130,20 @@ void FairServerMessageReceiver::setServerWeight(ServerID sid, float weight) {
     mReceiveSet.insert(sid);
 }
 
-void FairServerMessageReceiver::networkReceivedConnection(const Address4& from) {
+void FairServerMessageReceiver::networkReceivedConnection(const ServerID& from) {
     mContext->mainStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, from) );
 }
 
-void FairServerMessageReceiver::handleReceivedConnection(const Address4& from) {
-    ServerID* sid = mServerIDMap->lookupInternal(from);
-    assert(sid != NULL);
-
-    SILOG(fairreceiver,info,"Received connection from " << *sid << ", setting weight");
+void FairServerMessageReceiver::handleReceivedConnection(const ServerID& from) {
+    SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight");
     setServerWeight(
-        *sid,
-        mServerWeightCalculator->weight(mContext->id(), *sid)
+        from,
+        mServerWeightCalculator->weight(mContext->id(), from)
                     );
 }
 
-void FairServerMessageReceiver::networkReceivedData(const Address4& from) {
-    SILOG(fairreceiver,insane,"Received network data from " << from.ip << " - " << from.port);
+void FairServerMessageReceiver::networkReceivedData(const ServerID& from) {
+    SILOG(fairreceiver,insane,"Received network data from " << from);
 
     // No matter what, we'll post an event.  Since a new front() is available
     // this could completely change the amount of time we're waiting so the main
