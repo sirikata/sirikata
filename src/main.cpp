@@ -309,6 +309,7 @@ int main(int argc, char** argv) {
 
     delete server;
     delete sq;
+    delete server_message_receiver;
     delete prox;
     delete server_id_map;
 
