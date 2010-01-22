@@ -9,9 +9,21 @@
 # License: GPLv2 or later
 
 DIR=`pwd`
-APPDIR=../build/cmake
+APPOFFSET=build/cmake
 APPNAME=cbr
 GDB=/usr/bin/gdb
+
+APPDIR=""
+# Search up to 3 directories higher for the app
+for reldir in . .. ../.. ../../.. ; do
+    if [ -f ${reldir}/${APPOFFSET}/${APPNAME} ] ; then
+        APPDIR=${reldir}/${APPOFFSET}
+    fi
+done
+if [ -z "${APPDIR}" ] ; then
+    echo "Coudn't find cbr binary."
+    exit 1
+fi
 
 usage () {
   echo "$APPNAME [cbr|oh|cseg|analysis|bench] [-h|--help] [-g|--debug] [options]"

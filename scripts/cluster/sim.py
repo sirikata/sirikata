@@ -13,6 +13,8 @@ from config import ClusterConfig
 from run import ClusterSubstitute,ClusterRun,ClusterDeploymentRun
 from scp import ClusterSCP
 
+from util.cbr_wrapper import RunCBR
+
 from graph.windowed_bandwidth import GraphWindowedBandwidth
 from graph.windowed_jfi import GraphWindowedJFI
 from graph.windowed_queues import GraphWindowedQueues
@@ -71,7 +73,7 @@ class ClusterSimSettings:
         self.oseg_analyze_after = '60' #Will perform oseg analysis after this many seconds of the run.
         self.oseg_lookup_queue_size = 2000;
 
-        
+
         self.vis_mode = 'object'
         self.vis_seed = 1
 
@@ -355,8 +357,8 @@ class ClusterSim:
         ClusterSCP(self.config, [trace_file_pattern, "."])
 
     def bandwidth_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
-        subprocess.call([CBR_WRAPPER, 'analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
+        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers())])
+        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
 
         GraphWindowedBandwidth('windowed_bandwidth_packet_send.dat')
         GraphWindowedBandwidth('windowed_bandwidth_packet_receive.dat')
@@ -375,30 +377,30 @@ class ClusterSim:
 
 
     def latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
     def object_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
     def message_latency_analysis(self, filename=None):
         stdout_fp = None
         if filename != None:
             stdout_fp = open(filename, 'w')
 
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
                         stdout=stdout_fp,
                         stderr=stdout_fp)
         if stdout_fp != None:
             stdout_fp.close()
 
     def oseg_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
 
     def loc_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
+        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
 
     def prox_dump_analysis(self):
-        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ])
 
 
 
