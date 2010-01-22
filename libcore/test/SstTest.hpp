@@ -572,7 +572,7 @@ public:
             time_t last_time=time(NULL);
             int retry_count=8;
             while(mDisconCount.read()<2){
-                if (rand()<RAND_MAX/10) {
+                if (0&&rand()<RAND_MAX/10) {
                     z->readyRead();
                     {
                         unique_mutex_lock lck(mMutex);
@@ -600,7 +600,7 @@ public:
         int retry_count=3;
         while(mEndCount.read()<1){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
-            if (rand()<RAND_MAX/10) {
+            if (0&&rand()<RAND_MAX/10) {
                 {
                     unique_mutex_lock lck(mMutex);
                     for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
