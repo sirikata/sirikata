@@ -77,7 +77,7 @@ public:
     {
     }
 
-    inline void serializedEnter() {
+    inline void serializedEnter() const {
         int32 val = ++mAccessors;
 
         assert(val >= 1);
@@ -94,7 +94,7 @@ public:
         }
     }
 
-    inline void serializedExit() {
+    inline void serializedExit() const {
         if (mAccessors == (int32)1) {
             // We should be the only one left accessing this and a
             // serializedEnter should *not* be getting called, so we
@@ -112,8 +112,8 @@ private:
     // in a bad comparison, which should result in an assertion anyway since the
     // whole point of this class is to verify that multiple threads are not trying
     // to access shared data (including this object) at the same time.
-    AtomicValue<int32> mAccessors;
-    boost::thread::id mThreadID;
+    mutable AtomicValue<int32> mAccessors;
+    mutable boost::thread::id mThreadID;
 };
 
 } // namespace Sirikata
