@@ -32,9 +32,9 @@
 #ifndef _MANUAL_MATERIAL_LOADER_
 #define _MANUAL_MATERIAL_LOADER_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 #include <OgreResourceManager.h>
-#include <Event.hpp>
+#include "../meruCompat/Event.hpp"
 
 namespace Meru {
 namespace EventTypes {
@@ -66,8 +66,8 @@ protected:
     size_t calculateSize()const;
 public:
     bool texturesLoaded(){return mTexturesInRam;}
-    MaterialScript(Ogre::ResourceManager *creator, const Ogre::String &name, 
-        Ogre::ResourceHandle handle, const Ogre::String &group, bool isManual = false, 
+    MaterialScript(Ogre::ResourceManager *creator, const Ogre::String &name,
+        Ogre::ResourceHandle handle, const Ogre::String &group, bool isManual = false,
         Ogre::ManualResourceLoader *loader = 0,const Ogre::NameValuePairList*createParams=NULL);
     void forceLoad(){
         postLoadImpl();
@@ -75,12 +75,12 @@ public:
     virtual ~MaterialScript();
 };
 
-class MaterialScriptPtr : public Ogre::SharedPtr<MaterialScript> 
+class MaterialScriptPtr : public Ogre::SharedPtr<MaterialScript>
 {
 public:
     MaterialScriptPtr() : Ogre::SharedPtr<MaterialScript>() {}
     explicit MaterialScriptPtr(MaterialScript *rep) : Ogre::SharedPtr<MaterialScript>(rep) {}
-    MaterialScriptPtr(const MaterialScriptPtr &r) : Ogre::SharedPtr<MaterialScript>(r) {} 
+    MaterialScriptPtr(const MaterialScriptPtr &r) : Ogre::SharedPtr<MaterialScript>(r) {}
     MaterialScriptPtr(const Ogre::ResourcePtr &r) : Ogre::SharedPtr<MaterialScript>()
     {
         // lock & copy other mutex pointer
@@ -117,8 +117,8 @@ class MaterialScriptManager : public Ogre::ResourceManager, public Ogre::Singlet
 protected:
 
     // must implement this from ResourceManager's interface
-    Ogre::Resource *createImpl(const Ogre::String &name, Ogre::ResourceHandle handle, 
-        const Ogre::String &group, bool isManual, Ogre::ManualResourceLoader *loader, 
+    Ogre::Resource *createImpl(const Ogre::String &name, Ogre::ResourceHandle handle,
+        const Ogre::String &group, bool isManual, Ogre::ManualResourceLoader *loader,
         const Ogre::NameValuePairList *createParams);
 
 public:
@@ -144,4 +144,3 @@ public:
 } // namespace Meru
 
 #endif //_MANUAL_MATERIAL_LOADER_
-

@@ -32,12 +32,12 @@
 #ifndef _GRAPHICS_OBJECT_H_
 #define _GRAPHICS_OBJECT_H_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 
 namespace Meru {
 
 /** Base class for all objects in the graphics system.
- *  Contains functions for initializing and destroying 
+ *  Contains functions for initializing and destroying
  *  graphics objects.
  */
 class GraphicsObject

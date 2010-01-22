@@ -615,7 +615,6 @@ SET(INCLUDE_DIRECTORIES
   ${LIBPROXIMITY_INCLUDE_DIR}
   ${LIBOH_INCLUDE_DIR}
   ${LIBPROXYOBJECT_INCLUDE_DIR}/models
-  ${LIBPROXYOBJECT_DIR}/plugins/ogre/meruCompat #temporary hack
   ${LIBPROXYOBJECT_INCLUDE_DIR}
   ${SPACE_SOURCE_DIR}
   ${PROXIMITY_SOURCE_DIR}
@@ -1122,7 +1121,6 @@ ${GFX}/resourceManager/GraphicsResourceName.cpp
 ${GFX}/resourceManager/GraphicsResourceShader.cpp
 ${GFX}/resourceManager/GraphicsResourceSkeleton.cpp
 ${GFX}/resourceManager/GraphicsResourceTexture.cpp
-${GFX}/resourceManager/GraphicsSystem.cpp
 ${GFX}/resourceManager/ManualMaterialLoader.cpp
 ${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDependencyTask.cpp

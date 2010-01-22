@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "DependencyManager.hpp"
+#include "../meruCompat/DependencyManager.hpp"
 #include "GraphicsResourceManager.hpp"
 #include "GraphicsResourceMaterial.hpp"
 #include "GraphicsResourceMesh.hpp"
@@ -40,8 +40,8 @@
 #include "GraphicsResourceShader.hpp"
 #include "GraphicsResourceTexture.hpp"
 #include "ResourceManager.hpp"
-#include "Event.hpp"
-#include "EventSource.hpp"
+#include "../meruCompat/Event.hpp"
+#include "../meruCompat/EventSource.hpp"
 
 using std::map;
 using std::set;

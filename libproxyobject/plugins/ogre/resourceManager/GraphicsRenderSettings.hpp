@@ -32,14 +32,14 @@
 #ifndef _GRAPHICS_RENDER_SETTINGS_HPP_
 #define _GRAPHICS_RENDER_SETTINGS_HPP_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 
 namespace Meru {
-  
+
   enum TextureFilteringMode {
     TextureFilteringNone, TextureFilteringBilinear, TextureFilteringTrilinear, TextureFilteringAnisotropic, TextureFilteringNumModes
   };
-  
+
   class GraphicsRenderSettings {
   public:
     GraphicsRenderSettings();
@@ -48,7 +48,7 @@ namespace Meru {
     virtual void setTextureFilteringMode(TextureFilteringMode tfm) = 0;
     virtual void nextTextureFilteringMode() = 0;
   };
-  
+
 } // namespace Meru
 
 #endif //_GRAPHICS_RENDER_SETTINGS_HPP

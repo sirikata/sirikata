@@ -29,10 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "precomp.hpp"
+
 #include "ResourceManager.hpp"
 #include "ResourceTransfer.hpp"
-#include "EventSource.hpp"
+#include "../meruCompat/EventSource.hpp"
 #include <util/Sha256.hpp>
 
 #include <iostream>

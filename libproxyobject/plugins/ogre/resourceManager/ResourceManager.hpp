@@ -32,14 +32,14 @@
 #ifndef _RESOURCE_MANAGER_HPP_
 #define _RESOURCE_MANAGER_HPP_
 
-#include "MeruDefs.hpp"
-#include "Singleton.hpp"
+#include "../meruCompat/MeruDefs.hpp"
+#include "../meruCompat/Singleton.hpp"
 #include <transfer/URI.hpp>
 #include <boost/thread.hpp>
 #include <map>
 #include <vector>
-#include "Factory.hpp"
-#include "Event.hpp"
+#include "../meruCompat/Factory.hpp"
+#include "../meruCompat/Event.hpp"
 //#include <transfer/TransferManager.hpp>
 
 #define INSTRUMENT_RESOURCE_LOADING

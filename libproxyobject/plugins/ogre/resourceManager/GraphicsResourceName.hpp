@@ -34,7 +34,7 @@
 
 #include "GraphicsResource.hpp"
 #include "GraphicsResourceManager.hpp"
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 
 namespace Meru {
 

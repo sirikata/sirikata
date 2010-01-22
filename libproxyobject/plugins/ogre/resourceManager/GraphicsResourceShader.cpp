@@ -37,7 +37,6 @@
 #include "ResourceLoadTask.hpp"
 #include "ResourceLoadingQueue.hpp"
 #include "ResourceUnloadTask.hpp"
-#include "SequentialWorkQueue.hpp"
 #include <boost/bind.hpp>
 
 namespace Meru {

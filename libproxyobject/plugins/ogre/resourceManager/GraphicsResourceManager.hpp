@@ -33,10 +33,8 @@
 #define _GRAPHICS_RESOURCE_MANAGER_HPP_
 
 #include "GraphicsResource.hpp"
-#include "MeruDefs.hpp"
+#include "../meruCompat/Singleton.hpp"
 #include <proxyobject/ProxyObject.hpp>
-#include "Singleton.hpp"
-#include "Event.hpp"
 
 namespace Sirikata {
 namespace Task {

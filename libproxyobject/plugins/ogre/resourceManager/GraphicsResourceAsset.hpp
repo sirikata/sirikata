@@ -37,7 +37,7 @@
 #include "ResourceDependencyTask.hpp"
 #include "ResourceLoadTask.hpp"
 #include "ResourceUnloadTask.hpp"
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 
 namespace Meru {
 

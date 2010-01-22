@@ -32,7 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_HPP_
 #define _GRAPHICS_RESOURCE_HPP_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 
 namespace Meru {
 

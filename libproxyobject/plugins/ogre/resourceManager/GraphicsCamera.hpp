@@ -32,7 +32,7 @@
 #ifndef _GRAPHICS_CAMERA_HPP_
 #define _GRAPHICS_CAMERA_HPP_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 
 namespace Meru {
 

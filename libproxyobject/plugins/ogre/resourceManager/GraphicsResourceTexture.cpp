@@ -36,8 +36,7 @@
 #include "ResourceLoadTask.hpp"
 #include "ResourceLoadingQueue.hpp"
 #include "ResourceUnloadTask.hpp"
-#include "SequentialWorkQueue.hpp"
-#include "DependencyManager.hpp"
+#include "../meruCompat/DependencyManager.hpp"
 #include <boost/bind.hpp>
 #include <OgreResourceBackgroundQueue.h>
 

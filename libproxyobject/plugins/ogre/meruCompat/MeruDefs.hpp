@@ -42,7 +42,6 @@
 #include <queue>
 
 #include <util/Logging.hpp>
-#include "OgreDefs.hpp"
 
 //#include <task/Event.hpp>
 #include <util/BoundingBox.hpp>
@@ -199,7 +198,5 @@ namespace Digest {
 
 
 } // namespace Meru
-
-#include "ProximityDefs.hpp"
 
 #endif //_MERU_DEFS_HPP_

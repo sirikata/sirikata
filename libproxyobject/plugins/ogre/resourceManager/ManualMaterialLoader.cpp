@@ -40,11 +40,11 @@
 #include <OgreRoot.h>
 
 #include "ReplacingDataStream.hpp"
-#include "EventSource.hpp"
+#include "../meruCompat/EventSource.hpp"
 #include "util/Time.hpp"
 #include "transfer/URI.hpp"
 #include "util/Logging.hpp"
-#include "SequentialWorkQueue.hpp"
+#include "../meruCompat/SequentialWorkQueue.hpp"
 
 template<> Meru::MaterialScriptManager *Ogre::Singleton<Meru::MaterialScriptManager>::ms_Singleton = 0;
 

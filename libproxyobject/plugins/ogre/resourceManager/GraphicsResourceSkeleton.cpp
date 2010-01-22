@@ -29,8 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "DependencyManager.hpp"
-#include "DependencyTask.hpp"
+#include "../meruCompat/DependencyManager.hpp"
+#include "../meruCompat/DependencyTask.hpp"
 #include "GraphicsResourceSkeleton.hpp"
 #include <OgreResourceBackgroundQueue.h>
 #include <OgreSkeletonManager.h>

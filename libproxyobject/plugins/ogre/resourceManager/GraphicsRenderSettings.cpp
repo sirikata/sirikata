@@ -29,18 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "precomp.hpp" 
+
 #include "GraphicsRenderSettings.hpp"
 
 namespace Meru {
-  
+
   GraphicsRenderSettings::GraphicsRenderSettings()
   {
   }
-  
+
   GraphicsRenderSettings::~GraphicsRenderSettings()
   {
   }
 
 } // namespace Meru
-

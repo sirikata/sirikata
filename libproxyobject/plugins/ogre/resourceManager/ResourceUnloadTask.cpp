@@ -31,7 +31,7 @@
  */
 #include "ResourceUnloadTask.hpp"
 #include "CDNArchive.hpp"
-#include "DependencyManager.hpp"
+#include "../meruCompat/DependencyManager.hpp"
 
 namespace Meru {
 

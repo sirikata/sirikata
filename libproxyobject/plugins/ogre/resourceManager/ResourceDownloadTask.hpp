@@ -32,9 +32,9 @@
 #ifndef _RESOURCE_DOWNLOAD_TASK_HPP
 #define _RESOURCE_DOWNLOAD_TASK_HPP
 
-#include "MeruDefs.hpp"
-#include "DependencyTask.hpp"
-#include "Event.hpp"
+#include "../meruCompat/MeruDefs.hpp"
+#include "../meruCompat/DependencyTask.hpp"
+#include "../meruCompat/Event.hpp"
 
 namespace Meru {
 

@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "ResourceDependencyTask.hpp"
-#include "DependencyManager.hpp"
+#include "../meruCompat/DependencyManager.hpp"
 
 namespace Meru {
 

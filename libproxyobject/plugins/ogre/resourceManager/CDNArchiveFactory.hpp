@@ -32,7 +32,7 @@
 #ifndef _CDN_ARCHIVE_FACTORY_HPP_
 #define _CDN_ARCHIVE_FACTORY_HPP_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 #include "../OgreHeaders.hpp"
 #include <Ogre.h>
 #include <OgreArchiveFactory.h>
@@ -95,4 +95,3 @@ public:
 } // namespace Meru
 
 #endif //_URL_ARCHIVE_FACTORY_HPP_
-

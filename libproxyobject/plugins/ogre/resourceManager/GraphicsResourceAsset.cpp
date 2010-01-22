@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "DependencyManager.hpp"
+#include "../meruCompat/DependencyManager.hpp"
 #include "GraphicsResourceAsset.hpp"
 #include "GraphicsResourceManager.hpp"
 #include "ResourceDependencyTask.hpp"

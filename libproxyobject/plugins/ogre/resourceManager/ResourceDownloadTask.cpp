@@ -29,11 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "EventSource.hpp"
-#include "Event.hpp"
+#include "../meruCompat/EventSource.hpp"
+#include "../meruCompat/Event.hpp"
 #include "ResourceDownloadTask.hpp"
 #include "ResourceTransfer.hpp"
-#include "DependencyManager.hpp"
+#include "../meruCompat/DependencyManager.hpp"
 
 namespace Meru {
 

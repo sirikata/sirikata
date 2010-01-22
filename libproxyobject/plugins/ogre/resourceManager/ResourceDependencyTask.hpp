@@ -32,7 +32,7 @@
 #ifndef _RESOURCE_DEPENDENCY_TASK_HPP_
 #define _RESOURCE_DEPENDENCY_TASK_HPP_
 
-#include "DependencyTask.hpp"
+#include "../meruCompat/DependencyTask.hpp"
 #include "GraphicsResource.hpp"
 #include "ResourceDownloadTask.hpp"
 

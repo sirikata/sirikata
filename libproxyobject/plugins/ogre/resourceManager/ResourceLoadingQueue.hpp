@@ -32,13 +32,13 @@
 #ifndef _RESOURCE_DEPENDENCY_TASK_H_
 #define _RESOURCE_DEPENDENCY_TASK_H_
 
-#include "MeruDefs.hpp"
+#include "../meruCompat/MeruDefs.hpp"
 #include <OgrePrerequisites.h>
 #include <OgreCommon.h>
 #include <OgreSingleton.h>
 #include <OgreResourceBackgroundQueue.h>
 #include <queue>
-#include "Event.hpp"
+#include "../meruCompat/Event.hpp"
 
 namespace Meru {
 #if OGRE_THREAD_SUPPORT!=0

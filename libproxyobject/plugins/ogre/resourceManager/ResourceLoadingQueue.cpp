@@ -29,16 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "precomp.hpp"
+
 #include "ResourceLoadingQueue.hpp"
 #include "../OgreHeaders.hpp"
 #include <OgreDataStream.h>
 #include <OgreResourceBackgroundQueue.h>
 #include <OgreResourceManager.h>
-#include "EventSource.hpp"
+#include "../meruCompat/EventSource.hpp"
 #include "ResourceTransfer.hpp"
 #include "ResourceManager.hpp"
-#include "Proxy.hpp"
 #include "util/UUID.hpp"
 
 #if OGRE_THREAD_SUPPORT==0

@@ -33,7 +33,6 @@
 #define _GRAPHICS_LIGHT_H_
 
 #include "GraphicsObject.hpp"
-#include "MeruDefs.hpp"
 
 namespace Meru {
 

@@ -32,7 +32,7 @@
 #ifndef _RESOURCE_TRANSFER_HPP_
 #define _RESOURCE_TRANSFER_HPP_
 
-#include "Event.hpp"
+#include "../meruCompat/Event.hpp"
 
 //below for ResourceBuffer
 #include "ResourceManager.hpp"
