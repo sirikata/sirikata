@@ -209,6 +209,25 @@ public:
         ThreadSafeQueueNS::unlock(mLock);
     }
 
+    /** Push multiple values onto the queue, only locking once.
+     *  \param values queue holding values to push
+     */
+    void pushMultiple(const std::deque<T> &values) {
+        ThreadSafeQueueNS::lock(mLock);
+        try {
+            while(!values.empty()) {
+                T& value = values.front();
+                mList.push_back(value);
+                values.pop();
+            }
+            ThreadSafeQueueNS::notify(mCond);
+        } catch (...) {
+            ThreadSafeQueueNS::unlock(mLock);
+            throw;
+        }
+        ThreadSafeQueueNS::unlock(mLock);
+    }
+
     /** Pops the front element from the queue and places it in ret.
      *  \param ret storage for the popped element
      *  \returns true if an element was popped, false if the queue was empty

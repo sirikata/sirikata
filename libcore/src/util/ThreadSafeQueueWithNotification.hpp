@@ -83,6 +83,14 @@ class ThreadSafeQueueWithNotification {
             mCallback();
     }
 
+    /** \see ThreadSafeQueue::pushMultiple. */
+    void pushMultiple(const std::deque<T> &values) {
+        bool was_empty = empty();
+        mQueue.pushMultiple(values);
+        if (was_empty)
+            mCallback();
+    }
+
     /** \see ThreadSafeQueue::pop. */
     bool pop(T& ret) {
         mQueue.pop(ret);
