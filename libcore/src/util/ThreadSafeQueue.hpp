@@ -58,14 +58,18 @@ SIRIKATA_EXPORT void lockDestroy(Lock*oldlock);
 /// destroys the condition
 SIRIKATA_EXPORT void condDestroy(Condition*oldcond);
 }
-/// A queue of any type that has thread-safe push() and pop() functions.
-template <typename T> class ThreadSafeQueue {
-protected:
-	typedef std::deque<T> ListType;
+
+/** ThreadSafeQueue provides a queue interface whose operations -- push, pop,
+ *  empty -- are thread-safe.
+ */
+template <typename T>
+class ThreadSafeQueue {
+  protected:
+    typedef std::deque<T> ListType;
     ThreadSafeQueueNS::Lock* mLock;
-	ListType mList;
+    ListType mList;
     ThreadSafeQueueNS::Condition* mCond;
-private:
+  private:
     /**
      * Private function to copy a ThreadSafeQueue to another
      * Must pick a particular order, in this case pointer order, to acquire the locks
@@ -161,7 +165,7 @@ public:
     };
     friend class NodeIterator;
 
-	ThreadSafeQueue() {
+    ThreadSafeQueue() {
         mLock=ThreadSafeQueueNS::lockCreate();
         mCond=ThreadSafeQueueNS::condCreate();
     }
@@ -170,23 +174,30 @@ public:
         ThreadSafeQueueNS::condDestroy(mCond);
     }
 
+    /** Swap the contents of this queue with the one specified. Note that this
+     *  differs from popAll -- any elements currently in the queue being swapped
+     *  will be in the ThreadSafeQueue when the operation completes.
+     *  \param swapWith a deque to swap elements with
+     */
     void swap(std::deque<T> &swapWith) {
         ThreadSafeQueueNS::lock(mLock);
 		mList.swap(swapWith);
         ThreadSafeQueueNS::unlock(mLock);
     }
 
+    /** Pops all elements currently in the ThreadSafeQueue into popResults.  Any
+     *  elements currently in popResults will be discarded.
+     *  \param popResults a deque to place popped elements in
+     */
     void popAll(std::deque<T> *popResults) {
         popResults->resize(0);
         swap(*popResults);
     }
 
-	/**
-	 * Pushes value onto the queue
-	 *
-	 * @param value  is a new'ed value (you must not keep a reference)
-	 */
-	void push(const T &value) {
+    /** Push a value onto the queue.
+     *  \param value the value to push
+     */
+    void push(const T &value) {
         ThreadSafeQueueNS::lock(mLock);
         try {
             mList.push_back(value);
@@ -198,13 +209,11 @@ public:
         ThreadSafeQueueNS::unlock(mLock);
     }
 
-	/**
-	 * Pops the front value from the queue and places it in value.
-	 *
-	 * @returns  the T at the front of the queue, or NULL if the queue
-	 *           was empty (or if another thread grabbed the item).
-	 */
-	bool pop(T&ret) {
+    /** Pops the front element from the queue and places it in ret.
+     *  \param ret storage for the popped element
+     *  \returns true if an element was popped, false if the queue was empty
+     */
+    bool pop(T& ret) {
         ThreadSafeQueueNS::lock(mLock);
         if (mList.empty()) {
             ThreadSafeQueueNS::unlock(mLock);
@@ -221,14 +230,21 @@ public:
             return true;
         }
     }
-	/**
-	 * Waits until an item is available on the list.
-	 *
-	 * @returns  the next item in the queue.  Will not return NULL.
-	 */
-	void blockingPop(T&retval) {
-        ThreadSafeQueueNS::wait(mLock,mCond, &ThreadSafeQueue<T>::waitCheck,this,&retval);
+
+    /** Pop an element from the queue, blocking until an element is available if
+     *  the queue is currently empty.
+     *  \param retval storage for the popped element
+     */
+    void blockingPop(T& retval) {
+        ThreadSafeQueueNS::wait(mLock, mCond, &ThreadSafeQueue<T>::waitCheck, this, &retval);
     }
+
+    /** Checks if the queue is probably empty, without any locking. Most of the
+     *  time this is as good as checking empty() since the value of empty()
+     *  could change immediately after the call returns since the queue is then
+     *  unlocked.
+     *  \returns true if the efficient check indicates the queue is empty
+     */
     bool probablyEmpty() {
         return mList.empty();
     }
