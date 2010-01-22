@@ -346,6 +346,9 @@ void TCPNetwork::addNewStream(RemoteStreamPtr remote_stream) {
         mRemoteStreams[stream_to_save->logical_endpoint] = stream_to_save;
         // We should never have 2 closing streams at the same time or else the
         // remote end is misbehaving
+        if (mClosingStreams.find(stream_to_close->logical_endpoint) != mClosingStreams.end()) {
+            TCPNET_LOG(fatal,"Multiple closing streams for single remote server, server " << stream_to_close->logical_endpoint);
+        }
         assert(mClosingStreams.find(stream_to_close->logical_endpoint) == mClosingStreams.end());
         stream_to_close->shutting_down = true;
         mClosingStreams[stream_to_close->logical_endpoint] = stream_to_close;
