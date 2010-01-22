@@ -50,6 +50,7 @@
 using namespace Sirikata::Network;
 class SstTest : public CxxTest::TestSuite
 {
+    std::vector<Stream *> dedStreams;
     typedef boost::unique_lock<boost::mutex> unique_mutex_lock;
 public:
     void runRoutine(Stream* s) {
@@ -108,8 +109,14 @@ public:
             return Network::Stream::AcceptedData;
         }
 		mServicePool->service()->post(Duration::microseconds(100),
-			std::tr1::bind(&Stream::readyRead,s));
+                                      
+                                      std::tr1::bind(&SstTest::lockReadyRead,this,s));
         return Network::Stream::PauseReceive;
+    }
+    void lockReadyRead(Network::Stream*s) {
+        unique_mutex_lock lck(mMutex);
+        if(std::find(dedStreams.begin(),dedStreams.end(),s)==dedStreams.end())
+            s->readyRead();
     }
     Network::Stream::ReceivedResponse connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
         return dataRecvCallback(s,id,data);
@@ -397,6 +404,7 @@ public:
         {
             unique_mutex_lock lck(mMutex);
             for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+                dedStreams.push_back(*i);
                 delete *i;
             }
             mStreams.resize(0);
@@ -504,6 +512,7 @@ public:
     }
     void testConnectSend (void )
     {
+        dedStreams.clear();
         Stream*z=NULL;
         bool doSubstreams=true;
         {
@@ -565,7 +574,11 @@ public:
                 validateVector(datamapiter->first,datamapiter->second,mMessagesToSend);
             }
             r->close();
-            delete r;
+            {
+                unique_mutex_lock lck(mMutex);
+                dedStreams.push_back(r);
+                delete r;
+            }
         }
         if( doSubstreams){
             z->close();
@@ -593,8 +606,11 @@ public:
                     }
                 }
             }
-
-            delete z;
+            unique_mutex_lock lck(mMutex); 
+            {
+                dedStreams.push_back(z);
+                delete z;
+            }
         }
         time_t last_time=time(NULL);
         int retry_count=3;
