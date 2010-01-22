@@ -73,42 +73,7 @@ class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager 
     HostedObjectPtr getHostedObject(const ObjectReference &mref) const;
     const Duration& getServerTimeOffset()const {return mTimeSync->getOffset();};
 };
-/*
-class HostedObjectListener {
-public:
-    virtual void created(HostedObject *hostedObject) {
-    }
 
-    virtual void destroyed(HostedObject *hostedObject) = 0;
-};
-
-class HostedObject : public Provider<HostedObjectListener*>, ProxyObjectListener {
-    SSTStream *mObjectStream;
-    SpaceConnection *mSpace;
-    ProxyObjectPtr mProxy;
-
-    virtual void destroyed() {
-        this->call(&HostedObjectListener::destroyed, this);
-        delete this;
-    }
-
-protected:
-    void creationCallback(const ProxyObjectPtr &proxyPtr) {
-        mProxy = proxyPtr;
-        this->call(&HostedObjectListener::created, this);
-    }
-public:
-    // Sends initial packet on this stream, notifies ProxyManager when ready.
-    HostedObject(SpaceConnection *mSpaceConnection);
-    void create();
-    const ProxyObjectPtr &getProxyPtr() const {
-        return mProxy;
-    }
-    ProxyObject &getProxy() const {
-        return *mProxy;
-    }
-};
-*/
 }
 
 #endif

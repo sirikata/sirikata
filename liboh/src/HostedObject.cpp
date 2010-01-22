@@ -271,7 +271,6 @@ struct HostedObject::PrivateCallbacks {
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
         }
-        //realThis->mObjectHost->dequeueAll();
     }
 
     static Network::Stream::ReceivedResponse receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
@@ -354,7 +353,6 @@ struct HostedObject::PrivateCallbacks {
             resp.SerializeToString(&newBodyData);
             realThis->sendReply(origHeader, MemoryReference(newBodyData.data(), newBodyData.length()));
         }
-        //realThis->mObjectHost->dequeueAll();
     }
 
     static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
@@ -383,7 +381,7 @@ struct HostedObject::PrivateCallbacks {
 void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
     HostedObject *realThis=this;
     /// Parse message_names and message_arguments.
-    
+
     RoutableMessageBody msg;
     msg.ParseFromArray(bodyData.data(), bodyData.length());
     int numNames = msg.message_size();
@@ -392,12 +390,12 @@ void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryR
         realThis->sendErrorReply(header, RoutableMessageHeader::PROTOCOL_ERROR);
         return;
     }
-    
+
     RoutableMessageBody responseMessage;
     for (int i = 0; i < numNames; ++i) {
         std::string name = msg.message_names(i);
         MemoryReference body(msg.message_arguments(i));
-        
+
         if (header.has_id()) {
             std::string response;
             /// Pass response parameter if we expect a response.
@@ -408,7 +406,7 @@ void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryR
             realThis->processRPC(header, name, body, NULL);
         }
     }
-    
+
     if (header.has_id()) {
         std::string serializedResponse;
         responseMessage.SerializeToString(&serializedResponse);
@@ -570,7 +568,6 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
         } else {
             delete persistenceMsg;
         }
-        //realThis->mObjectHost->dequeueAll();
     }
 
 
@@ -719,7 +716,6 @@ void HostedObject::initializeDefault(
         setProperty("IsCamera", ttl);
     }
     //connectToSpace(spaceID, spaceConnectionHint, startingLocation, meshBounds, getUUID());
-    //mObjectHost->dequeueAll(); // don't need to wait until next frame.
 }
 void HostedObject::initializePythonScript() {
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getDefaultConstructor()("");
@@ -761,7 +757,6 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     msg->header().set_destination_object(ObjectReference::spaceServiceID());
     msg->header().set_destination_port(Services::PERSISTENCE);
     msg->serializeSend();
-    //mObjectHost->dequeueAll(); // don't need to wait until next frame.
 }
 namespace {
 bool myisalphanum(char c) {
@@ -834,8 +829,8 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     {
         SILOG(cppoh,debug,
               '['<<(mInternalObjectReference.toString())<<']'
-              << "** Message from: " << header.source_object() 
-              << " port " << header.source_port() 
+              << "** Message from: " << header.source_object()
+              << " port " << header.source_port()
               << " to "<<(header.has_destination_object()
                           ?  header.destination_object().toString()
                           :  ("[Temporary UUID " + mInternalObjectReference.toString() +"]"))
