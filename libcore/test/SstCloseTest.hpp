@@ -8,6 +8,7 @@
 #include "util/AtomicTypes.hpp"
 #include "util/PluginManager.hpp"
 #include "util/DynamicLibrary.hpp"
+#include "task/Time.hpp"
 #include <cxxtest/TestSuite.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
@@ -16,7 +17,7 @@
 using namespace Sirikata::Network;
 using namespace Sirikata;
 class SstCloseTest : public CxxTest::TestSuite
-{ 
+{
     enum {
         NUM_TEST_STREAMS=3
     };
@@ -61,7 +62,7 @@ class SstCloseTest : public CxxTest::TestSuite
             mSendReceiveMap[id]=(unsigned char)data[0];
         }
         static bool pause=true;
-        if (rand()<RAND_MAX/5||pause) 
+        if (rand()<RAND_MAX/5||pause)
             pause=!pause;
         if (pause) {
             mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s));
@@ -70,7 +71,7 @@ class SstCloseTest : public CxxTest::TestSuite
         mReceiversData[mSendReceiveMap[id]]+=(int)(data.size()*2);
         return Network::Stream::AcceptedData;
     }
-    
+
     void listenerNewStreamCallback (Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             for (int i=0;i<NUM_TEST_STREAMS;++i) {
@@ -97,7 +98,10 @@ private:
     SstCloseTest() {
         Sirikata::PluginManager plugins;
         plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
-        mPort="9143";
+
+        uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
+        mPort = boost::lexical_cast<std::string>(randport);
+
         mBytes=65536;
         mChunks=3;
         mOffset=1;
@@ -114,7 +118,7 @@ private:
 #else
         sleep(1);
 #endif
-        
+
     }
 public:
     void closeStreamRun(bool fork, bool doSleep=false) {
@@ -122,7 +126,7 @@ public:
         using std::tr1::placeholders::_2;
 
         for(int i=0;i<NUM_TEST_STREAMS;++i) {
-            mReceivers[i]=mSenders[i]=NULL;        
+            mReceivers[i]=mSenders[i]=NULL;
             mSendReceiveMap[i]=-1;
             mReceiversData[i]=0;
         }
@@ -141,7 +145,7 @@ public:
                                      &Stream::ignoreReadySendCallback);
 
             }
-            
+
         }
         mSendService->reset();
         mSendService->run();
@@ -154,7 +158,7 @@ public:
         int sentSoFar=0;
         for (int c=0;c<mChunks;++c) {
             int willHaveSent=(c+1)*mBytes/mChunks;
-            
+
             Chunk cur(willHaveSent-sentSoFar);
             for (size_t j=0;j<cur.size();++j) {
                 cur[j]=j+sentSoFar;
@@ -163,18 +167,18 @@ public:
                 if (cur.size()) {
                     cur[0]=i%256;
                     if (cur.size()>1) {
-                        cur[1]=i/256%256;                        
+                        cur[1]=i/256%256;
                     }
                     if (cur.size()>2) {
-                        cur[2]=i/256/256%256;                        
+                        cur[2]=i/256/256%256;
                     }
                     if (cur.size()>3) {
-                        cur[3]=i/256/256/256%256;                        
+                        cur[3]=i/256/256/256%256;
                     }
                 }
                 bool retval=mSenders[i]->send(MemoryReference(cur),ReliableUnordered);
                 TS_ASSERT(retval);
-                
+
             }
             if (doSleep) {
 #ifdef _WIN32
@@ -225,7 +229,7 @@ public:
             delete mReceivers[i];
             mReceivers[i]=NULL;
         }
-    }   
+    }
     void testCloseAllStream() {
         mOffset=0;
         closeStreamRun(false);
@@ -251,7 +255,7 @@ public:
         closeStreamRun(true,true);
     }
     ~SstCloseTest() {
-        
+
         delete mListener;
         mSendService->join();
         mRecvService->join();

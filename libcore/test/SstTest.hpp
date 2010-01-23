@@ -40,6 +40,7 @@
 #include "util/AtomicTypes.hpp"
 #include "util/PluginManager.hpp"
 #include "util/DynamicLibrary.hpp"
+#include "task/Time.hpp"
 #include <cxxtest/TestSuite.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
@@ -90,7 +91,7 @@ public:
             bool found=false;
             if (data.size()) {
                 for (unsigned int i=0;i<mMessagesToSend.size();++i) {
-                    
+
                     if (data.size()==mMessagesToSend[i].size()
                         && memcmp(&*data.begin(),&*mMessagesToSend[i].begin(),mMessagesToSend[i].size())==0) {
                         found=true;
@@ -100,7 +101,7 @@ public:
                 if (!found) {
                     found=false;
                     SILOG(tcpsst,error,"Test failed to find string "/*<<std::string((const char*)&*data.begin(),data.size())*/<<" size "<<data.size());
-                    
+
                 }
             }else {
                 SILOG(tcpsst,error,"GHOST PACKET (size0)");
@@ -109,7 +110,7 @@ public:
             return Network::Stream::AcceptedData;
         }
 		mServicePool->service()->post(Duration::microseconds(100),
-                                      
+
                                       std::tr1::bind(&SstTest::lockReadyRead,this,s));
         return Network::Stream::PauseReceive;
     }
@@ -265,7 +266,9 @@ public:
     SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false) {
         Sirikata::PluginManager plugins;
         plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
-        mPort="9142";
+
+        uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
+        mPort = boost::lexical_cast<std::string>(randport);
 
         mServicePool = new IOServicePool(1);
 
@@ -606,7 +609,7 @@ public:
                     }
                 }
             }
-            unique_mutex_lock lck(mMutex); 
+            unique_mutex_lock lck(mMutex);
             {
                 dedStreams.push_back(z);
                 delete z;
