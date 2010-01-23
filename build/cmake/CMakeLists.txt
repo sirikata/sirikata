@@ -170,7 +170,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
   SET(CXXTEST_TEST_FILES)
   SET(CXXTEST_H_FILES)
 
-  SET(CXXTEST_OPTIONS --runner=StdioPrinter --include=util/Standard.hh)
+  SET(CXXTEST_OPTIONS --include=util/Standard.hh)
   #IF(CXXTEST_OUTPUTDIR)
   #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
   #ENDIF(CXXTEST_OUTPUTDIR)
@@ -1167,14 +1167,15 @@ ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 
 
 
-SET(TEST_SOURCES ${CXXTEST_CPP_FILE}
-                 ${SirikataProtocolDirectory}/Test_protobuf.cc
-                 ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.cpp
-                 ${LIBCORE_DIR}/test/ObjectStorageTest.cpp
-                 ${LIBCORE_DIR}/test/MinitransactionHandlerTest.cpp
-                 ${LIBCORE_DIR}/test/SQLiteReadWriteTest.cpp
-                 ${LIBCORE_DIR}/test/ReadWriteHandlerTest.cpp
-
+SET(TEST_SOURCES
+  ${LIBCORE_DIR}/test/Test.cpp
+  ${CXXTEST_CPP_FILE}
+  ${SirikataProtocolDirectory}/Test_protobuf.cc
+  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.cpp
+  ${LIBCORE_DIR}/test/ObjectStorageTest.cpp
+  ${LIBCORE_DIR}/test/MinitransactionHandlerTest.cpp
+  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.cpp
+  ${LIBCORE_DIR}/test/ReadWriteHandlerTest.cpp
 )
 
 
