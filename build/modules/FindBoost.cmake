@@ -105,7 +105,7 @@ if (Boost_FIND_VERSION_EXACT)
   endif (Boost_FIND_VERSION_PATCH)
 else (Boost_FIND_VERSION_EXACT)
   set( _boost_TEST_VERSIONS ${Boost_ADDITIONAL_VERSIONS} 
-    "1.39.1" "1.39.0" "1.39" "1.38.1" "1.38.0" "1.38" "1.38.1" "1.37.0" "1.37" "1.36.1" "1.36.0" "1.36" "1.35.0" "1.35")
+    "1.47.0" "1.46.0" "1.45.0" "1.44.0" "1.43.0" "1.42.0" "1.41.0" "1.40.0" "1.39.1" "1.39.0" "1.39" "1.38.1" "1.38.0" "1.38" "1.38.1" "1.37.0" "1.47" "1.46" "1.45" "1.44" "1.43" "1.42" "1.41" "1.37" "1.36.1" "1.36.0" "1.36" "1.35.0" "1.35")
 endif (Boost_FIND_VERSION_EXACT)
 
 # The reason that we failed to find Boost. This will be set to a
