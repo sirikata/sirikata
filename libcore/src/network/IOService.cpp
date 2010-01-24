@@ -30,10 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
+#include "../util/Standard.hh"
 #include "IOService.hpp"
-#include "util/Time.hpp"
+#include "../util/Time.hpp"
 #include "IOStrand.hpp"
+#include <boost/version.hpp>
 #include <boost/asio.hpp>
 
 namespace Sirikata {
@@ -42,7 +43,11 @@ namespace Network {
 typedef boost::asio::io_service InternalIOService;
 
 typedef boost::asio::deadline_timer deadline_timer;
+#if BOOST_VERSION==103900
+typedef deadline_timer* deadline_timer_ptr;
+#else
 typedef std::tr1::shared_ptr<deadline_timer> deadline_timer_ptr;
+#endif
 typedef boost::posix_time::microseconds posix_microseconds;
 using std::tr1::placeholders::_1;
 
@@ -123,6 +128,13 @@ void handle_deadline_timer(const boost::system::error_code&e, const deadline_tim
 } // namespace
 
 void IOService::post(const Duration& waitFor, const IOCallback& handler) {
+#if BOOST_VERSION==103900
+    static bool warnOnce=true;
+    if (warnOnce) {
+        warnOnce=false;
+        SILOG(core,error,"Using buggy version of boost (1.39.0), leaking deadline_timer to avoid crash");
+    }
+#endif
     deadline_timer_ptr timer(new deadline_timer(*mImpl, posix_microseconds(waitFor.toMicroseconds())));
     timer->async_wait(std::tr1::bind(&handle_deadline_timer, _1, timer, handler));
 }
