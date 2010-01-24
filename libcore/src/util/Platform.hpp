@@ -287,7 +287,7 @@ class OptionSet;
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"
-#include "options/OptionValue.hpp"
+#include "../options/OptionValue.hpp"
 #include "Logging.hpp"
 #include "Location.hpp"
 #include "VInt.hpp"

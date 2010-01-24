@@ -2,7 +2,7 @@
 
 #ifndef _SIRIKATA_TIME_HPP_
 #define _SIRIKATA_TIME_HPP_
-#include "task/Time.hpp"
+#include "../task/Time.hpp"
 namespace Sirikata {
 class Time : private Task::LocalTime{
     Time (uint64 raw) :LocalTime(raw){}

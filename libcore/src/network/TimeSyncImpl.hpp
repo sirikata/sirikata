@@ -33,8 +33,8 @@
 #ifndef SIRIKATA_TimeSyncImpl_HPP__
 #define SIRIKATA_TimeSyncImpl_HPP__
 
-#include "network/IOServiceFactory.hpp"
-#include "network/IOService.hpp"
+#include "../network/IOServiceFactory.hpp"
+#include "../network/IOService.hpp"
 
 namespace Sirikata {
 namespace Network {

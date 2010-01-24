@@ -29,14 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
+#include "../util/Standard.hh"
 #include "Options.hpp"
-#include "boost/thread.hpp"
-#include "boost/program_options.hpp"
+#include <boost/thread.hpp>
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <stdarg.h>
-#include "util/ThreadSafeQueue.hpp"
-#include "util/DynamicLibrary.hpp"
+#include "../util/ThreadSafeQueue.hpp"
+#include "../util/DynamicLibrary.hpp"
 namespace Sirikata {
 class simple_string:public std::string {
 public:

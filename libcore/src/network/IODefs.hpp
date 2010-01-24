@@ -32,7 +32,7 @@
 #ifndef _SIRIKATA_NETWORK_IODEFS_HPP_
 #define _SIRIKATA_NETWORK_IODEFS_HPP_
 
-#include "util/Platform.hpp"
+#include "../util/Platform.hpp"
 
 
 // First we forward declare a bunch of Boost.Asio specific classes

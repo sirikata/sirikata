@@ -32,7 +32,7 @@
 #ifndef SIRIKATA_PersistenceSentMessage_hpp
 #define SIRIKATA_PersistenceSentMessage_hpp
 
-#include "util/SentMessage.hpp"
+#include "../util/SentMessage.hpp"
 
 namespace Sirikata {
 namespace Persistence {

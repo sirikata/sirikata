@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
+#include "../util/Standard.hh"
 #include "StreamFactory.hpp"
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Network::StreamFactory);

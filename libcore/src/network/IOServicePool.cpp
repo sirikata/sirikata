@@ -29,11 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
+#include "../util/Standard.hh"
 #include "IOServicePool.hpp"
 #include "IOService.hpp"
 #include "IOServiceFactory.hpp"
-#include "util/Thread.hpp"
+#include "../util/Thread.hpp"
 
 namespace Sirikata {
 namespace Network {

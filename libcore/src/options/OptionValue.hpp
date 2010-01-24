@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OPTIONVALUE_HPP_
 #define _SIRIKATA_OPTIONVALUE_HPP_
 
-#include "util/Any.hpp"
+#include "../util/Any.hpp"
 namespace Sirikata {
 class OptionSet;
 

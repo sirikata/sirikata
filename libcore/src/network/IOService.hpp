@@ -32,7 +32,7 @@
 #ifndef _SIRIKATA_IOSERVICE_HPP_
 #define _SIRIKATA_IOSERVICE_HPP_
 
-#include "util/Platform.hpp"
+#include "../util/Platform.hpp"
 #include "IODefs.hpp"
 
 namespace Sirikata {

@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SERIALIZATION_CHECK_HPP_
 #define _SIRIKATA_SERIALIZATION_CHECK_HPP_
 
-#include "util/Platform.hpp"
+#include "../util/Platform.hpp"
 #include <boost/thread/thread.hpp>
 
 namespace Sirikata {

@@ -31,15 +31,15 @@
  */
 /*  Created on: Jul 18, 2009 */
 
-#include <util/Standard.hh>
-#include "util/RoutableMessageHeader.hpp"
+#include "../util/Standard.hh"
+#include "../util/RoutableMessageHeader.hpp"
 #include "SentMessage.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 
-#include <network/IOService.hpp>
-#include <network/IOTimer.hpp>
+#include "../network/IOService.hpp"
+#include "../network/IOTimer.hpp"
 
 namespace Sirikata {
 void  checkThreadId(void *mDebugThreadId){

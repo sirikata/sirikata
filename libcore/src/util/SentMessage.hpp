@@ -35,7 +35,7 @@
 #define _SIRIKATA_SentMessage_HPP_
 
 #include "QueryTracker.hpp"
-#include <network/IOTimer.hpp>
+#include "../network/IOTimer.hpp"
 
 namespace Sirikata {
 

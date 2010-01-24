@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
-#include "options/Options.hpp"
+#include "../options/Options.hpp"
 extern "C" {
 void *Sirikata_Logging_OptionValue_defaultLevel;
 void *Sirikata_Logging_OptionValue_atLeastLevel;

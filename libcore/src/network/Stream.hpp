@@ -34,7 +34,7 @@
 #define SIRIKATA_Stream_HPP__
 
 #include "Address.hpp"
-#include "util/Time.hpp"
+#include "../util/Time.hpp"
 
 namespace Sirikata {
 namespace Network {
