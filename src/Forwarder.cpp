@@ -52,6 +52,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
     mContext->mServerDispatcher = this;
     mContext->mObjectDispatcher = this;
 
+    mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(UUID::null(), this, this);
+
+
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);

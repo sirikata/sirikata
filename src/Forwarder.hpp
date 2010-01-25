@@ -18,6 +18,8 @@
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 
+#include "SSTImpl.hpp"
+
 namespace CBR
 {
   class Object;
@@ -31,7 +33,7 @@ namespace CBR
 class ForwarderServiceQueue;
 class ServerWeightCalculator;
 
-  class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
+class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
 		    public ServerMessageRouter, public ObjectMessageRouter,
                     public MessageRecipient,
                     public ServerMessageQueue::Sender,
@@ -45,6 +47,7 @@ private:
     ServerMessageReceiver* mServerMessageReceiver;
 
     OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
+    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
 
     // Object connections, identified by a separate unique ID to handle fast migrations

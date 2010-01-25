@@ -43,7 +43,6 @@
 #include "CBR_Prox.pbj.hpp"
 #include "CBR_Loc.pbj.hpp"
 
-#include "SSTImpl.hpp"
 
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)
 
@@ -66,6 +65,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mQuitting(false),
    mLocUpdateTimer( IOTimer::create(mContext->ioService) )
 {
+  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);
 }
 
 Object::~Object() {
@@ -85,9 +85,11 @@ void Object::stop() {
 void Object::scheduleNextLocUpdate() {
     const Time tnow = mContext->simTime();
 
+    
     TimedMotionVector3f curLoc = location();
     const TimedMotionVector3f* update = mMotion->nextUpdate(tnow);
     if (update != NULL) {
+              
         mLocUpdateTimer->wait(
             update->time() - tnow,
             mContext->mainStrand->wrap(
@@ -98,6 +100,7 @@ void Object::scheduleNextLocUpdate() {
 }
 
 void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
+    
     if (mQuitting) {
         disconnect();
         return;
@@ -118,11 +121,14 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
         requested_loc.set_t(curLoc.updateTime());
         requested_loc.set_position(curLoc.position());
         requested_loc.set_velocity(curLoc.velocity());
+
         bool success = mContext->objectHost->send(
             this, OBJECT_PORT_LOCATION,
             UUID::null(), OBJECT_PORT_LOCATION,
             serializePBJMessage(container)
         );
+
+
         // XXX FIXME do something on failure
         mContext->trace()->objectGenLoc(tnow, mID, curLoc);
     }
@@ -130,6 +136,25 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
     scheduleNextLocUpdate();
 }
 
+bool Object::send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
+  return mContext->objectHost->send(
+			     src_port, src,
+			     dest_port, dest,
+			     payload
+			     );
+}
+  
+
+bool Object::route(CBR::Protocol::Object::ObjectMessage* msg) {
+  mContext->mainStrand->post(std::tr1::bind(
+			     &Object::send, this,
+			     msg->source_port(), msg->source_object(),
+			     msg->dest_port(), msg->dest_object(),
+			     msg->payload())
+			    );
+  
+  return true;
+}
 
 const TimedMotionVector3f Object::location() const {
     return mLocation.read();
@@ -203,11 +228,8 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
         locationMessage(*msg);
         break;
       default:
-        printf("Warning: Tried to deliver unknown message type through ObjectConnection.\n");
-        Connection<UUID>::handleReceive(mContext, 
-                                  EndPoint<UUID> (msg->source_object(), msg->source_port()),
-                                  EndPoint<UUID> (msg->dest_object(), msg->dest_port()),
-                                  (void*) msg->payload().data(), msg->payload().size() );
+        //printf("Warning: Tried to deliver unknown message type through ObjectConnection.\n");
+        dispatchMessage(*msg);
 
         break;
     }
@@ -257,7 +279,6 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             true,
             loc
         );
-
     }
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);

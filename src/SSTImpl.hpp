@@ -60,47 +60,109 @@ private:
  
 };
 
+template <class EndPointType>
+class Connection;
+
+#define MESSAGE_ID_SERVER_SHIFT 52
+#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
+
+
 
 template <typename EndPointType>
-class BaseDatagramLayer
+class BaseDatagramLayer:public ObjectMessageRecipient
 {
+private:
+
+  BaseDatagramLayer(ObjectMessageRouter* router, ObjectMessageDispatcher* dispatcher) :
+                    mRouter(router), mDispatcher(dispatcher) {}
+
+  uint64 generateUniqueID(const ServerID& origin) {
+    static uint64 sIDSource = 0;
+
+    uint64 id_src = sIDSource++;
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
+    uint64 server_int = (uint64)origin;
+    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
+    assert( (server_shifted & ~message_id_server_bits) == 0 );
+    return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
+}
+
 
 public:
-  BaseDatagramLayer(const ObjectHostContext* ctx) : mContext(ctx) {}
+  static boost::shared_ptr<BaseDatagramLayer<EndPointType> > getDatagramLayer(EndPointType endPoint) {
+    if (mDatagramLayerMap.find(endPoint) != mDatagramLayerMap.end()) {
+      return mDatagramLayerMap[endPoint];
+    }
+
+    return boost::shared_ptr<BaseDatagramLayer<EndPointType> > ();
+  }
+
+  static boost::shared_ptr<BaseDatagramLayer<EndPointType> > createDatagramLayer(EndPointType endPoint, 
+                                                                                 ObjectMessageRouter* router,
+	 									 ObjectMessageDispatcher* dispatcher) 
+  {
+    if (mDatagramLayerMap.find(endPoint) != mDatagramLayerMap.end()) {
+      return mDatagramLayerMap[endPoint];
+    }
+
+    boost::shared_ptr<BaseDatagramLayer<EndPointType> > datagramLayer = 
+                                                        boost::shared_ptr<BaseDatagramLayer<EndPointType> >
+                                                            (new BaseDatagramLayer(router, dispatcher));
+
+    mDatagramLayerMap[endPoint] = datagramLayer;
+
+    return datagramLayer;
+  }
+
+  static void listen(EndPoint<EndPointType>& listeningEndPoint) {
+    EndPointType endPointID = listeningEndPoint.endPoint;
+
+    mDatagramLayerMap[endPointID]->dispatcher()->registerObjectMessageRecipient(listeningEndPoint.port,
+										mDatagramLayerMap[endPointID].get());
+  }
 
   void send(EndPoint<EndPointType> src, EndPoint<EndPointType> dest, String dataStr) {
-    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+    boost::mutex::scoped_lock lock(mMutex);
 
-    mContext->objectHost->send(
-	    src.port,src.endPoint,
-            dest.port, dest.endPoint,
-            dataStr
-        );
+    CBR::Protocol::Object::ObjectMessage objectMessage;
+    objectMessage.set_source_object(src.endPoint);
+    objectMessage.set_source_port(src.port);
+    objectMessage.set_dest_object(dest.endPoint);
+    objectMessage.set_dest_port(dest.port);
+    objectMessage.set_unique(generateUniqueID(0));
+    objectMessage.set_payload(dataStr);
+
+    bool val = mRouter->route(  &objectMessage  );
   }
   
   /* This function will have to be re-implemented to support sending using
      other kinds of packets. For now, I'll implement only for ODP. */
-  void asyncSend(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
-    mContext->mainStrand->post(
-			       std::tr1::bind(
-				     &(BaseDatagramLayer<EndPointType>::send),this,
-				     *src, *dest, String((char*)data, len))
-			      );
+  virtual void asyncSend(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+    send(*src, *dest, String((char*) data, len));    
   }
 
   /* This function will also have to be re-implemented to support receiving
      using other kinds of packets. For now, I'll implement only for ODP. */
-  void handleReceive(EndPoint<EndPointType> endPoint, void* data, int len);
+  virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg)  {
+    Connection<EndPointType>::handleReceive(mRouter,
+                                  EndPoint<UUID> (msg.source_object(), msg.source_port()),
+                                  EndPoint<UUID> (msg.dest_object(), msg.dest_port()),
+                                  (void*) msg.payload().data(), msg.payload().size() );
+  }
+
+  ObjectMessageDispatcher* dispatcher() {
+    return mDispatcher;
+  }
 
 private: 
-  const ObjectHostContext* mContext;
+  ObjectMessageRouter* mRouter;
+  ObjectMessageDispatcher* mDispatcher;
 
-  Sirikata::SerializationCheck mSerialization;
+  boost::mutex mMutex;
 
+  static std::map<EndPointType, boost::shared_ptr<BaseDatagramLayer<EndPointType> > > mDatagramLayerMap;
 };
 
-template <class EndPointType>
-class Connection;
 
 template <class EndPointType>
 class Stream;
@@ -140,10 +202,7 @@ public:
   {
     mBuffer = new uint8[len];
     memcpy( mBuffer, (const uint8*) data, len); 
-    
   }
-
-  
 
   ~ChannelSegment() {
     delete [] mBuffer;
@@ -156,7 +215,7 @@ public:
 };
 
 template <class EndPointType>
-class Connection {
+class Connection : public ObjectMessageRecipient {
 
 private:
   friend class Stream<EndPointType>;
@@ -167,28 +226,30 @@ private:
   
 
   static ConnectionMap mConnectionMap;
-  static std::bitset<256> mAvailableChannels;
+  static std::bitset<65536> mAvailableChannels;
+  static uint16 mLastAssignedPort;
 
   static ConnectionReturnCallbackMap mConnectionReturnCallbackMap;
   static StreamReturnCallbackMap  mListeningConnectionsCallbackMap;
 
   static Mutex mStaticMembersLock;
-    
-  ObjectHostContext* mContext;
+   
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-  BaseDatagramLayer<UUID> mDatagramLayer;
+  boost::shared_ptr<BaseDatagramLayer<UUID> > mDatagramLayer;
 
   int mState;
-  uint8 mRemoteChannelID;
-  uint8 mLocalChannelID;
+  uint16 mRemoteChannelID;
+  uint16 mLocalChannelID;
 
   uint64 mTransmitSequenceNumber;
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
    
   std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
   std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
+
+  StreamReturnCallbackFunction mNewStreamCallback;
 
   std::vector<ReadDatagramCallback> mReadDatagramCallbacks;
 
@@ -216,23 +277,34 @@ private:
 
   boost::weak_ptr<Connection<EndPointType> > mWeakThis;
 
-  Connection(const ObjectHostContext* ctx, EndPoint<EndPointType> localEndPoint, 
+  Connection(ObjectMessageRouter* router, EndPoint<EndPointType> localEndPoint, 
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
-      mDatagramLayer(ctx), mState(CONNECTION_DISCONNECTED),
+      mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1), 
-      mLastReceivedSequenceNumber(1), mNumStreams(0), mCwnd(1), mRTOMicroseconds(20000),
+      mLastReceivedSequenceNumber(1),
+      mNumStreams(0), mCwnd(1), mRTOMicroseconds(200000),
       mFirstRTO(true), mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(300),
       CC_ALPHA(0.8)
   {
+    mDatagramLayer = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
+    mDatagramLayer->dispatcher()->registerObjectMessageRecipient(localEndPoint.port, this);
     mThread = new Thread(boost::bind(&(Connection<EndPointType>::sendChannelSegmentLoop), this));
   }
   
   void sendSSTChannelPacket(CBR::Protocol::SST::SSTChannelHeader& sstMsg) {
     std::string buffer = serializePBJMessage(sstMsg);
-    mDatagramLayer.asyncSend(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
+    mDatagramLayer->asyncSend(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
 				       buffer.size());
+  }
+
+  static uint16 getAvailablePort() {
+    if (mLastAssignedPort <= 2048) {
+      mLastAssignedPort = 65530;
+    }
+
+    return (mLastAssignedPort--);
   }
 
   /* Returns -1 if no channel is available. Otherwise returns the lowest
@@ -312,6 +384,11 @@ private:
         printf("Remote endpoint not available to connect\n");
         mConnectionReturnCallbackMap[mRemoteEndPoint](FAILURE,
                                                 boost::shared_ptr<Connection<EndPointType> > (mWeakThis) ); 
+
+	
+	mConnectionReturnCallbackMap.erase(mRemoteEndPoint);
+	mConnectionMap.erase(mLocalEndPoint);
+
         return;
       }
       
@@ -409,7 +486,7 @@ private:
      @return false if it's not possible to create this connection, e.g. if another connection
      is already using the same local endpoint; true otherwise.
   */
-  static bool createConnection(const ObjectHostContext* ctx, 
+  static bool createConnection(ObjectMessageRouter* router, 
 			       EndPoint <EndPointType> localEndPoint, 
 			       EndPoint <EndPointType> remoteEndPoint, 
                                ConnectionReturnCallbackFunction cb) 
@@ -421,13 +498,13 @@ private:
     }
     
     boost::shared_ptr<Connection>  conn =  boost::shared_ptr<Connection> (
-						           new Connection(ctx, localEndPoint, remoteEndPoint));
+						        new Connection(router, localEndPoint, remoteEndPoint));
     conn->mWeakThis = conn;
     mConnectionMap[localEndPoint] = conn;
 
     conn->setState(CONNECTION_PENDING_CONNECT);    
 
-    uint8 payload[1];
+    uint16 payload[1];
     payload[0] = getAvailableChannel();
    
     
@@ -440,6 +517,8 @@ private:
   }
 
   static bool listen(StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
+    BaseDatagramLayer<EndPointType>::listen(listeningEndPoint);
+
     boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
 
     if (mListeningConnectionsCallbackMap.find(listeningEndPoint) != mListeningConnectionsCallbackMap.end()){
@@ -566,6 +645,11 @@ private:
     }
   }
 
+  virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg)  {
+    receiveMessage((void*) msg.payload().data(), msg.payload().size() );
+  }
+
+
   void receiveMessage(void* recv_buff, int len) {
     uint8* data = (uint8*) recv_buff;
     std::string str = std::string((char*) data, len);
@@ -583,22 +667,24 @@ private:
     if (mState == CONNECTION_PENDING_CONNECT) {
       mState = CONNECTION_CONNECTED;
 
-      uint8* received_payload = (uint8*) received_msg->payload().data();
+      EndPoint<EndPointType> originalListeningEndPoint(mRemoteEndPoint.endPoint, mRemoteEndPoint.port);
+
+      uint16* received_payload = (uint16*) received_msg->payload().data();
 
       this->setRemoteChannelID(received_payload[0]);
-               
+      mRemoteEndPoint.port = received_payload[1];
+
       sendData( received_payload, 0 );
 
-      if (mConnectionReturnCallbackMap.find(mRemoteEndPoint) != mConnectionReturnCallbackMap.end()) 
+      if (mConnectionReturnCallbackMap.find(originalListeningEndPoint) != mConnectionReturnCallbackMap.end()) 
       {
 	if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
 	  boost::shared_ptr<Connection> conn = mConnectionMap[mLocalEndPoint];	
 
-	  mConnectionReturnCallbackMap[mRemoteEndPoint] (SUCCESS, conn);
+	  mConnectionReturnCallbackMap[originalListeningEndPoint] (SUCCESS, conn);
 	}
+        mConnectionReturnCallbackMap.erase(originalListeningEndPoint);
       }
-
-      mConnectionReturnCallbackMap.erase(mRemoteEndPoint);
     }
     else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
       mState = CONNECTION_CONNECTED;      
@@ -663,13 +749,12 @@ private:
       mOutgoingSubstreamMap[newLSID] = stream;
       mIncomingSubstreamMap[incomingLsid] = stream;
 
-      mListeningConnectionsCallbackMap[mLocalEndPoint](0, stream);
+      mNewStreamCallback(0, stream);
       
       stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			  received_stream_msg->bsn(),
 			  received_stream_msg->payload().size() );      
 
-      //mListeningConnectionsCallback.erase(mLocalEndPoint);
     }
   }
 
@@ -894,7 +979,7 @@ public:
     return mRemoteEndPoint;
   }
 
-  static void handleReceive(const ObjectHostContext* ctx, EndPoint<EndPointType> remoteEndPoint, 
+  static void handleReceive(ObjectMessageRouter* router, EndPoint<EndPointType> remoteEndPoint, 
                             EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len) 
   {
     boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
@@ -927,15 +1012,19 @@ public:
       if (mListeningConnectionsCallbackMap.find(localEndPoint) != mListeningConnectionsCallbackMap.end()) {
         uint8* received_payload = (uint8*) received_msg->payload().data();
       
-        uint8 payload[1];
-        payload[0] = getAvailableChannel();      
+        uint16 payload[2];
+        payload[0] = getAvailableChannel(); 
+        payload[1] = getAvailablePort();     
         std::cout << "receiveChannelRequest " << (int)payload[0] << "\n";
 
+        EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, payload[1]);
         boost::shared_ptr<Connection>  conn =  
                    boost::shared_ptr<Connection>(
-				    new Connection(ctx, localEndPoint, remoteEndPoint));
+				    new Connection(router, newLocalEndPoint, remoteEndPoint));
+
+        conn->mNewStreamCallback = mListeningConnectionsCallbackMap[localEndPoint];
         conn->mWeakThis = conn;
-        mConnectionMap[localEndPoint] = conn;
+        mConnectionMap[newLocalEndPoint] = conn;
 
         conn->setLocalChannelID(payload[0]);      
         conn->setRemoteChannelID(received_payload[0]);
@@ -1006,7 +1095,7 @@ public:
     delete [] mReceiveBitmap;
   }
 
-  static bool connectStream(const ObjectHostContext* ctx, 
+  static bool connectStream(ObjectMessageRouter* router, 
 			    EndPoint <EndPointType> localEndPoint, 
 			    EndPoint <EndPointType> remoteEndPoint, 
 			    StreamReturnCallbackFunction cb) 
@@ -1018,7 +1107,7 @@ public:
 
     mStreamReturnCallbackMap[localEndPoint] = cb;
 
-    bool result = Connection<EndPointType>::createConnection(ctx, localEndPoint, 
+    bool result = Connection<EndPointType>::createConnection(router, localEndPoint, 
 					       remoteEndPoint, 
 					       connectionCreated);
 

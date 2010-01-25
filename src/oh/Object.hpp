@@ -36,6 +36,8 @@
 #include "Utility.hpp"
 #include "Message.hpp"
 #include "MotionPath.hpp"
+#include "SSTImpl.hpp"
+
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -92,7 +94,7 @@ struct MaxDistUpdatePredicate {
     }
 };
 
-class Object : public Service {
+class Object : public Service, ObjectMessageRouter, ObjectMessageDispatcher {
 public:
     /** Standard constructor. */
     Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
@@ -132,7 +134,12 @@ private:
     // Handle a migration to a new space server
     void handleSpaceMigration(ServerID sid);
 
+    
+    bool route(CBR::Protocol::Object::ObjectMessage* msg);
 
+    bool send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
+
+    
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)
     const UUID mID;
@@ -156,6 +163,8 @@ private:
     bool mQuitting;
 
     IOTimerPtr mLocUpdateTimer;
+
+    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 }; // class Object
 
 } // namespace CBR

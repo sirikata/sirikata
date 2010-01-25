@@ -123,7 +123,7 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protoco
 
     if (sent) {
         TIMESTAMP(msg, Trace::SPACE_TO_OH_ENQUEUED);
-        delete msg;
+        //delete msg;
     }
     return sent;
 }
