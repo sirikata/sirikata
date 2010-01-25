@@ -28,7 +28,7 @@ class TestSuite:
         try:
             test.run()
         except:
-            print "Error: Caught exception in test '" + self.__get_name(test) + "':", sys.exc_info()[0]
+            print "Error: Caught exception in test '" + self.__get_name(test) + "':", str(sys.exc_info()[0])
 
         # And make sure we get out of that directory
         os.chdir(starting_dir)
