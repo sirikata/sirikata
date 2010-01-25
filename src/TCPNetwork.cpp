@@ -398,8 +398,20 @@ TCPNetwork::RemoteStreamPtr TCPNetwork::getReceiveQueue(const ServerID& addr) {
 
     RemoteStreamMap::iterator front_it = mFrontStreams.find(addr);
     if (front_it != mFrontStreams.end()) {
-        // Previous checks should still be valid, just return it
-        return front_it->second;
+        // At least for closing streams, results may no longer be valid, need to
+        // double check.
+        RemoteStreamPtr result = front_it->second;
+        if (result &&
+            result->front != NULL &&
+            (result->connected || result->shutting_down)
+            ) {
+            return result;
+        }
+        else {
+            // It got invalidated, get it out of the front stream map and
+            // continue search.
+            clearReceiveQueue(addr);
+        }
     }
 
     RemoteStreamMap::iterator closing_it = mClosingStreams.find(addr);
