@@ -132,29 +132,26 @@ void TCPNetwork::connectionCallback(const RemoteStreamWPtr& rwstream, const Siri
 
     if (status == Sirikata::Network::Stream::Disconnected ||
         status == Sirikata::Network::Stream::ConnectionFailed) {
-        TCPNET_LOG(info,"Got disconnection event.");
-        if (remote_stream) {
-            remote_stream->connected = false;
-            remote_stream->shutting_down = true;
-        }
+        TCPNET_LOG(info,"Got disconnection event from " << remote_stream->logical_endpoint);
+
+        remote_stream->connected = false;
+        remote_stream->shutting_down = true;
         mContext->mainStrand->post(
             std::tr1::bind(&TCPNetwork::markDisconnected, this, remote_stream)
-        );
+                                   );
     }
     else if (status == Sirikata::Network::Stream::Connected) {
         // Note: We should only get Connected for connections we initiated.
-        if (remote_stream) {
-            TCPNET_LOG(info,"Sending intro and marking stream as connected.");
-            // The first message needs to be our introduction
-            sendServerIntro(remote_stream);
-            // And after we're sure its sent, open things up for everybody else
-            remote_stream->connected = true;
-            // And notify listeners.  We *must* do this here because the initial
-            // send may have failed due to not having a connection so the normal
-            // readySend callback will not occur since we couldn't register for
-            // it yet.
-            mSendListener->networkReadyToSend(remote_stream->logical_endpoint);
-        }
+        TCPNET_LOG(info,"Sending intro and marking stream as connected to " << remote_stream->logical_endpoint);
+        // The first message needs to be our introduction
+        sendServerIntro(remote_stream);
+        // And after we're sure its sent, open things up for everybody else
+        remote_stream->connected = true;
+        // And notify listeners.  We *must* do this here because the initial
+        // send may have failed due to not having a connection so the normal
+        // readySend callback will not occur since we couldn't register for
+        // it yet.
+        mSendListener->networkReadyToSend(remote_stream->logical_endpoint);
     }
     else {
         TCPNET_LOG(error,"Unhandled send stream connection status: " << status << " -- " << reason);
@@ -189,6 +186,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
         bool parsed = parsePBJMessage(&intro, data);
         assert(parsed);
 
+        TCPNET_LOG(info,"Parsed remote endpoint information from " << intro.id());
         remote_stream->logical_endpoint = intro.id();
         remote_stream->connected = true;
         mContext->mainStrand->post(
@@ -250,7 +248,7 @@ void hexPrint(const char *name, const Chunk&data) {
 } // namespace
 
 void TCPNetwork::openConnection(const ServerID& dest) {
-    TCPNET_LOG(info,"Initiating new connection.");
+    TCPNET_LOG(info,"Initiating new connection to " << dest);
 
     RemoteStreamPtr remote(
         new RemoteStream(
@@ -325,7 +323,7 @@ void TCPNetwork::addNewStream(RemoteStreamPtr remote_stream) {
     // with one we started in the outgoing direction.  We need to cancel one and
     // save the other in our map.
     if (it != mRemoteStreams.end()) {
-        TCPNET_LOG(info,"Resolving multiple conflicting connections.");
+        TCPNET_LOG(info,"Resolving multiple conflicting connections to " << remote_stream->logical_endpoint);
 
         RemoteStreamPtr new_remote_stream = remote_stream;
         RemoteStreamPtr existing_remote_stream = it->second;
@@ -370,13 +368,15 @@ void TCPNetwork::addNewStream(RemoteStreamPtr remote_stream) {
 }
 
 void TCPNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, RemoteStreamWPtr& wstream) {
-    TCPNET_LOG(info,"Closing stream due to timeout.");
-
     mClosingStreamTimers.erase(timer);
 
     RemoteStreamPtr rstream(wstream);
-    if (!rstream)
+    if (!rstream) {
+        TCPNET_LOG(error,"Got close stream timeout for stream that is no longer in closing stream set.");
         return;
+    }
+
+    TCPNET_LOG(info,"Closing stream due to timeout, server " << rstream->logical_endpoint);
 
     rstream->connected = false;
     rstream->stream->close();
