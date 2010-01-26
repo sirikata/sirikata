@@ -296,6 +296,11 @@ void TCPNetwork::markDisconnected(const RemoteStreamWPtr& wstream) {
     if (it == mRemoteStreams.end())
         return;
 
+    // The stored one may not be the one we're looking for
+    RemoteStreamPtr stored_remote_stream = it->second;
+    if (stored_remote_stream != remote_stream)
+        return;
+
     assert(remote_stream &&
            !remote_stream->connected &&
            remote_stream->shutting_down);
