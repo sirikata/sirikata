@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _CBR_FORWARDER_SERVICE_QUEUE_HPP_
+#define _CBR_FORWARDER_SERVICE_QUEUE_HPP_
+
 #include "Utility.hpp"
 #include "FairQueue.hpp"
 #include "Message.hpp"
@@ -96,3 +99,5 @@ class ForwarderServiceQueue {
 };
 
 } // namespace CBR
+
+#endif //_CBR_FORWARDER_SERVICE_QUEUE_HPP_
