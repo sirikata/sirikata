@@ -386,14 +386,19 @@ void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& o
 }
 
 void Server::osegWriteFinished(const UUID& id) {
-    // Indicates an update to OSeg finished, meaning a migration can continue
-    finishAddObject(id);
+    // Indicates an update to OSeg finished, meaning a migration can
+    // continue.
+    mContext->mainStrand->post(
+        std::tr1::bind(&Server::finishAddObject, this, id)
+                               );
 }
 
 void Server::osegMigrationAcknowledged(const UUID& id) {
     // Indicates its safe to destroy the object connection since the migration
     // was successful
-    killObjectConnection(id);
+    mContext->mainStrand->post(
+        std::tr1::bind(&Server::killObjectConnection, this, id)
+                               );
 }
 
 void Server::receiveMessage(Message* msg)
