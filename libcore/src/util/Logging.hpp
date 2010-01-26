@@ -61,10 +61,15 @@ enum LOGGING_LEVEL {
 		   || (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)!=reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
               reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >()[#module]>=Sirikata::Logging::lvl)))
 # endif
-# define SILOGNOCR(module,lvl,value) \
-    if (SILOGP(module,lvl)) \
-        std::cerr << value
-# define SILOG(module,lvl,value) SILOGNOCR(module,lvl,value) << std::endl
+# define SILOGNOCR(module,lvl,value)                                    \
+    do {                                                                \
+        if (SILOGP(module,lvl)) {                                       \
+            std::ostringstream __log_stream;                            \
+            __log_stream << value;                                      \
+            std::cerr << __log_stream.str();                            \
+        }                                                               \
+    } while (0)
+# define SILOG(module,lvl,value) SILOGNOCR(module,lvl,value << std::endl)
 #else
 # define SILOGP(module,lvl) false
 # define SILOGNOCR(module,lvl,value)
