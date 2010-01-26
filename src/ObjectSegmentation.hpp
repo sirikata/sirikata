@@ -24,18 +24,23 @@ public:
 }; // class OSegLookupListener
 
 
+/** Listener interface for OSeg write events. */
+class OSegWriteListener {
+public:
+    virtual void osegWriteFinished(const UUID& id) = 0;
+}; // class OSegMembershipListener
+
+
 
 class ObjectSegmentation : public MessageRecipient, public PollingService
   {
-
-  private:
-
   protected:
     virtual void poll() = 0;
 
     SpaceContext* mContext;
     TimeProfiler::Stage* mServiceStage;
     OSegLookupListener* mLookupListener;
+      OSegWriteListener* mWriteListener;
     IOStrand* oStrand;
 
 
@@ -46,6 +51,7 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
      : PollingService(o_strand),
        mContext(ctx),
        mLookupListener(NULL),
+       mWriteListener(NULL),
        oStrand(o_strand)
     {
       fflush(stdout);
@@ -56,6 +62,10 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
 
       void setLookupListener(OSegLookupListener* listener) {
           mLookupListener = listener;
+      }
+
+      void setWriteListener(OSegWriteListener* listener) {
+          mWriteListener = listener;
       }
 
     virtual ServerID lookup(const UUID& obj_id) = 0;

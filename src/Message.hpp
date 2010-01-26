@@ -55,7 +55,6 @@ typedef uint16 ServerMessagePort;
 #define SERVER_PORT_KILL_OBJ_CONN              14
 #define SERVER_PORT_CSEG_CHANGE                6
 #define SERVER_PORT_LOAD_STATUS                7
-#define SERVER_PORT_OSEG_ADDED_OBJECT          17
 #define SERVER_PORT_OSEG_MIGRATE_MOVE          8
 #define SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE   9
 #define SERVER_PORT_OSEG_UPDATE                15

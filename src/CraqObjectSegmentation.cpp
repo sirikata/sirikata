@@ -1021,18 +1021,8 @@ namespace CBR
       //means that we just finished adding first object
       mObjects.push_back(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid() );//need to add obj_id
 
-      Message* to_send = new Message(
-                                     mContext->id(),
-                                     SERVER_PORT_OSEG_ADDED_OBJECT,
-                                     mContext->id(),
-                                     SERVER_PORT_OSEG_ADDED_OBJECT,
-                                     serializePBJMessage( *(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded) )
-                                     );
-
-      bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES, to_send);
-
-      if (!sent)
-        reTryAddedMessage.push_back(to_send);  //will try to re-send the add message
+      UUID written_obj = trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid();
+      mWriteListener->osegWriteFinished(written_obj);
     }
 
     delete trackedSetResult;

@@ -44,7 +44,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>())) {
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
       mForwarder->registerMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
-      mForwarder->registerMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
+
+      mOSeg->setWriteListener((OSegWriteListener*)this);
 
       mMigrationMonitor = new MigrationMonitor(
           mContext, mLocationService, mCSeg,
@@ -70,7 +71,6 @@ Server::~Server()
 {
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
     mForwarder->unregisterMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
-    mForwarder->unregisterMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
 
     printf("mObjects.size=%d\n", (uint32)mObjects.size());
 
@@ -392,6 +392,10 @@ void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& o
     mForwarder->enableObjectConnection(obj_id);
 }
 
+void Server::osegWriteFinished(const UUID& id) {
+    // Indicates an update to OSeg finished, meaning a migration can continue
+    finishAddObject(id);
+}
 
 void Server::receiveMessage(Message* msg)
 {
@@ -416,16 +420,6 @@ void Server::receiveMessage(Message* msg)
 
         if (parsed)
             killObjectConnection( kill_msg.m_objid() );
-
-        delete msg;
-    }
-    else if (msg->dest_port() == SERVER_PORT_OSEG_ADDED_OBJECT) {
-        CBR::Protocol::OSeg::AddedObjectMessage oseg_add_msg;
-        bool parsed = parsePBJMessage(&oseg_add_msg, msg->payload());
-
-        if (parsed) {
-            finishAddObject(oseg_add_msg.m_objid());
-        }
 
         delete msg;
     }
