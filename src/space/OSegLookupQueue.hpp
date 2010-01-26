@@ -45,7 +45,7 @@ namespace CBR {
  *  on a total number of outstanding lookups, a total number of bytes in messages
  *  for outstanding lookups, etc.
  */
-class OSegLookupQueue : public OSegListener {
+class OSegLookupQueue : public OSegLookupListener {
 public:
     enum ResolvedFrom {
         ResolvedFromCache,
@@ -97,7 +97,7 @@ private:
 
     uint32 oseg_lookup_queue_tail_drop_size_parameter;
 
-    /* OSegListener Interface */
+    /* OSegLookupListener Interface */
     virtual void osegLookupCompleted(const UUID& id, const ServerID& dest);
     /* Main thread handler for lookups. */
     void handleLookupCompleted(const UUID& id, const ServerID& dest);

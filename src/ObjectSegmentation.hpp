@@ -18,10 +18,10 @@ namespace CBR
  * Note that these are likely to be called from another thread, so
  * the implementing class must ensure they are thread safe.
  */
-class OSegListener {
+class OSegLookupListener {
 public:
     virtual void osegLookupCompleted(const UUID& id, const ServerID& dest) = 0;
-}; // class OSegListener
+}; // class OSegLookupListener
 
 
 
@@ -35,7 +35,7 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
 
     SpaceContext* mContext;
     TimeProfiler::Stage* mServiceStage;
-    OSegListener* mListener;
+    OSegLookupListener* mLookupListener;
     IOStrand* oStrand;
 
 
@@ -45,7 +45,7 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     ObjectSegmentation(SpaceContext* ctx,IOStrand* o_strand)
      : PollingService(o_strand),
        mContext(ctx),
-       mListener(NULL),
+       mLookupListener(NULL),
        oStrand(o_strand)
     {
       fflush(stdout);
@@ -54,8 +54,8 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
 
     virtual ~ObjectSegmentation() {}
 
-      void setListener(OSegListener* listener) {
-          mListener = listener;
+      void setLookupListener(OSegLookupListener* listener) {
+          mLookupListener = listener;
       }
 
     virtual ServerID lookup(const UUID& obj_id) = 0;

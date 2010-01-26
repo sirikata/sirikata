@@ -73,7 +73,7 @@ OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg,
    mTotalSize(0),
    oseg_lookup_queue_tail_drop_size_parameter (queue_size)
 {
-    mOSeg->setListener(this);
+    mOSeg->setLookupListener(this);
 }
 
 bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)

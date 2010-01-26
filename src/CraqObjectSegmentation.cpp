@@ -602,7 +602,7 @@ namespace CBR
     if (traceToken != NULL)
       mContext->trace()->osegCumulativeResponse(mContext->time,traceToken);
 
-    postingStrand->post(std::tr1::bind (&OSegListener::osegLookupCompleted,mListener,obj_id,sID));
+    postingStrand->post(std::tr1::bind (&OSegLookupListener::osegLookupCompleted,mLookupListener,obj_id,sID));
   }
 
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
