@@ -66,6 +66,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mLocUpdateTimer( IOTimer::create(mContext->ioService) )
 {
   mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);
+  
 }
 
 Object::~Object() {
@@ -122,7 +123,7 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
         requested_loc.set_position(curLoc.position());
         requested_loc.set_velocity(curLoc.velocity());
 
-        bool success = mContext->objectHost->send(
+	bool success = mContext->objectHost->send(
             this, OBJECT_PORT_LOCATION,
             UUID::null(), OBJECT_PORT_LOCATION,
             serializePBJMessage(container)
@@ -153,6 +154,8 @@ bool Object::route(CBR::Protocol::Object::ObjectMessage* msg) {
 			     msg->payload())
 			    );
   
+  delete msg;
+
   return true;
 }
 

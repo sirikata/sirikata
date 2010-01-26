@@ -62,10 +62,12 @@ private:
 template <class EndPointType>
 class Connection;
 
+template <class EndPointType>
+class Stream;
+
+
 #define MESSAGE_ID_SERVER_SHIFT 52
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
-
-
 
 template <typename EndPointType>
 class BaseDatagramLayer:public ObjectMessageRecipient
@@ -123,15 +125,15 @@ public:
   void send(EndPoint<EndPointType> src, EndPoint<EndPointType> dest, String dataStr) {
     boost::mutex::scoped_lock lock(mMutex);
 
-    CBR::Protocol::Object::ObjectMessage objectMessage;
-    objectMessage.set_source_object(src.endPoint);
-    objectMessage.set_source_port(src.port);
-    objectMessage.set_dest_object(dest.endPoint);
-    objectMessage.set_dest_port(dest.port);
-    objectMessage.set_unique(generateUniqueID(0));
-    objectMessage.set_payload(dataStr);
+    CBR::Protocol::Object::ObjectMessage* objectMessage = new CBR::Protocol::Object::ObjectMessage();
+    objectMessage->set_source_object(src.endPoint);
+    objectMessage->set_source_port(src.port);
+    objectMessage->set_dest_object(dest.endPoint);
+    objectMessage->set_dest_port(dest.port);
+    objectMessage->set_unique(generateUniqueID(0));
+    objectMessage->set_payload(dataStr);
 
-    bool val = mRouter->route(  &objectMessage  );
+    bool val = mRouter->route(  objectMessage  );
   }
 
   /* This function will have to be re-implemented to support sending using
@@ -163,8 +165,6 @@ private:
 };
 
 
-template <class EndPointType>
-class Stream;
 
 typedef std::tr1::function< void(int, boost::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
 
@@ -485,10 +485,13 @@ private:
      @return false if it's not possible to create this connection, e.g. if another connection
      is already using the same local endpoint; true otherwise.
   */
-  static bool createConnection(ObjectMessageRouter* router,
-			       EndPoint <EndPointType> localEndPoint,
-			       EndPoint <EndPointType> remoteEndPoint,
-                               ConnectionReturnCallbackFunction cb)
+
+  static bool createConnection(ObjectMessageRouter* router, 
+			       EndPoint <EndPointType> localEndPoint, 
+			       EndPoint <EndPointType> remoteEndPoint, 
+                               ConnectionReturnCallbackFunction cb,
+			       StreamReturnCallbackFunction scb) 
+
   {
     boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
 
@@ -505,7 +508,9 @@ private:
 
     uint16 payload[1];
     payload[0] = getAvailableChannel();
-
+   
+    
+    conn->mNewStreamCallback = scb;
 
     conn->setLocalChannelID(payload[0]);
     conn->sendData(payload, sizeof(payload));
@@ -733,7 +738,8 @@ private:
   }
 
   void handleInitPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
-    //std::cout << "INIT packet received\n";
+    //std::cout << "INIT packet received at " << mLocalEndPoint.endPoint.toString() <<"\n"; 
+
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -741,6 +747,7 @@ private:
       //create a new stream
       USID usid = createNewUSID();
       LSID newLSID = ++mNumStreams;
+
       boost::shared_ptr<Stream<EndPointType> > stream =
 	boost::shared_ptr<Stream<EndPointType> >
 	(new Stream<EndPointType>(NULL, mWeakThis, usid, newLSID,
@@ -1094,9 +1101,10 @@ public:
     delete [] mReceiveBitmap;
   }
 
-  static bool connectStream(ObjectMessageRouter* router,
-			    EndPoint <EndPointType> localEndPoint,
-			    EndPoint <EndPointType> remoteEndPoint,
+
+  static bool connectStream(ObjectMessageRouter* router, 
+			    EndPoint <EndPointType> localEndPoint, 
+			    EndPoint <EndPointType> remoteEndPoint, 
 			    StreamReturnCallbackFunction cb)
   {
     boost::mutex::scoped_lock lock(mStreamCreationMutex.getMutex());
@@ -1106,9 +1114,10 @@ public:
 
     mStreamReturnCallbackMap[localEndPoint] = cb;
 
-    bool result = Connection<EndPointType>::createConnection(router, localEndPoint,
-					       remoteEndPoint,
-					       connectionCreated);
+
+    bool result = Connection<EndPointType>::createConnection(router, localEndPoint, 
+							     remoteEndPoint, 
+							     connectionCreated, cb);
 
     return result;
   }
@@ -1505,7 +1514,8 @@ private:
 	 it != mChannelToBufferMap.end(); ++it)
      {
         mQueuedBuffers.push_front(it->second);
-        printf("Resending unacked packet at offset %d\n", (int)(it->second->mOffset));
+
+        printf("On %d, resending unacked packet at offset %d\n", (int)mLSID, (int)(it->second->mOffset));	
 
 	if (mTransmitWindowSize < it->second->mBufferLength){
 	  assert( ((int) it->second->mBufferLength) > 0);
@@ -1541,7 +1551,7 @@ private:
 
     //pass data up to the app from 0 to readyBufferSize;
     //
-    if (mReadCallback != NULL) {
+    if (mReadCallback != NULL && readyBufferSize > 0) {
       mReadCallback(mReceiveBuffer, readyBufferSize);
 
       //now move the window forward...
@@ -1581,6 +1591,8 @@ private:
 	else {
 	  mTransmitWindowSize = 0;
 	}
+
+	//printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
 
 	mChannelToBufferMap.erase(offset);
 
