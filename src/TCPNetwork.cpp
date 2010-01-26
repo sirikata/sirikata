@@ -248,6 +248,9 @@ void hexPrint(const char *name, const Chunk&data) {
 } // namespace
 
 void TCPNetwork::openConnection(const ServerID& dest) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
     TCPNET_LOG(info,"Initiating new connection to " << dest);
 
     RemoteStreamPtr remote(
