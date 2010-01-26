@@ -22,10 +22,6 @@
 #include "OSegLookupTraceToken.hpp"
 #include "Utility.hpp"
 
-// FIXME ObjConnKill shouldn't really be its own protocol... session or oseg
-// probably fit better
-#include "CBR_ObjConnKill.pbj.hpp"
-
 namespace CBR
 {
 

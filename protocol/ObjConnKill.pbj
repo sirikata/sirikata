@@ -1,9 +1,0 @@
-
-"pbj-0.0.3"
-
-package CBR.Protocol.ObjConnKill;
-
-message ObjConnKill
-{
-    required uuid   m_objid                = 1;
-}

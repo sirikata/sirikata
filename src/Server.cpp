@@ -16,11 +16,6 @@
 
 #include "Random.hpp"
 
-// FIXME we shouldn't have OSeg specific stuff here, it should be delegated to
-// OSeg as necessary
-#include "CBR_OSeg.pbj.hpp"
-#include "CBR_ObjConnKill.pbj.hpp"
-
 #include <iostream>
 #include <iomanip>
 

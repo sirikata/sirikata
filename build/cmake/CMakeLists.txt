@@ -373,7 +373,6 @@ SET(CBR_PROTOCOLS
   CSeg.pbj
   Session.pbj
   OSeg.pbj
-  ObjConnKill.pbj
   SSTHeader.pbj
 )
 SET(PBJ_CPP_HEADER "\n")
