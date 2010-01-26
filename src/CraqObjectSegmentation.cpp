@@ -106,17 +106,9 @@ namespace CBR
 
 
     //delete retries
-    for (int s=0; s < (int) reTryAddedMessage.size(); ++s)
-      delete reTryAddedMessage[s];
-    reTryAddedMessage.clear();
-
-    for (int s=0; s < (int) reTryMigAckMessage.size(); ++s)
-      delete reTryMigAckMessage[s];
-    reTryMigAckMessage.clear();
-
-    for (int s=0; s < (int) reTryKillConnMessage.size(); ++s)
-      delete reTryKillConnMessage[s];
-    reTryKillConnMessage.clear();
+    for (int s=0; s < (int) reTryMigAckMessages.size(); ++s)
+      delete reTryMigAckMessages[s];
+    reTryMigAckMessages.clear();
 
 
 
@@ -714,50 +706,21 @@ namespace CBR
     checkSendTimer.start();
 
 
-    std::vector<Message*> reReTryAddedMessage;
-    std::vector<Message*> reReTryMigAckMessage;
-    std::vector<Message*> reReTryKillConnMessage;
-
-
-    //trying to resend faild added messages
-    for (int s=0;s < (int)reTryAddedMessage.size(); ++s)
-    {
-      bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryAddedMessage[s]);
-
-      if (!sent)
-        reReTryAddedMessage.push_back(reTryAddedMessage[s]);
-
-    }
+    std::vector<Message*> re_retry_migacks;
 
 
     //trying to re-send failed mig ack messages
-    for (int s=0; s< (int)reTryMigAckMessage.size(); ++s)
+    for (int s=0; s< (int)reTryMigAckMessages.size(); ++s)
     {
-      bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryMigAckMessage[s]);
+      bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryMigAckMessages[s]);
       if (!sent)
-        reReTryMigAckMessage.push_back(reTryMigAckMessage[s]);
-
-    }
-
-    //trying to re-send failed kill conn messages
-    for (int s=0; s <(int) reTryKillConnMessage.size(); ++s)
-    {
-      bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryKillConnMessage[s]);//this will route the message to the server so that this computer can disconnect from the object connection.
-
-      if (!sent)
-        reTryKillConnMessage.push_back(reTryKillConnMessage[s]);
-
+        re_retry_migacks.push_back(reTryMigAckMessages[s]);
     }
 
     //load the messages that failed from this set of operations back so that can try to resend them next time this function is called.
-    reTryAddedMessage.clear();
-    reReTryAddedMessage.swap(reTryAddedMessage);
+    reTryMigAckMessages.clear();
+    reTryMigAckMessages.swap(re_retry_migacks);
 
-    reTryMigAckMessage.clear();
-    reReTryMigAckMessage.swap(reTryMigAckMessage);
-
-    reTryKillConnMessage.clear();
-    reReTryKillConnMessage.swap(reTryKillConnMessage);
   }
 
 
@@ -997,7 +960,7 @@ namespace CBR
       bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,to_send);
 
       if (!sent)
-        reTryMigAckMessage.push_back(to_send); //will try to re-send the tracking message
+        reTryMigAckMessages.push_back(to_send); //will try to re-send the tracking message
 
       trackingMessages.erase(trackedSetResult->trackedMessage);//stop tracking this message.
     }

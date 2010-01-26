@@ -144,9 +144,7 @@ namespace CBR
 
     //redundant message vectors in case a send fails.
     void checkReSends();
-    std::vector<Message*> reTryAddedMessage;
-    std::vector<Message*> reTryMigAckMessage;
-    std::vector<Message*> reTryKillConnMessage;
+    std::vector<Message*> reTryMigAckMessages;
     //end redundant message vectors in case a send fails
 
 
