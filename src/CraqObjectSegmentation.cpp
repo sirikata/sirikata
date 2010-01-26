@@ -699,21 +699,7 @@ namespace CBR
     inTransOrLookup_m.unlock();
 
     //send a message to the server that object should now disconnect
-    // FIXME is this really supposed to go to the same server? If so, there *must* be a better way to accomplish this
-    CBR::Protocol::ObjConnKill::ObjConnKill kill_msg_contents;
-    kill_msg_contents.set_m_objid(obj_id);
-    Message* kill_msg = new Message(
-        mContext->id(),
-        SERVER_PORT_KILL_OBJ_CONN,
-        mContext->id(),
-        SERVER_PORT_KILL_OBJ_CONN,
-        serializePBJMessage(kill_msg_contents)
-    );
-    bool sent = mContext->serverRouter()->route(ServerMessageRouter::MIGRATES, kill_msg);//this will route the message to the server so that this computer can disconnect from the object connection.
-
-    if (!sent)
-      reTryKillConnMessage.push_back(kill_msg);
-
+    mWriteListener->osegMigrationAcknowledged(obj_id);
   }
 
 

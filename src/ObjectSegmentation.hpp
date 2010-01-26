@@ -28,6 +28,7 @@ public:
 class OSegWriteListener {
 public:
     virtual void osegWriteFinished(const UUID& id) = 0;
+    virtual void osegMigrationAcknowledged(const UUID& id) = 0;
 }; // class OSegMembershipListener
 
 

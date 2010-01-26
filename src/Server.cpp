@@ -43,7 +43,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mObjectHostConnectionManager(NULL),
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>())) {
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
-      mForwarder->registerMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
 
       mOSeg->setWriteListener((OSegWriteListener*)this);
 
@@ -70,7 +69,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 Server::~Server()
 {
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
-    mForwarder->unregisterMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
 
     printf("mObjects.size=%d\n", (uint32)mObjects.size());
 
@@ -397,6 +395,12 @@ void Server::osegWriteFinished(const UUID& id) {
     finishAddObject(id);
 }
 
+void Server::osegMigrationAcknowledged(const UUID& id) {
+    // Indicates its safe to destroy the object connection since the migration
+    // was successful
+    killObjectConnection(id);
+}
+
 void Server::receiveMessage(Message* msg)
 {
     if (msg->dest_port() == SERVER_PORT_MIGRATION) {
@@ -412,15 +416,6 @@ void Server::receiveMessage(Message* msg)
             // Try to handle this migration if all the info is available
             handleMigration(obj_id);
         }
-        delete msg;
-    }
-    else if (msg->dest_port() == SERVER_PORT_KILL_OBJ_CONN) {
-        CBR::Protocol::ObjConnKill::ObjConnKill kill_msg;
-        bool parsed = parsePBJMessage(&kill_msg, msg->payload());
-
-        if (parsed)
-            killObjectConnection( kill_msg.m_objid() );
-
         delete msg;
     }
 }
