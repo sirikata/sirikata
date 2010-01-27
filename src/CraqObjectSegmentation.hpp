@@ -23,6 +23,8 @@
 
 #include "CBR_OSeg.pbj.hpp"
 
+#include <sirikata/util/ThreadSafeQueueWithNotification.hpp>
+
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
 
@@ -144,11 +146,10 @@ namespace CBR
     //end building for the cache
 
 
-    //redundant message vectors in case a send fails.
-    void checkReSends();
-    std::vector<Message*> reTryMigAckMessages;
-    //end redundant message vectors in case a send fails
-
+      Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
+      Message* mFrontMigAck;
+      void handleNewMigAckMessages();
+      void trySendMigAcks();
 
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
     void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken);

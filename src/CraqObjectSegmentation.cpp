@@ -22,6 +22,8 @@
 #include "OSegLookupTraceToken.hpp"
 #include "Utility.hpp"
 
+#include <sirikata/network/IOStrandImpl.hpp>
+
 namespace CBR
 {
 
@@ -35,6 +37,8 @@ namespace CBR
    craqDhtSet(con, o_strand, this),
    postingStrand(strand_to_post_to),
    mStrand(o_strand),
+   mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
+   mFrontMigAck(NULL),
    ctx(con),
    mReceivedStopRequest(false)
   {
@@ -107,9 +111,11 @@ namespace CBR
 
 
     //delete retries
-    for (int s=0; s < (int) reTryMigAckMessages.size(); ++s)
-      delete reTryMigAckMessages[s];
-    reTryMigAckMessages.clear();
+    while( !mMigAckMessages.empty() ) {
+        Message* msg;
+        mMigAckMessages.pop(msg);
+        delete msg;
+    }
 
 
 
@@ -695,35 +701,36 @@ namespace CBR
     mWriteListener->osegMigrationAcknowledged(obj_id);
   }
 
+void CraqObjectSegmentation::handleNewMigAckMessages() {
+    trySendMigAcks();
+}
 
-  //This function tries to re-send all the messages that failed to be delivered
-  //should probably be called from within o_strand
-  void CraqObjectSegmentation::checkReSends()
-  {
+void CraqObjectSegmentation::trySendMigAcks() {
     if (mReceivedStopRequest)
       return;
 
-    Timer checkSendTimer;
-    checkSendTimer.start();
+    while(true) {
+        if (mFrontMigAck == NULL) {
+            if (mMigAckMessages.empty())
+                return;
+            mMigAckMessages.pop(mFrontMigAck);
+        }
 
+        bool sent = mOSegServerMessageService->route( mFrontMigAck );
+        if (!sent)
+            break;
 
-    std::vector<Message*> re_retry_migacks;
-
-
-    //trying to re-send failed mig ack messages
-    for (int s=0; s< (int)reTryMigAckMessages.size(); ++s)
-    {
-      bool sent = mOSegServerMessageService->route(reTryMigAckMessages[s]);
-      if (!sent)
-        re_retry_migacks.push_back(reTryMigAckMessages[s]);
+        mFrontMigAck = NULL;
     }
 
-    //load the messages that failed from this set of operations back so that can try to resend them next time this function is called.
-    reTryMigAckMessages.clear();
-    reTryMigAckMessages.swap(re_retry_migacks);
-
-  }
-
+    if (mFrontMigAck != NULL || !mMigAckMessages.empty()) {
+        // We've still got work to do, setup a retry
+        mContext->mainStrand->post(
+            Duration::microseconds(100),
+            std::tr1::bind(&CraqObjectSegmentation::trySendMigAcks, this)
+                                   );
+    }
+}
 
   //this function tells us what to do with all the ids that just weren't found in craq.
   void CraqObjectSegmentation::notFoundFunction(CraqOperationResult* nf)
@@ -957,11 +964,7 @@ namespace CBR
                                      SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,
                                      serializePBJMessage( *(trackingMessages[trackedSetResult->trackedMessage].migAckMsg) )
                                      );
-
-      bool sent= mOSegServerMessageService->route(to_send);
-
-      if (!sent)
-        reTryMigAckMessages.push_back(to_send); //will try to re-send the tracking message
+      mMigAckMessages.push(to_send); // sending handled in main strand
 
       trackingMessages.erase(trackedSetResult->trackedMessage);//stop tracking this message.
     }
