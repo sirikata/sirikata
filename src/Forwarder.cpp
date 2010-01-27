@@ -22,6 +22,8 @@
 // to OSeg as necessary
 #include "CBR_OSeg.pbj.hpp"
 
+#include <sirikata/network/IOStrandImpl.hpp>
+
 namespace CBR
 {
 
@@ -266,7 +268,9 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 
     bool accepted = mOSegLookups->lookup(
         msg,
-        boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
+        mContext->mainStrand->wrap(
+            boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
+                                   )
                                          );
 
     return accepted;
