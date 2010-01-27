@@ -170,6 +170,10 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
     // If the stream hasn't been marked as connected, this *should* be
     // the initial header
     if (remote_stream->connected == false) {
+        // The stream might already be closing.  If so, just ignore this data.
+        if (remote_stream->shutting_down)
+            return Sirikata::Network::Stream::AcceptedData;
+
         // Remove from the list of pending connections
         TCPNET_LOG(info,"Parsing endpoint information for incomplete remote-initiated remote stream.");
         Address4 source_addr = remote_stream->network_endpoint;
