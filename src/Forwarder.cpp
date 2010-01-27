@@ -287,6 +287,15 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
     TIMESTAMP(obj_msg, mp);
     TIMESTAMP(obj_msg, Trace::OSEG_LOOKUP_FINISHED);
 
+    // It's possible we got the object after we started the query, resulting in
+    // use pointing the message back at ourselves.  In this case, just dispatch
+    // it.
+    if (dest_serv == mContext->id()) {
+        dispatchMessage(*obj_msg);
+        delete obj_msg;
+        return true;
+    }
+
   //send out all server updates associated with an object with this message:
   UUID obj_id =  obj_msg->dest_object();
 
