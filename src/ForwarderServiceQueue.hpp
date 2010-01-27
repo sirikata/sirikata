@@ -51,34 +51,11 @@ class ForwarderServiceQueue {
         virtual void forwarderServiceMessageReady(ServerID dest_server) = 0;
     };
 
-    ForwarderServiceQueue(ServerID this_server, uint32 size, Listener* listener)
-            : mThisServer(this_server),
-              mQueueSize(size),
-              mListener(listener)
-    {
-    }
+    ForwarderServiceQueue(ServerID this_server, uint32 size, Listener* listener);
+    ~ForwarderServiceQueue();
 
-    ~ForwarderServiceQueue() {
-        for(unsigned int i=0;i<mQueues.size();++i) {
-            if(mQueues[i]) {
-                delete mQueues[i];
-            }
-        }
-    }
-
-    Message* front(ServerID sid) {
-        uint64 size=1<<30;
-        ServiceID svc;
-
-        return getFairQueue(sid)->front(&size, &svc);
-    }
-
-    Message* pop(ServerID sid) {
-        uint64 size=1<<30;
-        return getFairQueue(sid)->pop(&size);
-    }
-
-
+    Message* front(ServerID sid);
+    Message* pop(ServerID sid);
   private:
     friend class ForwarderServerMessageRouter;
 
@@ -90,43 +67,13 @@ class ForwarderServiceQueue {
     uint32 mQueueSize;
     Listener* mListener;
 
-    QueueEnum::PushResult push(ServiceID svc, Message* msg) {
-        assert(msg->source_server() == mThisServer);
-        assert(msg->dest_server() != mThisServer);
-
-        ServerID dest_server = msg->dest_server();
-
-        OutgoingFairQueue* ofq = checkServiceQueue(getFairQueue(msg->dest_server()), svc);
-        bool was_empty = ofq->empty();
-        QueueEnum::PushResult success = ofq->push(svc, msg);
-        if (was_empty && (success == QueueEnum::PushSucceeded))
-            mListener->forwarderServiceMessageReady(dest_server);
-        return success;
-    }
-
-    uint32 size(ServerID sid, ServiceID svc) {
-        return checkServiceQueue(getFairQueue(sid), svc)->size(svc);
-    }
-
+    QueueEnum::PushResult push(ServiceID svc, Message* msg);
+    uint32 size(ServerID sid, ServiceID svc);
 
     // Utilities
 
-    OutgoingFairQueue* getFairQueue(ServerID sid) {
-        ServerQueueMap::iterator it = mQueues.find(sid);
-        if (it == mQueues.end()) {
-            mQueues[sid] = new OutgoingFairQueue();
-            it = mQueues.find(sid);
-        }
-        assert(it != mQueues.end());
-
-        return it->second;
-    }
-
-    OutgoingFairQueue* checkServiceQueue(OutgoingFairQueue* ofq, ServiceID svc_id) {
-        if (!ofq->hasQueue(svc_id))
-            ofq->addQueue(new Queue<Message*>(mQueueSize), svc_id, 1.0);
-        return ofq;
-    }
+    OutgoingFairQueue* getFairQueue(ServerID sid);
+    OutgoingFairQueue* checkServiceQueue(OutgoingFairQueue* ofq, ServiceID svc_id);
 };
 
 } // namespace CBR
