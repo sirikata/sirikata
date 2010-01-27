@@ -173,7 +173,9 @@ Router<Message*>* Forwarder::createServerMessageService(const String& name) {
 }
 
 void Forwarder::forwarderServiceMessageReady(ServerID dest_server) {
-    mServerMessageQueue->messageReady(dest_server);
+    mContext->mainStrand->post(
+        std::tr1::bind(&ServerMessageQueue::messageReady, mServerMessageQueue, dest_server)
+                               );
 }
 
 
