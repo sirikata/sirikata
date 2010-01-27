@@ -175,9 +175,10 @@ Router<Message*>* Forwarder::createServerMessageService(const String& name) {
 }
 
 void Forwarder::forwarderServiceMessageReady(ServerID dest_server) {
-    mContext->mainStrand->post(
-        std::tr1::bind(&ServerMessageQueue::messageReady, mServerMessageQueue, dest_server)
-                               );
+    // Note: this must occur in the main thread so we can call this
+    // synchronously (instead of posting to main strand) so the FairQueue in the
+    // SMQ can be updated correctly.
+    mServerMessageQueue->messageReady(dest_server);
 }
 
 
