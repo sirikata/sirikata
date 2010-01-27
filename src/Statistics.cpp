@@ -84,6 +84,11 @@ void BatchedBuffer::write(const void* buf, uint32 nbytes) {
     }
 }
 
+void BatchedBuffer::write(const IOVec* iov, uint32 iovcnt) {
+    for(uint32 i = 0; i < iovcnt; i++)
+        write(iov[i].base, iov[i].len);
+}
+
 void BatchedBuffer::flush() {
     if (filling == NULL)
         return;

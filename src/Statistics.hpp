@@ -62,10 +62,17 @@ struct Batch {
 
 class BatchedBuffer {
 public:
+    struct IOVec {
+        const void* base;
+        uint32 len;
+    };
+
     BatchedBuffer();
 
     // write the specified number of bytes from the pointer to the buffer
     void write(const void* buf, uint32 nbytes);
+
+    void write(const IOVec* iov, uint32 iovcnt);
 
     void flush();
 
