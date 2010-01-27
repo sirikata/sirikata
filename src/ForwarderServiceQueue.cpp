@@ -73,15 +73,13 @@ QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
 
     ServerID dest_server = msg->dest_server();
 
-    bool was_empty;
     QueueEnum::PushResult success;
     {
         boost::lock_guard<boost::mutex> lock(mMutex);
         OutgoingFairQueue* ofq = checkServiceQueue(getFairQueue(msg->dest_server()), svc);
-        was_empty = ofq->empty();
         success = ofq->push(svc, msg);
     }
-    if (was_empty && (success == QueueEnum::PushSucceeded))
+    if (success == QueueEnum::PushSucceeded)
         mListener->forwarderServiceMessageReady(dest_server);
     return success;
 }
