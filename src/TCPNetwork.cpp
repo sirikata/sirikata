@@ -118,7 +118,7 @@ void TCPNetwork::newStreamCallback(Stream* newStream, Stream::SetCallbacks& setC
     setCallbacks(
         std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote_stream, _1, _2),
         std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote_stream, _1),
-        &Stream::ignoreReadySendCallback
+        std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote_stream)
     );
 
     mPendingStreams[source_address] = remote_stream;
@@ -151,7 +151,7 @@ void TCPNetwork::connectionCallback(const RemoteStreamWPtr& rwstream, const Siri
         // send may have failed due to not having a connection so the normal
         // readySend callback will not occur since we couldn't register for
         // it yet.
-        mSendListener->networkReadyToSend(remote_stream->logical_endpoint);
+        notifyListenersOfNewStream(remote_stream->logical_endpoint);
     }
     else {
         TCPNET_LOG(error,"Unhandled send stream connection status: " << status << " -- " << reason);
@@ -199,20 +199,20 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
                            remote_stream
                            )
                                    );
-        mReceiveListener->networkReceivedConnection(intro.id());
+        notifyListenersOfNewStream(intro.id());
     }
     else {
-        TCPNET_LOG(insane,"Handling regular received data.");
+        TCPNET_LOG(insane,"Handling regular received data from " << remote_stream->logical_endpoint << ".");
         // Normal case, we can just handle the message
         if (remote_stream->front != NULL) {
             // Space is occupied, pause and ignore
-            TCPNET_LOG(insane,"Pausing receive.");
+            TCPNET_LOG(insane,"Pausing receive from " << remote_stream->logical_endpoint << ".");
             remote_stream->paused = true;
             return Sirikata::Network::Stream::PauseReceive;
         }
         else {
             // Otherwise, give it its own chunk and push it up
-            TCPNET_LOG(insane,"Passing data up to next layer.");
+            TCPNET_LOG(insane,"Passing data up to next layer from " << remote_stream->logical_endpoint << ".");
             Chunk* tmp = new Chunk;
             tmp->swap(data);
             remote_stream->front = tmp;
@@ -224,11 +224,20 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
     return Sirikata::Network::Stream::AcceptedData;
 }
 
-void TCPNetwork::readySendCallback(const ServerID& dest) {
-    mSendListener->networkReadyToSend(dest);
+void TCPNetwork::readySendCallback(const RemoteStreamWPtr& rwstream) {
+    RemoteStreamPtr remote_stream(rwstream);
+    if (!remote_stream)
+        return;
+
+    assert(remote_stream->logical_endpoint != NullServerID);
+
+    mSendListener->networkReadyToSend(remote_stream->logical_endpoint);
 }
 
-
+void TCPNetwork::notifyListenersOfNewStream(const ServerID& remote) {
+    mSendListener->networkReadyToSend(remote);
+    mReceiveListener->networkReceivedConnection(remote);
+}
 
 // Main Thread/Strand Methods
 
@@ -275,8 +284,8 @@ void TCPNetwork::openConnection(const ServerID& dest) {
 
     Stream::SubstreamCallback sscb(&Stream::ignoreSubstreamCallback);
     Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
-    Stream::ReceivedCallback br(&Stream::ignoreReceivedCallback);
-    Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, dest));
+    Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, _1));
+    Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
     remote->stream->connect(convertAddress4ToSirikata(*addr),
                             sscb,
                             connCallback,

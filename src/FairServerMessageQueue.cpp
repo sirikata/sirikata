@@ -129,6 +129,13 @@ void FairServerMessageQueue::removeInputQueue(ServerID sid) {
 }
 
 void FairServerMessageQueue::enableDownstream(ServerID sid) {
+    // Ignore this stream unless we already know about it -- if we don't know
+    // about it then we don't have anything to send to it.
+    if (!mServerQueues.hasQueue(sid))
+        return;
+
+    // Otherwise make sure we're tracking it, enable the queue, and take this
+    // opportunity to service
     if (mDownstreamReady.find(sid) == mDownstreamReady.end())
         mDownstreamReady.insert(sid);
 

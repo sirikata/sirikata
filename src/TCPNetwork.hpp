@@ -130,8 +130,9 @@ class TCPNetwork : public Network {
 
     void connectionCallback(const RemoteStreamWPtr& rwstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason);
     Sirikata::Network::Stream::ReceivedResponse bytesReceivedCallback(const RemoteStreamWPtr& rwstream, Chunk& data);
-    void readySendCallback(const ServerID& addr);
+    void readySendCallback(const RemoteStreamWPtr& rwstream);
 
+    void notifyListenersOfNewStream(const ServerID& remote);
 public:
     TCPNetwork(SpaceContext* ctx);
     virtual ~TCPNetwork();
