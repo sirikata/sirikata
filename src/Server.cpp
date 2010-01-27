@@ -36,7 +36,10 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
-   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>())) {
+   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>()))
+{
+    mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
+
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
 
       mOSeg->setWriteListener((OSegWriteListener*)this);
@@ -63,6 +66,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
 Server::~Server()
 {
+    delete mMigrateServerMessageService;
+
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
 
     printf("mObjects.size=%d\n", (uint32)mObjects.size());
@@ -647,7 +652,7 @@ void Server::trySendMigrationMessages() {
 
     // Send what we can right now
     while(!mMigrateMessages.empty()) {
-        bool sent = mForwarder->route(ServerMessageRouter::MIGRATES, mMigrateMessages.front());
+        bool sent = mMigrateServerMessageService->route(mMigrateMessages.front());
         if (!sent)
             break;
         mMigrateMessages.pop();

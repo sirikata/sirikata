@@ -14,8 +14,8 @@ FairServerMessageQueue::SenderAdapterQueue::SenderAdapterQueue(Sender* sender, S
 }
 
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second)
-        : ServerMessageQueue(ctx, net, sender),
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second)
+        : ServerMessageQueue(ctx, net, sender, swc),
           mServerQueues(),
           mLastServiceTime(ctx->time),
           mRate(send_bytes_per_second),
@@ -91,8 +91,16 @@ void FairServerMessageQueue::service(){
 
 
 void FairServerMessageQueue::messageReady(ServerID sid) {
-    mServerQueues.notifyPushFront(sid);
+    // Make sure we are setup for this server
+    if (!mServerQueues.hasQueue(sid)) {
+        addInputQueue(
+            sid,
+            mServerWeightCalculator->weight(mContext->id(), sid)
+                      );
+    }
 
+    // Notify and service
+    mServerQueues.notifyPushFront(sid);
     service();
 }
 

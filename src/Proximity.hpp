@@ -145,6 +145,8 @@ private:
     LocationService* mLocService;
     CoordinateSegmentation* mCSeg;
 
+    Router<Message*>* mProxServerMessageService;
+
     // Tracks object query angles for quick access in the main thread
     // NOTE: It really sucks that we're duplicating this information
     // but we'd have to provide a safe query map and query angle accessor

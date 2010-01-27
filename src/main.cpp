@@ -192,6 +192,7 @@ int main(int argc, char** argv) {
         sq = new FairServerMessageQueue(
             space_context, gNetwork,
             (ServerMessageQueue::Sender*)forwarder,
+            weight_calc,
             GetOption(SEND_BANDWIDTH)->as<uint32>());
     }
     /*
@@ -260,7 +261,7 @@ int main(int argc, char** argv) {
 
     // We have all the info to initialize the forwarder now
     uint32 oseg_lookup_queue_size = (uint32) GetOption("oseg_lookup_queue_size")->as<uint32>();
-    forwarder->initialize(oseg, weight_calc, sq, server_message_receiver, oseg_lookup_queue_size);
+    forwarder->initialize(oseg, sq, server_message_receiver, oseg_lookup_queue_size);
 
 
     Proximity* prox = new Proximity(space_context, loc_service);

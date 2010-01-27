@@ -209,57 +209,51 @@ public:
     void registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
     void unregisterMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
 
-    
+
 protected:
     virtual void dispatchMessage(Message* msg) const;
-    
+
 
 private:
     typedef std::map<ServerMessagePort, MessageRecipient*> MessageRecipientMap;
     MessageRecipientMap mMessageRecipients;
-   
+
 }; // class ServerMessageDispatcher
 
 class ObjectMessageDispatcher {
 public:
-    
+
     // Registration and unregistration for object messages destined for the space
     void registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
     void unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
 protected:
-    
+
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
 private:
-   
+
     typedef std::map<ObjectMessagePort, ObjectMessageRecipient*> ObjectMessageRecipientMap;
     ObjectMessageRecipientMap mObjectMessageRecipients;
 }; // class ObjectMessageDispatcher
 
+template<typename MessageType>
+class Router {
+  public:
+    WARN_UNUSED
+    virtual bool route(MessageType msg) = 0;
+}; // class Router
+
 /** Base class for an object that can route messages to their destination. */
 class ServerMessageRouter {
 public:
-    enum SERVICES{
-        PROXS,
-        MIGRATES,
-        LOCS,
-        CSEGS,
-        OSEG_TO_OBJECT_MESSAGESS,        
-	OBJECT_MESSAGESS,
-        OSEG_CACHE_UPDATE,
-        NUM_SERVICES,
-	
-    };
-
     virtual ~ServerMessageRouter() {}
 
-    WARN_UNUSED
-    virtual bool route(SERVICES svc, Message* msg) = 0;    
+    virtual Router<Message*>* createServerMessageService(const String& name) = 0;
 };
 
 class ObjectMessageRouter {
 public:
-    
+
     virtual ~ObjectMessageRouter() {}
 
     WARN_UNUSED

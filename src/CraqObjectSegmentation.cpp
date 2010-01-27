@@ -44,6 +44,9 @@ namespace CBR
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
+    // Register a ServerMessage service for oseg
+    mOSegServerMessageService = mContext->serverRouter()->createServerMessageService("craq-oseg");
+
     craqDhtGet.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
 
@@ -85,6 +88,8 @@ namespace CBR
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
+
+    delete mOSegServerMessageService;
 
     //    should delete not found queue;
     while (mNfData.size() != 0)
@@ -708,7 +713,7 @@ namespace CBR
     //trying to re-send failed mig ack messages
     for (int s=0; s< (int)reTryMigAckMessages.size(); ++s)
     {
-      bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,reTryMigAckMessages[s]);
+      bool sent = mOSegServerMessageService->route(reTryMigAckMessages[s]);
       if (!sent)
         re_retry_migacks.push_back(reTryMigAckMessages[s]);
     }
@@ -953,7 +958,7 @@ namespace CBR
                                      serializePBJMessage( *(trackingMessages[trackedSetResult->trackedMessage].migAckMsg) )
                                      );
 
-      bool sent= mContext->serverRouter()->route(ServerMessageRouter::MIGRATES,to_send);
+      bool sent= mOSegServerMessageService->route(to_send);
 
       if (!sent)
         reTryMigAckMessages.push_back(to_send); //will try to re-send the tracking message

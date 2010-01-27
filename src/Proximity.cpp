@@ -85,11 +85,15 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
 
+    mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
+
     // Start the processing thread
     mProxThread = new Thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
 
 Proximity::~Proximity() {
+    delete mProxServerMessageService;
+
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
 
     delete mObjectQueryHandler;
@@ -161,7 +165,7 @@ void Proximity::sendQueryRequests() {
             SERVER_PORT_PROX,
             serializePBJMessage(container)
         );
-        bool sent = mContext->serverRouter()->route(ServerMessageRouter::PROXS, smsg);
+        bool sent = mProxServerMessageService->route(smsg);
         if (!sent) {
             delete smsg;
             mNeedServerQueryUpdate.insert(sid);
@@ -340,7 +344,7 @@ void Proximity::poll() {
     bool server_sent = true;
     while(server_sent && !mServerResultsToSend.empty()) {
         Message* msg_front = mServerResultsToSend.front();
-        server_sent = mContext->serverRouter()->route(ServerMessageRouter::PROXS, msg_front);
+        server_sent = mProxServerMessageService->route(msg_front);
         if (server_sent)
             mServerResultsToSend.pop_front();
     }

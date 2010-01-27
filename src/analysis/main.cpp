@@ -54,10 +54,18 @@ CBR::SpaceContext* gSpaceContext = NULL;
 
 
 namespace CBR {
+/** Mock Router<Message*> class, needed to satisfy CoordinateSegmentation. */
+class MockServerMessageRouter : public Router<Message*> {
+  public:
+    WARN_UNUSED
+    virtual bool route(Message* msg) {
+        return true;
+    }
+};
 /** Mock forwarder class, neeeded because CoordinateSegmentation uses it via SpaceContext. */
-  class MockForwarder : public CBR::ServerMessageDispatcher, 
-			public CBR::ServerMessageRouter, 
-			public CBR::ObjectMessageRouter, 
+  class MockForwarder : public CBR::ServerMessageDispatcher,
+			public CBR::ServerMessageRouter,
+			public CBR::ObjectMessageRouter,
 			public CBR::ObjectMessageDispatcher {
 public:
     MockForwarder(CBR::SpaceContext* ctx) {
@@ -67,9 +75,9 @@ public:
 	ctx->mObjectDispatcher = this;
     }
 
-    virtual bool route(SERVICES svc, CBR::Message* msg) {
-        return true;
-    }
+      virtual Router<Message*>* createServerMessageService(const String&) {
+          return new MockServerMessageRouter();
+      }
 
     virtual bool route(CBR::Protocol::Object::ObjectMessage* msg) {
         return true;

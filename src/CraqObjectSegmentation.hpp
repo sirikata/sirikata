@@ -45,6 +45,8 @@ namespace CBR
   private:
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
+      Router<Message*>* mOSegServerMessageService;
+
     double checkOwnTimeDur;
     int checkOwnTimeCount;
 

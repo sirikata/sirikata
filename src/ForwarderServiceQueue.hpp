@@ -43,14 +43,19 @@ namespace CBR {
  *  message routing, PINTO, Loc, etc.
  */
 class ForwarderServiceQueue {
-  private:
-    typedef FairQueue<Message, ServerMessageRouter::SERVICES, AbstractQueue<Message*> > OutgoingFairQueue;
-    std::vector<OutgoingFairQueue*> mQueues;
-    uint32 mQueueSize;
-
   public:
-    ForwarderServiceQueue(uint32 size){
-        mQueueSize=size;
+    typedef uint32 ServiceID;
+
+    class Listener {
+      public:
+        virtual void forwarderServiceMessageReady(ServerID dest_server) = 0;
+    };
+
+    ForwarderServiceQueue(ServerID this_server, uint32 size, Listener* listener)
+            : mThisServer(this_server),
+              mQueueSize(size),
+              mListener(listener)
+    {
     }
 
     ~ForwarderServiceQueue() {
@@ -61,41 +66,67 @@ class ForwarderServiceQueue {
         }
     }
 
-    QueueEnum::PushResult push(ServerID sid, ServerMessageRouter::SERVICES svc, Message* msg) {
-        return getFairQueue(sid).push(svc, msg);
-    }
-
-    // Get the front element and service it camef
     Message* front(ServerID sid) {
         uint64 size=1<<30;
-        ServerMessageRouter::SERVICES svc;
+        ServiceID svc;
 
-        return getFairQueue(sid).front(&size, &svc);
+        return getFairQueue(sid)->front(&size, &svc);
     }
 
     Message* pop(ServerID sid) {
         uint64 size=1<<30;
-        return getFairQueue(sid).pop(&size);
+        return getFairQueue(sid)->pop(&size);
     }
 
-    uint32 size(ServerID sid, ServerMessageRouter::SERVICES svc) {
-        return getFairQueue(sid).size(svc);
-    }
 
   private:
-    OutgoingFairQueue& getFairQueue(ServerID sid) {
-        while (mQueues.size()<=sid) {
-            mQueues.push_back(NULL);
-        }
-        if(!mQueues[sid]) {
-            mQueues[sid]=new OutgoingFairQueue();
-            for(unsigned int i=0;i<ServerMessageRouter::NUM_SERVICES;++i) {
-                mQueues[sid]->addQueue(new Queue<Message*>(mQueueSize),(ServerMessageRouter::SERVICES)i,1.0);
-            }
-        }
-        return *mQueues[sid];
+    friend class ForwarderServerMessageRouter;
+
+    typedef FairQueue<Message, ServiceID, AbstractQueue<Message*> > OutgoingFairQueue;
+    typedef std::tr1::unordered_map<ServerID, OutgoingFairQueue*> ServerQueueMap;
+
+    ServerID mThisServer;
+    ServerQueueMap mQueues;
+    uint32 mQueueSize;
+    Listener* mListener;
+
+    QueueEnum::PushResult push(ServiceID svc, Message* msg) {
+        assert(msg->source_server() == mThisServer);
+        assert(msg->dest_server() != mThisServer);
+
+        ServerID dest_server = msg->dest_server();
+
+        OutgoingFairQueue* ofq = checkServiceQueue(getFairQueue(msg->dest_server()), svc);
+        bool was_empty = ofq->empty();
+        QueueEnum::PushResult success = ofq->push(svc, msg);
+        if (was_empty && (success == QueueEnum::PushSucceeded))
+            mListener->forwarderServiceMessageReady(dest_server);
+        return success;
     }
 
+    uint32 size(ServerID sid, ServiceID svc) {
+        return checkServiceQueue(getFairQueue(sid), svc)->size(svc);
+    }
+
+
+    // Utilities
+
+    OutgoingFairQueue* getFairQueue(ServerID sid) {
+        ServerQueueMap::iterator it = mQueues.find(sid);
+        if (it == mQueues.end()) {
+            mQueues[sid] = new OutgoingFairQueue();
+            it = mQueues.find(sid);
+        }
+        assert(it != mQueues.end());
+
+        return it->second;
+    }
+
+    OutgoingFairQueue* checkServiceQueue(OutgoingFairQueue* ofq, ServiceID svc_id) {
+        if (!ofq->hasQueue(svc_id))
+            ofq->addQueue(new Queue<Message*>(mQueueSize), svc_id, 1.0);
+        return ofq;
+    }
 };
 
 } // namespace CBR

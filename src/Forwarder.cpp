@@ -3,7 +3,6 @@
 #include "Server.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
-#include "ServerWeightCalculator.hpp"
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 #include "Statistics.hpp"
@@ -26,6 +25,25 @@
 namespace CBR
 {
 
+class ForwarderServerMessageRouter : public Router<Message*> {
+  public:
+    ForwarderServerMessageRouter(ForwarderServiceQueue* svc_queues, ForwarderServiceQueue::ServiceID service_id)
+            : mForwarderServiceQueue(svc_queues),
+              mServiceID(service_id)
+    {
+    }
+
+    WARN_UNUSED
+    virtual bool route(Message* msg) {
+        return (mForwarderServiceQueue->push(mServiceID, msg) == QueueEnum::PushSucceeded);
+    }
+
+  private:
+    ForwarderServiceQueue* mForwarderServiceQueue;
+    ForwarderServiceQueue::ServiceID mServiceID;
+};
+
+
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
 
 // -- First, all the boring boiler plate type stuff; initialization,
@@ -37,13 +55,13 @@ bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
 Forwarder::Forwarder(SpaceContext* ctx)
         :    mContext(ctx),
              mOutgoingMessages(NULL),
-             mServerWeightCalculator(NULL),
              mServerMessageQueue(NULL),
              mServerMessageReceiver(NULL),
              mOSegLookups(NULL),
-             mUniqueConnIDs(0)
+             mUniqueConnIDs(0),
+             mServiceIDSource(0)
 {
-    //no need to initialize mOutgoingMessages.
+    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), 16384, (ForwarderServiceQueue::Listener*)this);
 
     // Fill in the rest of the context
     mContext->mServerRouter = this;
@@ -57,26 +75,29 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
+
+    // Generate router queues for services we provide
+    mObjectMessageRouter = createServerMessageService("object-messages");
+    mOSegCacheUpdateRouter = createServerMessageService("oseg-cache-update");
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
+      delete mObjectMessageRouter;
+      delete mOSegCacheUpdateRouter;
+
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
   }
 
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(ObjectSegmentation* oseg, ServerWeightCalculator* swc, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size)
   {
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush, oseg_lookup_queue_size);
-    mServerWeightCalculator = swc;
     mServerMessageQueue = smq;
     mServerMessageReceiver = smr;
-    mOutgoingMessages = new ForwarderServiceQueue(16384);
-
-    Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
   }
 
 void Forwarder::dispatchMessage(Message*msg) const {
@@ -142,46 +163,17 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
 // -- information isn't available, or may simply be between two space servers so
 // -- that object information doesn't even exist.
 
-  // Routing interface for servers.  This is used to route messages that originate from
-  // a server provided service, and thus don't have a source object.  Messages may be destined
-  // for either servers or objects.  The second form will simply automatically do the destination
-  // server lookup.
-  // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  bool Forwarder::route(ServerMessageRouter::SERVICES svc, Message* msg)
-  {
-      assert(msg->source_server() == mContext->id());
-      assert(msg->dest_server() != NullServerID);
+Router<Message*>* Forwarder::createServerMessageService(const String& name) {
+    ServiceMap::iterator it = mServiceIDMap.find(name);
+    assert(it == mServiceIDMap.end());
 
-      ServerID dest_server = msg->dest_server();
+    ForwarderServiceQueue::ServiceID svc_id = mServiceIDSource++;
+    mServiceIDMap[name] = svc_id;
+    return new ForwarderServerMessageRouter(mOutgoingMessages, svc_id);
+}
 
-      bool success = false;
-
-    if (dest_server==mContext->id())
-    {
-        dispatchMessage(msg);
-        success = true;
-    }
-    else
-    {
-        checkDestWeight(dest_server);
-        QueueEnum::PushResult push_result = mOutgoingMessages->push(dest_server, svc, msg);
-        success = (push_result == QueueEnum::PushSucceeded);
-        if (success)
-            mServerMessageQueue->messageReady(dest_server); // FIXME only notify
-                                                            // when this causes
-                                                            // a new front()
-    }
-    return success;
-  }
-
-void Forwarder::checkDestWeight(ServerID sid) {
-    if (mSetDests.find(sid) == mSetDests.end()) {
-        mSetDests.insert(sid);
-        mServerMessageQueue->addInputQueue(
-            sid,
-            mServerWeightCalculator->weight(mContext->id(), sid)
-                                           );
-    }
+void Forwarder::forwarderServiceMessageReady(ServerID dest_server) {
+    mServerMessageQueue->messageReady(dest_server);
 }
 
 
@@ -302,7 +294,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
 
-  bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg);
+  bool send_success = mObjectMessageRouter->route(svr_obj_msg);
   if (!send_success) {
       delete svr_obj_msg;
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
@@ -337,7 +329,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
           serializePBJMessage(contents)
       );
 
-      bool oseg_cache_msg_success = route(ServerMessageRouter::OSEG_CACHE_UPDATE, up_os);
+      bool oseg_cache_msg_success = mOSegCacheUpdateRouter->route(up_os);
       // Ignore the success of this send.  If it failed the remote ends cache
       // will just continue to be incorrect, but forwarding will cover the error
   }

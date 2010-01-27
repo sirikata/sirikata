@@ -42,9 +42,12 @@ LocationUpdatePolicy::LocationUpdatePolicy(LocationService* locservice)
  : mLocService(locservice)
 {
     mLocService->addListener(this);
+
+    mLocMessageRouter = mLocService->context()->serverRouter()->createServerMessageService("loc-update");
 }
 
 LocationUpdatePolicy::~LocationUpdatePolicy() {
+    delete mLocMessageRouter;
 }
 
 

@@ -111,6 +111,9 @@ private:
     LocalForwarder* mLocalForwarder;
     Forwarder* mForwarder;
     MigrationMonitor* mMigrationMonitor;
+
+    Router<Message*>* mMigrateServerMessageService;
+
     bool mMigrationSendRunning; // Indicates whether an event chain for sending outstanding migration messages is running.
                                 // Note that ideally this could be replaced by just using our own internal queue
                                 // to hold messages since migration messsages aren't going to get stale

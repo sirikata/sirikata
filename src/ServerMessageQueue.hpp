@@ -37,6 +37,7 @@
 #include "SpaceContext.hpp"
 #include "Network.hpp"
 #include "CoordinateSegmentation.hpp"
+#include "ServerWeightCalculator.hpp"
 
 namespace CBR{
 
@@ -60,7 +61,7 @@ public:
         virtual Message* serverMessagePull(ServerID dest) = 0;
     };
 
-    ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender);
+    ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc);
     virtual ~ServerMessageQueue();
 
     /** Add an input queue using the specified weight. */
@@ -88,6 +89,7 @@ public:
     Network* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;
+    ServerWeightCalculator* mServerWeightCalculator;
 };
 }
 

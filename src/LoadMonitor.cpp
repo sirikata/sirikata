@@ -55,10 +55,12 @@ LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, 
    mAveragedLoadReading(0)
 {
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOAD_STATUS, this);
+    mLoadServerMessageService = mContext->serverRouter()->createServerMessageService("load-monitor");
     mProfiler = mContext->profiler->addStage("Load Monitor");
 }
 
 LoadMonitor::~LoadMonitor() {
+    delete mLoadServerMessageService;
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOAD_STATUS, this);
 }
 
@@ -128,7 +130,7 @@ void LoadMonitor::sendLoadReadings() {
               SERVER_PORT_LOAD_STATUS,
               serialized_load
           );
-          bool send_success = mContext->serverRouter()->route(ServerMessageRouter::CSEGS, msg);
+          bool send_success = mLoadServerMessageService->route(msg);
           // Ignore send success, lost load readings don't matter
     }
   }

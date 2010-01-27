@@ -95,6 +95,7 @@ public:
 
 protected:
     LocationService* mLocService; // The owner of this UpdatePolicy
+    Router<Message*>* mLocMessageRouter; // Server Message Router for Loc Service
 }; // class LocationUpdatePolicy
 
 

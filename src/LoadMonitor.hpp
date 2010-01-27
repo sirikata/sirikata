@@ -93,6 +93,7 @@ private:
   bool isAdjacent(BoundingBox3f& box1, BoundingBox3f& box2);
 
     SpaceContext* mContext;
+    Router<Message*>* mLoadServerMessageService;
     ServerMessageQueue* mServerMsgQueue;
     CoordinateSegmentation* mCoordinateSegmentation;
 

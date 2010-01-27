@@ -1,8 +1,6 @@
 #ifndef _CBR_FORWARDER_HPP_
 #define _CBR_FORWARDER_HPP_
 
-
-
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "Message.hpp"
@@ -20,6 +18,8 @@
 
 #include "SSTImpl.hpp"
 
+#include "ForwarderServiceQueue.hpp"
+
 namespace CBR
 {
   class Object;
@@ -30,18 +30,17 @@ namespace CBR
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;
-class ServerWeightCalculator;
 
 class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
 		    public ServerMessageRouter, public ObjectMessageRouter,
                     public MessageRecipient,
                     public ServerMessageQueue::Sender,
-                    public ServerMessageReceiver::Listener
+                  public ServerMessageReceiver::Listener,
+                  private ForwarderServiceQueue::Listener
 {
 private:
     SpaceContext* mContext;
     ForwarderServiceQueue *mOutgoingMessages;
-    ServerWeightCalculator* mServerWeightCalculator;
     ServerMessageQueue* mServerMessageQueue;
     ServerMessageReceiver* mServerMessageReceiver;
 
@@ -64,11 +63,20 @@ private:
     ObjectServerUpdateMap mServersToUpdate; // Map of object id -> servers which should be notified of new result
 
 
+    // ServerMessageRouter data
+    ForwarderServiceQueue::ServiceID mServiceIDSource;
+    typedef std::map<String, ForwarderServiceQueue::ServiceID> ServiceMap;
+    ServiceMap mServiceIDMap;
+
+    // Per-Service ServerMessage Router's
+    Router<Message*>* mObjectMessageRouter;
+    Router<Message*>* mOSegCacheUpdateRouter;
+
     // -- Boiler plate stuff - initialization, destruction, methods to satisfy interfaces
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
-    void initialize(ObjectSegmentation* oseg, ServerWeightCalculator* swc, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size);
+    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size);
 
   protected:
 
@@ -78,8 +86,7 @@ private:
   private:
     // -- Public routing interface
   public:
-    WARN_UNUSED
-    bool route(ServerMessageRouter::SERVICES svc, Message* msg);
+    virtual Router<Message*>* createServerMessageService(const String& name);
 
     WARN_UNUSED
     bool route(CBR::Protocol::Object::ObjectMessage* msg);
@@ -110,17 +117,16 @@ private:
     WARN_UNUSED
     bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
 
-    // FIXME this is not the ideal place for this -- checks if dest queue/weight
-    // has been added to ServerMessageQueue, adds it if its missing
-    void checkDestWeight(ServerID sid);
-    std::set<ServerID> mSetDests;
-
 
     // ServerMessageQueue::Sender Interface
     virtual Message* serverMessageFront(ServerID dest);
     virtual Message* serverMessagePull(ServerID dest);
     // ServerMessageReceiver::Listener Interface
     virtual void serverMessageReceived(Message* msg);
+
+    // ForwarderServiceQueue::Listener Interface (passed on to ServerMessageQueue)
+    virtual void forwarderServiceMessageReady(ServerID dest_server);
+
 
     // -- Object Connection Management used by Server
   public:

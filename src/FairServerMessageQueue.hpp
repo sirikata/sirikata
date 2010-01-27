@@ -40,7 +40,7 @@ protected:
     ServerSet mDownstreamReady;
 
   public:
-    FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second);
+    FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second);
 
     virtual void addInputQueue(ServerID sid, float weight);
     virtual void updateInputQueueWeight(ServerID sid, float weight);
