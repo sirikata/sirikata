@@ -66,6 +66,7 @@ class ForwarderServiceQueue {
     ServerQueueMap mQueues;
     uint32 mQueueSize;
     Listener* mListener;
+    boost::mutex mMutex;
 
     QueueEnum::PushResult push(ServiceID svc, Message* msg);
     uint32 size(ServerID sid, ServiceID svc);

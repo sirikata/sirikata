@@ -32,6 +32,7 @@
 
 
 #include "ForwarderServiceQueue.hpp"
+#include <boost/thread/locks.hpp>
 
 namespace CBR {
 
@@ -51,6 +52,8 @@ ForwarderServiceQueue::~ForwarderServiceQueue() {
 }
 
 Message* ForwarderServiceQueue::front(ServerID sid) {
+    boost::lock_guard<boost::mutex> lock(mMutex);
+
     uint64 size=1<<30;
     ServiceID svc;
 
@@ -58,6 +61,8 @@ Message* ForwarderServiceQueue::front(ServerID sid) {
 }
 
 Message* ForwarderServiceQueue::pop(ServerID sid) {
+    boost::lock_guard<boost::mutex> lock(mMutex);
+
     uint64 size=1<<30;
     return getFairQueue(sid)->pop(&size);
 }
@@ -68,15 +73,21 @@ QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
 
     ServerID dest_server = msg->dest_server();
 
-    OutgoingFairQueue* ofq = checkServiceQueue(getFairQueue(msg->dest_server()), svc);
-    bool was_empty = ofq->empty();
-    QueueEnum::PushResult success = ofq->push(svc, msg);
+    bool was_empty;
+    QueueEnum::PushResult success;
+    {
+        boost::lock_guard<boost::mutex> lock(mMutex);
+        OutgoingFairQueue* ofq = checkServiceQueue(getFairQueue(msg->dest_server()), svc);
+        was_empty = ofq->empty();
+        success = ofq->push(svc, msg);
+    }
     if (was_empty && (success == QueueEnum::PushSucceeded))
         mListener->forwarderServiceMessageReady(dest_server);
     return success;
 }
 
 uint32 ForwarderServiceQueue::size(ServerID sid, ServiceID svc) {
+    boost::lock_guard<boost::mutex> lock(mMutex);
     return checkServiceQueue(getFairQueue(sid), svc)->size(svc);
 }
 
