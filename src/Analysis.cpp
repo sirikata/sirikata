@@ -45,10 +45,18 @@ namespace CBR {
 
 
 Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
-    char tag;
-    is.read( &tag, sizeof(tag) );
+    uint32 record_size;
+    is.read( (char*)&record_size, sizeof(record_size) );
 
-    if (!is)
+    std::string raw_record(record_size, (char)0);
+    is.read( (char*)raw_record.c_str(), record_size );
+
+    std::istringstream record_is(raw_record);
+
+    char tag;
+    record_is.read( &tag, sizeof(tag) );
+
+    if (!record_is)
     {
       return NULL;
     }
@@ -59,84 +67,84 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::SegmentationChangeTag:
           {
   	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
-	      is.read( (char*)&sevt->time, sizeof(sevt->time) );
-	      is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
-	      is.read( (char*)&sevt->server, sizeof(sevt->server) );
+	      record_is.read( (char*)&sevt->time, sizeof(sevt->time) );
+	      record_is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
+	      record_is.read( (char*)&sevt->server, sizeof(sevt->server) );
 	      evt = sevt;
           }
 	  break;
       case Trace::ProximityTag:
           {
               ProximityEvent* pevt = new ProximityEvent;
-              is.read( (char*)&pevt->time, sizeof(pevt->time) );
-              is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
-              is.read( (char*)&pevt->source, sizeof(pevt->source) );
-              is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
-              is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
+              record_is.read( (char*)&pevt->time, sizeof(pevt->time) );
+              record_is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
+              record_is.read( (char*)&pevt->source, sizeof(pevt->source) );
+              record_is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
+              record_is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
               evt = pevt;
           }
           break;
       case Trace::ObjectLocationTag:
           {
               LocationEvent* levt = new LocationEvent;
-              is.read( (char*)&levt->time, sizeof(levt->time) );
-              is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
-              is.read( (char*)&levt->source, sizeof(levt->source) );
-              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              record_is.read( (char*)&levt->time, sizeof(levt->time) );
+              record_is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
+              record_is.read( (char*)&levt->source, sizeof(levt->source) );
+              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
           break;
       case Trace::ObjectGeneratedLocationTag:
           {
               GeneratedLocationEvent* levt = new GeneratedLocationEvent;
-              is.read( (char*)&levt->time, sizeof(levt->time) );
+              record_is.read( (char*)&levt->time, sizeof(levt->time) );
               levt->receiver = UUID::null();
-              is.read( (char*)&levt->source, sizeof(levt->source) );
-              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              record_is.read( (char*)&levt->source, sizeof(levt->source) );
+              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
           break;
       case Trace::ObjectPingTag:
           {
               PingEvent *pevt = new PingEvent;
-              is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
-              is.read((char*)&pevt->source, sizeof(pevt->source));
-              is.read((char*)&pevt->time, sizeof(pevt->time));
-              is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
-              is.read((char*)&pevt->id,sizeof(pevt->id));
-              is.read((char*)&pevt->distance,sizeof(pevt->distance));
-              is.read((char*)&pevt->uid,sizeof(pevt->uid));
+              record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
+              record_is.read((char*)&pevt->source, sizeof(pevt->source));
+              record_is.read((char*)&pevt->time, sizeof(pevt->time));
+              record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
+              record_is.read((char*)&pevt->id,sizeof(pevt->id));
+              record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
+              record_is.read((char*)&pevt->uid,sizeof(pevt->uid));
               evt=pevt;
           }
         break;
       case Trace::MessageCreationTimestampTag:
           {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
-              is.read((char*)&pevt->time, sizeof(pevt->time));
-              is.read((char*)&pevt->uid, sizeof(pevt->uid));
-              is.read((char*)&pevt->path, sizeof(pevt->path));
-              is.read((char*)&pevt->srcport, sizeof(pevt->srcport));
-              is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
+              record_is.read((char*)&pevt->time, sizeof(pevt->time));
+              record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
+              record_is.read((char*)&pevt->path, sizeof(pevt->path));
+              record_is.read((char*)&pevt->srcport, sizeof(pevt->srcport));
+              record_is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
               evt=pevt;
           }
         break;
         case Trace::MessageTimestampTag:
             {
               MessageTimestampEvent *pevt = new MessageTimestampEvent;
-              is.read((char*)&pevt->time, sizeof(pevt->time));
-              is.read((char*)&pevt->uid, sizeof(pevt->uid));
-              is.read((char*)&pevt->path, sizeof(pevt->path));
+              record_is.read((char*)&pevt->time, sizeof(pevt->time));
+              record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
+              record_is.read((char*)&pevt->path, sizeof(pevt->path));
               evt=pevt;
           }
         break;
       case Trace::ServerDatagramQueuedTag:
           {
               ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
-              is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
+              record_is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
               pqevt->source = trace_server_id;
-              is.read( (char*)&pqevt->dest, sizeof(pqevt->dest) );
-              is.read( (char*)&pqevt->id, sizeof(pqevt->id) );
-              is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
+              record_is.read( (char*)&pqevt->dest, sizeof(pqevt->dest) );
+              record_is.read( (char*)&pqevt->id, sizeof(pqevt->id) );
+              record_is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
               evt = pqevt;
           }
           break;
@@ -144,80 +152,80 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::OSegCumulativeTraceAnalysisTag:
         {
           OSegCumulativeEvent* cumevt = new OSegCumulativeEvent;
-          is.read((char*)&cumevt->time, sizeof(cumevt->time));
-          is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
+          record_is.read((char*)&cumevt->time, sizeof(cumevt->time));
+          record_is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
           evt = cumevt;
         }
         break;
       case Trace::ServerDatagramSentTag:
           {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
-              is.read( (char*)&psevt->time, sizeof(psevt->time) );
+              record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
               psevt->source = trace_server_id;
-              is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
-              is.read( (char*)&psevt->id, sizeof(psevt->id) );
-              is.read( (char*)&psevt->size, sizeof(psevt->size) );
-              is.read( (char*)&psevt->weight, sizeof(psevt->weight) );
-              is.read( (char*)&psevt->_start_time, sizeof(psevt->_start_time) );
-              is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
+              record_is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
+              record_is.read( (char*)&psevt->id, sizeof(psevt->id) );
+              record_is.read( (char*)&psevt->size, sizeof(psevt->size) );
+              record_is.read( (char*)&psevt->weight, sizeof(psevt->weight) );
+              record_is.read( (char*)&psevt->_start_time, sizeof(psevt->_start_time) );
+              record_is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
               evt = psevt;
           }
           break;
       case Trace::ServerDatagramReceivedTag:
           {
               ServerDatagramReceivedEvent* prevt = new ServerDatagramReceivedEvent;
-              is.read( (char*)&prevt->time, sizeof(prevt->time) );
-              is.read( (char*)&prevt->source, sizeof(prevt->source) );
+              record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
+              record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
               prevt->dest = trace_server_id;
-              is.read( (char*)&prevt->id, sizeof(prevt->id) );
-              is.read( (char*)&prevt->size, sizeof(prevt->size) );
-              is.read( (char*)&prevt->_start_time, sizeof(prevt->_start_time) );
-              is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
+              record_is.read( (char*)&prevt->id, sizeof(prevt->id) );
+              record_is.read( (char*)&prevt->size, sizeof(prevt->size) );
+              record_is.read( (char*)&prevt->_start_time, sizeof(prevt->_start_time) );
+              record_is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
               evt = prevt;
           }
           break;
       case Trace::PacketQueueInfoTag:
           {
               PacketQueueInfoEvent* pqievt = new PacketQueueInfoEvent;
-              is.read( (char*)&pqievt->time, sizeof(pqievt->time) );
+              record_is.read( (char*)&pqievt->time, sizeof(pqievt->time) );
               pqievt->source = trace_server_id;
-              is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
-              is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
-              is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
-              is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
-              is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
-              is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
-              is.read( (char*)&pqievt->receive_weight, sizeof(pqievt->receive_weight) );
+              record_is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
+              record_is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
+              record_is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
+              record_is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
+              record_is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
+              record_is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
+              record_is.read( (char*)&pqievt->receive_weight, sizeof(pqievt->receive_weight) );
               evt = pqievt;
           }
           break;
       case Trace::PacketSentTag:
           {
               PacketSentEvent* psevt = new PacketSentEvent;
-              is.read( (char*)&psevt->time, sizeof(psevt->time) );
+              record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
               psevt->source = trace_server_id;
-              is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
-              is.read( (char*)&psevt->size, sizeof(psevt->size) );
+              record_is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
+              record_is.read( (char*)&psevt->size, sizeof(psevt->size) );
               evt = psevt;
           }
           break;
       case Trace::PacketReceivedTag:
           {
               PacketReceivedEvent* prevt = new PacketReceivedEvent;
-              is.read( (char*)&prevt->time, sizeof(prevt->time) );
-              is.read( (char*)&prevt->source, sizeof(prevt->source) );
+              record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
+              record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
               prevt->dest = trace_server_id;
-              is.read( (char*)&prevt->size, sizeof(prevt->size) );
+              record_is.read( (char*)&prevt->size, sizeof(prevt->size) );
               evt = prevt;
           }
           break;
       case Trace::ObjectBeginMigrateTag:
         {
           ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
-          is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
-          is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
-          is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
-          is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
+          record_is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
+          record_is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
+          record_is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
+          record_is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
 
           evt = objBegMig_evt;
         }
@@ -227,12 +235,12 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::ObjectAcknowledgeMigrateTag:
         {
           ObjectAcknowledgeMigrateEvent* objAckMig_evt = new ObjectAcknowledgeMigrateEvent;
-          is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
+          record_is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
 
-          is.read((char*) &objAckMig_evt->mObjID, sizeof(objAckMig_evt->mObjID) );
+          record_is.read((char*) &objAckMig_evt->mObjID, sizeof(objAckMig_evt->mObjID) );
 
-          is.read((char*) & objAckMig_evt->mAcknowledgeFrom, sizeof(objAckMig_evt->mAcknowledgeFrom));
-          is.read((char*) & objAckMig_evt->mAcknowledgeTo, sizeof(objAckMig_evt->mAcknowledgeTo));
+          record_is.read((char*) & objAckMig_evt->mAcknowledgeFrom, sizeof(objAckMig_evt->mAcknowledgeFrom));
+          record_is.read((char*) & objAckMig_evt->mAcknowledgeTo, sizeof(objAckMig_evt->mAcknowledgeTo));
 
           evt = objAckMig_evt;
         }
@@ -241,11 +249,11 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::RoundTripMigrationTimeAnalysisTag:
         {
           ObjectMigrationRoundTripEvent* rdTripMig_evt = new ObjectMigrationRoundTripEvent;
-          is.read((char*)&rdTripMig_evt->time,sizeof(rdTripMig_evt->time));
-          is.read((char*)&rdTripMig_evt->obj_id,sizeof(rdTripMig_evt->obj_id));
-          is.read((char*)&rdTripMig_evt->sID_migratingFrom, sizeof(rdTripMig_evt->sID_migratingFrom));
-          is.read((char*)&rdTripMig_evt->sID_migratingTo,sizeof(rdTripMig_evt->sID_migratingTo));
-          is.read((char*)&rdTripMig_evt->numMill,sizeof(rdTripMig_evt->numMill));
+          record_is.read((char*)&rdTripMig_evt->time,sizeof(rdTripMig_evt->time));
+          record_is.read((char*)&rdTripMig_evt->obj_id,sizeof(rdTripMig_evt->obj_id));
+          record_is.read((char*)&rdTripMig_evt->sID_migratingFrom, sizeof(rdTripMig_evt->sID_migratingFrom));
+          record_is.read((char*)&rdTripMig_evt->sID_migratingTo,sizeof(rdTripMig_evt->sID_migratingTo));
+          record_is.read((char*)&rdTripMig_evt->numMill,sizeof(rdTripMig_evt->numMill));
 
           evt = rdTripMig_evt;
         }
@@ -254,10 +262,10 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::OSegTrackedSetResultAnalysisTag:
         {
           OSegTrackedSetResultsEvent* trackedSetResults_evt = new OSegTrackedSetResultsEvent;
-          is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
-          is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
-          is.read((char*)&trackedSetResults_evt->sID_migratingTo, sizeof(trackedSetResults_evt->sID_migratingTo));
-          is.read((char*)&trackedSetResults_evt->numMill, sizeof(trackedSetResults_evt->numMill));
+          record_is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
+          record_is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
+          record_is.read((char*)&trackedSetResults_evt->sID_migratingTo, sizeof(trackedSetResults_evt->sID_migratingTo));
+          record_is.read((char*)&trackedSetResults_evt->numMill, sizeof(trackedSetResults_evt->numMill));
 
           evt = trackedSetResults_evt;
         }
@@ -267,9 +275,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::OSegCacheResponseTag:
         {
           OSegCacheResponseEvent* cachedResponse_evt = new OSegCacheResponseEvent;
-          is.read((char*)&cachedResponse_evt->time,sizeof(cachedResponse_evt->time));
-          is.read((char*)&cachedResponse_evt->cacheResponseID, sizeof(cachedResponse_evt->cacheResponseID));
-          is.read((char*)&cachedResponse_evt->obj_id, sizeof(cachedResponse_evt->obj_id));
+          record_is.read((char*)&cachedResponse_evt->time,sizeof(cachedResponse_evt->time));
+          record_is.read((char*)&cachedResponse_evt->cacheResponseID, sizeof(cachedResponse_evt->cacheResponseID));
+          record_is.read((char*)&cachedResponse_evt->obj_id, sizeof(cachedResponse_evt->obj_id));
           evt = cachedResponse_evt;
         }
         break;
@@ -277,14 +285,14 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::OSegShutdownEventTag:
         {
           OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
-          is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
-          is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
-          is.read((char*)&shutdown_evt->numLookups, sizeof(shutdown_evt->numLookups));
-          is.read((char*)&shutdown_evt->numOnThisServer,sizeof(shutdown_evt->numOnThisServer));
-          is.read((char*)&shutdown_evt->numCacheHits, sizeof(shutdown_evt->numCacheHits));
-          is.read((char*)&shutdown_evt->numCraqLookups, sizeof(shutdown_evt->numCraqLookups));
-          is.read((char*)&shutdown_evt->numTimeElapsedCacheEviction, sizeof(shutdown_evt->numTimeElapsedCacheEviction));
-          is.read((char*)&shutdown_evt->numMigrationNotCompleteYet, sizeof(shutdown_evt->numMigrationNotCompleteYet));
+          record_is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
+          record_is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
+          record_is.read((char*)&shutdown_evt->numLookups, sizeof(shutdown_evt->numLookups));
+          record_is.read((char*)&shutdown_evt->numOnThisServer,sizeof(shutdown_evt->numOnThisServer));
+          record_is.read((char*)&shutdown_evt->numCacheHits, sizeof(shutdown_evt->numCacheHits));
+          record_is.read((char*)&shutdown_evt->numCraqLookups, sizeof(shutdown_evt->numCraqLookups));
+          record_is.read((char*)&shutdown_evt->numTimeElapsedCacheEviction, sizeof(shutdown_evt->numTimeElapsedCacheEviction));
+          record_is.read((char*)&shutdown_evt->numMigrationNotCompleteYet, sizeof(shutdown_evt->numMigrationNotCompleteYet));
 
           evt = shutdown_evt;
 
@@ -294,25 +302,25 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::ServerLocationTag:
           {
               ServerLocationEvent* levt = new ServerLocationEvent;
-              is.read( (char*)&levt->time, sizeof(levt->time) );
-              is.read( (char*)&levt->source, sizeof(levt->source) );
-              is.read( (char*)&levt->dest, sizeof(levt->dest) );
-              is.read( (char*)&levt->object, sizeof(levt->object) );
-              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              record_is.read( (char*)&levt->time, sizeof(levt->time) );
+              record_is.read( (char*)&levt->source, sizeof(levt->source) );
+              record_is.read( (char*)&levt->dest, sizeof(levt->dest) );
+              record_is.read( (char*)&levt->object, sizeof(levt->object) );
+              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
           break;
       case Trace::ServerObjectEventTag:
           {
               ServerObjectEventEvent* levt = new ServerObjectEventEvent;
-              is.read( (char*)&levt->time, sizeof(levt->time) );
-              is.read( (char*)&levt->source, sizeof(levt->source) );
-              is.read( (char*)&levt->dest, sizeof(levt->dest) );
-              is.read( (char*)&levt->object, sizeof(levt->object) );
+              record_is.read( (char*)&levt->time, sizeof(levt->time) );
+              record_is.read( (char*)&levt->source, sizeof(levt->source) );
+              record_is.read( (char*)&levt->dest, sizeof(levt->dest) );
+              record_is.read( (char*)&levt->object, sizeof(levt->object) );
               uint8 raw_added = 0;
-              is.read( (char*)&raw_added, sizeof(raw_added) );
+              record_is.read( (char*)&raw_added, sizeof(raw_added) );
               levt->added = (raw_added > 0);
-              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
           break;
@@ -320,9 +328,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::ObjectSegmentationCraqLookupRequestAnalysisTag:
         {
           ObjectCraqLookupEvent* obj_lookupReq_evt = new ObjectCraqLookupEvent;
-          is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
-          is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
-          is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
+          record_is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
+          record_is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
+          record_is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
 
           evt = obj_lookupReq_evt;
         }
@@ -331,9 +339,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::OSegLookupNotOnServerAnalysisTag:
         {
           ObjectLookupNotOnServerEvent* obj_lookup_not_on_server_evt = new ObjectLookupNotOnServerEvent;
-          is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
-          is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
-          is.read( (char*)&obj_lookup_not_on_server_evt->mID_lookup, sizeof(obj_lookup_not_on_server_evt->mID_lookup) );
+          record_is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
+          record_is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
+          record_is.read( (char*)&obj_lookup_not_on_server_evt->mID_lookup, sizeof(obj_lookup_not_on_server_evt->mID_lookup) );
 
           evt = obj_lookup_not_on_server_evt;
         }
@@ -342,12 +350,12 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       case Trace::ObjectSegmentationProcessedRequestAnalysisTag:
         {
           ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
-          is.read( (char* )&obj_lookupProc_evt->time, sizeof(obj_lookupProc_evt->time)  );
-          is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
-          is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
-          is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
-          is.read( (char* )&obj_lookupProc_evt->deltaTime, sizeof(obj_lookupProc_evt->deltaTime) );
-          is.read( (char* )&obj_lookupProc_evt->stillInQueue, sizeof(obj_lookupProc_evt->stillInQueue) );
+          record_is.read( (char* )&obj_lookupProc_evt->time, sizeof(obj_lookupProc_evt->time)  );
+          record_is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
+          record_is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
+          record_is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
+          record_is.read( (char* )&obj_lookupProc_evt->deltaTime, sizeof(obj_lookupProc_evt->deltaTime) );
+          record_is.read( (char* )&obj_lookupProc_evt->stillInQueue, sizeof(obj_lookupProc_evt->stillInQueue) );
           evt = obj_lookupProc_evt;
         }
         break;
@@ -356,7 +364,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
       default:
 
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
-        assert(false);
         break;
     }
 

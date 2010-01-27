@@ -69,9 +69,6 @@ public:
 
     BatchedBuffer();
 
-    // write the specified number of bytes from the pointer to the buffer
-    void write(const void* buf, uint32 nbytes);
-
     void write(const IOVec* iov, uint32 iovcnt);
 
     void flush();
@@ -79,6 +76,9 @@ public:
     // write the buffer to an ostream
     void store(FILE* os);
 private:
+    // write the specified number of bytes from the pointer to the buffer
+    void write(const void* buf, uint32 nbytes);
+
     typedef Batch<uint8> ByteBatch;
     boost::recursive_mutex mMutex;
     ByteBatch* filling;

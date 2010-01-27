@@ -86,8 +86,16 @@ void BatchedBuffer::write(const void* buf, uint32 nbytes) {
 }
 
 void BatchedBuffer::write(const IOVec* iov, uint32 iovcnt) {
+    uint32 total_size = 0;
+    for(uint32 i = 0; i < iovcnt; i++)
+        total_size += iov[i].len;
+    IOVec sz_vec[1] = {
+        { &total_size, sizeof(uint32) }
+    };
+
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
 
+    write(sz_vec, 1);
     for(uint32 i = 0; i < iovcnt; i++)
         write(iov[i].base, iov[i].len);
 }
