@@ -80,6 +80,7 @@ public:
     void store(FILE* os);
 private:
     typedef Batch<uint8> ByteBatch;
+    boost::recursive_mutex mMutex;
     ByteBatch* filling;
     std::deque<ByteBatch*> batches;
 };
@@ -217,8 +218,6 @@ private:
 
     Thread* mStorageThread;
     Sirikata::AtomicValue<bool> mFinishStorage;
-
-    boost::recursive_mutex mMutex;
 }; // class Trace
 
 } // namespace CBR

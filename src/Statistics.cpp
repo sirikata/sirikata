@@ -39,7 +39,6 @@
 #include <boost/thread/locks.hpp>
 
 
-
 //#define TRACE_OBJECT
 //#define TRACE_LOCPROX
 #define TRACE_OSEG
@@ -67,6 +66,8 @@ BatchedBuffer::BatchedBuffer()
 
 // write the specified number of bytes from the pointer to the buffer
 void BatchedBuffer::write(const void* buf, uint32 nbytes) {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
     const uint8* bufptr = (const uint8*)buf;
     while( nbytes > 0 ) {
         if (filling == NULL)
@@ -85,11 +86,15 @@ void BatchedBuffer::write(const void* buf, uint32 nbytes) {
 }
 
 void BatchedBuffer::write(const IOVec* iov, uint32 iovcnt) {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
     for(uint32 i = 0; i < iovcnt; i++)
         write(iov[i].base, iov[i].len);
 }
 
 void BatchedBuffer::flush() {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
     if (filling == NULL)
         return;
 
@@ -99,6 +104,8 @@ void BatchedBuffer::flush() {
 
 // write the buffer to an ostream
 void BatchedBuffer::store(FILE* os) {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
     std::deque<ByteBatch*> bufs;
     batches.swap(bufs);
 
@@ -155,10 +162,7 @@ void Trace::prepareShutdown() {
 }
 
 void Trace::shutdown() {
-    {
-        boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-        data.flush();
-    }
+    data.flush();
     mFinishStorage = true;
     mStorageThread->join();
     delete mStorageThread;
@@ -168,18 +172,12 @@ void Trace::storageThread(const String& filename) {
     FILE* of = fopen(filename.c_str(), "wb");
 
     while( !mFinishStorage.read() ) {
-        {
-            boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-            data.store(of);
-        }
+        data.store(of);
         fflush(of);
 
         usleep( Duration::seconds(1).toMicroseconds() );
     }
-    {
-        boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-        data.store(of);
-    }
+    data.store(of);
     fflush(of);
 
     fsync(fileno(of));
@@ -190,13 +188,16 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ProximityTag, sizeof(ProximityTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &receiver, sizeof(receiver) );
-    data.write( &source, sizeof(source) );
-    data.write( &entered, sizeof(entered) );
-    data.write( &loc, sizeof(loc) );
+    const uint32 num_data = 6;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ProximityTag, sizeof(ProximityTag) },
+        { &t, sizeof(t) },
+        { &receiver, sizeof(receiver) },
+        { &source, sizeof(source) },
+        { &entered, sizeof(entered) },
+        { &loc, sizeof(loc) }
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -204,11 +205,14 @@ void Trace::objectGenLoc(const Time& t, const UUID& source, const TimedMotionVec
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ObjectGeneratedLocationTag, sizeof(ObjectGeneratedLocationTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &source, sizeof(source) );
-    data.write( &loc, sizeof(loc) );
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectGeneratedLocationTag, sizeof(ObjectGeneratedLocationTag) },
+        { &t, sizeof(t) },
+        { &source, sizeof(source) },
+        { &loc, sizeof(loc) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -216,12 +220,15 @@ void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, c
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ObjectLocationTag, sizeof(ObjectLocationTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &receiver, sizeof(receiver) );
-    data.write( &source, sizeof(source) );
-    data.write( &loc, sizeof(loc) );
+    const uint32 num_data = 5;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectLocationTag, sizeof(ObjectLocationTag) },
+        { &t, sizeof(t) },
+        { &receiver, sizeof(receiver) },
+        { &source, sizeof(source) },
+        { &loc, sizeof(loc) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -229,13 +236,16 @@ void Trace::timestampMessageCreation(const Time&sent, uint64 uid, MessagePath pa
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &MessageCreationTimestampTag, sizeof(MessageCreationTimestampTag) );
-    data.write( &sent, sizeof(sent) );
-    data.write( &uid, sizeof(uid) );
-    data.write( &path, sizeof(path) );
-    data.write( &srcprt, sizeof(srcprt) );
-    data.write( &dstprt, sizeof(dstprt) );
+    const uint32 num_data = 6;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &MessageCreationTimestampTag, sizeof(MessageCreationTimestampTag) },
+        { &sent, sizeof(sent) },
+        { &uid, sizeof(uid) },
+        { &path, sizeof(path) },
+        { &srcprt, sizeof(srcprt) },
+        { &dstprt, sizeof(dstprt) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -243,11 +253,14 @@ void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &MessageTimestampTag, sizeof(MessageTimestampTag) );
-    data.write( &sent, sizeof(sent) );
-    data.write( &uid, sizeof(uid) );
-    data.write( &path, sizeof(path) );
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &MessageTimestampTag, sizeof(MessageTimestampTag) },
+        { &sent, sizeof(sent) },
+        { &uid, sizeof(uid) },
+        { &path, sizeof(path) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -255,15 +268,18 @@ void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID&
 #ifdef TRACE_PING
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ObjectPingTag, sizeof(ObjectPingTag) );
-    data.write( &src, sizeof(src) );
-    data.write( &sender, sizeof(sender) );
-    data.write( &dst, sizeof(dst) );
-    data.write( &receiver, sizeof(receiver) );
-    data.write( &id, sizeof(id) );
-    data.write( &distance, sizeof(distance) );
-    data.write( &uid, sizeof(uid) );
+    const uint32 num_data = 8;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectPingTag, sizeof(ObjectPingTag) },
+        { &src, sizeof(src) },
+        { &sender, sizeof(sender) },
+        { &dst, sizeof(dst) },
+        { &receiver, sizeof(receiver) },
+        { &id, sizeof(id) },
+        { &distance, sizeof(distance) },
+        { &uid, sizeof(uid) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -271,13 +287,16 @@ void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& rec
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ServerLocationTag, sizeof(ServerLocationTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &sender, sizeof(sender) );
-    data.write( &receiver, sizeof(receiver) );
-    data.write( &obj, sizeof(obj) );
-    data.write( &loc, sizeof(loc) );
+    const uint32 num_data = 6;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ServerLocationTag, sizeof(ServerLocationTag) },
+        { &t, sizeof(t) },
+        { &sender, sizeof(sender) },
+        { &receiver, sizeof(receiver) },
+        { &obj, sizeof(obj) },
+        { &loc, sizeof(loc) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -285,15 +304,19 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ServerObjectEventTag, sizeof(ServerObjectEventTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &source, sizeof(source) );
-    data.write( &dest, sizeof(dest) );
-    data.write( &obj, sizeof(obj) );
     uint8 raw_added = (added ? 1 : 0);
-    data.write( &raw_added, sizeof(raw_added) );
-    data.write( &loc, sizeof(loc) );
+
+    const uint32 num_data = 7;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ServerObjectEventTag, sizeof(ServerObjectEventTag) },
+        { &t, sizeof(t) },
+        { &source, sizeof(source) },
+        { &dest, sizeof(dest) },
+        { &obj, sizeof(obj) },
+        { &raw_added, sizeof(raw_added) },
+        { &loc, sizeof(loc) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -301,12 +324,15 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id,
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &dest, sizeof(dest) );
-    data.write( &id, sizeof(id) );
-    data.write( &size, sizeof(size) );
+    const uint32 num_data = 5;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) },
+        { &t, sizeof(t) },
+        { &dest, sizeof(dest) },
+        { &id, sizeof(id) },
+        { &size, sizeof(size) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -314,15 +340,18 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
-    data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
-    data.write( &dest, sizeof(dest) );
-    data.write( &id, sizeof(id) );
-    data.write( &size, sizeof(size) );
-    data.write( &weight, sizeof(weight));
-    data.write( &start_time, sizeof(start_time) );
-    data.write( &end_time, sizeof(end_time) );
+    const uint32 num_data = 8;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) },
+        { &start_time, sizeof(start_time) },
+        { &dest, sizeof(dest) },
+        { &id, sizeof(id) },
+        { &size, sizeof(size) },
+        { &weight, sizeof(weight) },
+        { &start_time, sizeof(start_time) },
+        { &end_time, sizeof(end_time) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -330,14 +359,17 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) );
-    data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
-    data.write( &src, sizeof(src) );
-    data.write( &id, sizeof(id) );
-    data.write( &size, sizeof(size) );
-    data.write( &start_time, sizeof(start_time) );
-    data.write( &end_time, sizeof(end_time) );
+    const uint32 num_data = 7;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) },
+        { &start_time, sizeof(start_time) },
+        { &src, sizeof(src) },
+        { &id, sizeof(id) },
+        { &size, sizeof(size) },
+        { &start_time, sizeof(start_time) },
+        { &end_time, sizeof(end_time) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -345,16 +377,19 @@ void Trace::packetQueueInfo(const Time& t, const ServerID& dest, uint32 send_siz
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &dest, sizeof(ServerID) );
-    data.write( &send_size, sizeof(send_size) );
-    data.write( &send_queued, sizeof(send_queued) );
-    data.write( &send_weight, sizeof(send_weight) );
-    data.write( &receive_size, sizeof(receive_size) );
-    data.write( &receive_queued, sizeof(receive_queued) );
-    data.write( &receive_weight, sizeof(receive_weight) );
+    const uint32 num_data = 9;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) },
+        { &t, sizeof(t) },
+        { &dest, sizeof(dest) },
+        { &send_size, sizeof(send_size) },
+        { &send_queued, sizeof(send_queued) },
+        { &send_weight, sizeof(send_weight) },
+        { &receive_size, sizeof(receive_size) },
+        { &receive_queued, sizeof(receive_queued) },
+        { &receive_weight, sizeof(receive_weight) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -362,11 +397,14 @@ void Trace::packetSent(const Time& t, const ServerID& dest, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &PacketSentTag, sizeof(PacketSentTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &dest, sizeof(ServerID) );
-    data.write( &size, sizeof(size) );
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &PacketSentTag, sizeof(PacketSentTag) },
+        { &t, sizeof(t) },
+        { &dest, sizeof(dest) },
+        { &size, sizeof(size) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -374,11 +412,14 @@ void Trace::packetReceived(const Time& t, const ServerID& src, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &src, sizeof(ServerID) );
-    data.write( &size, sizeof(size) );
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &PacketReceivedTag, sizeof(PacketReceivedTag) },
+        { &t, sizeof(t) },
+        { &src, sizeof(src) },
+        { &size, sizeof(size) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -386,11 +427,14 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_CSEG
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write( &SegmentationChangeTag, sizeof(SegmentationChangeTag) );
-    data.write( &t, sizeof(t) );
-    data.write( &bbox, sizeof(bbox) );
-    data.write( &serverID, sizeof(serverID) );
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &SegmentationChangeTag, sizeof(SegmentationChangeTag) },
+        { &t, sizeof(t) },
+        { &bbox, sizeof(bbox) },
+        { &serverID, sizeof(serverID) },
+    };
+    data.write(data_vec, num_data);
 #endif
 }
 
@@ -399,12 +443,15 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write(&ObjectBeginMigrateTag, sizeof(ObjectBeginMigrateTag));
-    data.write(&t, sizeof(t));
-    data.write(&obj_id, sizeof(obj_id));
-    data.write(&migrate_from, sizeof(migrate_from));
-    data.write(&migrate_to,sizeof(migrate_to));
+    const uint32 num_data = 5;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectBeginMigrateTag, sizeof(ObjectBeginMigrateTag) },
+        { &t, sizeof(t) },
+        { &obj_id, sizeof(obj_id) },
+        { &migrate_from, sizeof(migrate_from) },
+        { &migrate_to, sizeof(migrate_to) },
+    };
+    data.write(data_vec, num_data);
 #endif
   }
 
@@ -413,12 +460,15 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write(&ObjectAcknowledgeMigrateTag, sizeof(ObjectAcknowledgeMigrateTag));
-    data.write(&t, sizeof(t));
-    data.write(&obj_id, sizeof(obj_id));
-    data.write(&acknowledge_from, sizeof(ServerID));
-    data.write(&acknowledge_to,sizeof(ServerID));
+    const uint32 num_data = 5;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectAcknowledgeMigrateTag, sizeof(ObjectAcknowledgeMigrateTag) },
+        { &t, sizeof(t) },
+        { &obj_id, sizeof(obj_id) },
+        { &acknowledge_from, sizeof(acknowledge_from) },
+        { &acknowledge_to, sizeof(acknowledge_to) },
+    };
+    data.write(data_vec, num_data);
 #endif
   }
 
@@ -428,28 +478,33 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_OSEG
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write(&ObjectSegmentationCraqLookupRequestAnalysisTag, sizeof(ObjectSegmentationCraqLookupRequestAnalysisTag));
-    data.write(&t, sizeof(t));
-    data.write(&obj_id, sizeof(obj_id));
-    data.write(&sID_lookupTo, sizeof(sID_lookupTo));
-
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectSegmentationCraqLookupRequestAnalysisTag, sizeof(ObjectSegmentationCraqLookupRequestAnalysisTag) },
+        { &t, sizeof(t) },
+        { &obj_id, sizeof(obj_id) },
+        { &sID_lookupTo, sizeof(sID_lookupTo) },
+    };
+    data.write(data_vec, num_data);
 #endif
-
   }
+
   void Trace::objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 objectsInQueue)
   {
 #ifdef TRACE_OSEG
     if (mShuttingDown) return;
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write(&ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag));
-    data.write(&t, sizeof(t));
-    data.write(&obj_id, sizeof(obj_id));
-    data.write(&sID_processor, sizeof(sID_processor));
-    data.write(&sID, sizeof(sID));
-    data.write(&dTime, sizeof(dTime));
-    data.write(&objectsInQueue,sizeof(objectsInQueue));
+    const uint32 num_data = 7;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag) },
+        { &t, sizeof(t) },
+        { &obj_id, sizeof(obj_id) },
+        { &sID_processor, sizeof(sID_processor) },
+        { &sID, sizeof(sID) },
+        { &dTime, sizeof(dTime) },
+        { &objectsInQueue, sizeof(objectsInQueue) },
+    };
+    data.write(data_vec, num_data);
 #endif
   }
 
@@ -459,13 +514,16 @@ void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const Se
 #ifdef TRACE_ROUND_TRIP_MIGRATION_TIME
   if (mShuttingDown) return;
 
-  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-  data.write(&RoundTripMigrationTimeAnalysisTag, sizeof(RoundTripMigrationTimeAnalysisTag));
-  data.write(&t, sizeof(t));
-  data.write(&obj_id, sizeof(obj_id));
-  data.write(&sID_migratingFrom, sizeof(sID_migratingFrom));
-  data.write(&sID_migratingTo, sizeof(sID_migratingTo));
-  data.write(&numMilliseconds, sizeof(numMilliseconds));
+  const uint32 num_data = 6;
+  BatchedBuffer::IOVec data_vec[num_data] = {
+      { &RoundTripMigrationTimeAnalysisTag, sizeof(RoundTripMigrationTimeAnalysisTag) },
+      { &t, sizeof(t) },
+      { &obj_id, sizeof(obj_id) },
+      { &sID_migratingFrom, sizeof(sID_migratingFrom) },
+      { &sID_migratingTo, sizeof(sID_migratingTo) },
+      { &numMilliseconds, sizeof(numMilliseconds) },
+  };
+  data.write(data_vec, num_data);
 #endif
 }
 
@@ -474,12 +532,15 @@ void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, cons
 #ifdef TRACE_OSEG_TRACKED_SET_RESULTS
   if (mShuttingDown) return;
 
-  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-  data.write(&OSegTrackedSetResultAnalysisTag, sizeof(OSegTrackedSetResultAnalysisTag));
-  data.write(&t, sizeof(t));
-  data.write(&obj_id,sizeof(obj_id));
-  data.write(&sID_migratingTo, sizeof(sID_migratingTo));
-  data.write(&numMilliseconds, sizeof(numMilliseconds));
+  const uint32 num_data = 5;
+  BatchedBuffer::IOVec data_vec[num_data] = {
+      { &OSegTrackedSetResultAnalysisTag, sizeof(OSegTrackedSetResultAnalysisTag) },
+      { &t, sizeof(t) },
+      { &obj_id, sizeof(obj_id) },
+      { &sID_migratingTo, sizeof(sID_migratingTo) },
+      { &numMilliseconds, sizeof(numMilliseconds) },
+  };
+  data.write(data_vec, num_data);
 #endif
 }
 
@@ -495,15 +556,18 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   std::cout<<"\tnum_migration_not_complete_yet:   "<< num_migration_not_complete_yet<<"\n\n";
   std::cout<<"***************************\n\n";
 
-  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-  data.write(&OSegShutdownEventTag, sizeof(OSegShutdownEventTag));
-  data.write(&t,sizeof(t));
-  data.write(&num_lookups,sizeof(num_lookups));
-  data.write(&num_on_this_server,sizeof(num_on_this_server));
-  data.write(&num_cache_hits,sizeof(num_cache_hits));
-  data.write(&num_craq_lookups,sizeof(num_craq_lookups));
-  data.write(&num_time_elapsed_cache_eviction, sizeof(num_time_elapsed_cache_eviction));
-  data.write(&num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet));
+  const uint32 num_data = 8;
+  BatchedBuffer::IOVec data_vec[num_data] = {
+      { &OSegShutdownEventTag, sizeof(OSegShutdownEventTag) },
+      { &t, sizeof(t) },
+      { &num_lookups, sizeof(num_lookups) },
+      { &num_on_this_server, sizeof(num_on_this_server) },
+      { &num_cache_hits, sizeof(num_cache_hits) },
+      { &num_craq_lookups, sizeof(num_craq_lookups) },
+      { &num_time_elapsed_cache_eviction, sizeof(num_time_elapsed_cache_eviction) },
+      { &num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet) },
+  };
+  data.write(data_vec, num_data);
 #endif
 }
 
@@ -515,11 +579,14 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
 #ifdef TRACE_OSEG_CACHE_RESPONSE
   if (mShuttingDown) return;
 
-  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-  data.write(&OSegCacheResponseTag, sizeof(OSegCacheResponseTag));
-  data.write(&t, sizeof(t));
-  data.write(&sID, sizeof(sID));
-  data.write(&obj_id,sizeof(obj_id));
+  const uint32 num_data = 4;
+  BatchedBuffer::IOVec data_vec[num_data] = {
+      { &OSegCacheResponseTag, sizeof(OSegCacheResponseTag) },
+      { &t, sizeof(t) },
+      { &sID, sizeof(sID) },
+      { &obj_id, sizeof(obj_id) },
+  };
+  data.write(data_vec, num_data);
 #endif
 }
 
@@ -529,12 +596,14 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
 #ifdef TRACE_OSEG_NOT_ON_SERVER_LOOKUP
   if (mShuttingDown) return;
 
-  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-  data.write(&OSegLookupNotOnServerAnalysisTag, sizeof (OSegLookupNotOnServerAnalysisTag));
-  data.write(&t, sizeof(t));
-  data.write(&obj_id, sizeof(obj_id));
-  data.write(&sID_lookerupper, sizeof(sID_lookerupper));
-
+  const uint32 num_data = 4;
+  BatchedBuffer::IOVec data_vec[num_data] = {
+      { &OSegLookupNotOnServerAnalysisTag, sizeof(OSegLookupNotOnServerAnalysisTag) },
+      { &t, sizeof(t) },
+      { &obj_id, sizeof(obj_id) },
+      { &sID_lookerupper, sizeof(sID_lookerupper) },
+  };
+  data.write(data_vec, num_data);
 #endif
 }
 
@@ -552,10 +621,13 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
 
     #ifdef TRACE_OSEG_CUMULATIVE
 
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write(&OSegCumulativeTraceAnalysisTag, sizeof (OSegCumulativeTraceAnalysisTag));
-    data.write(&t, sizeof(t));
-    data.write(traceToken, sizeof(OSegLookupTraceToken));
+    const uint32 num_data = 3;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        { &OSegCumulativeTraceAnalysisTag, sizeof(OSegCumulativeTraceAnalysisTag) },
+        { &t, sizeof(t) },
+        { &traceToken, sizeof(OSegLookupTraceToken) },
+    };
+    data.write(data_vec, num_data);
     #endif
 
     delete traceToken;
