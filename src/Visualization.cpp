@@ -210,7 +210,8 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             SegmentationChangeEvent* sce;
 	    if ((sce=dynamic_cast<SegmentationChangeEvent*>(evt))) {
 	      mSegmentationChangeEvents.push_back(sce);

@@ -5,8 +5,12 @@
 #include "OSegLookupTraceToken.hpp"
 
 namespace CBR {
+
+/** Read a single */
+std::string read_record(std::istream& is);
+
 struct Event {
-    static Event* read(std::istream& is, const ServerID& trace_server_id);
+    static Event* parse(const std::string& record, const ServerID& trace_server_id);
 
     Event()
      : time(Time::null())

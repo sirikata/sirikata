@@ -42,16 +42,18 @@
 
 namespace CBR {
 
-
-
-Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
+std::string read_record(std::istream& is) {
     uint32 record_size;
     is.read( (char*)&record_size, sizeof(record_size) );
 
     std::string raw_record(record_size, (char)0);
     is.read( (char*)raw_record.c_str(), record_size );
 
-    std::istringstream record_is(raw_record);
+    return raw_record;
+}
+
+Event* Event::parse(const std::string& record, const ServerID& trace_server_id) {
+    std::istringstream record_is(record);
 
     char tag;
     record_is.read( &tag, sizeof(tag) );
@@ -435,7 +437,8 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -724,7 +727,8 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -1215,7 +1219,8 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -1283,7 +1288,8 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -1446,9 +1452,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
-        if (evt == NULL)
-          break;
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
+          if (evt == NULL)
+              break;
 
 
         ObjectBeginMigrateEvent* obj_mig_evt = dynamic_cast<ObjectBeginMigrateEvent*>(evt);
@@ -1617,7 +1624,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -1722,7 +1730,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -1828,7 +1837,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2031,7 +2041,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2112,7 +2123,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2188,7 +2200,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-        Event* evt = Event::read(is, server_id);
+          std::string raw_evt = read_record(is);
+          Event* evt = Event::parse(raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2246,7 +2259,8 @@ OSegCacheResponseAnalysis::OSegCacheResponseAnalysis(const char* opt_name, const
 
     while(is)
     {
-      Event* evt = Event::read(is, server_id);
+        std::string raw_evt = read_record(is);
+        Event* evt = Event::parse(raw_evt, server_id);
       if (evt == NULL)
         break;
 
@@ -2321,7 +2335,8 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
 
     while(is)
     {
-      Event* evt = Event::read(is, server_id);
+        std::string raw_evt = read_record(is);
+        Event* evt = Event::parse(raw_evt, server_id);
       if (evt == NULL)
         break;
 
@@ -2584,7 +2599,8 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
 
         // Extract all loc and gen loc events
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -2672,7 +2688,8 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
         std::ifstream is(prox_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is, server_id);
+            std::string raw_evt = read_record(is);
+            Event* evt = Event::parse(raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -2715,7 +2732,8 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
 
     while(is)
     {
-      Event* evt = Event::read(is, server_id);
+        std::string raw_evt = read_record(is);
+        Event* evt = Event::parse(raw_evt, server_id);
       if (evt == NULL)
         break;
 
