@@ -60,7 +60,7 @@ namespace Sirikata {
 template <typename T>
 class ThreadSafeQueueWithNotification {
   public:
-    typedef std::function<void()> Notification;
+    typedef std::tr1::function<void()> Notification;
 
     /** Create a new ThreadSafeQueueWithNotification which will invoke the given
      *  notification callback when a push() causes the queue to become
@@ -93,7 +93,7 @@ class ThreadSafeQueueWithNotification {
 
     /** \see ThreadSafeQueue::pop. */
     bool pop(T& ret) {
-        mQueue.pop(ret);
+        return mQueue.pop(ret);
     }
 
     /** \see ThreadSafeQueue::blockingPop. */
@@ -124,7 +124,7 @@ class ThreadSafeQueueWithNotification {
     ThreadSafeQueueWithNotification& operator=(const ThreadSafeQueueWithNotification& other);
     ThreadSafeQueueWithNotification(const ThreadSafeQueueWithNotification& other);
 
-    ThreadSafeQueue mQueue;
+    ThreadSafeQueue<T> mQueue;
     Notification mCallback;
 };
 
