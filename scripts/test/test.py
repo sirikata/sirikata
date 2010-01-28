@@ -3,8 +3,15 @@
 # test.py - Individual system test
 
 import subprocess
-import time
 import re
+
+import sys
+# FIXME It would be nice to have a better way of making this script able to find
+# other modules in sibling packages
+sys.path.insert(0, sys.path[0]+"/..")
+
+import util.stdio
+import util.invoke
 
 class Test:
     def __init__(self, _name):
@@ -35,15 +42,10 @@ class ShellCommandTest(Test):
         self.errors = _errors
 
     def run(self):
-        sp = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        result = ''
-        while( sp.returncode == None ):
-            sp.poll()
-            (stdoutdata, stderrdata) = sp.communicate()
-            if stdoutdata != None:
-                result += stdoutdata
-            time.sleep(0.1)
+        io = util.stdio.MemoryIO()
+        util.invoke.invoke(self.cmd, io)
 
+        result = 'stdout:\n' + io.stdout.getvalue() + '\nstderr:\n' + io.stderr.getvalue() + '\n'
         self._store_log(result)
 
         # now check for warnings and errors
