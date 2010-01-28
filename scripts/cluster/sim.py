@@ -2,7 +2,6 @@
 
 import sys
 import math
-import subprocess
 import datetime
 
 # FIXME It would be nice to have a better way of making this script able to find
@@ -14,6 +13,9 @@ from run import ClusterSubstitute,ClusterRun,ClusterDeploymentRun
 from scp import ClusterSCP
 
 from util.cbr_wrapper import RunCBR
+
+import util.stdio
+import util.invoke
 
 from graph.windowed_bandwidth import GraphWindowedBandwidth
 from graph.windowed_jfi import GraphWindowedJFI
@@ -105,9 +107,10 @@ class ClusterSimSettings:
 
 
 class ClusterSim:
-    def __init__(self, config, settings):
+    def __init__(self, config, settings, io=util.stdio.StdIO()):
         self.config = config
         self.settings = settings
+        self.io = io
 
     def num_servers(self):
         return self.settings.space_server_pool + self.settings.num_oh
@@ -196,18 +199,18 @@ class ClusterSim:
         self.config.generate_deployment(self.num_servers())
 
     def clean_local_data(self):
-        subprocess.call(['rm -f trace*'], shell=True)
-        subprocess.call(['rm -f serverip*'], shell=True)
-        subprocess.call(['rm -f analysis.trace'], shell=True)
-        subprocess.call(['rm -f *.ps'], shell=True)
-        subprocess.call(['rm -f *.dat'], shell=True)
-        subprocess.call(['rm -f distance_latency_histogram.csv'], shell=True)
-        subprocess.call(['rm -f loc_latency*'], shell=True)
-        subprocess.call(['rm -f prox.log'], shell=True)
+        util.invoke.invoke(['rm -f trace*'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f serverip*'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f analysis.trace'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f *.ps'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f *.dat'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f distance_latency_histogram.csv'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f loc_latency*'], shell=True, io=self.io)
+        util.invoke.invoke(['rm -f prox.log'], shell=True, io=self.io)
 
     def clean_remote_data(self):
         clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm serverip*;"
-        ClusterRun(self.config, clean_cmd)
+        ClusterRun(self.config, clean_cmd, io=self.io)
 
     def generate_ip_file(self):
         # Generate the serverip file, copy it to all nodes
@@ -221,7 +224,7 @@ class ClusterSim:
             server_index += 1
 
         fp.close()
-        ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])
+        ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()], io=self.io)
 
     def fill_parameters(self, node_params, param_dict, node_class, idx):
         for parm,parm_map in param_dict.items():
@@ -264,8 +267,6 @@ class ClusterSim:
                 self.fill_parameters(node_params, debug_param_functor_dict, node_type, x)
                 self.fill_parameters(node_params, oh_param_functor_dict, node_type, x)
                 self.fill_parameters(node_params, vis_param_functor_dict, node_type, x)
-
-        print node_params
 
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
 
@@ -323,8 +324,7 @@ class ClusterSim:
             # FIXME do we ever need to handle multiple local runs
             # FIXME what do we do about index? ideally it shouldn't matter, but analysis code cares about index=0
             cmd = ClusterSubstitute(cmd_seq, host='localhost', user='xxx', index=1, user_params=node_params)
-            print cmd
-            subprocess.call(cmd)
+            util.invoke.invoke(cmd, io=self.io)
         else: # cluster deployment
             # Generate the command string itself
             #  Note: we need to quote the entire command, so we we quote each parameter with escaped quotes,
@@ -334,7 +334,7 @@ class ClusterSim:
             # if it is included as part of the normal process
             cmd = 'cd ' + self.scripts_dir() + ' ; ' + cmd
             # And deploy
-            ClusterDeploymentRun(self.config, cmd, node_params)
+            ClusterDeploymentRun(self.config, cmd, node_params, io=self.io)
 
 
     def run_cluster_sim(self):
@@ -354,11 +354,11 @@ class ClusterSim:
     def retrieve_data(self):
         # Copy the trace and sync data back here
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
-        ClusterSCP(self.config, [trace_file_pattern, "."])
+        ClusterSCP(self.config, [trace_file_pattern, "."], io=self.io)
 
     def bandwidth_analysis(self):
-        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers())])
-        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
+        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers())], io=self.io)
+        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ], io=self.io)
 
         GraphWindowedBandwidth('windowed_bandwidth_packet_send.dat')
         GraphWindowedBandwidth('windowed_bandwidth_packet_receive.dat')
@@ -377,10 +377,10 @@ class ClusterSim:
 
 
     def latency_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
 
     def object_latency_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
 
     def message_latency_analysis(self, filename=None):
         stdout_fp = None
@@ -388,19 +388,20 @@ class ClusterSim:
             stdout_fp = open(filename, 'w')
 
         RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
-                        stdout=stdout_fp,
-                        stderr=stdout_fp)
+               io=self.io,
+               stdout=stdout_fp,
+               stderr=stdout_fp)
         if stdout_fp != None:
             stdout_fp.close()
 
     def oseg_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ], self.io)
 
     def loc_latency_analysis(self):
-        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
+        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
     def prox_dump_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ])
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
 
 
@@ -415,7 +416,6 @@ if __name__ == "__main__":
 #    cs = ClusterSimSettings(cc, 4, (2,2), 1)
 #    cs = ClusterSimSettings(cc, 4, (4,1), 1)
 #    cs = ClusterSimSettings(cc, 16, (4,4), 1)
-
 
     cluster_sim = ClusterSim(cc, cs)
 

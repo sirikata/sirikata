@@ -3,7 +3,8 @@
 import sys
 import os
 import os.path
-import subprocess
+import invoke
+import stdio
 
 CBR_WRAPPER = "scripts/util/cbr_wrapper.sh"
 
@@ -15,7 +16,7 @@ def FindRoot(start):
             return offset_dir
     return None
 
-def RunCBR(args, **kwargs):
+def RunCBR(args, io=None, **kwargs):
     # Get the *scripts* directory, then just run the wrapper
     root_dir = FindRoot( os.getcwd() )
     if root_dir == None:
@@ -24,7 +25,21 @@ def RunCBR(args, **kwargs):
 
     cmd = [root_dir + '/' + CBR_WRAPPER]
     cmd.extend(args)
-    subprocess.call(cmd, **kwargs)
+
+    # Setup our IO, using default IO but overriding with parameters
+    if io == None:
+        io = stdio.StdIO()
+    if ('stdin' in kwargs):
+        io.stdin = kwargs['stdin']
+        del kwargs['stdin']
+    if ('stdout' in kwargs):
+        io.stdout = kwargs['stdout']
+        del kwargs['stdout']
+    if ('stderr' in kwargs):
+        io.stderr = kwargs['stderr']
+        del kwargs['stderr']
+
+    invoke.invoke(cmd, io=io, **kwargs)
 
 if __name__ == "__main__":
     RunCBR(sys.argv)

@@ -5,7 +5,7 @@
 import subprocess
 import time
 
-def invoke(cmd, io=None):
+def invoke(cmd, io=None, **kwargs):
     """Invoke the specified command and redirect IO using the specified IO object.
 
     Arguments:
@@ -35,8 +35,9 @@ def invoke(cmd, io=None):
     if stderr_obj != None:
         stderr_arg = subprocess.PIPE
 
+    
 
-    sp = subprocess.Popen(cmd, stdin=stdin_arg, stdout=stdout_arg, stderr=stderr_arg)
+    sp = subprocess.Popen(cmd, stdin=stdin_arg, stdout=stdout_arg, stderr=stderr_arg, **kwargs)
     while( sp.returncode == None ):
         sp.poll()
         # FIXME note that we currently don't pipe in stdin because its not clear how
