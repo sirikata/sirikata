@@ -5,6 +5,7 @@
 import sys
 import os
 import os.path
+import traceback
 from test import Test, ShellCommandTest
 
 class TestSuite:
@@ -28,7 +29,7 @@ class TestSuite:
         try:
             test.run()
         except:
-            print "Error: Caught exception in test '" + self.__get_name(test) + "':", str(sys.exc_info()[0])
+            traceback.print_exc()
 
         # And make sure we get out of that directory
         os.chdir(starting_dir)
