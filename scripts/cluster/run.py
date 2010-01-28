@@ -18,13 +18,21 @@ import threading
 import os
 import time
 from config import ClusterConfig
+
+# FIXME It would be nice to have a better way of making this script able to find
+# other modules in sibling packages
+sys.path.insert(0, sys.path[0]+"/..")
+
+import util.stdio
+
 #xforward='-Y'
 xforward='-T'
 class NodeMonitorThread(threading.Thread):
-    def __init__(self, node, sp):
+    def __init__(self, node, sp, io):
         threading.Thread.__init__(self)
         self.node = node
         self.sp = sp
+        self.io = io
 
     def run(self):
         buf = ""
@@ -34,7 +42,7 @@ class NodeMonitorThread(threading.Thread):
 
             buflines = buf.splitlines(True)
             for line in buflines[:-1]:
-                print self.node, ': ', line.strip()
+                print >>self.io.stdout, self.node, ': ', line.strip()
             if (len(buflines) > 0):
                 buf = buflines[-1]
 
@@ -42,7 +50,7 @@ class NodeMonitorThread(threading.Thread):
 
         buf = buf + self.sp.stdout.read(1024*1024)
         for line in buf.splitlines():
-            print self.node, ': ', line
+            print >>self.io.stdout, self.node, ': ', line
         self.sp.wait()
 
     def returncode(self):
@@ -73,7 +81,7 @@ def ClusterSubstitute(command, host, user, index=0, user_params=None):
 
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
-def ClusterRun(cc, command):
+def ClusterRun(cc, command, io=util.stdio.StdIO()):
     new_environ = os.environ
     new_environ['DISPLAY'] = ':0.0'
     new_environ['XAUTHORITY'] = new_environ['HOME'] + '/.Xauthority'
@@ -86,7 +94,7 @@ def ClusterRun(cc, command):
         os.close(inp)
         #f.seek(0);
         sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh'], 0, None, outp, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
-        mt = NodeMonitorThread(node.str(), sp)
+        mt = NodeMonitorThread(node.str(), sp, io)
         mt.start()
         mts.append(mt)
         time.sleep(.1)
@@ -98,7 +106,7 @@ def ClusterRun(cc, command):
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
 # The user_params dictionary is a user specified set of substitutions to make, in the form of a dictionary whose values are arrays, each with a number of elements equal to the number of deployment node
-def ClusterDeploymentRun(cc, command, user_params = None):
+def ClusterDeploymentRun(cc, command, user_params = None, io=util.stdio.StdIO()):
     new_environ = os.environ
     new_environ['DISPLAY'] = ':0.0'
     new_environ['XAUTHORITY'] = new_environ['HOME'] + '/.Xauthority'
@@ -110,9 +118,9 @@ def ClusterDeploymentRun(cc, command, user_params = None):
         (outp,inp)=os.pipe();
         os.write(inp,node_command)
         os.close(inp)
-        
+
         sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh'], 0, None, outp, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
-        mt = NodeMonitorThread(str(index) + " (" + node.str() + ")", sp)
+        mt = NodeMonitorThread(str(index) + " (" + node.str() + ")", sp, io)
         mt.start()
         mts.append(mt)
         time.sleep(.1)
