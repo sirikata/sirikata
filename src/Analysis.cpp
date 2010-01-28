@@ -42,30 +42,28 @@
 
 namespace CBR {
 
-std::string read_record(std::istream& is) {
+bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_out) {
     uint32 record_size;
     is.read( (char*)&record_size, sizeof(record_size) );
 
-    std::string raw_record(record_size, (char)0);
-    is.read( (char*)raw_record.c_str(), record_size );
+    is.read( (char*)type_hint_out, sizeof(uint16) );
 
-    return raw_record;
+    assert(payload_out != NULL);
+    payload_out->resize(record_size, (char)0);
+    is.read( (char*)payload_out->c_str(), record_size );
+
+    return true;
 }
 
-Event* Event::parse(const std::string& record, const ServerID& trace_server_id) {
+Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID& trace_server_id) {
     std::istringstream record_is(record);
 
-    char tag;
-    record_is.read( &tag, sizeof(tag) );
-
     if (!record_is)
-    {
       return NULL;
-    }
 
     Event* evt = NULL;
 
-    switch(tag) {
+    switch(type_hint) {
       case Trace::SegmentationChangeTag:
           {
   	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
@@ -365,7 +363,7 @@ Event* Event::parse(const std::string& record, const ServerID& trace_server_id) 
 
       default:
 
-        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
+        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)type_hint<<"\n";
         break;
     }
 
@@ -437,8 +435,10 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -727,8 +727,10 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -1219,8 +1221,10 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -1288,8 +1292,10 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -1452,8 +1458,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
           if (evt == NULL)
               break;
 
@@ -1624,8 +1632,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -1730,8 +1740,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -1837,8 +1849,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2041,8 +2055,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2123,8 +2139,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2200,8 +2218,10 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       while(is)
       {
-          std::string raw_evt = read_record(is);
-          Event* evt = Event::parse(raw_evt, server_id);
+          uint16 type_hint;
+          std::string raw_evt;
+          read_record(is, &type_hint, &raw_evt);
+          Event* evt = Event::parse(type_hint, raw_evt, server_id);
         if (evt == NULL)
           break;
 
@@ -2259,8 +2279,10 @@ OSegCacheResponseAnalysis::OSegCacheResponseAnalysis(const char* opt_name, const
 
     while(is)
     {
-        std::string raw_evt = read_record(is);
-        Event* evt = Event::parse(raw_evt, server_id);
+        uint16 type_hint;
+        std::string raw_evt;
+        read_record(is, &type_hint, &raw_evt);
+        Event* evt = Event::parse(type_hint, raw_evt, server_id);
       if (evt == NULL)
         break;
 
@@ -2335,8 +2357,10 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
 
     while(is)
     {
-        std::string raw_evt = read_record(is);
-        Event* evt = Event::parse(raw_evt, server_id);
+        uint16 type_hint;
+        std::string raw_evt;
+        read_record(is, &type_hint, &raw_evt);
+        Event* evt = Event::parse(type_hint, raw_evt, server_id);
       if (evt == NULL)
         break;
 
@@ -2599,8 +2623,10 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
 
         // Extract all loc and gen loc events
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -2688,8 +2714,10 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
         std::ifstream is(prox_file.c_str(), std::ios::in);
 
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 
@@ -2732,8 +2760,10 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
 
     while(is)
     {
-        std::string raw_evt = read_record(is);
-        Event* evt = Event::parse(raw_evt, server_id);
+        uint16 type_hint;
+        std::string raw_evt;
+        read_record(is, &type_hint, &raw_evt);
+        Event* evt = Event::parse(type_hint, raw_evt, server_id);
       if (evt == NULL)
         break;
 

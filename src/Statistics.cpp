@@ -38,7 +38,6 @@
 
 #include <boost/thread/locks.hpp>
 
-
 //#define TRACE_OBJECT
 //#define TRACE_LOCPROX
 #define TRACE_OSEG
@@ -55,7 +54,6 @@
 #define TRACE_OSEG_SHUTTING_DOWN
 #define TRACE_OSEG_CACHE_RESPONSE
 #define TRACE_OSEG_NOT_ON_SERVER_LOOKUP
-
 
 namespace CBR {
 
@@ -86,16 +84,8 @@ void BatchedBuffer::write(const void* buf, uint32 nbytes) {
 }
 
 void BatchedBuffer::write(const IOVec* iov, uint32 iovcnt) {
-    uint32 total_size = 0;
-    for(uint32 i = 0; i < iovcnt; i++)
-        total_size += iov[i].len;
-    IOVec sz_vec[1] = {
-        { &total_size, sizeof(uint32) }
-    };
-
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
 
-    write(sz_vec, 1);
     for(uint32 i = 0; i < iovcnt; i++)
         write(iov[i].base, iov[i].len);
 }
@@ -192,20 +182,37 @@ void Trace::storageThread(const String& filename) {
     fclose(of);
 }
 
+void Trace::writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data_orig, uint32 iovcnt) {
+    assert(iovcnt < 30);
+
+    BatchedBuffer::IOVec data_vec[32];
+
+    uint32 total_size = 0;
+    for(uint32 i = 0; i < iovcnt; i++)
+        total_size += data_orig[i].len;
+
+
+    data_vec[0] = BatchedBuffer::IOVec(&total_size, sizeof(total_size));
+    data_vec[1] = BatchedBuffer::IOVec(&type_hint, sizeof(type_hint));
+    for(uint32 i = 0; i < iovcnt; i++)
+        data_vec[i+2] = data_orig[i];
+
+    data.write(data_vec, iovcnt+2);
+}
+
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
-    const uint32 num_data = 6;
+    const uint32 num_data = 5;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ProximityTag, sizeof(ProximityTag) },
-        { &t, sizeof(t) },
-        { &receiver, sizeof(receiver) },
-        { &source, sizeof(source) },
-        { &entered, sizeof(entered) },
-        { &loc, sizeof(loc) }
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
+        BatchedBuffer::IOVec(&source, sizeof(source)),
+        BatchedBuffer::IOVec(&entered, sizeof(entered)),
+        BatchedBuffer::IOVec(&loc, sizeof(loc))
     };
-    data.write(data_vec, num_data);
+    writeRecord(ProximityTag, data_vec, num_data);
 #endif
 }
 
@@ -213,14 +220,13 @@ void Trace::objectGenLoc(const Time& t, const UUID& source, const TimedMotionVec
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
-    const uint32 num_data = 4;
+    const uint32 num_data = 3;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectGeneratedLocationTag, sizeof(ObjectGeneratedLocationTag) },
-        { &t, sizeof(t) },
-        { &source, sizeof(source) },
-        { &loc, sizeof(loc) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&source, sizeof(source)),
+        BatchedBuffer::IOVec(&loc, sizeof(loc)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectGeneratedLocationTag, data_vec, num_data);
 #endif
 }
 
@@ -228,15 +234,14 @@ void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, c
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
-    const uint32 num_data = 5;
+    const uint32 num_data = 4;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectLocationTag, sizeof(ObjectLocationTag) },
-        { &t, sizeof(t) },
-        { &receiver, sizeof(receiver) },
-        { &source, sizeof(source) },
-        { &loc, sizeof(loc) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
+        BatchedBuffer::IOVec(&source, sizeof(source)),
+        BatchedBuffer::IOVec(&loc, sizeof(loc)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectLocationTag, data_vec, num_data);
 #endif
 }
 
@@ -244,16 +249,15 @@ void Trace::timestampMessageCreation(const Time&sent, uint64 uid, MessagePath pa
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 
-    const uint32 num_data = 6;
+    const uint32 num_data = 5;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &MessageCreationTimestampTag, sizeof(MessageCreationTimestampTag) },
-        { &sent, sizeof(sent) },
-        { &uid, sizeof(uid) },
-        { &path, sizeof(path) },
-        { &srcprt, sizeof(srcprt) },
-        { &dstprt, sizeof(dstprt) },
+        BatchedBuffer::IOVec(&sent, sizeof(sent)),
+        BatchedBuffer::IOVec(&uid, sizeof(uid)),
+        BatchedBuffer::IOVec(&path, sizeof(path)),
+        BatchedBuffer::IOVec(&srcprt, sizeof(srcprt)),
+        BatchedBuffer::IOVec(&dstprt, sizeof(dstprt)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(MessageCreationTimestampTag, data_vec, num_data);
 #endif
 }
 
@@ -261,14 +265,13 @@ void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 
-    const uint32 num_data = 4;
+    const uint32 num_data = 3;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &MessageTimestampTag, sizeof(MessageTimestampTag) },
-        { &sent, sizeof(sent) },
-        { &uid, sizeof(uid) },
-        { &path, sizeof(path) },
+        BatchedBuffer::IOVec(&sent, sizeof(sent)),
+        BatchedBuffer::IOVec(&uid, sizeof(uid)),
+        BatchedBuffer::IOVec(&path, sizeof(path)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(MessageTimestampTag, data_vec, num_data);
 #endif
 }
 
@@ -276,18 +279,17 @@ void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID&
 #ifdef TRACE_PING
     if (mShuttingDown) return;
 
-    const uint32 num_data = 8;
+    const uint32 num_data = 7;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectPingTag, sizeof(ObjectPingTag) },
-        { &src, sizeof(src) },
-        { &sender, sizeof(sender) },
-        { &dst, sizeof(dst) },
-        { &receiver, sizeof(receiver) },
-        { &id, sizeof(id) },
-        { &distance, sizeof(distance) },
-        { &uid, sizeof(uid) },
+        BatchedBuffer::IOVec(&src, sizeof(src)),
+        BatchedBuffer::IOVec(&sender, sizeof(sender)),
+        BatchedBuffer::IOVec(&dst, sizeof(dst)),
+        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
+        BatchedBuffer::IOVec(&id, sizeof(id)),
+        BatchedBuffer::IOVec(&distance, sizeof(distance)),
+        BatchedBuffer::IOVec(&uid, sizeof(uid)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectPingTag, data_vec, num_data);
 #endif
 }
 
@@ -295,16 +297,15 @@ void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& rec
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
 
-    const uint32 num_data = 6;
+    const uint32 num_data = 5;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ServerLocationTag, sizeof(ServerLocationTag) },
-        { &t, sizeof(t) },
-        { &sender, sizeof(sender) },
-        { &receiver, sizeof(receiver) },
-        { &obj, sizeof(obj) },
-        { &loc, sizeof(loc) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&sender, sizeof(sender)),
+        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
+        BatchedBuffer::IOVec(&obj, sizeof(obj)),
+        BatchedBuffer::IOVec(&loc, sizeof(loc)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ServerLocationTag, data_vec, num_data);
 #endif
 }
 
@@ -314,17 +315,16 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
 
     uint8 raw_added = (added ? 1 : 0);
 
-    const uint32 num_data = 7;
+    const uint32 num_data = 6;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ServerObjectEventTag, sizeof(ServerObjectEventTag) },
-        { &t, sizeof(t) },
-        { &source, sizeof(source) },
-        { &dest, sizeof(dest) },
-        { &obj, sizeof(obj) },
-        { &raw_added, sizeof(raw_added) },
-        { &loc, sizeof(loc) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&source, sizeof(source)),
+        BatchedBuffer::IOVec(&dest, sizeof(dest)),
+        BatchedBuffer::IOVec(&obj, sizeof(obj)),
+        BatchedBuffer::IOVec(&raw_added, sizeof(raw_added)),
+        BatchedBuffer::IOVec(&loc, sizeof(loc)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ServerObjectEventTag, data_vec, num_data);
 #endif
 }
 
@@ -332,15 +332,14 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id,
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
-    const uint32 num_data = 5;
+    const uint32 num_data = 4;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) },
-        { &t, sizeof(t) },
-        { &dest, sizeof(dest) },
-        { &id, sizeof(id) },
-        { &size, sizeof(size) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&dest, sizeof(dest)),
+        BatchedBuffer::IOVec(&id, sizeof(id)),
+        BatchedBuffer::IOVec(&size, sizeof(size)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ServerDatagramQueuedTag, data_vec, num_data);
 #endif
 }
 
@@ -348,18 +347,17 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
-    const uint32 num_data = 8;
+    const uint32 num_data = 7;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) },
-        { &start_time, sizeof(start_time) },
-        { &dest, sizeof(dest) },
-        { &id, sizeof(id) },
-        { &size, sizeof(size) },
-        { &weight, sizeof(weight) },
-        { &start_time, sizeof(start_time) },
-        { &end_time, sizeof(end_time) },
+        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
+        BatchedBuffer::IOVec(&dest, sizeof(dest)),
+        BatchedBuffer::IOVec(&id, sizeof(id)),
+        BatchedBuffer::IOVec(&size, sizeof(size)),
+        BatchedBuffer::IOVec(&weight, sizeof(weight)),
+        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
+        BatchedBuffer::IOVec(&end_time, sizeof(end_time)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ServerDatagramSentTag, data_vec, num_data);
 #endif
 }
 
@@ -367,17 +365,16 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
 
-    const uint32 num_data = 7;
+    const uint32 num_data = 6;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) },
-        { &start_time, sizeof(start_time) },
-        { &src, sizeof(src) },
-        { &id, sizeof(id) },
-        { &size, sizeof(size) },
-        { &start_time, sizeof(start_time) },
-        { &end_time, sizeof(end_time) },
+        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
+        BatchedBuffer::IOVec(&src, sizeof(src)),
+        BatchedBuffer::IOVec(&id, sizeof(id)),
+        BatchedBuffer::IOVec(&size, sizeof(size)),
+        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
+        BatchedBuffer::IOVec(&end_time, sizeof(end_time)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ServerDatagramReceivedTag, data_vec, num_data);
 #endif
 }
 
@@ -385,19 +382,18 @@ void Trace::packetQueueInfo(const Time& t, const ServerID& dest, uint32 send_siz
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
-    const uint32 num_data = 9;
+    const uint32 num_data = 8;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) },
-        { &t, sizeof(t) },
-        { &dest, sizeof(dest) },
-        { &send_size, sizeof(send_size) },
-        { &send_queued, sizeof(send_queued) },
-        { &send_weight, sizeof(send_weight) },
-        { &receive_size, sizeof(receive_size) },
-        { &receive_queued, sizeof(receive_queued) },
-        { &receive_weight, sizeof(receive_weight) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&dest, sizeof(dest)),
+        BatchedBuffer::IOVec(&send_size, sizeof(send_size)),
+        BatchedBuffer::IOVec(&send_queued, sizeof(send_queued)),
+        BatchedBuffer::IOVec(&send_weight, sizeof(send_weight)),
+        BatchedBuffer::IOVec(&receive_size, sizeof(receive_size)),
+        BatchedBuffer::IOVec(&receive_queued, sizeof(receive_queued)),
+        BatchedBuffer::IOVec(&receive_weight, sizeof(receive_weight)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(PacketQueueInfoTag, data_vec, num_data);
 #endif
 }
 
@@ -405,14 +401,13 @@ void Trace::packetSent(const Time& t, const ServerID& dest, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
-    const uint32 num_data = 4;
+    const uint32 num_data = 3;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &PacketSentTag, sizeof(PacketSentTag) },
-        { &t, sizeof(t) },
-        { &dest, sizeof(dest) },
-        { &size, sizeof(size) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&dest, sizeof(dest)),
+        BatchedBuffer::IOVec(&size, sizeof(size)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(PacketSentTag, data_vec, num_data);
 #endif
 }
 
@@ -420,14 +415,13 @@ void Trace::packetReceived(const Time& t, const ServerID& src, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
 
-    const uint32 num_data = 4;
+    const uint32 num_data = 3;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &PacketReceivedTag, sizeof(PacketReceivedTag) },
-        { &t, sizeof(t) },
-        { &src, sizeof(src) },
-        { &size, sizeof(size) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&src, sizeof(src)),
+        BatchedBuffer::IOVec(&size, sizeof(size)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(PacketReceivedTag, data_vec, num_data);
 #endif
 }
 
@@ -435,14 +429,13 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_CSEG
     if (mShuttingDown) return;
 
-    const uint32 num_data = 4;
+    const uint32 num_data = 3;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &SegmentationChangeTag, sizeof(SegmentationChangeTag) },
-        { &t, sizeof(t) },
-        { &bbox, sizeof(bbox) },
-        { &serverID, sizeof(serverID) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&bbox, sizeof(bbox)),
+        BatchedBuffer::IOVec(&serverID, sizeof(serverID)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(SegmentationChangeTag, data_vec, num_data);
 #endif
 }
 
@@ -451,15 +444,14 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
-    const uint32 num_data = 5;
+    const uint32 num_data = 4;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectBeginMigrateTag, sizeof(ObjectBeginMigrateTag) },
-        { &t, sizeof(t) },
-        { &obj_id, sizeof(obj_id) },
-        { &migrate_from, sizeof(migrate_from) },
-        { &migrate_to, sizeof(migrate_to) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+        BatchedBuffer::IOVec(&migrate_from, sizeof(migrate_from)),
+        BatchedBuffer::IOVec(&migrate_to, sizeof(migrate_to)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectBeginMigrateTag, data_vec, num_data);
 #endif
   }
 
@@ -468,15 +460,14 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
-    const uint32 num_data = 5;
+    const uint32 num_data = 4;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectAcknowledgeMigrateTag, sizeof(ObjectAcknowledgeMigrateTag) },
-        { &t, sizeof(t) },
-        { &obj_id, sizeof(obj_id) },
-        { &acknowledge_from, sizeof(acknowledge_from) },
-        { &acknowledge_to, sizeof(acknowledge_to) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+        BatchedBuffer::IOVec(&acknowledge_from, sizeof(acknowledge_from)),
+        BatchedBuffer::IOVec(&acknowledge_to, sizeof(acknowledge_to)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectAcknowledgeMigrateTag, data_vec, num_data);
 #endif
   }
 
@@ -486,14 +477,13 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_OSEG
     if (mShuttingDown) return;
 
-    const uint32 num_data = 4;
+    const uint32 num_data = 3;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectSegmentationCraqLookupRequestAnalysisTag, sizeof(ObjectSegmentationCraqLookupRequestAnalysisTag) },
-        { &t, sizeof(t) },
-        { &obj_id, sizeof(obj_id) },
-        { &sID_lookupTo, sizeof(sID_lookupTo) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+        BatchedBuffer::IOVec(&sID_lookupTo, sizeof(sID_lookupTo)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectSegmentationCraqLookupRequestAnalysisTag, data_vec, num_data);
 #endif
   }
 
@@ -502,17 +492,16 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_OSEG
     if (mShuttingDown) return;
 
-    const uint32 num_data = 7;
+    const uint32 num_data = 6;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag) },
-        { &t, sizeof(t) },
-        { &obj_id, sizeof(obj_id) },
-        { &sID_processor, sizeof(sID_processor) },
-        { &sID, sizeof(sID) },
-        { &dTime, sizeof(dTime) },
-        { &objectsInQueue, sizeof(objectsInQueue) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+        BatchedBuffer::IOVec(&sID_processor, sizeof(sID_processor)),
+        BatchedBuffer::IOVec(&sID, sizeof(sID)),
+        BatchedBuffer::IOVec(&dTime, sizeof(dTime)),
+        BatchedBuffer::IOVec(&objectsInQueue, sizeof(objectsInQueue)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(ObjectSegmentationProcessedRequestAnalysisTag, data_vec, num_data);
 #endif
   }
 
@@ -522,16 +511,15 @@ void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const Se
 #ifdef TRACE_ROUND_TRIP_MIGRATION_TIME
   if (mShuttingDown) return;
 
-  const uint32 num_data = 6;
+  const uint32 num_data = 5;
   BatchedBuffer::IOVec data_vec[num_data] = {
-      { &RoundTripMigrationTimeAnalysisTag, sizeof(RoundTripMigrationTimeAnalysisTag) },
-      { &t, sizeof(t) },
-      { &obj_id, sizeof(obj_id) },
-      { &sID_migratingFrom, sizeof(sID_migratingFrom) },
-      { &sID_migratingTo, sizeof(sID_migratingTo) },
-      { &numMilliseconds, sizeof(numMilliseconds) },
+      BatchedBuffer::IOVec(&t, sizeof(t)),
+      BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+      BatchedBuffer::IOVec(&sID_migratingFrom, sizeof(sID_migratingFrom)),
+      BatchedBuffer::IOVec(&sID_migratingTo, sizeof(sID_migratingTo)),
+      BatchedBuffer::IOVec(&numMilliseconds, sizeof(numMilliseconds)),
   };
-  data.write(data_vec, num_data);
+  writeRecord(RoundTripMigrationTimeAnalysisTag, data_vec, num_data);
 #endif
 }
 
@@ -540,15 +528,14 @@ void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, cons
 #ifdef TRACE_OSEG_TRACKED_SET_RESULTS
   if (mShuttingDown) return;
 
-  const uint32 num_data = 5;
+  const uint32 num_data = 4;
   BatchedBuffer::IOVec data_vec[num_data] = {
-      { &OSegTrackedSetResultAnalysisTag, sizeof(OSegTrackedSetResultAnalysisTag) },
-      { &t, sizeof(t) },
-      { &obj_id, sizeof(obj_id) },
-      { &sID_migratingTo, sizeof(sID_migratingTo) },
-      { &numMilliseconds, sizeof(numMilliseconds) },
+      BatchedBuffer::IOVec(&t, sizeof(t)),
+      BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+      BatchedBuffer::IOVec(&sID_migratingTo, sizeof(sID_migratingTo)),
+      BatchedBuffer::IOVec(&numMilliseconds, sizeof(numMilliseconds)),
   };
-  data.write(data_vec, num_data);
+  writeRecord(OSegTrackedSetResultAnalysisTag, data_vec, num_data);
 #endif
 }
 
@@ -564,18 +551,17 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   std::cout<<"\tnum_migration_not_complete_yet:   "<< num_migration_not_complete_yet<<"\n\n";
   std::cout<<"***************************\n\n";
 
-  const uint32 num_data = 8;
+  const uint32 num_data = 7;
   BatchedBuffer::IOVec data_vec[num_data] = {
-      { &OSegShutdownEventTag, sizeof(OSegShutdownEventTag) },
-      { &t, sizeof(t) },
-      { &num_lookups, sizeof(num_lookups) },
-      { &num_on_this_server, sizeof(num_on_this_server) },
-      { &num_cache_hits, sizeof(num_cache_hits) },
-      { &num_craq_lookups, sizeof(num_craq_lookups) },
-      { &num_time_elapsed_cache_eviction, sizeof(num_time_elapsed_cache_eviction) },
-      { &num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet) },
+      BatchedBuffer::IOVec(&t, sizeof(t)),
+      BatchedBuffer::IOVec(&num_lookups, sizeof(num_lookups)),
+      BatchedBuffer::IOVec(&num_on_this_server, sizeof(num_on_this_server)),
+      BatchedBuffer::IOVec(&num_cache_hits, sizeof(num_cache_hits)),
+      BatchedBuffer::IOVec(&num_craq_lookups, sizeof(num_craq_lookups)),
+      BatchedBuffer::IOVec(&num_time_elapsed_cache_eviction, sizeof(num_time_elapsed_cache_eviction)),
+      BatchedBuffer::IOVec(&num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet)),
   };
-  data.write(data_vec, num_data);
+  writeRecord(OSegShutdownEventTag, data_vec, num_data);
 #endif
 }
 
@@ -587,14 +573,13 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
 #ifdef TRACE_OSEG_CACHE_RESPONSE
   if (mShuttingDown) return;
 
-  const uint32 num_data = 4;
+  const uint32 num_data = 3;
   BatchedBuffer::IOVec data_vec[num_data] = {
-      { &OSegCacheResponseTag, sizeof(OSegCacheResponseTag) },
-      { &t, sizeof(t) },
-      { &sID, sizeof(sID) },
-      { &obj_id, sizeof(obj_id) },
+      BatchedBuffer::IOVec(&t, sizeof(t)),
+      BatchedBuffer::IOVec(&sID, sizeof(sID)),
+      BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
   };
-  data.write(data_vec, num_data);
+  writeRecord(OSegCacheResponseTag, data_vec, num_data);
 #endif
 }
 
@@ -604,14 +589,13 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
 #ifdef TRACE_OSEG_NOT_ON_SERVER_LOOKUP
   if (mShuttingDown) return;
 
-  const uint32 num_data = 4;
+  const uint32 num_data = 3;
   BatchedBuffer::IOVec data_vec[num_data] = {
-      { &OSegLookupNotOnServerAnalysisTag, sizeof(OSegLookupNotOnServerAnalysisTag) },
-      { &t, sizeof(t) },
-      { &obj_id, sizeof(obj_id) },
-      { &sID_lookerupper, sizeof(sID_lookerupper) },
+      BatchedBuffer::IOVec(&t, sizeof(t)),
+      BatchedBuffer::IOVec(&obj_id, sizeof(obj_id)),
+      BatchedBuffer::IOVec(&sID_lookerupper, sizeof(sID_lookerupper)),
   };
-  data.write(data_vec, num_data);
+  writeRecord(OSegLookupNotOnServerAnalysisTag, data_vec, num_data);
 #endif
 }
 
@@ -629,13 +613,12 @@ void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID
 
     #ifdef TRACE_OSEG_CUMULATIVE
 
-    const uint32 num_data = 3;
+    const uint32 num_data = 2;
     BatchedBuffer::IOVec data_vec[num_data] = {
-        { &OSegCumulativeTraceAnalysisTag, sizeof(OSegCumulativeTraceAnalysisTag) },
-        { &t, sizeof(t) },
-        { &traceToken, sizeof(OSegLookupTraceToken) },
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&traceToken, sizeof(OSegLookupTraceToken)),
     };
-    data.write(data_vec, num_data);
+    writeRecord(OSegCumulativeTraceAnalysisTag, data_vec, num_data);
     #endif
 
     delete traceToken;

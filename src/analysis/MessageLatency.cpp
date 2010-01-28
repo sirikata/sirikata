@@ -865,8 +865,10 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            std::string raw_evt = read_record(is);
-            Event* evt = Event::parse(raw_evt, server_id);
+            uint16 type_hint;
+            std::string raw_evt;
+            read_record(is, &type_hint, &raw_evt);
+            Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;
 

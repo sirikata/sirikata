@@ -63,6 +63,16 @@ struct Batch {
 class BatchedBuffer {
 public:
     struct IOVec {
+        IOVec()
+                : base(NULL),
+                  len(0)
+        {}
+
+        IOVec(const void* _b, uint32 _l)
+                : base(_b),
+                  len(_l)
+        {}
+
         const void* base;
         uint32 len;
     };
@@ -210,6 +220,9 @@ public:
   void shutdown();
 
 private:
+    // Helper to prepend framing (size and payload type hint)
+    void writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data, uint32 iovcnt);
+
     // Thread which flushes data to disk periodically
     void storageThread(const String& filename);
 
