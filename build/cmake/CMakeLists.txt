@@ -692,7 +692,7 @@ ADD_PBJ_TARGET(MessageHeader
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc
+  GENERATED_CPP_FILES MessageHeader_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -702,7 +702,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "Prox"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Prox_protobuf.cc
+  GENERATED_CPP_FILES Prox_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -723,7 +723,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "ObjectHost"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
+  GENERATED_CPP_FILES ObjectHost_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -733,7 +733,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "ProxyObject"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/ProxyObject_protobuf.cc
+  GENERATED_CPP_FILES ProxyObject_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -743,7 +743,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "Ogre"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Ogre_protobuf.cc
+  GENERATED_CPP_FILES Ogre_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -753,7 +753,7 @@ ADD_PBJ_TARGET(Sirikata Physics
   PLUGINNAME "Bullet"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Bullet_protobuf.cc
+  GENERATED_CPP_FILES Bullet_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -763,7 +763,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "ObjectHostBinary"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHostBinary_protobuf.cc
+  GENERATED_CPP_FILES ObjectHostBinary_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -773,7 +773,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "Space"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc
+  GENERATED_CPP_FILES Space_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -783,7 +783,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "Test"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc
+  GENERATED_CPP_FILES Test_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -793,7 +793,7 @@ ADD_PBJ_TARGET(Persistence
   PLUGINNAME "SQLite"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/SQLite_protobuf.cc
+  GENERATED_CPP_FILES SQLite_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -803,7 +803,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   PLUGINNAME "Proximity"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Proximity_protobuf.cc
+  GENERATED_CPP_FILES Proximity_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -891,7 +891,7 @@ ENDIF()
 
 SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
-	${SirikataProtocolDirectory}/MessageHeader_protobuf.cc
+        ${MessageHeader_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
@@ -985,7 +985,7 @@ IF(NOT WIN32)
 ENDIF()
 
 SET(LIBSPACE_SOURCES
-  ${SirikataProtocolDirectory}/Space_protobuf.cc
+  ${Space_PBJ_CPP_FILES}
                      ${LIBSPACE_SOURCE_DIR}/Space.cpp
                      ${LIBSPACE_SOURCE_DIR}/SpaceProxyManager.cpp
                      ${LIBSPACE_SOURCE_DIR}/Physics.cpp
@@ -995,14 +995,14 @@ SET(LIBSPACE_SOURCES
                      ${LIBSPACE_SOURCE_DIR}/Registration.cpp
                       )
 SET(LIBPROXIMITY_SOURCES
-                  ${SirikataProtocolDirectory}/Proximity_protobuf.cc
+  ${Proximity_PBJ_CPP_FILES}
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystem.cpp
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystemFactory.cpp
                   ${LIBPROXIMITY_SOURCE_DIR}/SingleStreamProximityConnection.cpp )
 
 SET(LIBPROXYOBJECT_SOURCES
-                  ${SirikataProtocolDirectory}/ProxyObject_protobuf.cc
+  ${ProxyObject_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
@@ -1014,7 +1014,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
-                  ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
+  ${ObjectHost_PBJ_CPP_FILES}
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
@@ -1031,14 +1031,14 @@ SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
 ${CPPOH_SOURCE_DIR}/Config.cpp
 ${CPPOH_SOURCE_DIR}/CDNConfig.cpp
-  ${SirikataProtocolDirectory}/ObjectHostBinary_protobuf.cc
+  ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
 # plugins sources
 
 SET(LIBPROXIMITY_PLUGIN_PROX_DIR ${LIBPROXIMITY_PLUGIN_DIR}/prox)
 SET(LIBPROXIMITY_PLUGIN_PROX_SOURCES
-  ${SirikataProtocolDirectory}/Prox_protobuf.cc
+  ${Prox_PBJ_CPP_FILES}
   ${LIBPROXIMITY_PLUGIN_PROX_DIR}/ProxPlugin.cpp
   ${LIBPROXIMITY_PLUGIN_PROX_DIR}/ProxBridge.cpp
   ${LIBPROXIMITY_PLUGIN_PROX_DIR}/BruteForceProx.cpp
@@ -1050,7 +1050,7 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 
 SET(LIBCORE_PLUGIN_SQLITE_DIR ${LIBCORE_PLUGIN_DIR}/sqlite)
 SET(LIBCORE_PLUGIN_SQLITE_SOURCES
-        ${SirikataProtocolDirectory}/SQLite_protobuf.cc
+  ${SQLite_PBJ_CPP_FILES}
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLitePlugin.cpp
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLite.cpp
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLiteObjectStorage.cpp)
@@ -1072,7 +1072,7 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/ogre)
 SET(GFX ${LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR})
 SET(INPUT ${GFX}/input)
 SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
-  ${SirikataProtocolDirectory}/Ogre_protobuf.cc
+  ${Ogre_PBJ_CPP_FILES}
   ${SirikataOgreCoreZipCpp}
   ${GFX}/OgreSystem.cpp
   ${GFX}/OgreMeshRaytrace.cpp
@@ -1170,7 +1170,7 @@ ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 SET(TEST_SOURCES
   ${LIBCORE_DIR}/test/Test.cpp
   ${CXXTEST_CPP_FILE}
-  ${SirikataProtocolDirectory}/Test_protobuf.cc
+  ${Test_PBJ_CPP_FILES}
   ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.cpp
   ${LIBCORE_DIR}/test/ObjectStorageTest.cpp
   ${LIBCORE_DIR}/test/MinitransactionHandlerTest.cpp
@@ -1339,7 +1339,7 @@ ENDIF(PROX_FOUND)
 
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/bullet)
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_SOURCES
- ${SirikataProtocolDirectory}/Bullet_protobuf.cc
+  ${Bullet_PBJ_CPP_FILES}
  ${LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR}/BulletSystem.cpp
     )
 IF(bullet_FOUND)

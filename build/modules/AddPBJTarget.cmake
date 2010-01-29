@@ -11,7 +11,7 @@
 # PLUGINNAME -
 # OUTPUTDIR - The directory to output generated files to
 # INPUTDIR - The directory to find input files in
-# OUTPUTCPPFILE - The C++ file to use as output, which just #includes a number of other generated files.
+# GENERATED_CPP_FILES - name of variable to store list of generated C++ files in
 # CPP_HEADER - the header we want written to the generated C++ files, useful for including dependencies
 #
 # The following flags are available:
@@ -24,7 +24,7 @@ INCLUDE(ListUtil)
 INCLUDE(ParseArguments)
 
 MACRO(ADD_PBJ_TARGET)
-  PARSE_ARGUMENTS(PBJ "DEPENDS;IMPORTS;PLUGINNAME;OUTPUTDIR;INPUTDIR;OUTPUTCPPFILE;CPP_HEADER" "GENERATE_CPP;GENERATE_CSHARP;GENERATE_PYTHON" ${ARGN})
+  PARSE_ARGUMENTS(PBJ "DEPENDS;IMPORTS;PLUGINNAME;OUTPUTDIR;INPUTDIR;GENERATED_CPP_FILES;CPP_HEADER" "GENERATE_CPP;GENERATE_CSHARP;GENERATE_PYTHON" ${ARGN})
   SET(PBJ_FILES ${PBJ_DEFAULT_ARGS})
 
   SET(PBJ_PROTO_FILES)
@@ -42,14 +42,7 @@ MACRO(ADD_PBJ_TARGET)
     SET(PBJ_OPTIONS ${PBJ_OPTIONS} --cpp_out=${PBJ_OUTPUTDIR})
   ENDIF(PBJ_OUTPUTDIR)
 
-
-  IF(PBJ_OUTPUTCPPFILE)
-    SET(PBJ_GenFile ${CMAKE_CURRENT_BINARY_DIR}/protobuf_${PBJ_PLUGINNAME}.txt)
-    IF(PBJ_CPP_HEADER)
-        FILE(WRITE ${PBJ_GenFile}
-             ${PBJ_CPP_HEADER})
-    ENDIF()
-  ENDIF()
+  SET(INTERNAL_GENERATED_CPP_FILES)
   SET(PBJ_PLUGINNAME_UNDERSCORE)
   IF(PBJ_PLUGINNAME)
     SET(PBJ_PLUGINNAME_UNDERSCORE ${PBJ_PLUGINNAME}_)
@@ -135,10 +128,7 @@ MACRO(ADD_PBJ_TARGET)
     IF(PBJ_GENERATE_CSHARP)
        SET(CS_COMMAND  --cs=${PBJ_PBJCS_FILE})
     ENDIF()
-    IF(PBJ_OUTPUTCPPFILE AND PBJ_GENERATE_CPP)
-      FILE(APPEND ${PBJ_GenFile}
-                  "#include \"${PBJ_CPP_FILE}\"\n")
-    ENDIF()
+    SET(INTERNAL_GENERATED_CPP_FILES ${INTERNAL_GENERATED_CPP_FILES} ${PBJ_CPP_FILE})
 
     ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_PBJHPP_FILE} ${PBJ_PROTO_FILE} ${PBJ_PBJCS_FILE}
                        COMMAND ${PBJ_RUNABLE} ${PBJ_PBJ_FILE} ${PBJ_PROTO_FILE} --cpp=${PBJ_PBJHPP_FILE} ${CS_COMMAND} ${PBJ_NAMESPACE}
@@ -147,12 +137,9 @@ MACRO(ADD_PBJ_TARGET)
 
   ENDFOREACH()
 
-  IF(PBJ_OUTPUTCPPFILE)
-    ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_OUTPUTCPPFILE}
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PBJ_GenFile} ${PBJ_OUTPUTCPPFILE}
-                       DEPENDS ${PBJ_CPP_FILES}
-                       COMMENT "Checking ${PBJ_OUTPUTCPPFILE}")
+  # If requested, store the generated C++ files into a variable
+  IF(PBJ_GENERATED_CPP_FILES)
+    SET(${PBJ_GENERATED_CPP_FILES} ${INTERNAL_GENERATED_CPP_FILES})
   ENDIF()
-  # else, this is for a scripting language
 
 ENDMACRO(ADD_PBJ_TARGET)
