@@ -7,6 +7,7 @@ import os
 import os.path
 import traceback
 from test import Test, ShellCommandTest
+from sim_test import ClusterSimTest
 
 import sys
 # FIXME It would be nice to have a better way of making this script able to find
@@ -75,7 +76,7 @@ class TestSuite:
 if __name__ == "__main__":
 
     suite = TestSuite()
-    suite.add( ShellCommandTest('default_sim', ['../../cluster/sim.py']) )
+    suite.add( ClusterSimTest('default_sim') )
     suite.add( ShellCommandTest('default_packet_latency', ['../../bench/packet_latency_by_load.py', '10']) )
 
     if len(sys.argv) < 2:
