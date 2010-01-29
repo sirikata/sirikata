@@ -4,6 +4,7 @@
 
 import subprocess
 import re
+from datetime import timedelta
 
 import sys
 # FIXME It would be nice to have a better way of making this script able to find
@@ -14,7 +15,7 @@ import util.stdio
 import util.invoke
 
 class Test:
-    def __init__(self, name, output_flags=[('Warning',['[Ww]arning'],False), ('Error',['[Ee]rror','[Aa]ssert','Segmentation fault'],True)]):
+    def __init__(self, name, output_flags=[('Warning',['[Ww]arning'],False), ('Error',['[Ee]rror','[Aa]ssert','Segmentation fault'],True)], time_limit=timedelta(minutes=5)):
         """
         name: Name of the test
 
@@ -27,6 +28,7 @@ class Test:
         """
         self.name = name
         self.output_flags = output_flags
+        self.time_limit = time_limit
 
     def run(self, io):
         print >>io.stderr, "Run not implemented for test " + self.name
@@ -75,12 +77,18 @@ class ShellCommandTest(Test):
 
     def run(self, io):
         intermediate_io = util.stdio.MemoryIO()
-        util.invoke.invoke(self.cmd, intermediate_io)
+
+        try:
+            invoke_result = util.invoke.invoke(self.cmd, io=intermediate_io, time_limit=self.time_limit)
+        except util.invoke.InvokeTimeLimitError:
+            invoke_result = False
+            print >>io.stderr, "(Time limit exceeded)",
+            io.stderr.flush()
 
         result = 'stdout:\n' + intermediate_io.stdout.getvalue() + '\nstderr:\n' + intermediate_io.stderr.getvalue() + '\n'
         self._store_log(result)
 
         # now check for warnings and errors
-        failed = self._check_errors(io, result)
+        failed = self._check_errors(io, result) or not invoke_result
 
         return not failed

@@ -5,7 +5,11 @@
 import subprocess
 import time
 
-def invoke(cmd, io=None, **kwargs):
+class InvokeTimeLimitError(Exception):
+    def __init__(self, limit):
+        self.time_limit = limit
+
+def invoke(cmd, io=None, time_limit=None, **kwargs):
     """Invoke the specified command and redirect IO using the specified IO object.
 
     Arguments:
@@ -13,6 +17,8 @@ def invoke(cmd, io=None, **kwargs):
 
     Keyword arguments:
     io -- IO object containing 3 file-like objects, or None to use normal IO objects
+    time_limit -- timedelta specifying the maximum amount of time we should allow
+                  the command to run for
 
     """
 
@@ -35,9 +41,13 @@ def invoke(cmd, io=None, **kwargs):
     if stderr_obj != None:
         stderr_arg = subprocess.PIPE
 
-    
+
+    time_limit_as_secs = None
+    if time_limit:
+        time_limit_as_secs = time_limit.days * 86400 + time_limit.seconds
 
     sp = subprocess.Popen(cmd, stdin=stdin_arg, stdout=stdout_arg, stderr=stderr_arg, **kwargs)
+    start_time = time.time()
     while( sp.returncode == None ):
         sp.poll()
         # FIXME note that we currently don't pipe in stdin because its not clear how
@@ -49,4 +59,12 @@ def invoke(cmd, io=None, **kwargs):
         if stderrdata != None:
             stderr_obj.write(stderrdata)
 
+        if time_limit_as_secs and ((time.time() - start_time) > time_limit_as_secs):
+            # FIXME We want to do this:
+            #sp.terminate()
+            # but its only available in Python 2.6
+            raise InvokeTimeLimitError(time_limit)
+
         time.sleep(0.1)
+
+    return sp.returncode

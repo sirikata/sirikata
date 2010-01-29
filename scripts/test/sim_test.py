@@ -10,6 +10,9 @@ import sys
 # other modules in sibling packages
 sys.path.insert(0, sys.path[0]+"/..")
 
+import threading
+import time
+
 import util.stdio
 import cluster.sim
 
@@ -39,12 +42,30 @@ class ClusterSimTest(test.Test):
                 setattr(cs, str(setname), value)
 
         cluster_sim = cluster.sim.ClusterSim(cc, cs, io=intermediate_io)
-        cluster_sim.run()
+
+        sim_result = True
+        if self.time_limit:
+            sim_thread = threading.Thread(target=cluster_sim.run)
+            sim_thread.daemon = True # allow program to exit without sim thread exiting since we can't kill it currently
+            sim_thread.setDaemon(True) # Alternate version for old versions of Python
+            sim_thread.start()
+            time_limit_as_secs = self.time_limit.days*86400 + self.time_limit.seconds
+            start_time = time.time()
+            while sim_thread.isAlive():
+                time.sleep(1)
+
+                if ((time.time() - start_time) > time_limit_as_secs):
+                    sim_result = False
+                    print >>io.stderr, "(Time limit exceeded)",
+                    io.stderr.flush()
+                    break
+        else:
+            cluster_sim.run()
 
         result = 'stdout:\n' + intermediate_io.stdout.getvalue() + '\nstderr:\n' + intermediate_io.stderr.getvalue() + '\n'
         self._store_log(result)
 
         # now check for warnings and errors
-        failed = self._check_errors(io, result)
+        failed = self._check_errors(io, result) or not sim_result
 
         return not failed
