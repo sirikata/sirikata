@@ -282,7 +282,7 @@ private:
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
-      mNumStreams(0), mCwnd(1), mRTOMicroseconds(200000),
+      mNumStreams(0), mCwnd(1), mRTOMicroseconds(1000000),
       mFirstRTO(true), mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(300),
       CC_ALPHA(0.8)
@@ -359,9 +359,15 @@ private:
 
 	    sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
 
+	    printf("%s sending packet from data sending loop to %s\n", mLocalEndPoint.endPoint.readableHexData().c_str()
+		                                                     , mRemoteEndPoint.endPoint.readableHexData().c_str());
+	    fflush(stdout);
+
 	    sendSSTChannelPacket(sstMsg);
 	    
-	    printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
+	    printf("%s SENT packet from data sending loop to %s\n", mLocalEndPoint.endPoint.readableHexData().c_str()
+		                                                     , mRemoteEndPoint.endPoint.readableHexData().c_str());
+	    fflush(stdout);
 
 	    segment->mTransmitTime = Timer::now();
 	    mOutstandingSegments.push_back(segment);
@@ -387,21 +393,15 @@ private:
 
         mConnectionReturnCallbackMap.erase(mRemoteEndPoint);	
 
-	if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
-	  std::cout << "mConnectionMap.find: " << "\n";
-	  std::cout << ((mConnectionMap.find(mLocalEndPoint))->first).endPoint.toString() << "\n";
-	  std::cout << ((mConnectionMap.find(mLocalEndPoint))->first).port  << "\n";
-	  std::cout << mConnectionMap.size() << "\n";
-	  fflush(stdout);
+	boost::shared_ptr<Connection<EndPointType> > conn = mConnectionMap[ mLocalEndPoint ];
 	  
-	  mConnectionMap.erase(mLocalEndPoint);
-	}
+	mConnectionMap.erase(mLocalEndPoint);	
 
-	std::cout << "Remote endpoint not available to connect\n";
-
+	std::cout << "Remote endpoint not available to connect\n";	
 	
-	for (int i=0; i<1000; i++) { std::cout << "FLUSH!\n"; }
 	fflush(stdout);
+
+	lock.unlock();
 
         return;
       }
@@ -1028,7 +1028,8 @@ public:
     else if (channelID == 0) {
       /* it's a new channel request negotiation protocol
 	 packet ; allocate a new channel.*/
-      std::cout << "Received a new channel request\n";
+      std::cout << localEndPoint.endPoint.toString()  << " received a new channel request from "
+		<< remoteEndPoint.endPoint.toString() << "\n";
 
       if (mListeningConnectionsCallbackMap.find(localEndPoint) != mListeningConnectionsCallbackMap.end()) {
         uint8* received_payload = (uint8*) received_msg->payload().data();
@@ -1036,7 +1037,9 @@ public:
         uint16 payload[2];
         payload[0] = getAvailableChannel();
         payload[1] = getAvailablePort();
-        std::cout << "receiveChannelRequest " << (int)payload[0] << "\n";
+        std::cout <<  localEndPoint.endPoint.toString()  << " receiveChannelRequest " << (int)payload[0] << "\n";
+
+	fflush(stdout);
 
         EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, payload[1]);
         boost::shared_ptr<Connection>  conn =
