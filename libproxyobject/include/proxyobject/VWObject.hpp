@@ -37,16 +37,6 @@
 namespace Sirikata {
 class PhysicalParameters;
 
-namespace SubscriptionPBJ {
-namespace Protocol {
-class Subscribe;
-class Broadcast;
-}
-}
-namespace Protocol {
-using namespace ::Sirikata::SubscriptionPBJ::Protocol;
-}
-
 namespace Protocol {
 class ObjLoc;
 class PhysicalParameters;
@@ -63,14 +53,14 @@ typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
  * They must be able to get a ProxyManager per space to which they are connected:
  *   In general any camera-like VWObject will be a ProxyManager for ProxyObjects it makes in a space
  * The HostedObject must be able to track reported interest in a given object based on that object's query id
- *   The addQueryInterest function will be called when 
+ *   The addQueryInterest function will be called when
  *   the processRPC function determines that a ProxCall method has returned a particular SpaceObjectReference
  *   The remoteQueryInterest function will be called when
  *   the processRPC function determines that a ProxCall method has invalidated a paricular SpaceObjectReference
  */
 class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>{
 private:
-    static void receivedProxObjectProperties( 
+    static void receivedProxObjectProperties(
             const VWObjectWPtr &weakThis,
             SentMessage* sentMessageBase,
             const RoutableMessageHeader &hdr,
@@ -89,7 +79,7 @@ private:
         MemoryReference bodyData,
         int32 queryId);
 protected:
-    ///This convenience function takes a recently deserialized property argument and applies it to a ProxyObject, notifying the ProxyObject's listeners about relevent changes 
+    ///This convenience function takes a recently deserialized property argument and applies it to a ProxyObject, notifying the ProxyObject's listeners about relevent changes
     void receivedPropertyUpdate(
         const ProxyObjectPtr &proxy,
         const std::string &propertyName,
@@ -116,7 +106,7 @@ public:
     ///a callback to this object telling it that an object with an instantiated ProxyObject has exited its region of interest for query query_id
     virtual void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&obj, const SpaceObjectReference&)=0;
 
-    
+
 };
 
 }

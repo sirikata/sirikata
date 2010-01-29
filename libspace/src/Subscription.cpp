@@ -110,7 +110,7 @@ void Broadcast::subscribe(const ObjectReference &subscriber, Duration period) {
 }
 
 void Broadcast::makeBroadcastMessage(std::string *serializedMsg) {
-    SubscriptionPBJ::Protocol::Broadcast msg;
+    Protocol::Broadcast msg;
     msg.set_broadcast_name(getNumber());
     msg.set_data(mMessage);
     msg.SerializeToString(serializedMsg);
@@ -141,7 +141,7 @@ Subscription::Subscription(Network::IOService *ioServ)
 Subscription::~Subscription() {
 }
 
-void Subscription::processMessage(const ObjectReference&src, const SubscriptionPBJ::Protocol::Subscribe&sub){
+void Subscription::processMessage(const ObjectReference&src, const Protocol::Subscribe&sub){
     ObjectReference object_reference(sub.object());
     SubscriptionID broadcast (object_reference, sub.broadcast_name());
     Duration period = sub.update_period();
@@ -154,7 +154,7 @@ void Subscription::processMessage(const ObjectReference&src, const SubscriptionP
     iter->second->subscribe(object_reference, period);
 }
 
-void Subscription::processMessage(const ObjectReference&src, bool isTrusted, const SubscriptionPBJ::Protocol::Broadcast&sub){
+void Subscription::processMessage(const ObjectReference&src, bool isTrusted, const Protocol::Broadcast&sub){
     ObjectReference object_reference(sub.object());
     if (ObjectReference(sub.object()) != src && !isTrusted) {
         return; // Src object and broadcast object do not match
@@ -172,7 +172,7 @@ void Subscription::processMessage(const ObjectReference&src, bool isTrusted, con
     }
 }
 void Subscription::SubscriptionService::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
-    SubscriptionPBJ::Protocol::Subscribe subMsg;
+    Protocol::Subscribe subMsg;
     subMsg.ParseFromArray(message_body.data(),message_body.size());
     mParent->processMessage(header.source_object(), subMsg);
 }
@@ -182,7 +182,7 @@ void Subscription::BroadcastService::processMessage(const RoutableMessageHeader&
         // ACK'ed
         return;
     }
-    SubscriptionPBJ::Protocol::Broadcast broadMsg;
+    Protocol::Broadcast broadMsg;
     broadMsg.ParseFromArray(message_body.data(),message_body.size());
     mParent->processMessage(header.source_object(), mTrusted, broadMsg);
 }

@@ -31,7 +31,7 @@
  */
 "pbj-0.0.3"
 
-package Sirikata.SubscriptionPBJ.Protocol;
+package Sirikata.Protocol;
 
 // SUBSCRIPTION port
 message Subscribe {

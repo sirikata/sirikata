@@ -40,11 +40,9 @@
 
 namespace Sirikata {
 
-namespace SubscriptionPBJ {
 namespace Protocol {
 class Subscribe;
 class Broadcast;
-}
 }
 
 class Subscriber;
@@ -144,8 +142,8 @@ class SIRIKATA_SPACE_EXPORT Subscription {
     BroadcastMap mBroadcasts;
     Network::IOService *mIOService;
 private:
-    void processMessage(const ObjectReference&object_reference,const SubscriptionPBJ::Protocol::Subscribe&loc);
-    void processMessage(const ObjectReference&object_reference,bool isTrusted,const SubscriptionPBJ::Protocol::Broadcast&loc);
+    void processMessage(const ObjectReference&object_reference,const Protocol::Subscribe&loc);
+    void processMessage(const ObjectReference&object_reference,bool isTrusted,const Protocol::Broadcast&loc);
 public:
     Subscription(Network::IOService *ioServ);
     ~Subscription();
