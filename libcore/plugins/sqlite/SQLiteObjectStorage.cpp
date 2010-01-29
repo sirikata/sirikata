@@ -27,7 +27,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH package.
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <util/Platform.hpp>
@@ -44,7 +44,7 @@
 
 namespace Sirikata { namespace Persistence {
 
- 
+
 template <typename StorageSet> void clearValuesFromStorageSet(StorageSet &ss) {
     int len = ss.reads_size();
     for (int i=0;i<len;++i) {
@@ -61,8 +61,8 @@ template <typename StorageSet> void clearKeysFromStorageSet(StorageSet &ss) {
 }
 
 template <typename StorageSet,typename ReadSet> void mergeKeysFromStorageSet(StorageSet &ss, const ReadSet&other) {
-    int len = other.reads_size();    
-    int sslen = ss.reads_size();    
+    int len = other.reads_size();
+    int sslen = ss.reads_size();
     int i;
     for (i=0;i<sslen;++i) {
         mergeStorageKey(ss.mutable_reads(i),other.reads(i));
@@ -423,8 +423,8 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
                     SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
                     if (rc==SQLITE_LOCKED||rc==SQLITE_BUSY)
                         locked=true;
-                }         
-                
+                }
+
             }
         }
         rc = sqlite3_finalize(value_query_stmt);
@@ -529,7 +529,7 @@ template <class CompareSet> SQLiteObjectStorage::Error SQLiteObjectStorage::chec
             const char *data=(const char*)sqlite3_column_text(value_query_stmt, 0);
             size_t size=sqlite3_column_bytes(value_query_stmt, 0);
             if(cs.compares(cs_it).has_data()==false) {
-                passed_test=false; 
+                passed_test=false;
             } else if (cs.compares(cs_it).has_comparator()==false) {
                 if (cs.compares(cs_it).data().length() != size) passed_test = false;
                 else if (0!=memcmp(cs.compares(cs_it).data().data(), data, size)) passed_test = false;
@@ -541,7 +541,7 @@ template <class CompareSet> SQLiteObjectStorage::Error SQLiteObjectStorage::chec
                     break;
                   case Protocol::CompareElement::NEQUAL:
                     if (cs.compares(cs_it).data().length() == size
-                        && 0==memcmp(cs.compares(cs_it).data().data(), data, size)) 
+                        && 0==memcmp(cs.compares(cs_it).data().data(), data, size))
                         passed_test = false;
                     break;
                   default:
@@ -586,7 +586,7 @@ Persistence::Protocol::Minitransaction* SQLiteObjectStorage::createMinitransacti
 }
 
 Persistence::Protocol::ReadWriteSet* SQLiteObjectStorage::createReadWriteSet(int numReadKeys, int numWriteKeys) {
-    
+
     Persistence::Protocol::ReadWriteSet* retval=new Persistence::Protocol::ReadWriteSet();
     while (numReadKeys--) {
         retval->add_reads();
@@ -603,7 +603,7 @@ void SQLiteObjectStorage::destroyResponse(Persistence::Protocol::Response*res) {
 }
 
 bool SQLiteObjectStorage::forwardMessagesTo(MessageService*ms) {
-    mDiskWorkQueue->enqueue(new AddMessageServiceMessage(this,ms));    
+    mDiskWorkQueue->enqueue(new AddMessageServiceMessage(this,ms));
     return true;
 }
 void SQLiteObjectStorage::AddMessageServiceMessage::operator() (){
@@ -613,9 +613,9 @@ void SQLiteObjectStorage::AddMessageServiceMessage::operator() (){
 
 void SQLiteObjectStorage::RemoveMessageServiceMessage::operator()(){
     std::vector<MessageService*>::iterator where=mParent->mInterestedParties.begin();
-    while (where!=mParent->mInterestedParties.end()) {        
+    while (where!=mParent->mInterestedParties.end()) {
         where=std::find(where,mParent->mInterestedParties.end(),toRemove);
-        if (where!=mParent->mInterestedParties.end()) {            
+        if (where!=mParent->mInterestedParties.end()) {
             where=mParent->mInterestedParties.erase(where);
         }
     }
@@ -625,7 +625,7 @@ void SQLiteObjectStorage::RemoveMessageServiceMessage::operator()(){
 
 bool SQLiteObjectStorage::endForwardingMessagesTo(MessageService*ms) {
     volatile bool complete=false;
-    mDiskWorkQueue->enqueue(new RemoveMessageServiceMessage(this,ms,&complete));    
+    mDiskWorkQueue->enqueue(new RemoveMessageServiceMessage(this,ms,&complete));
     while(!complete) {
     }
     delete this;
@@ -633,7 +633,7 @@ bool SQLiteObjectStorage::endForwardingMessagesTo(MessageService*ms) {
 }
 
 void SQLiteObjectStorage::processMessage(const RoutableMessageHeader&hdr,MemoryReference ref) {
-    if (mTransactional) {        
+    if (mTransactional) {
         Protocol::Minitransaction *trans=createMinitransaction(0,0,0);
         if (trans->ParseFromArray(ref.data(),ref.size())) {
             transactMessage(hdr,trans);
@@ -642,7 +642,7 @@ void SQLiteObjectStorage::processMessage(const RoutableMessageHeader&hdr,MemoryR
         Protocol::ReadWriteSet *rws=createReadWriteSet(0,0);
         if (rws->ParseFromArray(ref.data(),ref.size())) {
             applyMessage(hdr,rws);
-        }        
+        }
 
     }
 
