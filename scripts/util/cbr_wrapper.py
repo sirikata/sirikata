@@ -29,17 +29,18 @@ def RunCBR(args, io=None, **kwargs):
     # Setup our IO, using default IO but overriding with parameters
     if io == None:
         io = stdio.StdIO()
+    our_io = stdio.StdIO(io.stdin, io.stdout, io.stderr)
     if ('stdin' in kwargs):
-        io.stdin = kwargs['stdin']
+        our_io.stdin = kwargs['stdin']
         del kwargs['stdin']
     if ('stdout' in kwargs):
-        io.stdout = kwargs['stdout']
+        our_io.stdout = kwargs['stdout']
         del kwargs['stdout']
     if ('stderr' in kwargs):
-        io.stderr = kwargs['stderr']
+        our_io.stderr = kwargs['stderr']
         del kwargs['stderr']
 
-    invoke.invoke(cmd, io=io, **kwargs)
+    invoke.invoke(cmd, io=our_io, **kwargs)
 
 if __name__ == "__main__":
     RunCBR(sys.argv)
