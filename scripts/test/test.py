@@ -74,18 +74,13 @@ class ShellCommandTest(Test):
         self.cmd = cmd
 
     def run(self, io):
-        io = util.stdio.MemoryIO()
-        util.invoke.invoke(self.cmd, io)
+        intermediate_io = util.stdio.MemoryIO()
+        util.invoke.invoke(self.cmd, intermediate_io)
 
-        result = 'stdout:\n' + io.stdout.getvalue() + '\nstderr:\n' + io.stderr.getvalue() + '\n'
+        result = 'stdout:\n' + intermediate_io.stdout.getvalue() + '\nstderr:\n' + intermediate_io.stderr.getvalue() + '\n'
         self._store_log(result)
 
         # now check for warnings and errors
         failed = self._check_errors(io, result)
 
-        if failed:
-            print >>io.stdout, self.name, "Failed"
-            return False
-        else:
-            print >>io.stdout, self.name, "Succeeded"
-            return True
+        return not failed

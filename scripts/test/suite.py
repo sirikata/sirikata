@@ -27,22 +27,27 @@ class TestSuite:
 
     def run(self, name, io):
         test = self.tests_by_name[name]
-        print "TEST", self.__get_name(test), "- Started"
+        print >>io.stdout, "TEST", self.__get_name(test), "...",
+        io.stdout.flush()
 
         # Make sure directory for test exists, enter it
         starting_dir = os.getcwd();
         self.__ensure_in_directory(starting_dir, name)
 
+        success = True
         try:
-            test.run(io)
+            success = test.run(io)
         except:
             if (io.stderr):
                 traceback.print_exc(100, io.stderr)
+            success = False
 
+        if success:
+            print >>io.stdout, " Succeeded"
+        else:
+            print >>io.stdout, " Failed"
         # And make sure we get out of that directory
         os.chdir(starting_dir)
-
-        print "TEST", self.__get_name(test), "- Finished"
 
     def run_all(self, io):
         # Make sure directory for test exists, enter it
