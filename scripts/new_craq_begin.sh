@@ -1,6 +1,3 @@
-
 #!/bin/sh
 
-
-./cluster/run.py 'python /home/meru/bmistree/newZookeeperScripts/runZookeeper.py'
-
+./cluster/run.py 'cd ewencp/cbr.git/scripts/; python cluster/zookeeper/runZookeeper.py'
