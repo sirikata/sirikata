@@ -14,8 +14,19 @@ import util.stdio
 import util.invoke
 
 class Test:
-    def __init__(self, _name):
-        self.name = _name
+    def __init__(self, name, output_flags=[('Warning',['[Ww]arning'],False), ('Error',['[Ee]rror','[Aa]ssert','Segmentation fault'],True)]):
+        """
+        name: Name of the test
+
+        output_flags: List of ('ErrorType', [re,ge,xes], CausesFailureBool). ErrorType is
+        something like 'Warning' or 'Error', which will be prepended in a report.
+        The regex lists contains regexs to check (via re) the output for (by line).
+        CausesFailureBool indicates whether a match of one of these regexes should
+        cause the entire test to fail.
+
+        """
+        self.name = name
+        self.output_flags = output_flags
 
     def run(self, io):
         print >>io.stderr, "Run not implemented for test " + self.name
@@ -30,16 +41,37 @@ class Test:
         log_file.write(logdata)
         log_file.close()
 
+    def _check_errors(self, io, output):
+        """
+        Checks for errors reported in the output using the output_flags specified at
+        construction.
+        """
+        failed = False
+        outputlines = output.splitlines()
+        for error_type,matchers,causes_fail in self.output_flags:
+            for line in outputlines:
+                matched_one = False
+                for matcher in matchers:
+                    found = re.search(matcher, line)
+                    if found == None:
+                        continue
+                    matched_one = True
+                    if causes_fail:
+                        failed = True
+                if matched_one:
+                    print >>io.stdout, line
+        return failed
+
 class ShellCommandTest(Test):
-    # _name: Name of the test
-    # _cmd: Command to execute, as list of program and args
-    # _warnings: List of keywords to match in stderr and stdout that indicate a warning condition
-    # _errors: List of keywords to match in stderr and stdout that indicate an error
-    def __init__(self, _name, _cmd, _warnings=['[Ww]arning'], _errors=['[Ee]rror','[Aa]ssert']):
-        Test.__init__(self, _name)
-        self.cmd = _cmd
-        self.warnings = _warnings
-        self.errors = _errors
+    def __init__(self, name, cmd, **kwargs):
+        """
+        name: Name of the command
+        cmd: Command to execute, as list of program and args
+        Others: see Test.__init__
+        """
+
+        Test.__init__(self, name, **kwargs)
+        self.cmd = cmd
 
     def run(self, io):
         io = util.stdio.MemoryIO()
@@ -49,33 +81,11 @@ class ShellCommandTest(Test):
         self._store_log(result)
 
         # now check for warnings and errors
-        has_errors = self.__check_errors(io, result)
-        has_warnings = self.__check_warnings(io, result)
+        failed = self._check_errors(io, result)
 
-        if has_errors:
+        if failed:
             print >>io.stdout, self.name, "Failed"
             return False
-
-        if has_warnings:
-            print >>io.stdout, self.name, "Succeeded with warnings"
         else:
             print >>io.stdout, self.name, "Succeeded"
-        return True
-
-    def __check_warnings(self, io, output):
-        return self.__check_output(io, output, self.warnings)
-
-    def __check_errors(self, io, output):
-        return self.__check_output(io, output, self.errors)
-
-    def __check_output(self, io, output, matchers):
-        matched = False
-        outputlines = output.splitlines()
-        for matcher in matchers:
-            for line in outputlines:
-                found = re.search(matcher, line)
-                if found == None:
-                    continue
-                print >>io.stdout, line
-                matched = True
-        return matched
+            return True
