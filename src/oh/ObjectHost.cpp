@@ -596,7 +596,7 @@ void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, con
 bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double distance) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    CBR::Protocol::Object::Ping ping_msg;
+    /*CBR::Protocol::Object::Ping ping_msg;
     ping_msg.set_ping(t);
     if (distance>=0)
         ping_msg.set_distance(distance);
@@ -605,8 +605,8 @@ bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double d
 
     if (destServer!=NullServerID) {
         return send(src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
-    }
-    return false;
+    }*/
+    return false;    
 }
 
 bool ObjectHost::randomPing(const Time& t) {
@@ -620,7 +620,6 @@ bool ObjectHost::randomPing(const Time& t) {
     
     return false;
 }
-
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);

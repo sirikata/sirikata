@@ -327,13 +327,14 @@ private:
 
   void sendChannelSegmentLoop() {
     // should start from ssthresh, the slow start lower threshold, but starting
-    // from 1 for now. Still need to implement slow start.
+    // from 1 for now. Still need to implement slow start.   
+
     while (mLooping) {
       uint16 numSegmentsSent = 0;
       {
 	boost::unique_lock<boost::mutex> lock(mQueueMutex);
 
-        while (mQueuedSegments.empty()){
+        while (mQueuedSegments.empty()) {
 
 	  if (mState == CONNECTION_PENDING_DISCONNECT) {
 	    return;
@@ -344,7 +345,7 @@ private:
 	  if (!mLooping) return;
 	}
 
-	//printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
+	printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
 
 	for (int i = 0; i < mCwnd; i++) {
 	  if ( !mQueuedSegments.empty() ) {
@@ -359,8 +360,8 @@ private:
 	    sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
 
 	    sendSSTChannelPacket(sstMsg);
-
-	    //printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
+	    
+	    printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
 
 	    segment->mTransmitTime = Timer::now();
 	    mOutstandingSegments.push_back(segment);
@@ -374,19 +375,33 @@ private:
 	  }
 	}
       }
-
+      
       boost::this_thread::sleep( boost::posix_time::microseconds(mRTOMicroseconds) );
 
       if (mState == CONNECTION_PENDING_CONNECT) {
 	boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
 
-        printf("Remote endpoint not available to connect\n");
-        mConnectionReturnCallbackMap[mRemoteEndPoint](FAILURE,
+        
+	mConnectionReturnCallbackMap[mRemoteEndPoint](FAILURE,
                                                 boost::shared_ptr<Connection<EndPointType> > (mWeakThis) );
 
+        mConnectionReturnCallbackMap.erase(mRemoteEndPoint);	
 
-	mConnectionReturnCallbackMap.erase(mRemoteEndPoint);
-	mConnectionMap.erase(mLocalEndPoint);
+	if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
+	  std::cout << "mConnectionMap.find: " << "\n";
+	  std::cout << ((mConnectionMap.find(mLocalEndPoint))->first).endPoint.toString() << "\n";
+	  std::cout << ((mConnectionMap.find(mLocalEndPoint))->first).port  << "\n";
+	  std::cout << mConnectionMap.size() << "\n";
+	  fflush(stdout);
+	  
+	  mConnectionMap.erase(mLocalEndPoint);
+	}
+
+	std::cout << "Remote endpoint not available to connect\n";
+
+	
+	for (int i=0; i<1000; i++) { std::cout << "FLUSH!\n"; }
+	fflush(stdout);
 
         return;
       }
@@ -515,7 +530,7 @@ private:
     conn->setLocalChannelID(payload[0]);
     conn->sendData(payload, sizeof(payload));
 
-    mConnectionReturnCallbackMap[remoteEndPoint] = cb;
+    mConnectionReturnCallbackMap[remoteEndPoint] = cb;    
 
     return true;
   }
