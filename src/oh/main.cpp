@@ -106,6 +106,8 @@ int main(int argc, char** argv) {
     ctx->add(scenario);
     ctx->run(2);
 
+    ctx->cleanup();
+
     if (GetOption(PROFILE)->as<bool>()) {
         ctx->profiler->report();
     }

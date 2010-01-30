@@ -53,27 +53,8 @@ class MockForwarder;
  */
 class SpaceContext : public Context, public PollingService {
 public:
-    SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
-     : Context("Space", ios, strand, _trace, epoch, duration),
-       PollingService(strand),
-       lastTime(curtime),
-       time(curtime),
-       mID(_id),
-       mServerRouter(NULL),
-       mObjectRouter(NULL),
-       mServerDispatcher(NULL),
-       mObjectDispatcher(NULL)
-
-    {
-        mIterationProfiler = profiler->addStage("Context Iteration");
-        mIterationProfiler->started();
-        mWorkProfiler = profiler->addStage("Context Work");
-    }
-
-    ~SpaceContext() {
-        delete mIterationProfiler;
-        delete mWorkProfiler;
-    }
+    SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration);
+    ~SpaceContext();
 
     ServerID id() const {
         return mID.read();
@@ -103,25 +84,8 @@ public:
     Time lastTime;
     Time time;
 private:
-    virtual void poll() {
-        mIterationProfiler->finished();
-        mWorkProfiler->started();
-
-        Duration elapsed = sinceEpoch( Timer::now());
-
-        if (elapsed > mSimDuration)
-        {
-            this->stop();
-            for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
-                (*it)->stop();
-        }
-        
-        lastTime = time;
-        time = Time::null() + elapsed;
-
-        mWorkProfiler->finished();
-        mIterationProfiler->started();
-    }
+    virtual void poll();
+    virtual void stop();
 
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder

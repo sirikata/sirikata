@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectHostContext.cpp
+ *  SpaceContext.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,39 +30,54 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectHostContext.hpp"
+#include "SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
-ObjectHostContext::ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
- : Context("Object Host", ios, strand, _trace, epoch, simlen),
-   id(_id),
-   objectHost(NULL),
-   mFinishedTimer( IOTimer::create(ios) )
+SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
+ : Context("Space", ios, strand, _trace, epoch, duration),
+   PollingService(strand),
+   lastTime(curtime),
+   time(curtime),
+   mID(_id),
+   mServerRouter(NULL),
+   mObjectRouter(NULL),
+   mServerDispatcher(NULL),
+   mObjectDispatcher(NULL)
 {
+    mIterationProfiler = profiler->addStage("Context Iteration");
+    mIterationProfiler->started();
+    mWorkProfiler = profiler->addStage("Context Work");
 }
 
-void ObjectHostContext::start() {
-    Time t_now = simTime();
-    Time t_end = simTime(mSimDuration);
-    Duration wait_dur = t_end - t_now;
-    mFinishedTimer->wait(
-        wait_dur,
-        mainStrand->wrap(
-            std::tr1::bind(&ObjectHostContext::stopSimulation, this)
-        )
-    );
+SpaceContext::~SpaceContext() {
+    delete mIterationProfiler;
+    delete mWorkProfiler;
 }
 
-void ObjectHostContext::stopSimulation() {
-    this->stop();
-    for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
-        (*it)->stop();
+void SpaceContext::poll() {
+    mIterationProfiler->finished();
+    mWorkProfiler->started();
+
+    Duration elapsed = sinceEpoch( Timer::now());
+
+    if (elapsed > mSimDuration)
+    {
+        this->stop();
+        for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
+            (*it)->stop();
+    }
+
+    lastTime = time;
+    time = Time::null() + elapsed;
+
+    mWorkProfiler->finished();
+    mIterationProfiler->started();
 }
 
-void ObjectHostContext::stop() {
-    mFinishedTimer.reset();
+void SpaceContext::stop() {
+    PollingService::stop();
     startForceQuitTimer();
 }
 

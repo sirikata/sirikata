@@ -250,6 +250,7 @@ INCLUDE_DIRECTORIES(BEFORE
 #source files
 SET(CBR_CORE_SOURCES
   ${CBR_SOURCE_DIR}/Address4.cpp
+  ${CBR_SOURCE_DIR}/Context.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/RouterElement.cpp
@@ -257,6 +258,7 @@ SET(CBR_CORE_SOURCES
   ${CBR_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
   ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${CBR_SOURCE_DIR}/space/SpaceContext.cpp
   ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp

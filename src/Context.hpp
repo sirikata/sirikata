@@ -57,7 +57,10 @@ public:
        mTrace(_trace),
        mEpoch(epoch),
        mLastSimTime(Time::null()),
-       mSimDuration(simlen)
+       mSimDuration(simlen),
+       mKillThread(),
+       mKillService(NULL),
+       mKillTimer()
     {
 
     }
@@ -121,6 +124,9 @@ public:
         workerThreads.clear();
     }
 
+    // Call after run returns to ensure all resources get cleaned up.
+    void cleanup();
+
     Trace* trace() const {
         return mTrace;
     }
@@ -129,12 +135,27 @@ public:
     IOStrand* mainStrand;
     TimeProfiler* profiler;
 protected:
+
+    void startForceQuitTimer();
+
+    // Forces quit by stopping event processing.  Should only be
+    // invoked after waiting a sufficient period after an initial stop
+    // request.
+    void forceQuit() {
+        SILOG(forcequit,fatal,"[FORCEQUIT] Fatal error: Quit forced by timeout.");
+        ioService->stop();
+    }
+
     Trace* mTrace;
 
     Sirikata::AtomicValue<Time> mEpoch;
     Sirikata::AtomicValue<Time> mLastSimTime;
     Duration mSimDuration;
     std::vector<Service*> mServices;
+
+    std::tr1::shared_ptr<Thread> mKillThread;
+    IOService* mKillService;
+    IOTimerPtr mKillTimer;
 }; // class ObjectHostContext
 
 } // namespace CBR

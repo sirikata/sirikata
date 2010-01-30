@@ -88,6 +88,7 @@ int main(int argc, char** argv) {
 
     space_context->run(1);
 
+    space_context->cleanup();
 
     if (GetOption(PROFILE)->as<bool>()) {
         space_context->profiler->report();
