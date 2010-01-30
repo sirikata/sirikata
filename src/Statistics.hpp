@@ -62,17 +62,35 @@ struct Batch {
 
 class BatchedBuffer {
 public:
+    struct IOVec {
+        IOVec()
+                : base(NULL),
+                  len(0)
+        {}
+
+        IOVec(const void* _b, uint32 _l)
+                : base(_b),
+                  len(_l)
+        {}
+
+        const void* base;
+        uint32 len;
+    };
+
     BatchedBuffer();
 
-    // write the specified number of bytes from the pointer to the buffer
-    void write(const void* buf, uint32 nbytes);
+    void write(const IOVec* iov, uint32 iovcnt);
 
     void flush();
 
     // write the buffer to an ostream
     void store(FILE* os);
 private:
+    // write the specified number of bytes from the pointer to the buffer
+    void write(const void* buf, uint32 nbytes);
+
     typedef Batch<uint8> ByteBatch;
+    boost::recursive_mutex mMutex;
     ByteBatch* filling;
     std::deque<ByteBatch*> batches;
 };
@@ -202,6 +220,9 @@ public:
   void shutdown();
 
 private:
+    // Helper to prepend framing (size and payload type hint)
+    void writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data, uint32 iovcnt);
+
     // Thread which flushes data to disk periodically
     void storageThread(const String& filename);
 
@@ -210,8 +231,6 @@ private:
 
     Thread* mStorageThread;
     Sirikata::AtomicValue<bool> mFinishStorage;
-
-    boost::recursive_mutex mMutex;
 }; // class Trace
 
 } // namespace CBR

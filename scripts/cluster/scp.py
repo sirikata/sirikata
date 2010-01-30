@@ -16,7 +16,12 @@
 # instead of a formatted filename.
 
 import sys
-import subprocess
+# FIXME It would be nice to have a better way of making this script able to find
+# other modules in sibling packages
+sys.path.insert(0, sys.path[0]+"/..")
+
+import util.stdio
+import util.invoke
 from config import ClusterConfig
 
 def append_file_if_directory(dest, source_filename):
@@ -28,7 +33,7 @@ def append_file_if_directory(dest, source_filename):
     return source_dest
 
 # Takes a cluster config and the source and destination filename formats
-def ClusterSCP(cc, params):
+def ClusterSCP(cc, params, io=util.stdio.StdIO()):
     deployment_nodes = cc.deploy_nodes
     if (deployment_nodes == None or len(deployment_nodes) == 0):
         deployment_nodes = cc.nodes
@@ -79,7 +84,7 @@ def ClusterSCP(cc, params):
                 cmd = 'cp ' + source + ' ' + source_dest
 
             sh_command = ['sh', '-c', cmd % subs_dict]
-            subprocess.call(sh_command)
+            util.invoke.invoke(sh_command, io)
 
         index = index + 1
 

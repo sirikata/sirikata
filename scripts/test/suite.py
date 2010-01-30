@@ -5,7 +5,16 @@
 import sys
 import os
 import os.path
+import traceback
 from test import Test, ShellCommandTest
+from sim_test import ClusterSimTest
+
+import sys
+# FIXME It would be nice to have a better way of making this script able to find
+# other modules in sibling packages
+sys.path.insert(0, sys.path[0]+"/..")
+
+import util.stdio
 
 class TestSuite:
     def __init__(self, name='Default'):
@@ -17,31 +26,37 @@ class TestSuite:
         self.tests.append(test)
         self.tests_by_name[test.name] = test
 
-    def run(self, name):
+    def run(self, name, io):
         test = self.tests_by_name[name]
-        print "TEST", self.__get_name(test), "- Started"
+        print >>io.stdout, "TEST", self.__get_name(test), "...",
+        io.stdout.flush()
 
         # Make sure directory for test exists, enter it
         starting_dir = os.getcwd();
         self.__ensure_in_directory(starting_dir, name)
 
+        success = True
         try:
-            test.run()
+            success = test.run(io)
         except:
-            print "Error: Caught exception in test '" + self.__get_name(test) + "':", str(sys.exc_info()[0])
+            if (io.stderr):
+                traceback.print_exc(100, io.stderr)
+            success = False
 
+        if success:
+            print >>io.stdout, " Succeeded"
+        else:
+            print >>io.stdout, " Failed"
         # And make sure we get out of that directory
         os.chdir(starting_dir)
 
-        print "TEST", self.__get_name(test), "- Finished"
-
-    def run_all(self):
+    def run_all(self, io):
         # Make sure directory for test exists, enter it
         starting_dir = os.getcwd();
         self.__ensure_in_directory(starting_dir, self.name)
 
         for test in self.tests:
-            self.run(test.name)
+            self.run(test.name, io=io)
 
         # And make sure we get out of that directory
         os.chdir(starting_dir)
@@ -61,11 +76,11 @@ class TestSuite:
 if __name__ == "__main__":
 
     suite = TestSuite()
-    suite.add( ShellCommandTest('default_sim', ['../../cluster/sim.py']) )
+    suite.add( ClusterSimTest('default_sim') )
     suite.add( ShellCommandTest('default_packet_latency', ['../../bench/packet_latency_by_load.py', '10']) )
 
     if len(sys.argv) < 2:
-        suite.run_all()
+        suite.run_all(util.stdio.StdIO())
     else:
         for name in sys.argv[1:]:
             suite.run(name)
