@@ -72,7 +72,56 @@ public:
     /** Unique identifier for streams backed by the same connection.  Identifiers
      *  are always less than 2^30 and are reused when streams are closed.
      */
-    typedef vuint32 StreamID;
+    class StreamID: public vuint32 {
+    public:
+        StreamID(uint32 input) :vuint32(input){
+        }
+        StreamID(){}
+        enum {
+            MAX_HEX_SERIALIZED_LENGTH=sizeof(uint32)*2+1
+        };
+        static uint8 fromHex(char c) {
+            if (c>='0'&&c<='9') return c-'0';
+            if (c>='A'&&c<='Z') return c-'A';
+            return c-'a';
+        }
+        static char toHex(uint8 h) {
+            if (h<=9) return '0'+h;
+            return (h-10)+'A';
+        }
+        unsigned int serializeToHex(uint8 *destination, unsigned int maxsize) const {
+            assert(maxsize>1);
+            uint32 tmp = read();
+            unsigned int count=0;
+            do {
+                destination[count++]=toHex(tmp%16);
+                tmp/=16;
+            }while(count<maxsize&&tmp);
+            std::reverse(destination,destination+count);
+            destination[count++]='%';
+            return count;
+        }        
+        bool unserializeFromHex(const uint8*src, unsigned int&size) {
+            if (size==0) return false;
+            unsigned int maxsize=size;
+            uint64 retval=0;
+            uint64 temp=0;
+            bool success=false;
+            for (size=0;size<maxsize;++size) {
+                char c=src[size];
+                if (c=='%') {
+                    ++size;
+                    success=true;
+                    break;
+                }
+                retval*=16;
+                retval+=fromHex(c);
+            }
+            *this=StreamID(retval);
+            return success;
+        }
+        
+    };
 
     /// Specifies the current state of a connection.
     enum ConnectionStatus {

@@ -139,16 +139,24 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
         break;
     }
     toBeSent.originStream=getID();
-    uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];
-    unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
-    unsigned int successLengthNeeded=toBeSent.originStream.serialize(serializedStreamId,streamIdLength);
     ///this function should never return something larger than the  MAX_SERIALIZED_LEGNTH
-    assert(successLengthNeeded<=streamIdLength);
     if (mZeroDelim) {
-        toBeSent.data = ASIOSocketWrapper::toBase64ZeroDelim(MemoryReference(serializedStreamId,successLengthNeeded),
-                                                             firstChunk,
-                                                             secondChunk);
+        uint8 serializedStreamId[StreamID::MAX_HEX_SERIALIZED_LENGTH];
+        unsigned int streamIdLength=StreamID::MAX_HEX_SERIALIZED_LENGTH;
+        unsigned int successLengthNeeded=toBeSent.originStream.serializeToHex(serializedStreamId,streamIdLength);
+        assert(successLengthNeeded<=streamIdLength);
+
+
+        MemoryReference streamIdBytes(serializedStreamId,successLengthNeeded);
+        toBeSent.data = ASIOSocketWrapper::toBase64ZeroDelim(firstChunk,
+                                                             secondChunk,
+                                                             MemoryReference(NULL,0),
+                                                             &streamIdBytes);
     }else {
+        uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];
+        unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
+        unsigned int successLengthNeeded=toBeSent.originStream.serialize(serializedStreamId,streamIdLength);
+        assert(successLengthNeeded<=streamIdLength);
         streamIdLength=successLengthNeeded;
         size_t totalSize=firstChunk.size()+secondChunk.size();
         totalSize+=streamIdLength;

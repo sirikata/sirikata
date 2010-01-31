@@ -133,14 +133,19 @@ int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
     
 }
 
-Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c) {
+Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c, const MemoryReference*rawBytesToPrepend) {
     const MemoryReference*refs[3]; refs[0]=&a; refs[1]=&b; refs[2]=&c;
     unsigned int datalen=0;
     uint8 data[3];
-    Chunk * retval= new Chunk(conservativeBase64Size(a.size()+b.size()+c.size())+2);
-    (*retval)[0]='\0';//frame start
+    Chunk * retval= new Chunk((rawBytesToPrepend?rawBytesToPrepend->size():0)+conservativeBase64Size(a.size()+b.size()+c.size())+2);
+    Chunk::iterator prependStart=retval->begin();
+    *(prependStart++)='\0';//frame start
+    if (rawBytesToPrepend) {
+        memcpy(&*prependStart,rawBytesToPrepend->data(),rawBytesToPrepend->size());
+        prependStart+=rawBytesToPrepend->size();
+    }
     size_t retvalSize=retval->size();
-    unsigned int curPlace=1;
+    unsigned int curPlace=(unsigned int)(prependStart-retval->begin());
     for (int i=0;i<3;++i) {
         const uint8*dat=(const uint8*)refs[i]->data();
         uint32 size=refs[i]->size();
@@ -371,16 +376,18 @@ bool ASIOSocketWrapper::rawSend(const MultiplexedSocketPtr&parentMultiSocket, Ch
 Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid){
     const unsigned int max_size=16;
     if (thus->isZeroDelim()) {
-        uint8 dataStream[max_size+Stream::StreamID::MAX_SERIALIZED_LENGTH+1];
+        uint8 dataStream[max_size+Stream::StreamID::MAX_HEX_SERIALIZED_LENGTH+1];
         Stream::StreamID controlStream;//control packet
-        unsigned int size=controlStream.serialize(&dataStream[0],max_size);
+        unsigned int streamidsize=0;
+        unsigned int size=streamidsize=controlStream.serializeToHex(&dataStream[0],max_size);
         assert(size<max_size);
         dataStream[size++]=code;
         unsigned int cur=size;
         size=max_size-cur;
         size=sid.serialize(&dataStream[cur],size);
         assert(size+cur<=max_size);
-        return toBase64ZeroDelim(MemoryReference(dataStream,size+cur),MemoryReference(NULL,0),MemoryReference(NULL,0));
+        MemoryReference serializedStreamId(dataStream,streamidsize);
+        return toBase64ZeroDelim(MemoryReference(dataStream+streamidsize,size+cur-streamidsize),MemoryReference(NULL,0),MemoryReference(NULL,0),&serializedStreamId);
     }else {
         uint8 dataStream[max_size+VariableLength::MAX_SERIALIZED_LENGTH+Stream::StreamID::MAX_SERIALIZED_LENGTH];
         unsigned int size=max_size;

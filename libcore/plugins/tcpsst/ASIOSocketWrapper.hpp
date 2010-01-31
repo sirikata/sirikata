@@ -224,7 +224,7 @@ public:
     Duration averageSendLatency() const;
     Duration averageReceiveLatency() const;
     //converts 3 arrays into a contiguous array of base64 numbers, delimited with a '\0' at the end.
-    static Chunk* toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c);
+    static Chunk* toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c, const MemoryReference *bytesToPrependUnencoded=NULL);
     ///makes sure the UUID only consists of unicode-allowed characters and has no null values inside
     static UUID massageUUID(const UUID&);
 class CheckCRLF {

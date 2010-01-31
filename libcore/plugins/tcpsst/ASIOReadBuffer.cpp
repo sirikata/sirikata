@@ -142,10 +142,18 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
         }
         return resp;
     }
-    bool parsedId=false;
     Stream::StreamID id;
+    
     assert(begin!=end&&*begin<=127);
     ++begin;//begin should have 0x00-0x7f as initial byte to indicate 0xff delimitation
+    unsigned int streamIdOffset=(unsigned int)(end-begin);
+    bool parsedId=id.unserializeFromHex(begin,streamIdOffset);
+    if (parsedId==false) {
+        return Network::Stream::AcceptedData;//burn it, runt packet
+    }
+    begin+=streamIdOffset;
+   
+
     Chunk newChunk(((end-begin)*3)/4+3);//maximum of the size;
     int remainderShift=0;
     
@@ -166,10 +174,6 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
                 if( b4Posn > 3 ) {                  // Time to decode?
                     outBuffPosn += decode4to3( b4, newChunk, outBuffPosn );
                     b4Posn = 0;
-                    if (parsedId==false&&outBuffPosn>5) {
-                        id=parseId(newChunk,outBuffPosn);
-                        parsedId=true;
-                    }
                     // If that was the equals sign, break out of 'for' loop
                     if( sbiDecode == EQUALS_SIGN_ENC ) {
                         break;
@@ -179,9 +183,6 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
         }   // end if: white space, equals sign or better
     }
     assert(outBuffPosn<=(int)newChunk.size());
-    if (!parsedId) {
-        id=parseId(newChunk,outBuffPosn);
-    }
     newChunk.resize(outBuffPosn);
     Network::Stream::ReceivedResponse resp=parentSocket->receiveFullChunk(whichSocket,id,newChunk);
     if (resp!=Network::Stream::AcceptedData) {
