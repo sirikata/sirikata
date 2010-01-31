@@ -133,6 +133,9 @@ static Stream::StreamID parseId(Chunk&newChunk,int&outBuffPosn) {
     outBuffPosn-=headerLength;
     return id;
 }
+
+//Adding this bug to the stream library and turning on base64 triggers a space server crash, so we need to fix it ASAP
+//#define TRIGGER_SPACE_BUG
 Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket,const uint8*begin, const uint8*end){
     if (mCachedRejectedChunk) {
         Network::Stream::ReceivedResponse resp=parentSocket->receiveFullChunk(whichSocket,mNewChunkID,*mCachedRejectedChunk);
@@ -151,6 +154,9 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
     if (parsedId==false) {
         return Network::Stream::AcceptedData;//burn it, runt packet
     }
+#ifdef TRIGGER_SPACE_BUG
+    id=Stream::StreamID(id.read()%10);
+#endif
     begin+=streamIdOffset;
    
 
