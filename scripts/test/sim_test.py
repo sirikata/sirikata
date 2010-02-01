@@ -15,12 +15,21 @@ import time
 
 import util.stdio
 import cluster.sim
+from bench.packet_latency_by_load import PacketLatencyByLoad
+
+def __standard_sim_func__(cc, cs, io):
+    cluster_sim = cluster.sim.ClusterSim(cc, cs, io)
+    cluster_sim.run()
 
 class ClusterSimTest(test.Test):
-    def __init__(self, name, settings=None, space_pool=4, space_layout=(4,1), oh_pool=1, **kwargs):
+    def __init__(self, name, settings=None, space_pool=4, space_layout=(4,1), oh_pool=1, sim_func=__standard_sim_func__, **kwargs):
         """
         name: Name of the test
         settings: A dict of settings in ClusterSimSettings to override from the defaults, e.g. { 'duration' : '100s' }
+        space_pool: Number of space servers to allocate and run
+        space_layout: 2-tuple specifying 2D layout of servers
+        oh_pool: Number of object hosts to allocate and run
+        sim_func: Function to invoke to run the simulation, of the form f(cluster_config, cluster_settings, io=StdIO_obj)
         Others: see Test.__init__
         """
 
@@ -29,6 +38,7 @@ class ClusterSimTest(test.Test):
         self.space_pool = space_pool
         self.space_layout = space_layout
         self.oh_pool = oh_pool
+        self.sim_func = sim_func
 
     def run(self, io):
         intermediate_io = util.stdio.MemoryIO()
@@ -41,11 +51,10 @@ class ClusterSimTest(test.Test):
             for setname, value in self.settings.items():
                 setattr(cs, str(setname), value)
 
-        cluster_sim = cluster.sim.ClusterSim(cc, cs, io=intermediate_io)
-
+        target_func = lambda: self.sim_func(cc, cs, io=intermediate_io)
         sim_result = True
         if self.time_limit:
-            sim_thread = threading.Thread(target=cluster_sim.run)
+            sim_thread = threading.Thread(target=target_func)
             sim_thread.daemon = True # allow program to exit without sim thread exiting since we can't kill it currently
             sim_thread.setDaemon(True) # Alternate version for old versions of Python
             sim_thread.start()
@@ -60,7 +69,7 @@ class ClusterSimTest(test.Test):
                     io.stderr.flush()
                     break
         else:
-            cluster_sim.run()
+            target_func()
 
         result = 'stdout:\n' + intermediate_io.stdout.getvalue() + '\nstderr:\n' + intermediate_io.stderr.getvalue() + '\n'
         self._store_log(result)
@@ -69,3 +78,18 @@ class ClusterSimTest(test.Test):
         failed = self._check_errors(io, result) or not sim_result
 
         return not failed
+
+
+
+
+class PacketLatencyByLoadTest(ClusterSimTest):
+    def __init__(self, name, rates, **kwargs):
+        """
+        name: Name of the test
+        rates: List of ping rates to test with
+        Others: see ClusterSimTest.__init__
+        """
+        if 'sim_func' in kwargs:
+            ClusterSimTest.__init__(self, name, **kwargs)
+        else:
+            ClusterSimTest.__init__(self, name, sim_func=(lambda cc,cs,io: PacketLatencyByLoad(cc,cs,rates,io=io)), **kwargs)

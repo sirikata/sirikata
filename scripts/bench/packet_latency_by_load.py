@@ -16,6 +16,7 @@ import subprocess
 # other modules in sibling packages
 sys.path.insert(0, sys.path[0]+"/..")
 
+import util.stdio
 from cluster.config import ClusterConfig
 from cluster.sim import ClusterSimSettings,ClusterSim
 from graph.message_latency import graph_message_latency
@@ -64,7 +65,7 @@ def get_stage_samples_filename(trial):
 # ping_rate - # of pings to try to generate, i.e. load
 # allow_same - allow pings to go to objects on the same server
 # force_same - force pings to go to objects on the same server
-def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False):
+def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False, io=util.stdio.StdIO()):
     cs.scenario = 'ping'
     cs.scenario_options = ' '.join(
         ['--num-pings-per-second=' + str(ping_rate),
@@ -73,13 +74,33 @@ def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False):
          ]
         )
 
-    cluster_sim = ClusterSim(cc, cs)
+    cluster_sim = ClusterSim(cc, cs, io=io)
     run_trial(cluster_sim)
     run_message_latency_analysis(cluster_sim,
                                  get_logfile_name(ping_rate),
                                  get_latencyfile_name(ping_rate),
                                  get_stage_samples_filename(ping_rate)
                                  )
+
+
+# cc - ClusterConfig
+# cs - ClusterSimSettings
+# rates - array of ping rates to test
+# allow_same - allow pings to go to objects on the same server
+# force_same - force pings to go to objects on the same server
+def PacketLatencyByLoad(cc, cs, rates, allow_same=True, force_same=False, io=util.stdio.StdIO()):
+    for rate in rates:
+        run_ping_trial(cc, cs, rate, True, False, io=io)
+
+    log_files = [get_logfile_name(x) for x in rates]
+    labels = ['%s pps'%(x) for x in rates]
+    graph_message_latency(log_files, labels, 'latency_stacked_bar.pdf')
+
+    samples_files = zip(
+        [get_stage_samples_filename(x) for x in rates],
+        [get_stage_samples_filename(x) for x in rates]
+        )
+    graph_stages_raw_samples(samples_files)
 
 
 if __name__ == "__main__":
@@ -106,15 +127,4 @@ if __name__ == "__main__":
 
 
     rates = sys.argv[1:]
-    for rate in rates:
-        run_ping_trial(cc, cs, rate, True, False)
-
-    log_files = [get_logfile_name(x) for x in rates]
-    labels = ['%s pps'%(x) for x in rates]
-    graph_message_latency(log_files, labels, 'latency_stacked_bar.pdf')
-
-    samples_files = zip(
-        [get_stage_samples_filename(x) for x in rates],
-        [get_stage_samples_filename(x) for x in rates]
-        )
-    graph_stages_raw_samples(samples_files)
+    PacketLatencyByLoad(cc, cs, rates, True, False)
