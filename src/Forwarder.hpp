@@ -76,7 +76,7 @@ private:
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
-    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size);
+    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr);
 
   protected:
 

@@ -32,6 +32,7 @@
 
 #include "OSegLookupQueue.hpp"
 #include "ObjectSegmentation.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
@@ -66,13 +67,12 @@ OSegLookupQueue::OSegLookupList::iterator OSegLookupQueue::OSegLookupList::end()
 // OSegLookupQueue Implementation
 
 
-OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred, uint32 queue_size)
+OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg)
  : mNetworkStrand(net_strand),
    mOSeg(oseg),
-   mPredicate(pred),
-   mTotalSize(0),
-   oseg_lookup_queue_tail_drop_size_parameter (queue_size)
+   mTotalSize(0)
 {
+    mMaxLookups = GetOption(OSEG_LOOKUP_QUEUE_SIZE)->as<uint32>();
     mOSeg->setLookupListener(this);
 }
 
@@ -80,11 +80,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
 {
   UUID dest_obj = msg->dest_object();
 
-  // Check if we'll accept the burden of this very heavy packet
   size_t cursize = msg->ByteSize();
-  if (!mPredicate(dest_obj, cursize, mTotalSize))
-    return false;
-
 
   //if already looking up, do not call lookup on mOSeg;
   LookupMap::const_iterator it = mLookups.find(dest_obj);
@@ -109,7 +105,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
   }
 
   //if did not get a cache hit, check if have enough room to add it;
-  if (mLookups.size() > oseg_lookup_queue_tail_drop_size_parameter)
+  if (mLookups.size() > mMaxLookups)
     return false;
 
   //  otherwise, do full oseg lookup;
