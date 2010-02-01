@@ -22,11 +22,11 @@ def __standard_sim_func__(cc, cs, io):
     cluster_sim.run()
 
 class ClusterSimTest(test.Test):
-    def __init__(self, name, settings=None, space_pool=4, space_layout=(4,1), oh_pool=1, sim_func=__standard_sim_func__, **kwargs):
+    def __init__(self, name, settings=None, space_pool=None, space_layout=(4,1), oh_pool=1, sim_func=__standard_sim_func__, **kwargs):
         """
         name: Name of the test
         settings: A dict of settings in ClusterSimSettings to override from the defaults, e.g. { 'duration' : '100s' }
-        space_pool: Number of space servers to allocate and run
+        space_pool: Number of space servers to allocate and run, if None it is set to match the number needed by space_layout
         space_layout: 2-tuple specifying 2D layout of servers
         oh_pool: Number of object hosts to allocate and run
         sim_func: Function to invoke to run the simulation, of the form f(cluster_config, cluster_settings, io=StdIO_obj)
@@ -39,6 +39,9 @@ class ClusterSimTest(test.Test):
         self.space_layout = space_layout
         self.oh_pool = oh_pool
         self.sim_func = sim_func
+
+        if not self.space_pool:
+            self.space_pool = int(self.space_layout[0]) * int(self.space_layout[1])
 
     def run(self, io):
         intermediate_io = util.stdio.MemoryIO()
@@ -83,13 +86,16 @@ class ClusterSimTest(test.Test):
 
 
 class PacketLatencyByLoadTest(ClusterSimTest):
-    def __init__(self, name, rates, **kwargs):
+    def __init__(self, name, rates, local_pings=True, remote_pings=True, **kwargs):
         """
         name: Name of the test
         rates: List of ping rates to test with
+        local_pings: if True, pings to objects on the same server are generated
+        remote_pings: if True, pings to objects on remote servers are generated
         Others: see ClusterSimTest.__init__
         """
         if 'sim_func' in kwargs:
             ClusterSimTest.__init__(self, name, **kwargs)
         else:
-            ClusterSimTest.__init__(self, name, sim_func=(lambda cc,cs,io: PacketLatencyByLoad(cc,cs,rates,io=io)), **kwargs)
+            sim_func = (lambda cc,cs,io: PacketLatencyByLoad(cc,cs,rates,local_messages=local_pings,remote_messages=remote_pings,io=io))
+            ClusterSimTest.__init__(self, name, sim_func=sim_func, **kwargs)

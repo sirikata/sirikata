@@ -63,14 +63,14 @@ def get_stage_samples_filename(trial):
 # cc - ClusterConfig
 # cs - ClusterSimSettings
 # ping_rate - # of pings to try to generate, i.e. load
-# allow_same - allow pings to go to objects on the same server
-# force_same - force pings to go to objects on the same server
-def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False, io=util.stdio.StdIO()):
+# local_messages - if True, generate messages to objects connected to the same space server
+# remote_messages - if True, generate messages to objects connected to other space servers
+def run_ping_trial(cc, cs, ping_rate, local_messages=True, remote_messages=True, io=util.stdio.StdIO()):
     cs.scenario = 'ping'
     cs.scenario_options = ' '.join(
         ['--num-pings-per-second=' + str(ping_rate),
-         '--allow-same-object-host=' + str(allow_same),
-         '--force-same-object-host=' + str(force_same),
+         '--allow-same-object-host=' + str(local_messages),
+         '--force-same-object-host=' + str(local_messages and not remote_messages),
          ]
         )
 
@@ -86,11 +86,11 @@ def run_ping_trial(cc, cs, ping_rate, allow_same = True, force_same = False, io=
 # cc - ClusterConfig
 # cs - ClusterSimSettings
 # rates - array of ping rates to test
-# allow_same - allow pings to go to objects on the same server
-# force_same - force pings to go to objects on the same server
-def PacketLatencyByLoad(cc, cs, rates, allow_same=True, force_same=False, io=util.stdio.StdIO()):
+# local_messages - if True, generate messages to objects connected to the same space server
+# remote_messages - if True, generate messages to objects connected to other space servers
+def PacketLatencyByLoad(cc, cs, rates, local_messages=True, remote_messages=True, io=util.stdio.StdIO()):
     for rate in rates:
-        run_ping_trial(cc, cs, rate, True, False, io=io)
+        run_ping_trial(cc, cs, rate, local_messages=local_messages, remote_messages=remote_messages, io=io)
 
     log_files = [get_logfile_name(x) for x in rates]
     labels = ['%s pps'%(x) for x in rates]
@@ -127,4 +127,4 @@ if __name__ == "__main__":
 
 
     rates = sys.argv[1:]
-    PacketLatencyByLoad(cc, cs, rates, True, False)
+    PacketLatencyByLoad(cc, cs, rates, local_messages=True, remote_messages=True)
