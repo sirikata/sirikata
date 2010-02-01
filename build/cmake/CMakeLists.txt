@@ -1100,10 +1100,6 @@ ${GFX}/meruCompat/SequentialWorkQueue.cpp
 ${GFX}/resourceManager/CDNArchive.cpp
 ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
-${GFX}/resourceManager/GraphicsCamera.cpp
-${GFX}/resourceManager/GraphicsLight.cpp
-${GFX}/resourceManager/GraphicsObject.cpp
-${GFX}/resourceManager/GraphicsRenderSettings.cpp
 ${GFX}/resourceManager/GraphicsResource.cpp
 ${GFX}/resourceManager/GraphicsResourceAsset.cpp
 ${GFX}/resourceManager/GraphicsResourceEntity.cpp
