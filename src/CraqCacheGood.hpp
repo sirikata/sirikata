@@ -16,12 +16,6 @@
 
 namespace CBR
 {
-  static const int LARGEST_CRAQ_CACHE_SIZE =  200; //what is the most number of objects that we can have in the craq cache before we start deleting them
-  static const int NUM_CRAQ_CACHE_REMOVE   =   25; //how many should delete at a time when we get to our limit.
-
-  static const int MAXIMUM_CRAQ_AGE        = 8800; //maximum age is 8.8 seconds
-
-
   struct CraqCacheRecord
   {
     UUID obj_id;
@@ -51,7 +45,11 @@ namespace CBR
     double maintainDur;
     int numMaintained;
 
-    
+
+      uint32 mMaxCacheSize; //what is the most number of objects that we can have in the craq cache before we start deleting them
+      uint32 mCleanGroupSize; //how many should delete at a time when we get to our limit.
+      Duration mEntryLifetime; //maximum age of a cache entry
+
   public:
     CraqCacheGood();
     ~CraqCacheGood();
