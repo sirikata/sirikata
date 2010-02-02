@@ -120,7 +120,7 @@ namespace CBR
 
 
 
-    mContext->trace()->processOSegShutdownEvents(mContext->time,
+    mContext->trace()->processOSegShutdownEvents(mContext->simTime(),
                                                  mContext->id(),
                                                  numLookups,
                                                  numOnThisServer,
@@ -337,7 +337,7 @@ namespace CBR
     }
 
     //log the request.
-    mContext->trace()->objectSegmentationLookupNotOnServerRequest(mContext->time,
+    mContext->trace()->objectSegmentationLookupNotOnServerRequest(mContext->simTime(),
                                                                   obj_id,
                                                                   mContext->id());
 
@@ -355,7 +355,7 @@ namespace CBR
     ServerID cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
-      mContext->trace()->osegCacheResponse(mContext->time,
+        mContext->trace()->osegCacheResponse(mContext->simTime(),
                                            cacheReturn,
                                            obj_id);
 
@@ -363,7 +363,7 @@ namespace CBR
 
       Duration cacheEndDur = Time::local() - Time::epoch();
       traceToken->checkCacheLocalEnd = cacheEndDur.toMicroseconds();
-      //      mContext->trace()->osegCumulativeResponse(mContext->time, traceToken);
+      //      mContext->trace()->osegCumulativeResponse(mContext->simTime(), traceToken);
       delete traceToken;
       return cacheReturn;
     }
@@ -415,7 +415,7 @@ namespace CBR
 
       //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
-      mContext->trace()->objectSegmentationCraqLookupRequest(mContext->time,
+      mContext->trace()->objectSegmentationCraqLookupRequest(mContext->simTime(),
                                                              obj_id,
                                                              mContext->id());
 
@@ -442,7 +442,7 @@ namespace CBR
       ++numAlreadyLookingUp;
       Duration endCraqDur  = Time::local() - Time::epoch();
       traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
-      mContext->trace()->osegCumulativeResponse(mContext->time, traceToken);
+      mContext->trace()->osegCumulativeResponse(mContext->simTime(), traceToken);
     }
   }
 
@@ -531,7 +531,7 @@ namespace CBR
       return;
 
     //log the message.
-    mContext->trace()->objectBeginMigrate(mContext->time,
+    mContext->trace()->objectBeginMigrate(mContext->simTime(),
                                           obj_id,mContext->id(),
                                           new_server_id);
 
@@ -561,7 +561,7 @@ namespace CBR
     {
 
 #ifdef CRAQ_DEBUG
-      std::cout<<"\n\nThe object clearly wasn't registered on this server.  This is obj id:  " <<  obj_id.toString() <<  ".  This is time:   " <<mContext->time.raw() << " Oh no.   ";
+        std::cout<<"\n\nThe object clearly wasn't registered on this server.  This is obj id:  " <<  obj_id.toString() <<  ".  This is time:   " <<mContext->simTime().raw() << " Oh no.   ";
 
       if (clearToMigrate(obj_id))
         std::cout<<"  Likely a problem with clear to migrate\n\n";
@@ -599,7 +599,7 @@ namespace CBR
     }
 
     if (traceToken != NULL)
-      mContext->trace()->osegCumulativeResponse(mContext->time,traceToken);
+        mContext->trace()->osegCumulativeResponse(mContext->simTime(),traceToken);
 
     postingStrand->post(std::tr1::bind (&OSegLookupListener::osegLookupCompleted,mLookupListener,obj_id,sID));
   }
@@ -691,7 +691,7 @@ namespace CBR
 
 
       //log reception of acknowled message
-      mContext->trace()->objectAcknowledgeMigrate(mContext->time,
+      mContext->trace()->objectAcknowledgeMigrate(mContext->simTime(),
                                                   obj_id,serv_from,
                                                   mContext->id());
     }
@@ -842,7 +842,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       //log message stating that object was processed.
       Duration timerDur = Time::local() - Time::epoch();
 
-      mContext->trace()->objectSegmentationProcessedRequest(mContext->time,
+      mContext->trace()->objectSegmentationProcessedRequest(mContext->simTime(),
                                                             tmper,
                                                             cor->servID,
                                                             mContext->id(),
@@ -951,7 +951,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
 
-      mContext->trace()->processOSegTrackedSetResults(mContext->time,
+      mContext->trace()->processOSegTrackedSetResults(mContext->simTime(),
                                                       obj_id,
                                                       mContext->id(),
                                                       durMs);

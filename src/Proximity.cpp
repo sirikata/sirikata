@@ -519,7 +519,7 @@ void Proximity::generateObjectQueryEvents() {
 
         while(!evts.empty()) {
             CBR::Protocol::Prox::ProximityResults prox_results;
-            prox_results.set_t(mContext->time);
+            prox_results.set_t(mContext->simTime());
 
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {

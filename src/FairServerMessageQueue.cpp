@@ -17,7 +17,7 @@ FairServerMessageQueue::SenderAdapterQueue::SenderAdapterQueue(Sender* sender, S
 FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second)
         : ServerMessageQueue(ctx, net, sender, swc),
           mServerQueues(),
-          mLastServiceTime(ctx->time),
+          mLastServiceTime(ctx->simTime()),
           mRate(send_bytes_per_second),
           mRemainderSendBytes(0),
           mLastSendEndTime(ctx->simTime())

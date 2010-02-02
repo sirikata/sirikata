@@ -38,8 +38,6 @@ namespace CBR {
 SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
  : Context("Space", ios, strand, _trace, epoch, duration),
    PollingService(strand),
-   lastTime(curtime),
-   time(curtime),
    mID(_id),
    mServerRouter(NULL),
    mObjectRouter(NULL),
@@ -68,9 +66,6 @@ void SpaceContext::poll() {
         for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
             (*it)->stop();
     }
-
-    lastTime = time;
-    time = Time::null() + elapsed;
 
     mWorkProfiler->finished();
     mIterationProfiler->started();

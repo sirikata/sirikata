@@ -71,7 +71,7 @@ TimedMotionVector3f StandardLocationService::location(const UUID& uuid) {
 
 Vector3f StandardLocationService::currentPosition(const UUID& uuid) {
     TimedMotionVector3f loc = location(uuid);
-    return loc.extrapolate(mContext->time).position();
+    return loc.extrapolate(mContext->simTime()).position();
 }
 
 BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
@@ -93,7 +93,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
         // It was already in there as a replica, notify its removal
 
         assert(it->second.local == false);
-        mContext->trace()->serverObjectEvent(mContext->time, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME remote server ID
+        mContext->trace()->serverObjectEvent(mContext->simTime(), 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME remote server ID
         notifyReplicaObjectRemoved(uuid);
     }
 
@@ -106,7 +106,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     // reasonable compared to the loc and bounds passed in
 
     // Add to the list of local objects
-    mContext->trace()->serverObjectEvent(mContext->time, mContext->id(), mContext->id(), uuid, true, loc);
+    mContext->trace()->serverObjectEvent(mContext->simTime(), mContext->id(), mContext->id(), uuid, true, loc);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
@@ -132,7 +132,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
 
 
     // Remove from the list of local objects
-    mContext->trace()->serverObjectEvent(mContext->time, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
+  mContext->trace()->serverObjectEvent(mContext->simTime(), mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
     notifyLocalObjectRemoved(uuid);
 
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
@@ -165,7 +165,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
-        mContext->trace()->serverObjectEvent(mContext->time, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
+        mContext->trace()->serverObjectEvent(mContext->simTime(), 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
         notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
     }
 
@@ -185,7 +185,7 @@ void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uui
 
     // Otherwise, remove and notify
     mLocations.erase(uuid);
-    mContext->trace()->serverObjectEvent(mContext->time, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
+    mContext->trace()->serverObjectEvent(mContext->simTime(), 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
     notifyReplicaObjectRemoved(uuid);
 }
 
@@ -216,7 +216,7 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 loc_it->second.location = newloc;
                 notifyReplicaLocationUpdated( update.object(), newloc );
 
-                mContext->trace()->serverLoc( mContext->time, msg->source_server(), mContext->id(), update.object(), newloc );
+                mContext->trace()->serverLoc( mContext->simTime(), msg->source_server(), mContext->id(), update.object(), newloc );
             }
 
             if (update.has_bounds()) {
@@ -254,7 +254,7 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
                 loc_it->second.location = newloc;
                 notifyLocalLocationUpdated( msg.source_object(), newloc );
 
-                mContext->trace()->serverLoc( mContext->time, mContext->id(), mContext->id(), msg.source_object(), newloc );
+                mContext->trace()->serverLoc( mContext->simTime(), mContext->id(), mContext->id(), msg.source_object(), newloc );
             }
 
             if (request.has_bounds()) {

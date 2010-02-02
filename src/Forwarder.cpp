@@ -101,7 +101,7 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
   }
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
+    mContext->trace()->serverDatagramReceived(mContext->simTime(), mContext->simTime(), msg->source_server(), msg->id(), msg->serializedSize());
 
     ServerMessageDispatcher::dispatchMessage(msg);
 }
@@ -324,7 +324,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       // times, but it really only applied for the rate of lookups/migrations.  We should a) determine
       // if this is actually a problem and b) if it is, take a more principled approach to solving it.
 #ifdef CRAQ_DEBUG
-      std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->time.raw()<<"\n";
+      std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->simTime().raw()<<"\n";
       std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
       std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
       std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
@@ -361,7 +361,7 @@ Message* Forwarder::serverMessagePull(ServerID dest) {
     if (next_msg == NULL)
         return NULL;
 
-    mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+    mContext->trace()->serverDatagramQueued(mContext->simTime(), next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
 
     Message* pop_msg = mOutgoingMessages->pop(dest);
     assert(pop_msg == next_msg);

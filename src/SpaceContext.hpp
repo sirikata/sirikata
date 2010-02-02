@@ -74,15 +74,6 @@ public:
     ObjectMessageDispatcher* objectDispatcher() const {
         return mObjectDispatcher.read();
     }
-
-    // FIXME only used by vis code because it is out of date and horrible
-    void tick(const Time& t) {
-        lastTime = time;
-        time = t;
-    }
-
-    Time lastTime;
-    Time time;
 private:
     virtual void poll();
     virtual void stop();

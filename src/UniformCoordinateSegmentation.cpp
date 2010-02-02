@@ -161,7 +161,7 @@ void UniformCoordinateSegmentation::service() {
    */
   return;
 
-  Time t = mContext->time;
+  Time t = mContext->simTime();
 
   /* The following code changes the segmentation/layout of the region.*/
 

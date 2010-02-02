@@ -243,7 +243,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     // If the requested location isn't on this server, redirect
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
-    Vector3f curpos = loc.extrapolate(mContext->time).position();
+    Vector3f curpos = loc.extrapolate(mContext->simTime()).position();
     bool in_server_region = mMigrationMonitor->onThisServer(curpos);
     ServerID loc_server = mCSeg->lookup(curpos);
 
@@ -312,7 +312,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
 void Server::finishAddObject(const UUID& obj_id)
 {
-  //  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->time.raw()<<"\n\n";
+  //  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->simTime().raw()<<"\n\n";
 
   StoredConnectionMap::iterator storedConIter = mStoredConnectionData.find(obj_id);
   if (storedConIter != mStoredConnectionData.end())
@@ -354,7 +354,7 @@ void Server::finishAddObject(const UUID& obj_id)
   }
   else
   {
-    std::cout<<"\n\nNO stored connection data for obj:  "<<obj_id.toString()<<"   at time:  "<<mContext->time.raw()<<"\n\n";
+      std::cout<<"\n\nNO stored connection data for obj:  "<<obj_id.toString()<<"   at time:  "<<mContext->simTime().raw()<<"\n\n";
   }
 }
 
@@ -803,7 +803,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     Duration currentDur = mMigrationTimer.elapsed();
     int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
-    mContext->trace()->objectMigrationRoundTrip(mContext->time, obj_id, mContext->id(), migTo , timeTakenMs);
+    mContext->trace()->objectMigrationRoundTrip(mContext->simTime(), obj_id, mContext->id(), migTo , timeTakenMs);
 
     mMigratingConnections.erase(objConMapIt);
   }

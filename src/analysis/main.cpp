@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
         String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, space_context, cseg);
+        LocationVisualization lea(STATS_TRACE_FILE, nservers, cseg);
 
         if (vistype == "object")
             lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
