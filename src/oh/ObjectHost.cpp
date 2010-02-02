@@ -617,7 +617,7 @@ bool ObjectHost::randomPing(const Time& t) {
 
     if (a != NULL && b != NULL)
         return ping(t, a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
-    
+
     return false;
 }
 
@@ -753,13 +753,16 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
 
     // Mark as received
     TIMESTAMP_END(tstamp, Trace::OH_RECEIVED);
-    if (mRegisteredServices.find(msg->dest_port())!=mRegisteredServices.end()) {
-        mRegisteredServices[msg->dest_port()](*msg);
-        delete msg;
-    } else if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+
+    // Possibly tag as ping non-destructively
+    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
         mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->simTime(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
+    }
+
+    if (mRegisteredServices.find(msg->dest_port())!=mRegisteredServices.end()) {
+        mRegisteredServices[msg->dest_port()](*msg);
         delete msg;
     }
     // As a special case, messages dealing with sessions are handled by the object host
