@@ -260,8 +260,7 @@ int main(int argc, char** argv) {
 
 
     // We have all the info to initialize the forwarder now
-    uint32 oseg_lookup_queue_size = (uint32) GetOption("oseg_lookup_queue_size")->as<uint32>();
-    forwarder->initialize(oseg, sq, server_message_receiver, oseg_lookup_queue_size);
+    forwarder->initialize(oseg, sq, server_message_receiver);
 
 
     Proximity* prox = new Proximity(space_context, loc_service);

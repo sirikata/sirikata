@@ -87,6 +87,12 @@
 #define OSEG                       "oseg"
 #define OSEG_OPTION_CRAQ           "oseg_craq"
 #define OSEG_UNIQUE_CRAQ_PREFIX    "oseg_unique_craq_prefix"
+#define OSEG_CACHE_SIZE              "oseg-cache-size"
+#define OSEG_CACHE_CLEAN_GROUP_SIZE  "oseg-cache-clean-group-size"
+#define OSEG_CACHE_ENTRY_LIFETIME    "oseg-cache-entry-lifetime"
+
+
+
 #define OBJECT_DRIFT_X             "object_drift_x"
 #define OBJECT_DRIFT_Y             "object_drift_y"
 #define OBJECT_DRIFT_Z             "object_drift_z"

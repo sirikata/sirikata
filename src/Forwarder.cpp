@@ -46,8 +46,6 @@ class ForwarderServerMessageRouter : public Router<Message*> {
 };
 
 
-bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
-
 // -- First, all the boring boiler plate type stuff; initialization,
 // -- destruction, delegation to base classes
 
@@ -95,9 +93,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, uint32 oseg_lookup_queue_size)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr)
   {
-    mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush, oseg_lookup_queue_size);
+    mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg);
     mServerMessageQueue = smq;
     mServerMessageReceiver = smr;
   }

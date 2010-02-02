@@ -6,8 +6,9 @@ import sys
 import os
 import os.path
 import traceback
+import datetime
 from test import Test, ShellCommandTest
-from sim_test import ClusterSimTest
+from sim_test import ClusterSimTest, PacketLatencyByLoadTest
 
 import sys
 # FIXME It would be nice to have a better way of making this script able to find
@@ -77,7 +78,20 @@ if __name__ == "__main__":
 
     suite = TestSuite()
     suite.add( ClusterSimTest('default_sim') )
-    suite.add( ShellCommandTest('default_packet_latency', ['../../bench/packet_latency_by_load.py', '10']) )
+    suite.add( PacketLatencyByLoadTest('default_packet_latency', [10]) )
+
+    packet_latency_with_caching_settings = {'duration' : '300s', 'oseg_cache_entry_lifetime' : '300s', 'num_random_objects': 50}
+
+    # Local messages only
+    suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_local_4', [10], local_pings=True, remote_pings=False, settings=packet_latency_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
+    suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_local_8', [10], local_pings=True, remote_pings=False, settings=packet_latency_with_caching_settings, space_layout=(8,1), time_limit=datetime.timedelta(minutes=10) ) )
+    # Remote messages only
+    suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_remote_4', [10], local_pings=False, remote_pings=True, settings=packet_latency_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
+    suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_remote_8', [10], local_pings=False, remote_pings=True, settings=packet_latency_with_caching_settings, space_layout=(8,1), time_limit=datetime.timedelta(minutes=10) ) )
+    # Mix of messages
+    suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_mixed_4', [10], local_pings=True, remote_pings=True, settings=packet_latency_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
+    suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_mixed_8', [10], local_pings=True, remote_pings=True, settings=packet_latency_with_caching_settings, space_layout=(8,1), time_limit=datetime.timedelta(minutes=10) ) )
+
 
     if len(sys.argv) < 2:
         suite.run_all(util.stdio.StdIO())

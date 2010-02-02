@@ -8,6 +8,7 @@
 #include <iomanip>
 #include "Timer.hpp"
 #include <boost/thread/mutex.hpp>
+#include "Options.hpp"
 
 namespace CBR
 {
@@ -19,6 +20,10 @@ namespace CBR
     numInserted = 0;
     maintainDur = 0;
     numMaintained = 0;
+
+      mMaxCacheSize = GetOption(OSEG_CACHE_SIZE)->as<uint32>();
+      mCleanGroupSize = GetOption(OSEG_CACHE_CLEAN_GROUP_SIZE)->as<uint32>();
+      mEntryLifetime = GetOption(OSEG_CACHE_ENTRY_LIFETIME)->as<Duration>();
   }
 
   CraqCacheGood::~CraqCacheGood()
@@ -27,20 +32,20 @@ namespace CBR
     std::cout<<"\n\n  insertMilliseconds:  "<<insertMilliseconds<<"  numInserted:   "<<numInserted<<"    avg: "<<((double)insertMilliseconds)/((double) numInserted)<<"\n\n";
 
     std::cout<<"\n\n maintainDur:  "<<maintainDur<<"   numMaintained  "<<numMaintained<<"  avg: "<<((double)maintainDur)/((double)numMaintained)<<"\n\n";
-    
+
   }
 
 
   //kill the last x objects that were in that map
   void CraqCacheGood::maintain()
   {
-    if ((int)idRecMap.size() > LARGEST_CRAQ_CACHE_SIZE)
+    if (idRecMap.size() > mMaxCacheSize)
     {
       Duration beginningDur = mTimer.elapsed();
       int numObjectsDeleted = 0;
 
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
-      for (int s=0; (s < NUM_CRAQ_CACHE_REMOVE) && (tMapIter != timeRecMap.end()); ++s)
+      for (uint32 s=0; (s < mCleanGroupSize) && (tMapIter != timeRecMap.end()); ++s)
       {
         //remove the object from the map
         IDRecordMap::iterator idRecMapIterator =  idRecMap.find(tMapIter->second->obj_id);
@@ -72,9 +77,9 @@ namespace CBR
   void CraqCacheGood::insert(const UUID& uuid, const ServerID& sID)
   {
     Duration beginningDur = mTimer.elapsed();
-    
+
     Duration currentDur = mTimer.elapsed();
-    
+
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
     if (idRecMapIter != idRecMap.end())
     {
@@ -143,11 +148,11 @@ namespace CBR
     Duration endingDur = mTimer.elapsed();
     insertMilliseconds += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
     ++numInserted;
-    
-    
+
+
   }
 
-  
+
   ServerID CraqCacheGood::get(const UUID& uuid)
   {
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
@@ -169,7 +174,7 @@ namespace CBR
 bool CraqCacheGood::satisfiesCacheAgeCondition(int inAge)
 {
   Duration currentDur = mTimer.elapsed();
-  if (currentDur.toMilliseconds() - inAge > MAXIMUM_CRAQ_AGE)
+  if (currentDur.toMilliseconds() - inAge > mEntryLifetime.toMilliseconds())
   {
     return false;
   }

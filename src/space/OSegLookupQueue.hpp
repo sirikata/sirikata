@@ -52,12 +52,6 @@ public:
         ResolvedFromServer
     };
 
-    /** Predicate which determines whether a message will be admitted for a destination object lookup.
-     *  \param object the object the lookup is being performed on
-     *  \param msg_size the size of the object submitted with the request
-     *  \param cur_tot_size the current total size of messages in the queue
-     */
-    typedef std::tr1::function<bool(UUID, size_t, size_t)> PushPredicate;
     /** Callback type for lookups, taking the message the lookup was performed on, the
      *  ServerID the OSeg returned, and an enum indicating how the lookup was resolved.
      *  If you need additional information it must be curried via bind().
@@ -92,10 +86,9 @@ private:
     ObjectSegmentation* mOSeg; // The OSeg that does the heavy lifting
 
     LookupMap mLookups; // Map of object id being queried -> msgs destined for that object
-    PushPredicate mPredicate; // Predicate determining entry to the queue
-    int32 mTotalSize;
-
-    uint32 oseg_lookup_queue_tail_drop_size_parameter;
+    int32 mTotalSize; // Total # bytes associated with outstanding lookups
+    uint32 mMaxLookups; // Total number of unique OSeg lookups (i.e. number of
+                        // UUIDs, not number of requests).
 
     /* OSegLookupListener Interface */
     virtual void osegLookupCompleted(const UUID& id, const ServerID& dest);
@@ -107,9 +100,8 @@ public:
      *  \param net_strand the strand used for networking, i.e. the one which should handle lookup
      *                    results
      *  \param oseg the ObjectSegmentation which resolves queries
-     *  \param pred the predicate which controls whether new lookups are admitted
      */
-    OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred, uint32 queue_size);
+    OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg);
 
     /** Perform an OSeg lookup, calling the specified callback when the result is available.
      *  If the result is available immediately, the callback may be triggered during this
