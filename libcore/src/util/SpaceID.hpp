@@ -60,6 +60,11 @@ class SpaceID : public TotallyOrdered<SpaceID>{
         static SpaceID retval(UUID::null());
         return retval;
     }
+    /** Get a reserved SpaceID which is a sentinal to match any other SpaceID. */
+    static const SpaceID &any() {
+        static SpaceID retval(UUID::max());
+        return retval;
+    }
 
     String toString() const{
         return mID.readableHexData();

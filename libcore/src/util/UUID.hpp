@@ -62,6 +62,12 @@ public:
         static UUID retval(data,static_size);
         return retval;
     }
+    static const UUID& max() {
+        static unsigned char data[static_size]=
+            {255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255};
+        static UUID retval(data,static_size);
+        return retval;
+    }
     /**
      * Interprets the human readable UUID string using boost functions
      */

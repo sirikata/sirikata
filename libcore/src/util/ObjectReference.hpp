@@ -60,6 +60,12 @@ class ObjectReference : public TotallyOrdered<ObjectReference>{
         static ObjectReference retval(UUID::null());
         return retval;
     }
+    /** Get a reserved ObjectReference which is a sentinal to match any other ObjectReference. */
+    static const ObjectReference &any() {
+        static ObjectReference retval(UUID::max());
+        return retval;
+    }
+
     static const ObjectReference &spaceServiceID() {
         return null();
     }
