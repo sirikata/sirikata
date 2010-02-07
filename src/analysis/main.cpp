@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
         String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, space_context, cseg);
+        LocationVisualization lea(STATS_TRACE_FILE, nservers, cseg);
 
         if (vistype == "object")
             lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
                        &unservers);//filter by destroyed @ object host
         MessageLatencyFilters nilfilter;
         MessageLatencyFilters pingfilter(&ping_port);
-        MessageLatencyAnalysis(STATS_TRACE_FILE,nservers,pingfilter,"stage_samples.txt");
+        MessageLatencyAnalysis(STATS_TRACE_FILE,nservers,pingfilter/*,"stage_samples.txt"*/);
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {

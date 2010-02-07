@@ -34,6 +34,9 @@
 #include "MessageLatency.hpp"
 #include "Options.hpp"
 
+#define INFO_LOG(msg) SILOG(message_latency_analysis,insane,"[MSG_LAT_ANLS] " << msg)
+#define ERROR_LOG(msg) SILOG(message_latency_analysis,error,"[MSG_LAT_ANLS] " << msg)
+
 namespace CBR {
 
 namespace {
@@ -422,7 +425,7 @@ class PacketStageGraph {
         bool broken = breakAtAsync(pd, ordered_list_list);
 
         if (!broken) {
-            std::cout << "Couldn't find sane breakdown for: " << pd << std::endl;
+            INFO_LOG("Couldn't find sane breakdown for: " << pd);
             return;
         }
 
@@ -432,12 +435,11 @@ class PacketStageGraph {
                                        );
 
         if (!matched) {
-            std::cout << "Couldn't match packet path: " << pd
-                      << std::endl;
+            INFO_LOG("Couldn't match packet path: " << pd);
 
             for(OrderedPacketSampleListList::iterator dump_it = ordered_list_list.begin(); dump_it != ordered_list_list.end(); dump_it++) {
                 PacketSampleList dump_subseq = *dump_it;
-                std::cout << dump_subseq << std::endl;
+                INFO_LOG("  " << dump_subseq);
             }
             return;
         }
@@ -445,7 +447,7 @@ class PacketStageGraph {
   private:
     bool hasStage(Trace::MessagePath mp) const {
         if (stages.find(mp) == stages.end()) {
-            std::cerr << "Don't have stage " << getPacketStageName(mp) << std::endl;
+            ERROR_LOG("Don't have stage " << getPacketStageName(mp));
             return false;
         }
         return true;
@@ -588,7 +590,7 @@ class PacketStageGraph {
             PacketSampleList next_set;
             uint32 cur_offset = us.offset;
             if (!isAsyncEntry(us.list[cur_offset].tag)) {
-                printf("First entry in list isn't async\n");
+                ERROR_LOG("First entry in list isn't async");
                 return false;
             }
 
@@ -617,7 +619,7 @@ class PacketStageGraph {
         for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
             if ( isPureEntry(unconstrained_output[ii][0].tag) ) {
                 if (starting_samples_idx != -1) {
-                    printf("Found 2 entry points\n");
+                    ERROR_LOG("Found 2 entry points");
                     return false; // Found 2 entry points
                 }
                 else
@@ -626,7 +628,7 @@ class PacketStageGraph {
 
             if ( isPureExit(unconstrained_output[ii][ unconstrained_output[ii].size()-1 ].tag) ) {
                 if (ending_samples_idx != -1) {
-                    printf("Found 2 exit points\n");
+                    ERROR_LOG("Found 2 exit points");
                     return false; // Found 2 exit points
                 }
                 else
@@ -635,7 +637,9 @@ class PacketStageGraph {
         }
 
         if (starting_samples_idx == -1 || ending_samples_idx == -1) {
-            printf("Didn't find both entry and exit point.\n");
+            // Note that this only goes to info since anything in flight will
+            // have this
+            INFO_LOG("Didn't find both entry and exit point.");
             return false;
         }
 
@@ -647,7 +651,7 @@ class PacketStageGraph {
                 return true;
             }
             else {
-                printf("One subsequence, but source and sink don't match.\n");
+                ERROR_LOG("One subsequence, but source and sink don't match.");
                 return false;
             }
         }

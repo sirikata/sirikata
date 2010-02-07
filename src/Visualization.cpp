@@ -38,12 +38,11 @@ void LocationVisualization::handleLocEvent(const UUID& obj, const TimedMotionVec
 
 static LocationVisualization*gVis=NULL;
 void LocationVisualization::mainLoop() {
-    Time t = mSpaceContext->time + mSamplingRate;
-    mSpaceContext->tick(t);
+    mDisplayTime = mDisplayTime + mSamplingRate;
 
     while (mCurEvent!=mObservedEvents->end()) {
         Event*oe=*mCurEvent;
-        if (oe->end_time()>mSpaceContext->time) {
+        if (oe->end_time()>mDisplayTime) {
             break;
         }
 
@@ -66,7 +65,7 @@ void LocationVisualization::mainLoop() {
 
 
 	if (mSegmentationChangeIterator != mSegmentationChangeEvents.end()) {
-	  if ((*mSegmentationChangeIterator)->begin_time() <= mSpaceContext->time) {
+	  if ((*mSegmentationChangeIterator)->begin_time() <= mDisplayTime) {
 	    mDynamicBoxes.push_back((*mSegmentationChangeIterator)->bbox);
 	    mSegmentationChangeIterator++;
 	  }
@@ -142,7 +141,7 @@ void LocationVisualization::mainLoop() {
     for (MotionPathMap::iterator it = mObjectMotions.begin(); it != mObjectMotions.end(); ++it) {
         UUID objid = it->first;
         MotionPath* motion = it->second;
-        Vector3f pos = motion->at(mSpaceContext->time).extrapolate(mSpaceContext->time).position();
+        Vector3f pos = motion->at(mDisplayTime).extrapolate(mDisplayTime).position();
         if (objid == mObserver) {
             glEnd();
             glColor3f(.125,.125,.125);
@@ -161,7 +160,7 @@ void LocationVisualization::mainLoop() {
             if ((where=mVisible.find(objid))==mVisible.end()) {
                 glColor3f(0,.5,0);
                 if ((where=mInvisible.find(objid))!=mInvisible.end()) {
-                    Vector3f twhere=where->second.extrapolate(mSpaceContext->time).position();
+                    Vector3f twhere=where->second.extrapolate(mDisplayTime).position();
                     glColor3f(.25,0,0);
                     glVertex2f(twhere.x,twhere.y);
                     glEnd();
@@ -175,7 +174,7 @@ void LocationVisualization::mainLoop() {
                 }
             }else {
                 glColor3f(.5,.5,.5);
-                Vector3f twhere=where->second.extrapolate(mSpaceContext->time).position();
+                Vector3f twhere=where->second.extrapolate(mDisplayTime).position();
                 glVertex2f(twhere.x,twhere.y);
                 glEnd();
                 glColor3f(.25,.25,.25);
@@ -198,10 +197,10 @@ void main_loop() {
   sVis->mainLoop();
 
 }
-LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, CoordinateSegmentation*cseg):
+LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, CoordinateSegmentation*cseg):
  LocationErrorAnalysis(opt_name,nservers),
  mSeg(cseg),
- mSpaceContext(space_context),
+ mDisplayTime(Time::null()),
  mSamplingRate(Duration::milliseconds(30.0f))
 {
     // read in all our data
@@ -271,7 +270,7 @@ void LocationVisualization::displayError(const Duration&sampling_rate) {
     mCurEvent=mObservedEvents->begin();
     mSamplingRate=sampling_rate;
     if (mCurEvent!=mObservedEvents->end()) {
-        mSpaceContext->tick( (*mCurEvent)->begin_time() );
+        mDisplayTime = (*mCurEvent)->begin_time(); // start time at first event
     }
     glutIdleFunc(&main_loop);
     glutDisplayFunc(&main_loop);

@@ -82,7 +82,7 @@ void MigrationMonitor::waitForNextEvent() {
 void MigrationMonitor::service() {
     std::set<UUID> considered;
 
-    Time curt = mLocService->context()->time;
+    Time curt = mLocService->context()->simTime();
     for(ObjectInfoByNextEvent::iterator it = mObjectInfo.get<nextevent>().begin();
         it != mObjectInfo.get<nextevent>().end() && it->nextEvent < curt;
         it++) {
@@ -141,7 +141,7 @@ bool MigrationMonitor::inRegion(const Vector3f& pos) const {
 }
 
 Time MigrationMonitor::computeNextEventTime(const UUID& obj, const TimedMotionVector3f& newloc) {
-    Time curt = mLocService->context()->time;
+    Time curt = mLocService->context()->simTime();
 
     // Short cut: if its static, only verify it is in the server's boundaries
     if (newloc.velocity().lengthSquared() == 0.f) {

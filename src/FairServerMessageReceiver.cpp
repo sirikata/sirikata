@@ -49,7 +49,7 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
           mLastServiceTime(ctx->simTime()),
           mReceiveQueues(),
           mRemainderReceiveBytes(0),
-          mLastReceiveEndTime(ctx->time),
+          mLastReceiveEndTime(ctx->simTime()),
           mReceiveSet()
 {
 }

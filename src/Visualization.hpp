@@ -10,12 +10,15 @@ class CoordinateSegmentation;
 
 class LocationVisualization :public LocationErrorAnalysis {
     CoordinateSegmentation*mSeg;
-    SpaceContext* mSpaceContext;
     UUID mObserver;
     static EventList* NullObservedEvents; // if we don't have an event list to use
     EventList* mObservedEvents;
     EventList::iterator mCurEvent;
+
+    Time mDisplayTime; // The current simulated time, i.e. the time currently
+                       // being displayed
     Duration mSamplingRate;
+
     typedef std::tr1::unordered_map<UUID,TimedMotionVector3f,UUID::Hasher> VisibilityMap;
     VisibilityMap mVisible;
     VisibilityMap mInvisible;
@@ -34,7 +37,7 @@ class LocationVisualization :public LocationErrorAnalysis {
     void displayError(const Duration& sampling_rate);
 public:
     void mainLoop();
-    LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, CoordinateSegmentation*cseg);
+    LocationVisualization(const char *opt_name, const uint32 nservers, CoordinateSegmentation*cseg);
     void displayError(const UUID&observer, const Duration& sampling_rate);
     void displayError(const ServerID&observer, const Duration& sampling_rate);
 

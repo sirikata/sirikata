@@ -164,7 +164,7 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
 
 DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
  : CoordinateSegmentation(ctx),
-   mLastUpdateTime(mContext->time),
+   mLastUpdateTime(Time::null()),
    mSidMap(sidmap)
 {
   mAvailableCSEGServers = GetOption("num-cseg-servers")->as<uint16>();
@@ -395,7 +395,7 @@ void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegi
 }
 
 void DistributedCoordinateSegmentation::service() {
-  Time t = mContext->time;
+    Time t = mContext->simTime();
 
   if ( !GetOption("random-splits-merges")->as<bool>()) {
     return;
