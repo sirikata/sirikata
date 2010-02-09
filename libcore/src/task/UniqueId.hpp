@@ -34,7 +34,6 @@
 #define SIRIKATA_UniqueId_HPP__
 
 #include <typeinfo>
-#include "HashMap.hpp"
 
 
 namespace Sirikata {

@@ -37,7 +37,6 @@
 #include "util/ThreadSafeQueue.hpp"
 #include "util/AtomicTypes.hpp"
 #include "options/Options.hpp"
-#include "HashMap.hpp"
 #include "UniqueId.hpp"
 #include "Event.hpp"
 #include "Time.hpp"

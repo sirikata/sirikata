@@ -33,8 +33,6 @@
 #ifndef SIRIKATA_Event_HPP__
 #define SIRIKATA_Event_HPP__
 
-#include "HashMap.hpp"
-
 namespace Sirikata {
 
 /*
