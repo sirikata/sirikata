@@ -36,15 +36,6 @@
 #include "ObjectReference.hpp"
 
 namespace Sirikata {
-class SpaceObjectReference;
-} // namespace Sirikata
-
-namespace Mono {
-struct CSharpSpaceObjectReference;
-void ConvertSpaceObjectReference(const Sirikata::SpaceObjectReference& in, CSharpSpaceObjectReference* out);
-} // namespace Mono
-
-namespace Sirikata {
 
 typedef uint32 MessagePort;
 
@@ -57,7 +48,7 @@ typedef uint32 MessagePort;
 class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
   public:
     SpaceObjectReference(){}
-    SpaceObjectReference(const SpaceID&sid, 
+    SpaceObjectReference(const SpaceID&sid,
                          const ObjectReference&oref):mSpace(sid),
                                                      mObject(oref) {}
     explicit SpaceObjectReference(const String& humanReadable){
@@ -78,11 +69,11 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
        mObject(UUID::Data::construct(reinterpret_cast<const byte*>(data)+SpaceID::static_size,
                                      reinterpret_cast<const byte*>(data)+SpaceID::static_size)){}
 
-    Array<byte,SpaceID::static_size+ObjectReference::static_size> toRawBytes() const { 
+    Array<byte,SpaceID::static_size+ObjectReference::static_size> toRawBytes() const {
         Array<byte,SpaceID::static_size+ObjectReference::static_size> retval;
         std::memcpy(retval.begin(),space().toRawBytes().begin(),SpaceID::static_size);
         std::memcpy(retval.begin()+SpaceID::static_size,object().toRawBytes().begin(),ObjectReference::static_size);
-        return retval; 
+        return retval;
     }
 
     String toRawHexData() const
@@ -122,8 +113,6 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
     }
 
   private:
-
-    friend void Mono::ConvertSpaceObjectReference(const Sirikata::SpaceObjectReference& in, CSharpSpaceObjectReference* out);
 
     SpaceID mSpace;
     ObjectReference mObject;

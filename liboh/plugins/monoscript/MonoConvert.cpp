@@ -220,7 +220,7 @@ Sirikata::UUID UUID(CSharpUUID* in) {
 
 
 void ConvertSpaceID(const Sirikata::SpaceID& in, CSharpSpaceID* out) {
-    ConvertUUID(in.mID, &out->id);
+    ConvertUUID(in.getAsUUID(), &out->id);
 }
 
 Sirikata::SpaceID SpaceID(CSharpSpaceID* in) {
@@ -230,7 +230,7 @@ Sirikata::SpaceID SpaceID(CSharpSpaceID* in) {
 
 
 void ConvertObjectReference(const Sirikata::ObjectReference& in, CSharpObjectReference* out) {
-    ConvertUUID(in.mID, &out->id);
+    ConvertUUID(in.getAsUUID(), &out->id);
 }
 
 Sirikata::ObjectReference ObjectReference(CSharpObjectReference* in) {

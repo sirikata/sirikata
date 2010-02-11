@@ -35,15 +35,6 @@
 #include "UUID.hpp"
 
 namespace Sirikata {
-class SpaceID;
-} // namespace Sirikata
-
-namespace Mono {
-struct CSharpSpaceID;
-void ConvertSpaceID(const Sirikata::SpaceID& in, CSharpSpaceID* out);
-} // namespace Mono
-
-namespace Sirikata {
 
 /** A reference to an object in a space.  This can be used as
  *  an address to send a message to an object via a space.
@@ -81,7 +72,7 @@ class SpaceID : public TotallyOrdered<SpaceID>{
              return objr.hash();
         }
     };
-    
+
     /** Get the %UUID of the object referred to. This is not necessarily space-specific, it is just the value used to
      *  construct this reference. Note the contrast with getAsUUID().
      */
@@ -104,8 +95,6 @@ class SpaceID : public TotallyOrdered<SpaceID>{
     }
 
   private:
-
-    friend void Mono::ConvertSpaceID(const Sirikata::SpaceID& in, CSharpSpaceID* out);
 
     UUID mID;
 

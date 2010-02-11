@@ -35,15 +35,6 @@
 #include "UUID.hpp"
 
 namespace Sirikata {
-class ObjectReference;
-} // namespace Sirikata
-
-namespace Mono {
-struct CSharpObjectReference;
-void ConvertObjectReference(const Sirikata::ObjectReference& in, CSharpObjectReference* out);
-} // namespace Mono
-
-namespace Sirikata {
 
 /** A reference to an object in a space.  This can be used as
  *  an address to send a message to an object via a space.
@@ -106,8 +97,6 @@ class ObjectReference : public TotallyOrdered<ObjectReference>{
     }
 
   private:
-
-    friend void Mono::ConvertObjectReference(const Sirikata::ObjectReference& in, CSharpObjectReference* out);
 
     UUID mID;
 
