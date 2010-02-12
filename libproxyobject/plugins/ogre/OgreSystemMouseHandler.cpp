@@ -385,12 +385,12 @@ private:
                 iter != mSelectedObjects.end(); ++iter) {
             ProxyObjectPtr obj(iter->lock());
             std::string serializedDestroy;
-            
+
             RoutableMessageBody body;
             body.add_message("DestroyObject", serializedDestroy);
             std::string serialized;
             body.SerializeToString(&serialized);
-            
+
             obj->sendMessage(MemoryReference(serialized.data(),serialized.length()));
         }
         mSelectedObjects.clear();
@@ -679,6 +679,45 @@ private:
         creator.set_mesh("meru:///webview.mesh");
         creator.set_weburl("http://www.yahoo.com/");
         creator.set_scale(Vector3f(2,2,2));
+
+        std::string serializedCreate;
+        creator.SerializeToString(&serializedCreate);
+
+        RoutableMessageBody body;
+        body.add_message("CreateObject", serializedCreate);
+        std::string serialized;
+        body.SerializeToString(&serialized);
+        camera->getProxy().sendMessage(MemoryReference(serialized.data(), serialized.length()));
+    }
+
+
+    void createScriptedObjectAction() {//const String& script_type, const
+                                       //std::map<String, String>& script_args) {
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+
+        CameraEntity *camera = mParent->mPrimaryCamera;
+        if (!camera) return;
+        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Location curLoc (camera->getProxy().globalLocation(now));
+        Protocol::CreateObject creator;
+        Protocol::IConnectToSpace space = creator.add_space_properties();
+        Protocol::IObjLoc loc = space.mutable_requested_object_loc();
+        loc.set_position(curLoc.getPosition() + Vector3d(direction(curLoc.getOrientation()))*WORLD_SCALE/3);
+        loc.set_orientation(curLoc.getOrientation());
+        loc.set_velocity(Vector3f(0,0,0));
+        loc.set_angular_speed(0);
+        loc.set_rotational_axis(Vector3f(1,0,0));
+
+        creator.set_mesh("http://www.sirikata.com/content/assets/cube.dae");
+        creator.set_scale(Vector3f(1,1,1));
+
+        creator.set_script("monoscript");
+        Protocol::IStringMapProperty script_args = creator.mutable_script_args();
+        script_args.add_keys("Assembly"); script_args.add_values("Sirikata.Runtime");
+        script_args.add_keys("Class"); script_args.add_values("PythonObject");
+        script_args.add_keys("Namespace"); script_args.add_values("Sirikata.Runtime");
+        script_args.add_keys("PythonModule"); script_args.add_values("test");
+        script_args.add_keys("PythonClass"); script_args.add_values("exampleclass");
 
         std::string serializedCreate;
         creator.SerializeToString(&serializedCreate);
@@ -1448,6 +1487,7 @@ public:
         mInputResponses["stableRotateNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::stableRotateAction, this, -1.f, _1), 1, 0);
 
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
+        mInputResponses["createScriptedObjectAction"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this));
         mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
@@ -1507,6 +1547,7 @@ public:
 
         // Various other actions
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["createScriptedObjectAction"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
