@@ -982,6 +982,17 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                         obj->connectToSpace(spaceid, getSharedPtr(), location, bs, evidence);
                     }
                 }
+                if (co.has_script()) {
+                    String script_type = co.script();
+                    ObjectScriptManager::Arguments script_args;
+                    if (co.has_script_args()) {
+                        Protocol::StringMapProperty args_map = co.script_args();
+                        assert(args_map.keys_size() == args_map.values_size());
+                        for (int i = 0; i < args_map.keys_size(); ++i)
+                            script_args[ args_map.keys(i) ] = args_map.values(i);
+                    }
+                    obj->initializeScript(script_type, script_args);
+                }
                 return;
     }
     if (name == "ConnectToSpace") {

@@ -317,4 +317,7 @@ message CreateObject {
     optional LightInfoProperty light_info=6;
     optional bool camera=7;
     optional PhysicalParameters physical=8;
+
+    optional string script = 9;
+    optional StringMapProperty script_args = 10;
 }
