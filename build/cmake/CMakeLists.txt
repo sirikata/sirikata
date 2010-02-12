@@ -866,7 +866,7 @@ IF(MONO_FOUND)
        ${ScriptsRoot}/csharp/Time.cs
      )
   IF(IRON_PYTHON_FOUND)
-    SET(SirikataScriptSources ${ScriptsRoot}/csharp/PythonObject.cs)
+    SET(SirikataScriptSources ${SirikataScriptSources} ${ScriptsRoot}/csharp/PythonObject.cs)
   ENDIF()
 
   SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
