@@ -59,12 +59,9 @@ message SSTStreamHeader {
 	required  uint8 flags = 3;
 	required  uint8 window = 4;
 
-	required uint16 src_port = 5;
-	required uint16 dest_port = 6;
+	optional uint16 psid = 5;
+	optional uint16	rsid = 6;
+	optional uint32 bsn = 7;
 
-	optional uint16 psid = 7;
-	optional uint16	rsid = 8;
-	optional uint32 bsn = 9;
-
-	optional bytes payload = 10;
+	optional bytes payload = 8;
 }
