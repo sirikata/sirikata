@@ -282,7 +282,7 @@ private:
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
-      mNumStreams(0), mCwnd(1), mRTOMicroseconds(1000000),
+      mNumStreams(0), mCwnd(1), mRTOMicroseconds(200000),
       mFirstRTO(true), mLooping(true), MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(300),
       CC_ALPHA(0.8)
@@ -327,14 +327,13 @@ private:
 
   void sendChannelSegmentLoop() {
     // should start from ssthresh, the slow start lower threshold, but starting
-    // from 1 for now. Still need to implement slow start.   
-
+    // from 1 for now. Still need to implement slow start.
     while (mLooping) {
       uint16 numSegmentsSent = 0;
       {
 	boost::unique_lock<boost::mutex> lock(mQueueMutex);
 
-        while (mQueuedSegments.empty()) {
+        while (mQueuedSegments.empty()){
 
 	  if (mState == CONNECTION_PENDING_DISCONNECT) {
 	    return;
@@ -345,7 +344,7 @@ private:
 	  if (!mLooping) return;
 	}
 
-	printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
+	//printf("Stopped waiting: %s has window size = %d, queued_segments.size=%d\n", mLocalEndPoint.endPoint.readableHexData().c_str(), mCwnd, (int)mQueuedSegments.size());
 
 	for (int i = 0; i < mCwnd; i++) {
 	  if ( !mQueuedSegments.empty() ) {
@@ -359,15 +358,9 @@ private:
 
 	    sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
 
-	    printf("%s sending packet from data sending loop to %s\n", mLocalEndPoint.endPoint.readableHexData().c_str()
-		                                                     , mRemoteEndPoint.endPoint.readableHexData().c_str());
-	    fflush(stdout);
-
 	    sendSSTChannelPacket(sstMsg);
-	    
-	    printf("%s SENT packet from data sending loop to %s\n", mLocalEndPoint.endPoint.readableHexData().c_str()
-		                                                     , mRemoteEndPoint.endPoint.readableHexData().c_str());
-	    fflush(stdout);
+
+	    //printf("%s sending packet from data sending loop\n", mLocalEndPoint.endPoint.readableHexData().c_str());
 
 	    segment->mTransmitTime = Timer::now();
 	    mOutstandingSegments.push_back(segment);
@@ -381,27 +374,19 @@ private:
 	  }
 	}
       }
-      
+
       boost::this_thread::sleep( boost::posix_time::microseconds(mRTOMicroseconds) );
 
       if (mState == CONNECTION_PENDING_CONNECT) {
 	boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
 
-        
-	mConnectionReturnCallbackMap[mRemoteEndPoint](FAILURE,
+        printf("Remote endpoint not available to connect\n");
+        mConnectionReturnCallbackMap[mRemoteEndPoint](FAILURE,
                                                 boost::shared_ptr<Connection<EndPointType> > (mWeakThis) );
 
-        mConnectionReturnCallbackMap.erase(mRemoteEndPoint);	
 
-	boost::shared_ptr<Connection<EndPointType> > conn = mConnectionMap[ mLocalEndPoint ];
-	  
-	mConnectionMap.erase(mLocalEndPoint);	
-
-	std::cout << "Remote endpoint not available to connect\n";	
-	
-	fflush(stdout);
-
-	lock.unlock();
+	mConnectionReturnCallbackMap.erase(mRemoteEndPoint);
+	mConnectionMap.erase(mLocalEndPoint);
 
         return;
       }
@@ -530,7 +515,7 @@ private:
     conn->setLocalChannelID(payload[0]);
     conn->sendData(payload, sizeof(payload));
 
-    mConnectionReturnCallbackMap[remoteEndPoint] = cb;    
+    mConnectionReturnCallbackMap[remoteEndPoint] = cb;
 
     return true;
   }
@@ -1028,8 +1013,7 @@ public:
     else if (channelID == 0) {
       /* it's a new channel request negotiation protocol
 	 packet ; allocate a new channel.*/
-      std::cout << localEndPoint.endPoint.toString()  << " received a new channel request from "
-		<< remoteEndPoint.endPoint.toString() << "\n";
+      std::cout << "Received a new channel request\n";
 
       if (mListeningConnectionsCallbackMap.find(localEndPoint) != mListeningConnectionsCallbackMap.end()) {
         uint8* received_payload = (uint8*) received_msg->payload().data();
@@ -1037,9 +1021,7 @@ public:
         uint16 payload[2];
         payload[0] = getAvailableChannel();
         payload[1] = getAvailablePort();
-        std::cout <<  localEndPoint.endPoint.toString()  << " receiveChannelRequest " << (int)payload[0] << "\n";
-
-	fflush(stdout);
+        std::cout << "receiveChannelRequest " << (int)payload[0] << "\n";
 
         EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, payload[1]);
         boost::shared_ptr<Connection>  conn =
