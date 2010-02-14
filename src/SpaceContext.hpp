@@ -46,6 +46,9 @@ class ObjectMessageDispatcher;
 class Forwarder;
 class MockForwarder;
 
+template <class EndPointType>
+class Stream;
+
 /** SpaceContext holds a number of useful items that are effectively global
  *  for each space node and used throughout the system -- ServerID, time information,
  *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
@@ -74,6 +77,17 @@ public:
     ObjectMessageDispatcher* objectDispatcher() const {
         return mObjectDispatcher.read();
     }
+
+    void newStream(int err, boost::shared_ptr< Stream<UUID> > s);
+
+    boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
+      if (mObjectStreams.find(uuid) != mObjectStreams.end()) {
+        return mObjectStreams[uuid];
+      }
+      
+      return boost::shared_ptr<Stream<UUID> >();
+    }
+
 private:
     virtual void poll();
     virtual void stop();
@@ -90,6 +104,8 @@ private:
 
     TimeProfiler::Stage* mIterationProfiler;
     TimeProfiler::Stage* mWorkProfiler;
+
+    std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
 }; // class SpaceContext
 
 } // namespace CBR

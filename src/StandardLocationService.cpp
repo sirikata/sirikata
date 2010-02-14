@@ -233,7 +233,7 @@ void StandardLocationService::receiveMessage(Message* msg) {
 void StandardLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     assert(msg.dest_object() == UUID::null());
     assert(msg.dest_port() == OBJECT_PORT_LOCATION);
-
+ 
     CBR::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString(msg.payload());
     assert(parse_success);
@@ -261,6 +261,43 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
                 BoundingSphere3f newbounds = request.bounds();
                 loc_it->second.bounds = newbounds;
                 notifyLocalBoundsUpdated( msg.source_object(), newbounds );
+            }
+        }
+        else {
+            // Warn about update to non-local object
+        }
+    }
+}
+
+void StandardLocationService::locationUpdate(UUID source, void* buffer, uint length) {     
+    CBR::Protocol::Loc::Container loc_container;
+    bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
+    assert(parse_success);
+
+    if (loc_container.has_update_request()) {
+        CBR::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
+
+        TrackingType obj_type = type(source);
+        if (obj_type == Local) {
+            LocationMap::iterator loc_it = mLocations.find( source );
+            assert(loc_it != mLocations.end());
+
+            if (request.has_location()) {
+                TimedMotionVector3f newloc(
+                    request.location().t(),
+                    MotionVector3f( request.location().position(), request.location().velocity() )
+                );
+                loc_it->second.location = newloc;
+                notifyLocalLocationUpdated( source, newloc );
+
+                mContext->trace()->serverLoc( mContext->simTime(), mContext->id(), mContext->id(), source, newloc );
+
+            }
+
+            if (request.has_bounds()) {
+                BoundingSphere3f newbounds = request.bounds();
+                loc_it->second.bounds = newbounds;
+                notifyLocalBoundsUpdated( source, newbounds );
             }
         }
         else {

@@ -110,15 +110,19 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
-    CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
-        mLocService->context()->id(),
-        UUID::null(), OBJECT_PORT_LOCATION,
-        dest, OBJECT_PORT_LOCATION,
-        serializePBJMessage(blu)
-    );
+bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu)
+{
+  std::string bluMsg = serializePBJMessage(blu);
+  boost::shared_ptr<Stream<UUID> > locServiceStream = mLocService->getObjectStream(dest);
 
-    return mLocService->context()->objectRouter()->route(obj_msg);
+  bool sent = false;
+  if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
+    locServiceStream->connection().lock()->datagram( (void*)bluMsg.data(), bluMsg.size(), 
+						     OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION, NULL);
+    sent = true;
+  }
+
+  return sent;
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {

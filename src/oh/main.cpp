@@ -42,6 +42,8 @@
 #include "Statistics.hpp"
 #include "TabularServerIDMap.hpp"
 #include "ScenarioFactory.hpp"
+
+
 void *main_loop(void *);
 int main(int argc, char** argv) {
     using namespace CBR;
@@ -89,6 +91,9 @@ int main(int argc, char** argv) {
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
     Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOption("scenario")->as<String>())(GetOption("scenario-options")->as<String>());
     scenario->initialize(ctx);
+
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
+
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
         Time now_time = Timer::now();
@@ -104,6 +109,7 @@ int main(int argc, char** argv) {
     ctx->add(obj_host);
     ctx->add(obj_factory);
     ctx->add(scenario);
+    ctx->add(sstConnMgr);
     ctx->run(2);
 
     ctx->cleanup();
@@ -114,6 +120,7 @@ int main(int argc, char** argv) {
 
     gTrace->prepareShutdown();
 
+    delete sstConnMgr;
     delete server_id_map;
     delete obj_factory;
     delete scenario;

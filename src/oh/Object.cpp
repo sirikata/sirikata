@@ -65,8 +65,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mQuitting(false),
    mLocUpdateTimer( IOTimer::create(mContext->ioService) )
 {
-  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);
-  
+  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);  
 }
 
 Object::~Object() {
@@ -85,7 +84,6 @@ void Object::stop() {
 
 void Object::scheduleNextLocUpdate() {
     const Time tnow = mContext->simTime();
-
     
     TimedMotionVector3f curLoc = location();
     const TimedMotionVector3f* update = mMotion->nextUpdate(tnow);
@@ -101,7 +99,6 @@ void Object::scheduleNextLocUpdate() {
 }
 
 void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
-    
     if (mQuitting) {
         disconnect();
         return;
@@ -122,14 +119,16 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
         requested_loc.set_t(curLoc.updateTime());
         requested_loc.set_position(curLoc.position());
         requested_loc.set_velocity(curLoc.velocity());
+	
+        std::string payload = serializePBJMessage(container);
 
-	bool success = mContext->objectHost->send(
-            this, OBJECT_PORT_LOCATION,
-            UUID::null(), OBJECT_PORT_LOCATION,
-            serializePBJMessage(container)
-        );
-
-
+	boost::shared_ptr<Stream<UUID> > spaceStream = mContext->objectHost->getSpaceStream(mID);
+        if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
+          spaceStream->connection().lock()->datagram( (void*)payload.data(),
+								payload.size(), OBJECT_PORT_LOCATION,
+								OBJECT_PORT_LOCATION, NULL);
+	}
+        
         // XXX FIXME do something on failure
         mContext->trace()->objectGenLoc(tnow, mID, curLoc);
     }
@@ -138,13 +137,14 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 }
 
 bool Object::send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
-  return mContext->objectHost->send(
+  bool val = mContext->objectHost->send(
 			     src_port, src,
 			     dest_port, dest,
 			     payload
 			     );
+
+  return val;
 }
-  
 
 bool Object::route(CBR::Protocol::Object::ObjectMessage* msg) {
   mContext->mainStrand->post(std::tr1::bind(
@@ -180,13 +180,15 @@ void Object::connect() {
             this,
             mQueryAngle,
             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) )
+            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
+	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this) )
         );
     else
         mContext->objectHost->connect(
             this,
             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) )
+            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
+	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this ) )
         );
 }
 
@@ -203,18 +205,29 @@ void Object::handleSpaceConnection(ServerID sid) {
     }
 
     OBJ_LOG(insane,"Got space connection callback");
-    mConnectedTo = sid;
+    mConnectedTo = sid;    
 
     // Start normal processing
     mContext->mainStrand->post(
         std::tr1::bind(&Object::scheduleNextLocUpdate, this)
-    );
+    );    
 }
 
 void Object::handleSpaceMigration(ServerID sid) {
     OBJ_LOG(insane,"Migrated to new space server: " << sid);
     mConnectedTo = sid;
 }
+
+void Object::handleSpaceStreamCreated() {
+  boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
+  if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
+    boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
+    sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION, 
+						std::tr1::bind(&Object::locationMessage, this, _1, _2)
+						);
+  }
+}
+
 
 bool Object::connected() {
     return (mConnectedTo != NullServerID);
@@ -226,12 +239,8 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
     switch( msg->dest_port() ) {
       case OBJECT_PORT_PROXIMITY:
         proximityMessage(*msg);
-        break;
-      case OBJECT_PORT_LOCATION:
-        locationMessage(*msg);
-        break;
-      default:
-        //printf("Warning: Tried to deliver unknown message type through ObjectConnection.\n");
+        break;	
+      default:        
         dispatchMessage(*msg);
 
         break;
@@ -240,11 +249,9 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
     delete msg;
 }
 
-void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
-    assert(msg.source_object() == UUID::null()); // Should come from space
-
+void Object::locationMessage(uint8* buffer, int len) {
     CBR::Protocol::Loc::BulkLocationUpdate contents;
-    bool parse_success = contents.ParseFromString(msg.payload());
+    bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
@@ -255,7 +262,7 @@ void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
         mContext->trace()->objectLoc(
             mContext->simTime(),
-            msg.dest_object(),
+            mID,
             update.object(),
             loc
         );
@@ -282,7 +289,8 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             true,
             loc
         );
-    }
+    }    
+
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 

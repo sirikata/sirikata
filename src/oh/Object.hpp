@@ -94,7 +94,7 @@ struct MaxDistUpdatePredicate {
     }
 };
 
-class Object : public Service, ObjectMessageRouter, ObjectMessageDispatcher {
+class Object : public Service, public ObjectMessageRouter, public ObjectMessageDispatcher {
 public:
     /** Standard constructor. */
     Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
@@ -126,19 +126,18 @@ private:
     void scheduleNextLocUpdate();
     void handleNextLocUpdate(const TimedMotionVector3f& up);
 
-    void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+    void locationMessage(uint8* buffer, int len);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(ServerID sid);
     // Handle a migration to a new space server
     void handleSpaceMigration(ServerID sid);
-
+    void handleSpaceStreamCreated(); 
     
     bool route(CBR::Protocol::Object::ObjectMessage* msg);
 
     bool send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
-
     
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)

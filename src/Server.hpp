@@ -103,6 +103,8 @@ private:
     bool checkAlreadyMigrating(const UUID& obj_id);
     void processAlreadyMigrating(const UUID& obj_id);
 
+    void newStream(int err, boost::shared_ptr< Stream<UUID> > s);
+
     SpaceContext* mContext;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;

@@ -66,6 +66,7 @@ typedef uint16 ObjectMessagePort;
 #define OBJECT_PORT_SESSION       1
 #define OBJECT_PORT_PROXIMITY     2
 #define OBJECT_PORT_LOCATION      3
+#define OBJECT_SPACE_PORT         253
 #define OBJECT_PORT_PING          254
 
 

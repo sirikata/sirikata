@@ -119,7 +119,7 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protoco
     assert( mConnections.find(conn) != mConnections.end() );
 
     String data = serializePBJMessage(*msg);
-    bool sent = conn->socket->send( Sirikata::MemoryReference(data), Sirikata::Network::ReliableOrdered );
+    bool sent = conn->socket->send( Sirikata::MemoryReference(data), Sirikata::Network::ReliableOrdered );    
 
     if (sent) {
         TIMESTAMP(msg, Trace::SPACE_TO_OH_ENQUEUED);

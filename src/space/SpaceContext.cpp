@@ -33,6 +33,8 @@
 #include "SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
 
+#include "SSTImpl.hpp"
+
 namespace CBR {
 
 SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
@@ -50,6 +52,8 @@ SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const
 }
 
 SpaceContext::~SpaceContext() {
+    mObjectStreams.clear();
+
     delete mIterationProfiler;
     delete mWorkProfiler;
 }
@@ -74,6 +78,17 @@ void SpaceContext::poll() {
 void SpaceContext::stop() {
     PollingService::stop();
     startForceQuitTimer();
+}
+
+void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
+  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;      
+
+  if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
+    std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";
+    mObjectStreams[sourceObject]->connection().lock()->close(true);
+  }
+  
+  mObjectStreams[sourceObject] = s;
 }
 
 } // namespace CBR

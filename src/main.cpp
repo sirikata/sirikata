@@ -281,6 +281,7 @@ int main(int argc, char** argv) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(space_context);
 
     space_context->add(space_context);
     space_context->add(gNetwork);
@@ -290,6 +291,7 @@ int main(int argc, char** argv) {
     space_context->add(server);
     space_context->add(oseg);
     space_context->add(loadMonitor);
+    space_context->add(sstConnMgr);
 
 
     std::vector<PollingService*>oseg_nested_pollers =  oseg->getNestedPollers();
@@ -322,6 +324,7 @@ int main(int argc, char** argv) {
     delete cseg;
     delete oseg;
     delete loc_service;
+    delete sstConnMgr;
     delete forwarder;
 
     delete gNetwork;

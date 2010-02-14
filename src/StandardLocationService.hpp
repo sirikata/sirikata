@@ -62,6 +62,9 @@ public:
 
     virtual void receiveMessage(Message* msg);
     virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+
+    virtual void locationUpdate(UUID source, void* buffer, uint length);
+
 private:
     struct LocationInfo {
         TimedMotionVector3f location;

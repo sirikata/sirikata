@@ -39,6 +39,8 @@
 #include "Message.hpp"
 #include "PollingService.hpp"
 
+#include "SSTImpl.hpp"
+
 namespace CBR {
 
 class LocationServiceListener;
@@ -117,6 +119,15 @@ public:
         return mContext;
     }
 
+    virtual void newStream(boost::shared_ptr< Stream<UUID> > s) {
+      boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
+
+      UUID sourceObject = conn->remoteEndPoint().endPoint;	
+
+      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION, 
+					  std::tr1::bind(&LocationService::locationUpdate, this, sourceObject, _1, _2) );
+    }
+
     /** Indicates whether this location service is tracking the given object.  It is only
      *  safe to request information */
     virtual bool contains(const UUID& uuid) const = 0;
@@ -156,6 +167,13 @@ public:
     virtual void receiveMessage(Message* msg) = 0;
     /** ObjectMessageRecipient Interface. */
     virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) = 0;
+
+    virtual void locationUpdate(UUID source, void* buffer, uint length) = 0;
+
+    boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
+      return mContext->getObjectStream(uuid);
+    }
+
 protected:
     virtual void poll();
     virtual void service() = 0;

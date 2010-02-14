@@ -94,7 +94,9 @@ TCPNetwork::~TCPNetwork() {
 
 // IO Thread Methods
 
-void TCPNetwork::newStreamCallback(Stream* newStream, Stream::SetCallbacks& setCallbacks) {
+void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream, 
+				   Sirikata::Network::Stream::SetCallbacks& setCallbacks) 
+{
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -282,10 +284,10 @@ void TCPNetwork::openConnection(const ServerID& dest) {
     remote->logical_endpoint = dest;
     mRemoteStreams.insert(std::pair<ServerID,RemoteStreamPtr>(dest, remote));
 
-    Stream::SubstreamCallback sscb(&Stream::ignoreSubstreamCallback);
-    Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
-    Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, _1));
-    Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
+    Sirikata::Network::Stream::SubstreamCallback sscb(&Sirikata::Network::Stream::ignoreSubstreamCallback);
+    Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
+    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, _1));
+    Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
     remote->stream->connect(convertAddress4ToSirikata(*addr),
                             sscb,
                             connCallback,

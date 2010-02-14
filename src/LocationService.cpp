@@ -55,19 +55,17 @@ LocationService::LocationService(SpaceContext* ctx)
  : PollingService(ctx->mainStrand),
    mContext(ctx)
 {
-    mProfiler = mContext->profiler->addStage("Location Service");
+    mProfiler = mContext->profiler->addStage("Location Service");     
 
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
 
-    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);
-    mContext->objectDispatcher()->registerObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
+    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);    
 }
 
 LocationService::~LocationService() {
     delete mUpdatePolicy;
 
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOCATION, this);
-    mContext->objectDispatcher()->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 void LocationService::poll() {

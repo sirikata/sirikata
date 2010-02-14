@@ -38,8 +38,11 @@
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
 #include "Message.hpp"
+#include "SSTImpl.hpp"
 
 #include <sirikata/util/SerializationCheck.hpp>
+
+
 
 namespace CBR {
 
@@ -57,6 +60,7 @@ public:
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
     typedef SessionCallback MigratedCallback;
+    typedef std::tr1::function<void()> StreamCreatedCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
     ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap);
@@ -68,8 +72,10 @@ public:
     // NOTE: The public interface is only safe to access from the main strand.
 
     /** Connect the object to the space with the given starting parameters. */
-    void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb, MigratedCallback migrated_cb);
-    void connect(Object* obj, ConnectedCallback connected_cb, MigratedCallback migrated_cb);
+    void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb, 
+		 MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
+    void connect(Object* obj, ConnectedCallback connected_cb, MigratedCallback migrated_cb, 
+		 StreamCreatedCallback stream_created_cb);
     /** Disconnect the object from the space. */
     void disconnect(Object* obj);
 
@@ -79,6 +85,8 @@ public:
 
     /* Ping Utility Methods. */
     bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
+
+    boost::shared_ptr<Stream<UUID> > getSpaceStream(const UUID& objectID);
 
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
@@ -152,7 +160,7 @@ private:
     /** Object session initiation. */
 
     // Private utility method that the public versions all use to initialize connection struct
-    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regquery, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb);
+  void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regquery, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback);
 
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
     void openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn);
@@ -245,7 +253,8 @@ private:
         ObjectConnections();
 
         // Add the object, completely disconnected, to the index
-        void add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb, MigratedCallback migrate_cb);
+        void add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb, MigratedCallback migrate_cb,
+	       StreamCreatedCallback stream_created_cb);
 
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const UUID& obj, ServerID connecting_to);
@@ -260,6 +269,8 @@ private:
         ServerID handleConnectSuccess(const UUID& obj);
 
         void handleConnectError(const UUID& objid);
+
+        void handleConnectStream(const UUID& objid);
 
         void remove(const UUID& obj);
 
@@ -294,6 +305,7 @@ private:
 
             ConnectedCallback connectedCB;
             MigratedCallback migratedCB;
+  	    StreamCreatedCallback streamCreatedCB;	  
         };
         typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;
@@ -309,6 +321,11 @@ private:
     uint64 mPingId;
     typedef std::tr1::function<void(const CBR::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
     std::tr1::unordered_map<uint64, ObjectMessageCallback > mRegisteredServices;
+
+
+    void spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> > s, UUID obj);
+    std::map<UUID, boost::shared_ptr<Stream<UUID> > > mObjectToSpaceStreams;
+
 public:
     ObjectConnections*getObjectConnections(){return &mObjectConnections;}
     ///Register to intercept all incoming messages on a given port

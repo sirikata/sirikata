@@ -62,6 +62,19 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
                                          );
 
     mMigrationTimer.start();
+
+    Stream<UUID>::listen( std::tr1::bind(&Server::newStream, this, _1, _2),
+			  EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT) );
+}
+
+void Server::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
+  if (err != SUCCESS){
+    return;
+  }    
+  
+  mLocationService->newStream(s);
+
+  mContext->newStream(err, s);
 }
 
 Server::~Server()
@@ -192,6 +205,7 @@ void Server::handleObjectHostMessageRouting() {
         return;
     }
 
+    
     // Finally, if we've passed all these tests, then everything looks good and we can route it
     mForwarder->routeObjectHostMessage(front.obj_msg);
 }
