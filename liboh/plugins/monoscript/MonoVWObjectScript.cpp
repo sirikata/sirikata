@@ -41,81 +41,74 @@
 #include "MonoContext.hpp"
 namespace Sirikata {
 
-MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObject*ho, const ObjectScriptManager::Arguments&args):mDomain(mono_system->createDomain()){
-    mParent=ho;
-    int ignored_args=0;
-    String reserved_string_assembly="Assembly";
-    String reserved_string_class="Class";
-    String reserved_string_namespace="Namespace";
-    String reserved_string_function="Function";
-    String assembly_name;//="Sirikata.Runtime";
-    ObjectScriptManager::Arguments::const_iterator i=args.begin(),j,func_iter;
-    if ((i=args.find(reserved_string_assembly))!=args.end()) {
-        assembly_name=i->second;
-        ++ignored_args;
+namespace {
+/** Gets an argument from the argument map if it exists, removes it from the
+ *  map, and returns its value (or the empty string if it doesn't exist).
+ */
+String GetAndFilterArgument(ObjectScriptManager::Arguments& args, const String& argname) {
+    if (args.find(argname) == args.end())
+        return "";
+    String retval = args[argname];
+    args.erase(argname);
+    return retval;
+}
+} // namespace
+
+MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObject*ho, const ObjectScriptManager::Arguments&args)
+ : mParent(ho),
+   mDomain(mono_system->createDomain()),
+   mObject()
+{
+    // Filter out reserved parameters
+    ObjectScriptManager::Arguments filtered_args = args;
+    String assembly_name = GetAndFilterArgument(filtered_args, "Assembly");
+    String namespace_name = GetAndFilterArgument(filtered_args, "Namespace");
+    String class_name = GetAndFilterArgument(filtered_args, "Class");
+    // Build the arg array to pass into the constructor
+    std::vector<String> flattened_args;
+    for(ObjectScriptManager::Arguments::const_iterator arg_it = filtered_args.begin(); arg_it != filtered_args.end(); arg_it++) {
+        flattened_args.push_back(arg_it->first);
+        flattened_args.push_back(arg_it->second);
     }
-    mono_system->loadAssembly(assembly_name);
+
+    if (!assembly_name.empty())
+        mono_system->loadAssembly(assembly_name);
+
     try {
-        Mono::Assembly ass=mDomain.getAssembly(i->second);
-        String class_name;//="PythonObject";
-        String namespace_name;//="Sirikata.Runtime";
-        
-        if ((i=args.find(reserved_string_class))!=args.end()) {        
-            ++ignored_args;
-            class_name=i->second;
-        }
-        if ((i=args.find(reserved_string_namespace))!=args.end()) {        
-            ++ignored_args;
-            namespace_name=i->second;
-        }
-        if ((func_iter=args.find(reserved_string_function))!=args.end()) {        
-            ++ignored_args;
-        }
+        Mono::Assembly ass = mDomain.getAssembly(assembly_name);
+
         MonoContext::getSingleton().push(MonoContextData());
         MonoContext::getSingleton().setVWObject(ho,mDomain);
         try {
-            
-            Mono::Class class_type=ass.getClass(namespace_name,class_name);
-            Mono::Object exampleString=mDomain.String(String());
-            Mono::Array mono_args=Mono::Array(mDomain.Array(exampleString.type(),(args.size()-ignored_args)*2));
-            unsigned int mono_count=0;
-            
-            for (i=args.begin(),j=args.end();i!=j;++i) {
-                if (i->first!=reserved_string_assembly&&i->first!=reserved_string_class&&i->first!=reserved_string_namespace&&i->first!=reserved_string_function) {                        
-                    mono_args.set(mono_count++,mDomain.String(i->first));
-                    mono_args.set(mono_count++,mDomain.String(i->second));
-                }
-            }
+            Mono::Class class_type = ass.getClass(namespace_name, class_name);
+            Mono::Array mono_args = mDomain.StringArray(flattened_args);
             try {
-                if (func_iter==args.end()) {
-                    mObject=class_type.instance(mono_args);
-                }else {
-                    mObject=class_type.send(func_iter->second,mono_args);
-                }
+                mObject=class_type.instance(mono_args);
             }catch(Mono::Exception&e) {
-                SILOG(mono,warning,"Making new object: Cannot locate method "<<(func_iter==args.end()?String("constructor"):func_iter->second) <<" in class "<<namespace_name<<"::"<<class_name<<"with "<<mono_args.length()<<" arguments."<<e);
+                SILOG(mono,warning,"Making new object: Cannot locate constructor in class "<<namespace_name<<"::"<<class_name<<"with "<<mono_args.length()<<" arguments."<<e);
             }
         } catch (Mono::Exception&e) {
             SILOG(mono,warning,"Making new object: Cannot locate class "<<namespace_name<<"::"<<class_name<<"."<<e);
         }
         MonoContext::getSingleton().pop();
     } catch (Mono::Exception&e) {
-        SILOG(mono,warning,"Making new object: Cannot locate assembly "<<i->second<<"."<<e);
-        //no assembly could be loaded
+        SILOG(mono,warning,"Making new object: Cannot locate assembly "<< assembly_name <<"."<<e);
     }
 }
-MonoVWObjectScript::~MonoVWObjectScript(){
-
+MonoVWObjectScript::~MonoVWObjectScript() {
     //mono_jit_cleanup(mDomain.domain());
 }
+
 bool MonoVWObjectScript::forwardMessagesTo(MessageService*){
     NOT_IMPLEMENTED(mono);
     return false;
 }
+
 bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
     NOT_IMPLEMENTED(mono);
     return false;
 }
+
 bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue){
     MonoContext::getSingleton().push(MonoContextData());
     MonoContext::getSingleton().setVWObject(mParent,mDomain);
@@ -133,13 +126,13 @@ bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader,
     }catch (Mono::Exception&e) {
         SILOG(mono,debug,"RPC Exception "<<e);
         MonoContext::getSingleton().pop();
-        return false;        
+        return false;
     }
     MonoContext::getSingleton().pop();
     return true;
 }
 
-void MonoVWObjectScript::processMessage(const RoutableMessageHeader&receivedHeader , MemoryReference body){
+void MonoVWObjectScript::processMessage(const RoutableMessageHeader& receivedHeader, MemoryReference body){
     std::string header;
     receivedHeader.SerializeToString(&header);
     MonoContext::getSingleton().push(MonoContextData());
@@ -150,6 +143,10 @@ void MonoVWObjectScript::processMessage(const RoutableMessageHeader&receivedHead
         SILOG(mono,debug,"Message Exception "<<e);
     }
     MonoContext::getSingleton().pop();
+}
+
+bool MonoVWObjectScript::valid() const {
+    return !mObject.null();
 }
 
 

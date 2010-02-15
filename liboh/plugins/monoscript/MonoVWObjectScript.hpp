@@ -45,16 +45,23 @@ namespace Sirikata {
 class HostedObject;
 
 class MonoVWObjectScript : public ObjectScript{
-    HostedObject*mParent;
+    HostedObject* mParent;
     Mono::Domain mDomain;
     Mono::Object mObject;
 public:
     MonoVWObjectScript(Mono::MonoSystem*, HostedObject*, const ObjectScriptManager::Arguments&args);
     ~MonoVWObjectScript();
+
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);
     bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
-    void processMessage(const RoutableMessageHeader&header , MemoryReference body);
+    void processMessage(const RoutableMessageHeader& header, MemoryReference body);
+
+    /** Returns true if this script is valid, i.e. if it was successfully loaded
+     *  and initialized.
+     */
+    bool valid() const;
+
 };
 
 }
