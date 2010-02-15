@@ -312,6 +312,24 @@ Array Domain::ByteArray(const Sirikata::MemoryBuffer& data) {
     return byte_array;
 }
 
+
+Array Domain::StringArray(unsigned int length) {
+    Class StringClass(mono_get_string_class());
+    ::Mono::Array string_array = Domain::root().Array(StringClass, length);
+    return string_array;
+}
+
+Array Domain::StringArray(const std::vector<Sirikata::String>& data) {
+    int length = data.size();
+    Class StringClass(mono_get_string_class());
+    ::Mono::Array string_array = Domain::root().Array(StringClass, length);
+
+    for(unsigned int idx = 0; idx < data.size(); idx++)
+        string_array.set(idx, String(data[idx]));
+
+    return string_array;
+}
+
 //#####################################################################
 // Function wrapObject
 //#####################################################################
@@ -410,14 +428,4 @@ Object Domain::AssemblyRewriter() {
     return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime.Assemblies", "AssemblyRewriter").instance();
 }
 
-/*
-Object Domain::TimerID(Sirikata::Scripting::TimerID id) {
-    return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "TimerID").instance( Int32(id) );
-}
-*/
-/*
-Object Domain::ResourceID(const Sirikata::ResourceID &id) {
-    return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "ResourceID").instance( String(id.toString()) );
-}
-*/
 } // namespace Mono

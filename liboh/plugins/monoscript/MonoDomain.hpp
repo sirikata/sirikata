@@ -169,6 +169,12 @@ public:
     /** Create a Mono Byte[] that contains the provided data. */
     ::Mono::Array ByteArray(const Sirikata::MemoryBuffer& data);
 
+    /** Create a Mono String[] of the specified length. */
+    ::Mono::Array StringArray(unsigned int length);
+
+    /** Create a Mono String[] that contains the provided data. */
+    ::Mono::Array StringArray(const std::vector<Sirikata::String>& data);
+
     /** Create a Mono Time that belongs to this Domain.
      *  \param time the Time to copy
      */
