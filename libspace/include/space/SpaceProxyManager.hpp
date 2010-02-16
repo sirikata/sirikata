@@ -70,4 +70,3 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
 };
 }
 #endif
-

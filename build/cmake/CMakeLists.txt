@@ -1003,6 +1003,9 @@ SET(LIBPROXIMITY_SOURCES
 
 SET(LIBPROXYOBJECT_SOURCES
   ${ProxyObject_PBJ_CPP_FILES}
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/odp/Defs.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/odp/DelegateService.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/odp/DelegatePort.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp

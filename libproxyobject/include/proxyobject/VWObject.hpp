@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 #define _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 
-
 namespace Sirikata {
 class PhysicalParameters;
 
@@ -58,7 +57,7 @@ typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
  *   The remoteQueryInterest function will be called when
  *   the processRPC function determines that a ProxCall method has invalidated a paricular SpaceObjectReference
  */
-class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>{
+class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject> {
 private:
     static void receivedProxObjectProperties(
             const VWObjectWPtr &weakThis,
@@ -94,6 +93,7 @@ protected:
 public:
     VWObject();
     virtual ~VWObject();
+
     ///The tracker managing state for outstanding requests this object has made
     virtual QueryTracker*getTracker()=0;
     ///The ProxyManager this VWObject is responsible for (or partially responsible as in the current OH design) given the space ID
@@ -105,8 +105,6 @@ public:
     virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;
     ///a callback to this object telling it that an object with an instantiated ProxyObject has exited its region of interest for query query_id
     virtual void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&obj, const SpaceObjectReference&)=0;
-
-
 };
 
 }

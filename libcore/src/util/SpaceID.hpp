@@ -99,6 +99,13 @@ class SpaceID : public TotallyOrdered<SpaceID>{
         return mID<rhs.mID;
     }
 
+    bool matches(const SpaceID& rhs) const {
+        return (
+            *this == rhs ||
+            *this == any() ||
+            rhs == any()
+        );
+    }
   private:
 
     UUID mID;

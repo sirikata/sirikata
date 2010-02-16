@@ -5,7 +5,7 @@ namespace Sirikata {
 SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io):mQueryTracker(io),mSpace(space){
 }
 SpaceProxyManager::~SpaceProxyManager() {
-    
+
 }
 
 void SpaceProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTracker*tracker){
@@ -112,4 +112,5 @@ ProxyObjectPtr SpaceProxyManager::getProxyObject(const Sirikata::SpaceObjectRefe
 QueryTracker * SpaceProxyManager::getQueryTracker(const SpaceObjectReference&id) {
     return &mQueryTracker;
 }
+
 }

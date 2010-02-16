@@ -102,6 +102,13 @@ class ObjectReference : public TotallyOrdered<ObjectReference>{
         return mID<rhs.mID;
     }
 
+    bool matches(const ObjectReference& rhs) const {
+        return (
+            *this == rhs ||
+            *this == any() ||
+            rhs == any()
+        );
+    }
   private:
 
     UUID mID;

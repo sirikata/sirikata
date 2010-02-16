@@ -58,6 +58,7 @@
 #include <util/KnownServices.hpp>
 #include "util/ThreadId.hpp"
 #include "util/PluginManager.hpp"
+
 namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
@@ -811,6 +812,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
     }
 }
+
 
 void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
     {

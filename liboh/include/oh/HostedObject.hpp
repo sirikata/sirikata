@@ -111,7 +111,7 @@ private:
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
-    ~HostedObject();
+    virtual ~HostedObject();
 
 
 private:
