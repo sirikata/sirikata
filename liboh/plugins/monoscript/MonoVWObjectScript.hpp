@@ -35,6 +35,7 @@
 #include "MonoDefs.hpp"
 #include "MonoObject.hpp"
 #include "MonoDomain.hpp"
+#include "MonoMethodLookupCache.hpp"
 #include "oh/ObjectScript.hpp"
 
 namespace Sirikata {
@@ -44,6 +45,9 @@ class MonoVWObjectScript : public ObjectScript{
     HostedObjectPtr mParent;
     Mono::Domain mDomain;
     Mono::Object mObject;
+
+    Mono::ThreadSafeSingleMethodLookupCache mProcessRPCCache;
+    Mono::ThreadSafeSingleMethodLookupCache mProcessMessageCache;
 public:
     MonoVWObjectScript(Mono::MonoSystem*, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args);
     ~MonoVWObjectScript();
@@ -57,7 +61,6 @@ public:
      *  and initialized.
      */
     bool valid() const;
-
 };
 
 }
