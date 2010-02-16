@@ -850,11 +850,8 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     } else if (mDelegateODPService->deliver(header, bodyData)) {
         // if this was true, it got delivered
     } else {
-        if (mObjectScript) {
+        if (mObjectScript)
             mObjectScript->processMessage(header, bodyData);
-        } else {
-            sendErrorReply(header, RoutableMessageHeader::PORT_FAILURE);
-        }
     }
 }
 
