@@ -717,19 +717,6 @@ void HostedObject::initializeDefault(
     }
     //connectToSpace(spaceID, spaceConnectionHint, startingLocation, meshBounds, getUUID());
 }
-void HostedObject::initializePythonScript() {
-    ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getDefaultConstructor()("");
-    if (mgr) {
-        ObjectScriptManager::Arguments args;
-        args["Assembly"]="Sirikata.Runtime";
-        args["Class"]="PythonObject";
-        args["Namespace"]="Sirikata.Runtime";
-        args["PythonModule"]="test";
-        args["PythonClass"]="exampleclass";
-
-        mObjectScript=mgr->createObjectScript(this->getSharedPtr(),args);
-    }
-}
 
 void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint) {
     mObjectHost->registerHostedObject(getSharedPtr());

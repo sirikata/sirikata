@@ -115,7 +115,6 @@ public:
 
 
 private:
-    void initializePythonScript();//FIXME this is a temporary function
 //------- Private member functions:
     PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
     ///When a message is destined for the RPC port of 0, split it into submessages and process those

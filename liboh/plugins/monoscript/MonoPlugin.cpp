@@ -61,7 +61,7 @@ bool loadDependencyAssembly(Mono::MonoSystem*mono_system, const Sirikata::String
         ||mono_system->loadAssembly(assembly,"dependencies/Cecil");
 }
 bool loadCustomAssembly(Mono::MonoSystem*mono_system, const Sirikata::String&assembly) {
-    return   
+    return
             mono_system->loadAssembly(assembly,".")
             ||mono_system->loadAssembly(assembly,"bin")
             ||mono_system->loadAssembly(assembly,"lib")
@@ -86,22 +86,11 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         bool retval=loadDependencyAssembly(mono_system,"Microsoft.Scripting");
         retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
         retval=loadDependencyAssembly(mono_system,"IronPython.Modules")&&retval;
- 
+
         bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime")&&
             loadCustomAssembly(mono_system,"Sirikata.Protocol");
-        /*
-        Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
-        Mono::Class cls =ass.getClass("PythonObject");
-        Mono::Object monoobj=cls.instance(d.Array(d.String(String()).type(),0));
-        try {
-            monoobj.send("processRPC",d.ByteArray("",0),d.String("rpctest"),d.ByteArray("",0));
-            monoobj.send("tick",d.Time(Time::now()));
-        }catch (Mono::Exception&e) {
-            SILOG(mono,error,"Error processing rpc"<<e);
-        }
-        */
         printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
-        
+
     }
     core_plugin_refcount++;
 }
