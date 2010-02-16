@@ -18,9 +18,10 @@ class MonoContextData {
 private:
     friend class MonoContext;
     Mono::Domain CurrentDomain;
-    std::tr1::weak_ptr<Sirikata::HostedObject> Object;
+    HostedObjectWPtr Object;
 public:
     MonoContextData();
+    MonoContextData(const Mono::Domain& domain, HostedObjectPtr vwobj);
 };
 
 
@@ -57,13 +58,8 @@ public:
     /** Get the current VWObject being called.
      *  May return a null object.
      */
-    std::tr1::shared_ptr<Sirikata::HostedObject> getVWObject() const;
+    HostedObjectPtr getVWObject() const;
 
-    /** Set the current VWObject being called.
-     *  Its safe to set the object to null.
-     */
-    void setVWObject(Sirikata::HostedObject* vwobj, const Mono::Domain &current_domain);
-    
     /**
      * Get the domain the object was allocated and is running under
      */

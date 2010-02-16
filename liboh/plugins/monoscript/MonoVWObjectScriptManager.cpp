@@ -11,11 +11,13 @@ MonoVWObjectScriptManager::MonoVWObjectScriptManager(Mono::MonoSystem*system, co
     mSystem=system;
 
 }
-ObjectScript *MonoVWObjectScriptManager::createObjectScript(HostedObject* ho,
+ObjectScript *MonoVWObjectScriptManager::createObjectScript(HostedObjectPtr ho,
                                                             const Arguments &args){
     MonoVWObjectScript* new_script = new MonoVWObjectScript(mSystem,ho,args);
-    if (!new_script->valid())
+    if (!new_script->valid()) {
+        delete new_script;
         return NULL;
+    }
     return new_script;
 }
 void MonoVWObjectScriptManager::destroyObjectScript(ObjectScript*toDestroy){

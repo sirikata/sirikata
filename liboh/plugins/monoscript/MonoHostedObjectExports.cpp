@@ -43,8 +43,7 @@ static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObj
     std::tr1::shared_ptr<HostedObject>ho(weak_ho);
     bool keepquery = false;
     if (ho) {
-        MonoContext::getSingleton().push(MonoContextData());
-        MonoContext::getSingleton().setVWObject(&*ho,domain);
+        MonoContext::getSingleton().push(MonoContextData(domain, ho));
         String header;
         responseHeader.SerializeToString(&header);
         try {
@@ -95,21 +94,22 @@ static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoOb
     }
     return MonoContext::getSingleton().getDomain().Boolean(true).object();
 }
+
 class ContextPush {
     MonoContextData mMonoContextData;
 public:
-    ContextPush() {
-        MonoContext::getSingleton().push();
+    ContextPush(const Mono::Domain& domain, const HostedObjectPtr& ho) {
+        MonoContext::getSingleton().push(MonoContextData(domain, ho));
     }
     ~ContextPush() {
         MonoContext::getSingleton().pop();
     }
 };
+
 static void CallDelegate(const std::tr1::weak_ptr<HostedObject>&weak_ho, const Mono::Domain &domain, const Mono::Delegate&delegate) {
     std::tr1::shared_ptr<HostedObject> ho(weak_ho.lock());
-    ContextPush cp;
     if (ho) {
-        MonoContext::getSingleton().setVWObject(&*ho,domain);
+        ContextPush cp(domain, ho);
         try {
             delegate.invoke();
         } catch (Mono::Exception&e) {

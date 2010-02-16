@@ -31,25 +31,21 @@
  */
 #ifndef _MONO_VWOBJECT_SCRIPT_HPP
 #define _MONO_VWOBJECT_SCRIPT_HPP
+
 #include "MonoDefs.hpp"
 #include "MonoObject.hpp"
 #include "MonoDomain.hpp"
 #include "oh/ObjectScript.hpp"
 
-
-namespace Mono {
-class MonoSystem;
-
-}
 namespace Sirikata {
 class HostedObject;
 
 class MonoVWObjectScript : public ObjectScript{
-    HostedObject* mParent;
+    HostedObjectPtr mParent;
     Mono::Domain mDomain;
     Mono::Object mObject;
 public:
-    MonoVWObjectScript(Mono::MonoSystem*, HostedObject*, const ObjectScriptManager::Arguments&args);
+    MonoVWObjectScript(Mono::MonoSystem*, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args);
     ~MonoVWObjectScript();
 
     bool forwardMessagesTo(MessageService*);

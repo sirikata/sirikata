@@ -46,7 +46,7 @@ class MonoVWObjectScriptManager : public ObjectScriptManager {
 
     static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem *monosystem,const Sirikata::String&arguments);
 
-    virtual ObjectScript *createObjectScript(HostedObject* ho,
+    virtual ObjectScript *createObjectScript(HostedObjectPtr ho,
                                              const Arguments &args);
     virtual void destroyObjectScript(ObjectScript*toDestroy);
     virtual ~MonoVWObjectScriptManager();

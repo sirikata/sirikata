@@ -727,7 +727,7 @@ void HostedObject::initializePythonScript() {
         args["PythonModule"]="test";
         args["PythonClass"]="exampleclass";
 
-        mObjectScript=mgr->createObjectScript(this,args);
+        mObjectScript=mgr->createObjectScript(this->getSharedPtr(),args);
     }
 }
 
@@ -786,7 +786,7 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     }
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
     if (mgr) {
-        mObjectScript = mgr->createObjectScript(this, args);
+        mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
     }
 }
 void HostedObject::connectToSpace(

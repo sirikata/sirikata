@@ -35,6 +35,8 @@
 namespace Sirikata {
 
 class HostedObject;
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 class ObjectScript;
 
 /** Script factory -- generally have one per shared dynamic library.
@@ -46,7 +48,7 @@ class SIRIKATA_OH_EXPORT ObjectScriptManager  {
     /** Create a script linked to this HostedObject.
         Called by HostedObject::initializeScripted().
     */
-    virtual ObjectScript *createObjectScript(HostedObject* ho,
+    virtual ObjectScript *createObjectScript(HostedObjectPtr ho,
                                              const Arguments &args)=0;
     /// Delete this ObjectScript instance.
     virtual void destroyObjectScript(ObjectScript*toDestroy)=0;

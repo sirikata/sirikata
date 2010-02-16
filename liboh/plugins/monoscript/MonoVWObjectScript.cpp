@@ -54,7 +54,7 @@ String GetAndFilterArgument(ObjectScriptManager::Arguments& args, const String& 
 }
 } // namespace
 
-MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObject*ho, const ObjectScriptManager::Arguments&args)
+MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args)
  : mParent(ho),
    mDomain(mono_system->createDomain()),
    mObject()
@@ -77,8 +77,7 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
     try {
         Mono::Assembly ass = mDomain.getAssembly(assembly_name);
 
-        MonoContext::getSingleton().push(MonoContextData());
-        MonoContext::getSingleton().setVWObject(ho,mDomain);
+        MonoContext::getSingleton().push(MonoContextData(mDomain, ho));
         try {
             Mono::Class class_type = ass.getClass(namespace_name, class_name);
             Mono::Array mono_args = mDomain.StringArray(flattened_args);
@@ -110,8 +109,7 @@ bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
 }
 
 bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue){
-    MonoContext::getSingleton().push(MonoContextData());
-    MonoContext::getSingleton().setVWObject(mParent,mDomain);
+    MonoContext::getSingleton().push(MonoContextData(mDomain, mParent));
     std::string header;
     receivedHeader.SerializeToString(&header);
     try {
@@ -135,8 +133,7 @@ bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader,
 void MonoVWObjectScript::processMessage(const RoutableMessageHeader& receivedHeader, MemoryReference body){
     std::string header;
     receivedHeader.SerializeToString(&header);
-    MonoContext::getSingleton().push(MonoContextData());
-    MonoContext::getSingleton().setVWObject(mParent,mDomain);
+    MonoContext::getSingleton().push(MonoContextData(mDomain, mParent));
     try {
         Mono::Object retval=mObject.send("processMessage",mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)body.data(),(unsigned int)body.size()));
     }catch (Mono::Exception&e) {

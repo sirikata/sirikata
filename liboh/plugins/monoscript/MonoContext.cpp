@@ -5,11 +5,23 @@
 #include "MonoDomain.hpp"
 #include "MonoObject.hpp"
 #include "MonoContext.hpp"
+
 AUTO_SINGLETON_INSTANCE(Sirikata::MonoContext);
 
 namespace Sirikata {
-MonoContextData::MonoContextData():CurrentDomain(Mono::Domain::root()){
+
+MonoContextData::MonoContextData()
+ : CurrentDomain(Mono::Domain::root()),
+   Object()
+{
 }
+
+MonoContextData::MonoContextData(const Mono::Domain& domain, HostedObjectPtr vwobj)
+ : CurrentDomain(domain),
+   Object(vwobj)
+{
+}
+
 MonoContext&MonoContext::getSingleton(){
     return AutoSingleton<MonoContext>::getSingleton();
 }
@@ -72,19 +84,9 @@ Mono::Domain& MonoContext::getDomain() const {
     return *const_cast<Mono::Domain*>(&current().CurrentDomain);
 }
 
-void MonoContext::setVWObject(HostedObject* vwobj, const Mono::Domain &current_domain) {
-    if (vwobj) {
-        current().Object = vwobj->getSharedPtr();
-    }else {
-        current().Object=std::tr1::shared_ptr<HostedObject>();
-    }
-    current().CurrentDomain = current_domain;
-}
-
-
 Sirikata::UUID MonoContext::getUUID() const {
     std::tr1::shared_ptr<HostedObject> tmp=getVWObject();
-    if (tmp) 
+    if (tmp)
         return tmp->getUUID();
     return UUID::null();
 }
