@@ -85,4 +85,15 @@ enum LOGGING_LEVEL {
 
 #define NOT_IMPLEMENTED(module) SILOG(module,error,NOT_IMPLEMENTED_MSG)
 
+
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+// FIXME only works on GCC
+#define DEPRECATED_MSG (Sirikata::String("DEPRECATED reached in ") + Sirikata::String(__PRETTY_FUNCTION__))
+#else
+#define DEPRECATED_MSG (Sirikata::String("DEPRECATED"))
+#endif
+
+#define DEPRECATED(module) SILOG(module,warning,DEPRECATED_MSG)
+
+
 #endif
