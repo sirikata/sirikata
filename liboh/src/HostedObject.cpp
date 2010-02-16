@@ -856,6 +856,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
 }
 
 void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
+    DEPRECATED(HostedObject);
     ///// MessageService::processMessage
     assert(hdrOrig.has_destination_object());
     assert(hdrOrig.has_destination_space());
@@ -873,6 +874,7 @@ void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryRefe
 }
 
 void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
+    DEPRECATED(HostedObject);
     assert(hdrOrig.has_destination_object());
     if (!hdrOrig.has_destination_space() || hdrOrig.destination_space() == SpaceID::null()) {
         RoutableMessageHeader hdr (hdrOrig);

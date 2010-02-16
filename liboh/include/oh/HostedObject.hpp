@@ -218,9 +218,6 @@ public:
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
     const QueryTracker*getTracker()const {return &mTracker;}
 
-    // No reason to allow talking directly to the script--just send a message to the object.
-    //ObjectScript* getScript() const { return mScript; }
-
     /** Called once per frame, at a certain framerate. */
     void tick();
 
@@ -262,6 +259,7 @@ public:
     */
     void send(const RoutableMessageHeader &header, MemoryReference body);
 
+  private:
     /** Equivalent to header.swap_source_and_destination(); send(header, body);
         @see send.
     */
@@ -296,6 +294,9 @@ public:
         @see ReceivedMessage
     */
     void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
+
+  public:
+
     ProxyManager* getProxyManager(const SpaceID&space);
     bool isLocal(const SpaceObjectReference&space)const;
     void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
