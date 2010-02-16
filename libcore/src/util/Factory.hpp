@@ -79,7 +79,7 @@ public:
         return mDefault;
     }
     bool hasConstructor(const String&name)const {
-        return mConstructors.find(name)==mConstructors.end();
+        return mConstructors.find(name) != mConstructors.end();
     }
     const Ftype &getConstructor(const String&name)const{
         typename ConstructorMap::const_iterator where=mConstructors.find(name);
