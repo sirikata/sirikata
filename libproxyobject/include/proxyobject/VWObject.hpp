@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 #define _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 
+#include <proxyobject/odp/Service.hpp>
+
 namespace Sirikata {
 class PhysicalParameters;
 
@@ -57,7 +59,7 @@ typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
  *   The remoteQueryInterest function will be called when
  *   the processRPC function determines that a ProxCall method has invalidated a paricular SpaceObjectReference
  */
-class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject> {
+class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>, public ODP::Service {
 private:
     static void receivedProxObjectProperties(
             const VWObjectWPtr &weakThis,
@@ -105,6 +107,12 @@ public:
     virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;
     ///a callback to this object telling it that an object with an instantiated ProxyObject has exited its region of interest for query query_id
     virtual void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&obj, const SpaceObjectReference&)=0;
+
+
+    // ODP::Service Interface
+    virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port) = 0;
+    virtual ODP::Port* bindODPPort(SpaceID space) = 0;
+    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb) = 0;
 };
 
 }

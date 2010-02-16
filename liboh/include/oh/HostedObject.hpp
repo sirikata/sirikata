@@ -38,6 +38,10 @@
 #include "proxyobject/ProxyObject.hpp"
 #include "util/QueryTracker.hpp"
 #include "proxyobject/VWObject.hpp"
+
+#include <proxyobject/odp/DelegateService.hpp>
+#include <proxyobject/odp/DelegatePort.hpp>
+
 namespace Sirikata {
 class ObjectHost;
 class ProxyObject;
@@ -102,6 +106,8 @@ protected:
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
     QueryTracker mTracker;
+
+    ODP::DelegateService* mDelegateODPService;
 
 //------- Constructors/Destructors
 private:
@@ -300,6 +306,15 @@ public:
     std::tr1::weak_ptr<HostedObject> getWeakPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
+
+
+    // ODP::Service Interface
+    virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(SpaceID space);
+    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+  private:
+    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
+    bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

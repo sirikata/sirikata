@@ -113,4 +113,21 @@ QueryTracker * SpaceProxyManager::getQueryTracker(const SpaceObjectReference&id)
     return &mQueryTracker;
 }
 
+
+// ODP::Service Interface
+
+ODP::Port* SpaceProxyManager::bindODPPort(SpaceID space, ODP::PortID port) {
+    NOT_IMPLEMENTED(SpaceProxyManager);
+    return NULL;
+}
+
+ODP::Port* SpaceProxyManager::bindODPPort(SpaceID space) {
+    NOT_IMPLEMENTED(SpaceProxyManager);
+    return NULL;
+}
+
+void SpaceProxyManager::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+    NOT_IMPLEMENTED(SpaceProxyManager);
+}
+
 }

@@ -67,6 +67,12 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
     QueryTracker* getTracker();
     void addQueryInterest(uint32 query_id, const SpaceObjectReference&);
     void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&, const SpaceObjectReference&);
+
+    // FIXME Why is this even a VWObject?
+    // ODP::Service Interface
+    virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(SpaceID space);
+    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
 };
 }
 #endif

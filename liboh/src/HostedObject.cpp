@@ -77,6 +77,10 @@ public:
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
 
+    const ObjectReference& object() const {
+        return mProxyObject->getObjectReference().object();
+    }
+
     void locationWasReset(Time timestamp, Location loc) {
         loc.setVelocity(Vector3f::nil());
         loc.setAngularSpeed(0);
@@ -158,7 +162,8 @@ public:
 
 HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     : mInternalObjectReference(objectName),
-      mTracker(parent->getSpaceIO()) {
+      mTracker(parent->getSpaceIO())
+{
     mSpaceData = new SpaceDataMap;
     mNextSubscriptionID = 0;
     mObjectHost=parent;
@@ -166,6 +171,13 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     mSendService.ho = this;
     mReceiveService.ho = this;
     mTracker.forwardMessagesTo(&mSendService);
+
+    mDelegateODPService = new ODP::DelegateService(
+        std::tr1::bind(
+            &HostedObject::createDelegateODPPort, this,
+            _1, _2, _3
+        )
+    );
 }
 
 HostedObject::~HostedObject() {
@@ -835,6 +847,8 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
         handleRPCMessage(header, bodyData);
     } else if (header.destination_port() == Services::PERSISTENCE) {
         handlePersistenceMessage(header, bodyData);
+    } else if (mDelegateODPService->deliver(header, bodyData)) {
+        // if this was true, it got delivered
     } else {
         if (mObjectScript) {
             mObjectScript->processMessage(header, bodyData);
@@ -1212,5 +1226,61 @@ void HostedObject::addQueryInterest(uint32 query_id, const SpaceObjectReference&
 }
 
 
+
+// ODP::Service Interface
+ODP::Port* HostedObject::bindODPPort(SpaceID space, ODP::PortID port) {
+    return mDelegateODPService->bindODPPort(space, port);
+}
+
+ODP::Port* HostedObject::bindODPPort(SpaceID space) {
+    return mDelegateODPService->bindODPPort(space);
+}
+
+void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+    mDelegateODPService->registerDefaultODPHandler(cb);
+}
+
+ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port) {
+    assert(space != SpaceID::any());
+    assert(space != SpaceID::null());
+
+    SpaceDataMap::const_iterator space_data_it = mSpaceData->find(space);
+    if (space_data_it == mSpaceData->end())
+        return NULL;
+
+    ObjectReference objid = space_data_it->second.object();
+    ODP::Endpoint port_ep(space, objid, port);
+    return new ODP::DelegatePort(
+        mDelegateODPService,
+        port_ep,
+        std::tr1::bind(
+            &HostedObject::delegateODPPortSend, this,
+            port_ep, _1, _2
+        )
+    );
+}
+
+bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
+    assert(source_ep.space() == dest_ep.space());
+
+    SpaceDataMap::iterator space_data_it = mSpaceData->find(dest_ep.space());
+    if (space_data_it == mSpaceData->end())
+        return false;
+    SpaceConnection& space_conn = space_data_it->second.mSpaceConnection;
+
+    RoutableMessageHeader hdr;
+    hdr.set_source_space( source_ep.space() );
+    hdr.set_source_object( source_ep.object() );
+    hdr.set_source_port( source_ep.port() );
+    hdr.set_destination_space( dest_ep.space() );
+    hdr.set_destination_object( dest_ep.object() );
+    hdr.set_destination_port( dest_ep.port() );
+
+    String serialized_hdr;
+    hdr.SerializeToString(&serialized_hdr);
+    MemoryReference hdr_data(serialized_hdr);
+
+    return space_conn.getStream()->send(hdr_data, payload, Network::ReliableOrdered);
+}
 
 }
