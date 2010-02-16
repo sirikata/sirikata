@@ -225,6 +225,10 @@ void Object::handleSpaceStreamCreated() {
     sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION, 
 						std::tr1::bind(&Object::locationMessage, this, _1, _2)
 						);
+    sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
+                                                std::tr1::bind(&Object::proximityMessage, this, _1, _2)
+                                                );
+
   }
 }
 
@@ -237,9 +241,9 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
     switch( msg->dest_port() ) {
-      case OBJECT_PORT_PROXIMITY:
-        proximityMessage(*msg);
-        break;	
+      //case OBJECT_PORT_PROXIMITY:
+      //  proximityMessage(*msg);
+      //  break;	
       default:        
         dispatchMessage(*msg);
 
@@ -271,10 +275,10 @@ void Object::locationMessage(uint8* buffer, int len) {
     }
 }
 
-void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
-    assert(msg.source_object() == UUID::null()); // Should originate at space server
+void Object::proximityMessage(uint8* buffer, int len) {
+    //assert(msg.source_object() == UUID::null()); // Should originate at space server
     CBR::Protocol::Prox::ProximityResults contents;
-    bool parse_success = contents.ParseFromString(msg.payload());
+    bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
     for(int32 idx = 0; idx < contents.addition_size(); idx++) {
@@ -284,7 +288,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
         mContext->trace()->prox(
             mContext->simTime(),
-            msg.dest_object(),
+            mID,
             addition.object(),
             true,
             loc
@@ -296,7 +300,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
         mContext->trace()->prox(
             mContext->simTime(),
-            msg.dest_object(),
+            mID,
             removal.object(),
             false,
             TimedMotionVector3f()

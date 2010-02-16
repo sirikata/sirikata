@@ -357,7 +357,17 @@ void Proximity::poll() {
     bool object_sent = true;
     while(object_sent && !mObjectResultsToSend.empty()) {
         CBR::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
-        object_sent = mContext->objectRouter()->route(msg_front);
+        boost::shared_ptr<Stream<UUID> > proxStream = mContext->getObjectStream(msg_front->dest_object());
+        std::string proxMsg = msg_front->payload();
+
+        if (proxStream != boost::shared_ptr<Stream<UUID> >()) {
+          object_sent = proxStream->connection().lock()->datagram( (void*)proxMsg.data(), proxMsg.size(),
+                                                         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY, NULL);
+        }
+        else {
+          object_sent = false;
+        }
+   
         if (object_sent)
             mObjectResultsToSend.pop_front();
     }

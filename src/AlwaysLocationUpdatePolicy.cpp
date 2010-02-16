@@ -117,9 +117,8 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
 
   bool sent = false;
   if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
-    locServiceStream->connection().lock()->datagram( (void*)bluMsg.data(), bluMsg.size(), 
+    sent = locServiceStream->connection().lock()->datagram( (void*)bluMsg.data(), bluMsg.size(), 
 						     OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION, NULL);
-    sent = true;
   }
 
   return sent;

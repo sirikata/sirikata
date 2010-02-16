@@ -41,6 +41,8 @@
 #include <prox/LocationUpdateListener.hpp>
 #include "PollingService.hpp"
 
+#include "SSTImpl.hpp"
+
 namespace CBR {
 
 class LocationService;

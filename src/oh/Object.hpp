@@ -127,7 +127,7 @@ private:
     void handleNextLocUpdate(const TimedMotionVector3f& up);
 
     void locationMessage(uint8* buffer, int len);
-    void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+    void proximityMessage(uint8* buffer, int len);
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(ServerID sid);

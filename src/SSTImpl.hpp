@@ -968,15 +968,17 @@ public:
                                      while the 'void*' argument is a pointer
                                      to the buffer that was being sent.
   */
-  virtual void datagram( void* data, int length, uint16 local_port, uint16 remote_port,
+  virtual bool datagram( void* data, int length, uint16 local_port, uint16 remote_port,
 			 DatagramSendDoneCallback cb) {
     int currOffset = 0;
 
     if (mState == CONNECTION_DISCONNECTED
      || mState == CONNECTION_PENDING_DISCONNECT)
     {
-      cb(FAILURE, data);
-      return;
+      if (cb != NULL) {
+        cb(FAILURE, data);
+      }
+      return false;
     }
 
     LSID lsid = ++mNumStreams;
@@ -1006,6 +1008,8 @@ public:
       //invoke the callback function
       cb(SUCCESS, data);
     }
+
+    return true;
   }
 
   /*
