@@ -40,16 +40,24 @@ class HostedObject;
 class ObjectScript;
 
 class MonoVWObjectScriptManager : public ObjectScriptManager {
-    Mono::MonoSystem * mSystem;
-  public:
-    MonoVWObjectScriptManager(Mono::MonoSystem*system, const Sirikata::String&arguments);
+public:
+    enum MonoScriptType {
+        MonoScript,
+        IronPythonScript
+    };
 
-    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem *monosystem,const Sirikata::String&arguments);
+    MonoVWObjectScriptManager(Mono::MonoSystem* system, const Sirikata::String& arguments, MonoScriptType script_type);
+
+    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
 
     virtual ObjectScript *createObjectScript(HostedObjectPtr ho,
                                              const Arguments &args);
     virtual void destroyObjectScript(ObjectScript*toDestroy);
     virtual ~MonoVWObjectScriptManager();
+
+private:
+    Mono::MonoSystem* mSystem;
+    MonoScriptType mScriptType;
 };
 }
 #endif

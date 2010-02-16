@@ -711,11 +711,8 @@ private:
         creator.set_mesh("http://www.sirikata.com/content/assets/cube.dae");
         creator.set_scale(Vector3f(1,1,1));
 
-        creator.set_script("monoscript");
+        creator.set_script("monopython");
         Protocol::IStringMapProperty script_args = creator.mutable_script_args();
-        script_args.add_keys("Assembly"); script_args.add_values("Sirikata.Runtime");
-        script_args.add_keys("Class"); script_args.add_values("PythonObject");
-        script_args.add_keys("Namespace"); script_args.add_values("Sirikata.Runtime");
         script_args.add_keys("PythonModule"); script_args.add_values("test");
         script_args.add_keys("PythonClass"); script_args.add_values("exampleclass");
 

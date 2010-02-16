@@ -77,20 +77,45 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using std::tr1::placeholders::_1;
     if (core_plugin_refcount==0) {
         mono_system = new Mono::MonoSystem();
-        ObjectScriptManagerFactory::getSingleton().registerConstructor("monoscript",
-                                                                       std::tr1::bind(&Sirikata::MonoVWObjectScriptManager::createObjectScriptManager,mono_system,_1),
-                                                                       true);
+
         MonoContext::getSingleton().initializeThread();
         Sirikata::InitHostedObjectExports();
-        Mono::Domain d=mono_system->createDomain();
-        bool retval=loadDependencyAssembly(mono_system,"Microsoft.Scripting");
-        retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
-        retval=loadDependencyAssembly(mono_system,"IronPython.Modules")&&retval;
+        Mono::Domain d = mono_system->createDomain();
 
-        bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime")&&
+        bool sirikata_loaded =
+            loadCustomAssembly(mono_system,"Sirikata.Runtime") &&
             loadCustomAssembly(mono_system,"Sirikata.Protocol");
-        printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
 
+        if (sirikata_loaded) {
+            SILOG(mono,info,"[MONO] Sirikata libraries loaded.");
+            ObjectScriptManagerFactory::getSingleton().registerConstructor(
+                "monoscript",
+                std::tr1::bind(
+                    &Sirikata::MonoVWObjectScriptManager::createObjectScriptManager,
+                    mono_system,
+                    _1,
+                    Sirikata::MonoVWObjectScriptManager::MonoScript
+                )
+            );
+
+            bool iron_python_loaded =
+                loadDependencyAssembly(mono_system,"Microsoft.Scripting") &&
+                loadDependencyAssembly(mono_system,"IronPython") &&
+                loadDependencyAssembly(mono_system,"IronPython.Modules");
+
+            if (iron_python_loaded) {
+                SILOG(mono,info,"[MONO] IronPython loaded.");
+                ObjectScriptManagerFactory::getSingleton().registerConstructor(
+                    "monopython",
+                    std::tr1::bind(
+                        &Sirikata::MonoVWObjectScriptManager::createObjectScriptManager,
+                        mono_system,
+                        _1,
+                        Sirikata::MonoVWObjectScriptManager::IronPythonScript
+                    )
+                );
+            }
+        }
     }
     core_plugin_refcount++;
 }
