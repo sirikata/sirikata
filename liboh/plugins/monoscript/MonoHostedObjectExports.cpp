@@ -12,7 +12,10 @@
 #include "MonoDelegate.hpp"
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
+#include "MonoConvert.hpp"
 #include "util/SentMessage.hpp"
+
+
 using namespace Sirikata;
 using namespace Mono;
 static MonoObject* Mono_Context_CurrentUUID() {
@@ -132,20 +135,29 @@ static MonoObject* Mono_Context_CallFunctionWithTimeout(MonoObject *message, Mon
 static MonoObject* Mono_Context_CallFunction(MonoObject *message, MonoObject*callback){
     return InternalMono_Context_CallFunction(message,callback,Sirikata::Duration::seconds(4.0));
 }
-static MonoObject* Mono_Context_SendMessage(MonoObject *message){
-    std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
-    MemoryBuffer buf;
+static MonoObject* Mono_Context_SendMessage(Mono::CSharpSpaceID* mono_dest_space, Mono::CSharpObjectReference* mono_dest_obj, uint32 mono_dest_port, MonoObject* mono_payload){
+    std::tr1::shared_ptr<HostedObject> ho = MonoContext::getSingleton().getVWObject();
+    MemoryBuffer payload;
 
-    Mono::Array(message).unboxInPlaceByteArray(buf);
-    if (ho&&!buf.empty()) {
-        RoutableMessageHeader hdr;
-        MemoryReference body=hdr.ParseFromArray(&buf[0],buf.size());
+    SpaceID dest_space( Mono::SpaceIDFromMono(mono_dest_space) );
+    ObjectReference dest_obj( Mono::ObjectReferenceFromMono(mono_dest_obj) );
+    ODP::PortID dest_port(mono_dest_port);
+    ODP::Endpoint dest_ep(dest_space, dest_obj, dest_port);
 
-        ho->send(hdr,body);
-    }else {
+    Mono::Array(mono_payload).unboxInPlaceByteArray(payload);
+
+    if (!ho || payload.empty())
         return MonoContext::getSingleton().getDomain().Boolean(false).object();
-    }
-    return MonoContext::getSingleton().getDomain().Boolean(true).object();
+
+    // FIXME exposing ODP ports would be a better solution
+    ODP::Port* temp_port = ho->bindODPPort(dest_space);
+    if (temp_port == NULL)
+        return MonoContext::getSingleton().getDomain().Boolean(false).object();
+
+    bool sent_success = temp_port->send(dest_ep, MemoryReference(payload));
+    delete temp_port;
+
+    return MonoContext::getSingleton().getDomain().Boolean(sent_success).object();
 }
 
 static void Mono_Context_TickDelay(MonoObject*duration) {

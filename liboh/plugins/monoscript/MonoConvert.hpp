@@ -90,19 +90,19 @@ struct CSharpDuration {
 };
 
 
-Sirikata::Vector3f Vector3f(CSharpVector3* in);
-Sirikata::Vector3d Vector3d(CSharpVector3* in);
-Sirikata::Quaternion Quaternion(CSharpQuaternion* in);
-Sirikata::Location Location(CSharpLocation* in);
-Sirikata::Vector4f Color(CSharpColor* in);
-Sirikata::BoundingInfo BoundingInfo(const Object& in);
-Sirikata::UUID UUID(CSharpUUID* in);
-Sirikata::SpaceID SpaceID(CSharpSpaceID* in);
-Sirikata::ObjectReference ObjectReference(CSharpObjectReference* in);
-Sirikata::SpaceObjectReference SpaceObjectReference(CSharpSpaceObjectReference* in);
-Sirikata::Time RawTime(Sirikata::int64 ticks);
-Sirikata::Duration Duration(CSharpDuration* in);
-Sirikata::Time Time(CSharpDuration* in);
+Sirikata::Vector3f Vector3fFromMono(CSharpVector3* in);
+Sirikata::Vector3d Vector3dFromMono(CSharpVector3* in);
+Sirikata::Quaternion QuaternionFromMono(CSharpQuaternion* in);
+Sirikata::Location LocationFromMono(CSharpLocation* in);
+Sirikata::Vector4f ColorFromMono(CSharpColor* in);
+Sirikata::BoundingInfo BoundingInfoFromMono(const Object& in);
+Sirikata::UUID UUIDFromMono(CSharpUUID* in);
+Sirikata::SpaceID SpaceIDFromMono(CSharpSpaceID* in);
+Sirikata::ObjectReference ObjectReferenceFromMono(CSharpObjectReference* in);
+Sirikata::SpaceObjectReference SpaceObjectReferenceFromMono(CSharpSpaceObjectReference* in);
+Sirikata::Time RawTimeFromMono(Sirikata::int64 ticks);
+Sirikata::Duration DurationFromMono(CSharpDuration* in);
+Sirikata::Time TimeFromMono(CSharpDuration* in);
 
 void ConvertVector3(const Sirikata::Vector3f& in, CSharpVector3* out);
 void ConvertVector3(const Sirikata::Vector3d& in, CSharpVector3* out);

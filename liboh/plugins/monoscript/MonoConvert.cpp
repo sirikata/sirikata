@@ -64,17 +64,17 @@ void ConvertVector3CPPToCSharpAndFree(void* jarg, void* jout) {
     delete arg;
 }
 
-Sirikata::Vector3f Vector3f(CSharpVector3* in) {
+Sirikata::Vector3f Vector3fFromMono(CSharpVector3* in) {
     return Sirikata::Vector3f(in->x, in->y, in->z);//warns cus we should have Vector3f and Vector3d in C# land
 }
 
-Sirikata::Vector3d Vector3d(CSharpVector3* in) {
+Sirikata::Vector3d Vector3dFromMono(CSharpVector3* in) {
     return Sirikata::Vector3d(in->x, in->y, in->z);
 }
 
 SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertVector3CSharpToCPP(CSharpVector3* csharp_vec3) {
-    return (void*) new Sirikata::Vector3d( Vector3d(csharp_vec3) );
+    return (void*) new Sirikata::Vector3d( Vector3dFromMono(csharp_vec3) );
 }
 
 
@@ -96,14 +96,14 @@ void ConvertQuaternionCPPToCSharpAndFree(void* jarg, void* jout) {
     delete arg;
 }
 
-::Sirikata::Quaternion Quaternion(CSharpQuaternion* in) {
+::Sirikata::Quaternion QuaternionFromMono(CSharpQuaternion* in) {
 
     return ::Sirikata::Quaternion(in->w, in->x, in->y, in->z, ::Sirikata::Quaternion::WXYZ());
 }
 
 SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertQuaternionCSharpToCPP(CSharpQuaternion* csharp_quat) {
-    return (void*) new Sirikata::Quaternion( Quaternion(csharp_quat) );
+    return (void*) new Sirikata::Quaternion( QuaternionFromMono(csharp_quat) );
 }
 
 
@@ -125,26 +125,26 @@ void ConvertLocationCPPToCSharpAndFree(void* jarg, void* jout) {
     delete arg;
 }
 
-Sirikata::Location Location(CSharpLocation* in) {
+Sirikata::Location LocationFromMono(CSharpLocation* in) {
     float temp=in->angVelocityRadians;
     return Sirikata::Location(
-        Vector3d(&in->pos),
-        Quaternion(&in->orient),
-        Vector3f(&in->vel),
-        Vector3f(&in->angVelocityAxis),
+        Vector3dFromMono(&in->pos),
+        QuaternionFromMono(&in->orient),
+        Vector3fFromMono(&in->vel),
+        Vector3fFromMono(&in->angVelocityAxis),
         temp
     );
 }
 
 SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertLocationCSharpToCPP(CSharpLocation* csharp_loc) {
-    return (void*) new Sirikata::Location( Location(csharp_loc) );
+    return (void*) new Sirikata::Location( LocationFromMono(csharp_loc) );
 }
 
 
 
 
-Sirikata::Vector4f Color(CSharpColor* in) {
+Sirikata::Vector4f ColorFromMono(CSharpColor* in) {
     return Sirikata::Vector4f(in->r, in->g, in->b, in->a);
 }
 
@@ -159,7 +159,7 @@ void ConvertColor(const Sirikata::Vector4f& in, CSharpColor* out) {
 
 
 
-Sirikata::BoundingInfo BoundingInfo(const Object& in) {
+Sirikata::BoundingInfo BoundingInfoFromMono(const Object& in) {
   float minx=in.getField("mMinx").unboxSingle();
   float miny=in.getField("mMiny").unboxSingle();
   float minz=in.getField("mMinz").unboxSingle();
@@ -195,7 +195,7 @@ void ConvertUUID(const Sirikata::UUID& in, CSharpUUID* out) {
     out->data[15] = in.getArray()[15];
 }
 
-Sirikata::UUID UUID(CSharpUUID* in) {
+Sirikata::UUID UUIDFromMono(CSharpUUID* in) {
     // Internal C# representation is little endian, UUID format is big endian
     unsigned char tmp[16];
     tmp[0] = in->data[3];
@@ -223,8 +223,8 @@ void ConvertSpaceID(const Sirikata::SpaceID& in, CSharpSpaceID* out) {
     ConvertUUID(in.getAsUUID(), &out->id);
 }
 
-Sirikata::SpaceID SpaceID(CSharpSpaceID* in) {
-    return Sirikata::SpaceID( UUID(&in->id) );
+Sirikata::SpaceID SpaceIDFromMono(CSharpSpaceID* in) {
+    return Sirikata::SpaceID( UUIDFromMono(&in->id) );
 }
 
 
@@ -233,8 +233,8 @@ void ConvertObjectReference(const Sirikata::ObjectReference& in, CSharpObjectRef
     ConvertUUID(in.getAsUUID(), &out->id);
 }
 
-Sirikata::ObjectReference ObjectReference(CSharpObjectReference* in) {
-    return Sirikata::ObjectReference( UUID(&in->id) );
+Sirikata::ObjectReference ObjectReferenceFromMono(CSharpObjectReference* in) {
+    return Sirikata::ObjectReference( UUIDFromMono(&in->id) );
 }
 
 
@@ -253,16 +253,16 @@ void ConvertSpaceObjectReferenceCPPToCSharpAndFree(void* jarg, void* jout) {
     delete arg;
 }
 
-Sirikata::SpaceObjectReference SpaceObjectReference(CSharpSpaceObjectReference* in) {
+Sirikata::SpaceObjectReference SpaceObjectReferenceFromMono(CSharpSpaceObjectReference* in) {
     return Sirikata::SpaceObjectReference(
-        SpaceID(&in->space),
-        ObjectReference(&in->reference)
+        SpaceIDFromMono(&in->space),
+        ObjectReferenceFromMono(&in->reference)
     );
 }
 
 SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertSpaceObjectReferenceCSharpToCPP(CSharpSpaceObjectReference* csharp_sor) {
-    return (void*) new Sirikata::SpaceObjectReference( SpaceObjectReference(csharp_sor) );
+    return (void*) new Sirikata::SpaceObjectReference( SpaceObjectReferenceFromMono(csharp_sor) );
 }
 
 
@@ -283,7 +283,7 @@ void* ConvertTimeCSharpToCPP(Sirikata::int64 csharp_time) {
 }
 */
 
-Sirikata::Time RawTime(Sirikata::int64 ticks) {
+Sirikata::Time RawTimeFromMono(Sirikata::int64 ticks) {
     return Sirikata::Time::microseconds(ticks);
 }
 
@@ -328,7 +328,7 @@ void ConvertTimeCPPToCSharpAndFree(void* jarg, void* jout) {
     delete arg;
 }
 
-Sirikata::Duration Duration(CSharpDuration* in) {
+Sirikata::Duration DurationFromMono(CSharpDuration* in) {
     Sirikata::uint64 micro;
     micro=in->upperTicks;
     micro*=65536;
@@ -339,7 +339,7 @@ Sirikata::Duration Duration(CSharpDuration* in) {
 
 SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertDurationCSharpToCPP(CSharpDuration* csharp_duration) {
-    return (void*) new Sirikata::Duration( Duration(csharp_duration) );
+    return (void*) new Sirikata::Duration( DurationFromMono(csharp_duration) );
 }
 
 

@@ -2,7 +2,7 @@ from protocol import Persistence_pb2
 from protocol import MessageHeader_pb2
 
 import traceback
-from System import Array, Byte
+from System import Array, Byte, Guid
 
 def fromByteArray(b):
     return tuple(b)
@@ -33,6 +33,9 @@ def tupleToUUID(t):
     return uuid.UUID(int=tupleToBigEndian(t))
 def tupleFromUUID(u):
     return bigEndianTuple16(int(u))
+
+def tupleToSystemGuid(t):
+    return Guid( str(tupleToUUID(t)) )
 
 #Callback is of the format
 #def callback(persistenceReadInstance, lastMessageHeader, persistenceError)
@@ -99,5 +102,3 @@ class PersistenceRead:
 
         self.allcb(self, hdr, None)
         return False
-
-

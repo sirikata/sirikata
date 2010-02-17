@@ -739,7 +739,7 @@ Sirikata::UUID Object::unboxUUID() const {
     checkNullReference(obj);
 
     // FIXME assert class = UUID
-    return UUID((CSharpUUID*)mono_object_unbox(mGCObject->object()));
+    return UUIDFromMono((CSharpUUID*)mono_object_unbox(mGCObject->object()));
 }
 static const Sirikata::String mIDstring("mID");
 /*
@@ -774,7 +774,7 @@ Sirikata::SpaceObjectReference Object::unboxSpaceObjectReference() const {
     checkNullReference(obj);
 
     // FIXME assert class = SpaceObjectReference
-    return SpaceObjectReference((CSharpSpaceObjectReference*)mono_object_unbox(mGCObject->object()));
+    return SpaceObjectReferenceFromMono((CSharpSpaceObjectReference*)mono_object_unbox(mGCObject->object()));
 }
 
 

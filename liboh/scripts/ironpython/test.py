@@ -6,9 +6,7 @@ import protocol.Persistence_pb2 as pbPer
 import protocol.MessageHeader_pb2 as pbHead
 
 from Sirikata.Runtime import HostedObject
-#import Sirikata.Runtime.Time
 import Sirikata.Runtime
-print dir(HostedObject)
 import System
 import util
 
@@ -37,11 +35,14 @@ class exampleclass:
                 retobj.ParseFromString(util.fromByteArray(serialarg))
             except:
                 pass
+            # self.obj_guid is the System.Guid form, self.objid is the python uuid form
+            self.obj_guid = util.tupleToSystemGuid(retobj.object_reference)
             self.objid = util.tupleToUUID(retobj.object_reference)
             print "sendprox1"
+            # self.space_guid is the System.Guid form, self.spaceid is the python uuid form
+            self.space_guid = util.tupleToSystemGuid(header.source_space)
             self.spaceid = util.tupleToUUID(header.source_space)
 
-            print self.spaceid
             self.sendNewProx()
             self.setPosition(angular_speed=0,axis=(0,1,0))
         elif name == "ProxCall":
@@ -78,11 +79,7 @@ class exampleclass:
             parentProperty=pbSiri.ParentProperty()
             parentProperty.value=util.tupleFromUUID(uuid);
             se.data=parentProperty.SerializeToString()
-            header = pbHead.Header()
-            header.destination_space=util.tupleFromUUID(self.spaceid);
-            header.destination_object=util.tupleFromUUID(self.objid);
-            header.destination_port=5#FIXME this should be PERSISTENCE_SERVICE_PORT
-            HostedObject.SendMessage(header.SerializeToString()+rws.SerializeToString());
+            HostedObject.SendMessage(self.space_guid, self.obj_guid, 5, rws.SerializeToString());
     def processRPC(self,header,name,arg):
         try:
             self.reallyProcessRPC(header,name,arg)
@@ -118,10 +115,7 @@ class exampleclass:
         body = pbSiri.MessageBody()
         body.message_names.append("SetLoc")
         body.message_arguments.append(objloc.SerializeToString())
-        header = pbHead.Header()
-        header.destination_space = util.tupleFromUUID(self.spaceid)
-        header.destination_object = util.tupleFromUUID(self.objid)
-        HostedObject.SendMessage(util.toByteArray(header.SerializeToString()+body.SerializeToString()))
+        HostedObject.SendMessage(self.space_guid, self.obj_guid, 0, util.toByteArray(body.SerializeToString()))
     def sendNewProx(self):
         print "sendprox2"
         try:
@@ -143,11 +137,8 @@ class exampleclass:
             arry=Array[Byte](tuple(Byte(c) for c in util.tupleFromUUID(self.spaceid)))
             print "time on spaceA ",HostedObject.GetTimeFromByteArraySpace(arry).microseconds()
             #print "time on spaceB ",HostedObject.GetTime(self.spaceid).microseconds()
-            header.destination_object = util.tupleFromUUID(uuid.UUID(int=0))
-            header.destination_port = 3 # libcore/src/util/KnownServices.hpp
-            headerstr = header.SerializeToString()
             bodystr = body.SerializeToString()
-            HostedObject.SendMessage(util.toByteArray(headerstr+bodystr))
+            HostedObject.SendMessage(self.space_guid, System.Guid.Empty, 3, util.toByteArray(bodystr))
         except:
             print "ERORR"
             traceback.print_exc()
@@ -156,4 +147,3 @@ class exampleclass:
         print "Got a message"
     def tick(self):
         print "tick";
-        #HostedObject.SendMessage(tuple(Byte(ord(c)) for c in x));# this seems to get into hosted object...but fails due to bad encoding
