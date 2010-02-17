@@ -73,9 +73,13 @@ InitializeGlobalOptions hostedobject_props("",
 class HostedObject::PerSpaceData {
 public:
 
+    HostedObject* parent;
+    SpaceID space;
     SpaceConnection mSpaceConnection;
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
+
+    ODP::Port* rpcPort;
 
     const ObjectReference& object() const {
         return mProxyObject->getObjectReference().object();
@@ -124,16 +128,29 @@ public:
     typedef std::map<uint32, std::set<ObjectReference> > ProxQueryMap;
     ProxQueryMap mProxQueryMap; ///< indexed by ProxCall::query_id()
 
-    PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream)
-        :mSpaceConnection(topLevel,stream),
-        mUpdatedLocation(
+    PerSpaceData(HostedObject* _parent, const SpaceID& _space,
+        const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel, Network::Stream*stream)
+     : parent(_parent),
+       space(_space),
+       mSpaceConnection(topLevel,stream),
+       mUpdatedLocation(
             Duration::seconds(.1),
             TemporalValue<Location>::Time::null(),
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
-            ProxyObject::UpdateNeeded()) {
+            ProxyObject::UpdateNeeded()),
+       rpcPort(NULL)
+    {
     }
+
+    void initializeAs(ProxyObjectPtr proxyobj) {
+        mProxyObject = proxyobj;
+        rpcPort = parent->bindODPPort(space, ODP::PortID((uint32)Services::RPC));
+    }
+
     void destroy(QueryTracker *tracker) const {
+        delete rpcPort;
+
         if (mProxyObject) {
             mSpaceConnection.getTopLevelStream()->
                 destroyObject(mProxyObject, tracker);
@@ -591,7 +608,9 @@ HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,
     SpaceDataMap::iterator iter = mSpaceData->insert(
         SpaceDataMap::value_type(
             sid,
-            PerSpaceData(tls,
+            PerSpaceData(this,
+                sid,
+                tls,
                          tls->topLevelStream()->clone(
                              std::tr1::bind(&PrivateCallbacks::connectionEvent,
                                             getWeakPtr(),
@@ -814,6 +833,11 @@ void HostedObject::connectToSpace(
     }
 }
 
+void HostedObject::initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy) {
+    psd.initializeAs(selfproxy);
+    psd.rpcPort->receive( std::tr1::bind(&HostedObject::handleRPCMessage, this, _1, _2) );
+}
+
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     SpaceDataMap::iterator where;
     where=mSpaceData->find(spaceID);
@@ -843,12 +867,20 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
         return; // Not a message for us to process.
     }
 
-    if (header.destination_port() == 0) {
+    /** NOTE: ODP::Service is the way we should be handling these.  In order to
+     *  transition to ODP only at this layer gracefully, we need to leave the
+     *  other delivery mechanisms in place.  However, ODP delivery should
+     *  *always* be attempted first. RPC already has another path and has been
+     *  marked as deprecated.  As other paths are replaced, they should also be
+     *  marked.
+     */
+    if (mDelegateODPService->deliver(header, bodyData)) {
+        // if this was true, it got delivered
+    } else if (header.destination_port() == 0) {
+        DEPRECATED(HostedObject);
         handleRPCMessage(header, bodyData);
     } else if (header.destination_port() == Services::PERSISTENCE) {
         handlePersistenceMessage(header, bodyData);
-    } else if (mDelegateODPService->deliver(header, bodyData)) {
-        // if this was true, it got delivered
     } else {
         if (mObjectScript)
             mObjectScript->processMessage(header, bodyData);
@@ -856,7 +888,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
 }
 
 void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
-    DEPRECATED(HostedObject);
+    //DEPRECATED(HostedObject);
     ///// MessageService::processMessage
     assert(hdrOrig.has_destination_object());
     assert(hdrOrig.has_destination_space());
@@ -874,7 +906,7 @@ void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryRefe
 }
 
 void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
-    DEPRECATED(HostedObject);
+    //DEPRECATED(HostedObject);
     assert(hdrOrig.has_destination_object());
     if (!hdrOrig.has_destination_space() || hdrOrig.destination_space() == SpaceID::null()) {
         RoutableMessageHeader hdr (hdrOrig);
@@ -1110,7 +1142,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
             }
             proxyObj->setLocal(true);
-            perSpaceIter->second.mProxyObject = proxyObj;
+            initializePerSpaceData(perSpaceIter->second, proxyObj);
             proxyMgr->registerHostedObject(objectId.object(), getSharedPtr());
             applyPositionUpdate(proxyObj, retObj.location(), true);
             perSpaceIter->second.locationWasReset(retObj.location().timestamp(), proxyObj->getLastLocation());

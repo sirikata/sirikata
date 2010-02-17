@@ -114,6 +114,25 @@ bool ProxyObject::sendMessage(MemoryReference message) const {
     }
 }
 
+bool ProxyObject::sendMessage(const ODP::Endpoint& src, const ODP::PortID& dest_port, MemoryReference message) const {
+    QueryTracker *qt = getQueryTracker();
+    if (qt) {
+        RoutableMessageHeader hdr;
+        // FIXME bogus source info
+        hdr.set_source_space(src.space());
+        hdr.set_source_object(src.object());
+        hdr.set_source_port(src.port());
+        hdr.set_destination_space(getObjectReference().space());
+        hdr.set_destination_object(getObjectReference().object());
+        hdr.set_destination_port(dest_port);
+        qt->sendMessage(hdr, message);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,
                               const Location&location) {
     mLocation.updateValue(timeStamp,

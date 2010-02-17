@@ -59,6 +59,7 @@
 #include "CameraPath.hpp"
 #include "Ogre_Sirikata.pbj.hpp"
 #include <util/RoutableMessageBody.hpp>
+#include <util/KnownServices.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -723,7 +724,11 @@ private:
         body.add_message("CreateObject", serializedCreate);
         std::string serialized;
         body.SerializeToString(&serialized);
-        camera->getProxy().sendMessage(MemoryReference(serialized.data(), serialized.length()));
+        camera->getProxy().sendMessage(
+            ODP::Endpoint(camera->getProxy().getObjectReference().space(), camera->getProxy().getObjectReference().object(), Services::RPC),
+            Services::RPC,
+            MemoryReference(serialized.data(), serialized.length())
+        );
     }
 
     std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {

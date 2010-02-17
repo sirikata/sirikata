@@ -40,6 +40,9 @@
 #include "PositionListener.hpp"
 #include <util/QueryTracker.hpp>
 
+#include <proxyobject/odp/Service.hpp>
+#include <proxyobject/odp/Port.hpp>
+
 namespace Sirikata {
 
 class ProxyObject;
@@ -102,7 +105,7 @@ public:
 
     // MCB: default to true for legacy proxies. FIX ME when all converted.
     virtual bool hasModelObject () const { return true; }
-    
+
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy(const TemporalValue<Location>::Time& when);
 
@@ -113,6 +116,10 @@ public:
     void addressMessage(RoutableMessageHeader &hdr) const;
     /// Send a message to port 0 which does not require a response.
     bool sendMessage(MemoryReference message) const;
+
+    /// Send a message.  FIXME this is temporary to transition from QueryTracker.
+    bool sendMessage(const ODP::Endpoint& src, const ODP::PortID& dest_port, MemoryReference message) const;
+
     /// Create a SentMessage, which you can use to wait for a response.
     template<class Message> inline Message *createQuery() const {
         QueryTracker *qt = getQueryTracker();
@@ -169,7 +176,7 @@ public:
         Location&location,
         const Protocol::ObjLoc& reqLoc);
 
-    /** requests a new location for this object.  May involve physics 
+    /** requests a new location for this object.  May involve physics
     or other authority to actually move object */
     void requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc);
 
@@ -177,7 +184,7 @@ public:
     void setLocationAuthority(LocationAuthority* auth) {
         mLocationAuthority = auth;
     }
-    
+
     /** @see setLocation. This disables interpolation from the last update. */
     void resetLocation(TemporalValue<Location>::Time timeStamp,
                                const Location&location);

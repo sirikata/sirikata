@@ -129,6 +129,9 @@ private:
     void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
     ///makes a new object with the bare minimum--assumed that a script or persistence fills in the rest.
     void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&, const UUID&evidence);
+
+    // When a connection to a space is setup, initialize it to handle default behaviors
+    void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
 public:
 //------- Public member functions:
     ///makes a new object that is not in the persistence database.
@@ -309,6 +312,7 @@ public:
     }
 
 
+  public:
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
     virtual ODP::Port* bindODPPort(SpaceID space);
