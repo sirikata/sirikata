@@ -80,6 +80,7 @@ public:
     ProxyObject::Extrapolator mUpdatedLocation;
 
     ODP::Port* rpcPort;
+    ODP::Port* persistencePort;
 
     const ObjectReference& object() const {
         return mProxyObject->getObjectReference().object();
@@ -139,17 +140,20 @@ public:
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       rpcPort(NULL)
+       rpcPort(NULL),
+       persistencePort(NULL)
     {
     }
 
     void initializeAs(ProxyObjectPtr proxyobj) {
         mProxyObject = proxyobj;
         rpcPort = parent->bindODPPort(space, ODP::PortID((uint32)Services::RPC));
+        persistencePort = parent->bindODPPort(space, ODP::PortID((uint32)Services::PERSISTENCE));
     }
 
     void destroy(QueryTracker *tracker) const {
         delete rpcPort;
+        delete persistencePort;
 
         if (mProxyObject) {
             mSpaceConnection.getTopLevelStream()->
@@ -836,6 +840,7 @@ void HostedObject::connectToSpace(
 void HostedObject::initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
     psd.rpcPort->receive( std::tr1::bind(&HostedObject::handleRPCMessage, this, _1, _2) );
+    psd.persistencePort->receive( std::tr1::bind(&HostedObject::handlePersistenceMessage, this, _1, _2) );
 }
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
@@ -879,8 +884,6 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     } else if (header.destination_port() == 0) {
         DEPRECATED(HostedObject);
         handleRPCMessage(header, bodyData);
-    } else if (header.destination_port() == Services::PERSISTENCE) {
-        handlePersistenceMessage(header, bodyData);
     } else {
         if (mObjectScript)
             mObjectScript->processMessage(header, bodyData);
