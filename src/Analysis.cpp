@@ -187,6 +187,8 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
           is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
           is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
+          is.read((char*)&craqProcEvt->numProcessed, sizeof(craqProcEvt->numProcessed));
+          is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
           evt = craqProcEvt;
         }
         break;
@@ -2989,8 +2991,27 @@ void OSegProcessCraqReturnAnalysis::printData(std::ostream &fileOut)
   sortAllEvents();
   for (int s=0;s < (int) allProcEvts.size(); ++s)
   {
-    fileOut <<  allProcEvts[s]->timeItTook.toMicroseconds() << ",";
+    fileOut <<  allProcEvts[s]->timeItTook.toMicroseconds() << "\t";
   }
+
+  fileOut <<"\n";
+  for (int s=0; s < (int) allProcEvts.size(); ++s)
+  {
+    fileOut << allProcEvts[s]->numProcessed << "\t";
+  }
+
+  fileOut <<"\n";
+  for (int s=0; s < (int) allProcEvts.size(); ++s)
+  {
+    fileOut << allProcEvts[s]->sizeIncomingString << "\t";
+  }
+
+  fileOut <<"\n";
+  for (int s=0; s < (int) allProcEvts.size(); ++s)
+  {
+    fileOut << (allProcEvts[s]->time - Time::null()).toMilliseconds() << "\t";
+  }
+        
   fileOut <<"\n\n\n";
 }
 

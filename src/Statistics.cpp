@@ -597,7 +597,7 @@ CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSeg, const Time &t, OSegLookupTrac
 }
 
 
-  void Trace::osegProcessedCraqTime(const Time&t , const Duration& dur)
+  void Trace::osegProcessedCraqTime(const Time&t , const Duration& dur, uint32 numProc, uint32 sizeIncomingString)
   {
 
     if (mShuttingDown)
@@ -609,6 +609,8 @@ CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSeg, const Time &t, OSegLookupTrac
     data.write(&OSegCraqProcessTag, sizeof(OSegCraqProcessTag));
     data.write(&t,sizeof(t));
     data.write(&dur, sizeof(Duration));
+    data.write(&numProc, sizeof(numProc));
+    data.write(&sizeIncomingString,sizeof(sizeIncomingString));
    #endif
   }
 

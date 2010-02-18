@@ -253,6 +253,8 @@ struct OSegCacheResponseEvent : public Event
   struct OSegCraqProcEvent : public Event
   {
     Duration timeItTook;
+    uint32 numProcessed;
+    uint32 sizeIncomingString;
   };
 
 

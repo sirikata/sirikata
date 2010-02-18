@@ -513,10 +513,12 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
   response = mPrevReadFrag + response;  //see explanation at end when re-setting mPrevReadFrag
   mPrevReadFrag = "";
 
-  int numChecking = 0;
-
+  uint32 numChecking = 0;
+  uint32 sizeResp = response.size();
+  
   while(keepChecking)
   {
+    ++numChecking;
     keepChecking   =                            false;
 
     //checks to see if there are any responses to get queries with data (also processes);
@@ -524,16 +526,16 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
     keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any responses to set responses that worked (stored) (also processes)
-    secondChecking =            checkStored(response);
-    keepChecking   =   keepChecking || secondChecking;
+    //    secondChecking =            checkStored(response);
+    //    keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any responses to get queries that were not found  (also processes)
     secondChecking =          checkNotFound(response);
     keepChecking   =   keepChecking || secondChecking;
 
     //checks to see if there are any error responses.  (also processes)
-    secondChecking =             checkError(response);
-    keepChecking   =   keepChecking || secondChecking;
+    //    secondChecking =             checkError(response);
+    //    keepChecking   =   keepChecking || secondChecking;
 
     if (firstTime)
     {
@@ -550,7 +552,7 @@ bool AsyncConnectionGet::processEntireResponse(std::string response)
 
   Time t2 = ctx->time;
   Duration timeTaken = t2 - t1;
-  ctx->trace() -> osegProcessedCraqTime(ctx->time,timeTaken);
+  ctx->trace() -> osegProcessedCraqTime(ctx->time,timeTaken, numChecking, sizeResp);
   
   return returner;
 }
