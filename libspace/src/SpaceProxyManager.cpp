@@ -95,7 +95,7 @@ ProxyManager* SpaceProxyManager::getProxyManager(const SpaceID&space) {
     if (mSpace->id()==space) return this;
     return NULL;
 }
-QueryTracker* SpaceProxyManager::getTracker() {
+QueryTracker* SpaceProxyManager::getTracker(const SpaceID& space) {
     return &mQueryTracker;
 }
 

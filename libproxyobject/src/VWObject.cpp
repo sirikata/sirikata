@@ -27,25 +27,28 @@ void VWObject::receivedProxObjectLocation(
     const RoutableMessageHeader &hdr,
     MemoryReference bodyData,
     int32 queryId) {
+
+    SpaceID space = hdr.destination_space();
+
         std::auto_ptr<RPCMessage> destructor(static_cast<RPCMessage*>(sentMessage));
         VWObjectPtr realThis(weakThis.lock());
         if (!realThis) {
             return;
         }
-        
+
         RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
         if (responseMessage.header().return_status() != RoutableMessageHeader::SUCCESS) {
             return;
         }
         ObjLoc objLoc;
         objLoc.ParseFromString(responseMessage.body().message_arguments(0));
-        
-        Persistence::SentReadWriteSet *request = new Persistence::SentReadWriteSet(realThis->getTracker());
-        
+
+        Persistence::SentReadWriteSet *request = new Persistence::SentReadWriteSet(realThis->getTracker(space));
+
         request->header().set_destination_space(sentMessage->getSpace());
         request->header().set_destination_object(sentMessage->getRecipient());
         request->header().set_destination_port(Services::PERSISTENCE);
-        
+
         request->body().add_reads().set_field_name("MeshURI");
         request->body().add_reads().set_field_name("WebViewURL");
         request->body().add_reads().set_field_name("MeshScale");
@@ -73,6 +76,9 @@ void VWObject::receivedProxObjectProperties(
         uint64 returnStatus,//type Persistence::Protocol::Response::ReturnStatus
         int32 queryId,
         const ObjLoc &objLoc) {
+
+    SpaceID space = hdr.destination_space();
+
     using namespace Persistence::Protocol;
     std::auto_ptr<Persistence::SentReadWriteSet> sentMessage(Persistence::SentReadWriteSet::cast_sent_message(sentMessageBase));
     VWObjectPtr realThis(weakThis.lock());
@@ -99,7 +105,7 @@ void VWObject::receivedProxObjectProperties(
         }
     }
     if (persistence_error || haveAll) {
-        
+
     } else {
         assert(false&&"Received incomplete persistence callback for the same read/write set: should only ever get one");
         return; // More messages would have come before the new design.
@@ -143,7 +149,7 @@ void VWObject::receivedProxObjectProperties(
     }
     proxyObj->setLocal(false);
     realThis->applyPositionUpdate(proxyObj, objLoc, true);
-    proxyMgr->createObject(proxyObj, realThis->getTracker());
+    proxyMgr->createObject(proxyObj, realThis->getTracker(space));
     for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
         if (sentMessage->body().reads(i).has_return_status()) {
             continue;
@@ -152,7 +158,7 @@ void VWObject::receivedProxObjectProperties(
             realThis->receivedPropertyUpdate(proxyObj, sentMessage->body().reads(i).field_name(), sentMessage->body().reads(i).data());
     }
     {
-        RPCMessage *request = new RPCMessage(realThis->getTracker(),std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
+        RPCMessage *request = new RPCMessage(realThis->getTracker(space),std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
         request->header().set_destination_space(proximateObjectId.space());
         request->header().set_destination_object(proximateObjectId.object());
         Protocol::LocRequest loc;
@@ -294,7 +300,7 @@ void VWObject::receivedPositionUpdateResponse(
     }
     Protocol::ObjLoc loc;
     loc.ParseFromString(responseMessage.body().message_arguments(0));
-    
+
     const SpaceID &space = sentMessage->getSpace();
     ProxyManager *pm = thus->getProxyManager(space);
     if (pm) {
@@ -347,6 +353,8 @@ void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &na
     std::ostringstream printstr;
     printstr<<"\t";
 
+    SpaceID space = msg.destination_space();
+
     if (name == "ProxCall") {
         if (false && msg.source_object() != ObjectReference::spaceServiceID()) {
             SILOG(objecthost, error, "ProxCall message not coming from space: "<<msg.source_object());
@@ -373,7 +381,7 @@ void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &na
                 printstr<<" (Requesting information...)";
 
                 {
-                    RPCMessage *locRequest = new RPCMessage(getTracker(),std::tr1::bind(&VWObject::receivedProxObjectLocation,
+                    RPCMessage *locRequest = new RPCMessage(getTracker(space),std::tr1::bind(&VWObject::receivedProxObjectLocation,
                                                                                      getWeakPtr(), _1, _2, _3,
                                                         proxCall.query_id()));
                     locRequest->header().set_destination_space(proximateObjectId.space());
@@ -387,7 +395,7 @@ void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &na
                 }
             } else {
                 printstr<<" (Already known)";
-                proxyMgr->createObject(proxyObj, this->getTracker());
+                proxyMgr->createObject(proxyObj, this->getTracker(space));
             }
             break;
           case Protocol::ProxCall::STATELESS_PROXIMITY:

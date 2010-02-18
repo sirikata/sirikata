@@ -97,7 +97,7 @@ public:
     virtual ~VWObject();
 
     ///The tracker managing state for outstanding requests this object has made
-    virtual QueryTracker*getTracker()=0;
+    virtual QueryTracker*getTracker(const SpaceID& space)=0;
     ///The ProxyManager this VWObject is responsible for (or partially responsible as in the current OH design) given the space ID
     virtual ProxyManager*getProxyManager(const SpaceID&space)=0;
     ///determine if objectId is an object hosted by this computer so messages to it may directly reach it

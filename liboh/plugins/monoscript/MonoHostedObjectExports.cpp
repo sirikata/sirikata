@@ -77,13 +77,14 @@ static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoOb
     if (ho&&!buf.empty()) {
         RoutableMessageHeader hdr;
         MemoryReference body=hdr.ParseFromArray(&buf[0],buf.size());
+        SpaceID dest_space = hdr.destination_space();
         SentMessage*sm=hdr.has_id()
-            ? new SentMessage(hdr.id(),ho->getTracker(),std::tr1::bind(&Mono_Context_CallFunctionCallback,
+            ? new SentMessage(hdr.id(),ho->getTracker(dest_space),std::tr1::bind(&Mono_Context_CallFunctionCallback,
                                                                        ho->getWeakPtr(),
                                                                        MonoContext::getSingleton().getDomain(),
                                                                        Mono::Delegate(Mono::Object(callback)),
                                        _1,_2,_3))
-            :new SentMessage(ho->getTracker(),std::tr1::bind(&Mono_Context_CallFunctionCallback,
+            :new SentMessage(ho->getTracker(dest_space),std::tr1::bind(&Mono_Context_CallFunctionCallback,
                                                              ho->getWeakPtr(),
                                                              MonoContext::getSingleton().getDomain(),
                                                              Mono::Delegate(Mono::Object(callback)),

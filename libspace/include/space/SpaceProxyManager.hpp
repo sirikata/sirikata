@@ -68,7 +68,7 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
     bool isLocal(const SpaceObjectReference&)const;
     ProxyManager* getProxyManager(const SpaceID&);
-    QueryTracker* getTracker();
+    QueryTracker* getTracker(const SpaceID& space);
     void addQueryInterest(uint32 query_id, const SpaceObjectReference&);
     void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&, const SpaceObjectReference&);
 

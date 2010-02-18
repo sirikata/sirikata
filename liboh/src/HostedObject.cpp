@@ -214,7 +214,7 @@ void HostedObject::destroy() {
     for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
          iter != mSpaceData->end();
          ++iter) {
-        iter->second.destroy(getTracker());
+        iter->second.destroy(getTracker(iter->first));
     }
     mTracker.endForwardingMessagesTo(&mSendService);
     mSpaceData->clear();
@@ -396,7 +396,7 @@ struct HostedObject::PrivateCallbacks {
         if (thus) {
             SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
             if (where!=thus->mSpaceData->end()) {
-                where->second.destroy(thus->getTracker());
+                where->second.destroy(thus->getTracker(sid));
                 thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
             }
         }
@@ -852,7 +852,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     SpaceDataMap::iterator where;
     where=mSpaceData->find(spaceID);
     if (where!=mSpaceData->end()) {
-        where->second.destroy(getTracker());
+        where->second.destroy(getTracker(spaceID));
         mSpaceData->erase(where);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
@@ -1109,7 +1109,8 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         }
     }
     else if (name == "RetObj") {
-        SpaceDataMap::iterator perSpaceIter = mSpaceData->find(msg.source_space());
+        SpaceID space = msg.source_space();
+        SpaceDataMap::iterator perSpaceIter = mSpaceData->find(space);
         if (msg.source_object() != ObjectReference::spaceServiceID()) {
             SILOG(objecthost, error, "RetObj message not coming from space: "<<msg.source_object());
             return;
@@ -1146,7 +1147,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             applyPositionUpdate(proxyObj, retObj.location(), true);
             perSpaceIter->second.locationWasReset(retObj.location().timestamp(), proxyObj->getLastLocation());
             if (proxyMgr) {
-                proxyMgr->createObject(proxyObj, getTracker());
+                proxyMgr->createObject(proxyObj, getTracker(space));
                 ProxyCameraObject* cam = dynamic_cast<ProxyCameraObject*>(proxyObj.get());
                 if (cam) {
                     /* HACK: Because we have no method of scripting yet, we force
@@ -1220,7 +1221,8 @@ bool HostedObject::isLocal(const SpaceObjectReference&objref) const{
 
 
 void HostedObject::removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId) {
-    SpaceDataMap::iterator where = mSpaceData->find(proximateObjectId.space());
+    SpaceID space = proximateObjectId.space();
+    SpaceDataMap::iterator where = mSpaceData->find(space);
     if (where !=mSpaceData->end()) {
         ProxyManager* proxyMgr=where->second.mSpaceConnection.getTopLevelStream().get();
         PerSpaceData::ProxQueryMap::iterator iter = where->second.mProxQueryMap.find(query_id);
@@ -1241,7 +1243,7 @@ void HostedObject::removeQueryInterest(uint32 query_id, const ProxyObjectPtr&pro
                     }
                 }
                 if (!otherCopies) {
-                    proxyMgr->destroyObject(proxyObj, this->getTracker());
+                    proxyMgr->destroyObject(proxyObj, this->getTracker(space));
                 }
             }
         }

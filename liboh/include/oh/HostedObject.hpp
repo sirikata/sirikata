@@ -217,9 +217,9 @@ public:
         return mInternalObjectReference;
     }
     /// Returns QueryTracker object that tracks of message ids awaiting reply.
-    QueryTracker*getTracker(){return &mTracker;}
+    QueryTracker* getTracker(const SpaceID& space){return &mTracker;}
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
-    const QueryTracker*getTracker()const {return &mTracker;}
+    const QueryTracker*getTracker(const SpaceID& space)const {return &mTracker;}
 
     /** Called once per frame, at a certain framerate. */
     void tick();
