@@ -1,11 +1,21 @@
 #include "space/SpaceProxyManager.hpp"
 #include "space/Space.hpp"
 #include "proxyobject/ProxyCameraObject.hpp"
+
+#include <core/odp/DelegatePort.hpp>
+#include <util/RoutableMessageHeader.hpp>
+
 namespace Sirikata {
 SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io):mQueryTracker(io),mSpace(space){
+    mDelegateODPService = new ODP::DelegateService(
+        std::tr1::bind(
+            &SpaceProxyManager::createDelegateODPPort, this,
+            _1, _2, _3
+        )
+    );
 }
 SpaceProxyManager::~SpaceProxyManager() {
-
+    delete mDelegateODPService;
 }
 
 void SpaceProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTracker*tracker){
@@ -117,17 +127,49 @@ QueryTracker * SpaceProxyManager::getQueryTracker(const SpaceObjectReference&id)
 // ODP::Service Interface
 
 ODP::Port* SpaceProxyManager::bindODPPort(SpaceID space, ODP::PortID port) {
-    NOT_IMPLEMENTED(SpaceProxyManager);
-    return NULL;
+    return mDelegateODPService->bindODPPort(space, port);
 }
 
 ODP::Port* SpaceProxyManager::bindODPPort(SpaceID space) {
-    NOT_IMPLEMENTED(SpaceProxyManager);
-    return NULL;
+    return mDelegateODPService->bindODPPort(space);
 }
 
 void SpaceProxyManager::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
-    NOT_IMPLEMENTED(SpaceProxyManager);
+    mDelegateODPService->registerDefaultODPHandler(cb);
+}
+
+ODP::DelegatePort* SpaceProxyManager::createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port) {
+    assert(space == mSpace->id());
+    ODP::Endpoint port_ep(space, ObjectReference::spaceServiceID(), port);
+    return new ODP::DelegatePort(
+        mDelegateODPService,
+        port_ep,
+        std::tr1::bind(
+            &SpaceProxyManager::delegateODPPortSend, this,
+            port_ep, _1, _2
+        )
+    );
+}
+
+bool SpaceProxyManager::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
+    assert(source_ep.space() == mSpace->id());
+    assert(dest_ep.space() == mSpace->id());
+    assert(source_ep.object() == ObjectReference::spaceServiceID());
+
+    RoutableMessageHeader hdr;
+    hdr.set_source_space( source_ep.space() );
+    hdr.set_source_object( source_ep.object() );
+    hdr.set_source_port( source_ep.port() );
+    hdr.set_destination_space( dest_ep.space() );
+    hdr.set_destination_object( dest_ep.object() );
+    hdr.set_destination_port( dest_ep.port() );
+
+    // FIXME either this should be able to accurately indicate whether the data
+    // was accepted or this class shouldn't be implementing this interface
+    // (which it is currently forced to via VWObject).  I'm guessing the latter
+    // is the correct solution.
+    mSpace->processMessage(hdr, payload);
+    return true;
 }
 
 }

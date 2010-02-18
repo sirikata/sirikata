@@ -37,6 +37,8 @@
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
 #include <proxyobject/VWObject.hpp>
+#include <core/odp/DelegateService.hpp>
+
 namespace Sirikata {
 namespace Space {
 class Space;
@@ -50,6 +52,8 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
   private:
     ProxyMap mProxyMap;
     std::tr1::unordered_map<ObjectReference,std::set<uint32>, ObjectReference::Hasher > mQueryMap;
+
+    ODP::DelegateService* mDelegateODPService;
   public:
     SpaceProxyManager(Space::Space*space, Network::IOService*io);
 	~SpaceProxyManager();
@@ -73,6 +77,9 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
     virtual ODP::Port* bindODPPort(SpaceID space);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+  private:
+    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
+    bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 };
 }
 #endif
