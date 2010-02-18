@@ -247,14 +247,14 @@ public:
     /** Handles an incoming message, then passes the message to the scripting language. */
     void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
 
+  private:
+
     /** Sends directly via an attached space, without going through the ObjectHost.
         No messages with a null SpaceId (i.e. for a local object or message service)
         may be delivered using this path.
         @see send
     */
     void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);
-
-  private:
 
     /** Sends a message from the space hdr.destination_space() to the object
         hdr.destination_object(). Note that this will properly route locally destined

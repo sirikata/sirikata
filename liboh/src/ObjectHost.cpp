@@ -158,36 +158,6 @@ public:
                     }
                 }
             }
-        } else {
-            std::tr1::shared_ptr<TopLevelSpaceConnection> tlsc;
-            SpaceConnectionMap::iterator iter = parent->mSpaceConnections.find(header.destination_space());
-            if (iter != parent->mSpaceConnections.end()) {
-                tlsc = iter->second.lock();
-            }
-            HostedObjectPtr dest;
-            if (!tlsc) {
-                SILOG(cppoh, error, "Invalid destination space in ObjectHost::processMessage");
-                // ERROR: the space does not exist on this OH.
-                return;
-            }
-            if (header.destination_object() != ObjectReference::spaceServiceID()) {
-                dest = tlsc->getHostedObject(header.destination_object());
-            }
-            if (dest) {
-                header.set_source_space(header.destination_space());
-                dest->processRoutableMessage(header, MemoryReference(body));
-            } else {
-                HostedObjectPtr src;
-                if (tlsc) {
-                    src = tlsc->getHostedObject(header.source_object());
-                }
-                if (src) {
-                    src->sendViaSpace(header, MemoryReference(body));
-                } else {
-                    // ERROR: neither sender nor receiver exist on this OH...
-                    return;
-                }
-            }
         }
     }
 };
