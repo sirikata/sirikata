@@ -49,7 +49,7 @@ class DelegatePort;
  *  function properly, your port creation function must return a DelegatePort
  *  (or subclass).
  */
-class SIRIKATA_PROXYOBJECT_EXPORT DelegateService : public Service {
+class SIRIKATA_EXPORT DelegateService : public Service {
 public:
     typedef std::tr1::function<DelegatePort*(DelegateService*,SpaceID,PortID)> PortCreateFunction;
 

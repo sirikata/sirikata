@@ -39,8 +39,8 @@
 #include "util/QueryTracker.hpp"
 #include "proxyobject/VWObject.hpp"
 
-#include <proxyobject/odp/DelegateService.hpp>
-#include <proxyobject/odp/DelegatePort.hpp>
+#include <core/odp/DelegateService.hpp>
+#include <core/odp/DelegatePort.hpp>
 
 namespace Sirikata {
 class ObjectHost;

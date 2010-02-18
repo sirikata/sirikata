@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_ODP_DEFS_HPP_
 #define _SIRIKATA_ODP_DEFS_HPP_
 
-#include <proxyobject/Platform.hpp>
+#include <util/Platform.hpp>
 #include <util/SpaceObjectReference.hpp>
 
 namespace Sirikata {
@@ -45,7 +45,7 @@ namespace ODP {
  *  uint32, the raw value is exposed directly -- a PortID can be be cast
  *  directly to a uint32.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT PortID {
+class SIRIKATA_EXPORT PortID {
 public:
     PortID();
     PortID(uint32 rhs);
@@ -95,7 +95,7 @@ typedef std::tr1::function<void(const RoutableMessageHeader&, MemoryReference)> 
  *  to specify coverage of all ports, PortID::any() could be used.  However,
  *  depending on context, the use of non-specific values may be invalid.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT Endpoint {
+class SIRIKATA_EXPORT Endpoint {
 public:
     Endpoint(const SpaceID& space, const ObjectReference& obj, const PortID& port);
     Endpoint(const SpaceObjectReference& space_obj, const PortID& port);

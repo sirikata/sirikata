@@ -46,7 +46,7 @@ class DelegateService;
  *
  *  Note that this class works in conjunction with DelegateService.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT DelegatePort : public Port {
+class SIRIKATA_EXPORT DelegatePort : public Port {
 public:
     typedef std::tr1::function<bool(const Endpoint&, MemoryReference payload)> SendFunction;
 

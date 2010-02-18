@@ -577,6 +577,7 @@ SET(PROXIMITY_DIR ${TOP_LEVEL}/proximity)
 SET(CPPOH_DIR ${TOP_LEVEL}/cppoh)
 
 #include locations
+SET(LIBCORE_INCLUDE_DIR ${LIBCORE_DIR}/include)
 SET(LIBSPACE_INCLUDE_DIR ${LIBSPACE_DIR}/include)
 SET(LIBPROXIMITY_INCLUDE_DIR ${LIBPROXIMITY_DIR}/include)
 SET(LIBOH_INCLUDE_DIR ${LIBOH_DIR}/include)
@@ -604,7 +605,8 @@ SET(LIBOH_PLUGIN_DIR ${LIBOH_DIR}/plugins)
 
 
 SET(INCLUDE_DIRECTORIES
-  ${LIBCORE_SOURCE_DIR}
+  ${LIBCORE_INCLUDE_DIR}
+  ${LIBCORE_SOURCE_DIR} #FIXME
   ${LIBSPACE_INCLUDE_DIR}
   ${LIBPROXIMITY_INCLUDE_DIR}
   ${LIBOH_INCLUDE_DIR}
@@ -905,6 +907,9 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
+        ${LIBCORE_SOURCE_DIR}/odp/Defs.cpp
+        ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
+        ${LIBCORE_SOURCE_DIR}/odp/DelegatePort.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
@@ -1003,9 +1008,6 @@ SET(LIBPROXIMITY_SOURCES
 
 SET(LIBPROXYOBJECT_SOURCES
   ${ProxyObject_PBJ_CPP_FILES}
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/odp/Defs.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/odp/DelegateService.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/odp/DelegatePort.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
@@ -1782,6 +1784,7 @@ ENDIF()
 INSTALL(DIRECTORY
           # note: the trailing slashes avoid prepending the directory name
           # itself to the installed files
+          ${LIBCORE_INCLUDE_DIR}/
           ${LIBCORE_SOURCE_DIR}/
           ${LIBSPACE_INCLUDE_DIR}/
           ${LIBPROXIMITY_INCLUDE_DIR}/

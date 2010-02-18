@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/odp/Defs.hpp>
+#include <util/Platform.hpp>
+#include <core/odp/Defs.hpp>
 
 namespace Sirikata {
 namespace ODP {

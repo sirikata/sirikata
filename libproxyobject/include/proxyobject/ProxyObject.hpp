@@ -40,8 +40,8 @@
 #include "PositionListener.hpp"
 #include <util/QueryTracker.hpp>
 
-#include <proxyobject/odp/Service.hpp>
-#include <proxyobject/odp/Port.hpp>
+#include <core/odp/Service.hpp>
+#include <core/odp/Port.hpp>
 
 namespace Sirikata {
 

@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <proxyobject/odp/DelegateService.hpp>
-#include <proxyobject/odp/DelegatePort.hpp>
+#include <util/Platform.hpp>
+#include <core/odp/DelegateService.hpp>
+#include <core/odp/DelegatePort.hpp>
 #include <util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {

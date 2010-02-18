@@ -68,7 +68,7 @@ namespace ODP {
  *  are not checked.  This combination generally doesn't make sense since an
  *  object reference won't be valid across spaces.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT Port {
+class SIRIKATA_EXPORT Port {
 public:
     virtual ~Port() {}
 

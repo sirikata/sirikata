@@ -43,7 +43,7 @@ namespace ODP {
  *  messages. ODP::Service mainly handles management of ODP::Ports, which in
  *  turn allow sending and receiving of ODP messages.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT Service {
+class SIRIKATA_EXPORT Service {
 public:
     virtual ~Service() {}
 
