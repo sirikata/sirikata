@@ -264,28 +264,6 @@ public:
     */
     void send(const RoutableMessageHeader &header, MemoryReference body);
 
-    /** Equivalent to header.swap_source_and_destination(); send(header, body);
-        @see send.
-    */
-    void sendReply(const RoutableMessageHeader &origHdr, MemoryReference body) {
-        RoutableMessageHeader replyHeader(origHdr);
-        replyHeader.swap_source_and_destination();
-        send(replyHeader, body);
-    }
-
-    /** Equivalent to header.swap_source_and_destination();
-        header.set_return_status(error); send(header, NULL);
-        @see send.
-    */
-    void sendErrorReply(const RoutableMessageHeader &origHdr, ReturnStatus error) {
-        if (origHdr.has_reply_id()) {
-            RoutableMessageHeader replyHeader(origHdr);
-            replyHeader.swap_source_and_destination();
-            replyHeader.set_return_status(error);
-            send(replyHeader, MemoryReference::null());
-        }
-    }
-
     /** Handles a single RPC out of a received message.
         @param msg  A ReceivedMessage struct with sender, message_name, and
                     arguments.

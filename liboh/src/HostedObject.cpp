@@ -357,7 +357,8 @@ struct HostedObject::PrivateCallbacks {
             }
             std::string errorData;
             resp.SerializeToString(&errorData);
-            realThis->sendReply(origHeader, MemoryReference(errorData));
+            RoutableMessageHeader replyHeader = origHeader.createReply();
+            realThis->sendViaSpace(replyHeader, MemoryReference(errorData));
         } else {
             Persistence::Protocol::Response resp;
             resp.ParseFromArray(bodyData.data(), bodyData.length());
@@ -385,7 +386,8 @@ struct HostedObject::PrivateCallbacks {
             }
             std::string newBodyData;
             resp.SerializeToString(&newBodyData);
-            realThis->sendReply(origHeader, MemoryReference(newBodyData.data(), newBodyData.length()));
+            RoutableMessageHeader replyHeader = origHeader.createReply();
+            realThis->sendViaSpace(replyHeader, MemoryReference(newBodyData));
         }
     }
 
@@ -421,7 +423,9 @@ void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryR
     int numNames = msg.message_size();
     if (numNames <= 0) {
         // Invalid message!
-        realThis->sendErrorReply(header, RoutableMessageHeader::PROTOCOL_ERROR);
+        RoutableMessageHeader replyHeader = header.createReply();
+        replyHeader.set_return_status(RoutableMessageHeader::PROTOCOL_ERROR);
+        sendViaSpace(replyHeader, MemoryReference::null());
         return;
     }
 
@@ -444,7 +448,8 @@ void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryR
     if (header.has_id()) {
         std::string serializedResponse;
         responseMessage.SerializeToString(&serializedResponse);
-        realThis->sendReply(header, MemoryReference(serializedResponse));
+        RoutableMessageHeader replyHeader = header.createReply();
+        realThis->sendViaSpace(replyHeader, MemoryReference(serializedResponse));
     }
 }
 
@@ -588,8 +593,8 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
             SILOG(cppoh,debug,"ImmedResponse: "<<immedResponse.reads_size());
             std::string respStr;
             immedResponse.SerializeToString(&respStr);
-            RoutableMessageHeader respHeader (header);
-            realThis->sendReply(respHeader, MemoryReference(respStr));
+            RoutableMessageHeader replyHeader = header.createReply();
+            realThis->sendViaSpace(replyHeader, MemoryReference(respStr));
         }
         if (outMessage.reads_size() || outMessage.writes_size()) {
             SILOG(cppoh,debug,"ForwardToPersistence: "<<outMessage.reads_size()<<

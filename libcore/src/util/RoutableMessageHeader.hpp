@@ -85,6 +85,7 @@ public:
         mHasMessageId=mHasMessageReplyId=false;
         mReturnStatus = SUCCESS;
     }
+
 private:
     uint32 parseLength(const unsigned char*&input, size_t&size) {
         uint32 retval=0;
@@ -468,6 +469,14 @@ public:
         mReturnStatus=(int32)status;
     }
 
+    /** Create a header for a reply to this message, i.e. with source and
+     *  destination swapped.
+     */
+    RoutableMessageHeader createReply() const {
+        RoutableMessageHeader result(*this);
+        result.swap_source_and_destination();
+        return result;
+    }
 };
 
 typedef RoutableMessageHeader::ReturnStatus ReturnStatus;
