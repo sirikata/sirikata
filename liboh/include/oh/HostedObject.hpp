@@ -254,6 +254,8 @@ public:
     */
     void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);
 
+  private:
+
     /** Sends a message from the space hdr.destination_space() to the object
         hdr.destination_object(). Note that this will properly route locally destined
         messages via a WorkQueue in the ObjectHost.
@@ -262,7 +264,6 @@ public:
     */
     void send(const RoutableMessageHeader &header, MemoryReference body);
 
-  private:
     /** Equivalent to header.swap_source_and_destination(); send(header, body);
         @see send.
     */

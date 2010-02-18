@@ -312,7 +312,6 @@ int main ( int argc,const char**argv ) {
         else {
             SILOG(cppoh,info,String("Successfully initialized ") + simName);
             sims.push_back(sim);
-			sim->forwardMessagesTo(oh);
         }
     }
     Duration frameTime = Duration::seconds(1.0/frameRate->as<double>());
@@ -341,9 +340,7 @@ int main ( int argc,const char**argv ) {
         }
         lastTickTime=curTickTime;
     }
-	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
-		(*it)->endForwardingMessagesTo(oh);
-	}
+
     provider.reset();
     delete oh;
 

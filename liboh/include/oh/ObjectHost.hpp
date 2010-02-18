@@ -87,9 +87,9 @@ public:
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
     ///ObjectHost does not forward messages to other services, only to objects it owns
-    bool forwardMessagesTo(MessageService*){return false;}
+    bool forwardMessagesTo(MessageService*){ assert(false); return false;}
     ///ObjectHost does not forward messages to other services, only to objects it owns
-    bool endForwardingMessagesTo(MessageService*){return false;}
+    bool endForwardingMessagesTo(MessageService*){ assert(false); return false;}
 
     /** Register a global space-like service for null Space, null Object.
         @param port  The service port number (i.e. Services::PERSISTENCE)

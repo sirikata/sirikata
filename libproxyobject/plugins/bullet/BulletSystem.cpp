@@ -142,10 +142,10 @@ void BulletObj::onSetScale (const Vector3f &newScale) {
     mBulletBodyPtr->activate(true);
     DEBUG_OUTPUT(cout << "dbm: onSetScale: " << newScale << " old X: " << mSizeX << " mass: "
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
-}    
+}
 
 void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << (unsigned int)pp.mode 
+    DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << (unsigned int)pp.mode
             << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
@@ -200,7 +200,7 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
 }
 
 /////////////////////////////////////////////////////////////////////
-    
+
 positionOrientation BulletObj::getBulletState() {
     btTransform trans;
     this->mBulletBodyPtr->getMotionState()->getWorldTransform(trans);
@@ -255,7 +255,7 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             btAlignedFree(mBtVertices);
         mBtVertices=NULL;
         unsigned int i,j;
-        
+
         if (meshbytes || is_collada) {
             mVertices.clear();
             mIndices.clear();
@@ -626,6 +626,8 @@ bool BulletSystem::tick() {
                         hdr.set_source_port(Services::PHYSICS);
                         std::string body;
                         iter->second.SerializeToString(&body);
+                        // NOTE: This currently doesn't work.  See the
+                        // note in sendMessage().
                         sendMessage(hdr,MemoryReference(body));
                     }
                     if (whichMessages==&mEndCollisionMessagesToSend) {
@@ -823,32 +825,17 @@ struct  raycastCallback : public btCollisionWorld::RayResultCallback {
         return rayResult.m_hitFraction;
     }
 };
-bool BulletSystem::forwardMessagesTo(MessageService*ms) {
-    messageServices.push_back(ms);
-    return true;
-}
-bool BulletSystem::endForwardingMessagesTo(MessageService*ms) {
-    bool retval=false;
-    do {
-        std::vector<MessageService*>::iterator where=std::find(messageServices.begin(),messageServices.end(),ms);
-        if (where!=messageServices.end()) {
-            messageServices.erase(where);
-            retval=true;
-        }
-        else break;
-    }
-    while (true);
-    return retval;
-}
-
-void BulletSystem::processMessage(const RoutableMessageHeader&mh, MemoryReference message_body) {
-
-}
 
 void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference message_body) {
+/* Note: Both this interface and implementation need to change.  They
+    should use ODP::Service and ODP::Port (or something layered on top
+    of them).  One-off unreliable messages probably don't even make
+    sense for this service.
+
     for (vector<MessageService*>::iterator i=messageServices.begin(),ie=messageServices.end();i!=ie;++i) {
         (*i)->processMessage(mh,message_body);
     }
+*/
 }
 
 bool BulletSystem::queryRay(const Vector3d& position,

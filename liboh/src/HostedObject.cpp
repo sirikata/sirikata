@@ -912,23 +912,14 @@ void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference bo
     //DEPRECATED(HostedObject);
     assert(hdrOrig.has_destination_object());
     if (!hdrOrig.has_destination_space() || hdrOrig.destination_space() == SpaceID::null()) {
+        DEPRECATED(HostedObject); // QueryTracker still causes this case
         RoutableMessageHeader hdr (hdrOrig);
         hdr.set_destination_space(SpaceID::null());
         hdr.set_source_object(ObjectReference(mInternalObjectReference));
         mObjectHost->processMessage(hdr, body);
         return;
     }
-    SpaceDataMap::iterator where=mSpaceData->find(hdrOrig.destination_space());
-    if (where!=mSpaceData->end()) {
-        const ProxyObjectPtr &obj = where->second.mProxyObject;
-        if (obj) {
-            RoutableMessageHeader hdr (hdrOrig);
-            hdr.set_source_object(obj->getObjectReference().object());
-            mObjectHost->processMessage(hdr, body);
-        } else {
-            sendViaSpace(hdrOrig, body);
-        }
-    }
+    sendViaSpace(hdrOrig, body);
 }
 
 void HostedObject::tick() {

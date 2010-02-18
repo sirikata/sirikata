@@ -47,7 +47,7 @@ namespace Sirikata {
 void tickSim(Network::IOService*io,TimeSteppedSimulation*sim) {
     sim->tick();
     io->post(Duration::seconds(1./30.),std::tr1::bind(&tickSim,io,sim));
-    
+
 }
 }
 int main(int argc,const char**argv) {
@@ -60,7 +60,7 @@ int main(int argc,const char**argv) {
 
     OptionSet::getOptions("")->parse(argc,argv);
     PluginManager plugins;
-    
+
     const char* pluginNames[] = { "tcpsst", "prox", "colladamodels", "ogregraphics", "bulletphysics", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++) {
         if (strcmp(*plugin_name,"ogregraphics")!=0||loadGraphics->as<bool>())
@@ -98,7 +98,7 @@ int main(int argc,const char**argv) {
             os << "--workqueue=" << workQueue << " ";
             graphicsCommandArguments = os.str();
         }
-        
+
         // MCB: seems like a good place to initialize models system
         ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider, graphicsCommandArguments ) );
 
@@ -137,7 +137,6 @@ int main(int argc,const char**argv) {
         else {
             SILOG(cppoh,info,String("Successfully initialized ") + simName);
             sims.push_back(sim);
-			sim->forwardMessagesTo(&space);
         }
     }
 

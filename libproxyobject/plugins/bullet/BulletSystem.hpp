@@ -484,7 +484,6 @@ public:
     std::tr1::unordered_map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<BulletObj*>objects;
-    vector<MessageService*>messageServices;
 //    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(BulletObj* obj, positionOrientation po,
@@ -511,13 +510,6 @@ public:
         }
         return bo;
     };
-    bool forwardMessagesTo(MessageService*);
-    bool endForwardingMessagesTo(MessageService*);
-    /**
-     * Process an incoming message that may be meant for this system
-     */
-    void processMessage(const RoutableMessageHeader&,
-                        MemoryReference message_body);
     /**
      * Send a message to another object on this system
      */

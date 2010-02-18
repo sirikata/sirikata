@@ -193,6 +193,8 @@ public:
 };
 
 void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryReference message_body) {
+    DEPRECATED(ObjectHost);
+
     assert(header.has_destination_object());
     assert(header.has_source_object());
     assert(!header.has_source_space() || header.source_space() == header.destination_space());
@@ -291,7 +293,7 @@ std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpaceAddress(
 
 
 void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::Address& addy,const TopLevelSpaceConnection*example){
-    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);    
+    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
     {
         SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
         for(;where!=mSpaceConnections.end()&&where->first==id;) {
@@ -369,4 +371,3 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
 
 
 } // namespace Sirikata
-

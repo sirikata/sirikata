@@ -141,18 +141,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
                      int which=0) const;
 public:
     class Transfer::TransferManager *mTransferManager;          /// FIXME: need a better way to get this
-    bool forwardMessagesTo(MessageService*){return false;}
-    bool endForwardingMessagesTo(MessageService*){return false;}
     const TimeOffsetManager *getLocalTimeOffset() {
         return mLocalTimeOffset;
     }
-    /**
-     * Process a message that may be meant for this system
-     */
-    void processMessage(const RoutableMessageHeader&,
-						MemoryReference message_body){
-		NOT_IMPLEMENTED(ogregraphics);
-	}
 
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
