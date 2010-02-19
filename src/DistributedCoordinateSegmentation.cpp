@@ -193,15 +193,16 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
     mAvailableServers.push_back(sa);
   }
 
-  mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
+  if (ctx->id() == 1) {
+    mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
+    startAccepting();
+  }
 
   Address4* addy = sidmap->lookupInternal(ctx->id());
   uint16 cseg_server_ll_port = addy->getPort()+10000;
   mLLTreeAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mLLIOService,tcp::endpoint(tcp::v4(), cseg_server_ll_port)));
 
   startAcceptingLLRequests();
-
-  startAccepting();
 
   Thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
   Thread thrd2(boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
@@ -213,16 +214,15 @@ DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
 }
 
 void DistributedCoordinateSegmentation::ioServicingLoop() {
-
   mIOService.run();
 
+  std::cout << "Exiting ioServicingLoop\n"; fflush(stdout);
 }
 
 void DistributedCoordinateSegmentation::llIOServicingLoop() {
-
   mLLIOService.run();
 
-
+  std::cout << "Exiting llIOServicingLoop\n"; fflush(stdout);
 }
 
 
@@ -394,13 +394,20 @@ void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegi
   }
 }
 
-void DistributedCoordinateSegmentation::service() {
-    Time t = mContext->simTime();
+void DistributedCoordinateSegmentation::stop() {
+  mIOService.stop();
 
-  if ( !GetOption("random-splits-merges")->as<bool>()) {
+  mLLIOService.stop();
+}
+
+void DistributedCoordinateSegmentation::service() {
+  static bool random_splits_merges = GetOption("random-splits-merges")->as<bool>();
+
+  if (!random_splits_merges) {
     return;
   }
 
+  Time t = mContext->simTime();
   uint32 availableSvrIndex = getAvailableServerIndex();
 
   if (availableSvrIndex == INT_MAX)

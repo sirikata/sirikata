@@ -70,6 +70,7 @@ public:
     virtual uint32 numServers() ;
 
     virtual void service();
+    virtual void stop();
 
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);

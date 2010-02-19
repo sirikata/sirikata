@@ -40,7 +40,7 @@ class ClusterSimSettings:
 
         # OH: basic oh settings
         self.num_oh = num_object_hosts
-        self.object_connect_phase = '0s'
+        self.object_connect_phase = '10s'
 
         # OH: random object generation settings
         self.num_random_objects = 1000
@@ -67,15 +67,22 @@ class ClusterSimSettings:
         self.profile = True
         self.loc = 'standard'
         self.space_server_pool = space_svr_pool
+
         self.cseg = 'uniform'
-        self.cseg_service_host = 'meru00'
+        self.cseg_service_host = ' '
         self.cseg_service_tcp_port = 6234;
+        self.cseg_ip_file = "cseg_serverip.txt"
+
+        if (self.cseg == "client"):
+            self.num_cseg_servers = 1
+        else:
+            self.num_cseg_servers = 0
 
         # Space: OSeg settings
         self.oseg = 'oseg_craq'
+        self.oseg_lookup_queue_size = 2000;
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
         self.oseg_analyze_after = '60' #Will perform oseg analysis after this many seconds of the run.
-        self.oseg_lookup_queue_size = 2000;
 
         self.oseg_cache_size = 200
         self.oseg_cache_clean_group = 25
@@ -88,7 +95,7 @@ class ClusterSimSettings:
             "prox" : "warn",
             #"tcpsst" : "insane",
             }
-
+       
         # sanity checks
         if (self.space_server_pool < self.layout_x * self.layout_y):
             print "Space server pool not large enough for desired layout."
@@ -118,7 +125,7 @@ class ClusterSim:
         self.io = io
 
     def num_servers(self):
-        return self.settings.space_server_pool + self.settings.num_oh
+        return self.settings.space_server_pool + self.settings.num_oh + self.settings.num_cseg_servers
 
     def max_space_servers(self):
         return self.settings.space_server_pool
@@ -171,6 +178,20 @@ class ClusterSim:
             }
         return (params, class_params)
 
+    def cseg_parameters(self):
+        params = [
+            '--max-servers=' + str(self.settings.space_server_pool),
+            '--num-cseg-servers=' + str(self.settings.num_cseg_servers),
+            '--cseg-serverips=' + self.settings.cseg_ip_file,
+            '%(csegid)s',
+            ]
+        class_params = {
+            'csegid' : {
+                'cseg' : lambda index : ['--cseg-id=' + str(index)]
+                }
+            }
+        return (params, class_params)
+
 
     def vis_parameters(self):
         params = ['%(vis)s']
@@ -198,7 +219,6 @@ class ClusterSim:
 
         self.loc_latency_analysis()
         self.prox_dump_analysis()
-
 
     def generate_deployment(self):
         self.config.generate_deployment(self.num_servers())
@@ -231,6 +251,22 @@ class ClusterSim:
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()], io=self.io)
 
+        # Generate the cseg-serverip file, copy it to all nodes
+        serveripfile = self.settings.cseg_ip_file
+        fp = open(serveripfile,'w')
+        for i in range(0, self.settings.num_cseg_servers):
+            fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
+
+            if (self.settings.cseg_service_host == " "): 
+                self.settings.cseg_service_host = self.config.deploy_nodes[server_index].node
+
+            port += 2
+            server_index += 1
+
+        fp.close()
+        ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()], io=self.io)
+
+
     def fill_parameters(self, node_params, param_dict, node_class, idx):
         for parm,parm_map in param_dict.items():
             if (not parm in node_params):
@@ -250,10 +286,13 @@ class ClusterSim:
         debug_params, debug_param_functor_dict = self.debug_parameters()
         oh_params, oh_param_functor_dict = self.oh_parameters()
         vis_params, vis_param_functor_dict = self.vis_parameters()
+        cseg_params, cseg_param_functor_dict = self.cseg_parameters()
 
         # Construct the node-specific parameter lists
         node_params = {}
         node_params['binary'] = []
+
+        num_cseg_instances = 0
 
         for node_class in instance_types:
             node_type = node_class[0]
@@ -267,11 +306,15 @@ class ClusterSim:
                     node_params['binary'].append('oh')
                 elif (node_type == 'vis'):
                     node_params['binary'].append('analysis')
+                elif (node_type == 'cseg'):
+                    node_params['binary'].append('cseg')
+                    num_cseg_instances += 1
                 else:
                     node_params['binary'].append('')
                 self.fill_parameters(node_params, debug_param_functor_dict, node_type, x)
                 self.fill_parameters(node_params, oh_param_functor_dict, node_type, x)
                 self.fill_parameters(node_params, vis_param_functor_dict, node_type, x)
+                self.fill_parameters(node_params, cseg_param_functor_dict, node_type, num_cseg_instances)
 
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
 
@@ -316,6 +359,7 @@ class ClusterSim:
                 ])
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
+        cmd_seq.extend(cseg_params)
 
         # Add a param for loglevel if necessary
         if len(self.settings.loglevels) > 0:
@@ -348,9 +392,12 @@ class ClusterSim:
     def run_cluster_sim(self):
         instances = [
             ('space', self.settings.space_server_pool),
+            ('cseg', self.settings.num_cseg_servers),
             ('oh', self.settings.num_oh)
             ]
         self.run_instances(instances, False)
+
+
 
     def vis(self):
         instances = [
@@ -408,6 +455,7 @@ class ClusterSim:
     def loc_latency_analysis(self):
         RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
+
     def prox_dump_analysis(self):
         RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
@@ -418,6 +466,7 @@ if __name__ == "__main__":
     cs = ClusterSimSettings(cc, 4, (2,2), 1)
 #    cs = ClusterSimSettings(cc, 2, (2,1), 1)
 #    cs = ClusterSimSettings(cc, 3, (3,1), 1)
+#    cs = ClusterSimSettings(cc, 2, (2,1), 1)
 #    cs = ClusterSimSettings(cc, 8, (8,1), 1)
 #    cs = ClusterSimSettings(cc, 8, (8,1), 1)
 #    cs = ClusterSimSettings(cc, 14, (2,2), 1)

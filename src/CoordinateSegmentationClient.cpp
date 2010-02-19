@@ -90,8 +90,6 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
 							   ServerIDMap* sidmap)
   : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false), mAvailableServersCount(0), mSidMap(sidmap)
 {
-
-
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 
   Address4* addy = mSidMap->lookupInternal(mContext->id());
@@ -233,7 +231,6 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
   boost::asio::io_service io_service;
 
-
   tcp::resolver resolver(io_service);
 
   tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
@@ -310,7 +307,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
     return mServerRegionCache[server];
   }
 
- // printf("Going to server for serverRegion\n");
+  //printf("Going to server for serverRegion for svr_id=%d\n", server);
 
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
@@ -370,7 +367,6 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 	std::cout << "Error reading response from " << socket.remote_endpoint().address().to_string() <<" in serverRegion\n";
        //throw boost::system::system_error(error); // Some other error.
 
-
       }
   }
 
@@ -415,7 +411,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
     return mTopLevelRegion.mBoundingBox;
   }
 
-  printf("Going to server for region\n");
+  //printf("Going to server for region\n");
 
   RegionRequestMessage requestMessage;
 
@@ -509,7 +505,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
     return mAvailableServersCount;
   }
 
-  printf("Going to server for numServers\n");
+  //printf("Going to server for numServers\n");
 
   NumServersRequestMessage requestMessage;
 

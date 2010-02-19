@@ -45,16 +45,16 @@ int main(int argc, char** argv) {
     InitOptions();
     ParseOptions(argc, argv);
 
-    ServerID server_id = GetOption("id")->as<ServerID>();
+    ServerID server_id = GetOption("cseg-id")->as<ServerID>();
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
     Trace* trace = new Trace(trace_file);
 
     // Compute the starting date/time
     String start_time_str = GetOption("wait-until")->as<String>();
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time += GetOption("wait-additional")->as<Duration>();
+    start_time +=  GetOption("wait-additional")->as<Duration>();
 
-    Duration duration = GetOption("duration")->as<Duration>();
+    Duration duration = GetOption("duration")->as<Duration>() + GetOption("additional-cseg-duration")->as<Duration>();
 
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    String filehandle = GetOption("serverips")->as<String>();
+    String filehandle = GetOption("cseg-serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
 
