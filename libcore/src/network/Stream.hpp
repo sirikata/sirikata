@@ -117,7 +117,7 @@ public:
                 retval*=16;
                 retval+=fromHex(c);
             }
-            *this=StreamID(retval);
+            *this=StreamID((uint32)retval);
             return success;
         }
         

@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include "util/Standard.hh"
 #include <core/odp/Defs.hpp>
+#include <core/odp/Exceptions.hpp>
 
 namespace Sirikata {
 namespace ODP {
-
 // PortID
 
 #define NULL_PORT_ID 0

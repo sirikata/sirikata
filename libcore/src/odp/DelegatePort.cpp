@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include "util/Standard.hh"
 #include <core/odp/DelegateService.hpp>
 #include <core/odp/DelegatePort.hpp>
 #include <util/RoutableMessageHeader.hpp>

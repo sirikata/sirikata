@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../util/Standard.hh"
+#include "util/Standard.hh"
 #include "../util/Factory.hpp"
 #include "../persistence/MinitransactionHandlerFactory.hpp"
 

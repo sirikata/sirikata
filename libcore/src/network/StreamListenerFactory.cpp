@@ -32,7 +32,7 @@
 
 
 
-#include "../util/Standard.hh"
+#include "util/Standard.hh"
 #include "StreamListenerFactory.hpp"
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Network::StreamListenerFactory);

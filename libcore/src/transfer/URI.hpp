@@ -36,7 +36,9 @@
 
 #include "util/Sha256.hpp"
 #include "Range.hpp" // defines cache_usize_type, cache_ssize_type
-
+#ifdef _WIN32
+#include <locale>
+#endif
 namespace Sirikata {
 /// URI.hpp: Fingerprint and URI class
 namespace Transfer {
@@ -89,14 +91,23 @@ class URIContext {
 	struct IsSpace {
 		inline bool operator()(const unsigned char c) {
 			int kspace=(char)c;
-			return std::isspace(kspace)!=false;
+			return std::isspace(kspace
+#ifdef _WIN32
+				,std::locale()
+#endif
+				)!=false;
 		}
 	};
 
 	void cleanup(std::string &s) {
 		// hostnames and protocols are case-insensitive.
 		for (std::string::size_type i = 0; i < s.length(); ++i) {
-			s[i] = std::tolower(s[i]);
+			s[i] = std::tolower(s[i]
+#ifdef _WIN32
+				,std::locale()
+#endif
+			
+			);
 		}
 		// remove any illegal characters such as spaces.
 		s.erase(std::remove_if(s.begin(), s.end(), IsSpace()), s.end());

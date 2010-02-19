@@ -1302,8 +1302,13 @@ ADD_PLUGIN_TARGET(tcpsst
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
 
-IF(OGRE_FOUND AND sdl_FOUND)
-ADD_PLUGIN_TARGET(ogregraphics
+IF(OGRE_FOUND AND sdl_FOUND )
+  IF(WIN32)#not sure why this needs to happen again
+    STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY ${Boost_SYSTEM_LIBRARY})
+    STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
+    STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
+  ENDIF()
+  ADD_PLUGIN_TARGET(ogregraphics
                     SOURCES ${LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES}
                     TARGET_CXXFLAGS ${OGRE_CFLAGS} ${sdl_CFLAGS} ${BERKELIUM_CFLAGS}
                     TARGET_LDFLAGS ${OGRE_LDFLAGS} ${sdl_LDFLAGS} ${BERKELIUM_LDFLAGS} ${sirikata_LDFLAGS}
@@ -1454,8 +1459,10 @@ ENDIF()
 
 
 #precompiled headers
-IF(WIN32)
-  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-Ycutil/Standard.hh")
+IF(WIN32) 
+  #right now protobuf compiler cannot output pch #include flags at the top of their files, so we cannot use them directly or have to turn off pch:
+  #resolved: turn off PCH on windows
+  #SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-Ycutil/Standard.hh")
 ENDIF()
 
 

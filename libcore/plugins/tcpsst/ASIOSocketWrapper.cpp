@@ -100,7 +100,6 @@ static const uint8 _URL_SAFE_ALPHABET []= {
     };
 	
 int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
-    uint8 temp[4];
     uint32 source0=source[0];
     uint32 source1=source[1];
     uint32 source2=source[2];
