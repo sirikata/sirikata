@@ -51,33 +51,33 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 {
     public:
         typedef std::tr1::shared_ptr< MeshObject > ModelObjectPtr;
-        
-        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id );
+
+        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, ODP::Service* odp_service );
 
         void setModelObject ( ModelObjectPtr const& model );
         ModelObjectPtr const& getModelObject () const { return mModelObject; }
 
     protected:
-    
+
     private:
         // MCB: private data for proxy (mediator) operations only
         ModelObjectPtr mModelObject;
-    
+
     // interface from MeshObject
     public:
         virtual void setMesh ( URI const& rhs );
         virtual URI const& getMesh () const;
-        
+
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;
-        
+
         virtual void setPhysical ( PhysicalParameters const& rhs );
         virtual PhysicalParameters const& getPhysical () const;
-        
+
         void meshParsed(String s, Meshdata* md);
-    
+
     protected:
-    
+
     // interface from MeshProvider
     // MCB: Provider needs to supply a listener typedef
     public:
@@ -89,16 +89,16 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 //        virtual void listenerRemoved ( MeshListener* p );
 //        virtual void firstListenerAdded ( MeshListener* p );
 //        virtual void lastListenerRemoved ( MeshListener* p );
-    
+
     // interface from ProxyObject
     public:
         virtual bool hasModelObject () const;
 
     protected:
 //        virtual void destroyed ();
-        
+
 };
-    
+
 } // namespace Sirikata
 
 #endif

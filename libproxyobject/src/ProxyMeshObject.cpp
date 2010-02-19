@@ -37,10 +37,10 @@
 
 namespace Sirikata {
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id )
+ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, ODP::Service* odp_service )
     :   MeshObject (),
         MeshProvider (),
-        ProxyObject ( man, id ),
+        ProxyObject ( man, id, odp_service ),
         mModelObject ()
 {
 
@@ -65,9 +65,9 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
 {
     if (hasModelObject())
         mModelObject->setMesh ( mesh );
-    
+
     /// dbm: this is what triggers Ogre mesh download [and Model for now]
-    
+
     MeshProvider::notify ( &MeshListener::onSetMesh, mesh );
 }
 

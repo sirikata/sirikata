@@ -84,6 +84,9 @@ private:
     Extrapolator mLocation;
     SpaceObjectReference mParentId;
     LocationAuthority* mLocationAuthority;
+
+    ODP::Service* mODPService;
+
     bool mLocal;
 protected:
     /// Notification that the Parent has been destroyed.
@@ -94,8 +97,10 @@ public:
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
         @param man  The ProxyManager controlling this object.
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
+        \param odp_service the ODP::Service this ProxyObject can use to send
+               messages, i.e. its parent for messaging purposes
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id);
+    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service);
     virtual ~ProxyObject();
 
     void setLocal(bool isLocal);
@@ -111,6 +116,11 @@ public:
 
     /// Gets a class that can send messages to this Object.
     QueryTracker *getQueryTracker() const;
+
+    ODP::Service* odp() const {
+        DEPRECATED(ProxyObject);
+        return mODPService;
+    }
 
     /// Address a header with this object as a destination.
     void addressMessage(RoutableMessageHeader &hdr) const;

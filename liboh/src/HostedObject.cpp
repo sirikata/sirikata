@@ -1166,16 +1166,16 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             ProxyObjectPtr proxyObj;
             if (hasProperty("IsCamera")) {
                 printstr<<"RetObj: I am now a Camera known as "<<objectId.object();
-                proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, objectId));
+                proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, objectId, this));
             } else if (hasProperty("LightInfo") && !hasProperty("MeshURI")) {
                 printstr<<"RetObj. I am now a Light known as "<<objectId.object();
-                proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, objectId));
+                proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, objectId, this));
             } else if (hasProperty("MeshURI") && hasProperty("WebViewURL")){
                 printstr<<"RetObj: I am now a WebView known as "<<objectId.object();
-                proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, objectId));
+                proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, objectId, this));
             } else {
                 printstr<<"RetObj: I am now a Mesh known as "<<objectId.object();
-                proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
+                proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId, this));
             }
             proxyObj->setLocal(true);
             initializePerSpaceData(perSpaceIter->second, proxyObj);

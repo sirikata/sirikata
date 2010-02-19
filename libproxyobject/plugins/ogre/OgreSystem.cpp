@@ -886,6 +886,9 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
         bool success = (*iter).second == Transfer::TransferManager::SUCCESS;
         if (success) {
             SILOG(ogre,debug,"Upload of " << (*iter).first.mID << " (hash "<<(*iter).first.mHash << ") was successful.");
+            /* FIXME Creating proxy meshes out of nowhere makes no sense.  If
+               you want to put a mesh in place, fix this to create a new
+               HostedObject that uses that mesh.
             if ((*iter).first.mType == Meru::MESH) {
                 Time now(mLocalTimeOffset->now(mPrimaryCamera->getProxy()));
                 SpaceObjectReference newId = SpaceObjectReference(mPrimaryCamera->id().space(), ObjectReference(UUID::random()));
@@ -901,6 +904,7 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
                 selectObject(getEntity(newMeshObject));
                 nummesh++;
             }
+            */
         } else {
             SILOG(ogre,warn,"Failed to upload " << (*iter).first.mID <<  " (hash "<<(*iter).first.mHash << "). Status = "<<(int)((*iter).second));
         }

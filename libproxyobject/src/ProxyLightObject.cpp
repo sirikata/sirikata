@@ -34,9 +34,9 @@
 #include <util/ListenerProvider.hpp>
 #include <proxyobject/ProxyLightObject.hpp>
 namespace Sirikata {
-ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id)
+ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service)
   : LightProvider(LightInfo()),
-    ProxyObject(man, id) {
+    ProxyObject(man, id, odp_service) {
 }
 void ProxyLightObject::update(const LightInfo&li) {
     LightProvider::notify(li);

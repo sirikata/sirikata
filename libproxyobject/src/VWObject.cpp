@@ -136,16 +136,16 @@ void VWObject::receivedProxObjectProperties(
     ObjectReference myObjectReference;
     if (isCamera) {
         SILOG(cppoh,info, "* I found a camera named " << proximateObjectId.object());
-        proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId));
+        proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId, (ODP::Service*)realThis.get()));
     } else if (hasLight && !hasMesh) {
         SILOG(cppoh,info, "* I found a light named " << proximateObjectId.object());
-        proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId));
+        proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId, (ODP::Service*)realThis.get()));
     } else if (hasMesh && isWebView){
         SILOG(cppoh,info,"* I found a WEBVIEW known as "<<proximateObjectId.object());
-        proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, proximateObjectId));
+        proxyObj = ProxyObjectPtr(new ProxyWebViewObject(proxyMgr, proximateObjectId, (ODP::Service*)realThis.get()));
     } else {
         SILOG(cppoh,info, "* I found a MESH named " << proximateObjectId.object());
-        proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
+        proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId, (ODP::Service*)realThis.get()));
     }
     proxyObj->setLocal(false);
     realThis->applyPositionUpdate(proxyObj, objLoc, true);

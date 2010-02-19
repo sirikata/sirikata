@@ -42,7 +42,7 @@
 #include "util/KnownServices.hpp"
 namespace Sirikata {
 
-ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
+ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service)
         : mID(id),
         mManager(man),
         mLocation(Duration::seconds(.1),
@@ -51,7 +51,11 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
                            Vector3f(0,0,0),Vector3f(0,1,0),0),
                   UpdateNeeded()),
         mParentId(SpaceObjectReference::null()),
-        mLocationAuthority(0) {
+          mLocationAuthority(0),
+          mODPService(odp_service)
+{
+    assert(mODPService != NULL);
+
     mLocal = true;
 }
 

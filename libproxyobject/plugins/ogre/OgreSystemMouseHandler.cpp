@@ -413,11 +413,11 @@ private:
                 std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(ent->getProxyPtr()));
             std::tr1::shared_ptr<ProxyMeshObject> newMeshObject;
             if (webObj) {
-                std::tr1::shared_ptr<ProxyWebViewObject> newWebObject(new ProxyWebViewObject(proxyMgr, newId));
+                std::tr1::shared_ptr<ProxyWebViewObject> newWebObject(new ProxyWebViewObject(proxyMgr, newId, parentPtr->odp()));
                 newWebObject->loadURL("http://www.google.com/");
                 newMeshObject = newWebObject;
             } else {
-                newMeshObject = std::tr1::shared_ptr<ProxyMeshObject>(new ProxyMeshObject(proxyMgr, newId));
+                newMeshObject = std::tr1::shared_ptr<ProxyMeshObject>(new ProxyMeshObject(proxyMgr, newId, parentPtr->odp()));
             }
             newObj = newMeshObject;
             proxyMgr->createObject(newMeshObject,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
@@ -425,13 +425,13 @@ private:
             newMeshObject->setScale(meshObj->getScale());
         }
         else if (lightObj) {
-            std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
+            std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId, parentPtr->odp()));
             newObj = newLightObject;
             proxyMgr->createObject(newLightObject,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
             newLightObject->update(lightObj->getLastLightInfo());
         }
         else {
-            newObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newId));
+            newObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newId, parentPtr->odp()));
             proxyMgr->createObject(newObj,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         }
         if (newObj) {
@@ -513,7 +513,7 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId)),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
+        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         Entity *newParentEntity = mParent->getEntity(newParentId);
         newParentEntity->getProxy().resetLocation(now, totalLocation);
 
@@ -636,7 +636,7 @@ private:
         loc.setPosition(loc.getPosition() + Vector3d(direction(loc.getOrientation()))*WORLD_SCALE/3);
         loc.setOrientation(loc.getOrientation());
 
-        std::tr1::shared_ptr<ProxyWebViewObject> newWebObject (new ProxyWebViewObject(proxyMgr, newId));
+        std::tr1::shared_ptr<ProxyWebViewObject> newWebObject (new ProxyWebViewObject(proxyMgr, newId, camera->getProxy().odp()));
         proxyMgr->createObject(newWebObject,mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         {
             newWebObject->setMesh(URI("meru:///webview.mesh"));
@@ -742,7 +742,7 @@ private:
         loc.setPosition(loc.getPosition());
         loc.setOrientation(Quaternion(0.886995, 0.000000, -0.461779, 0.000000, Quaternion::WXYZ()));
 
-        std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
+        std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId, camera->getProxy().odp()));
         proxyMgr->createObject(newLightObject,camera->getProxy().getQueryTracker());
         {
             LightInfo li;
