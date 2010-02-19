@@ -75,6 +75,7 @@ public:
 
     HostedObject* parent;
     SpaceID space;
+    ObjectReference object;
     SpaceConnection mSpaceConnection;
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
@@ -83,10 +84,6 @@ public:
     ODP::Port* persistencePort;
 
     QueryTracker* tracker;
-
-    const ObjectReference& object() const {
-        return mProxyObject->getObjectReference().object();
-    }
 
     void locationWasReset(Time timestamp, Location loc) {
         loc.setVelocity(Vector3f::nil());
@@ -148,7 +145,13 @@ public:
     {
     }
 
+    void setObject(const ObjectReference& obj) {
+        object = obj;
+    }
+
     void initializeAs(ProxyObjectPtr proxyobj) {
+        assert(proxyobj->getObjectReference().object() == object);
+
         mProxyObject = proxyobj;
         rpcPort = parent->bindODPPort(space, ODP::PortID((uint32)Services::RPC));
         persistencePort = parent->bindODPPort(space, ODP::PortID((uint32)Services::PERSISTENCE));
@@ -1163,6 +1166,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         retObj.ParseFromArray(args.data(), args.length());
         if (retObj.has_object_reference() && retObj.has_location()) {
             SpaceObjectReference objectId(msg.source_space(), ObjectReference(retObj.object_reference()));
+            perSpaceIter->second.setObject(objectId.object());
             ProxyObjectPtr proxyObj;
             if (hasProperty("IsCamera")) {
                 printstr<<"RetObj: I am now a Camera known as "<<objectId.object();
@@ -1316,7 +1320,7 @@ ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* par
     if (space_data_it == mSpaceData->end())
         return NULL;
 
-    ObjectReference objid = space_data_it->second.object();
+    ObjectReference objid = space_data_it->second.object;
     ODP::Endpoint port_ep(space, objid, port);
     return new ODP::DelegatePort(
         mDelegateODPService,

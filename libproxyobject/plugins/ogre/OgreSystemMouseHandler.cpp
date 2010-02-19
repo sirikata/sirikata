@@ -392,7 +392,10 @@ private:
             std::string serialized;
             body.SerializeToString(&serialized);
 
-            obj->sendMessage(MemoryReference(serialized.data(),serialized.length()));
+            obj->sendMessage(
+                Services::RPC,
+                MemoryReference(serialized.data(),serialized.length())
+            );
         }
         mSelectedObjects.clear();
     }
@@ -688,7 +691,10 @@ private:
         body.add_message("CreateObject", serializedCreate);
         std::string serialized;
         body.SerializeToString(&serialized);
-        camera->getProxy().sendMessage(MemoryReference(serialized.data(), serialized.length()));
+        camera->getProxy().sendMessage(
+            Services::RPC,
+            MemoryReference(serialized.data(), serialized.length())
+        );
     }
 
 
@@ -725,7 +731,6 @@ private:
         std::string serialized;
         body.SerializeToString(&serialized);
         camera->getProxy().sendMessage(
-            ODP::Endpoint(camera->getProxy().getObjectReference().space(), camera->getProxy().getObjectReference().object(), Services::RPC),
             Services::RPC,
             MemoryReference(serialized.data(), serialized.length())
         );

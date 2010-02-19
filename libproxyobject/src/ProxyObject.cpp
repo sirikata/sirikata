@@ -57,9 +57,13 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::
     assert(mODPService != NULL);
 
     mLocal = true;
+
+    mDefaultPort = mODPService->bindODPPort(id.space());
 }
 
-ProxyObject::~ProxyObject() {}
+ProxyObject::~ProxyObject() {
+    delete mDefaultPort;
+}
 
 void ProxyObject::setLocal(bool loc) {
     mLocal = loc;
@@ -99,42 +103,13 @@ void ProxyObject::destroyed(const TemporalValue<Location>::Time& when) {
 }
 
 QueryTracker *ProxyObject::getQueryTracker() const {
+    DEPRECATED(ProxyObject);
     return mManager->getQueryTracker(getObjectReference());
 }
 
-void ProxyObject::addressMessage(RoutableMessageHeader &hdr) const {
-    hdr.set_destination(getObjectReference());
-}
-bool ProxyObject::sendMessage(MemoryReference message) const {
-    QueryTracker *qt = getQueryTracker();
-    if (qt) {
-        RoutableMessageHeader hdr;
-        addressMessage(hdr);
-        qt->sendMessage(hdr, message);
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-bool ProxyObject::sendMessage(const ODP::Endpoint& src, const ODP::PortID& dest_port, MemoryReference message) const {
-    QueryTracker *qt = getQueryTracker();
-    if (qt) {
-        RoutableMessageHeader hdr;
-        // FIXME bogus source info
-        hdr.set_source_space(src.space());
-        hdr.set_source_object(src.object());
-        hdr.set_source_port(src.port());
-        hdr.set_destination_space(getObjectReference().space());
-        hdr.set_destination_object(getObjectReference().object());
-        hdr.set_destination_port(dest_port);
-        qt->sendMessage(hdr, message);
-        return true;
-    }
-    else {
-        return false;
-    }
+bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference message) const {
+    ODP::Endpoint dest(getObjectReference().space(), getObjectReference().object(), dest_port);
+    return mDefaultPort->send(dest, message);
 }
 
 void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,
