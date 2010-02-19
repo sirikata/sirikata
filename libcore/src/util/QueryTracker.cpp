@@ -39,6 +39,8 @@
 namespace Sirikata {
 
 QueryTracker::~QueryTracker() {
+    delete mPort;
+
     mForwardService = NULL; // can't resend a message.
     SentMessageMap sentMessageCopy;
     mSentMessages.swap(sentMessageCopy);

@@ -6,11 +6,11 @@
 namespace Sirikata { namespace Space {
 
 Physics::Physics(Space*space, Network::IOService*io, const SpaceObjectReference&nodeId, uint32 port):SpaceProxyManager(space,io),mReplyMessageService(nodeId,port), mBounds(BoundingBox3d3f::null()),mQueryId(0) {
-    mQueryTracker.forwardMessagesTo(&mReplyMessageService);
+    mQueryTracker->forwardMessagesTo(&mReplyMessageService);
     initialize();
 }
 Physics::~Physics() {
-    mQueryTracker.endForwardingMessagesTo(&mReplyMessageService);
+    mQueryTracker->endForwardingMessagesTo(&mReplyMessageService);
     destroy();
 }
 Physics::ReplyMessageService::ReplyMessageService(const SpaceObjectReference&senderId, uint32 port):mSenderId(senderId),mPort(port){
@@ -44,9 +44,9 @@ void Physics::setBounds(const BoundingBox3d3f &bounds) {
             proxQuery.set_query_id(mQueryId);
             String proxQueryStr;
             proxQuery.SerializeToString(&proxQueryStr);
-            body.add_message("DelProxQuery", proxQueryStr);            
+            body.add_message("DelProxQuery", proxQueryStr);
             clearQuery(mQueryId);
-            mQueryId++;            
+            mQueryId++;
         }
         if (bounds!=BoundingBox3d3f::null()) {
             //create query
@@ -88,12 +88,12 @@ void Physics::processMessage(const RoutableMessageHeader&underspecifiedHeader, M
     SILOG(cppoh,debug,"** Message from: " << header.source_object() << " port " << header.source_port() << " to "<<header.destination_object()<<" port " << header.destination_port());
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {
-        mQueryTracker.processMessage(header, bodyData);
+        mQueryTracker->processMessage(header, bodyData);
         return; // Not a message for us to process.
     }
 
     /// Parse message_names and message_arguments.
-    
+
     RoutableMessageBody msg;
     msg.ParseFromArray(bodyData.data(), bodyData.length());
     int numNames = msg.message_size();
@@ -103,9 +103,9 @@ void Physics::processMessage(const RoutableMessageHeader&underspecifiedHeader, M
         MemoryReference body(msg.message_arguments(i));
         processRPC(header, name, body, NULL);
     }
-    
+
     if (header.has_id()) {
-        NOT_IMPLEMENTED();//we don't reply to anything for now        
+        NOT_IMPLEMENTED();//we don't reply to anything for now
     }
 }
 
@@ -116,7 +116,3 @@ void Physics::addQueryInterest(uint32 query_id, const SpaceObjectReference &id){
 }
 
 } }
-
-
-
-

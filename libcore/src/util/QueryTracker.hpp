@@ -34,6 +34,8 @@
 #ifndef _SIRIKATA_QueryTracker_HPP_
 #define _SIRIKATA_QueryTracker_HPP_
 
+#include <core/odp/Port.hpp>
+
 namespace Sirikata {
 
 class SentMessage;
@@ -51,18 +53,20 @@ private:
     int64 mNextQueryId;
     Network::IOService *mIOService;
     MessageService *mForwardService;
-
+    ODP::Port* mPort;
 public:
     /** Constructs a QueryTracker.
-     *
+     *  \param port the ODP::Port to listen to and respond on.  Ownership of the
+     *              port is transferred to the QueryTracker.
      *  @param timerService  An IOService instance for creating timeouts. If
      *                       NULL, timeouts will not be honored.
      *  @param forwarder     A message service to forward messages to.
      */
-    explicit QueryTracker(Network::IOService *timerService, MessageService *forwarder=NULL) {
+    explicit QueryTracker(ODP::Port* port, Network::IOService *timerService, MessageService *forwarder=NULL) {
         mNextQueryId = 0;
         mIOService = timerService;
         mForwardService = forwarder;
+        mPort = port;
     }
     /// Destructor: Cancels all ongoing queries with a NETWORK_FAILURE status.
     ~QueryTracker();

@@ -105,10 +105,13 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
-    QueryTracker mTracker;
 
     ODP::DelegateService* mDelegateODPService;
 
+    QueryTracker* mDefaultTracker; // FIXME this is necessary because we're
+                                   // using messaging outside of spaces in order
+                                   // to communicate with the db, which is
+                                   // required for initialization....
 //------- Constructors/Destructors
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
@@ -217,9 +220,9 @@ public:
         return mInternalObjectReference;
     }
     /// Returns QueryTracker object that tracks of message ids awaiting reply.
-    QueryTracker* getTracker(const SpaceID& space){return &mTracker;}
+    QueryTracker* getTracker(const SpaceID& space);
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
-    const QueryTracker*getTracker(const SpaceID& space)const {return &mTracker;}
+    const QueryTracker*getTracker(const SpaceID& space) const;
 
     /** Called once per frame, at a certain framerate. */
     void tick();

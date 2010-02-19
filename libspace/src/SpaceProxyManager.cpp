@@ -6,20 +6,24 @@
 #include <util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
-SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io):mQueryTracker(io),mSpace(space){
+SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io)
+ : mSpace(space)
+{
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
             &SpaceProxyManager::createDelegateODPPort, this,
             _1, _2, _3
         )
     );
+    mQueryTracker = new QueryTracker(bindODPPort(mSpace->id()), io);
 }
 SpaceProxyManager::~SpaceProxyManager() {
+    delete mQueryTracker;
     delete mDelegateODPService;
 }
 
 void SpaceProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTracker*tracker){
-    if (tracker!=NULL&&tracker!=&mQueryTracker) {
+    if (tracker!=NULL&&tracker!=mQueryTracker) {
         SILOG(space,error,"Trying to add interest to a new object with an incorrect QueryTracker");
         return;
     }
@@ -34,7 +38,7 @@ void SpaceProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTracker*
     }
 }
 void SpaceProxyManager::destroyObject(const ProxyObjectPtr &obj, QueryTracker*tracker){
-    if (tracker!=NULL&&tracker!=&mQueryTracker) {
+    if (tracker!=NULL&&tracker!=mQueryTracker) {
         SILOG(space,error,"Trying to add interest to a new object with an incorrect QueryTracker");
         return;
     }
@@ -62,7 +66,7 @@ void SpaceProxyManager::removeQueryInterest(uint32 query_id, const ProxyObjectPt
             where->second.erase(query_id);
             if (where->second.empty()) {
                 mQueryMap.erase(where);
-                destroyObject(obj,&mQueryTracker);
+                destroyObject(obj,mQueryTracker);
             }
         }else {
             SILOG(space,error,"Trying to erase query "<<query_id<<" for object "<<id<<" query_id invalid");
@@ -96,7 +100,7 @@ ProxyManager* SpaceProxyManager::getProxyManager(const SpaceID&space) {
     return NULL;
 }
 QueryTracker* SpaceProxyManager::getTracker(const SpaceID& space) {
-    return &mQueryTracker;
+    return mQueryTracker;
 }
 
 void SpaceProxyManager::initialize() {
@@ -120,7 +124,7 @@ ProxyObjectPtr SpaceProxyManager::getProxyObject(const Sirikata::SpaceObjectRefe
     return ProxyObjectPtr();
 }
 QueryTracker * SpaceProxyManager::getQueryTracker(const SpaceObjectReference&id) {
-    return &mQueryTracker;
+    return mQueryTracker;
 }
 
 

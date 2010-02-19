@@ -46,7 +46,7 @@ class Space;
 class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyManager {
     typedef std::tr1::unordered_map<ObjectReference, ProxyObjectPtr,ObjectReference::Hasher> ProxyMap;
   protected:
-    QueryTracker mQueryTracker;
+    QueryTracker* mQueryTracker;
     SimpleTimeOffsetManager mOffsetManager;
     Space::Space*mSpace;
   private:

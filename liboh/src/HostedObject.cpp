@@ -82,6 +82,8 @@ public:
     ODP::Port* rpcPort;
     ODP::Port* persistencePort;
 
+    QueryTracker* tracker;
+
     const ObjectReference& object() const {
         return mProxyObject->getObjectReference().object();
     }
@@ -141,7 +143,8 @@ public:
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
        rpcPort(NULL),
-       persistencePort(NULL)
+       persistencePort(NULL),
+       tracker(NULL)
     {
     }
 
@@ -149,9 +152,16 @@ public:
         mProxyObject = proxyobj;
         rpcPort = parent->bindODPPort(space, ODP::PortID((uint32)Services::RPC));
         persistencePort = parent->bindODPPort(space, ODP::PortID((uint32)Services::PERSISTENCE));
+
+        // Use any port for tracker
+        tracker = new QueryTracker(parent->bindODPPort(space), parent->mObjectHost->getSpaceIO());
+        tracker->forwardMessagesTo(&parent->mSendService);
     }
 
     void destroy(QueryTracker *tracker) const {
+        tracker->endForwardingMessagesTo(&parent->mSendService);
+        delete tracker;
+
         delete rpcPort;
         delete persistencePort;
 
@@ -182,8 +192,7 @@ public:
 
 
 HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
-    : mInternalObjectReference(objectName),
-      mTracker(parent->getSpaceIO())
+    : mInternalObjectReference(objectName)
 {
     mSpaceData = new SpaceDataMap;
     mNextSubscriptionID = 0;
@@ -191,7 +200,6 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     mObjectScript=NULL;
     mSendService.ho = this;
     mReceiveService.ho = this;
-    mTracker.forwardMessagesTo(&mSendService);
 
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
@@ -199,9 +207,14 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
             _1, _2, _3
         )
     );
+
+    mDefaultTracker = NULL;
 }
 
 HostedObject::~HostedObject() {
+    if (mDefaultTracker != NULL)
+        delete mDefaultTracker;
+
     destroy();
     delete mSpaceData;
 }
@@ -216,7 +229,6 @@ void HostedObject::destroy() {
          ++iter) {
         iter->second.destroy(getTracker(iter->first));
     }
-    mTracker.endForwardingMessagesTo(&mSendService);
     mSpaceData->clear();
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
     mProperties.clear();
@@ -413,6 +425,18 @@ struct HostedObject::PrivateCallbacks {
 };
 
 
+QueryTracker* HostedObject::getTracker(const SpaceID& space) {
+    SpaceDataMap::iterator it = mSpaceData->find(space);
+    if (it == mSpaceData->end()) return NULL;
+    return it->second.tracker;
+}
+
+const QueryTracker* HostedObject::getTracker(const SpaceID& space) const {
+    SpaceDataMap::const_iterator it = mSpaceData->find(space);
+    if (it == mSpaceData->end()) return NULL;
+    return it->second.tracker;
+}
+
 
 void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
     HostedObject *realThis=this;
@@ -463,7 +487,10 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
         Response immedResponse;
         int immedIndex = 0;
 
-        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(&realThis->mTracker,std::tr1::bind(&PrivateCallbacks::handlePersistenceResponse, realThis, header, _1, _2, _3));
+        SpaceID space = header.destination_space();
+        QueryTracker* space_query_tracker = getTracker(space);
+
+        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(space_query_tracker,std::tr1::bind(&PrivateCallbacks::handlePersistenceResponse, realThis, header, _1, _2, _3));
         int outIndex = 0;
         ReadWriteSet &outMessage = persistenceMsg->body();
         if (rws.has_options()) {
@@ -763,7 +790,11 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     mObjectHost->registerHostedObject(getSharedPtr());
 
     Persistence::SentReadWriteSet *msg;
-    msg = new Persistence::SentReadWriteSet(&mTracker);
+    if (mDefaultTracker == NULL) {
+        mDefaultTracker = new QueryTracker(bindODPPort(spaceID), mObjectHost->getSpaceIO());
+        mDefaultTracker->forwardMessagesTo(&mSendService);
+    }
+    msg = new Persistence::SentReadWriteSet(mDefaultTracker);
     msg->setPersistenceCallback(std::tr1::bind(
                          &PrivateCallbacks::initializeDatabaseCallback,
                          getWeakPtr(), spaceID, spaceConnectionHint,
@@ -873,7 +904,12 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     }
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {
-        mTracker.processMessage(header, bodyData);
+        SpaceID space = header.destination_space();
+        QueryTracker* responsibleTracker = getTracker(space);
+        if (responsibleTracker != NULL)
+            responsibleTracker->processMessage(header, bodyData);
+        if (mDefaultTracker != NULL)
+            mDefaultTracker->processMessage(header, bodyData);
         return; // Not a message for us to process.
     }
 
