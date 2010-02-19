@@ -3,6 +3,7 @@
 #include "proxyobject/ProxyCameraObject.hpp"
 
 #include <core/odp/DelegatePort.hpp>
+#include <core/odp/Exceptions.hpp>
 #include <util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
@@ -143,7 +144,9 @@ void SpaceProxyManager::registerDefaultODPHandler(const ODP::MessageHandler& cb)
 }
 
 ODP::DelegatePort* SpaceProxyManager::createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port) {
-    assert(space == mSpace->id());
+    if (space != mSpace->id())
+        throw ODP::PortAllocationException("SpaceProxyManager::createDelegateODPPort can't allocate port because the specified space does not match the ProxyManager's space.");
+
     ODP::Endpoint port_ep(space, ObjectReference::spaceServiceID(), port);
     return new ODP::DelegatePort(
         mDelegateODPService,

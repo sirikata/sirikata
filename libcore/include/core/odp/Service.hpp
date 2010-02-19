@@ -52,6 +52,8 @@ public:
      *  \param port the PortID to attempt to bind
      *  \returns an ODP Port object which can be used immediately, or NULL if
      *           the port is already bound
+     *  \throws PortAllocationError if the Service cannot allocate the port for
+     *          some reason other than it already being allocated.
      */
     virtual Port* bindODPPort(SpaceID space, PortID port) = 0;
 
@@ -59,6 +61,8 @@ public:
      *  \param space the Space to communicate via
      *  \returns an ODP Port object which can be used immediately, or, in
      *           extremely rare cases, NULL when an unused port isn't available
+     *  \throws PortAllocationError if the Service cannot allocate the port for
+     *          some reason other than it already being allocated.
      */
     virtual Port* bindODPPort(SpaceID space) = 0;
 

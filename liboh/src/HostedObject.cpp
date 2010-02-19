@@ -59,6 +59,8 @@
 #include "util/ThreadId.hpp"
 #include "util/PluginManager.hpp"
 
+#include <core/odp/Exceptions.hpp>
+
 namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
@@ -789,12 +791,20 @@ void HostedObject::initializeDefault(
     //connectToSpace(spaceID, spaceConnectionHint, startingLocation, meshBounds, getUUID());
 }
 
-void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint) {
+void HostedObject::initializeRestoreFromDatabase(const SpaceID& spaceID, const HostedObjectPtr&spaceConnectionHint) {
     mObjectHost->registerHostedObject(getSharedPtr());
 
     Persistence::SentReadWriteSet *msg;
     if (mDefaultTracker == NULL) {
-        mDefaultTracker = new QueryTracker(bindODPPort(spaceID), mObjectHost->getSpaceIO());
+        // FIXME this allocation is happening before a real connection to the
+        // space.  Currently this ends up just using NULL form
+        // default_tracker_port, which obviously won't work out in the long term.
+        ODP::Port* default_tracker_port = NULL;
+        try {
+            default_tracker_port = bindODPPort(spaceID);
+        } catch(ODP::PortAllocationException& e) {
+        }
+        mDefaultTracker = new QueryTracker(default_tracker_port, mObjectHost->getSpaceIO());
         mDefaultTracker->forwardMessagesTo(&mSendService);
     }
     msg = new Persistence::SentReadWriteSet(mDefaultTracker);
@@ -1318,7 +1328,7 @@ ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* par
 
     SpaceDataMap::const_iterator space_data_it = mSpaceData->find(space);
     if (space_data_it == mSpaceData->end())
-        return NULL;
+        throw ODP::PortAllocationException("HostedObject::createDelegateODPPort can't allocate port because the HostedObject is not connected to the specified space.");
 
     ObjectReference objid = space_data_it->second.object;
     ODP::Endpoint port_ep(space, objid, port);
