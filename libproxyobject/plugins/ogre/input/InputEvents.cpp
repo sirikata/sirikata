@@ -116,7 +116,7 @@ WebViewEvent::~WebViewEvent() {
 }
 
 EventDescriptor WebViewEvent::getDescriptor() const {
-    return EventDescriptor::Web(webview, name, args.size());
+    return EventDescriptor::Web(webview, name);
 }
 
 }

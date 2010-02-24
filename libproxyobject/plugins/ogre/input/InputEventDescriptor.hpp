@@ -64,7 +64,7 @@ public:
     static EventDescriptor Text();
     static EventDescriptor Window(WindowEventType type);
     static EventDescriptor DragAndDrop();
-    static EventDescriptor Web(const String& wvname, const String& name, uint32 nargs);
+    static EventDescriptor Web(const String& wvname, const String& name);
 
     EventDescriptor();
     EventDescriptor(const EventDescriptor& other);
@@ -91,7 +91,6 @@ public:
     bool isWeb() const;
     const String& webViewName() const;
     const String& webName() const;
-    uint32 webArgCount() const;
 
     bool operator<(const EventDescriptor& rhs) const;
     EventDescriptor& operator=(const EventDescriptor& rhs);
@@ -123,7 +122,6 @@ private:
         struct {
             String* wvname;
             String* name;
-            uint32 argcount;
         } web;
     } mDescriptor;
 };

@@ -46,7 +46,7 @@ public:
     static InputBindingEvent MouseClick(Input::MouseButton button);
     static InputBindingEvent MouseDrag(Input::MouseButton button);
     static InputBindingEvent Axis(Input::AxisIndex axis);
-    static InputBindingEvent Web(const String& wvname, const String& name, uint32 argcount = 0);
+    static InputBindingEvent Web(const String& wvname, const String& name);
 
     InputBindingEvent();
     InputBindingEvent(const InputBindingEvent& rhs);
@@ -68,7 +68,6 @@ public:
     bool isWeb() const;
     const String& webViewName() const;
     const String& webName() const;
-    uint32 webArgCount() const;
 
     InputBindingEvent& operator=(const InputBindingEvent& rhs);
 private:
@@ -91,7 +90,6 @@ private:
         struct {
             String* wvname;
             String* name;
-            uint32 argcount;
         } web;
     } mDescriptor;
 };

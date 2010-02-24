@@ -627,6 +627,12 @@ private:
         }
     }
 
+    /** Create a UI element using a web view. */
+    void createUIAction(const String& ui_page) {
+        WebView* ui_wv = WebViewManager::getSingleton().createWebView("__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+        ui_wv->loadFile(ui_page);
+    }
+
     void LOCAL_createWebviewAction() {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
@@ -698,8 +704,20 @@ private:
     }
 
 
-    void createScriptedObjectAction() {//const String& script_type, const
-                                       //std::map<String, String>& script_args) {
+    void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
+        typedef std::tr1::unordered_map<String, String> StringMap;
+        printf("createScriptedObjectAction: %d\n", args.size());
+        // Filter out the script type from rest of args
+        String script_type = "";
+        StringMap filtered_args = args;
+        {
+            StringMap::iterator type_it = filtered_args.find("ScriptType");
+            if (type_it == filtered_args.end())
+                return;
+            script_type = type_it->second;
+            filtered_args.erase(type_it);
+        }
+
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -718,10 +736,11 @@ private:
         creator.set_mesh("http://www.sirikata.com/content/assets/cube.dae");
         creator.set_scale(Vector3f(1,1,1));
 
-        creator.set_script("monopython");
+        creator.set_script(script_type);
         Protocol::IStringMapProperty script_args = creator.mutable_script_args();
-        script_args.add_keys("PythonModule"); script_args.add_values("test");
-        script_args.add_keys("PythonClass"); script_args.add_values("exampleclass");
+        for(StringMap::const_iterator arg_it = filtered_args.begin(); arg_it != filtered_args.end(); arg_it++) {
+            script_args.add_keys(arg_it->first); script_args.add_values(arg_it->second);
+        }
 
         std::string serializedCreate;
         creator.SerializeToString(&serializedCreate);
@@ -1494,7 +1513,10 @@ public:
         mInputResponses["stableRotateNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::stableRotateAction, this, -1.f, _1), 1, 0);
 
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
-        mInputResponses["createScriptedObjectAction"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this));
+
+        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "../object/object.html"));
+
+        mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
         mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
@@ -1554,7 +1576,7 @@ public:
 
         // Various other actions
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["createScriptedObjectAction"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
@@ -1599,13 +1621,15 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navforward"), mInputResponses["webForward"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navrefresh"), mInputResponses["webRefresh"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navhome"), mInputResponses["webHome"]);
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navgo", 1), mInputResponses["webGo"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navgo"), mInputResponses["webGo"]);
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navdel"), mInputResponses["webDelete"]);
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navmoveforward", 1), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnleft", 1), mInputResponses["rotateYPos"]);
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright", 1), mInputResponses["rotateYNeg"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navmoveforward"), mInputResponses["moveForward"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnleft"), mInputResponses["rotateYPos"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright"), mInputResponses["rotateYNeg"]);
 
-        mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand", 1), mInputResponses["webCommand"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
+
+        mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
     }
 
     ~MouseHandler() {

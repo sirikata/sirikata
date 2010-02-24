@@ -190,7 +190,7 @@ InputResponse::InputEventDescriptorList SimpleInputResponse::getInputEvents(cons
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_PRESSED, descriptor.keyModifiers()));
     }
     else if (descriptor.isWeb()) {
-        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), descriptor.webArgCount()));
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName()));
     }
 
     return result;
@@ -237,7 +237,7 @@ InputResponse::InputEventDescriptorList FloatToggleInputResponse::getInputEvents
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_RELEASED, descriptor.keyModifiers()));
     }
     if (descriptor.isWeb()) {
-        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), 1));
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName()));
     }
 
     return result;
@@ -316,11 +316,42 @@ InputResponse::InputEventDescriptorList StringInputResponse::getInputEvents(cons
     InputEventDescriptorList result;
 
     if (descriptor.isWeb()) {
-        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), descriptor.webArgCount()));
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName()));
     }
 
     return result;
 }
+
+
+
+StringMapInputResponse::StringMapInputResponse(ResponseCallback cb)
+ : mCallback(cb)
+{
+}
+
+void StringMapInputResponse::invoke(WebViewEventPtr& wvevt) {
+    const std::vector<String>& args = wvevt->args;
+    StringMap data;
+    if (args.size() % 2 != 0) {
+        SILOG(input,error,"Odd number of string arguments to StringMapInputResponse.");
+        return;
+    }
+
+    for(uint32 idx = 0; idx < args.size(); idx += 2)
+        data[args[idx]] = args[idx+1];
+    mCallback(data);
+}
+
+InputResponse::InputEventDescriptorList StringMapInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isWeb()) {
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName()));
+    }
+
+    return result;
+}
+
 
 } // namespace Graphics
 } // namespace Sirikata

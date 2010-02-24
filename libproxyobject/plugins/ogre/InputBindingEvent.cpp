@@ -66,12 +66,11 @@ InputBindingEvent InputBindingEvent::Axis(AxisIndex index) {
     return result;
 }
 
-InputBindingEvent InputBindingEvent::Web(const String& wvname, const String& name, uint32 argcount) {
+InputBindingEvent InputBindingEvent::Web(const String& wvname, const String& name) {
     InputBindingEvent result;
     result.mTag = WebEventTag;
     result.mDescriptor.web.wvname = new String(wvname);
     result.mDescriptor.web.name = new String(name);
-    result.mDescriptor.web.argcount = argcount;
     return result;
 }
 
@@ -153,10 +152,6 @@ const String& InputBindingEvent::webName() const {
     return *mDescriptor.web.name;
 }
 
-uint32 InputBindingEvent::webArgCount() const {
-    assert(isWeb());
-    return mDescriptor.web.argcount;
-}
 
 
 InputBindingEvent& InputBindingEvent::operator=(const InputBindingEvent& rhs) {

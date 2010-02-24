@@ -98,12 +98,11 @@ EventDescriptor EventDescriptor::DragAndDrop() {
     return result;
 }
 
-EventDescriptor EventDescriptor::Web(const String& wvname, const String& name, uint32 argcount) {
+EventDescriptor EventDescriptor::Web(const String& wvname, const String& name) {
     EventDescriptor result;
     result.mTag = WebEventTag;
     result.mDescriptor.web.wvname = new String(wvname);
     result.mDescriptor.web.name = new String(name);
-    result.mDescriptor.web.argcount = argcount;
     return result;
 }
 
@@ -202,10 +201,6 @@ const String& EventDescriptor::webName() const {
     return *mDescriptor.web.name;
 }
 
-uint32 EventDescriptor::webArgCount() const {
-    assert(isWeb());
-    return mDescriptor.web.argcount;
-}
 
 
 bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
@@ -252,10 +247,7 @@ bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
     if (mTag == WebEventTag) {
         return mDescriptor.web.wvname->compare(*rhs.mDescriptor.web.wvname) < 0 ||
             (mDescriptor.web.wvname->compare(*rhs.mDescriptor.web.wvname) == 0 &&
-                (mDescriptor.web.name->compare(*rhs.mDescriptor.web.name) < 0 ||
-                    (mDescriptor.web.name->compare(*rhs.mDescriptor.web.name) == 0 &&
-                        mDescriptor.web.argcount < rhs.mDescriptor.web.argcount
-                    )
+                (mDescriptor.web.name->compare(*rhs.mDescriptor.web.name) < 0
                 )
             );
     }

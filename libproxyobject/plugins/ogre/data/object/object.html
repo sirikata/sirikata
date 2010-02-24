@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <script language="javascript" type="text/javascript">
+      function createObject() {
+        var script_type = document.getElementById('ScriptType').value;
+        var python_module = document.getElementById('PythonModule').value;
+        var python_class = document.getElementById('PythonClass').value;
+        var arg_map = [
+          'CreateScriptedObject',
+          'ScriptType', script_type,
+          'PythonModule', python_module,
+          'PythonClass', python_class
+        ];
+        chrome.send("event",arg_map);
+      }
+    </script>
+  </head>
+  <body>
+    <form>
+      ScriptType: <input type="text" id="ScriptType" name="ScriptType" value="monopython" /> <br />
+      Module: <input type="text" id="PythonModule" name="PythonModule" value="test" /> <br />
+      Class: <input type="text" id="PythonClass" name="PythonClass" value="exampleclass" /> <br />
+      <button type="button" onclick="createObject()">Create</button>
+    </form>
+  </body>
+</html>
