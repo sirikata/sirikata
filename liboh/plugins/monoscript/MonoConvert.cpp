@@ -56,14 +56,6 @@ void ConvertVector3(const Sirikata::Vector3d& in, CSharpVector3* out) {
     out->z = in.z;
 }
 
-SIRIKATA_PLUGIN_EXPORT_C
-void ConvertVector3CPPToCSharpAndFree(void* jarg, void* jout) {
-    Sirikata::Vector3d* arg = (Sirikata::Vector3d*)jarg;
-    CSharpVector3* out = (CSharpVector3*)jout;
-    ConvertVector3(*arg, out);
-    delete arg;
-}
-
 Sirikata::Vector3f Vector3fFromMono(CSharpVector3* in) {
     return Sirikata::Vector3f(in->x, in->y, in->z);//warns cus we should have Vector3f and Vector3d in C# land
 }
@@ -71,13 +63,6 @@ Sirikata::Vector3f Vector3fFromMono(CSharpVector3* in) {
 Sirikata::Vector3d Vector3dFromMono(CSharpVector3* in) {
     return Sirikata::Vector3d(in->x, in->y, in->z);
 }
-
-SIRIKATA_PLUGIN_EXPORT_C
-void* ConvertVector3CSharpToCPP(CSharpVector3* csharp_vec3) {
-    return (void*) new Sirikata::Vector3d( Vector3dFromMono(csharp_vec3) );
-}
-
-
 
 
 
@@ -88,24 +73,11 @@ void ConvertQuaternion(const Sirikata::Quaternion& in, CSharpQuaternion* out) {
     out->z = in.z;
 }
 
-SIRIKATA_PLUGIN_EXPORT_C
-void ConvertQuaternionCPPToCSharpAndFree(void* jarg, void* jout) {
-    Sirikata::Quaternion* arg = (Sirikata::Quaternion*)jarg;
-    CSharpQuaternion* out = (CSharpQuaternion*)jout;
-    ConvertQuaternion(*arg, out);
-    delete arg;
-}
 
 ::Sirikata::Quaternion QuaternionFromMono(CSharpQuaternion* in) {
 
     return ::Sirikata::Quaternion(in->w, in->x, in->y, in->z, ::Sirikata::Quaternion::WXYZ());
 }
-
-SIRIKATA_PLUGIN_EXPORT_C
-void* ConvertQuaternionCSharpToCPP(CSharpQuaternion* csharp_quat) {
-    return (void*) new Sirikata::Quaternion( QuaternionFromMono(csharp_quat) );
-}
-
 
 
 
@@ -115,14 +87,6 @@ void ConvertLocation(const Sirikata::Location& in, CSharpLocation* out) {
     ConvertVector3(in.getVelocity(), &out->vel);
     ConvertVector3(in.getAxisOfRotation(), &out->angVelocityAxis);
     out->angVelocityRadians=in.getAngularSpeed();
-}
-
-SIRIKATA_PLUGIN_EXPORT_C
-void ConvertLocationCPPToCSharpAndFree(void* jarg, void* jout) {
-    Sirikata::Location* arg = (Sirikata::Location*)jarg;
-    CSharpLocation* out = (CSharpLocation*)jout;
-    ConvertLocation(*arg, out);
-    delete arg;
 }
 
 Sirikata::Location LocationFromMono(CSharpLocation* in) {
@@ -135,13 +99,6 @@ Sirikata::Location LocationFromMono(CSharpLocation* in) {
         temp
     );
 }
-
-SIRIKATA_PLUGIN_EXPORT_C
-void* ConvertLocationCSharpToCPP(CSharpLocation* csharp_loc) {
-    return (void*) new Sirikata::Location( LocationFromMono(csharp_loc) );
-}
-
-
 
 
 Sirikata::Vector4f ColorFromMono(CSharpColor* in) {
@@ -245,26 +202,12 @@ void ConvertSpaceObjectReference(const Sirikata::SpaceObjectReference& in, CShar
     ConvertObjectReference(in.object(), &out->reference);
 }
 
-SIRIKATA_PLUGIN_EXPORT_C
-void ConvertSpaceObjectReferenceCPPToCSharpAndFree(void* jarg, void* jout) {
-    Sirikata::SpaceObjectReference* arg = (Sirikata::SpaceObjectReference*)jarg;
-    CSharpSpaceObjectReference* out = (CSharpSpaceObjectReference*)jout;
-    ConvertSpaceObjectReference(*arg, out);
-    delete arg;
-}
-
 Sirikata::SpaceObjectReference SpaceObjectReferenceFromMono(CSharpSpaceObjectReference* in) {
     return Sirikata::SpaceObjectReference(
         SpaceIDFromMono(&in->space),
         ObjectReferenceFromMono(&in->reference)
     );
 }
-
-SIRIKATA_PLUGIN_EXPORT_C
-void* ConvertSpaceObjectReferenceCSharpToCPP(CSharpSpaceObjectReference* csharp_sor) {
-    return (void*) new Sirikata::SpaceObjectReference( SpaceObjectReferenceFromMono(csharp_sor) );
-}
-
 
 Sirikata::Time RawTimeFromMono(Sirikata::int64 ticks) {
     return Sirikata::Time::microseconds(ticks);
@@ -296,22 +239,6 @@ CSharpTime ConvertTime(const Sirikata::Time& in) {
     return retval;
 }
 
-SIRIKATA_PLUGIN_EXPORT_C
-void ConvertDurationCPPToCSharpAndFree(void* jarg, void* jout) {
-    Sirikata::Duration* arg = (Sirikata::Duration*)jarg;
-    CSharpDuration* out = (CSharpDuration*)jout;
-    ConvertDuration(*arg, out);
-    delete arg;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C
-void ConvertTimeCPPToCSharpAndFree(void* jarg, void* jout) {
-    Sirikata::Time* arg = (Sirikata::Time*)jarg;
-    CSharpTime* out = (CSharpTime*)jout;
-    ConvertTime(*arg, out);
-    delete arg;
-}
-
 Sirikata::Duration DurationFromMono(CSharpDuration* in) {
     Sirikata::uint64 micro;
     micro=in->upperTicks;
@@ -319,11 +246,6 @@ Sirikata::Duration DurationFromMono(CSharpDuration* in) {
     micro*=65536;
     micro+=in->lowerTicks;
     return Sirikata::Duration::microseconds(micro);
-}
-
-SIRIKATA_PLUGIN_EXPORT_C
-void* ConvertDurationCSharpToCPP(CSharpDuration* csharp_duration) {
-    return (void*) new Sirikata::Duration( DurationFromMono(csharp_duration) );
 }
 
 
