@@ -52,3 +52,25 @@ class Object:
         if not space: return HostedObject.LocalTime()
         system_space = util.PythonUUIDToSystemGuid(space)
         return HostedObject.Time(system_space)
+
+    def timeout(self, dt, cb):
+        """
+        Invoke the method cb after dt time has passed.  This timeout is best
+        effort -- if the system is overloaded it may be invoked significantly
+        later than expected.  The callback is invoked only one time.  To
+        register a repeated callback see interval.
+
+        NOTE: Currently dt needs to be a C# Sirikata.Runtime.Time struct.
+        """
+        HostedObject.AsyncWait(dt, cb)
+
+    def interval(self, dt, cb):
+        """
+        Repeatedly invoke the method cb at intervals of dt. These intervals are
+        best effort -- if the system is overloaded the callback may be invoked
+        at a fraction of the rate requested.  To register a one time callback,
+        see timeout.
+
+        NOTE: Currently dt needs to be a C# Sirikata.Runtime.Time struct.
+        """
+        HostedObject.AsyncTick(dt, cb)

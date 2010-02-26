@@ -67,38 +67,32 @@ public class HostedObject {
 
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iTickPeriod(Sirikata.Runtime.TimeClass t);
+    internal static extern void iAsyncWait(ref Sirikata.Runtime.Time t, TimeoutCallback callback);
 
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iAsyncWait(TimeoutCallback callback, Sirikata.Runtime.TimeClass t);
-
-    internal static long TimeTicks(Sirikata.Runtime.Time t) {
-        return t.microseconds();
+    public static void AsyncWait(Sirikata.Runtime.Time t, TimeoutCallback callback) {
+        if (callback == null) return;
+        iAsyncWait(ref t, callback);
     }
-    public static  void SetupTickFunction(TimeoutCallback tc, Sirikata.Runtime.Time t){
 
-        long us=t.microseconds();
-        TimeoutCallback wrapped_tc=null;
-        long estLocalTime=LocalTime().microseconds()+us*2;
-        wrapped_tc=new TimeoutCallback(delegate(){
+    public static void AsyncTick(Sirikata.Runtime.Time t, TimeoutCallback tc) {
+        long us = t.microseconds();
+        TimeoutCallback wrapped_tc = null;
+        Sirikata.Runtime.Time next_time = LocalTime() + t;
+        wrapped_tc = new TimeoutCallback(
+            delegate() {
                 try {
                     tc();
-                }finally {
-                    long delta=estLocalTime-LocalTime().microseconds();
-                    estLocalTime+=us;
-                    if (delta>0) {
-                        iAsyncWait(wrapped_tc,new TimeClass((ulong)delta));
-                    }else {
-                        iAsyncWait(wrapped_tc,new TimeClass());
-                    }
+                } finally {
+                    next_time = next_time + t;
+                    Sirikata.Runtime.Time cur_time = LocalTime();
+                    while(next_time < cur_time)
+                        next_time = next_time + t;
+                    Sirikata.Runtime.Time delta = next_time - cur_time;
+                    iAsyncWait(ref delta, wrapped_tc);
                 }
-            });
-        iAsyncWait(wrapped_tc,t.toClass());
-    }
-    public static bool AsyncWait(TimeoutCallback callback, Sirikata.Runtime.Time t) {
-        if (callback==null) return false;
-        iAsyncWait(callback,t.toClass());
-        return true;
+            }
+        );
+        iAsyncWait(ref t, wrapped_tc);
     }
 
 

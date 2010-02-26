@@ -17,20 +17,20 @@ DEBUG_OUTPUT=False
 class exampleclass(sirikata.object.Object):
     def __init__(self):
         self.val=0
-        HostedObject.SetupTickFunction(self.tick,Sirikata.Runtime.Time(2000000))
+        self.interval(Sirikata.Runtime.Time(2000000), self.handleTick)
     def func(self,otherval):
         self.val+=otherval
         print self.val
         return self.val;
     def dailyPrint(self):
         print "TIMEOUT"
-        HostedObject.AsyncWait(self.dailyPrint,Sirikata.Runtime.Time(8000000));
+        self.timeout(Sirikata.Runtime.Time(8000000), self.dailyPrint);
     def reallyProcessRPC(self,serialheader,name,serialarg):
         print "Got an RPC named",name
         header = pbHead.Header()
         header.ParseFromString(util.fromByteArray(serialheader))
         if name == "RetObj":
-            HostedObject.AsyncWait(self.dailyPrint,Sirikata.Runtime.Time(8000000));
+            self.timeout(Sirikata.Runtime.Time(8000000), self.dailyPrint);
             retobj = pbSiri.RetObj()
             #print repr(util.fromByteArray(serialarg))
             try:
@@ -144,5 +144,5 @@ class exampleclass(sirikata.object.Object):
 
     def processMessage(self,header,body):
         print "Got a message"
-    def tick(self):
+    def handleTick(self):
         print "tick";
