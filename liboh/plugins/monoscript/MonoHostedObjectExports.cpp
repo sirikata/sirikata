@@ -18,25 +18,33 @@
 
 using namespace Sirikata;
 using namespace Mono;
-static MonoObject* Mono_Context_CurrentUUID() {
+
+// Internal unique identifier of object
+static void Mono_HostedObject_iInternalID(Mono::CSharpUUID* mono_result) {
     UUID uuid = MonoContext::getSingleton().getUUID();
-    Mono::Object obj = MonoContext::getSingleton().getDomain().UUID(uuid);
-    return obj.object();
+    Mono::ConvertUUID(uuid, mono_result);
+}
+
+// ObjectReference in a Space
+static void Mono_HostedObject_iObjectReference(Mono::CSharpUUID* mono_space, Mono::CSharpUUID* mono_result) {
+    SpaceID space( Mono::UUIDFromMono(mono_space) );
+    HostedObjectPtr vwobj = MonoContext::getSingleton().getVWObject();
+    if (!vwobj) {
+        Mono::ConvertUUID(UUID::null(), mono_result);
+        return;
+    }
+
+    ProxyObjectPtr proxy = vwobj->getProxy(space);
+    if (!proxy) {
+        Mono::ConvertUUID(UUID::null(), mono_result);
+        return;
+    }
+
+    ObjectReference objref = proxy->getObjectReference().object();
+    Mono::ConvertUUID(objref.getAsUUID(), mono_result);
 }
 
 
-
-/*
-static MonoObject* Mono_Context_CurrentObject() {
-    Mono::Object obj =  Mono::Domain::root().UUID(MonoContext::getSingleton().getVWObject());
-    return obj.object();
-}
-
-static MonoObject* Mono_Context_CallFunction(MonoObject*callback) {
-    Mono::Object obj =  Mono::Domain::root().UUID(MonoContext::getSingleton().getVWObject());
-    return obj.object();
-}
-*/
 static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObject>&weak_ho,
                                               const Mono::Domain &domain,
                                               const Mono::Delegate &callback,
@@ -223,7 +231,9 @@ namespace Sirikata {
 
 void
 InitHostedObjectExports () {
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::GetUUID", (void*)Mono_Context_CurrentUUID);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iInternalID", (void*)Mono_HostedObject_iInternalID);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iObjectReference", (void*)Mono_HostedObject_iObjectReference);
+
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_Context_SendMessage);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunction", (void*)Mono_Context_CallFunction);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunctionWithTimeout", (void*)Mono_Context_CallFunction);

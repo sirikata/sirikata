@@ -10,9 +10,11 @@ import Sirikata.Runtime
 import System
 import util
 
+import sirikata.object
+
 DEBUG_OUTPUT=False
 
-class exampleclass:
+class exampleclass(sirikata.object.Object):
     def __init__(self):
         self.val=0
         HostedObject.SetupTickFunction(self.tick,Sirikata.Runtime.Time(2000000))

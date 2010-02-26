@@ -37,6 +37,13 @@ def tupleFromUUID(u):
 def tupleToSystemGuid(t):
     return Guid( str(tupleToUUID(t)) )
 
+def PythonUUIDToSystemGuid(t):
+    return Guid(str(t))
+
+def SystemGuidToPythonUUID(t):
+    return uuid.UUID(str(t))
+
+
 #Callback is of the format
 #def callback(persistenceReadInstance, lastMessageHeader, persistenceError)
 

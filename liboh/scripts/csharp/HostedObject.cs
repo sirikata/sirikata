@@ -6,10 +6,34 @@ namespace Sirikata.Runtime {
 public delegate bool FunctionReturnCallback(byte[] header,byte[] body);
 public delegate void TimeoutCallback();
 
-public class HostedObject{
+/** HostedObject bridges the C++/.NET gap. The public interface should be
+ *  stable, but is a relatively thin wrapper around the internal interface.  The
+ *  internal methods which actually cross the barrier *MUST* be marked as
+ *  internal so the C++ implementation can change as needed.
+ */
+public class HostedObject {
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public static extern Guid GetUUID();
+    internal static extern void iInternalID(out Guid result);
+
+    /** Get this object's internal UUID. */
+    public static Guid InternalID() {
+        Guid result = new Guid();
+        iInternalID(out result);
+        return result;
+    }
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    internal static extern void iObjectReference(ref Guid space, out Guid result);
+
+    /** Get this object's reference within the given space.  If the object isn't
+     *  connected to the space, returns a null Guid.
+     */
+    public static Guid ObjectReference(Guid space) {
+        Guid result = new Guid();
+        iObjectReference(ref space, out result);
+        return result;
+    }
 
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
