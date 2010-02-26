@@ -266,28 +266,9 @@ void* ConvertSpaceObjectReferenceCSharpToCPP(CSharpSpaceObjectReference* csharp_
 }
 
 
-
-/*
-SIRIKATA_PLUGIN_EXPORT_C
-Sirikata::int64 ConvertTimeCPPToCSharpAndFree(void* jarg) {
-    Sirikata::Time* arg = (Sirikata::Time*)jarg;
-    Sirikata::int64 ticks = ConvertTime(*arg);
-    delete arg;
-    return ticks;
-    }*/
-/*
-
-SIRIKATA_PLUGIN_EXPORT_C
-void* ConvertTimeCSharpToCPP(Sirikata::int64 csharp_time) {
-    return (void*) new Sirikata::Time( Time(csharp_time) );
-}
-*/
-
 Sirikata::Time RawTimeFromMono(Sirikata::int64 ticks) {
     return Sirikata::Time::microseconds(ticks);
 }
-
-
 
 void ConvertDuration(const Sirikata::Duration& in, CSharpDuration* out) {
     Sirikata::uint64 micro=in.toMicroseconds();
@@ -298,7 +279,8 @@ void ConvertDuration(const Sirikata::Duration& in, CSharpDuration* out) {
     out->lowerTicks = lowerlower+65536*upperlower;
     out->upperTicks = (Sirikata::uint32)micro;
 }
-void ConvertTime(const Sirikata::Time& in, CSharpDuration* out) {
+
+void ConvertTime(const Sirikata::Time& in, CSharpTime* out) {
     Sirikata::uint64 micro=in.raw();
     Sirikata::uint32 lowerlower=micro%65536;
     Sirikata::uint32 upperlower=micro/65536%65536;
@@ -307,8 +289,9 @@ void ConvertTime(const Sirikata::Time& in, CSharpDuration* out) {
     out->lowerTicks = lowerlower+65536*upperlower;
     out->upperTicks = (Sirikata::uint32)micro;
 }
-CSharpDuration ConvertTime(const Sirikata::Time& in) {
-    CSharpDuration retval;
+
+CSharpTime ConvertTime(const Sirikata::Time& in) {
+    CSharpTime retval;
     ConvertTime(in,&retval);
     return retval;
 }
@@ -320,10 +303,11 @@ void ConvertDurationCPPToCSharpAndFree(void* jarg, void* jout) {
     ConvertDuration(*arg, out);
     delete arg;
 }
+
 SIRIKATA_PLUGIN_EXPORT_C
 void ConvertTimeCPPToCSharpAndFree(void* jarg, void* jout) {
     Sirikata::Time* arg = (Sirikata::Time*)jarg;
-    CSharpDuration* out = (CSharpDuration*)jout;
+    CSharpTime* out = (CSharpTime*)jout;
     ConvertTime(*arg, out);
     delete arg;
 }

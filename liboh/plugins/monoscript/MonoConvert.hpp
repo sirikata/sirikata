@@ -89,6 +89,11 @@ struct CSharpDuration {
     Sirikata::int32 upperTicks;
 };
 
+struct CSharpTime {
+    Sirikata::int32 lowerTicks;
+    Sirikata::int32 upperTicks;
+};
+
 
 Sirikata::Vector3f Vector3fFromMono(CSharpVector3* in);
 Sirikata::Vector3d Vector3dFromMono(CSharpVector3* in);
@@ -102,7 +107,7 @@ Sirikata::ObjectReference ObjectReferenceFromMono(CSharpObjectReference* in);
 Sirikata::SpaceObjectReference SpaceObjectReferenceFromMono(CSharpSpaceObjectReference* in);
 Sirikata::Time RawTimeFromMono(Sirikata::int64 ticks);
 Sirikata::Duration DurationFromMono(CSharpDuration* in);
-Sirikata::Time TimeFromMono(CSharpDuration* in);
+Sirikata::Time TimeFromMono(CSharpTime* in);
 
 void ConvertVector3(const Sirikata::Vector3f& in, CSharpVector3* out);
 void ConvertVector3(const Sirikata::Vector3d& in, CSharpVector3* out);
@@ -111,9 +116,9 @@ void ConvertLocation(const Sirikata::Location& in, CSharpLocation* out);
 void ConvertColor(const Sirikata::Vector4f& in, CSharpColor* out);
 void ConvertUUID(const Sirikata::UUID& in, CSharpUUID* out);
 void ConvertSpaceObjectReference(const Sirikata::SpaceObjectReference& in, CSharpSpaceObjectReference* out);
-CSharpDuration ConvertTime(const Sirikata::Time& in);
+CSharpTime ConvertTime(const Sirikata::Time& in);
 void ConvertDuration(const Sirikata::Duration& in, CSharpDuration* out);
-void ConvertTime(const Sirikata::Duration& in, CSharpDuration* out);
+void ConvertTime(const Sirikata::Time& in, CSharpTime* out);
 
 } // namespace Mono
 

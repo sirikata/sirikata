@@ -48,17 +48,26 @@ public class HostedObject {
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iTickPeriod(Sirikata.Runtime.TimeClass t);
 
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iGetTime(Guid spaceid,  Sirikata.Runtime.TimeClass retval);
+
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iGetTimeByteArray(byte[] spaceid,  Sirikata.Runtime.TimeClass retval);
+    internal static extern void iLocalTime(out Sirikata.Runtime.Time retval);
+
+    public static Sirikata.Runtime.Time LocalTime() {
+        Sirikata.Runtime.Time retval = new Sirikata.Runtime.Time();
+        iLocalTime(out retval);
+        return retval;
+    }
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iGetTimeString(string spaceid,  Sirikata.Runtime.TimeClass retval);
+    internal static extern void iTime(ref Guid spaceid, out Sirikata.Runtime.Time retval);
 
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iGetLocalTime( Sirikata.Runtime.TimeClass retval);
+    public static Sirikata.Runtime.Time Time(Guid spaceid) {
+        Sirikata.Runtime.Time retval = new Sirikata.Runtime.Time();
+        iTime(ref spaceid, out retval);
+        return retval;
+    }
+
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iAsyncWait(TimeoutCallback callback, Sirikata.Runtime.TimeClass t);
@@ -70,12 +79,12 @@ public class HostedObject {
 
         long us=t.microseconds();
         TimeoutCallback wrapped_tc=null;
-        long estLocalTime=GetLocalTime().microseconds()+us*2;
+        long estLocalTime=LocalTime().microseconds()+us*2;
         wrapped_tc=new TimeoutCallback(delegate(){
                 try {
                     tc();
                 }finally {
-                    long delta=estLocalTime-GetLocalTime().microseconds();
+                    long delta=estLocalTime-LocalTime().microseconds();
                     estLocalTime+=us;
                     if (delta>0) {
                         iAsyncWait(wrapped_tc,new TimeClass((ulong)delta));
@@ -106,38 +115,6 @@ public class HostedObject {
             return false;
         return iSendMessage(ref dest_space, ref dest_obj, dest_port, payload);
     }
-    public static Sirikata.Runtime.Time GetTime(Guid spaceid){
-        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
-        iGetTime(spaceid,retval);
-        return new Sirikata.Runtime.Time(retval);
-    }
-    public static Sirikata.Runtime.Time GetLocalTime() {
-        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
-        iGetLocalTime(retval);
-        return new Sirikata.Runtime.Time(retval);
-    }
-    public static Sirikata.Runtime.Time GetTimeFromByteArraySpace(byte[] spaceid){
-        if (spaceid==null) {
-            return GetLocalTime();
-        }
-/*
-        byte[] newArray=new byte[16];
-        for (int i=0;i<16;++i) {
-            newArray[i]=(System.Byte)spaceid[i];
-        }
-*/
-        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
-        iGetTimeByteArray(spaceid,retval);
-        return new Sirikata.Runtime.Time(retval);
-        //return GetLocalTime();
-    }
-    public static Sirikata.Runtime.Time GetTimeFromStringSpace(string spaceid){
-        if (spaceid==null) {
-            return GetLocalTime();
-        }
-        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
-        iGetTimeString(spaceid,retval);
-        return new Sirikata.Runtime.Time(retval);
-    }
+
 }
 }

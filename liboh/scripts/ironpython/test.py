@@ -133,12 +133,9 @@ class exampleclass(sirikata.object.Object):
             print "sendprox5"
             header.destination_space = util.tupleFromUUID(self.spaceid);
             print dir(HostedObject)
-            print "time locally ",HostedObject.GetLocalTime().microseconds();
+            print "time locally ", self.time().microseconds();
 
-            from System import Array, Byte
-            arry=Array[Byte](tuple(Byte(c) for c in util.tupleFromUUID(self.spaceid)))
-            print "time on spaceA ",HostedObject.GetTimeFromByteArraySpace(arry).microseconds()
-            #print "time on spaceB ",HostedObject.GetTime(self.spaceid).microseconds()
+            print "time on spaceA ", self.time(self.spaceid).microseconds()
             bodystr = body.SerializeToString()
             HostedObject.SendMessage(self.space_guid, System.Guid.Empty, 3, util.toByteArray(bodystr))
         except:

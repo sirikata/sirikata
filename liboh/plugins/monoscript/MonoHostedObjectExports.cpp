@@ -45,6 +45,18 @@ static void Mono_HostedObject_iObjectReference(Mono::CSharpUUID* mono_space, Mon
 }
 
 
+static void Mono_HostedObject_iLocalTime(Mono::CSharpTime* mono_result) {
+    Time cur = Time::now(Sirikata::Duration::zero());
+    Mono::ConvertTime(cur, mono_result);
+}
+
+static void Mono_HostedObject_iTime(Mono::CSharpUUID* mono_space, Mono::CSharpTime* mono_result) {
+    SpaceID space( Mono::UUIDFromMono(mono_space) );
+    Time cur = SpaceTimeOffsetManager::getSingleton().now(space);
+    Mono::ConvertTime(cur, mono_result);
+}
+
+
 static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObject>&weak_ho,
                                               const Mono::Domain &domain,
                                               const Mono::Delegate &callback,
@@ -178,55 +190,6 @@ static void Mono_Context_TickDelay(MonoObject*duration) {
     }
 }
 
-void Mono_Context_setTime(MonoObject *timeRetval, const Time& cur) {
-    uint64 curRaw=cur.raw();
-    Mono::Object retval(timeRetval);
-    uint32 curLowerLower=curRaw%65536;
-    uint32 curLowerUpper=(curRaw/65536)%65536;
-    uint32 curLower=curLowerLower+curLowerUpper*65536;
-    curRaw/=65536;
-    curRaw/=65536;
-    uint32 curUpper=curRaw;
-    retval.send("setLowerUpper",
-                MonoContext::getSingleton().getDomain().UInt32(curLower),
-                MonoContext::getSingleton().getDomain().UInt32(curUpper));
-}
-static void Mono_Context_GetTime(MonoObject*space_id,MonoObject *timeRetval) {
-    SpaceID sid=SpaceID(Mono::Object(space_id).unboxUUID());
-    Time cur=SpaceTimeOffsetManager::getSingleton().now(sid);
-    Mono_Context_setTime(timeRetval,cur);
-}
-
-
-static void Mono_Context_GetLocalTime(MonoObject *timeRetval) {
-    Time cur=Time::now(Sirikata::Duration::zero());
-    //SILOG(monoscript,warning,"Time should be "<<cur.raw());
-    Mono_Context_setTime(timeRetval,cur);
-}
-static void Mono_Context_GetTimeByteArray(MonoObject*space_id,MonoObject *timeRetval) {
-    MemoryBuffer buf;
-    Mono::Array(space_id).unboxInPlaceByteArray(buf);
-    if (buf.size()==16) {
-        SpaceID sid=SpaceID(*Sirikata::Array<unsigned char, 16,true>().memcpy(&buf[0],buf.size()));
-        Time cur= SpaceTimeOffsetManager::getSingleton().now(sid);
-        //SILOG(monoscript,warning,"Time should be "<<cur.raw());
-        Mono_Context_setTime(timeRetval,cur);
-    }else {
-         Mono_Context_GetLocalTime(timeRetval);
-    }
-}
-
-static void Mono_Context_GetTimeString(MonoObject*space_id, MonoObject* timeRetval) {
-    std::string ss=Mono::Object(space_id).unboxString();
-    try {
-        SpaceID sid=SpaceID(UUID(ss,UUID::HumanReadable()));
-        Time cur = SpaceTimeOffsetManager::getSingleton().now(sid);
-        Mono_Context_setTime(timeRetval,cur);
-    }catch (std::invalid_argument&){
-         Mono_Context_GetLocalTime(timeRetval);
-    }
-}
-
 namespace Sirikata {
 
 void
@@ -234,14 +197,15 @@ InitHostedObjectExports () {
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iInternalID", (void*)Mono_HostedObject_iInternalID);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iObjectReference", (void*)Mono_HostedObject_iObjectReference);
 
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTime", (void*)Mono_HostedObject_iTime);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iLocalTime", (void*)Mono_HostedObject_iLocalTime);
+
+
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_Context_SendMessage);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunction", (void*)Mono_Context_CallFunction);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunctionWithTimeout", (void*)Mono_Context_CallFunction);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iAsyncWait", (void*)Mono_Context_AsyncWait);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTickPeriod", (void*)Mono_Context_TickDelay);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iGetTime", (void*)Mono_Context_GetTime);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iGetTimeByteArray", (void*)Mono_Context_GetTimeByteArray);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iGetTimeString", (void*)Mono_Context_GetTimeString);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iGetLocalTime", (void*)Mono_Context_GetLocalTime);
 }
+
 }

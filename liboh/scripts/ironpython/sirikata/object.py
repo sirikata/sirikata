@@ -39,3 +39,16 @@ class Object:
         system_objref = HostedObject.ObjectReference(system_space)
         if system_objref == None: return None
         return util.SystemGuidToPythonUUID(system_objref)
+
+    def time(self, space=None):
+        """
+        Returns the current time.  Without the space paramter, returns the local
+        time (i.e. time with epoch at start of object host).  With the space
+        parameter, gets the current best approximation of the time of the space
+        (i.e. time with epoch at start of space).
+
+        NOTE: This currently returns a C# Sirikata.Runtime.Time struct.
+        """
+        if not space: return HostedObject.LocalTime()
+        system_space = util.PythonUUIDToSystemGuid(space)
+        return HostedObject.Time(system_space)
