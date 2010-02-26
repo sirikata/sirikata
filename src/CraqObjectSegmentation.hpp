@@ -111,8 +111,6 @@ namespace CBR
     AsyncCraqHybrid craqDhtGet;
     AsyncCraqHybrid craqDhtSet;
 
-
-
     int mAtomicTrackID;
     boost::mutex atomic_track_id_m;
     int getUniqueTrackID();
@@ -148,10 +146,10 @@ namespace CBR
     //end building for the cache
 
 
-      Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
-      Message* mFrontMigAck;
-      void handleNewMigAckMessages();
-      void trySendMigAcks();
+    Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
+    Message* mFrontMigAck;
+    void handleNewMigAckMessages();
+    void trySendMigAcks();
 
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
     void callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken);

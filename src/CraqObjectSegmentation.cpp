@@ -72,7 +72,6 @@ namespace CBR
     checkOwnTimeCount = 0;
 
     mAtomicTrackID    = 10;
-
   }
 
 
@@ -111,13 +110,12 @@ namespace CBR
 
 
     //delete retries
-    while( !mMigAckMessages.empty() ) {
+    while( !mMigAckMessages.empty() )
+    {
         Message* msg;
         mMigAckMessages.pop(msg);
         delete msg;
     }
-
-
 
 
     CONTEXT_TRACE(processOSegShutdownEvents,
@@ -128,15 +126,6 @@ namespace CBR
         numCraqLookups,
         numTimeElapsedCacheEviction,
         numMigrationNotCompleteYet);
-
-    /*
-    printf("\n\nREMAINING IN QUEUE GET:  %i     SET:  %i\n\n", (int) craqDhtGet.queueSize(),(int) craqDhtSet.queueSize());
-    fflush(stdout);
-    printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
-    fflush(stdout);
-
-    std::cout<<"\n\nCheckOwnTimeDur "<<checkOwnTimeDur<<"   checkOwnTimeCount  "<<checkOwnTimeCount<<"  avg: "<<((double)checkOwnTimeDur)/((double)checkOwnTimeCount)<<"\n\n";
-    */
   }
 
 
@@ -145,14 +134,12 @@ namespace CBR
   */
   bool CraqObjectSegmentation::checkOwn(const UUID& obj_id, float*radius)
   {
-    //    Duration beginningDur = mTimer.elapsed();
     Duration beginningDur = Time::local() - Time::epoch();
     ObjectSet::iterator where=mObjects.find(obj_id);
     if (where == mObjects.end())
     {
       //means that the object isn't hosted on this space server
 
-      //      Duration endingDur = mTimer.elapsed();
       Duration endingDur = Time::local() - Time::epoch();
 
 
@@ -163,7 +150,6 @@ namespace CBR
     }
     *radius=where->second.radius();
     //means that the object *is* hosted on this space server
-    //    Duration endingDur = mTimer.elapsed();
     Duration endingDur = Time::local() - Time::epoch();
 
 
@@ -269,7 +255,6 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
 
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id,radius);
-    //    tsrda.dur       = mTimer.elapsed();
     tsrda.dur = Time::local() - Time::epoch();
 
 
@@ -345,6 +330,7 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
     CraqEntry cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
+
         CONTEXT_TRACE(osegCacheResponse,
             cacheReturn.server(),
             obj_id);
@@ -353,7 +339,6 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
 
       Duration cacheEndDur = Time::local() - Time::epoch();
       traceToken->checkCacheLocalEnd = cacheEndDur.toMicroseconds();
-      //      mContext->trace()->osegCumulativeResponse(mContext->simTime(), traceToken);
       delete traceToken;
       return cacheReturn;
     }
@@ -369,7 +354,8 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
 
 
 
-
+  
+  //this call actually wraps a call that performs the craq lookup
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken)
   {
     if (mReceivedStopRequest)
@@ -403,7 +389,6 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
-      //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
       CONTEXT_TRACE(objectSegmentationCraqLookupRequest,
           obj_id,
@@ -412,7 +397,6 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
       ++numLookingUpDebug;
 
       //puts object in transit or lookup.
-      //Duration timerDur = mTimer.elapsed();
       Duration timerDur =  Time::local() - Time::epoch();
 
       TransLookup tmpTransLookup;
@@ -476,8 +460,10 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       receivingObjects_m.unlock();
 
       TrackedSetResultsData tsrd;
+
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id, radius, idServerAckTo);
       //      tsrd.dur       = mTimer.elapsed();
+
       tsrd.dur =  Time::local() - Time::epoch();
 
       int trackID = getUniqueTrackID();
@@ -524,7 +510,6 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = new_server_id;
 
-    //    Duration tmpDurer= mTimer.elapsed();
     Duration tmpDurer = Time::local() - Time::epoch();
 
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
@@ -903,7 +888,6 @@ void CraqObjectSegmentation::trySendMigAcks() {
       removeFromReceivingObjects(obj_id);
 
       //log event
-      //      Duration procTrackedSetRes = mTimer.elapsed();
       Duration procTrackedSetRes = Time::local() - Time::epoch();
 
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
