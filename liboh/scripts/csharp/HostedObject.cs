@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 namespace Sirikata.Runtime {
 
 
-public delegate bool FunctionReturnCallback(byte[] header,byte[] body);
 public delegate void TimeoutCallback();
 
 /** HostedObject bridges the C++/.NET gap. The public interface should be
@@ -12,6 +11,8 @@ public delegate void TimeoutCallback();
  *  internal so the C++ implementation can change as needed.
  */
 public class HostedObject {
+
+    // ID Related Functions
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iInternalID(out Guid result);
@@ -36,23 +37,15 @@ public class HostedObject {
     }
 
 
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern bool iSendMessage(ref Guid dest_space, ref Guid dest_obj, uint dest_port, byte[] payload);
 
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern bool iCallFunction(byte[]message,FunctionReturnCallback callback);
-
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern bool iCallFunctionWithTimeout(byte[]message,FunctionReturnCallback callback, Sirikata.Runtime.TimeClass t);
-
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iTickPeriod(Sirikata.Runtime.TimeClass t);
-
-
+    // Time/Timer Related Functions
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iLocalTime(out Sirikata.Runtime.Time retval);
 
+    /** Get the current local time, i.e. the current time with epoch equal to
+     *  the starting time of this object host.
+     */
     public static Sirikata.Runtime.Time LocalTime() {
         Sirikata.Runtime.Time retval = new Sirikata.Runtime.Time();
         iLocalTime(out retval);
@@ -62,12 +55,19 @@ public class HostedObject {
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iTime(ref Guid spaceid, out Sirikata.Runtime.Time retval);
 
+    /** Get the current time in the specified space, i.e. the current time with
+     *  epoch equal to the starting time of the object host.  This is only an
+     *  approximation and may not be monotonic due to resynchronization.
+     */
     public static Sirikata.Runtime.Time Time(Guid spaceid) {
         Sirikata.Runtime.Time retval = new Sirikata.Runtime.Time();
         iTime(ref spaceid, out retval);
         return retval;
     }
 
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    internal static extern void iTickPeriod(Sirikata.Runtime.TimeClass t);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iAsyncWait(TimeoutCallback callback, Sirikata.Runtime.TimeClass t);
@@ -100,16 +100,20 @@ public class HostedObject {
         iAsyncWait(callback,t.toClass());
         return true;
     }
-    public static bool CallFunctionWithTimeout(byte[]message,FunctionReturnCallback callback, Sirikata.Runtime.Time t) {
-        if (message==null||callback==null||message.Length==0)
-            return false;
-        return iCallFunctionWithTimeout(message,callback,t.toClass());
-    }
-    public static bool CallFunction(byte[]message,FunctionReturnCallback callback) {
-        if (message==null||callback==null||message.Length==0)
-            return false;
-        return iCallFunction(message,callback);
-    }
+
+
+    // Messaging Related Functions
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    internal static extern bool iSendMessage(ref Guid dest_space, ref Guid dest_obj, uint dest_port, byte[] payload);
+
+    /** Send a message from this object.
+     *  \param dest_space destination space
+     *  \param dest_obj destination object
+     *  \param dest_port destination ODP port
+     *  \param payload the contents of the message
+     *  \returns true if message was accepted, false if there wasn't queue space available
+     */
     public static bool SendMessage(Guid dest_space, Guid dest_obj, uint dest_port, byte[] payload) {
         if (payload == null || payload.Length == 0)
             return false;

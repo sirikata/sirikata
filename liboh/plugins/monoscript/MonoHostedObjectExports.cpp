@@ -56,69 +56,6 @@ static void Mono_HostedObject_iTime(Mono::CSharpUUID* mono_space, Mono::CSharpTi
     Mono::ConvertTime(cur, mono_result);
 }
 
-
-static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObject>&weak_ho,
-                                              const Mono::Domain &domain,
-                                              const Mono::Delegate &callback,
-                                              SentMessage*sentMessage,
-                                              const RoutableMessageHeader&responseHeader,
-                                              MemoryReference responseBody) {
-    std::tr1::shared_ptr<HostedObject>ho(weak_ho);
-    bool keepquery = false;
-    if (ho) {
-        MonoContext::getSingleton().push(MonoContextData(domain, ho));
-        String header;
-        responseHeader.SerializeToString(&header);
-        try {
-            Object ret = callback.invoke(MonoContext::getSingleton().getDomain().ByteArray(header.data(),
-                                                                              header.size()),
-                            MonoContext::getSingleton().getDomain().ByteArray(responseBody.data(),
-                                                                              responseBody.size()));
-            if (!ret.null()) {
-                keepquery = ret.unboxBoolean();
-            }
-        }catch (Mono::Exception&e) {
-            SILOG(mono,debug,"Callback raised exception: "<<e);
-            keepquery = false;
-        }
-        MonoContext::getSingleton().pop();
-    }
-    if (!keepquery) {
-        delete sentMessage;
-    }
-}
-static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoObject*callback, const Sirikata::Duration&duration){
-    std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
-    MemoryBuffer buf;
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-    using std::tr1::placeholders::_3;
-    Mono::Array(message).unboxInPlaceByteArray(buf);
-    if (ho&&!buf.empty()) {
-        RoutableMessageHeader hdr;
-        MemoryReference body=hdr.ParseFromArray(&buf[0],buf.size());
-        SpaceID dest_space = hdr.destination_space();
-        SentMessage*sm=hdr.has_id()
-            ? new SentMessage(hdr.id(),ho->getTracker(dest_space),std::tr1::bind(&Mono_Context_CallFunctionCallback,
-                                                                       ho->getWeakPtr(),
-                                                                       MonoContext::getSingleton().getDomain(),
-                                                                       Mono::Delegate(Mono::Object(callback)),
-                                       _1,_2,_3))
-            :new SentMessage(ho->getTracker(dest_space),std::tr1::bind(&Mono_Context_CallFunctionCallback,
-                                                             ho->getWeakPtr(),
-                                                             MonoContext::getSingleton().getDomain(),
-                                                             Mono::Delegate(Mono::Object(callback)),
-                                                             _1,_2,_3));
-
-        sm->setTimeout(duration);
-        sm->header()=hdr;
-        sm->send(body);
-    }else {
-        return MonoContext::getSingleton().getDomain().Boolean(false).object();
-    }
-    return MonoContext::getSingleton().getDomain().Boolean(true).object();
-}
-
 class ContextPush {
     MonoContextData mMonoContextData;
 public:
@@ -150,13 +87,7 @@ static void Mono_Context_AsyncWait(MonoObject*callback, MonoObject*duration){
 
 
 
-static MonoObject* Mono_Context_CallFunctionWithTimeout(MonoObject *message, MonoObject*callback, MonoObject*duration){
-    return InternalMono_Context_CallFunction(message,callback,Mono::Object(duration).unboxDuration());
-}
-static MonoObject* Mono_Context_CallFunction(MonoObject *message, MonoObject*callback){
-    return InternalMono_Context_CallFunction(message,callback,Sirikata::Duration::seconds(4.0));
-}
-static MonoObject* Mono_Context_SendMessage(Mono::CSharpSpaceID* mono_dest_space, Mono::CSharpObjectReference* mono_dest_obj, uint32 mono_dest_port, MonoObject* mono_payload){
+static MonoObject* Mono_HostedObject_SendMessage(Mono::CSharpSpaceID* mono_dest_space, Mono::CSharpObjectReference* mono_dest_obj, uint32 mono_dest_port, MonoObject* mono_payload){
     std::tr1::shared_ptr<HostedObject> ho = MonoContext::getSingleton().getVWObject();
     MemoryBuffer payload;
 
@@ -181,6 +112,7 @@ static MonoObject* Mono_Context_SendMessage(Mono::CSharpSpaceID* mono_dest_space
     return MonoContext::getSingleton().getDomain().Boolean(sent_success).object();
 }
 
+
 static void Mono_Context_TickDelay(MonoObject*duration) {
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
     if (ho) {
@@ -192,20 +124,18 @@ static void Mono_Context_TickDelay(MonoObject*duration) {
 
 namespace Sirikata {
 
-void
-InitHostedObjectExports () {
+void InitHostedObjectExports () {
+    // ID Functions
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iInternalID", (void*)Mono_HostedObject_iInternalID);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iObjectReference", (void*)Mono_HostedObject_iObjectReference);
-
+    // Time Functions
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTime", (void*)Mono_HostedObject_iTime);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iLocalTime", (void*)Mono_HostedObject_iLocalTime);
-
-
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_Context_SendMessage);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunction", (void*)Mono_Context_CallFunction);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunctionWithTimeout", (void*)Mono_Context_CallFunction);
+    // Timer Functions
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iAsyncWait", (void*)Mono_Context_AsyncWait);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTickPeriod", (void*)Mono_Context_TickDelay);
+    // Messaging Functions
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_HostedObject_SendMessage);
 }
 
 }
