@@ -103,6 +103,9 @@ def PacketLatencyByLoad(cc, cs, rates, local_messages=True, remote_messages=True
         [get_stage_samples_filename(x) for x in rates],
         [get_stage_samples_filename(x) for x in rates]
         )
+    samples_files = [x for x in samples_files
+                     if os.path.exists(x[0]) and
+                     os.path.exists(x[1])]
     graph_stages_raw_samples(samples_files)
 
 
