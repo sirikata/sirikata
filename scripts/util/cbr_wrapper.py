@@ -9,11 +9,16 @@ import stdio
 CBR_WRAPPER = "scripts/util/cbr_wrapper.sh"
 
 def FindRoot(start):
-    for offset in ['.', '..', '../..', '../../..']:
-        offset_dir = start + '/' + offset
-        test_file = offset_dir + '/install-deps.sh'
-        if (os.path.isfile(test_file)):
-            return offset_dir
+    search_offsets = ['.', '..', '../..', '../../..']
+    # Search directories: locals preferred first
+    search_dirs = [os.getcwd()]
+    # Otherwise search system dirs
+    search_dirs.extend(sys.path)
+    for sdir in search_dirs:
+        for soffset in search_offsets:
+            test_file = os.path.join(sdir, soffset, 'install-deps.sh')
+            if (os.path.isfile(test_file)):
+                return os.path.join(sdir, soffset)
     return None
 
 def RunCBR(args, io=None, **kwargs):
@@ -23,7 +28,7 @@ def RunCBR(args, io=None, **kwargs):
         print "RunCBR: Couldn't find root directory from current directory."
         return
 
-    cmd = [root_dir + '/' + CBR_WRAPPER]
+    cmd = [os.path.join(root_dir, CBR_WRAPPER)]
     cmd.extend(args)
 
     # Setup our IO, using default IO but overriding with parameters
