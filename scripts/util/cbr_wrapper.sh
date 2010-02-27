@@ -14,14 +14,21 @@ APPNAME=cbr
 GDB=/usr/bin/gdb
 
 APPDIR=""
+script_dir=`dirname $0`
 # Search up to 3 directories higher for the app
 for reldir in . .. ../.. ../../.. ; do
     if [ -f ${reldir}/${APPOFFSET}/${APPNAME} ] ; then
         APPDIR=${reldir}/${APPOFFSET}
+        break
+    fi
+    if [ -f ${script_dir}/${reldir}/${APPOFFSET}/${APPNAME} ] ; then
+        APPDIR=${script_dir}/${reldir}/${APPOFFSET}
+        break
     fi
 done
 if [ -z "${APPDIR}" ] ; then
     echo "Coudn't find cbr binary."
+    echo "Trying to run ${0+"$@"}"
     exit 1
 fi
 
