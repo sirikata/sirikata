@@ -11,6 +11,7 @@
 
 import sys
 import subprocess
+import os.path
 
 # FIXME It would be nice to have a better way of making this script able to find
 # other modules in sibling packages
@@ -42,11 +43,13 @@ def run_trial(cluster_sim):
 def run_message_latency_analysis(cluster_sim, log_file, histogram_file, samples_file):
     cluster_sim.message_latency_analysis(log_file)
     # individual packetx(stage-stage) samples are always in stage_samples.txt
-    subprocess.call(['cp', 'stage_samples.txt', samples_file])
+    if os.path.exists('stage_samples.txt'):
+        subprocess.call(['cp', 'stage_samples.txt', samples_file])
 
     cluster_sim.object_latency_analysis()
     # object latency histogram always goes to 'distance_latency_histogram.csv'
-    subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
+    if os.path.exists('distance_latency_histogram.csv'):
+        subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
 
 def get_logfile_name(trial):
     log_file = 'packet_latency_by_load.log.' + str(trial)
