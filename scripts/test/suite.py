@@ -27,6 +27,10 @@ class TestSuite:
         self.tests.append(test)
         self.tests_by_name[test.name] = test
 
+    def clean(self):
+        starting_dir = os.getcwd();
+        self.__remove_directory(starting_dir, self.name)
+
     def run(self, name, io):
         test = self.tests_by_name[name]
         print >>io.stdout, "TEST", self.__get_name(test), "...",
@@ -62,8 +66,29 @@ class TestSuite:
         # And make sure we get out of that directory
         os.chdir(starting_dir)
 
+    def archive(self):
+        dir = self.name
+        assert( os.path.exists(dir) and os.path.isdir(dir) )
+        timestamp = datetime.datetime.now().strftime('%Y.%m.%d.%H.%M')
+        os.system('tar -c %s | bzip2 -z -9 > %s.%s.tar.bz2' % (dir, self.name, timestamp))
+
     def __get_name(self, test):
         return self.name + "::" + test.name
+
+    def __remove_directory(self, start_dir, dir_offset):
+        dir = os.path.join(start_dir, dir_offset)
+        if not os.path.exists(dir): return
+
+        assert os.path.isdir(dir)
+
+        # This is fairly dangerous, add some sanity asserts:
+        # hopefully not / or anything too close to /
+        assert (len(dir) > 10)
+        # Either path doesn't start at root or is relatively deep
+        assert (not dir.startswith('/') or dir.count('/') > 3)
+
+        os.system('rm -rf %s' % (dir))
+        assert not os.path.exists(dir)
 
     def __ensure_in_directory(self, start_dir, dir_offset):
         dir = os.path.join(start_dir, dir_offset)
@@ -94,6 +119,7 @@ if __name__ == "__main__":
 
 
     if len(sys.argv) < 2:
+        suite.clean()
         suite.run_all(util.stdio.StdIO())
     else:
         for name in sys.argv[1:]:
