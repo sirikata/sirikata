@@ -228,6 +228,36 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
         return newWebView;
 }
 
+WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
+		Berkelium::Window *newwin, Tier tier, Ogre::Viewport* viewport)
+{
+	if(activeWebViews.find(webViewName) != activeWebViews.end())
+		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
+			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
+			"WebViewManager::createWebView");
+
+	int highestZOrder = -1;
+	int zOrder = 0;
+
+	WebViewMap::iterator iter;
+	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
+		if(iter->second->overlay)
+			if(iter->second->overlay->getTier() == tier)
+				if(iter->second->overlay->getZOrder() > highestZOrder)
+					highestZOrder = iter->second->overlay->getZOrder();
+
+	if(highestZOrder != -1)
+		zOrder = highestZOrder + 1;
+
+        WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
+            viewport? viewport : defaultViewport);
+        newWebView->initializeWebView(newwin);
+	activeWebViews[webViewName] = newWebView;
+        newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
+        focusWebView(newWebView);
+        return newWebView;
+}
+
 WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
 {

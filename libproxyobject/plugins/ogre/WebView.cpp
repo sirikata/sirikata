@@ -164,14 +164,7 @@ void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& pro
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 {
 #ifdef HAVE_BERKELIUM
-    webView = Berkelium::Window::create();
-    webView->setDelegate(this);
-    //make sure that the width and height of the border do not dominate the size
-    if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
-        webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
-    } else {
-        webView->resize(0, 0);
-    }
+    initializeWebView(Berkelium::Window::create());
 #endif
 }
 
@@ -184,6 +177,12 @@ void WebView::initializeWebView(
 #ifdef HAVE_BERKELIUM
     webView = win;
     webView->setDelegate(this);
+    //make sure that the width and height of the border do not dominate the size
+    if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
+        webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
+    } else {
+        webView->resize(0, 0);
+    }
 #endif
 }
 
@@ -896,15 +895,14 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     r.mWidth = 600;
     r.mHeight = 400;
     Berkelium::Widget *wid = newwin->getWidget();
-    if (wid) {
+    if (wid && wid->getRect().mWidth > 0 && wid->getRect().mHeight > 0) {
         r = wid->getRect();
     }
-    WebView *wv = new WebView(
+    WebViewManager::getSingleton().createWebViewPopup(
         name, r.width(), r.height(),
         OverlayPosition(r.left(), r.top()),
-        overlay?(Ogre::uchar)overlay->zOrder:0, TIER_MIDDLE,
+        newwin, TIER_MIDDLE,
         overlay?overlay->viewport:WebViewManager::getSingleton().defaultViewport);
-    wv->initializeWebView(newwin);
 #endif
 }
 

@@ -135,6 +135,13 @@ public:
 	WebView* createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 		bool asyncRender = false, int maxAsyncRenderRate = 70, Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
 
+#ifdef HAVE_BERKELIUM
+	/**
+	* Creates a WebView from a given Berkelium::Window.
+	*/
+	WebView* createWebViewPopup(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
+		Berkelium::Window *newwin, Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
+#endif
 	/**
 	* Creates a WebViewMaterial. WebViewMaterials are just like WebViews except that they lack a movable overlay element.
 	* Instead, you handle the material and apply it to anything you like. Mouse input for WebViewMaterials should be
