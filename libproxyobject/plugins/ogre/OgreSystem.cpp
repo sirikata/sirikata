@@ -92,9 +92,11 @@ std::string getResourcesDir() {
         boost::filesystem::complete(path(".")),
         boost::filesystem::complete(path("..")),
         boost::filesystem::complete(path("../..")),
-        boost::filesystem::complete(path("../../.."))
+        boost::filesystem::complete(path("../../..")),
+        boost::filesystem::complete(path("../../../..")),
+        boost::filesystem::complete(path("../../../../.."))
     };
-    uint32 nsearch_offsets = 4;
+    uint32 nsearch_offsets = sizeof(search_offsets)/sizeof(*search_offsets);
 
     // FIXME there probably need to be more of these
     // The current two reflect what we'd expect for installed
@@ -104,7 +106,7 @@ std::string getResourcesDir() {
         path("share/ogre/data"),
         path("libproxyobject/plugins/ogre/data")
     };
-    uint32 nsearch_paths = 3;
+    uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
     for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
         for(uint32 spath = 0; spath < nsearch_paths; spath++) {
