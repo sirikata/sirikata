@@ -164,9 +164,6 @@ public:
     }
 
     void destroy(QueryTracker *tracker) const {
-        tracker->endForwardingMessagesTo(&parent->mSendService);
-        delete tracker;
-
         delete rpcPort;
         delete persistencePort;
 
@@ -190,6 +187,11 @@ public:
                         destroyObject(which, tracker);
                 }
             }
+        }
+
+        if (tracker) {
+            tracker->endForwardingMessagesTo(&parent->mSendService);
+            delete tracker;
         }
     }
 };
