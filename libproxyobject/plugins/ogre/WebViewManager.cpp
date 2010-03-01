@@ -228,6 +228,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
         return newWebView;
 }
 
+#ifdef HAVE_BERKELIUM
 WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 		Berkelium::Window *newwin, Tier tier, Ogre::Viewport* viewport)
 {
@@ -257,7 +258,7 @@ WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsi
         focusWebView(newWebView);
         return newWebView;
 }
-
+#endif //HAVE_BERKELIUM
 WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
 {
