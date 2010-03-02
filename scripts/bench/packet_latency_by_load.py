@@ -63,55 +63,67 @@ def get_stage_samples_filename(trial):
     log_file = 'packet_latency_samples.' + str(trial)
     return log_file
 
-# cc - ClusterConfig
-# cs - ClusterSimSettings
-# ping_rate - # of pings to try to generate, i.e. load
-# local_messages - if True, generate messages to objects connected to the same space server
-# remote_messages - if True, generate messages to objects connected to other space servers
-def run_ping_trial(cc, cs, ping_rate, local_messages=True, remote_messages=True, io=util.stdio.StdIO()):
-    cs.scenario = 'ping'
-    cs.scenario_options = ' '.join(
-        ['--num-pings-per-second=' + str(ping_rate),
-         '--allow-same-object-host=' + str(local_messages),
-         '--force-same-object-host=' + str(local_messages and not remote_messages),
-         ]
-        )
 
-    cluster_sim = ClusterSim(cc, cs, io=io)
-    run_trial(cluster_sim)
-    run_message_latency_analysis(cluster_sim,
-                                 get_logfile_name(ping_rate),
-                                 get_latencyfile_name(ping_rate),
-                                 get_stage_samples_filename(ping_rate)
-                                 )
+class PacketLatencyByLoad:
+    def __init__(self, cc, cs, local_messages=True, remote_messages=True):
+        """
+        cc - ClusterConfig
+        cs - ClusterSimSettings
+        local_messages - if True, generate messages to objects connected to the same space server
+        remote_messages - if True, generate messages to objects connected to other space servers
+        """
+        self.cc = cc
+        self.cs = cs
+        self.local_messages = local_messages
+        self.remote_messages = remote_messages
+        self._last_rate = None
+        self._all_rates = []
 
+    def _setup_cluster_sim(self, rate, io):
+        self.cs.scenario = 'ping'
+        self.cs.scenario_options = ' '.join(
+            ['--num-pings-per-second=' + str(rate),
+             '--allow-same-object-host=' + str(self.local_messages),
+             '--force-same-object-host=' + str(self.local_messages and not self.remote_messages),
+             ]
+            )
+        cluster_sim = ClusterSim(self.cc, self.cs, io=io)
+        return cluster_sim
 
-# cc - ClusterConfig
-# cs - ClusterSimSettings
-# rates - array of ping rates to test
-# local_messages - if True, generate messages to objects connected to the same space server
-# remote_messages - if True, generate messages to objects connected to other space servers
-def PacketLatencyByLoad(cc, cs, rates, local_messages=True, remote_messages=True, io=util.stdio.StdIO()):
-    for rate in rates:
-        run_ping_trial(cc, cs, rate, local_messages=local_messages, remote_messages=remote_messages, io=io)
+    def run(self, rate, io=util.stdio.StdIO()):
+        self._last_rate = rate
+        self._all_rates.append(rate)
 
-    log_files = [get_logfile_name(x) for x in rates]
-    labels = ['%s pps'%(x) for x in rates]
-    graph_message_latency(log_files, labels, 'latency_stacked_bar.pdf')
+        cluster_sim = self._setup_cluster_sim(rate, io)
+        run_trial(cluster_sim)
 
-    samples_files = zip(
-        [get_stage_samples_filename(x) for x in rates],
-        [get_stage_samples_filename(x) for x in rates]
-        )
-    samples_files = [x for x in samples_files
-                     if os.path.exists(x[0]) and
-                     os.path.exists(x[1])]
-    graph_stages_raw_samples(samples_files)
+    def analysis(self, io=util.stdio.StdIO()):
+        rate = self._last_rate
+        cluster_sim = self._setup_cluster_sim(rate, io)
+        run_message_latency_analysis(cluster_sim,
+                                     get_logfile_name(rate),
+                                     get_latencyfile_name(rate),
+                                     get_stage_samples_filename(rate)
+                                     )
+
+    def graph(self, io=util.stdio.StdIO()):
+        log_files = [get_logfile_name(x) for x in self._all_rates]
+        labels = ['%s pps'%(x) for x in self._all_rates]
+        graph_message_latency(log_files, labels, 'latency_stacked_bar.pdf')
+
+        samples_files = zip(
+            [get_stage_samples_filename(x) for x in self._all_rates],
+            [get_stage_samples_filename(x) for x in self._all_rates]
+            )
+        samples_files = [x for x in samples_files
+                         if os.path.exists(x[0]) and
+                         os.path.exists(x[1])]
+        graph_stages_raw_samples(samples_files)
 
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-    cs = ClusterSimSettings(cc, 8, (8,1), 1)
+    cs = ClusterSimSettings(cc, 4, (4,1), 1)
 
     cs.debug = False
     cs.valgrind = False
@@ -133,4 +145,8 @@ if __name__ == "__main__":
 
 
     rates = sys.argv[1:]
-    PacketLatencyByLoad(cc, cs, rates, local_messages=True, remote_messages=True)
+    plan = PacketLatencyByLoad(cc, cs, local_messages=True, remote_messages=True)
+    for rate in rates:
+        plan.run(rate)
+        plan.analysis()
+    plan.graph()

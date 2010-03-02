@@ -58,6 +58,14 @@ class ClusterSimTest(test.Test):
         if not self.space_pool:
             self.space_pool = int(self.space_layout[0]) * int(self.space_layout[1])
 
+        self._cc = cluster.sim.ClusterConfig()
+        # Generate default settings, add user specified settings
+        self._cs = cluster.sim.ClusterSimSettings(self._cc, self.space_pool, self.space_layout, self.oh_pool)
+        if self.settings:
+            for setname, value in self.settings.items():
+                setattr(self._cs, str(setname), value)
+
+
     def __collect_output_and_check(self, io, store):
         """
         Collect intermediate IO and check it for errors, returning
@@ -74,13 +82,6 @@ class ClusterSimTest(test.Test):
 
     def pre_run(self, io):
         self._intermediate_io = util.stdio.MemoryIO()
-
-        self._cc = cluster.sim.ClusterConfig()
-        # Generate default settings, add user specified settings
-        self._cs = cluster.sim.ClusterSimSettings(self._cc, self.space_pool, self.space_layout, self.oh_pool)
-        if self.settings:
-            for setname, value in self.settings.items():
-                setattr(self._cs, str(setname), value)
 
         self.pre_sim_func(self._cc, self._cs, io=self._intermediate_io)
         return self.__collect_output_and_check(io, store=True)
@@ -116,16 +117,47 @@ class ClusterSimTest(test.Test):
 
 
 class PacketLatencyByLoadTest(ClusterSimTest):
-    def __init__(self, name, rates, local_pings=True, remote_pings=True, **kwargs):
+    def __init__(self, name, rate, local_pings=True, remote_pings=True, **kwargs):
         """
         name: Name of the test
-        rates: List of ping rates to test with
+        rate: Ping rate to test with
         local_pings: if True, pings to objects on the same server are generated
         remote_pings: if True, pings to objects on remote servers are generated
         Others: see ClusterSimTest.__init__
         """
-        if 'sim_func' in kwargs:
-            ClusterSimTest.__init__(self, name, **kwargs)
+        assert type(rate) != list
+        self.rate = rate
+
+        # pre_sim_func
+        if 'pre_sim_func' in kwargs:
+            pre_sim_func = kwargs['pre_sim_func']
+            del kwargs['pre_sim_func']
         else:
-            sim_func = (lambda cc,cs,io: PacketLatencyByLoad(cc,cs,rates,local_messages=local_pings,remote_messages=remote_pings,io=io))
-            ClusterSimTest.__init__(self, name, sim_func=sim_func, **kwargs)
+            pre_sim_func = self.__pre_sim_func
+
+        # sim_func
+        if 'sim_func' in kwargs:
+            sim_func = kwargs['sim_func']
+            del kwargs['sim_func']
+        else:
+            sim_func = self.__sim_func
+
+        # post_sim_func
+        if 'post_sim_func' in kwargs:
+            post_sim_func = kwargs['post_sim_func']
+            del kwargs['post_sim_func']
+        else:
+            post_sim_func = self.__post_sim_func
+
+        ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
+        self.bench = PacketLatencyByLoad(self._cc, self._cs, local_messages=local_pings, remote_messages=remote_pings)
+
+    def __pre_sim_func(self, cc, cs, io):
+        pass
+
+    def __sim_func(self, cc, cs, io):
+        self.bench.run(self.rate, io)
+
+    def __post_sim_func(self, cc, cs, io):
+        self.bench.analysis(io)
+        self.bench.graph(io)
