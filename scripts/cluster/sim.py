@@ -202,16 +202,18 @@ class ClusterSim:
             }
         return (params, class_params)
 
-
-    def run(self):
+    def run_pre(self):
         self.generate_deployment()
 
         self.clean_local_data()
         self.clean_remote_data()
         self.generate_ip_file()
+
+    def run_main(self):
         self.run_cluster_sim()
         self.retrieve_data()
 
+    def run_analysis(self):
         self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
@@ -219,6 +221,11 @@ class ClusterSim:
 
         self.loc_latency_analysis()
         self.prox_dump_analysis()
+
+    def run(self):
+        self.run_pre()
+        self.run_main()
+        self.run_analysis()
 
     def generate_deployment(self):
         self.config.generate_deployment(self.num_servers())

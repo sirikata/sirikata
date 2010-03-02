@@ -17,19 +17,29 @@ import util.stdio
 import cluster.sim
 from bench.packet_latency_by_load import PacketLatencyByLoad
 
+def __standard_pre_sim_func__(cc, cs, io):
+    cluster_sim = cluster.sim.ClusterSim(cc, cs, io)
+    cluster_sim.run_pre()
+
 def __standard_sim_func__(cc, cs, io):
     cluster_sim = cluster.sim.ClusterSim(cc, cs, io)
-    cluster_sim.run()
+    cluster_sim.run_main()
+
+def __standard_post_sim_func__(cc, cs, io):
+    cluster_sim = cluster.sim.ClusterSim(cc, cs, io)
+    cluster_sim.run_analysis()
 
 class ClusterSimTest(test.Test):
-    def __init__(self, name, settings=None, space_pool=None, space_layout=(4,1), oh_pool=1, sim_func=__standard_sim_func__, **kwargs):
+    def __init__(self, name, settings=None, space_pool=None, space_layout=(4,1), oh_pool=1, pre_sim_func=__standard_pre_sim_func__, sim_func=__standard_sim_func__, post_sim_func=__standard_post_sim_func__, **kwargs):
         """
         name: Name of the test
         settings: A dict of settings in ClusterSimSettings to override from the defaults, e.g. { 'duration' : '100s' }
         space_pool: Number of space servers to allocate and run, if None it is set to match the number needed by space_layout
         space_layout: 2-tuple specifying 2D layout of servers
         oh_pool: Number of object hosts to allocate and run
+        pre_sim_func: Function to invoke to run the pre-simulation setup, of the form f(cluster_config, cluster_settings, io=StdIO_obj)
         sim_func: Function to invoke to run the simulation, of the form f(cluster_config, cluster_settings, io=StdIO_obj)
+        post_sim_func: Function to invoke to run the post-simulation cleanup and analysis, of the form f(cluster_config, cluster_settings, io=StdIO_obj)
         Others: see Test.__init__
         """
 
@@ -38,23 +48,45 @@ class ClusterSimTest(test.Test):
         self.space_pool = space_pool
         self.space_layout = space_layout
         self.oh_pool = oh_pool
+        self.pre_sim_func = pre_sim_func
         self.sim_func = sim_func
+        self.post_sim_func = post_sim_func
+
+        self._cc = None
+        self._cs = None
 
         if not self.space_pool:
             self.space_pool = int(self.space_layout[0]) * int(self.space_layout[1])
 
-    def run(self, io):
-        intermediate_io = util.stdio.MemoryIO()
+    def __collect_output_and_check(self, io, store):
+        """
+        Collect intermediate IO and check it for errors, returning
+        True if it has no flagged errors, False if it does.  If store
+        is true, the output will be stored to the log file.
+        """
 
-        cc = cluster.sim.ClusterConfig()
+        result = 'stdout:\n' + self._intermediate_io.stdout.getvalue() + '\nstderr:\n' + self._intermediate_io.stderr.getvalue() + '\n'
+        if store: self._store_log(result)
 
+        # now check for warnings and errors
+        failed = self._check_errors(io, result)
+        return not failed
+
+    def pre_run(self, io):
+        self._intermediate_io = util.stdio.MemoryIO()
+
+        self._cc = cluster.sim.ClusterConfig()
         # Generate default settings, add user specified settings
-        cs = cluster.sim.ClusterSimSettings(cc, self.space_pool, self.space_layout, self.oh_pool)
+        self._cs = cluster.sim.ClusterSimSettings(self._cc, self.space_pool, self.space_layout, self.oh_pool)
         if self.settings:
             for setname, value in self.settings.items():
-                setattr(cs, str(setname), value)
+                setattr(self._cs, str(setname), value)
 
-        target_func = lambda: self.sim_func(cc, cs, io=intermediate_io)
+        self.pre_sim_func(self._cc, self._cs, io=self._intermediate_io)
+        return self.__collect_output_and_check(io, store=True)
+
+    def run(self, io):
+        target_func = lambda: self.sim_func(self._cc, self._cs, io=self._intermediate_io)
         sim_result = True
         if self.time_limit:
             sim_thread = threading.Thread(target=target_func)
@@ -74,14 +106,12 @@ class ClusterSimTest(test.Test):
         else:
             target_func()
 
-        result = 'stdout:\n' + intermediate_io.stdout.getvalue() + '\nstderr:\n' + intermediate_io.stderr.getvalue() + '\n'
-        self._store_log(result)
+        return self.__collect_output_and_check(io, store=True) or sim_result
 
-        # now check for warnings and errors
-        failed = self._check_errors(io, result) or not sim_result
 
-        return not failed
-
+    def post_run(self, io):
+        self.post_sim_func(self._cc, self._cs, io=self._intermediate_io)
+        return self.__collect_output_and_check(io, store=True)
 
 
 

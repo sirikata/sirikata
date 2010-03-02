@@ -42,7 +42,11 @@ class TestSuite:
 
         success = True
         try:
-            success = test.run(io)
+            success = test.pre_run(io)
+            if success:
+                success = test.run(io)
+                post_success = test.post_run(io)
+                success = success and post_success
         except:
             if (io.stderr):
                 traceback.print_exc(100, io.stderr)
