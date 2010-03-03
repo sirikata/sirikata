@@ -347,6 +347,7 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/analysis/MessageLatency.cpp
+  ${CBR_SOURCE_DIR}/analysis/ObjectLatency.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/analysis/main.cpp
 )

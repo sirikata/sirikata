@@ -38,6 +38,7 @@
 #include "Statistics.hpp"
 #include "Analysis.hpp"
 #include "MessageLatency.hpp"
+#include "ObjectLatency.hpp"
 #include "Visualization.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"
