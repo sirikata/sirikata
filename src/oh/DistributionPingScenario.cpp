@@ -64,13 +64,10 @@ bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance
     }
     Time t(mContext->simTime());
     if (objA&&objB) {
-        if (!mContext->objectHost->ping(t,
-                                        objA,
-                                        objB->uuid(),
-                                        distance*GetOption("region")->as<BoundingBox3f>().diag().x/maxDistance)) {
-
+        float obj_dist = (objA->location().position(t) - objB->location().position(t)).length();
+        //distance*GetOption("region")->as<BoundingBox3f>().diag().x/maxDistance);
+        if (!mContext->objectHost->ping(t, objA, objB->uuid(), obj_dist))
             return false;
-        }
     }
     return true;
 }
