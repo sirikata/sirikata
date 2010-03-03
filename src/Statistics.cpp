@@ -47,7 +47,8 @@ BatchedBuffer::BatchedBuffer()
 }
 
 // write the specified number of bytes from the pointer to the buffer
-void BatchedBuffer::write(const void* buf, uint32 nbytes) {
+void BatchedBuffer::write(const void* buf, uint32 nbytes)
+{
     boost::lock_guard<boost::recursive_mutex> lck(mMutex);
 
     const uint8* bufptr = (const uint8*)buf;
@@ -591,29 +592,30 @@ CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSeg, const Time &t, OSegLookupTrac
     const uint32 num_data = 2;
     BatchedBuffer::IOVec data_vec[num_data] = {
         BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&traceToken, sizeof(OSegLookupTraceToken)),
+        BatchedBuffer::IOVec(traceToken, sizeof(OSegLookupTraceToken)),
     };
     writeRecord(OSegCumulativeTraceAnalysisTag, data_vec, num_data);
 }
 
 
-  void Trace::osegProcessedCraqTime(const Time&t , const Duration& dur, uint32 numProc, uint32 sizeIncomingString)
+  void Trace::osegProcessedCraqTime(const Time&t, const Duration& dur, uint32 numProc, uint32 sizeIncomingString)
   {
-
     if (mShuttingDown)
       return;
 
-   #ifdef TRACE_OSEG_PROCESS_CRAQ
-
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-    data.write(&OSegCraqProcessTag, sizeof(OSegCraqProcessTag));
-    data.write(&t,sizeof(t));
-    data.write(&dur, sizeof(Duration));
-    data.write(&numProc, sizeof(numProc));
-    data.write(&sizeIncomingString,sizeof(sizeIncomingString));
-   #endif
+    #ifdef TRACE_OSEG_PROCESS_CRAQ
+    const uint32 num_data = 4;
+    BatchedBuffer::IOVec data_vec[num_data] =
+      {
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&dur, sizeof(Duration)),
+        BatchedBuffer::IOVec(&numProc,sizeof(numProc)),
+        BatchedBuffer::IOVec(&sizeIncomingString,sizeof(sizeIncomingString)),
+      };
+    writeRecord(OSegCraqProcessTag, data_vec, num_data);
+    #endif
+    
   }
-
   
 
 } // namespace CBR

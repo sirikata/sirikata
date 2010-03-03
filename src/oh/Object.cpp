@@ -175,21 +175,40 @@ void Object::connect() {
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->simTime());
 
+//     if (mRegisterQuery)
+//         mContext->objectHost->connect(
+//             this,
+//             mQueryAngle,
+//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
+//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
+// 	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this) )
+//         );
+//     else
+//         mContext->objectHost->connect(
+//             this,
+//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
+//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
+// 	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this ) )
+//         );
+
     if (mRegisterQuery)
         mContext->objectHost->connect(
             this,
             mQueryAngle,
-            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
-	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this) )
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, std::tr1::placeholders::_1) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, std::tr1::placeholders::_1) ),
+	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) )
         );
     else
         mContext->objectHost->connect(
             this,
-            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-            mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
-	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this ) )
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this,std::tr1::placeholders::_1) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, std::tr1::placeholders::_1) ),
+	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
         );
+
+
+    
 }
 
 void Object::disconnect() {
@@ -232,11 +251,12 @@ void Object::handleSpaceStreamCreated() {
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
     boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
+
     sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
-						std::tr1::bind(&Object::locationMessage, this, _1, _2)
+						std::tr1::bind(&Object::locationMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
 						);
     sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
-                                                std::tr1::bind(&Object::proximityMessage, this, _1, _2)
+                                                std::tr1::bind(&Object::proximityMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
                                                 );
 
   }

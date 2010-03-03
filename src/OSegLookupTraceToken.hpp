@@ -40,6 +40,8 @@ namespace CBR
     //CraqObjectSegmentation::get
     uint64 checkCacheLocalEnd;
 
+    uint64 osegQLenPostQuery;
+    
     //CraqObjectSegmentation::beginning of beginCraqLookup //anything that gets to beginCraqLookupGets to here
     uint64 craqLookupBegin;
 
@@ -70,11 +72,15 @@ namespace CBR
     //AsyncConnectionGet::processValueFound
     uint64 getConnectionNetworkReceived;
 
+    uint64 osegQLenPostReturn;
+    
     //CraqObjectSegmentation:craqGetResult
     uint64 lookupReturnBegin;
     
     //CraqObjectSegmentation:craqGetResult
-    uint64 lookupReturnEnd;			    
+    uint64 lookupReturnEnd;
+
+    void printCumulativeTraceToken();
   };
 }
 

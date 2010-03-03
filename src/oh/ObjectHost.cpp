@@ -796,6 +796,7 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
 void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
+
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -829,7 +830,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 	    Stream<UUID>::connectStream(mObjectConnections.object(obj),
                                 EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
-					std::tr1::bind( &ObjectHost::spaceConnectCallback, this, _1, _2, obj)
+					std::tr1::bind( &ObjectHost::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
                                 );
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Redirect) {
@@ -838,7 +839,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
             // Get a connection to request
             getSpaceConnection(
                 redirected,
-                std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj, _1)
+                std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj, std::tr1::placeholders::_1)
             );
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Error) {
@@ -895,7 +896,7 @@ void ObjectHost::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> >
     Stream<UUID>::connectStream(mObjectConnections.object(obj),
                                 EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
-                                std::tr1::bind( &ObjectHost::spaceConnectCallback, this, _1, _2, obj)
+                                std::tr1::bind( &ObjectHost::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
                                 );
 
     return;

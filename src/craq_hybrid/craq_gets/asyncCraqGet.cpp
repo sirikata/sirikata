@@ -175,19 +175,22 @@ namespace CBR
     }
   }
 
-  void AsyncCraqGet::get(const CraqDataSetGet& dataToGet, OSegLookupTraceToken* traceToken)
+  void AsyncCraqGet::get(CraqDataSetGet* cdQuery, OSegLookupTraceToken* traceToken)
   {
     Duration beginGetEnqueueManager  = Time::local() - Time::epoch();
     traceToken->getManagerEnqueueBegin = beginGetEnqueueManager.toMicroseconds();
 
     CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
+
     QueueValue* qValue = new QueueValue;
     qValue->cdQuery = cdQuery;
     qValue->traceToken = traceToken;
     mQueue.push(qValue);
 
     Duration endGetEnqueueManager = Time::local() - Time::epoch();
+
     traceToken->getManagerEnqueueEnd = endGetEnqueueManager.toMicroseconds();
+
 
     int numTries = 0;
     while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_GET))
@@ -256,7 +259,9 @@ void AsyncCraqGet::checkConnections(int s)
       ++numOperations;
 
       Duration dequeueManager  = Time::local() - Time::epoch();
+
       qVal->traceToken->getManagerDequeued = dequeueManager.toMicroseconds();
+
 
       if (cdSG->messageType == CraqDataSetGet::GET)
       {

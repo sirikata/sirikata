@@ -127,8 +127,10 @@ public:
 
       UUID sourceObject = conn->remoteEndPoint().endPoint;
 
-      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
-					  std::tr1::bind(&LocationService::locationUpdate, this, sourceObject, _1, _2) );
+
+      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION, 
+					  std::tr1::bind(&LocationService::locationUpdate, this, sourceObject, std::tr1::placeholders::_1,std::tr1::placeholders::_2) );
+
     }
 
     /** Indicates whether this location service is tracking the given object.  It is only

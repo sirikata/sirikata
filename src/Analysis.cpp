@@ -185,10 +185,10 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
       case Trace::OSegCraqProcessTag:
         {
           OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
-          is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
-          is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
-          is.read((char*)&craqProcEvt->numProcessed, sizeof(craqProcEvt->numProcessed));
-          is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
+          record_is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
+          record_is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
+          record_is.read((char*)&craqProcEvt->numProcessed, sizeof(craqProcEvt->numProcessed));
+          record_is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
           evt = craqProcEvt;
         }
         break;
@@ -2572,6 +2572,7 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
           mInitialTime = (oseg_cum_evt->time - Time::null()).toMicroseconds();
 
         allTraces.push_back(oseg_cum_evt);
+
         continue;
       }
       delete evt;
@@ -2604,7 +2605,9 @@ void OSegCumulativeTraceAnalysis::generateAllData()
     generateReturnPostTime();
   generateLookupReturnTime();
   generateCompleteLookupTime();
-
+  generateOSegQLenQuery();
+  generateOSegQLenReturn();
+  
   sortByCompleteLookupTime();
 }
 
@@ -2683,6 +2686,22 @@ void OSegCumulativeTraceAnalysis::printDataHuman(std::ostream &fileOut)
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->lookupReturnsTime << ",";
 
+
+  //q len
+  fileOut << "\n\n Process Return Times\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->osegQLenPostQuery << ",";
+
+
+  fileOut << "\n\n Process Return Times\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->osegQLenPostReturn << ",";
+
+  //at what time within the run (in microseconds) the trace value was recorded
+  fileOut << "\n\n System run time\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->runTime << ",";
+  
   fileOut <<"\n\n\n";
 }
 
@@ -2742,11 +2761,22 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->lookupReturnsTime << ",";
 
+  //now pushing out q lengths as well.
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->osegQLenPostQuery << ",";
+
+  //pushing another q length
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->osegQLenPostReturn << ",";
+
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->runTime << ",";
+
   fileOut <<"\n\n\n";
 }
-
-
-
 
 
 void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microseconds)
@@ -2775,6 +2805,7 @@ void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microsecon
         ((*traceIt)->traceToken.lookupReturnBegin                   == 0) ||
         ((*traceIt)->traceToken.lookupReturnEnd                     == 0))
     {
+      (*traceIt)->traceToken.printCumulativeTraceToken();
       delete (*traceIt);
       traceIt = allTraces.erase(traceIt);
     }
@@ -2925,6 +2956,37 @@ void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
   }
 }
 
+void OSegCumulativeTraceAnalysis::generateOSegQLenQuery()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    toPush = allTraces[s]->traceToken.osegQLenPostQuery;
+    mCumData[s]->completeLookupTime = toPush;
+  }
+}
+void OSegCumulativeTraceAnalysis::generateOSegQLenReturn()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    uint64 osegQLenPostReturn;
+    toPush = allTraces[s]->traceToken.osegQLenPostReturn;
+    mCumData[s]->completeLookupTime = toPush;
+  }
+}
+
+void OSegCumulativeTraceAnalysis::generateRunTime()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size(); ++s)
+  {
+    uint64 runTimer;
+    toPush =(allTraces[s]->time - Time::null()).toMicroseconds() - mInitialTime;
+    mCumData[s]->runTime = toPush;
+  }
+}
+
 
 
 OSegProcessCraqReturnAnalysis::OSegProcessCraqReturnAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds)
@@ -2937,10 +2999,13 @@ OSegProcessCraqReturnAnalysis::OSegProcessCraqReturnAnalysis(const char* opt_nam
 
     while(is)
     {
-      Event* evt = Event::read(is, server_id);
+      uint16 type_hint;
+      std::string raw_evt;
+      read_record(is, &type_hint, &raw_evt);
+      Event* evt = Event::parse(type_hint, raw_evt, server_id);
+
       if (evt == NULL)
         break;
-
       
       OSegCraqProcEvent* oseg_craq_proc_evt = dynamic_cast<OSegCraqProcEvent*> (evt);
       if (oseg_craq_proc_evt != NULL)
@@ -2959,6 +3024,7 @@ OSegProcessCraqReturnAnalysis::OSegProcessCraqReturnAnalysis(const char* opt_nam
 
   filterTimeAfter(time_after_seconds*OSEG_CRAQ_PROCESS_RETURN_ANALYSIS_ECONDS_TO_MICROSECONDS);
 }
+
 
 
 OSegProcessCraqReturnAnalysis::~OSegProcessCraqReturnAnalysis()

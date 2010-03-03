@@ -245,17 +245,17 @@ struct OSegCacheResponseEvent : public Event
   UUID obj_id;
 };
 
-  struct OSegCumulativeEvent : public Event
-  {
-    OSegLookupTraceToken traceToken;
-  };
+struct OSegCumulativeEvent : public Event
+{
+  OSegLookupTraceToken traceToken;
+};
 
-  struct OSegCraqProcEvent : public Event
-  {
-    Duration timeItTook;
-    uint32 numProcessed;
-    uint32 sizeIncomingString;
-  };
+struct OSegCraqProcEvent : public Event
+{
+  Duration timeItTook;
+  uint32 numProcessed;
+  uint32 sizeIncomingString;
+};
 
 
 }

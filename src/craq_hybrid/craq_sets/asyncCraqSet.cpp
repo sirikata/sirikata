@@ -125,15 +125,14 @@ namespace CBR
     }
   }
 
-
-  void AsyncCraqSet::set(CraqDataSetGet dataToSet, uint64 track_num)
+  void AsyncCraqSet::set(CraqDataSetGet* dataToSet, uint64 track_num)
   {
     //force this to be a set message.
-    dataToSet.messageType = CraqDataSetGet::SET;
+    dataToSet->messageType = CraqDataSetGet::SET;
 
-    if (dataToSet.trackMessage)
+    if (dataToSet->trackMessage)
     {
-      dataToSet.trackingID = track_num;
+      dataToSet->trackingID = track_num;
       mQueue.push(dataToSet);
     }
     else
@@ -162,7 +161,6 @@ namespace CBR
   }
 
 
-
   int AsyncCraqSet::numStillProcessing()
   {
     int returner = 0;
@@ -183,7 +181,6 @@ namespace CBR
     assert(false);
   }
 
-
   void AsyncCraqSet::erroredSetValue(CraqOperationResult* errorRes)
   {
     if (errorRes->whichOperation == CraqOperationResult::GET)
@@ -195,10 +192,9 @@ namespace CBR
     }
     else
     {
-      CraqDataSetGet cdSG(errorRes->objID,errorRes->servID,errorRes->tracking, CraqDataSetGet::SET);
+      CraqDataSetGet* cdSG= new CraqDataSetGet(errorRes->objID,errorRes->servID,errorRes->tracking, CraqDataSetGet::SET);
       mQueue.push(cdSG);
     }
-
     delete errorRes;
   }
 
@@ -231,26 +227,28 @@ namespace CBR
       if (mQueue.size() != 0)
       {
         //need to put in another
-        CraqDataSetGet cdSG = mQueue.front();
+        CraqDataSetGet* cdSG = mQueue.front();
         mQueue.pop();
 
         ++numOperations;
 
-        if (cdSG.messageType == CraqDataSetGet::GET)
+        if (cdSG->messageType == CraqDataSetGet::GET)
         {
 #ifdef ASYNC_CRAQ_SET_DEBUG
           std::cout<<"\n\nTrying to deal with get message in async craq set.cpp\n\n";
 #endif
           assert(false);
         }
-        else if (cdSG.messageType == CraqDataSetGet::SET)
+        else if (cdSG->messageType == CraqDataSetGet::SET)
         {
           //performing a set in connections.
           CraqObjectID tmpCraqID;
-          memcpy(tmpCraqID.cdk, cdSG.dataKey, CRAQ_DATA_KEY_SIZE);
+          memcpy(tmpCraqID.cdk, cdSG->dataKey, CRAQ_DATA_KEY_SIZE);
 
-          mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::setBound, mConnections[s], tmpCraqID, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID));
+          mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::setBound, mConnections[s], tmpCraqID, cdSG->dataKeyValue, cdSG->trackMessage, cdSG->trackingID));
         }
+
+        delete cdSG;
       }
     }
     else if (mConnections[s]->ready() == AsyncConnectionSet::NEED_NEW_SOCKET)

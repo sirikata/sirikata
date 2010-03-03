@@ -63,6 +63,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mMigrationTimer.start();
 
+
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 

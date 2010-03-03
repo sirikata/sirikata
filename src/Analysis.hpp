@@ -329,7 +329,10 @@ public:
     void generateLookupReturnTime();
     void generateCompleteLookupTime();
     void generateFullTime();
-
+    void generateOSegQLenQuery();
+    void generateOSegQLenReturn();
+    void generateRunTime();
+    
     uint64 mInitialTime;
 
     struct CumulativeTraceData
@@ -348,6 +351,10 @@ public:
       uint64 lookupReturnsTime;
       uint64 completeLookupTime;
       uint64 fullTime;
+
+      uint64 osegQLenPostQuery;
+      uint64 osegQLenPostReturn;
+      uint64 runTime;
     };
 
     struct OSegCumulativeDurationComparator
