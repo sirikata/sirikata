@@ -122,9 +122,10 @@ if __name__ == "__main__":
     suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_mixed_8', 10, local_pings=True, remote_pings=True, settings=packet_latency_with_caching_settings, space_layout=(8,1), time_limit=datetime.timedelta(minutes=10) ) )
 
 
+
     if len(sys.argv) < 2:
         suite.clean()
         suite.run_all(util.stdio.StdIO())
     else:
         for name in sys.argv[1:]:
-            suite.run(name)
+            suite.run(name,util.stdio.StdIO())
