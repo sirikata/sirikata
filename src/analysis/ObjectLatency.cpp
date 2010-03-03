@@ -54,7 +54,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
                 PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
                 if (ping_evt != NULL) {
                     mLatency.insert(
-                        std::multimap<double,Duration>::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
+                        PingMap::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
                 }
             }
             delete evt;
@@ -63,43 +63,59 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
 
 }
 
-void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Average > &retval){
-    int bucket=-1;
-    int bucketSamples=0;
-    for (std::multimap<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
-         i!=ie;++i) {
-        int curBucket=(int)floor(i->first/bucketWidth);
-        if (curBucket!=bucket) {
-            if (bucketSamples) {
-                retval.find(bucket)->second.time/=(double)bucketSamples;
-                retval.find(bucket)->second.numSamples=(double)bucketSamples;
-            }
-            bucket=curBucket;
-            bucketSamples=1;
-            retval.insert(std::map<int,Average>::value_type(bucket,Average(i->second)));
-        }else {
-            bucketSamples++;
-            retval.find(bucket)->second.time+=i->second;
-        }
+void ObjectLatencyAnalysis::histogramDistanceData(uint32 numBuckets, AverageHistogram &retval) {
+    if (mLatency.empty()) return;
+
+    // Find min and max
+    double min_dist = mLatency.begin()->first, max_dist = mLatency.begin()->first;
+    for (PingMap::iterator it = mLatency.begin(); it != mLatency.end(); ++it) {
+        double dist = it->first;
+        min_dist = std::min(min_dist, dist);
+        max_dist = std::max(max_dist, dist);
     }
-    if (bucketSamples) {
-        retval.find(bucket)->second.time/=(double)bucketSamples;
-        retval.find(bucket)->second.numSamples=bucketSamples;
+
+    if (min_dist == max_dist) {
+        // As a special case, if we're only getting one distance value
+        // (which can happen since they are discretized by server and
+        // we sometimes only send messages to objects on the same
+        // server), for this case we just respond with a single
+        // bucket with all items and ignor numBuckets.
+        numBuckets = 1;
+    }
+
+    // Compute buckets, initialize linear buckets (by bucket index
+    // rather than distance)
+    double bucketWidth = (max_dist - min_dist) / numBuckets;
+    std::vector<Average> buckets(numBuckets);
+
+    // Now add samples to the buckets
+    for (PingMap::iterator it = mLatency.begin(); it != mLatency.end(); ++it) {
+        double sample_dist = it->first;
+        Duration sample_lat = it->second;
+        int curBucket =
+            numBuckets == 1 ? 0 :
+            std::min((int)floor((sample_dist - min_dist)/bucketWidth), (int)numBuckets-1);
+        buckets[curBucket].sample(sample_lat);
+    }
+
+    // And finally map to the final output
+    for(uint32 bucket_idx = 0; bucket_idx < buckets.size(); bucket_idx++) {
+        retval[ min_dist + bucketWidth*bucket_idx ] = buckets[bucket_idx];
     }
 }
-void ObjectLatencyAnalysis::printHistogramDistanceData(std::ostream&out, double bucketWidth){
-    std::map<int,Average> histogram;
-    histogramDistanceData(bucketWidth,histogram);
-    for (std::map<int,Average>::iterator i=histogram.begin(),ie=histogram.end();i!=ie;++i) {
-        out<<i->first*bucketWidth<<", ";
-        if(i->second.time.toMicroseconds()>9999) {
-            out<<i->second.time;
-        }else {
-            out<<i->second.time.toMicroseconds()<<"us";
-        }
-        out <<", ";
-        out << i->second.time.toMicroseconds();
-        out << ", "<<i->second.numSamples<<'\n';
+
+void ObjectLatencyAnalysis::printHistogramDistanceData(std::ostream&out, uint32 numBuckets){
+    AverageHistogram histogram;
+    histogramDistanceData(numBuckets, histogram);
+    for (AverageHistogram::iterator it = histogram.begin(); it != histogram.end(); ++it) {
+        int bucket_start_dist = it->first;
+        Average& bucket_avg = it->second;
+
+        out << bucket_start_dist << ", ";
+        out << bucket_avg.average();
+        out << ", ";
+        out << bucket_avg.average().toMicroseconds();
+        out << ", " << bucket_avg.numSamples << '\n';
     }
 }
 

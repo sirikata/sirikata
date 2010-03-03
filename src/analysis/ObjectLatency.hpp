@@ -38,18 +38,34 @@
 namespace CBR {
 
 class ObjectLatencyAnalysis {
-    std::multimap<double, Duration> mLatency;
+    typedef std::multimap<double, Duration> PingMap;
+    PingMap mLatency;
 public:
     int mNumberOfServers;
     ObjectLatencyAnalysis(const char* opt_name, const uint32 nservers);
 
     struct Average{
-        Duration time;
+        Average()
+         : totalTime(Duration::zero()),
+           numSamples(0)
+        {}
+
+        void sample(const Duration& dt) {
+            totalTime += dt;
+            numSamples++;
+        }
+
+        Duration average() const {
+            if (numSamples == 0) return Duration::zero();
+            return totalTime / (double)numSamples;
+        }
+
+        Duration totalTime;
         int numSamples;
-        Average(const Duration&t) :time(t){numSamples=0;}
     };
-    void histogramDistanceData(double bucketWidth, std::map<int, Average> &retval);
-    void printHistogramDistanceData(std::ostream&out, double bucketWidth);
+    typedef std::map<int,Average> AverageHistogram;
+    void histogramDistanceData(uint32 numBuckets, AverageHistogram &retval);
+    void printHistogramDistanceData(std::ostream&out, uint32 numBuckets);
 };
 
 } // namespace CBR
