@@ -199,9 +199,20 @@ if __name__ == "__main__":
         print 'No command provided...'
         exit(-1)
 
+    # Some commands are simple shorthands for others and can just be
+    # expanded into their long forms
+    filter_rules = {
+        'deploy' : ['patchset_create', 'patchset_apply', 'clean', 'build']
+        }
+    filtered_args = []
+    for arg in sys.argv:
+        expanded = [arg]
+        if arg in filter_rules: expanded = filter_rules[arg]
+        filtered_args.extend(expanded)
+
     cur_arg_idx = 1
-    while cur_arg_idx < len(sys.argv):
-        cmd = sys.argv[cur_arg_idx]
+    while cur_arg_idx < len(filtered_args):
+        cmd = filtered_args[cur_arg_idx]
         cur_arg_idx += 1
         retval = 0
 
@@ -213,36 +224,36 @@ if __name__ == "__main__":
             retval = cluster_build.update()
         elif cmd == 'dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['sirikata', 'prox']:
-                deps.append(sys.argv[cur_arg_idx])
+            while cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['sirikata', 'prox']:
+                deps.append(filtered_args[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.dependencies(deps)
         elif cmd == 'update_dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['sirikata', 'prox']:
-                deps.append(sys.argv[cur_arg_idx])
+            while cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['sirikata', 'prox']:
+                deps.append(filtered_args[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.update_dependencies(deps)
         elif cmd == 'build':
             build_type = 'Debug'
             with_timestamp = True
             tstamp_map = { 'timestamp' : True, 'no-timestamp' : False }
-            while(cur_arg_idx < len(sys.argv)):
-                if sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile', 'Coverage']:
-                    build_type = sys.argv[cur_arg_idx]
+            while(cur_arg_idx < len(filtered_args)):
+                if filtered_args[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile', 'Coverage']:
+                    build_type = filtered_args[cur_arg_idx]
                     cur_arg_idx += 1
-                elif sys.argv[cur_arg_idx] in tstamp_map.keys():
-                    with_timestamp = tstamp_map[sys.argv[cur_arg_idx]]
+                elif filtered_args[cur_arg_idx] in tstamp_map.keys():
+                    with_timestamp = tstamp_map[filtered_args[cur_arg_idx]]
                     cur_arg_idx += 1
                 else:
                     break
             retval = cluster_build.build(build_type, with_timestamp)
         elif cmd == 'patch':
-            patch_file = sys.argv[cur_arg_idx]
+            patch_file = filtered_args[cur_arg_idx]
             cur_arg_idx += 1
             retval = cluster_build.apply_patch(patch_file)
         elif cmd == 'patchmail':
-            patch_file = sys.argv[cur_arg_idx]
+            patch_file = filtered_args[cur_arg_idx]
             cur_arg_idx += 1
             retval = cluster_build.apply_patch_mail(patch_file)
         elif cmd == 'reset':
@@ -273,8 +284,8 @@ if __name__ == "__main__":
             retval = cluster_build.revert_patchset()
         elif cmd == 'profile':
             profile_binary = 'cbr'
-            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['cbr', 'oh', 'cseg', 'analysis']):
-                profile_binary = sys.argv[cur_arg_idx]
+            if (cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['cbr', 'oh', 'cseg', 'analysis']):
+                profile_binary = filtered_args[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.profile(profile_binary)
         else:
