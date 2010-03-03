@@ -860,37 +860,25 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_DROPPED_AT_RECEIVE_QUEUE); // drop
     stage_graph.addEdge(Trace::OH_RECEIVED, Trace::DESTROYED);
-    // read in all our data
+
+    // In order to handle large traces, we use a multi-pass approach. Each pass
+    // over the data does 2 things:
+    //  1. Collect timestamp info for a subset of the packets and process them.
+    //  2. Figure out next group of packet IDs to consider.
+    // Each pass processes a fixed number of packets (or possibly fewer for the
+    // last pass).
+    //
+    // In order to minimize the state we need to maintain between passes we
+    // define the current and next group of packets we need to process
+    // implicitly. We assume we're going to try to process as many as N packets
+    // each pass.  We just choose a minimum packet ID m to start collecting
+    // packets and choose the N packets from the entire trace with the smallest
+    // packet IDs greater than than m.  Our starting point for the next round is
+    // then the largest packet ID from the current round.  For the first round,
+    // the base packet ID will obviously be 0.
+
     typedef std::tr1::unordered_map<uint64,PacketData> PacketMap;
-    PacketMap packetFlow;
-
-    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
-        String loc_file = GetPerServerFile(opt_name, server_id);
-        std::ifstream is(loc_file.c_str(), std::ios::in);
-
-        while(is) {
-            uint16 type_hint;
-            std::string raw_evt;
-            read_record(is, &type_hint, &raw_evt);
-            Event* evt = Event::parse(type_hint, raw_evt, server_id);
-            if (evt == NULL)
-                break;
-
-            {
-                MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
-                if (tevt != NULL) {
-                    PacketData* pd = &packetFlow[tevt->uid];
-                    pd->stamps[server_id].push_back(PacketSample(tevt->begin_time(), server_id, tevt->path));
-                    MessageCreationTimestampEvent* cevt = dynamic_cast<MessageCreationTimestampEvent*>(evt);
-                    if (cevt != NULL) {
-                        if (cevt->srcport!=0) pd->source_port = cevt->srcport;
-                        if (cevt->dstport!=0) pd->dest_port = cevt->dstport;
-                    }
-                }
-            }
-            delete evt;
-        }
-    }
+    typedef std::priority_queue<uint64> PacketIDPriority;
 
     // Prepare output data structures
     std::ofstream* stage_dump_file = NULL;
@@ -903,24 +891,98 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     using std::tr1::placeholders::_2;
     ReportPairFunction report_func = std::tr1::bind(&reportPair, _1, _2, &results, stage_dump_file);
 
+    // Round data
+    uint32 round_max_packets = 1024*1024; // maximum # of packets per round
+    uint64 round_base_id = 0; // we'll choose from ID's greater than this, and
+                              // it will be updated at the end of each round
+    while(true) { // condition near bottom will break out of loop if we end up
+                  // processing fewer than our target number of packets
 
-    // Perform a stable sort for each packet's server timestamp lists, then try
-    // to match it to the graph.
-    // Note that the stable sort is only necessary because the logging is
-    // multithreaded and may not get everything perfectly in order.
-    for (PacketMap::iterator iter = packetFlow.begin(),ie=packetFlow.end();
-         iter!=ie;
-         ++iter) {
-        PacketData& pd = iter->second;
-        if ( !matches(filter, pd) || (pd.stamps.size() == 0) ) continue;
+        PacketMap packetFlow;
+        PacketIDPriority packetPriorities;
 
-        for(PacketData::ServerPacketMap::iterator server_it = pd.stamps.begin();
-            server_it != pd.stamps.end();
-            server_it++) {
-            std::stable_sort(server_it->second.begin(), server_it->second.end());
+        // Read in data for this round
+        for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+            String loc_file = GetPerServerFile(opt_name, server_id);
+            std::ifstream is(loc_file.c_str(), std::ios::in);
+
+            while(is) {
+                uint16 type_hint;
+                std::string raw_evt;
+                read_record(is, &type_hint, &raw_evt);
+                Event* evt = Event::parse(type_hint, raw_evt, server_id);
+                if (evt == NULL)
+                    break;
+
+                {
+                    MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
+                    if (tevt != NULL) {
+                        uint64 pid = tevt->uid;
+
+                        // Figure out if we need to / can add this packet
+                        bool should_insert = false;
+                        if (packetFlow.find(pid) != packetFlow.end()) {
+                            should_insert = true;
+                        }
+                        else {
+                            if (pid > round_base_id) {
+                                // Either we fit in now problem
+                                if (packetPriorities.size() < round_max_packets) {
+                                    packetPriorities.push(pid);
+                                    should_insert = true;
+                                }
+                                else {
+                                    // Or we need to evict, or are ignored
+                                    uint64 top_pid = packetPriorities.top();
+                                    if (top_pid > pid) {
+                                        packetPriorities.pop();
+                                        packetFlow.erase(top_pid);
+                                        packetPriorities.push(pid);
+                                        should_insert = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (should_insert) {
+                            PacketData* pd = &packetFlow[tevt->uid];
+                            pd->stamps[server_id].push_back(PacketSample(tevt->begin_time(), server_id, tevt->path));
+                            MessageCreationTimestampEvent* cevt = dynamic_cast<MessageCreationTimestampEvent*>(evt);
+                            if (cevt != NULL) {
+                                if (cevt->srcport!=0) pd->source_port = cevt->srcport;
+                                if (cevt->dstport!=0) pd->dest_port = cevt->dstport;
+                            }
+                        }
+                    }
+                }
+                delete evt;
+            }
         }
 
-        stage_graph.match_path(pd, report_func);
+        // Perform a stable sort for each packet's server timestamp lists, then try
+        // to match it to the graph.
+        // Note that the stable sort is only necessary because the logging is
+        // multithreaded and may not get everything perfectly in order.
+        for (PacketMap::iterator iter = packetFlow.begin(),ie=packetFlow.end();
+             iter!=ie;
+             ++iter) {
+            PacketData& pd = iter->second;
+            if ( !matches(filter, pd) || (pd.stamps.size() == 0) ) continue;
+
+            for(PacketData::ServerPacketMap::iterator server_it = pd.stamps.begin();
+                server_it != pd.stamps.end();
+                server_it++) {
+                std::stable_sort(server_it->second.begin(), server_it->second.end());
+            }
+
+            stage_graph.match_path(pd, report_func);
+        }
+
+        // Finally, with all of this rounds packets report, prepare for next round
+        round_base_id = packetPriorities.top();
+        // We can stop when we had fewer than our max number of packets for the round
+        if (packetPriorities.size() < round_max_packets)
+            break;
     }
 
     if (stage_dump_file) {
