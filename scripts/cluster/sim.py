@@ -44,7 +44,7 @@ class ClusterSimSettings:
         self.object_connect_phase = '10s'
 
         # OH: random object generation settings
-        self.num_random_objects = 1000
+        self.num_random_objects = 5000
         self.object_static = 'static'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'

@@ -1007,7 +1007,11 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
 
   void CraqObjectSegmentation::testSanityQLen()
   {
-    std::cout<<"\n ql: "<<mStrandQLen<<"\n";
+    static int largest = 0;
+    if (mStrandQLen > largest)
+      largest = mStrandQLen;
+    
+    std::cout<<"\n ql: "<<mStrandQLen<<"\n  and largest: "<<largest<<"\n";
   }
 
 }//namespace CBR
