@@ -72,9 +72,9 @@ public:
     // NOTE: The public interface is only safe to access from the main strand.
 
     /** Connect the object to the space with the given starting parameters. */
-    void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb, 
+    void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb,
 		 MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
-    void connect(Object* obj, ConnectedCallback connected_cb, MigratedCallback migrated_cb, 
+    void connect(Object* obj, ConnectedCallback connected_cb, MigratedCallback migrated_cb,
 		 StreamCreatedCallback stream_created_cb);
     /** Disconnect the object from the space. */
     void disconnect(Object* obj);
@@ -190,7 +190,6 @@ private:
 
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
-    Poller* mPingPoller;
 
     TimeProfiler::Stage* mHandleMessageProfiler;
 
@@ -305,7 +304,7 @@ private:
 
             ConnectedCallback connectedCB;
             MigratedCallback migratedCB;
-  	    StreamCreatedCallback streamCreatedCB;	  
+  	    StreamCreatedCallback streamCreatedCB;
         };
         typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;
