@@ -64,6 +64,8 @@ UUID selectID(const ObjectIDSet& uuidMap) {
 }
 
 Object* ConnectedObjectTracker::randomObject() {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     if (mObjectsByServer.size()==0)
         return NULL;
 
@@ -80,6 +82,8 @@ Object* ConnectedObjectTracker::randomObject() {
 }
 
 Object* ConnectedObjectTracker::randomObject(ServerID whichServer) {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     if (whichServer==NullServerID)
         return randomObject();
 
@@ -95,6 +99,8 @@ Object* ConnectedObjectTracker::randomObject(ServerID whichServer) {
 }
 
 Object* ConnectedObjectTracker::roundRobinObject() {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     if (mObjectsByID.size() == 0) return NULL;
 
     // Find last
@@ -116,6 +122,8 @@ Object* ConnectedObjectTracker::roundRobinObject() {
 }
 
 Object* ConnectedObjectTracker::roundRobinObject(ServerID whichServer) {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     if (mObjectsByID.size() == 0) return NULL;
 
     const ObjectIDSet& server_objects = mObjectsByServer[whichServer];
@@ -139,11 +147,15 @@ ServerID ConnectedObjectTracker::numServerIDs() const {
 }
 
 void ConnectedObjectTracker::objectHostConnectedObject(ObjectHost* oh, Object* obj, const ServerID& server) {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     mObjectsByServer[server].insert(obj->uuid());
     mObjectsByID[obj->uuid()] = obj;
 }
 
 void ConnectedObjectTracker::objectHostMigratedObject(ObjectHost* oh, const UUID& objid, const ServerID& from_server, const ServerID& to_server) {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     {
         ObjectIDSet& server_objects = mObjectsByServer[from_server];
         ObjectIDSet::iterator it = server_objects.find(objid);
@@ -153,6 +165,8 @@ void ConnectedObjectTracker::objectHostMigratedObject(ObjectHost* oh, const UUID
 }
 
 void ConnectedObjectTracker::objectHostDisconnectedObject(ObjectHost* oh, const UUID& objid, const ServerID& server) {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
     ObjectIDSet& server_objects = mObjectsByServer[server];
     ObjectIDSet::iterator it = server_objects.find(objid);
     if (it != server_objects.end()) server_objects.erase(it);

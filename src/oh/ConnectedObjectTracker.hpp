@@ -34,6 +34,7 @@
 #define _CBR_OH_CONNECTED_OBJECT_TRACKER_HPP_
 
 #include "ObjectHostListener.hpp"
+#include <boost/thread/shared_mutex.hpp>
 
 namespace CBR {
 
@@ -62,8 +63,10 @@ private:
     typedef std::tr1::unordered_map<UUID, Object*, UUID::Hasher> ObjectsByID;
 
     ObjectHost* mParent;
-    ObjectsByServerMap mObjectsByServer;
 
+    boost::shared_mutex mMutex;
+
+    ObjectsByServerMap mObjectsByServer;
     ObjectsByID mObjectsByID;
 
     UUID mLastRRObject;
