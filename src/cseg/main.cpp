@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
     using namespace CBR;
 
     InitOptions();
+    Trace::InitOptions();
     ParseOptions(argc, argv);
 
     ServerID server_id = GetOption("cseg-id")->as<ServerID>();

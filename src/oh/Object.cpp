@@ -65,7 +65,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mQuitting(false),
    mLocUpdateTimer( IOTimer::create(mContext->ioService) )
 {
-  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);  
+  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);
 }
 
 Object::~Object() {
@@ -84,11 +84,11 @@ void Object::stop() {
 
 void Object::scheduleNextLocUpdate() {
     const Time tnow = mContext->simTime();
-    
+
     TimedMotionVector3f curLoc = location();
     const TimedMotionVector3f* update = mMotion->nextUpdate(tnow);
     if (update != NULL) {
-              
+
         mLocUpdateTimer->wait(
             update->time() - tnow,
             mContext->mainStrand->wrap(
@@ -119,7 +119,7 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
         requested_loc.set_t(curLoc.updateTime());
         requested_loc.set_position(curLoc.position());
         requested_loc.set_velocity(curLoc.velocity());
-	
+
         std::string payload = serializePBJMessage(container);
 
 	boost::shared_ptr<Stream<UUID> > spaceStream = mContext->objectHost->getSpaceStream(mID);
@@ -128,9 +128,9 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 								payload.size(), OBJECT_PORT_LOCATION,
 								OBJECT_PORT_LOCATION, NULL);
 	}
-        
+
         // XXX FIXME do something on failure
-        mContext->trace()->objectGenLoc(tnow, mID, curLoc);
+        CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc);
     }
 
     scheduleNextLocUpdate();
@@ -153,7 +153,7 @@ bool Object::route(CBR::Protocol::Object::ObjectMessage* msg) {
 			     msg->dest_port(), msg->dest_object(),
 			     msg->payload())
 			    );
-  
+
   delete msg;
 
   return true;
@@ -205,12 +205,12 @@ void Object::handleSpaceConnection(ServerID sid) {
     }
 
     OBJ_LOG(insane,"Got space connection callback");
-    mConnectedTo = sid;    
+    mConnectedTo = sid;
 
     // Start normal processing
     mContext->mainStrand->post(
         std::tr1::bind(&Object::scheduleNextLocUpdate, this)
-    );    
+    );
 }
 
 void Object::handleSpaceMigration(ServerID sid) {
@@ -222,7 +222,7 @@ void Object::handleSpaceStreamCreated() {
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
     boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
-    sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION, 
+    sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
 						std::tr1::bind(&Object::locationMessage, this, _1, _2)
 						);
     sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
@@ -243,8 +243,8 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
     switch( msg->dest_port() ) {
       //case OBJECT_PORT_PROXIMITY:
       //  proximityMessage(*msg);
-      //  break;	
-      default:        
+      //  break;
+      default:
         dispatchMessage(*msg);
 
         break;
@@ -264,8 +264,7 @@ void Object::locationMessage(uint8* buffer, int len) {
         CBR::Protocol::Loc::TimedMotionVector update_loc = update.location();
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
-        mContext->trace()->objectLoc(
-            mContext->simTime(),
+        CONTEXT_TRACE(objectLoc,
             mID,
             update.object(),
             loc
@@ -286,20 +285,18 @@ void Object::proximityMessage(uint8* buffer, int len) {
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-        mContext->trace()->prox(
-            mContext->simTime(),
+        CONTEXT_TRACE(prox,
             mID,
             addition.object(),
             true,
             loc
         );
-    }    
+    }
 
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 
-        mContext->trace()->prox(
-            mContext->simTime(),
+        CONTEXT_TRACE(prox,
             mID,
             removal.object(),
             false,

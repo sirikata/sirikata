@@ -72,7 +72,7 @@ void FIFOServerMessageQueue::service(){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest_server(), next_msg->id(), packet_size);
+        CONTEXT_TRACE_NO_TIME(serverDatagramSent, start_time, end_time, 1, next_msg->dest_server(), next_msg->id(), packet_size);
         mListener->serverMessageSent(next_msg);
 
         delete next_msg;

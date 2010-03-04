@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
     using namespace CBR;
 
     InitOptions();
+    Trace::InitOptions();
     ParseOptions(argc, argv);
 
     std::string time_server=GetOption("time-server")->as<String>();

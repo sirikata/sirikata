@@ -111,6 +111,7 @@ int main(int argc, char** argv) {
     using namespace CBR;
 
     InitOptions();
+    Trace::InitOptions();
     ParseOptions(argc, argv);
 
     assert(is_analysis());

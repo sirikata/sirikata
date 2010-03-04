@@ -170,52 +170,66 @@ public:
         NUM_PATHS
     };
 
+    // Initialize options which flip recording of trace data on and off
+    static void InitOptions();
+
     Trace(const String& filename);
 
-    void timestampMessageCreation(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
-    void timestampMessage(const Time&t, uint64 packetId, MessagePath path);
 
-    void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
-    void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
-    void objectGenLoc(const Time& t, const UUID& source, const TimedMotionVector3f& loc);
+#define CREATE_TRACE_CHECK_DECL(___name)           \
+    bool check ## ___name () const;
+#define CREATE_TRACE_EVAL_DECL(___name, ...)    \
+    void ___name( __VA_ARGS__ );
+
+#define CREATE_TRACE_DECL(___name, ...)         \
+    CREATE_TRACE_CHECK_DECL(___name)            \
+    CREATE_TRACE_EVAL_DECL(___name, __VA_ARGS__)
+
+    CREATE_TRACE_DECL(timestampMessageCreation, const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
+    CREATE_TRACE_DECL(timestampMessage, const Time&t, uint64 packetId, MessagePath path);
+
+    CREATE_TRACE_DECL(prox, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(objectLoc, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc);
 
     // Server received a loc update
-    void serverLoc(const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(serverLoc, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
     // Object tracking change
-    void serverObjectEvent(const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(serverObjectEvent, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc);
 
 
-    void serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size);
-    void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
-    void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
+    CREATE_TRACE_DECL(serverDatagramQueued, const Time& t, const ServerID& dest, uint64 id, uint32 size);
+    CREATE_TRACE_DECL(serverDatagramSent, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
+    CREATE_TRACE_DECL(serverDatagramReceived, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
-    void packetQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
+    CREATE_TRACE_DECL(packetQueueInfo, const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
 
-    void ping(const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId);
-    void packetSent(const Time& t, const ServerID& dest, uint32 size);
-    void packetReceived(const Time& t, const ServerID& src, uint32 size);
+    CREATE_TRACE_DECL(ping, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId);
+    CREATE_TRACE_DECL(packetSent, const Time& t, const ServerID& dest, uint32 size);
+    CREATE_TRACE_DECL(packetReceived, const Time& t, const ServerID& src, uint32 size);
 
-    void segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
+    CREATE_TRACE_DECL(segmentationChanged, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
-    void objectBeginMigrate(const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
-    void objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
+    CREATE_TRACE_DECL(objectBeginMigrate, const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
+    CREATE_TRACE_DECL(objectAcknowledgeMigrate, const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
 
-    void objectSegmentationCraqLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
-    void objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+    CREATE_TRACE_DECL(objectSegmentationCraqLookupRequest, const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+    CREATE_TRACE_DECL(objectSegmentationLookupNotOnServerRequest, const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
 
 
-    void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 stillInQueue);
+    CREATE_TRACE_DECL(objectSegmentationProcessedRequest, const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 stillInQueue);
 
-    void objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
+    CREATE_TRACE_DECL(objectMigrationRoundTrip, const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
 
-  void processOSegTrackedSetResults(const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds);
+    CREATE_TRACE_DECL(processOSegTrackedSetResults, const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds);
 
-  void processOSegShutdownEvents(const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet);
+    CREATE_TRACE_DECL(processOSegShutdownEvents, const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet);
 
-  void osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj);
+    CREATE_TRACE_DECL(osegCacheResponse, const Time &t, const ServerID& sID, const UUID& obj);
 
-  void osegCumulativeResponse(const Time &t, OSegLookupTraceToken* traceToken);
+    CREATE_TRACE_DECL(osegCumulativeResponse, const Time &t, OSegLookupTraceToken* traceToken);
 
+public:
   void prepareShutdown();
   void shutdown();
 
@@ -231,7 +245,42 @@ private:
 
     Thread* mStorageThread;
     Sirikata::AtomicValue<bool> mFinishStorage;
+
+    // OptionValues that turn tracing on/off
+    static OptionValue* mLogObject;
+    static OptionValue* mLogLocProx;
+    static OptionValue* mLogOSeg;
+    static OptionValue* mLogCSeg;
+    static OptionValue* mLogMigration;
+    static OptionValue* mLogDatagram;
+    static OptionValue* mLogPacket;
+    static OptionValue* mLogPing;
+    static OptionValue* mLogMessage;
 }; // class Trace
+
+// This is how you should *actually*
+#define TRACE(___trace, ___name, ...)            \
+    {                                            \
+        if ( ___trace-> check ## ___name () )    \
+            ___trace-> ___name ( __VA_ARGS__ );  \
+    } while(0)
+// To check that you aren't using tracing via the incorrect interface (that is,
+// directly instead of via macros) uncomment the following and mark the DECL's
+// in Trace as private.
+//#undef TRACE
+//#define TRACE(___trace, ___name, ...)
+
+// This version of the TRACE macro automatically uses mContext->trace() and
+// passes mContext->simTime() as the first argument, which is the most common
+// form.
+#define CONTEXT_TRACE(___name, ...)                 \
+    TRACE( mContext->trace(), ___name, mContext->simTime(), __VA_ARGS__)
+
+// This version is like the above, but you can specify the time yourself.  Use
+// this if you already called Context::simTime() recently. (It also works for
+// cases where the first parameter is not the current time.)
+#define CONTEXT_TRACE_NO_TIME(___name, ...)             \
+    TRACE( mContext->trace(), ___name, __VA_ARGS__)
 
 } // namespace CBR
 
@@ -240,7 +289,7 @@ private:
 
 #ifdef CBR_TIMESTAMP_PACKETS
 // The most complete macro, allows you to specify everything
-#define TIMESTAMP_FULL(trace, time, packetId, path) trace->timestampMessage(time, packetId, path)
+#define TIMESTAMP_FULL(trace, time, packetId, path) TRACE(trace, timestampMessage, time, packetId, path)
 
 // Slightly simplified version, works everywhere mContext->trace() and mContext->simTime() are valid
 #define TIMESTAMP_SIMPLE(packetId, path) TIMESTAMP_FULL(mContext->trace(), mContext->simTime(), packetId, path)
@@ -267,7 +316,7 @@ private:
 #define TIMESTAMP_PAYLOAD_END(prefix, path) TIMESTAMP_SIMPLE(prefix ## _uniq, path)
 
 
-#define TIMESTAMP_CREATED(packet, path) mContext->trace()->timestampMessageCreation(mContext->simTime(), packet->unique(), path, packet->source_port(), packet->dest_port())
+#define TIMESTAMP_CREATED(packet, path) TRACE(mContext->trace(), timestampMessageCreation, mContext->simTime(), packet->unique(), path, packet->source_port(), packet->dest_port())
 
 #else //CBR_TIMESTAMP_PACKETS
 #define TIMESTAMP_FULL(trace, time, packetId, path)

@@ -93,7 +93,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
         // It was already in there as a replica, notify its removal
 
         assert(it->second.local == false);
-        mContext->trace()->serverObjectEvent(mContext->simTime(), 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME remote server ID
+        CONTEXT_TRACE(serverObjectEvent, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME remote server ID
         notifyReplicaObjectRemoved(uuid);
     }
 
@@ -106,7 +106,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     // reasonable compared to the loc and bounds passed in
 
     // Add to the list of local objects
-    mContext->trace()->serverObjectEvent(mContext->simTime(), mContext->id(), mContext->id(), uuid, true, loc);
+    CONTEXT_TRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
@@ -132,7 +132,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
 
 
     // Remove from the list of local objects
-  mContext->trace()->serverObjectEvent(mContext->simTime(), mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
+  CONTEXT_TRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
     notifyLocalObjectRemoved(uuid);
 
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
@@ -165,7 +165,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
-        mContext->trace()->serverObjectEvent(mContext->simTime(), 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
+        CONTEXT_TRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
         notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
     }
 
@@ -185,7 +185,7 @@ void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uui
 
     // Otherwise, remove and notify
     mLocations.erase(uuid);
-    mContext->trace()->serverObjectEvent(mContext->simTime(), 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
+    CONTEXT_TRACE(serverObjectEvent, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
     notifyReplicaObjectRemoved(uuid);
 }
 
@@ -216,7 +216,7 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 loc_it->second.location = newloc;
                 notifyReplicaLocationUpdated( update.object(), newloc );
 
-                mContext->trace()->serverLoc( mContext->simTime(), msg->source_server(), mContext->id(), update.object(), newloc );
+                CONTEXT_TRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), newloc );
             }
 
             if (update.has_bounds()) {
@@ -233,7 +233,7 @@ void StandardLocationService::receiveMessage(Message* msg) {
 void StandardLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     assert(msg.dest_object() == UUID::null());
     assert(msg.dest_port() == OBJECT_PORT_LOCATION);
- 
+
     CBR::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString(msg.payload());
     assert(parse_success);
@@ -254,7 +254,7 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
                 loc_it->second.location = newloc;
                 notifyLocalLocationUpdated( msg.source_object(), newloc );
 
-                mContext->trace()->serverLoc( mContext->simTime(), mContext->id(), mContext->id(), msg.source_object(), newloc );
+                CONTEXT_TRACE(serverLoc, mContext->id(), mContext->id(), msg.source_object(), newloc );
             }
 
             if (request.has_bounds()) {
@@ -269,7 +269,7 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
     }
 }
 
-void StandardLocationService::locationUpdate(UUID source, void* buffer, uint length) {     
+void StandardLocationService::locationUpdate(UUID source, void* buffer, uint length) {
     CBR::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     assert(parse_success);
@@ -290,7 +290,7 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint len
                 loc_it->second.location = newloc;
                 notifyLocalLocationUpdated( source, newloc );
 
-                mContext->trace()->serverLoc( mContext->simTime(), mContext->id(), mContext->id(), source, newloc );
+                CONTEXT_TRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
 
             }
 

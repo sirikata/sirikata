@@ -61,7 +61,7 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOS
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);    
+    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -159,8 +159,8 @@ ObjectHost::ObjectConnections::ObjectConnections()
 {
 }
 
-void ObjectHost::ObjectConnections::add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb, 
-					MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb) 
+void ObjectHost::ObjectConnections::add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb,
+					MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb)
 {
     // Make sure we have this object's info stored
     ObjectInfoMap::iterator it = mObjectInfo.find(obj->uuid());
@@ -186,7 +186,7 @@ void ObjectHost::ObjectConnections::startMigration(const UUID& objid, ServerID m
     std::vector<UUID>::iterator where = std::find(objects.begin(), objects.end(), objid);
     if (where != objects.end()) {
         objects.erase(where);
-    }    
+    }
 
     // Notify the object
     mObjectInfo[objid].migratedCB(migrating_to);
@@ -381,8 +381,8 @@ void ObjectHost::stop() {
 
 }
 
-void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb, 
-			 MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb) 
+void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb,
+			 MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb)
 
 {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
@@ -394,7 +394,7 @@ void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallba
 }
 
 void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCallback migrate_cb,
-			 StreamCreatedCallback stream_created_cb) 
+			 StreamCreatedCallback stream_created_cb)
 {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -622,7 +622,7 @@ bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double d
     if (destServer!=NullServerID) {
         return send(src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
     }
-    return false;    
+    return false;
 }
 
 bool ObjectHost::randomPing(const Time& t) {
@@ -773,7 +773,15 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->simTime(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
+        CONTEXT_TRACE_NO_TIME(ping,
+            ping_msg.ping(),
+            msg->source_object(),
+            mContext->simTime(),
+            msg->dest_object(),
+            ping_msg.has_id()?ping_msg.id():(uint64)-1,
+            ping_msg.has_distance()?ping_msg.distance():-1,
+            msg->unique()
+        );
     }
 
     if (mRegisteredServices.find(msg->dest_port())!=mRegisteredServices.end()) {
@@ -815,7 +823,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
         UUID obj = msg->dest_object();
 
         if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Success) {
-	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj);	    
+	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj);
 
 	    // Send an ack so the server (our first conn or after migrating) can start sending data to us
 	    CBR::Protocol::Session::Container ack_msg;
@@ -898,11 +906,11 @@ void ObjectHost::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> >
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
                                 std::tr1::bind( &ObjectHost::spaceConnectCallback, this, _1, _2, obj)
                                 );
-    
+
     return;
   }
-  
-  mObjectToSpaceStreams[obj] = s;  
+
+  mObjectToSpaceStreams[obj] = s;
 
   mObjectConnections.handleConnectStream(obj);
 }

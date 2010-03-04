@@ -120,14 +120,14 @@ namespace CBR
 
 
 
-    mContext->trace()->processOSegShutdownEvents(mContext->simTime(),
-                                                 mContext->id(),
-                                                 numLookups,
-                                                 numOnThisServer,
-                                                 numCacheHits,
-                                                 numCraqLookups,
-                                                 numTimeElapsedCacheEviction,
-                                                 numMigrationNotCompleteYet);
+    CONTEXT_TRACE(processOSegShutdownEvents,
+        mContext->id(),
+        numLookups,
+        numOnThisServer,
+        numCacheHits,
+        numCraqLookups,
+        numTimeElapsedCacheEviction,
+        numMigrationNotCompleteYet);
 
     /*
     printf("\n\nREMAINING IN QUEUE GET:  %i     SET:  %i\n\n", (int) craqDhtGet.queueSize(),(int) craqDhtSet.queueSize());
@@ -337,9 +337,9 @@ namespace CBR
     }
 
     //log the request.
-    mContext->trace()->objectSegmentationLookupNotOnServerRequest(mContext->simTime(),
-                                                                  obj_id,
-                                                                  mContext->id());
+    CONTEXT_TRACE(objectSegmentationLookupNotOnServerRequest,
+        obj_id,
+        mContext->id());
 
 
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
@@ -355,9 +355,9 @@ namespace CBR
     ServerID cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
-        mContext->trace()->osegCacheResponse(mContext->simTime(),
-                                           cacheReturn,
-                                           obj_id);
+        CONTEXT_TRACE(osegCacheResponse,
+            cacheReturn,
+            obj_id);
 
       ++numCacheHits;
 
@@ -415,9 +415,9 @@ namespace CBR
 
       //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
-      mContext->trace()->objectSegmentationCraqLookupRequest(mContext->simTime(),
-                                                             obj_id,
-                                                             mContext->id());
+      CONTEXT_TRACE(objectSegmentationCraqLookupRequest,
+          obj_id,
+          mContext->id());
 
       ++numLookingUpDebug;
 
@@ -442,7 +442,8 @@ namespace CBR
       ++numAlreadyLookingUp;
       Duration endCraqDur  = Time::local() - Time::epoch();
       traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
-      mContext->trace()->osegCumulativeResponse(mContext->simTime(), traceToken);
+      CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+      delete traceToken;
     }
   }
 
@@ -531,9 +532,9 @@ namespace CBR
       return;
 
     //log the message.
-    mContext->trace()->objectBeginMigrate(mContext->simTime(),
-                                          obj_id,mContext->id(),
-                                          new_server_id);
+    CONTEXT_TRACE(objectBeginMigrate,
+        obj_id,mContext->id(),
+        new_server_id);
 
     std::map<UUID,TransLookup>::const_iterator transIter = mInTransitOrLookup.find(obj_id);
 
@@ -598,8 +599,10 @@ namespace CBR
       return;
     }
 
-    if (traceToken != NULL)
-        mContext->trace()->osegCumulativeResponse(mContext->simTime(),traceToken);
+    if (traceToken != NULL) {
+        CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+        delete traceToken;
+    }
 
     postingStrand->post(std::tr1::bind (&OSegLookupListener::osegLookupCompleted,mLookupListener,obj_id,sID));
   }
@@ -691,9 +694,9 @@ namespace CBR
 
 
       //log reception of acknowled message
-      mContext->trace()->objectAcknowledgeMigrate(mContext->simTime(),
-                                                  obj_id,serv_from,
-                                                  mContext->id());
+      CONTEXT_TRACE(objectAcknowledgeMigrate,
+              obj_id,serv_from,
+              mContext->id());
     }
     inTransOrLookup_m.unlock();
 
@@ -842,12 +845,12 @@ void CraqObjectSegmentation::trySendMigAcks() {
       //log message stating that object was processed.
       Duration timerDur = Time::local() - Time::epoch();
 
-      mContext->trace()->objectSegmentationProcessedRequest(mContext->simTime(),
-                                                            tmper,
-                                                            cor->servID,
-                                                            mContext->id(),
-                                                            (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)),
-                                                            (uint32) craqDhtGet.queueSize()  );
+      CONTEXT_TRACE(objectSegmentationProcessedRequest,
+          tmper,
+          cor->servID,
+          mContext->id(),
+          (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)),
+          (uint32) craqDhtGet.queueSize()  );
 
       if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
       {
@@ -951,10 +954,10 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
 
-      mContext->trace()->processOSegTrackedSetResults(mContext->simTime(),
-                                                      obj_id,
-                                                      mContext->id(),
-                                                      durMs);
+      CONTEXT_TRACE(processOSegTrackedSetResults,
+          obj_id,
+          mContext->id(),
+          durMs);
 
       //send an acknowledge message to space server that formerly hosted object.
       Message* to_send = new Message(

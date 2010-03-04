@@ -54,7 +54,7 @@ void FairServerMessageQueue::service(){
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
-        mContext->trace()->serverDatagramSent(start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
+        CONTEXT_TRACE_NO_TIME(serverDatagramSent, start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), packet_size);
 
         // Get rid of the message

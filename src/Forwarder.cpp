@@ -101,7 +101,7 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
   }
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    mContext->trace()->serverDatagramReceived(mContext->simTime(), mContext->simTime(), msg->source_server(), msg->id(), msg->serializedSize());
+    CONTEXT_TRACE(serverDatagramReceived, mContext->simTime(), msg->source_server(), msg->id(), msg->serializedSize());
 
     ServerMessageDispatcher::dispatchMessage(msg);
 }
@@ -361,7 +361,7 @@ Message* Forwarder::serverMessagePull(ServerID dest) {
     if (next_msg == NULL)
         return NULL;
 
-    mContext->trace()->serverDatagramQueued(mContext->simTime(), next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+    CONTEXT_TRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
 
     Message* pop_msg = mOutgoingMessages->pop(dest);
     assert(pop_msg == next_msg);

@@ -70,8 +70,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 void Server::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
   if (err != SUCCESS){
     return;
-  }    
-  
+  }
+
   mLocationService->newStream(s);
 
   mContext->newStream(err, s);
@@ -205,7 +205,7 @@ void Server::handleObjectHostMessageRouting() {
         return;
     }
 
-    
+
     // Finally, if we've passed all these tests, then everything looks good and we can route it
     mForwarder->routeObjectHostMessage(front.obj_msg);
 }
@@ -817,7 +817,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     Duration currentDur = mMigrationTimer.elapsed();
     int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
-    mContext->trace()->objectMigrationRoundTrip(mContext->simTime(), obj_id, mContext->id(), migTo , timeTakenMs);
+    CONTEXT_TRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
 
     mMigratingConnections.erase(objConMapIt);
   }
