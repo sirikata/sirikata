@@ -2767,10 +2767,12 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
     fileOut  << mCumData[s]->osegQLenPostQuery << ",";
 
   //pushing another q length
+  fileOut <<"\n\nJust pushing q data\n\n";
   fileOut << "\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->osegQLenPostReturn << ",";
-
+  
+  //what time it is in the run.
   fileOut << "\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->runTime << ",";
@@ -2805,7 +2807,6 @@ void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microsecon
         ((*traceIt)->traceToken.lookupReturnBegin                   == 0) ||
         ((*traceIt)->traceToken.lookupReturnEnd                     == 0))
     {
-      (*traceIt)->traceToken.printCumulativeTraceToken();
       delete (*traceIt);
       traceIt = allTraces.erase(traceIt);
     }
@@ -2817,7 +2818,15 @@ void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microsecon
         traceIt = allTraces.erase(traceIt);
       }
       else
+      {
+        if((*traceIt)->traceToken.osegQLenPostQuery > 1000 )
+        {
+          std::cout<<"\nWhat happened here\n";
+          (*traceIt)->traceToken.printCumulativeTraceToken();
+        }
+        
         ++traceIt;
+      }
     }
   }
 }
@@ -2961,8 +2970,8 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenQuery()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.osegQLenPostQuery;
-    mCumData[s]->completeLookupTime = toPush;
+    toPush = (uint64)(allTraces[s]->traceToken.osegQLenPostQuery);
+    mCumData[s]->osegQLenPostQuery = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateOSegQLenReturn()
@@ -2970,9 +2979,8 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenReturn()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    uint64 osegQLenPostReturn;
-    toPush = allTraces[s]->traceToken.osegQLenPostReturn;
-    mCumData[s]->completeLookupTime = toPush;
+    toPush = (uint64)(allTraces[s]->traceToken.osegQLenPostReturn);
+    mCumData[s]->osegQLenPostReturn = toPush;
   }
 }
 
@@ -2981,7 +2989,6 @@ void OSegCumulativeTraceAnalysis::generateRunTime()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    uint64 runTimer;
     toPush =(allTraces[s]->time - Time::null()).toMicroseconds() - mInitialTime;
     mCumData[s]->runTime = toPush;
   }

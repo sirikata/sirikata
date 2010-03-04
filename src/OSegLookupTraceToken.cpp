@@ -31,6 +31,9 @@ namespace CBR
     getConnectionNetworkReceived        =  0;
     lookupReturnBegin                   =  0;
     lookupReturnEnd                     =  0;
+
+    osegQLenPostReturn                  = 1000;
+    osegQLenPostQuery                   = 1000;
   }
 
   
@@ -60,6 +63,10 @@ namespace CBR
     getConnectionNetworkReceived        =  0;
     lookupReturnBegin                   =  0;
     lookupReturnEnd                     =  0;
+
+    osegQLenPostReturn                  = 1000;
+    osegQLenPostQuery                   = 1000;
+    
   }
 
   
@@ -85,6 +92,8 @@ namespace CBR
     std::cout<<"getConnectionNetworkReceived:\t\t"<<getConnectionNetworkReceived<<"\n";
     std::cout<<"lookupReturnBegin:\t\t"<<lookupReturnBegin<<"\n";
     std::cout<<"lookupReturnEnd:\t\t"<<lookupReturnEnd<<"\n";
+    std::cout<<"osegQLenPostReturn:\t\t"<<osegQLenPostReturn<<"\n";
+    std::cout<<"osegQLenPostQuery:\t\t"<<osegQLenPostQuery<<"\n";
     std::cout<<"\n\n";
   }
 
