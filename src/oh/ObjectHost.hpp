@@ -52,7 +52,6 @@ class ServerIDMap;
 class ObjectHost : public Service {
 public:
 
-    bool randomPing(const Time& t);
     typedef std::tr1::function<void(ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef SessionCallback ConnectedCallback;
@@ -123,9 +122,6 @@ private:
     bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
 
-
-    // Periodically called to generate random ping messages
-    void generatePings();
 
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object

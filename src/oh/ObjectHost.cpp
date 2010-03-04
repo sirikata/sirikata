@@ -625,18 +625,6 @@ bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double d
     return false;
 }
 
-bool ObjectHost::randomPing(const Time& t) {
-    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-
-    Object* a = mObjectConnections.randomObject(true);
-    Object* b = mObjectConnections.randomObject(true);
-
-    if (a != NULL && b != NULL)
-        return ping(t, a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
-
-    return false;
-}
-
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
