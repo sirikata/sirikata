@@ -34,6 +34,7 @@
 #define _CBR_OBJECT_HOST_HPP_
 
 #include "ObjectHostContext.hpp"
+#include "ObjectHostListener.hpp"
 #include "QueueRouterElement.hpp"
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
@@ -49,7 +50,7 @@ namespace CBR {
 class Object;
 class ServerIDMap;
 
-class ObjectHost : public Service {
+class ObjectHost : public Service, public Sirikata::Provider<ObjectHostListener*> {
 public:
 
     typedef std::tr1::function<void(ServerID)> SessionCallback;
@@ -60,6 +61,8 @@ public:
     // intents and purposes this is the point at which the transition happens
     typedef SessionCallback MigratedCallback;
     typedef std::tr1::function<void()> StreamCreatedCallback;
+
+    typedef std::tr1::function<void(const CBR::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
     ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap);
@@ -86,6 +89,11 @@ public:
     bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
 
     boost::shared_ptr<Stream<UUID> > getSpaceStream(const UUID& objectID);
+
+    ///Register to intercept all incoming messages on a given port
+    bool registerService(uint64 port, const ObjectMessageCallback&cb);
+    ///Unregister to intercept all incoming messages on a given port
+    bool unregisterService(uint64 port);
 
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
@@ -245,7 +253,7 @@ private:
     // Objects connections, maintains object connections and mapping
     class ObjectConnections {
     public:
-        ObjectConnections();
+        ObjectConnections(ObjectHost* _parent);
 
         // Add the object, completely disconnected, to the index
         void add(Object* obj, ConnectingInfo ci, ConnectedCallback connect_cb, MigratedCallback migrate_cb,
@@ -277,12 +285,8 @@ private:
         // established
         ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
 
-        // Select random objects uniformly, uniformly from server, using round robin
-        Object* randomObject(bool null_if_disconnected = false);
-        Object* randomObject(ServerID whichServer, bool null_if_disconnected = false);
-        Object* roundRobinObject(ServerID whichServer, bool null_if_disconnected = false);
-        ServerID numServerIDs()const;
     private:
+        ObjectHost* parent;
         struct ObjectInfo {
             ObjectInfo(Object* obj);
             ObjectInfo(); // Don't use, necessary for std::map
@@ -306,27 +310,17 @@ private:
         ObjectServerMap mObjectServerMap;
         typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
         ObjectInfoMap mObjectInfo;
-
-        UUID mLastRRObject;
-        size_t mLastRRIndex;
     };
     ObjectConnections mObjectConnections;
 
     bool mShuttingDown;
     uint64 mPingId;
-    typedef std::tr1::function<void(const CBR::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
     std::tr1::unordered_map<uint64, ObjectMessageCallback > mRegisteredServices;
 
 
     void spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> > s, UUID obj);
     std::map<UUID, boost::shared_ptr<Stream<UUID> > > mObjectToSpaceStreams;
 
-public:
-    ObjectConnections*getObjectConnections(){return &mObjectConnections;}
-    ///Register to intercept all incoming messages on a given port
-    bool registerService(uint64 port, const ObjectMessageCallback&cb);
-    ///Unregister to intercept all incoming messages on a given port
-    bool unregisterService(uint64 port);
 }; // class ObjectHost
 
 } // namespace CBR

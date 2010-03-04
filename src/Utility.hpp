@@ -55,6 +55,8 @@
 
 #include <sirikata/util/Thread.hpp>
 
+#include <sirikata/util/ListenerProvider.hpp>
+
 namespace CBR {
 
 typedef Sirikata::int8 int8;
@@ -109,7 +111,7 @@ typedef Sirikata::Network::IOTimer IOTimer;
 typedef Sirikata::Network::IOTimerPtr IOTimerPtr;
 typedef Sirikata::Network::IOCallback IOCallback;
 
-  
+
 typedef Sirikata::Thread Thread;
 
 /* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */

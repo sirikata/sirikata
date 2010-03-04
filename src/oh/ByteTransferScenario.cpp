@@ -3,6 +3,8 @@
 #include "ObjectHost.hpp"
 #include "Object.hpp"
 #include "Options.hpp"
+#include "ConnectedObjectTracker.hpp"
+
 namespace CBR{
 void BTSInitOptions(ByteTransferScenario *thus) {
 
@@ -16,6 +18,7 @@ void BTSInitOptions(ByteTransferScenario *thus) {
 ByteTransferScenario::ByteTransferScenario(const String &options):mStartTime(Time::epoch()){
     mNumTotalPings=0;
     mContext=NULL;
+    mObjectTracker = NULL;
 
     BTSInitOptions(this);
     OptionSet* optionsSet = OptionSet::getOptions("DistributedPingScenario",this);
@@ -44,6 +47,8 @@ void ByteTransferScenario::initialize(ObjectHostContext*ctx) {
     using std::tr1::placeholders::_1;
 
     mContext=ctx;
+    mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
+
     mPingProfiler = mContext->profiler->addStage("Object Host Generate TransferBytes ");
     mContext->objectHost->registerService(mPort,std::tr1::bind(&ByteTransferScenario::pingReturn,this,_1));
     mReturned=false;
@@ -51,7 +56,7 @@ void ByteTransferScenario::initialize(ObjectHostContext*ctx) {
 }
 
 void ByteTransferScenario::start() {
-    mSourceObject=UUID::null();
+    mSourceObject = NULL;
     mDestinationObject=UUID::null();
     mOutstandingPackets.clear();
     mReturned=false;
@@ -110,9 +115,11 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
     mGeneratePings();
 }
 void ByteTransferScenario::generatePings() {
-    if (mSourceObject==UUID::null()||mDestinationObject==UUID::null()&&mContext->objectHost->getObjectConnections()->numServerIDs()>1) {
+    if (mSourceObject == NULL ||
+        mDestinationObject == UUID::null() &&
+        mObjectTracker->numServerIDs()>1) {
         mPingProfiler->started();
-        unsigned int maxDistance=mContext->objectHost->getObjectConnections()->numServerIDs();
+        unsigned int maxDistance=mObjectTracker->numServerIDs();
         unsigned int distance=0;
         if (maxDistance&&((!mSameObjectHostPings)&&(!mForceSameObjectHostPings)))
             maxDistance-=1;
@@ -126,10 +133,8 @@ void ByteTransferScenario::generatePings() {
         }
         unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
 
-        Object * objA=mContext->objectHost->getObjectConnections()->randomObject((ServerID)minServer,
-                                                                                 false);
-        Object * objB=mContext->objectHost->getObjectConnections()->randomObject((ServerID)(minServer+distance),
-                                                                                 false);
+        Object * objA = mObjectTracker->randomObject((ServerID)minServer);
+        Object * objB = mObjectTracker->randomObject((ServerID)(minServer+distance));
 
 
         if (rand()<RAND_MAX/2) {
@@ -153,7 +158,7 @@ void ByteTransferScenario::generatePings() {
             }
         }
         if (objA!=NULL&&objB!=NULL) {
-            mSourceObject=objA->uuid();
+            mSourceObject=objA;
             mDestinationObject=objB->uuid();
         }
         mContext->mainStrand->post(Duration::milliseconds(10.0),mGeneratePings);
@@ -177,7 +182,7 @@ void ByteTransferScenario::generatePings() {
             buffer[5]=pingNumber/256/256/256/256/256%256;
             buffer[6]=pingNumber/256/256/256/256/256/256%256;
             buffer[7]=pingNumber/256/256/256/256/256/256/256%256;
-            pushed=mContext->objectHost->send(mContext->objectHost->getObjectConnections()->object(mSourceObject),
+            pushed=mContext->objectHost->send(mSourceObject,
                                        mPort,
                                        mDestinationObject,
                                        mPort,

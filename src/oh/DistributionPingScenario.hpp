@@ -4,9 +4,12 @@
 #include "Scenario.hpp"
 namespace CBR {
 class ScenarioFactory;
+class ConnectedObjectTracker;
 class DistributionPingScenario : public Scenario {
     double mNumPingsPerSecond;
+
     ObjectHostContext*mContext;
+    ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
     unsigned int mPingID;
     bool mSameObjectHostPings;
@@ -14,6 +17,7 @@ class DistributionPingScenario : public Scenario {
     Time mStartTime;
     int64 mNumTotalPings;
     TimeProfiler::Stage* mPingProfiler;
+
     bool pingOne(ServerID minServer, unsigned int distance);
     void generatePings();
     static DistributionPingScenario*create(const String&options);
@@ -22,7 +26,7 @@ public:
     ~DistributionPingScenario();
     virtual void initialize(ObjectHostContext*);
     void start();
-    void stop();    
+    void stop();
     static void addConstructorToFactory(ScenarioFactory*);
 };
 }

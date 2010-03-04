@@ -154,8 +154,8 @@ ObjectHost::ObjectConnections::ObjectInfo::ObjectInfo(Object* obj)
 
 // ObjectConnections Implementation
 
-ObjectHost::ObjectConnections::ObjectConnections()
- : mLastRRObject(UUID::null())
+ObjectHost::ObjectConnections::ObjectConnections(ObjectHost* _parent)
+ : parent(_parent)
 {
 }
 
@@ -203,15 +203,23 @@ ServerID ObjectHost::ObjectConnections::handleConnectSuccess(const UUID& obj) {
         mObjectInfo[obj].connectedTo = connectedTo;
         mObjectInfo[obj].connectingTo = NullServerID;
         mObjectServerMap[connectedTo].push_back(obj);
+
         mObjectInfo[obj].connectedCB(connectedTo);
+        parent->notify(&ObjectHostListener::objectHostConnectedObject, parent, object(obj), connectedTo);
+
         return connectedTo;
     }
     else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
+        ServerID migratedFrom = mObjectInfo[obj].connectedTo;
         ServerID migratedTo = mObjectInfo[obj].migratingTo;
+
         OH_LOG(debug,"Successfully migrated " << obj.toString() << " to space node " << migratedTo);
         mObjectInfo[obj].connectedTo = migratedTo;
         mObjectInfo[obj].migratingTo = NullServerID;
         mObjectServerMap[migratedTo].push_back(obj);
+
+        parent->notify(&ObjectHostListener::objectHostMigratedObject, parent, obj, migratedFrom, migratedTo);
+
         return migratedTo;
     }
     else { // What were we doing?
@@ -256,66 +264,6 @@ ServerID ObjectHost::ObjectConnections::getConnectedServer(const UUID& obj_id, b
     return dest_server;
 }
 
-Object* ObjectHost::ObjectConnections::roundRobinObject(ServerID whichServer, bool null_if_disconnected) {
-    if (mObjectInfo.size()==0) return NULL;
-    UUID myrand(mLastRRObject);
-    ObjectInfoMap::iterator i=mObjectInfo.end();
-    if (whichServer==NullServerID){
-        i=mObjectInfo.find(myrand);
-        if (i!=mObjectInfo.end()) ++i;
-        if (i==mObjectInfo.end()) i=mObjectInfo.begin();
-    }else {
-        std::vector<UUID> *osm=&mObjectServerMap[whichServer];
-        ++mLastRRIndex;
-        if (mLastRRIndex>=osm->size()) {
-            mLastRRIndex=0;
-        }
-        if (osm->size()) {
-            i=mObjectInfo.find((*osm)[mLastRRIndex]);
-        }
-    }
-    if (i!=mObjectInfo.end()) {
-        mLastRRObject=i->first;
-        return ( i->second.connectedTo == NullServerID ? NULL : i->second.object );
-    }
-    return NULL;
-}
-
-ServerID ObjectHost::ObjectConnections::numServerIDs() const{
-    return mObjectServerMap.size();
-}
-
-Object* ObjectHost::ObjectConnections::randomObject(bool null_if_disconnected) {
-    if (mObjectServerMap.size()==0) return NULL;
-    int iteratorLevel=rand()%mObjectServerMap.size();
-    ObjectServerMap::iterator i=mObjectServerMap.begin();
-    for (int index=0;index<iteratorLevel;++index,++i) {
-    }
-    std::vector<UUID> *uuidMap=&i->second;
-    if (uuidMap->size()) {
-        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
-        if (i!=mObjectInfo.end())
-            return ( i->second.connectedTo == NullServerID ? NULL : i->second.object );
-    }
-    return NULL;
-}
-
-Object* ObjectHost::ObjectConnections::randomObject(ServerID whichServer, bool null_if_disconnected) {
-    if (whichServer==NullServerID) return randomObject(null_if_disconnected);
-    ObjectServerMap::iterator i=mObjectServerMap.find(whichServer);
-    if (i==mObjectServerMap.end())
-        return NULL;
-    std::vector<UUID> *uuidMap=&i->second;
-    if (uuidMap->size()) {
-        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
-        if (i!=mObjectInfo.end())
-            return ( i->second.connectedTo == NullServerID ? NULL : i->second.object );
-    }
-    return NULL;
-}
-
-
-
 
 // ObjectHost Implementation
 
@@ -327,6 +275,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap
    mIOWork(NULL),
    mIOThread(NULL),
    mServerIDMap(sidmap),
+   mObjectConnections(this),
    mShuttingDown(false)
 {
     static Sirikata::PluginManager sPluginManager;

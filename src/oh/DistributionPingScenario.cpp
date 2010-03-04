@@ -3,6 +3,8 @@
 #include "ObjectHost.hpp"
 #include "Object.hpp"
 #include "Options.hpp"
+#include "ConnectedObjectTracker.hpp"
+
 namespace CBR{
 void DPSInitOptions(DistributionPingScenario *thus) {
 
@@ -16,6 +18,7 @@ void DPSInitOptions(DistributionPingScenario *thus) {
 DistributionPingScenario::DistributionPingScenario(const String &options):mStartTime(Time::epoch()){
     mNumTotalPings=0;
     mContext=NULL;
+    mObjectTracker = NULL;
     mPingID=0;
     DPSInitOptions(this);
     OptionSet* optionsSet = OptionSet::getOptions("DistributedPingScenario",this);
@@ -23,7 +26,6 @@ DistributionPingScenario::DistributionPingScenario(const String &options):mStart
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mSameObjectHostPings=optionsSet->referenceOption("allow-same-object-host")->as<bool>();
     mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
-
 }
 DistributionPingScenario::~DistributionPingScenario(){
     delete mPingPoller;
@@ -39,6 +41,7 @@ void DistributionPingScenario::addConstructorToFactory(ScenarioFactory*thus){
 
 void DistributionPingScenario::initialize(ObjectHostContext*ctx) {
     mContext=ctx;
+    mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
     mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
     mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&DistributionPingScenario::generatePings, this), Duration::seconds(1.0/mNumPingsPerSecond));
 }
@@ -50,11 +53,9 @@ void DistributionPingScenario::stop() {
     mPingPoller->stop();
 }
 bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance) {
-    unsigned int maxDistance=mContext->objectHost->getObjectConnections()->numServerIDs();
-    Object * objA=mContext->objectHost->getObjectConnections()->randomObject((ServerID)minServer,
-                                                                             false);
-    Object * objB=mContext->objectHost->getObjectConnections()->randomObject((ServerID)(minServer+distance),
-                                                                             false);
+    unsigned int maxDistance = mObjectTracker->numServerIDs();
+    Object * objA = mObjectTracker->randomObject((ServerID)minServer);
+    Object * objB = mObjectTracker->randomObject((ServerID)(minServer+distance));
 
 
     if (rand()<RAND_MAX/2) {
@@ -74,7 +75,7 @@ bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance
 
 void DistributionPingScenario::generatePings() {
     mPingProfiler->started();
-    unsigned int maxDistance=mContext->objectHost->getObjectConnections()->numServerIDs();
+    unsigned int maxDistance = mObjectTracker->numServerIDs();
     unsigned int distance=0;
     if (maxDistance&&((!mSameObjectHostPings)&&(!mForceSameObjectHostPings)))
         maxDistance-=1;

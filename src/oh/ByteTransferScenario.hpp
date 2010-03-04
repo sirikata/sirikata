@@ -4,9 +4,13 @@
 #include "Scenario.hpp"
 namespace CBR {
 class ScenarioFactory;
+class ConnectedObjectTracker;
+class Object;
 class ByteTransferScenario : public Scenario {
-    
+
     ObjectHostContext*mContext;
+    ConnectedObjectTracker* mObjectTracker;
+
     unsigned int mPingID;
     bool mSameObjectHostPings;
     bool mForceSameObjectHostPings;
@@ -15,7 +19,7 @@ class ByteTransferScenario : public Scenario {
     bool mReturned;
     Time mStartTime;
     int64 mNumTotalPings;
-    UUID mSourceObject;
+    Object* mSourceObject;
     UUID mDestinationObject;
     size_t mPacketSize;
     int64 mPingNumber;
@@ -43,7 +47,7 @@ public:
     ~ByteTransferScenario();
     virtual void initialize(ObjectHostContext*);
     void start();
-    void stop();    
+    void stop();
     static void addConstructorToFactory(ScenarioFactory*);
 };
 }
