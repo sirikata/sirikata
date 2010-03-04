@@ -87,6 +87,10 @@ class PacketLatencyByLoad:
              '--force-same-object-host=' + str(self.local_messages and not self.remote_messages),
              ]
             )
+
+        if 'message' not in self.cs.traces: self.cs.traces.append('message')
+        if 'ping' not in self.cs.traces: self.cs.traces.append('ping')
+
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
 
@@ -142,7 +146,6 @@ if __name__ == "__main__":
     cs.object_query_frac = 0.0
 
     cs.duration = '100s'
-
 
     rates = sys.argv[1:]
     plan = PacketLatencyByLoad(cc, cs, local_messages=True, remote_messages=True)

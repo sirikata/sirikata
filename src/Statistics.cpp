@@ -151,13 +151,13 @@ OptionValue* Trace::mLogMessage;
 void Trace::InitOptions() {
     mLogObject = new OptionValue(TRACE_OBJECT_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"true",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogCSeg = new OptionValue(TRACE_CSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogMigration = new OptionValue(TRACE_MIGRATION_NAME,"true",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogMigration = new OptionValue(TRACE_MIGRATION_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogPacket = new OptionValue(TRACE_PACKET_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogPing = new OptionValue(TRACE_PING_NAME,"true",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"true",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogPing = new OptionValue(TRACE_PING_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeOptions::module(CBR_MODULE)
         .addOption(mLogObject)

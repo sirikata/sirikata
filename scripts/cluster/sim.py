@@ -91,11 +91,16 @@ class ClusterSimSettings:
         self.vis_mode = 'object'
         self.vis_seed = 1
 
+        # Trace:
+        # list of trace types to enable, e.g. ['object', 'oseg'] will
+        # result in --trace-object --trace-oseg being passed in
+        self.traces = []
+
         self.loglevels = {
             "prox" : "warn",
             #"tcpsst" : "insane",
             }
-       
+
         # sanity checks
         if (self.space_server_pool < self.layout_x * self.layout_y):
             print "Space server pool not large enough for desired layout."
@@ -264,7 +269,7 @@ class ClusterSim:
         for i in range(0, self.settings.num_cseg_servers):
             fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
 
-            if (self.settings.cseg_service_host == " "): 
+            if (self.settings.cseg_service_host == " "):
                 self.settings.cseg_service_host = self.config.deploy_nodes[server_index].node
 
             port += 2
@@ -367,6 +372,9 @@ class ClusterSim:
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
         cmd_seq.extend(cseg_params)
+
+        for tracetype in self.settings.traces:
+            cmd_seq.append( '--trace-%s=true' % (tracetype) )
 
         # Add a param for loglevel if necessary
         if len(self.settings.loglevels) > 0:
@@ -480,6 +488,9 @@ if __name__ == "__main__":
 #    cs = ClusterSimSettings(cc, 4, (2,2), 1)
 #    cs = ClusterSimSettings(cc, 4, (4,1), 1)
 #    cs = ClusterSimSettings(cc, 16, (4,4), 1)
+
+    # For command line, enable traces by default that are needed for the analyses.
+    cs.traces = ['oseg', 'migration', 'ping', 'message']
 
     cluster_sim = ClusterSim(cc, cs)
 

@@ -54,7 +54,7 @@ csim.loglevels = {
             "prox" : "warn",
             }
 
-
+csim.traces = ['ping', 'message', 'packet', 'datagram']
 
 
 
