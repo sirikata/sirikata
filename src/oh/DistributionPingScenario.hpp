@@ -33,6 +33,7 @@ class DistributionPingScenario : public Scenario {
     bool mForceSameObjectHostPings;
     Time mStartTime;
     int64 mNumTotalPings;
+    int64 mMaxPingsPerRound;
     TimeProfiler::Stage* mPingProfiler;
 
     bool generateOnePing(ServerID minServer, unsigned int distance, const Time& t, PingInfo* result);

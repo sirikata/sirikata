@@ -32,11 +32,22 @@ DistributionPingScenario::DistributionPingScenario(const String &options)
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
     mGeneratePingPoller = NULL;
-    mPings =
+    mPings = // We allocate space for 1/4 seconds worth of pings
         new Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>(
             CountResourceMonitor(std::max((uint32)(mNumPingsPerSecond / 4), (uint32)2))
         );
     mPingPoller = NULL;
+    // NOTE: We have this limit because we can get in lock-step with the
+    // generator, causing this to run for excessively long when we fall behind
+    // on pings.  This allows us to burst to catch up when there is time (and
+    // amortize the constant overhead of doing 1 round), but if
+    // there is other work to be done we won't make our target rate.
+    mMaxPingsPerRound = 20;
+    // Do we want to vary this based on mNumPingsPerSecond? 20 is a decent
+    // burst, but at 10k/s can take 2ms (we're seeing about 100us/ping
+    // currently), which is potentially a long delay for other things in this
+    // strand.  If we try to get to 100k, that can be up to 20ms which is very
+    // long to block other things on the main strand.
 }
 DistributionPingScenario::~DistributionPingScenario(){
     delete mPings;
@@ -134,10 +145,12 @@ void DistributionPingScenario::sendPings() {
     mPingProfiler->started();
 
     Time newTime=mContext->simTime();
-    int64 howManyPings=(newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
+    int64 howManyPings = (newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
 
     bool broke=false;
-    int64 limit=howManyPings-mNumTotalPings;
+    // NOTE: We limit here because we can get in lock-step with the generator,
+    // causing this to run for excessively long when we fall behind on pings.
+    int64 limit = std::min((int64)howManyPings-mNumTotalPings, mMaxPingsPerRound);
     int64 i;
     for (i=0;i<limit;++i) {
         Time t(mContext->simTime());
