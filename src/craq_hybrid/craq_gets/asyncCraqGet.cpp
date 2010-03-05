@@ -40,7 +40,6 @@ namespace CBR
     }
     mConnections.clear();
     mConnectionsStrands.clear();
-
   }
 
   int AsyncCraqGet::getRespCount()

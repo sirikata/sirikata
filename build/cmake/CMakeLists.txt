@@ -277,6 +277,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/BatchCraqQueue.cpp
   ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp

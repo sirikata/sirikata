@@ -134,6 +134,7 @@ const uint8 Trace::ObjectConnectedTag;
 OptionValue* Trace::mLogObject;
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogOSeg;
+OptionValue* Trace::mLogOSegCumulative;
 OptionValue* Trace::mLogCSeg;
 OptionValue* Trace::mLogMigration;
 OptionValue* Trace::mLogDatagram;
@@ -141,20 +142,22 @@ OptionValue* Trace::mLogPacket;
 OptionValue* Trace::mLogPing;
 OptionValue* Trace::mLogMessage;
 
-#define TRACE_OBJECT_NAME        "trace-object"
-#define TRACE_LOCPROX_NAME       "trace-locprox"
-#define TRACE_OSEG_NAME          "trace-oseg"
-#define TRACE_CSEG_NAME          "trace-cseg"
-#define TRACE_MIGRATION_NAME     "trace-migration"
-#define TRACE_DATAGRAM_NAME      "trace-datagram"
-#define TRACE_PACKET_NAME        "trace-packet"
-#define TRACE_PING_NAME          "trace-ping"
-#define TRACE_MESSAGE_NAME       "trace-message"
+#define TRACE_OBJECT_NAME                   "trace-object"
+#define TRACE_LOCPROX_NAME                  "trace-locprox"
+#define TRACE_OSEG_NAME                     "trace-oseg"
+#define TRACE_OSEG_CUMULATIVE_NAME          "trace-oseg-cumulative"
+#define TRACE_CSEG_NAME                     "trace-cseg"
+#define TRACE_MIGRATION_NAME                "trace-migration"
+#define TRACE_DATAGRAM_NAME                 "trace-datagram"
+#define TRACE_PACKET_NAME                   "trace-packet"
+#define TRACE_PING_NAME                     "trace-ping"
+#define TRACE_MESSAGE_NAME                  "trace-message"
 
 void Trace::InitOptions() {
     mLogObject = new OptionValue(TRACE_OBJECT_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogOSegCumulative = new OptionValue(TRACE_OSEG_CUMULATIVE_NAME,"true",Sirikata::OptionValueType<bool>(),"Log oseg cumulative trace data");
     mLogCSeg = new OptionValue(TRACE_CSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogMigration = new OptionValue(TRACE_MIGRATION_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
@@ -166,6 +169,7 @@ void Trace::InitOptions() {
         .addOption(mLogObject)
         .addOption(mLogLocProx)
         .addOption(mLogOSeg)
+        .addOption(mLogOSegCumulative)
         .addOption(mLogCSeg)
         .addOption(mLogMigration)
         .addOption(mLogDatagram)
@@ -584,38 +588,38 @@ CREATE_TRACE_DEF(objectSegmentationLookupNotOnServerRequest, mLogOSeg, const Tim
 }
 
 
-CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSeg, const Time &t, OSegLookupTraceToken* traceToken)
+CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSegCumulative, const Time &t, OSegLookupTraceToken* traceToken)
 {
-    if (traceToken == NULL || mShuttingDown)
-        return;
+  if (traceToken == NULL || mShuttingDown)
+    return;
 
-    const uint32 num_data = 2;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(traceToken, sizeof(OSegLookupTraceToken)),
-    };
-    writeRecord(OSegCumulativeTraceAnalysisTag, data_vec, num_data);
+  const uint32 num_data = 2;
+  BatchedBuffer::IOVec data_vec[num_data] = {
+    BatchedBuffer::IOVec(&t, sizeof(t)),
+    BatchedBuffer::IOVec(traceToken, sizeof(OSegLookupTraceToken)),
+  };
+  
+  writeRecord(OSegCumulativeTraceAnalysisTag, data_vec, num_data);
 }
 
 
-  void Trace::osegProcessedCraqTime(const Time&t, const Duration& dur, uint32 numProc, uint32 sizeIncomingString)
-  {
-    if (mShuttingDown)
-      return;
+//   void Trace::osegProcessedCraqTime(const Time&t, const Duration& dur, uint32 numProc, uint32 sizeIncomingString)
+//   {
+//     if (mShuttingDown)
+//       return;
 
-    #ifdef TRACE_OSEG_PROCESS_CRAQ
-    const uint32 num_data = 4;
-    BatchedBuffer::IOVec data_vec[num_data] =
-      {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&dur, sizeof(Duration)),
-        BatchedBuffer::IOVec(&numProc,sizeof(numProc)),
-        BatchedBuffer::IOVec(&sizeIncomingString,sizeof(sizeIncomingString)),
-      };
-    writeRecord(OSegCraqProcessTag, data_vec, num_data);
-    #endif
-    
-  }
+//     #ifdef TRACE_OSEG_PROCESS_CRAQ
+//     const uint32 num_data = 4;
+//     BatchedBuffer::IOVec data_vec[num_data] =
+//       {
+//         BatchedBuffer::IOVec(&t, sizeof(t)),
+//         BatchedBuffer::IOVec(&dur, sizeof(Duration)),
+//         BatchedBuffer::IOVec(&numProc,sizeof(numProc)),
+//         BatchedBuffer::IOVec(&sizeIncomingString,sizeof(sizeIncomingString)),
+//       };
+//     writeRecord(OSegCraqProcessTag, data_vec, num_data);
+//     #endif
+//   }
   
 
 } // namespace CBR

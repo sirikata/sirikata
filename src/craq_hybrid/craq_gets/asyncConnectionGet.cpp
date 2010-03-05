@@ -19,10 +19,6 @@
 
 
 
-
-
-
-
 namespace CBR
 {
   //constructor

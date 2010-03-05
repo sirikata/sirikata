@@ -49,7 +49,8 @@ namespace CBR
    mStrand(o_strand),
    mCraqCache(con),
    mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
-   mFrontMigAck(NULL)
+   mFrontMigAck(NULL),
+   mBatchQueue(new BatchCraqQueue(con->ioService->createStrand(),this, con))
   {
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
@@ -63,7 +64,7 @@ namespace CBR
     craqDhtSet.initialize(setInitArgs);
   }
 
-
+  
   void CraqObjectSegmentation::stop()
   {
     craqDhtSet.stop();
@@ -293,7 +294,6 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
             cacheReturn.server(),
             obj_id);
 
-
       Duration cacheEndDur           =    Time::local() - Time::epoch();
       traceToken->checkCacheLocalEnd =    (uint64) cacheEndDur.toMicroseconds();
       delete traceToken;
@@ -303,10 +303,10 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
     Duration cacheEndDur             =    Time::local() - Time::epoch();
     traceToken->checkCacheLocalEnd   =     (uint64)cacheEndDur.toMicroseconds();
 
-    traceToken->osegQLenPostQuery     =             (uint64)mStrandQLen;
+    traceToken->osegQLenPostQuery    =             (uint64)mStrandQLen;
     ++mStrandQLen;
     testSanityQLen();
-    mStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id, traceToken));
+
 
     return CraqEntry::null();
   }
@@ -314,9 +314,11 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
   
   
   //this call actually wraps a call that performs the craq lookup
-  void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken)
+  void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken,bool decrement)
   {
-    --mStrandQLen;
+    if (decrement)
+      --mStrandQLen;
+
     testSanityQLen();
     if (mReceivedStopRequest)
     {
@@ -341,7 +343,8 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
       //object is already being looked up.
       Duration endCraqDur            =             Time::local() - Time::epoch();
       traceToken->craqLookupEnd      =            (uint64)   endCraqDur.toMicroseconds();
-      mContext->trace()->osegCumulativeResponse(mContext->simTime(), traceToken);
+      CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+      delete traceToken;
     }
   }
 
@@ -358,10 +361,6 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
 
     mapDataKeyToUUID[indexer] = obj_id;
 
-    mContext->trace()->objectSegmentationCraqLookupRequest(mContext->simTime(),
-                                                           obj_id,
-                                                           mContext->id());
-
     return cdSetGet;
   }
 
@@ -370,6 +369,7 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
   TransLookup tmpTransLookup;
   tmpTransLookup.sID = CraqEntry::null();  //means that we're performing a lookup, rather than a migrate.
   tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
+
 
   TransLookup tmpTransLookup;
   tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
@@ -523,9 +523,9 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     }
 
 
-    if (traceToken != NULL) {
+    if (traceToken != NULL)
+    {
         CONTEXT_TRACE(osegCumulativeResponse, traceToken);
-         I do not know that I have to delete the trace token here;
         delete traceToken;
     }
 
@@ -901,7 +901,6 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     ++mStrandQLen;
     testSanityQLen();
     mStrand->post(boost::bind(&CraqObjectSegmentation::processCraqSetResult, this, trackedSetResult));
-    //    lkjs;
   }
     
   //gets posted to from craqSetResult.  Should get inside of o_strand from the post.
@@ -1005,8 +1004,44 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     return returner;
   }
 
+
+  //this function is just a wrapper for posting on to mStrand
+  void CraqObjectSegmentation::lookupQueue(QueryQueue* qq)
+  {
+    ++mStrandQLen;
+    mStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookupQueue,this, qq));
+    
+  }
+
+  //run through and initiate craq lookups on each.
+  void CraqObjectSegmentation::beginCraqLookupQueue(QueryQueue* qq)
+  {
+    --mStrandQLen;
+
+    //    run through and initiate craq lookups on each member of the queue;
+    while(! qq->empty())
+    {
+      Query* query = qq->front();
+      qq->pop();
+      beginCraqLookup(query->obj_id,query->traceToken,false);
+      delete query;
+    }
+    delete qq;
+  }
+  
+  
   void CraqObjectSegmentation::testSanityQLen()
   {
+    static int counter = 0;
+    static UUID tmper;
+    static Duration dur;
+    
+    if (counter < 100)
+      std::cout<<"\nSize of uuid:  "<<sizeof(tmper)<<"   and duration:  " <<sizeof(dur) <<"\n\n";
+
+    ++counter;
+
+    
     static int largest = 0;
     if (mStrandQLen > largest)
       largest = mStrandQLen;

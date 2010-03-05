@@ -227,6 +227,7 @@ public:
 
     CREATE_TRACE_DECL(osegCumulativeResponse, const Time &t, OSegLookupTraceToken* traceToken);
 
+  
 public:
 
   void prepareShutdown();
@@ -249,6 +250,7 @@ private:
     static OptionValue* mLogObject;
     static OptionValue* mLogLocProx;
     static OptionValue* mLogOSeg;
+    static OptionValue* mLogOSegCumulative;
     static OptionValue* mLogCSeg;
     static OptionValue* mLogMigration;
     static OptionValue* mLogDatagram;

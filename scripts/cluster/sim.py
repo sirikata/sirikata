@@ -30,7 +30,7 @@ class ClusterSimSettings:
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '175s'
+        self.duration = '120s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.falloff = 'sqr'
@@ -44,7 +44,7 @@ class ClusterSimSettings:
         self.object_connect_phase = '10s'
 
         # OH: random object generation settings
-        self.num_random_objects = 1000
+        self.num_random_objects = 5000
         self.object_static = 'static'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'

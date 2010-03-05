@@ -2172,8 +2172,6 @@ void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfte
 
 bool OSegCacheResponseAnalysis::compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B)
 {
-
-
   return A.time < B.time;
 }
 
@@ -2567,9 +2565,9 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
       if (oseg_cum_evt != NULL)
       {
         if (allTraces.size() == 0)
-          mInitialTime = (oseg_cum_evt->time - Time::null()).toMicroseconds();
+          mInitialTime = (uint64)(oseg_cum_evt->time - Time::null()).toMicroseconds();
         else if (mInitialTime > (uint64) (oseg_cum_evt->time - Time::null()).toMicroseconds())
-          mInitialTime = (oseg_cum_evt->time - Time::null()).toMicroseconds();
+          mInitialTime = (uint64)(oseg_cum_evt->time - Time::null()).toMicroseconds();
 
         allTraces.push_back(oseg_cum_evt);
 
@@ -2607,6 +2605,7 @@ void OSegCumulativeTraceAnalysis::generateAllData()
   generateCompleteLookupTime();
   generateOSegQLenQuery();
   generateOSegQLenReturn();
+  generateRunTime();
   
   sortByCompleteLookupTime();
 }
@@ -2767,7 +2766,6 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
     fileOut  << mCumData[s]->osegQLenPostQuery << ",";
 
   //pushing another q length
-  fileOut <<"\n\nJust pushing q data\n\n";
   fileOut << "\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->osegQLenPostReturn << ",";
@@ -2989,7 +2987,7 @@ void OSegCumulativeTraceAnalysis::generateRunTime()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush =(allTraces[s]->time - Time::null()).toMicroseconds() - mInitialTime;
+    toPush =(uint64) ((allTraces[s]->time - Time::null()).toMicroseconds() - mInitialTime);
     mCumData[s]->runTime = toPush;
   }
 }
