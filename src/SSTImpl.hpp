@@ -356,7 +356,7 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
-  bool serviceConnection() {
+  bool serviceConnection(const Time& curTime) { 
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) return false;
@@ -365,7 +365,7 @@ private:
     for (typename std::map<LSID, boost::shared_ptr< Stream<EndPointType> > >::iterator it=mOutgoingSubstreamMap.begin();
 	 it != mOutgoingSubstreamMap.end(); ++it)
     {
-      if ( (it->second->serviceStream()) == false) {
+      if ( (it->second->serviceStream(curTime)) == false) {
 	return false;
       }
     }
@@ -373,16 +373,9 @@ private:
     if (inSendingMode) {
       boost::unique_lock<boost::mutex> lock(mQueueMutex);
 
-      if (mQueuedSegments.empty()) {
-	if (mState == CONNECTION_PENDING_DISCONNECT) {
-	  return true;
-	}
-      }
-
       numSegmentsSent = 0;
 
-      for (int i = 0; i < mCwnd; i++) {
-	if ( !mQueuedSegments.empty() ) {
+      for (int i = 0; (!mQueuedSegments.empty()) && i < mCwnd; i++) {
 	  boost::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
 
 	  CBR::Protocol::SST::SSTChannelHeader sstMsg;
@@ -399,27 +392,20 @@ private:
 
 	  sendSSTChannelPacket(sstMsg);
 
-	  segment->mTransmitTime = Timer::now();
+	  segment->mTransmitTime = curTime;
 	  mOutstandingSegments.push_back(segment);
 
 	  mQueuedSegments.pop_front();
 
 	  numSegmentsSent++;
 
-	  mLastTransmitTime = Timer::now();
+	  mLastTransmitTime = curTime;
 
-	  inSendingMode = false;
-	}
-	else {
-	  break;
-	}
+	  inSendingMode = false;  
       }
     }
-    else {
-      Time curTime = Timer::now();
-
-      if ( (curTime - mLastTransmitTime).toMicroseconds() < mRTOMicroseconds ||
-	   mLastTransmitTime ==Time::null() )
+    else { 
+      if ( (curTime - mLastTransmitTime).toMicroseconds() < mRTOMicroseconds)
       {
 	return true;
       }
@@ -680,7 +666,6 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
-
     for (uint i = 0; i < mOutstandingSegments.size(); i++) {
       if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
 	mOutstandingSegments[i]->mAckTime = Timer::now();
@@ -913,17 +898,12 @@ public:
   }
 
   static void closeConnections() {
-    for (typename ConnectionMap::iterator it = mConnectionMap.begin();
-         it != mConnectionMap.end();
-         ++it)
-    {
-      it->second->close(true);
-    }
-
     mConnectionMap.clear();
   }
 
   static void service() {
+    Time curTime = Timer::now();    
+
     for (typename ConnectionMap::iterator it = mConnectionMap.begin();
 	 it != mConnectionMap.end();
 	 ++it)
@@ -931,7 +911,7 @@ public:
       boost::shared_ptr<Connection<EndPointType> > conn = it->second;
       int connState = conn->mState;
 
-      bool cleanupConnection = conn->serviceConnection();
+      bool cleanupConnection = conn->serviceConnection(curTime);
 
       if (!cleanupConnection) {
 
@@ -1375,8 +1355,7 @@ public:
   */
   virtual bool close(bool force) {
     if (force) {
-      mLooping = false;
-
+      mConnected = false;
       mState = DISCONNECTED;
       return true;
     }
@@ -1473,7 +1452,6 @@ private:
     MAX_RECEIVE_WINDOW(15000),
     mStreamRTOMicroseconds(200000),
     FL_ALPHA(0.8),
-    mLooping(true),
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
     mNumOutstandingBytes(0),
@@ -1551,18 +1529,17 @@ private:
   }
 
 
-  bool serviceStream() {
+  bool serviceStream(const Time& curTime) {
     if (mState != CONNECTED && mState != DISCONNECTED) {
-      Time cur_time = Timer::now();
 
       if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
-	if ( mLastSendTime != Time::null() && (cur_time - mLastSendTime).toMicroseconds() < 2*mStreamRTOMicroseconds) {
+	if ( mLastSendTime != Time::null() && (curTime - mLastSendTime).toMicroseconds() < 2*mStreamRTOMicroseconds) {
 	  return true;
 	}
 
 	sendInitPacket(mInitialData, mInitialDataLength);
 
-	mLastSendTime = Timer::now();
+	mLastSendTime = curTime;
 
 	mNumInitRetransmissions++;
 	mStreamRTOMicroseconds = (int64) (mStreamRTOMicroseconds * 2);
@@ -1591,21 +1568,21 @@ private:
       }
     }
     else {
-      if (mLooping && mConnected) {
+      if (mState != DISCONNECTED) {
 	//this should wait for the queue to get occupied... right now it is
 	//just polling...
-	Time cur_time = Timer::now();
 
-	if ( mLastSendTime != Time::null() && (cur_time - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds) {
+        if ( mLastSendTime != Time::null() 
+             && (curTime - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds) 
+        {
 	  resendUnackedPackets();
-	  mLastSendTime = cur_time;
-	}
+	  mLastSendTime = curTime;
+        }
 
 	if (mState == PENDING_DISCONNECT &&
 	    mQueuedBuffers.empty()  &&
 	    mChannelToBufferMap.empty() )
 	{
-	    mLooping = false;
 	    mState = DISCONNECTED;
 
 	    return true;
@@ -1613,7 +1590,7 @@ private:
 
 	boost::unique_lock<boost::mutex> lock(mQueueMutex);
 
-	while ( !mQueuedBuffers.empty() && mLooping ) {
+	while ( !mQueuedBuffers.empty() ) {
 	  boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
 	  if (mTransmitWindowSize < buffer->mBufferLength) {
@@ -1625,7 +1602,7 @@ private:
 					    buffer->mOffset
 					    );
 
-	  buffer->mTransmitTime = Timer::now();
+	  buffer->mTransmitTime = curTime;
 
 	  if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
 	    mChannelToBufferMap[channelID] = buffer;
@@ -1633,7 +1610,7 @@ private:
 
 	  mQueuedBuffers.pop_front();
 	  mCurrentQueueLength -= buffer->mBufferLength;
-	  mLastSendTime = Timer::now();
+	  mLastSendTime = curTime;
 
 	  assert(buffer->mBufferLength <= mTransmitWindowSize);
 	  mTransmitWindowSize -= buffer->mBufferLength;
@@ -1645,11 +1622,10 @@ private:
     return true;
   }
 
-  void resendUnackedPackets() {
+  inline void resendUnackedPackets() {
     boost::lock_guard<boost::mutex> lock(mQueueMutex);
 
-
-     for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::iterator it=mChannelToBufferMap.begin();
+    for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::iterator it=mChannelToBufferMap.begin();
 	 it != mChannelToBufferMap.end(); ++it)
      {
         mQueuedBuffers.push_front(it->second);
@@ -1672,8 +1648,11 @@ private:
      }
 
      mNumOutstandingBytes = 0;
-     mStreamRTOMicroseconds *= 2;
-     mChannelToBufferMap.clear();
+
+     if (!mChannelToBufferMap.empty()) {
+       mStreamRTOMicroseconds *= 2;
+       mChannelToBufferMap.clear();
+     }
   }
 
   /* This function sends received data up to the application interface.
@@ -1721,7 +1700,6 @@ private:
 	mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
 
 	mChannelToBufferMap[offset]->mAckTime = Timer::now();
-
 
 	updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
 
@@ -1928,7 +1906,6 @@ private:
   int64 mStreamRTOMicroseconds;
   float FL_ALPHA;
 
-  bool mLooping;
 
   uint32 mTransmitWindowSize;
   uint32 mReceiveWindowSize;
