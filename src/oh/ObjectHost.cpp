@@ -810,6 +810,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
 
     CBR::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
@@ -897,6 +898,9 @@ boost::shared_ptr<Stream<UUID> > ObjectHost::getSpaceStream(const UUID& objectID
 }
 
 void ObjectHost::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> > s, UUID obj) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
   OH_LOG(debug, "SST object-space connect callback for " << obj.toString() << " : " << err << "\n");
 
   if (err != SUCCESS) {

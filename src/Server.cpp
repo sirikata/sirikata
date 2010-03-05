@@ -63,6 +63,9 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mMigrationTimer.start();
 
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
     Stream<UUID>::listen( std::tr1::bind(&Server::newStream, this, _1, _2),
 			  EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT) );
 }

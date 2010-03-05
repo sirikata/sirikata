@@ -120,11 +120,14 @@ public:
     }
 
     virtual void newStream(boost::shared_ptr< Stream<UUID> > s) {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
       boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
 
-      UUID sourceObject = conn->remoteEndPoint().endPoint;	
+      UUID sourceObject = conn->remoteEndPoint().endPoint;
 
-      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION, 
+      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
 					  std::tr1::bind(&LocationService::locationUpdate, this, sourceObject, _1, _2) );
     }
 

@@ -219,6 +219,9 @@ void Object::handleSpaceMigration(ServerID sid) {
 }
 
 void Object::handleSpaceStreamCreated() {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
     boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
