@@ -41,19 +41,12 @@ namespace CBR {
 
 class ObjectHost;
 
-class ObjectHostContext : public Context, public Service {
+class ObjectHostContext : public Context {
 public:
     ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
 
     ObjectHostID id;
     ObjectHost* objectHost;
-private:
-    void handleSimFinished();
-    virtual void start();
-    void stopSimulation();
-    virtual void stop();
-
-    IOTimerPtr mFinishedTimer;
 }; // class ObjectHostContext
 
 } // namespace CBR

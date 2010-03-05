@@ -47,26 +47,11 @@ class Trace;
 /** Base class for Contexts, provides basic infrastructure such as IOServices,
  *  IOStrands, Trace, and timing information.
  */
-class Context {
+class Context : public Service {
 public:
 
-    Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
-     : ioService(ios),
-       mainStrand(strand),
-       profiler( new TimeProfiler(name) ),
-       mTrace(_trace),
-       mEpoch(epoch),
-       mLastSimTime(Time::null()),
-       mSimDuration(simlen),
-       mKillThread(),
-       mKillService(NULL),
-       mKillTimer()
-    {
-
-    }
-
-    ~Context() {
-    }
+    Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
+    ~Context();
 
     Time epoch() const {
         return mEpoch.read();
@@ -136,6 +121,14 @@ public:
     TimeProfiler* profiler;
 protected:
 
+    // Main Lifetime Management
+    virtual void start();
+    void stopSimulation();
+    virtual void stop();
+    IOTimerPtr mFinishedTimer;
+
+
+    // Forced Quit Management
     void startForceQuitTimer();
 
     // Forces quit by stopping event processing.  Should only be

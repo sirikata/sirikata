@@ -54,7 +54,7 @@ class Stream;
  *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
  *  from messages), and a Trace object.
  */
-class SpaceContext : public Context, public PollingService {
+class SpaceContext : public Context {
 public:
     SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration);
     ~SpaceContext();
@@ -84,14 +84,11 @@ public:
       if (mObjectStreams.find(uuid) != mObjectStreams.end()) {
         return mObjectStreams[uuid];
       }
-      
+
       return boost::shared_ptr<Stream<UUID> >();
     }
 
 private:
-    virtual void poll();
-    virtual void stop();
-
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
 
@@ -101,9 +98,6 @@ private:
     Sirikata::AtomicValue<ObjectMessageRouter*> mObjectRouter;
     Sirikata::AtomicValue<ServerMessageDispatcher*> mServerDispatcher;
     Sirikata::AtomicValue<ObjectMessageDispatcher*> mObjectDispatcher;
-
-    TimeProfiler::Stage* mIterationProfiler;
-    TimeProfiler::Stage* mWorkProfiler;
 
     std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
 }; // class SpaceContext

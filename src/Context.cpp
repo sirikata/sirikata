@@ -35,6 +35,49 @@
 
 namespace CBR {
 
+Context::Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
+ : ioService(ios),
+   mainStrand(strand),
+   profiler( new TimeProfiler(name) ),
+   mFinishedTimer( IOTimer::create(ios) ),
+   mTrace(_trace),
+   mEpoch(epoch),
+   mLastSimTime(Time::null()),
+   mSimDuration(simlen),
+   mKillThread(),
+   mKillService(NULL),
+   mKillTimer()
+{
+}
+
+Context::~Context() {
+}
+
+void Context::start() {
+    Time t_now = simTime();
+    Time t_end = simTime(mSimDuration);
+    Duration wait_dur = t_end - t_now;
+    mFinishedTimer->wait(
+        wait_dur,
+        mainStrand->wrap(
+            std::tr1::bind(&Context::stopSimulation, this)
+        )
+    );
+}
+
+void Context::stopSimulation() {
+    this->stop();
+    for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
+        (*it)->stop();
+}
+
+void Context::stop() {
+    mFinishedTimer.reset();
+    startForceQuitTimer();
+}
+
+
+
 void Context::cleanup() {
     IOTimerPtr timer = mKillTimer;
 

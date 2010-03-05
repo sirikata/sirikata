@@ -39,55 +39,26 @@ namespace CBR {
 
 SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
  : Context("Space", ios, strand, _trace, epoch, duration),
-   PollingService(strand),
    mID(_id),
    mServerRouter(NULL),
    mObjectRouter(NULL),
    mServerDispatcher(NULL),
    mObjectDispatcher(NULL)
 {
-    mIterationProfiler = profiler->addStage("Context Iteration");
-    mIterationProfiler->started();
-    mWorkProfiler = profiler->addStage("Context Work");
 }
 
 SpaceContext::~SpaceContext() {
     mObjectStreams.clear();
-
-    delete mIterationProfiler;
-    delete mWorkProfiler;
-}
-
-void SpaceContext::poll() {
-    mIterationProfiler->finished();
-    mWorkProfiler->started();
-
-    Duration elapsed = sinceEpoch( Timer::now());
-
-    if (elapsed > mSimDuration)
-    {
-        this->stop();
-        for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
-            (*it)->stop();
-    }
-
-    mWorkProfiler->finished();
-    mIterationProfiler->started();
-}
-
-void SpaceContext::stop() {
-    PollingService::stop();
-    startForceQuitTimer();
 }
 
 void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;      
+  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;
 
   if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
     std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";
     mObjectStreams[sourceObject]->connection().lock()->close(true);
   }
-  
+
   mObjectStreams[sourceObject] = s;
 }
 

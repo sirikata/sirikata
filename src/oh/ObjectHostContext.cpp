@@ -38,32 +38,8 @@ namespace CBR {
 ObjectHostContext::ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
  : Context("Object Host", ios, strand, _trace, epoch, simlen),
    id(_id),
-   objectHost(NULL),
-   mFinishedTimer( IOTimer::create(ios) )
+   objectHost(NULL)
 {
-}
-
-void ObjectHostContext::start() {
-    Time t_now = simTime();
-    Time t_end = simTime(mSimDuration);
-    Duration wait_dur = t_end - t_now;
-    mFinishedTimer->wait(
-        wait_dur,
-        mainStrand->wrap(
-            std::tr1::bind(&ObjectHostContext::stopSimulation, this)
-        )
-    );
-}
-
-void ObjectHostContext::stopSimulation() {
-    this->stop();
-    for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
-        (*it)->stop();
-}
-
-void ObjectHostContext::stop() {
-    mFinishedTimer.reset();
-    startForceQuitTimer();
 }
 
 } // namespace CBR
