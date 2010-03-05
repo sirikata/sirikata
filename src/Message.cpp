@@ -194,8 +194,8 @@ void ObjectMessageDispatcher::dispatchMessage(const CBR::Protocol::Object::Objec
 
 
 
-ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
-    ObjectMessage* result = new ObjectMessage();
+void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result) {
+    if (result == NULL) return;
 
     result->set_source_object(src);
     result->set_source_port(src_port);
@@ -203,8 +203,6 @@ ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& s
     result->set_dest_port(dest_port);
     result->set_unique(GenerateUniqueID(source_server));
     result->set_payload(payload);
-
-    return result;
 }
 
 CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {

@@ -68,22 +68,19 @@ ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
     delete socket;
 }
 
-bool ObjectHost::SpaceNodeConnection::push(ObjectMessage* msg) {
-    std::string* data = msg->serialize();
+bool ObjectHost::SpaceNodeConnection::push(const ObjectMessage& msg) {
+    std::string data;
+    msg.serialize(&data);
 
-    TIMESTAMP_START(tstamp, msg);
+    TIMESTAMP_START(tstamp, (&msg));
 
     // Try to push to the network
     bool success = socket->send(
-        Sirikata::MemoryReference(&((*data)[0]), data->size()),
+        Sirikata::MemoryReference(&(data[0]), data.size()),
         Sirikata::Network::ReliableOrdered
                                 );
-
-    delete data;
-
     if (success) {
         TIMESTAMP_END(tstamp, Trace::OH_HIT_NETWORK);
-        delete msg;
     }
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_SEND);
@@ -532,9 +529,10 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     SpaceNodeConnection* conn = it->second;
 
     // FIXME would be nice not to have to do this alloc/dealloc
-    ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
-    TIMESTAMP_CREATED(obj_msg, Trace::CREATED);
-    return conn->push( obj_msg );
+    ObjectMessage obj_msg;
+    createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload, &obj_msg);
+    TIMESTAMP_CREATED((&obj_msg), Trace::CREATED);
+    return conn->push(obj_msg);
 }
 
 void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, IOStrand* strand, const Duration& rate) {

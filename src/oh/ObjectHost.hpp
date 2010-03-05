@@ -215,7 +215,7 @@ private:
         Sirikata::Network::Stream* socket;
 
         // Push a packet to be sent out
-        bool push(ObjectMessage* msg);
+        bool push(const ObjectMessage& msg);
 
         // Pull a packet from the receive queue
         ObjectMessage* pull();

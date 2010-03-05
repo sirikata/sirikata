@@ -221,13 +221,17 @@ public:
         return this->ByteSize();
     }
 
-    std::string* serialize() {
+    void serialize(std::string* result) const {
+        serializePBJMessage(result, *this);
+    }
+
+    std::string* serialize() const {
         return new std::string( serializePBJMessage(*this) );
     };
 }; // class ObjectMessage
 
 // FIXME get rid of this
-ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
 
 /** Interface for classes that need to receive object messages, i.e. those that
  *  need to talk to objects/object hosts.
