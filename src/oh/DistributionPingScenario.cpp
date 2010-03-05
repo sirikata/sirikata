@@ -15,7 +15,9 @@ void DPSInitOptions(DistributionPingScenario *thus) {
                                          new OptionValue("ping-server-distribution","uniform",Sirikata::OptionValueType<String>(),"objects on which space server are chosen?"),
         NULL);
 }
-DistributionPingScenario::DistributionPingScenario(const String &options):mStartTime(Time::epoch()){
+DistributionPingScenario::DistributionPingScenario(const String &options)
+ : mStartTime(Time::epoch())
+{
     mNumTotalPings=0;
     mContext=NULL;
     mObjectTracker = NULL;
@@ -26,8 +28,18 @@ DistributionPingScenario::DistributionPingScenario(const String &options):mStart
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mSameObjectHostPings=optionsSet->referenceOption("allow-same-object-host")->as<bool>();
     mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
+
+    mNumGeneratedPings = 0;
+    mGeneratePingsStrand = NULL;
+    mGeneratePingPoller = NULL;
+    mPings =
+        new Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>(
+            CountResourceMonitor(std::max((uint32)(mNumPingsPerSecond / 4), (uint32)2))
+        );
+    mPingPoller = NULL;
 }
 DistributionPingScenario::~DistributionPingScenario(){
+    delete mPings;
     delete mPingPoller;
     delete mPingProfiler;
 }
@@ -42,39 +54,51 @@ void DistributionPingScenario::addConstructorToFactory(ScenarioFactory*thus){
 void DistributionPingScenario::initialize(ObjectHostContext*ctx) {
     mContext=ctx;
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
-    mPingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mPingPoller = new Poller(ctx->mainStrand, std::tr1::bind(&DistributionPingScenario::generatePings, this), Duration::seconds(1.0/mNumPingsPerSecond));
+    mPingProfiler = mContext->profiler->addStage("Object Host Send Pings");
+    mPingPoller = new Poller(
+        ctx->mainStrand,
+        std::tr1::bind(&DistributionPingScenario::sendPings, this),
+        Duration::seconds(1.0/mNumPingsPerSecond)
+    );
+
+    mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
+    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingPoller = new Poller(
+        mGeneratePingsStrand,
+        std::tr1::bind(&DistributionPingScenario::generatePings, this),
+        Duration::seconds(1.0/mNumPingsPerSecond)
+    );
 }
 
 void DistributionPingScenario::start() {
+    mGeneratePingPoller->start();
     mPingPoller->start();
 }
 void DistributionPingScenario::stop() {
     mPingPoller->stop();
+    mGeneratePingPoller->stop();
 }
-bool DistributionPingScenario::pingOne(ServerID minServer, unsigned int distance) {
+bool DistributionPingScenario::generateOnePing(ServerID minServer, unsigned int distance, const Time& t, PingInfo* result) {
     unsigned int maxDistance = mObjectTracker->numServerIDs();
     Object * objA = mObjectTracker->randomObject((ServerID)minServer);
     Object * objB = mObjectTracker->randomObject((ServerID)(minServer+distance));
 
-
     if (rand()<RAND_MAX/2) {
-        Object * tmp=objA;
-        objA=objB;
-        objB=tmp;
+        std::swap(objA, objB);
     }
-    Time t(mContext->simTime());
-    if (objA&&objB) {
-        float obj_dist = (objA->location().position(t) - objB->location().position(t)).length();
-        //distance*GetOption("region")->as<BoundingBox3f>().diag().x/maxDistance);
-        if (!mContext->objectHost->ping(t, objA, objB->uuid(), obj_dist))
-            return false;
+    if (!objA || !objB) {
+        return false;
     }
+
+    result->objA = objA->uuid();
+    result->objB = objB->uuid();
+    result->dist = (objA->location().position(t) - objB->location().position(t)).length();
     return true;
 }
 
 void DistributionPingScenario::generatePings() {
-    mPingProfiler->started();
+    mGeneratePingProfiler->started();
+
     unsigned int maxDistance = mObjectTracker->numServerIDs();
     unsigned int distance=0;
     if (maxDistance&&((!mSameObjectHostPings)&&(!mForceSameObjectHostPings)))
@@ -86,23 +110,53 @@ void DistributionPingScenario::generatePings() {
     }
     unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
     Time newTime=mContext->simTime();
-    int64 howManyPings=(newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
+    int64 howManyPings=((newTime-mStartTime).toSeconds()+0.25)*mNumPingsPerSecond;
 
+    Time t(mContext->simTime());
+
+    bool broke=false;
+    int64 limit=howManyPings-mNumGeneratedPings;
+    int64 i;
+    for (i=0;i<limit;++i) {
+        PingInfo result;
+        if (!mPings->probablyCanPush(result))
+            break;
+        if (!generateOnePing(minServer,distance, t, &result))
+            break;
+        mPings->push(result, false);
+    }
+    mNumGeneratedPings += i;
+
+    mGeneratePingProfiler->finished();
+}
+
+void DistributionPingScenario::sendPings() {
+    mPingProfiler->started();
+
+    Time newTime=mContext->simTime();
+    int64 howManyPings=(newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
 
     bool broke=false;
     int64 limit=howManyPings-mNumTotalPings;
     int64 i;
     for (i=0;i<limit;++i) {
-        if (!pingOne(minServer,distance)) {
+        Time t(mContext->simTime());
+        PingInfo result;
+        if (!mPings->pop(result))
             break;
-        }
+        if (!mContext->objectHost->ping(t, result.objA, result.objB, result.dist))
+            break;
     }
-    mNumTotalPings+=i;
+    mNumTotalPings += i;
+
     mPingProfiler->finished();
+
     static bool printed=false;
     if ( (i-limit) > (10*(int64)mNumPingsPerSecond) && !printed) {
         SILOG(oh,debug,"[OH] " << i-limit<<" pending ");
         printed=true;
     }
+
 }
+
 }

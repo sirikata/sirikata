@@ -86,7 +86,7 @@ public:
     bool send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload);
 
     /* Ping Utility Methods. */
-    bool ping(const Time& t, const Object *src, const UUID&dest, double distance=-0);
+    bool ping(const Time& t, const UUID& src, const UUID&dest, double distance=-0);
 
     boost::shared_ptr<Stream<UUID> > getSpaceStream(const UUID& objectID);
 

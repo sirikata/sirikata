@@ -558,7 +558,7 @@ void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, con
 }
 
 
-bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double distance) {
+bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double distance) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     CBR::Protocol::Object::Ping ping_msg;
@@ -566,12 +566,14 @@ bool ObjectHost::ping(const Time& t, const Object*src, const UUID&dest, double d
     if (distance>=0)
         ping_msg.set_distance(distance);
     ping_msg.set_id(mPingId++);
-    ServerID destServer = mObjectConnections.getConnectedServer(src->uuid());
 
-    if (destServer!=NullServerID) {
-        return send(src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
-    }
-    return false;
+    ServerID destServer = mObjectConnections.getConnectedServer(src);
+    if (destServer == NullServerID)
+        return true; // We mark this as sent because this probably
+                     // just means there was latency between ping
+                     // creation and ping sending.
+
+    return send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
 }
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
