@@ -237,7 +237,7 @@ private:
     };
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
-    typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
+    typedef std::tr1::unordered_map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;
 
 
