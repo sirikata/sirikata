@@ -619,7 +619,8 @@ class PacketStageGraph {
         for(uint32 ii = 0; ii < unconstrained_output.size(); ii++) {
             if ( isPureEntry(unconstrained_output[ii][0].tag) ) {
                 if (starting_samples_idx != -1) {
-                    ERROR_LOG("Found 2 entry points");
+                    ERROR_LOG("Found 2 entry points: " << getPacketStageName(unconstrained_output[ii][0].tag) << ", " << getPacketStageName(unconstrained_output[starting_samples_idx][0].tag) << " -- " << "source_port = " << pd.source_port << ", dest_port = " << pd.dest_port);
+                    ERROR_LOG("  Original: " << pd);
                     return false; // Found 2 entry points
                 }
                 else
@@ -628,7 +629,8 @@ class PacketStageGraph {
 
             if ( isPureExit(unconstrained_output[ii][ unconstrained_output[ii].size()-1 ].tag) ) {
                 if (ending_samples_idx != -1) {
-                    ERROR_LOG("Found 2 exit points");
+                    ERROR_LOG("Found 2 exit points " << getPacketStageName(unconstrained_output[ii][ unconstrained_output[ii].size()-1 ].tag) << ", " << getPacketStageName(unconstrained_output[ending_samples_idx][ unconstrained_output[ending_samples_idx].size()-1].tag) << " -- " << "source_port = " << pd.source_port << ", dest_port = " << pd.dest_port);
+                    ERROR_LOG("  Original: " << pd);
                     return false; // Found 2 exit points
                 }
                 else
