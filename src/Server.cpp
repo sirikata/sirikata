@@ -126,24 +126,50 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
     // exceptions for bootstrapping purposes (namely session messages to the space).
 
-    // 1. Try to shortcut the main thread. Let the LocalForwarder try
+    // Initial sanity check
+    // 1. If the source is the space, somebody is messing with us.
+    bool space_source = (obj_msg->source_object() == UUID::null());
+    if (space_source) {
+        SILOG(cbr,error,"Got message from object host claiming to be from space.");
+        delete obj_msg;
+        return true;
+    }
+
+    // 2. For connection bootstrapping purposes we need to exempt session messages destined for the space.
+    // Note that we need to check this before the connected sanity check since obviously the object won't
+    // be connected yet.  We dispatch directly from here since this needs information about the object host
+    // connection to be passed along as well.
+    bool space_dest = (obj_msg->dest_object() == UUID::null());
+    bool session_msg = (obj_msg->dest_port() == OBJECT_PORT_SESSION);
+    if (space_dest && session_msg)
+    {
+        // FIXME infinite queue
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &Server::handleSessionMessage, this,
+                conn_id, obj_msg
+            )
+        );
+        return true;
+    }
+
+    // 3. Try to shortcut the main thread. Let the LocalForwarder try
     // to ship it over a connection.  This checks both the source
     // and dest objects, guaranteeing that the appropriate connections
     // exist for both.
     if (mLocalForwarder->tryForward(obj_msg))
         return true;
 
-    // 2. Otherwise, we're going to have to ship this to the main thread, either
+    // 4. Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
     // routing decision.
-    // FIXME infinite queue!
     if (mRouteObjectMessage.push(ConnectionIDObjectMessagePair(conn_id,obj_msg),false)) {
         mContext->mainStrand->post(
             std::tr1::bind(
                 &Server::handleObjectHostMessageRouting,
                 this));
         return true;
-    }else {
+    } else {
         TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
         return false;
     }
@@ -157,29 +183,6 @@ void Server::handleObjectHostMessageRouting() {
     }
 
     mObjectHostConnectionManager->unpauseObjectStream(front.conn_id);
-
-    // Take this opportunity to do some sanity checking.
-
-    // 1. If the source is the space, somebody is messing with us.
-    bool space_source = (front.obj_msg->source_object() == UUID::null());
-    if (space_source) {
-        SILOG(cbr,error,"Got message from object host claiming to be from space.");
-        delete front.obj_msg;
-        return;
-    }
-
-    // 2. For connection bootstrapping purposes we need to exempt session messages destined for the space.
-    // Note that we need to check this before the connected sanity check since obviously the object won't
-    // be connected yet.  We dispatch directly from here since this needs information about the object host
-    // connection to be passed along as well.
-    bool space_dest = (front.obj_msg->dest_object() == UUID::null());
-    bool session_msg = (front.obj_msg->dest_port() == OBJECT_PORT_SESSION);
-    if (space_dest && session_msg)
-    {
-        handleSessionMessage(front.conn_id, front.obj_msg);
-        return;
-    }
-
 
     // If we don't have a connection for the source object, we can't do anything with it.
     // The object could be migrating and we get outdated packets.  Currently this can
