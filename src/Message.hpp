@@ -69,6 +69,8 @@ typedef uint16 ObjectMessagePort;
 #define OBJECT_SPACE_PORT         253
 #define OBJECT_PORT_PING          254
 
+#define MESSAGE_ID_SERVER_SHIFT 52
+#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
 typedef uint64 UniqueMessageID;
 
@@ -99,6 +101,40 @@ bool parsePBJMessage(PBJMessageType* contents, const WireType& wire, uint32 offs
     uint32 rlen = (length == -1) ? (wire.size() - offset) : length;
     assert(offset + rlen <= wire.size()); // buffer overrun
     return contents->ParseFromArray((void*)&wire[offset], rlen);
+}
+
+
+#define MESSAGE_ID_SERVER_SHIFT 52
+#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
+
+namespace {
+
+uint64 sIDSource = 0;
+
+uint64 GenerateUniqueID(const ServerID& origin) {
+    uint64 id_src = sIDSource++;
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
+    uint64 server_int = (uint64)origin;
+    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
+    assert( (server_shifted & ~message_id_server_bits) == 0 );
+    return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
+}
+
+uint64 GenerateUniqueID(const ObjectHostID& origin) {
+    return GenerateUniqueID(origin.id);
+}
+
+ServerID GetUniqueIDServerID(uint64 uid) {
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
+    uint64 server_int = ( uid & message_id_server_bits ) >> MESSAGE_ID_SERVER_SHIFT;
+    return (ServerID) server_int;
+}
+
+uint64 GetUniqueIDMessageID(uint64 uid) {
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
+    return ( uid & ~message_id_server_bits );
+}
+
 }
 
 CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
@@ -192,7 +228,6 @@ public:
 
 // FIXME get rid of this
 ObjectMessage* createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
-
 
 /** Interface for classes that need to receive object messages, i.e. those that
  *  need to talk to objects/object hosts.

@@ -100,8 +100,6 @@ class Connection;
 template <class EndPointType>
 class Stream;
 
-#define MESSAGE_ID_SERVER_SHIFT 52
-#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
 template <typename EndPointType>
 class BaseDatagramLayer:public ObjectMessageRecipient
@@ -111,16 +109,6 @@ private:
   BaseDatagramLayer(ObjectMessageRouter* router, ObjectMessageDispatcher* dispatcher) :
                     mRouter(router), mDispatcher(dispatcher) { }
 
-  uint64 generateUniqueID(const ServerID& origin) {
-    static uint64 sIDSource = 0;
-
-    uint64 id_src = sIDSource++;
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    uint64 server_int = (uint64)origin;
-    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
-    assert( (server_shifted & ~message_id_server_bits) == 0 );
-    return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
-  }
 
 public:
   static boost::shared_ptr<BaseDatagramLayer<EndPointType> > getDatagramLayer(EndPointType endPoint) {
@@ -159,14 +147,13 @@ public:
 
   void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
     boost::mutex::scoped_lock lock(mMutex);
-
-    CBR::Protocol::Object::ObjectMessage* objectMessage = new CBR::Protocol::Object::ObjectMessage();
+    
+    ObjectMessage* objectMessage = new ObjectMessage();
     objectMessage->set_source_object(src->endPoint);
     objectMessage->set_source_port(src->port);
     objectMessage->set_dest_object(dest->endPoint);
-    objectMessage->set_dest_port(dest->port);
-    objectMessage->set_unique(generateUniqueID(0));
-    objectMessage->set_payload(String((char*) data, len));
+    objectMessage->set_dest_port(dest->port);    
+    objectMessage->set_payload(String((char*) data, len));    
 
     bool val = mRouter->route(  objectMessage  );
   }
@@ -911,9 +898,9 @@ public:
       boost::shared_ptr<Connection<EndPointType> > conn = it->second;
       int connState = conn->mState;
 
-      bool cleanupConnection = conn->serviceConnection(curTime);
+      bool keepConnection = conn->serviceConnection(curTime);
 
-      if (!cleanupConnection) {
+      if (!keepConnection) {
 
 	if (connState == CONNECTION_PENDING_CONNECT) {
 

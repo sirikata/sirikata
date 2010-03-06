@@ -34,39 +34,6 @@
 
 namespace CBR {
 
-#define MESSAGE_ID_SERVER_SHIFT 52
-#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
-
-
-namespace {
-
-uint64 sIDSource = 0;
-
-uint64 GenerateUniqueID(const ServerID& origin) {
-    uint64 id_src = sIDSource++;
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    uint64 server_int = (uint64)origin;
-    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
-    assert( (server_shifted & ~message_id_server_bits) == 0 );
-    return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
-}
-
-uint64 GenerateUniqueID(const ObjectHostID& origin) {
-    return GenerateUniqueID(origin.id);
-}
-
-ServerID GetUniqueIDServerID(uint64 uid) {
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    uint64 server_int = ( uid & message_id_server_bits ) >> MESSAGE_ID_SERVER_SHIFT;
-    return (ServerID) server_int;
-}
-
-uint64 GetUniqueIDMessageID(uint64 uid) {
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    return ( uid & ~message_id_server_bits );
-}
-
-}
 
 void Message::fillMessage(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port) {
     set_source_server(src);

@@ -201,6 +201,7 @@ void Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 
 // --- From local space server services
 bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg) {
+    msg->set_unique(GenerateUniqueID(mContext->id()));
     return forward(msg, NullServerID);
 }
 
