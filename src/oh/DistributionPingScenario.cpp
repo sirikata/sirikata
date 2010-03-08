@@ -156,7 +156,7 @@ void DistributionPingScenario::sendPings() {
         Time t(mContext->simTime());
         PingInfo result;
         if (!mPings->pop(result)) {
-            SILOG(oh,error,"[OH] " << "Ping queue underflowed.");
+            SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
             break;
         }
         if (!mContext->objectHost->ping(t, result.objA, result.objB, result.dist))
