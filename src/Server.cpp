@@ -168,11 +168,15 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
             std::tr1::bind(
                 &Server::handleObjectHostMessageRouting,
                 this));
-        return true;
     } else {
         TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
-        return false;
     }
+    // NOTE: We always "accept" the data, even if we're just dropping
+    // it.  This keeps packets flowing.  We could use flow control to
+    // slow things down, but since the data path splits in this method
+    // between local and remote, we don't want to slow the local
+    // packets just because of a backup in routing.
+    return true;
 }
 
 void Server::handleObjectHostMessageRouting() {
