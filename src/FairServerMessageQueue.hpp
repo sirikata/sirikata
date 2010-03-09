@@ -39,6 +39,7 @@ protected:
     typedef std::set<ServerID> ServerSet;
     ServerSet mDownstreamReady;
 
+    Sirikata::AtomicValue<bool> mServiceScheduled;
   public:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second);
 
@@ -56,6 +57,8 @@ protected:
     void enableDownstream(ServerID sid);
     void disableDownstream(ServerID sid);
 
+    // Schedules servicing to occur, but only if it isn't already currently scheduled.
+    void scheduleServicing();
     // Services the queue, will be called in response to network ready events
     // and message ready events since one of those conditions must have changed
     // in order to make any additional progress.

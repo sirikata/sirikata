@@ -20,12 +20,25 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
           mLastServiceTime(ctx->simTime()),
           mRate(send_bytes_per_second),
           mRemainderSendBytes(0),
-          mLastSendEndTime(ctx->simTime())
+          mLastSendEndTime(ctx->simTime()),
+          mServiceScheduled(false)
 {
 }
 
-void FairServerMessageQueue::service(){
+void FairServerMessageQueue::scheduleServicing() {
+    if (!mServiceScheduled.read()) {
+        mServiceScheduled = true;
+        mContext->mainStrand->post(
+            std::tr1::bind(&FairServerMessageQueue::service, this)
+        );
+    }
+}
+
+void FairServerMessageQueue::service() {
     mProfiler->started();
+
+    // Unmark scheduling
+    mServiceScheduled = false;
 
     Time tcur = mContext->simTime();
     Duration since_last = tcur - mLastServiceTime;
@@ -66,6 +79,9 @@ void FairServerMessageQueue::service(){
         mLastSendEndTime = tcur;
     }
     else {
+        // We reschedule only if we still have data to send
+        scheduleServicing();
+
         // NOTE: we used to just leave mLastSendEndTime at the last time recorded since the leftover
         // bytes should be used starting at that time. However, now when we exit the loop we can't tell
         // if it was due to a) not having enough bytes for a message or b) not being able to send the
@@ -101,7 +117,7 @@ void FairServerMessageQueue::messageReady(ServerID sid) {
 
     // Notify and service
     mServerQueues.notifyPushFront(sid);
-    service();
+    scheduleServicing();
 }
 
 void FairServerMessageQueue::networkReadyToSend(const ServerID& from) {
@@ -141,7 +157,7 @@ void FairServerMessageQueue::enableDownstream(ServerID sid) {
 
     mServerQueues.enableQueue(sid);
 
-    service();
+    scheduleServicing();
 }
 
 void FairServerMessageQueue::disableDownstream(ServerID sid) {
