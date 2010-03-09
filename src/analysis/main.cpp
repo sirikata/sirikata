@@ -263,8 +263,6 @@ int main(int argc, char** argv) {
             for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.computeWindowedDatagramSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_send_file);
-                else if (windowed_analysis_type == "packet")
-                    ba.computeWindowedPacketSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_send_file);
             }
         }
         printf("Receive rates\n");
@@ -272,8 +270,6 @@ int main(int argc, char** argv) {
             for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
-                else if (windowed_analysis_type == "packet")
-                    ba.computeWindowedPacketReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
             }
         }
         // Queue information

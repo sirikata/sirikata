@@ -145,18 +145,6 @@ struct PacketQueueInfoEvent : public Event {
 };
 
 
-struct PacketEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    uint32 size;
-};
-
-struct PacketSentEvent : public PacketEvent {
-};
-
-struct PacketReceivedEvent : public PacketEvent {
-};
-
 struct SegmentationChangeEvent : public Event {
   BoundingBox3f bbox;
   ServerID server;

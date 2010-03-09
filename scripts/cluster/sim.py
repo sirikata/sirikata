@@ -427,21 +427,14 @@ class ClusterSim:
         ClusterSCP(self.config, [trace_file_pattern, "."], io=self.io)
 
     def bandwidth_analysis(self):
-        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers())], io=self.io)
         RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ], io=self.io)
 
-        GraphWindowedBandwidth('windowed_bandwidth_packet_send.dat')
-        GraphWindowedBandwidth('windowed_bandwidth_packet_receive.dat')
         GraphWindowedBandwidth('windowed_bandwidth_datagram_send.dat')
         GraphWindowedBandwidth('windowed_bandwidth_datagram_receive.dat')
 
-        GraphWindowedQueues('windowed_queue_info_send_packet.dat')
-        GraphWindowedQueues('windowed_queue_info_receive_packet.dat')
         GraphWindowedQueues('windowed_queue_info_send_datagram.dat')
         GraphWindowedQueues('windowed_queue_info_receive_datagram.dat')
 
-        GraphWindowedJFI('windowed_bandwidth_packet_send.dat', 'windowed_queue_info_send_packet.dat', 'jfi_packet_send')
-        GraphWindowedJFI('windowed_bandwidth_packet_receive.dat', 'windowed_queue_info_receive_packet.dat', 'jfi_packet_receive')
         GraphWindowedJFI('windowed_bandwidth_datagram_send.dat', 'windowed_queue_info_send_datagram.dat', 'jfi_datagram_send')
         #GraphWindowedJFI('windowed_bandwidth_datagram_receive.dat', 'windowed_queue_info_receive_datagram.dat', 'jfi_datagram_receive')
 

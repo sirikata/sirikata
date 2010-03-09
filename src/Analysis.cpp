@@ -199,26 +199,6 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt = pqievt;
           }
           break;
-      case Trace::PacketSentTag:
-          {
-              PacketSentEvent* psevt = new PacketSentEvent;
-              record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
-              psevt->source = trace_server_id;
-              record_is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
-              record_is.read( (char*)&psevt->size, sizeof(psevt->size) );
-              evt = psevt;
-          }
-          break;
-      case Trace::PacketReceivedTag:
-          {
-              PacketReceivedEvent* prevt = new PacketReceivedEvent;
-              record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
-              record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
-              prevt->dest = trace_server_id;
-              record_is.read( (char*)&prevt->size, sizeof(prevt->size) );
-              evt = prevt;
-          }
-          break;
       case Trace::ObjectBeginMigrateTag:
         {
           ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
@@ -742,12 +722,6 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
                 insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
             }
 
-            PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
-            if (packet_evt != NULL) {
-                used = true;
-                insert_event<PacketEvent, PacketEventList, ServerPacketEventListMap>(packet_evt, mPacketEventLists);
-            }
-
             ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
             if (datagram_qi_evt != NULL) {
                 used = true;
@@ -766,7 +740,6 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
 
     // Sort all lists of events by time
     sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
-    sort_events<PacketEventList, ServerPacketEventListMap>(mPacketEventLists);
 
     sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
     sort_events<PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(mPacketQueueInfoEventLists);
@@ -783,29 +756,11 @@ BandwidthAnalysis::~BandwidthAnalysis() {
                 delete *events_it;
         }
     }
-
-    for(ServerPacketEventListMap::iterator event_lists_it = mPacketEventLists.begin(); event_lists_it != mPacketEventLists.end(); event_lists_it++) {
-        ServerID server_id = event_lists_it->first;
-        PacketEventList* event_list = event_lists_it->second;
-        for(PacketEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
-            // each event is put in both the source and the dest server event lists,
-            // to avoid double deleting, only delete if this is the event's source list
-            if ((*events_it)->source == server_id)
-                delete *events_it;
-        }
-    }
 }
 
 const BandwidthAnalysis::DatagramEventList* BandwidthAnalysis::getDatagramEventList(const ServerID& server) const {
     ServerDatagramEventListMap::const_iterator event_lists_it = mDatagramEventLists.find(server);
     if (event_lists_it == mDatagramEventLists.end()) return &mEmptyDatagramEventList;
-
-    return event_lists_it->second;
-}
-
-const BandwidthAnalysis::PacketEventList* BandwidthAnalysis::getPacketEventList(const ServerID& server) const {
-    ServerPacketEventListMap::const_iterator event_lists_it = mPacketEventLists.find(server);
-    if (event_lists_it == mPacketEventLists.end()) return &mEmptyPacketEventList;
 
     return event_lists_it->second;
 }
@@ -831,14 +786,6 @@ BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagram
 
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramEnd(const ServerID& server) const {
     return getDatagramEventList(server)->end();
-}
-
-BandwidthAnalysis::PacketEventList::const_iterator BandwidthAnalysis::packetBegin(const ServerID& server) const {
-    return getPacketEventList(server)->begin();
-}
-
-BandwidthAnalysis::PacketEventList::const_iterator BandwidthAnalysis::packetEnd(const ServerID& server) const {
-    return getPacketEventList(server)->end();
 }
 
 BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoBegin(const ServerID& server) const {
@@ -1019,14 +966,6 @@ void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, 
 
 void BandwidthAnalysis::computeWindowedDatagramReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
     computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
-}
-
-void BandwidthAnalysis::computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<PacketSentEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(sender), packetEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
-}
-
-void BandwidthAnalysis::computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<PacketReceivedEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(receiver), packetEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
 }
 
 void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
@@ -1242,10 +1181,6 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
                 if (datagram_evt != NULL) {
                     packetFlow[datagram_evt->id].addPacketSentEvent(datagram_evt);
                 }
-            }
-            PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
-            if (packet_evt != NULL) {
-                //insert_event<PacketEvent, PacketEventList, ServerPacketEventListMap>(packet_evt, mPacketEventLists);
             }
             ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
             if (datagram_qi_evt != NULL) {

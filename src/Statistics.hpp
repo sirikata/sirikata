@@ -104,8 +104,6 @@ public:
     static const uint8 ServerDatagramSentTag = 5;
     static const uint8 ServerDatagramReceivedTag = 6;
     static const uint8 PacketQueueInfoTag = 7;
-    static const uint8 PacketSentTag = 8;
-    static const uint8 PacketReceivedTag = 9;
     static const uint8 SegmentationChangeTag = 10;
     static const uint8 ObjectBeginMigrateTag = 11;
     static const uint8 ObjectAcknowledgeMigrateTag = 12;
@@ -205,8 +203,6 @@ public:
     CREATE_TRACE_DECL(packetQueueInfo, const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
 
     CREATE_TRACE_DECL(ping, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId);
-    CREATE_TRACE_DECL(packetSent, const Time& t, const ServerID& dest, uint32 size);
-    CREATE_TRACE_DECL(packetReceived, const Time& t, const ServerID& src, uint32 size);
 
     CREATE_TRACE_DECL(segmentationChanged, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 

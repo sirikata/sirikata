@@ -48,7 +48,6 @@ struct ServerDatagramSentEvent;
 struct ServerDatagramQueuedEvent;
 struct ServerDatagramReceivedEvent;
 struct ServerDatagramQueueInfoEvent;
-struct PacketEvent;
 struct PacketQueueInfoEvent;
 
 /** Error of observed vs. true object locations over simulation period. */
@@ -107,9 +106,6 @@ public:
    void computeJFI(const ServerID& server_id) const;
 
 private:
-    typedef std::vector<PacketEvent*> PacketEventList;
-    typedef std::map<ServerID, PacketEventList*> ServerPacketEventListMap;
-    PacketEventList mEmptyPacketEventList;
     typedef std::vector<ServerDatagramEvent*> DatagramEventList;
     typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
     DatagramEventList mEmptyDatagramEventList;
@@ -123,8 +119,6 @@ private:
 
     DatagramEventList::const_iterator datagramBegin(const ServerID& server) const;
     DatagramEventList::const_iterator datagramEnd(const ServerID& server) const;
-    PacketEventList::const_iterator packetBegin(const ServerID& server) const;
-    PacketEventList::const_iterator packetEnd(const ServerID& server) const;
 
     DatagramQueueInfoEventList::const_iterator datagramQueueInfoBegin(const ServerID& server) const;
     DatagramQueueInfoEventList::const_iterator datagramQueueInfoEnd(const ServerID& server) const;
@@ -132,7 +126,6 @@ private:
     PacketQueueInfoEventList::const_iterator packetQueueInfoEnd(const ServerID& server) const;
 
     const DatagramEventList* getDatagramEventList(const ServerID& server) const;
-    const PacketEventList* getPacketEventList(const ServerID& server) const;
 
     const DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
     const PacketQueueInfoEventList* getPacketQueueInfoEventList(const ServerID& server) const;
@@ -140,7 +133,6 @@ private:
     template<typename EventType, typename EventIteratorType>
     void computeJFI(const ServerID& sender, const ServerID& filter) const;
 
-    ServerPacketEventListMap mPacketEventLists;
     ServerDatagramEventListMap mDatagramEventLists;
 
     ServerPacketQueueInfoEventListMap mPacketQueueInfoEventLists;
