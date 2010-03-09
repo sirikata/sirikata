@@ -119,7 +119,6 @@ private:
 
 
     // ServerMessageQueue::Sender Interface
-    virtual Message* serverMessageFront(ServerID dest);
     virtual Message* serverMessagePull(ServerID dest);
     virtual bool serverMessageEmpty(ServerID dest);
     // ServerMessageReceiver::Listener Interface

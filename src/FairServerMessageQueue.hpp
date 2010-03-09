@@ -9,21 +9,13 @@ class FairServerMessageQueue:public ServerMessageQueue {
 protected:
     struct SenderAdapterQueue {
         SenderAdapterQueue(Sender* sender, ServerID sid);
-
-        Message* front() {
-            return mSender->serverMessageFront(mDestServer);
-        }
-
-        Message* pop() {
-            return mSender->serverMessagePull(mDestServer);
-        }
-
-        bool empty() {
-            return mSender->serverMessageEmpty(mDestServer);
-        }
+        Message* front();
+        Message* pop();
+        bool empty();
       private:
         Sender* mSender;
         ServerID mDestServer;
+        Message* mFront;
     };
 
     typedef FairQueue<Message, ServerID, SenderAdapterQueue> FairSendQueue;

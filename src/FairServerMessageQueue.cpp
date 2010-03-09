@@ -9,8 +9,30 @@ namespace CBR{
 
 FairServerMessageQueue::SenderAdapterQueue::SenderAdapterQueue(Sender* sender, ServerID sid)
         : mSender(sender),
-          mDestServer(sid)
+          mDestServer(sid),
+          mFront(NULL)
 {
+}
+
+Message* FairServerMessageQueue::SenderAdapterQueue::front() {
+    if (mFront != NULL)
+        return mFront;
+
+    mFront = mSender->serverMessagePull(mDestServer);
+    return mFront;
+}
+
+Message* FairServerMessageQueue::SenderAdapterQueue::pop() {
+    Message* result = front();
+    mFront = NULL;
+    return result;
+}
+
+bool FairServerMessageQueue::SenderAdapterQueue::empty() {
+    return
+        (mFront == NULL &&
+            mSender->serverMessageEmpty(mDestServer)
+        );
 }
 
 

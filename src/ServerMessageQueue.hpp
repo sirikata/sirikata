@@ -50,10 +50,6 @@ public:
       public:
         virtual ~Sender() {}
 
-        /** Invoked to check what the item returned would be if
-         *  serverMessagePull were called.
-         */
-        virtual Message* serverMessageFront(ServerID dest) = 0;
         /** Invoked when the ServerMessageQueue is ready to accept a message
          *  from the sender, destined for the specified server. Return NULL if
          *  no elements are available.

@@ -352,11 +352,6 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   return send_success;
 }
 
-Message* Forwarder::serverMessageFront(ServerID dest) {
-    Message* next_msg = mOutgoingMessages->front(dest);
-    return next_msg;
-}
-
 Message* Forwarder::serverMessagePull(ServerID dest) {
     Message* next_msg = mOutgoingMessages->front(dest);
     if (next_msg == NULL)
