@@ -369,6 +369,10 @@ Message* Forwarder::serverMessagePull(ServerID dest) {
     return pop_msg;
 }
 
+bool Forwarder::serverMessageEmpty(ServerID dest) {
+    return mOutgoingMessages->empty(dest);
+}
+
 void Forwarder::serverMessageReceived(Message* msg) {
     assert(msg != NULL);
     TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);

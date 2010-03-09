@@ -67,6 +67,13 @@ Message* ForwarderServiceQueue::pop(ServerID sid) {
     return getFairQueue(sid)->pop(&size);
 }
 
+bool ForwarderServiceQueue::empty(ServerID sid) {
+    boost::lock_guard<boost::mutex> lock(mMutex);
+
+    uint64 size=1<<30;
+    return getFairQueue(sid)->empty();
+}
+
 QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
     assert(msg->source_server() == mThisServer);
     assert(msg->dest_server() != mThisServer);

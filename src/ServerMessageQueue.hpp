@@ -59,6 +59,8 @@ public:
          *  no elements are available.
          */
         virtual Message* serverMessagePull(ServerID dest) = 0;
+
+        virtual bool serverMessageEmpty(ServerID dest) = 0;
     };
 
     ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc);

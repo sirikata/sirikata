@@ -56,6 +56,7 @@ class ForwarderServiceQueue {
 
     Message* front(ServerID sid);
     Message* pop(ServerID sid);
+    bool empty(ServerID sid);
   private:
     friend class ForwarderServerMessageRouter;
 

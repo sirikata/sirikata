@@ -19,7 +19,7 @@ protected:
         }
 
         bool empty() {
-            return front() == NULL;
+            return mSender->serverMessageEmpty(mDestServer);
         }
       private:
         Sender* mSender;
