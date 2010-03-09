@@ -61,6 +61,7 @@ private:
     void handleReceivedConnection(const ServerID& from);
     void handleReceived(const ServerID& from);
 
+    void scheduleServicing();
     // Internal service call -- generated either by a networkReceivedData event
     // or by a timer as we wait for enough bandwidth to be available to service
     // the next packet.
@@ -82,6 +83,8 @@ private:
 
     typedef std::set<ServerID> ReceiveServerSet;
     ReceiveServerSet mReceiveSet;
+
+    Sirikata::AtomicValue<bool> mServiceScheduled;
 };
 
 } // namespace CBR

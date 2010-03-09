@@ -50,11 +50,21 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
           mReceiveQueues(),
           mRemainderReceiveBytes(0),
           mLastReceiveEndTime(ctx->simTime()),
-          mReceiveSet()
+          mReceiveSet(),
+          mServiceScheduled(false)
 {
 }
 
 FairServerMessageReceiver::~FairServerMessageReceiver() {
+}
+
+void FairServerMessageReceiver::scheduleServicing() {
+    if (!mServiceScheduled.read()) {
+        mServiceScheduled = true;
+        mContext->mainStrand->post(
+            std::tr1::bind(&FairServerMessageReceiver::service, this)
+        );
+    }
 }
 
 void FairServerMessageReceiver::handleReceived(const ServerID& from) {
@@ -66,11 +76,13 @@ void FairServerMessageReceiver::handleReceived(const ServerID& from) {
 
     // And run service (which will handle setting up
     // any new service callbacks that may be needed).
-    service();
+    scheduleServicing();
 }
 
 void FairServerMessageReceiver::service() {
     mProfiler->started();
+
+    mServiceScheduled = false;
 
     Time tcur = mContext->simTime();
     Duration since_last = tcur - mLastServiceTime;
