@@ -147,11 +147,9 @@ void FairServerMessageReceiver::networkReceivedConnection(const ServerID& from) 
 }
 
 void FairServerMessageReceiver::handleReceivedConnection(const ServerID& from) {
-    SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight");
-    setServerWeight(
-        from,
-        mServerWeightCalculator->weight(mContext->id(), from)
-                    );
+    double wt = mServerWeightCalculator->weight(mContext->id(), from);
+    SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
+    setServerWeight(from, wt);
 }
 
 void FairServerMessageReceiver::networkReceivedData(const ServerID& from) {
