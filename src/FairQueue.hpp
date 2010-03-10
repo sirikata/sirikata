@@ -544,9 +544,16 @@ protected:
      *  finish time. */
     Time finishTime(uint32 size, float weight, const Time& last_finish_time) const {
         float queue_frac = weight;
-        Duration transmitTime = queue_frac == 0 ? Duration::seconds((float)1000) : Duration::seconds( size / queue_frac );
-        if (transmitTime == Duration::zero()) transmitTime = Duration::microseconds(1); // just make sure we take *some* time
+        Duration transmitTime = Duration::seconds((float)1000);
+        if (queue_frac == 0)
+            SILOG(fairqueue,fatal,"[FQ] Encountered 0 weight.");
+        else
+            transmitTime = Duration::seconds( size / queue_frac );
 
+        if (transmitTime == Duration::zero()) {
+            SILOG(fairqueue,fatal,"[FQ] Encountered 0 duration transmission");
+            transmitTime = Duration::microseconds(1); // just make sure we take *some* time
+        }
         return last_finish_time + transmitTime;
     }
 
