@@ -86,16 +86,6 @@ public:
     bool empty() const{
         return mNetwork->front(mServerID, mMaxRecvSize)==NULL;
     }
-
-    uint32 size() const {
-        return 0;
-        //return mNetwork->front(mServerAddress,mMaxRecvSize)?mNetwork->front(mServerAddress,mMaxRecvSize)->size():0;
-    }
-
-    // Returns the total amount of space that can be allocated for the destination
-    uint32 maxSize() const {
-        return 0;
-    }
 };
 }
 
