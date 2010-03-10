@@ -63,8 +63,6 @@ public:
     virtual ~ServerMessageReceiver();
 
 protected:
-    virtual void setServerWeight(ServerID sid, float weight) = 0;
-
     // Network::ReceiveListener Interface
     virtual void networkReceivedConnection(const ServerID& from) = 0;
     virtual void networkReceivedData(const ServerID& from) = 0;
@@ -72,6 +70,7 @@ protected:
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 
     SpaceContext* mContext;
+    IOStrand* mReceiverStrand;
     Network* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Listener* mListener;

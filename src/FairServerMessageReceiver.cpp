@@ -43,7 +43,7 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
           mServiceTimer(
               IOTimer::create(
                   ctx->ioService,
-                  ctx->mainStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
+                  mReceiverStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
                               )
                         ),
           mLastServiceTime(ctx->simTime()),
@@ -61,7 +61,7 @@ FairServerMessageReceiver::~FairServerMessageReceiver() {
 void FairServerMessageReceiver::scheduleServicing() {
     if (!mServiceScheduled.read()) {
         mServiceScheduled = true;
-        mContext->mainStrand->post(
+        mReceiverStrand->post(
             std::tr1::bind(&FairServerMessageReceiver::service, this)
         );
     }
@@ -143,7 +143,7 @@ void FairServerMessageReceiver::setServerWeight(ServerID sid, float weight) {
 }
 
 void FairServerMessageReceiver::networkReceivedConnection(const ServerID& from) {
-    mContext->mainStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, from) );
+    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, from) );
 }
 
 void FairServerMessageReceiver::handleReceivedConnection(const ServerID& from) {
@@ -158,7 +158,7 @@ void FairServerMessageReceiver::networkReceivedData(const ServerID& from) {
     // No matter what, we'll post an event.  Since a new front() is available
     // this could completely change the amount of time we're waiting so the main
     // strand always needs to know.
-    mContext->mainStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceived, this, from) );
+    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceived, this, from) );
 }
 
 } // namespace CBR

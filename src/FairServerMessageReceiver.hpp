@@ -52,7 +52,7 @@ public:
     virtual ~FairServerMessageReceiver();
 
 private:
-    virtual void setServerWeight(ServerID sid, float weight);
+    void setServerWeight(ServerID sid, float weight);
 
     virtual void networkReceivedConnection(const ServerID& from);
     virtual void networkReceivedData(const ServerID& from);

@@ -38,6 +38,7 @@ namespace CBR {
 
 ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
         : mContext(ctx),
+          mReceiverStrand(ctx->ioService->createStrand()),
           mNetwork(net),
           mListener(listener)
 {

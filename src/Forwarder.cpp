@@ -59,7 +59,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
              mServerMessageReceiver(NULL),
              mOSegLookups(NULL),
              mUniqueConnIDs(0),
-             mServiceIDSource(0)
+             mServiceIDSource(0),
+             mReceivedMessages(std::tr1::bind(&Forwarder::scheduleProcessReceivedServerMessages, this))
 {
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), 16384, (ForwarderServiceQueue::Listener*)this);
 
@@ -371,7 +372,21 @@ bool Forwarder::serverMessageEmpty(ServerID dest) {
 void Forwarder::serverMessageReceived(Message* msg) {
     assert(msg != NULL);
     TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
-    dispatchMessage(msg);
+    mReceivedMessages.push(msg);
+}
+
+void Forwarder::scheduleProcessReceivedServerMessages() {
+    mContext->mainStrand->post(
+        std::tr1::bind(&Forwarder::processReceivedServerMessages, this)
+    );
+}
+
+void Forwarder::processReceivedServerMessages() {
+    while(!mReceivedMessages.empty()) {
+        Message* msg;
+        mReceivedMessages.pop(msg);
+        dispatchMessage(msg);
+    }
 }
 
 } //end namespace

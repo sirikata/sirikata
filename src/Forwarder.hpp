@@ -20,6 +20,8 @@
 
 #include "ForwarderServiceQueue.hpp"
 
+#include <sirikata/util/ThreadSafeQueueWithNotification.hpp>
+
 namespace CBR
 {
   class Object;
@@ -72,6 +74,8 @@ private:
     Router<Message*>* mObjectMessageRouter;
     Router<Message*>* mOSegCacheUpdateRouter;
 
+    Sirikata::ThreadSafeQueueWithNotification<Message*> mReceivedMessages;
+
     // -- Boiler plate stuff - initialization, destruction, methods to satisfy interfaces
   public:
       Forwarder(SpaceContext* ctx);
@@ -123,6 +127,9 @@ private:
     virtual bool serverMessageEmpty(ServerID dest);
     // ServerMessageReceiver::Listener Interface
     virtual void serverMessageReceived(Message* msg);
+
+    void scheduleProcessReceivedServerMessages();
+    void processReceivedServerMessages();
 
     // ForwarderServiceQueue::Listener Interface (passed on to ServerMessageQueue)
     virtual void forwarderServiceMessageReady(ServerID dest_server);
