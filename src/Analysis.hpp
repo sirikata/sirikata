@@ -110,9 +110,6 @@ private:
     typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
     DatagramEventList mEmptyDatagramEventList;
 
-    typedef std::vector<PacketQueueInfoEvent*> PacketQueueInfoEventList;
-    typedef std::map<ServerID, PacketQueueInfoEventList*> ServerPacketQueueInfoEventListMap;
-    PacketQueueInfoEventList mEmptyPacketQueueInfoEventList;
     typedef std::vector<ServerDatagramQueueInfoEvent*> DatagramQueueInfoEventList;
     typedef std::map<ServerID, DatagramQueueInfoEventList*> ServerDatagramQueueInfoEventListMap;
     DatagramQueueInfoEventList mEmptyDatagramQueueInfoEventList;
@@ -122,20 +119,16 @@ private:
 
     DatagramQueueInfoEventList::const_iterator datagramQueueInfoBegin(const ServerID& server) const;
     DatagramQueueInfoEventList::const_iterator datagramQueueInfoEnd(const ServerID& server) const;
-    PacketQueueInfoEventList::const_iterator packetQueueInfoBegin(const ServerID& server) const;
-    PacketQueueInfoEventList::const_iterator packetQueueInfoEnd(const ServerID& server) const;
 
     const DatagramEventList* getDatagramEventList(const ServerID& server) const;
 
     const DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
-    const PacketQueueInfoEventList* getPacketQueueInfoEventList(const ServerID& server) const;
 
     template<typename EventType, typename EventIteratorType>
     void computeJFI(const ServerID& sender, const ServerID& filter) const;
 
     ServerDatagramEventListMap mDatagramEventLists;
 
-    ServerPacketQueueInfoEventListMap mPacketQueueInfoEventLists;
     ServerDatagramQueueInfoEventListMap mDatagramQueueInfoEventLists;
 
     uint32_t mNumberOfServers;

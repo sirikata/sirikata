@@ -133,18 +133,6 @@ struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
 };
 
 
-struct PacketQueueInfoEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    uint32 send_size;
-    uint32 send_queued;
-    float send_weight;
-    uint32 receive_size;
-    uint32 receive_queued;
-    float receive_weight;
-};
-
-
 struct SegmentationChangeEvent : public Event {
   BoundingBox3f bbox;
   ServerID server;

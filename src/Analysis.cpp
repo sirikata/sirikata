@@ -184,21 +184,6 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt = prevt;
           }
           break;
-      case Trace::PacketQueueInfoTag:
-          {
-              PacketQueueInfoEvent* pqievt = new PacketQueueInfoEvent;
-              record_is.read( (char*)&pqievt->time, sizeof(pqievt->time) );
-              pqievt->source = trace_server_id;
-              record_is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
-              record_is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
-              record_is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
-              record_is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
-              record_is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
-              record_is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
-              record_is.read( (char*)&pqievt->receive_weight, sizeof(pqievt->receive_weight) );
-              evt = pqievt;
-          }
-          break;
       case Trace::ObjectBeginMigrateTag:
         {
           ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
@@ -728,12 +713,6 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
                 insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
             }
 
-            PacketQueueInfoEvent* packet_qi_evt = dynamic_cast<PacketQueueInfoEvent*>(evt);
-            if (packet_qi_evt != NULL) {
-                used = true;
-                insert_event<PacketQueueInfoEvent, PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(packet_qi_evt, mPacketQueueInfoEventLists);
-            }
-
             if (!used) delete evt;
         }
     }
@@ -742,7 +721,6 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
     sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
 
     sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
-    sort_events<PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(mPacketQueueInfoEventLists);
 }
 
 BandwidthAnalysis::~BandwidthAnalysis() {
@@ -773,13 +751,6 @@ const BandwidthAnalysis::DatagramQueueInfoEventList* BandwidthAnalysis::getDatag
     return event_lists_it->second;
 }
 
-const BandwidthAnalysis::PacketQueueInfoEventList* BandwidthAnalysis::getPacketQueueInfoEventList(const ServerID& server) const {
-    ServerPacketQueueInfoEventListMap::const_iterator event_lists_it = mPacketQueueInfoEventLists.find(server);
-    if (event_lists_it == mPacketQueueInfoEventLists.end()) return &mEmptyPacketQueueInfoEventList;
-
-    return event_lists_it->second;
-}
-
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramBegin(const ServerID& server) const {
     return getDatagramEventList(server)->begin();
 }
@@ -796,13 +767,6 @@ BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis:
     return getDatagramQueueInfoEventList(server)->end();
 }
 
-BandwidthAnalysis::PacketQueueInfoEventList::const_iterator BandwidthAnalysis::packetQueueInfoBegin(const ServerID& server) const {
-    return getPacketQueueInfoEventList(server)->begin();
-}
-
-BandwidthAnalysis::PacketQueueInfoEventList::const_iterator BandwidthAnalysis::packetQueueInfoEnd(const ServerID& server) const {
-    return getPacketQueueInfoEventList(server)->end();
-}
 
 template<typename EventType, typename EventIteratorType>
 void computeRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end) {
@@ -1001,10 +965,6 @@ void BandwidthAnalysis::dumpDatagramQueueInfo(const ServerID& sender, const Serv
     dumpQueueInfoSend<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
 }
 
-void BandwidthAnalysis::dumpPacketQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
-    dumpQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator>(sender, receiver, packetQueueInfoBegin(sender), packetQueueInfoEnd(sender), summary_out, detail_out);
-}
-
 
 // note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
 template<typename EventType, typename EventIteratorType, typename ValueFunctor>
@@ -1095,29 +1055,6 @@ void BandwidthAnalysis::windowedDatagramSendQueueInfo(const ServerID& sender, co
     );
 }
 
-void BandwidthAnalysis::windowedPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    windowedQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator, SendQueueFunctor<PacketQueueInfoEvent> >(
-        sender, receiver,
-        packetQueueInfoBegin(sender), packetQueueInfoEnd(sender),
-        SendQueueFunctor<PacketQueueInfoEvent>(),
-        window, sample_rate, start_time, end_time,
-        summary_out, detail_out,
-        false
-    );
-}
-
-void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    windowedQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator, ReceiveQueueFunctor<PacketQueueInfoEvent> >(
-        sender, receiver,
-        packetQueueInfoBegin(receiver), packetQueueInfoEnd(receiver),
-        ReceiveQueueFunctor<PacketQueueInfoEvent>(),
-        window, sample_rate, start_time, end_time,
-        summary_out, detail_out,
-        true
-    );
-}
-
-
 
 
 
@@ -1185,11 +1122,6 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
             ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
             if (datagram_qi_evt != NULL) {
                 //insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
-            }
-
-            PacketQueueInfoEvent* packet_qi_evt = dynamic_cast<PacketQueueInfoEvent*>(evt);
-            if (packet_qi_evt != NULL) {
-                //insert_event<PacketQueueInfoEvent, PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(packet_qi_evt, mPacketQueueInfoEventLists);
             }
 
             delete evt;

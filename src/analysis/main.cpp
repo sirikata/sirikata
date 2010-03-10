@@ -278,8 +278,6 @@ int main(int argc, char** argv) {
             for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.dumpDatagramQueueInfo(sender, receiver, std::cout, queue_info_file);
-                else if (windowed_analysis_type == "packet")
-                    ba.dumpPacketQueueInfo(sender, receiver, std::cout, queue_info_file);
             }
         }
         //  * Send
@@ -287,17 +285,10 @@ int main(int argc, char** argv) {
             for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.windowedDatagramSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
-                else if (windowed_analysis_type == "packet")
-                    ba.windowedPacketSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
             }
         }
         //  * Receive
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "packet")
-                    ba.windowedPacketReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
-            }
-        }
+        // None
 
         exit(0);
     }

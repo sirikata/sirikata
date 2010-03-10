@@ -107,7 +107,6 @@ const uint8 Trace::ObjectLocationTag;
 const uint8 Trace::ServerDatagramQueuedTag;
 const uint8 Trace::ServerDatagramSentTag;
 const uint8 Trace::ServerDatagramReceivedTag;
-const uint8 Trace::PacketQueueInfoTag;
 const uint8 Trace::SegmentationChangeTag;
 const uint8 Trace::ObjectBeginMigrateTag;
 const uint8 Trace::ObjectAcknowledgeMigrateTag;
@@ -394,23 +393,6 @@ CREATE_TRACE_DEF(serverDatagramReceived, mLogDatagram, const Time& start_time, c
         BatchedBuffer::IOVec(&end_time, sizeof(end_time)),
     };
     writeRecord(ServerDatagramReceivedTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(packetQueueInfo, mLogPacket, const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 8;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&dest, sizeof(dest)),
-        BatchedBuffer::IOVec(&send_size, sizeof(send_size)),
-        BatchedBuffer::IOVec(&send_queued, sizeof(send_queued)),
-        BatchedBuffer::IOVec(&send_weight, sizeof(send_weight)),
-        BatchedBuffer::IOVec(&receive_size, sizeof(receive_size)),
-        BatchedBuffer::IOVec(&receive_queued, sizeof(receive_queued)),
-        BatchedBuffer::IOVec(&receive_weight, sizeof(receive_weight)),
-    };
-    writeRecord(PacketQueueInfoTag, data_vec, num_data);
 }
 
 CREATE_TRACE_DEF(segmentationChanged, mLogCSeg, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
