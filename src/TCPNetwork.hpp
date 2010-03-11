@@ -143,8 +143,8 @@ public:
     virtual bool send(const ServerID&,const Chunk&);
 
     virtual void listen(const ServerID& addr, ReceiveListener* receive_listener);
-    virtual Chunk* front(const ServerID& from, uint32 max_size);
-    virtual Chunk* receiveOne(const ServerID& from, uint32 max_size);
+    virtual Chunk* front(const ServerID& from);
+    virtual Chunk* receiveOne(const ServerID& from);
 };
 
 } // namespace CBR

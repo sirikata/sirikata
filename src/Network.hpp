@@ -62,8 +62,8 @@ public:
     virtual bool send(const ServerID&, const Chunk&)=0;
 
     virtual void listen (const ServerID& addr, ReceiveListener* receive_listener)=0;
-    virtual Chunk* front(const ServerID& from, uint32 max_size)=0;
-    virtual Chunk* receiveOne(const ServerID& from, uint32 max_size)=0;
+    virtual Chunk* front(const ServerID& from)=0;
+    virtual Chunk* receiveOne(const ServerID& from)=0;
 
 
     // ServerIDMap -- used for converting received server ID to a (ip,port) pair.  We have to do

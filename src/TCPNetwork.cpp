@@ -94,8 +94,8 @@ TCPNetwork::~TCPNetwork() {
 
 // IO Thread Methods
 
-void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream, 
-				   Sirikata::Network::Stream::SetCallbacks& setCallbacks) 
+void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream,
+				   Sirikata::Network::Stream::SetCallbacks& setCallbacks)
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
@@ -533,24 +533,20 @@ void TCPNetwork::listen(const ServerID& as_server, ReceiveListener* receive_list
 }
 
 
-Chunk* TCPNetwork::front(const ServerID& from, uint32 max_size) {
+Chunk* TCPNetwork::front(const ServerID& from) {
     RemoteStreamPtr stream(getReceiveQueue(from));
 
     if (!stream || !stream->front)
         return NULL;
 
     Chunk* result = stream->front;
-    // Only return the front item if it doesn't violate size requirements
-    if (result->size() > max_size)
-        return NULL;
-
     return result;
 }
 
-Chunk* TCPNetwork::receiveOne(const ServerID& from, uint32 max_size) {
+Chunk* TCPNetwork::receiveOne(const ServerID& from) {
     // Use front() to get the next one.  We have a slight duplication of work in
     // calling getReceiveQueue twice...
-    Chunk* result = front(from, max_size);
+    Chunk* result = front(from);
 
     // If front fails we can bail out now
     if (result == NULL)

@@ -10,7 +10,6 @@ class NetworkQueueWrapper {
     Context* mContext;
     Network* mNetwork;
     ServerID mServerID;
-    uint32 mMaxRecvSize;
     Message* mFront;
     Trace::MessagePath mPathTag;
     typedef Network::Chunk Chunk;
@@ -42,7 +41,6 @@ public:
         mContext = ctx;
         mServerID=sid;
         mNetwork=net;
-        mMaxRecvSize=(1<<30);
         mFront = NULL;
         mPathTag = tag;
     }
@@ -54,7 +52,7 @@ public:
 
     Message* front() {
         if (mFront == NULL) {
-            Chunk* c = mNetwork->front(mServerID, mMaxRecvSize);
+            Chunk* c = mNetwork->front(mServerID);
             if (c != NULL)
                 mFront = parse(c);
         }
@@ -63,7 +61,7 @@ public:
     }
 
     Message* pop(){
-        Chunk* c = mNetwork->receiveOne(mServerID, mMaxRecvSize);
+        Chunk* c = mNetwork->receiveOne(mServerID);
 
         if (c == NULL) {
             assert(mFront == NULL);
@@ -84,7 +82,7 @@ public:
     }
 
     bool empty() const{
-        return mNetwork->front(mServerID, mMaxRecvSize)==NULL;
+        return mNetwork->front(mServerID)==NULL;
     }
 };
 }
