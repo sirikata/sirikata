@@ -6,6 +6,8 @@
 #include <sirikata/network/Stream.hpp>
 #include <sirikata/network/StreamListener.hpp>
 #include <sirikata/util/PluginManager.hpp>
+#include <sirikata/util/SizedThreadSafeQueue.hpp>
+#include "CountResourceMonitor.hpp"
 
 namespace CBR {
 
@@ -49,11 +51,11 @@ class TCPNetwork : public Network {
                             // currently being shutdown. Will be true
                             // if another stream to the same endpoint
                             // was preferred over this one.
-        Sirikata::AtomicValue<Chunk*> front; // A single buffered, thread-safe chunk. We
-                                   // buffer this since we need to be able to
-                                   // pass the front item up to the user,
-                                   // meaning it has to be available and
-                                   // stored.
+        typedef Sirikata::SizedThreadSafeQueue<Chunk*,CountResourceMonitor> SizedChunkReceiveQueue;
+        SizedChunkReceiveQueue receive_queue; // Note: This can't be a single
+                                              // front item or the receive queue
+                                              // empties it too quickly and
+                                              // loses bandwidth.
         bool paused; // Indicates if receiving is currently paused for
                      // this stream.  If true, the stream must be
                      // unpaused the next time someone calls
@@ -130,12 +132,15 @@ class TCPNetwork : public Network {
         // with data available also exists.
         RemoteStreamPtr getCurrentRemoteStream();
 
-        static bool canReadFrom(RemoteStreamPtr strm);
+        bool canReadFrom(RemoteStreamPtr strm);
 
         ServerID logical_endpoint;
         RemoteSessionPtr session;
         RemoteStreamPtr front_stream; // Stream which we already got a front()
                                       // item from
+        Chunk* front_elem; // The front item, left out here to make it
+                           // accessible since the RemoteStream doesn't give
+                           // easy access
         IOService* ios;
     };
     typedef std::tr1::unordered_map<ServerID, TCPReceiveStream*> ReceiveStreamMap;

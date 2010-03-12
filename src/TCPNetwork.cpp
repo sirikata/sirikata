@@ -22,7 +22,7 @@ TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::St
           initiator(init),
           connected(false),
           shutting_down(false),
-          front(NULL),
+          receive_queue( CountResourceMonitor(16) ),
           paused(false)
 {
 }
@@ -33,18 +33,22 @@ TCPNetwork::RemoteStream::~RemoteStream() {
 
 bool TCPNetwork::RemoteStream::push(Chunk& data) {
     boost::lock_guard<boost::mutex> lck(mPushPopMutex);
-    if (front != NULL) {
+
+    Chunk* tmp = new Chunk;
+    tmp->swap(data);
+    bool pushed = receive_queue.push(tmp, false);
+
+    if (!pushed) {
         // Space is occupied, pause and ignore
         TCPNET_LOG(insane,"Pausing receive from " << logical_endpoint << ".");
         paused = true;
+        data.swap(*tmp); // Put the data back
+        delete tmp;
         return false;
     }
     else {
         // Otherwise, give it its own chunk and push it up
         TCPNET_LOG(insane,"Passing data up to next layer from " << logical_endpoint << ".");
-        Chunk* tmp = new Chunk;
-        tmp->swap(data);
-        front = tmp;
         return true;
     }
 }
@@ -64,11 +68,12 @@ Chunk* TCPNetwork::RemoteStream::pop(IOService* ios) {
     // are guaranteed another pop will be possible and we're back to a safe
     // state.
 
-    Chunk* result = front;
     bool was_paused = paused;
 
+    Chunk* result = NULL;
+    bool popped = receive_queue.pop(result);
+
     paused = false; // we can always unset pause
-    front = NULL;
     if (was_paused) {
         // Note: we're posting this to the network strand because
         // bytesReceivedCallback may not have returned yet, causing
@@ -134,6 +139,8 @@ bool TCPNetwork::TCPSendStream::send(const Chunk& data) {
 TCPNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios)
  : logical_endpoint(sid),
    session(s),
+   front_stream(),
+   front_elem(NULL),
    ios(_ios)
 {
 }
@@ -152,21 +159,21 @@ Chunk* TCPNetwork::TCPReceiveStream::front() {
     if (!session)
         return NULL;
 
-    RemoteStreamPtr stream(getCurrentRemoteStream());
+    if (front_elem != NULL)
+        return front_elem;
 
-    if (!stream || !stream->front)
+    // Need to get a new front_elem
+    RemoteStreamPtr stream(getCurrentRemoteStream());
+    if (!stream)
         return NULL;
 
-    Chunk* result = stream->front;
+    Chunk* result = stream->pop(ios);
+    front_elem = result;
     return result;
 }
 
 Chunk* TCPNetwork::TCPReceiveStream::pop() {
-    if (!session)
-        return NULL;
-
-    // Use front() to get the next one.  We have a slight duplication of work in
-    // calling getCurrentRemoteStream twice...
+    // Use front() to get the next one.
     Chunk* result = front();
 
     // If front fails we can bail out now
@@ -174,12 +181,12 @@ Chunk* TCPNetwork::TCPReceiveStream::pop() {
         return NULL;
 
     // Otherwise, just do cleanup before returning the front item
-    RemoteStreamPtr stream(getCurrentRemoteStream());
+    RemoteStreamPtr stream(front_stream);
     assert(stream);
-    // Pop...
-    Chunk* popped = stream->pop(ios);
-    assert(popped == result);
-    // Unmark this queue as the front queue
+    assert(result == front_elem);
+    // We've already popped in front, we just clear out the front element and
+    // front queue
+    front_elem = NULL;
     front_stream.reset();
 
     return result;
@@ -188,7 +195,7 @@ Chunk* TCPNetwork::TCPReceiveStream::pop() {
 bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr strm) {
     return (
         strm &&
-        strm->front != NULL &&
+        ( (front_elem != NULL && strm == front_stream) || !strm->receive_queue.probablyEmpty()) &&
         (strm->connected || strm->shutting_down)
     );
 }
