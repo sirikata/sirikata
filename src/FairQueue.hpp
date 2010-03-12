@@ -232,18 +232,15 @@ public:
         computeNextFinishTime(queue_info);
     }
 
-    // Returns the next message to deliver, given the number of bytes available for transmission
-    // \param bytes number of bytes available; updated appropriately for intermediate null messages when returns
-    // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
-    //          given the number of bytes allocated
-    Message* front(uint64* bytes, Key* keyAtFront) {
+    // Returns the next message to deliver
+    // \returns the next message, or NULL if the queue is empty
+    Message* front(Key* keyAtFront) {
         Message* result = NULL;
         Time vftime(Time::null());
         mFrontQueue = NULL;
 
-        nextMessage(bytes, &result, &vftime, &mFrontQueue);
+        nextMessage(&result, &vftime, &mFrontQueue);
         if (result != NULL) {
-            assert( *bytes >= result->size() );
             *keyAtFront = mFrontQueue->key;
             assert(mFrontQueue->enabled);
             return result;
@@ -252,17 +249,15 @@ public:
         return NULL;
     }
 
-    // Returns the next message to deliver, given the number of bytes available for transmission
-    // \param bytes number of bytes available; updated appropriately when returns
-    // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
-    //          given the number of bytes allotted
-    Message* pop(uint64* bytes, Key* keyAtFront = NULL) {
+    // Returns the next message to deliver
+    // \returns the next message, or NULL if the queue is empty
+    Message* pop(Key* keyAtFront = NULL) {
         Message* result = NULL;
         Time vftime(Time::null());
 
         // If we haven't marked any queue as holding the front item, do so now
         if (mFrontQueue == NULL)
-            nextMessage(bytes, &result, &vftime, &mFrontQueue);
+            nextMessage(&result, &vftime, &mFrontQueue);
         else { // Otherwise, just fill in the information we need from the marked queue
             assert(!mFrontQueue->messageQueue->empty());
             result = mFrontQueue->nextFinishMessage;
@@ -280,9 +275,6 @@ public:
 
             if (keyAtFront != NULL)
                 *keyAtFront = mFrontQueue->key;
-
-            assert( *bytes >= result->size() );
-            *bytes -= result->size();
 
             Message* popped_val = mFrontQueue->messageQueue->pop();
             assert(popped_val == mFrontQueue->nextFinishMessage);
@@ -376,14 +368,12 @@ protected:
     // the queue was actually satisfactory, i.e. if *result_out != NULL then there was the queue was truly satisfactory.
     // Note that, despite passing in a QueueInfo*, we have additional parameters which are actually used.  This is because
     // this method may be used when the info in a QueueInfo is out of date.
-    bool satisfies(QueueInfo* qi, uint64* bytes, QueueInfo** qiout, Message** result_out, Time* vftime_out) {
+    // FIXME this no longer really checks anything since we don't check sizes
+    // anymore, just sets up output
+    bool satisfies(QueueInfo* qi, QueueInfo** qiout, Message** result_out, Time* vftime_out) {
         *result_out = NULL;
 
         assert(qi->nextFinishMessage != NULL);
-        // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
-        // would violate the ordering.
-        if (*bytes < qi->nextFinishMessage->size())
-            return false;
 
         // Otherwsie, we have enough space and can use this queue.
         *qiout = qi;
@@ -392,10 +382,9 @@ protected:
         return true;
     }
 
-    // Retrieves the next message to deliver, along with its virtual finish time, given the number of bytes available
-    // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
-    // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
-    void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
+    // Retrieves the next message to deliver, along with its virtual finish time
+    // for transmission. Returns null if the queue is empty.
+    void nextMessage(Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
         *result_out = NULL;
 
         // If there's nothing in the queue, there is no next message
@@ -474,7 +463,7 @@ protected:
 
                     // It should have been moved earlier, check if its satisfactory
                     bool satis = satisfies(
-                        min_queue_info, bytes,
+                        min_queue_info,
                         min_queue_info_out, result_out, vftime_out
                     );
                     if (!satis || (satis && *result_out != NULL))
@@ -487,7 +476,7 @@ protected:
 
             assert(min_queue_info->nextFinishMessage != NULL);
             bool satis = satisfies(
-                min_queue_info, bytes,
+                min_queue_info,
                 min_queue_info_out, result_out, vftime_out
             );
             if (!satis || (satis && *result_out != NULL))

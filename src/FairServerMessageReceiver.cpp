@@ -101,16 +101,21 @@ void FairServerMessageReceiver::service() {
     // Receive
     ServerID sid;
     Message* next_recv_msg = NULL;
-    while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
-        Message* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
+    while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&sid)) != NULL ) {
+        uint32 packet_size = next_recv_msg->serializedSize();
+
+        if (packet_size > recv_bytes)
+            break;
+
+        Message* next_recv_msg_popped = mReceiveQueues.pop();
         assert(next_recv_msg_popped == next_recv_msg);
 
-        uint32 packet_size = next_recv_msg->serializedSize();
         Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
         Time start_time = mLastReceiveEndTime;
         Time end_time = mLastReceiveEndTime + recv_duration;
         mLastReceiveEndTime = end_time;
 
+        recv_bytes -= packet_size;
         mBytesUsed += packet_size;
 
         /*

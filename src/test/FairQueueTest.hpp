@@ -58,9 +58,8 @@ public:
 // Simple macro to evaluate popped results: takes a queue
 #define ASSERT_FAIR_QUEUE_POP(queue, expected_key, expected_val)        \
         {                                                               \
-            uint64 bogus_bytes = 1 << 28;                               \
             uint32 result_key;                                          \
-            SizedElem* result = test_queue.pop(&bogus_bytes, &result_key); \
+            SizedElem* result = test_queue.pop(&result_key);            \
             assert(result_key == expected_key);                         \
             assert(result->val == expected_val);                        \
             delete result;                                              \

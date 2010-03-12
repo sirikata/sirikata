@@ -54,23 +54,19 @@ ForwarderServiceQueue::~ForwarderServiceQueue() {
 Message* ForwarderServiceQueue::front(ServerID sid) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
-    uint64 size=1<<30;
     ServiceID svc;
-
-    return getFairQueue(sid)->front(&size, &svc);
+    return getFairQueue(sid)->front(&svc);
 }
 
 Message* ForwarderServiceQueue::pop(ServerID sid) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
-    uint64 size=1<<30;
-    return getFairQueue(sid)->pop(&size);
+    return getFairQueue(sid)->pop();
 }
 
 bool ForwarderServiceQueue::empty(ServerID sid) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
-    uint64 size=1<<30;
     return getFairQueue(sid)->empty();
 }
 

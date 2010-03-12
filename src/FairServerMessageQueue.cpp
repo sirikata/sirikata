@@ -84,7 +84,7 @@ void FairServerMessageQueue::service() {
     Message* next_msg = NULL;
     ServerID sid;
     bool save_bytes = true;
-    while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
+    while( send_bytes > 0 && (next_msg = mServerQueues.front(&sid)) != NULL ) {
         bool sent_success = trySend(sid, next_msg);
         if (!sent_success) {
             disableDownstream(sid);
@@ -92,7 +92,7 @@ void FairServerMessageQueue::service() {
         }
 
         // Pop the message
-        Message* next_msg_popped = mServerQueues.pop(&send_bytes);
+        Message* next_msg_popped = mServerQueues.pop();
         assert(next_msg == next_msg_popped);
         save_bytes = false;
 
@@ -105,6 +105,7 @@ void FairServerMessageQueue::service() {
         CONTEXT_TRACE_NO_TIME(serverDatagramSent, start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), packet_size);
 
+        send_bytes -= packet_size;
         mBytesUsed += packet_size;
 
         // Get rid of the message
