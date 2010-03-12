@@ -45,7 +45,8 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
           mLastSendEndTime(ctx->simTime()),
           mServiceScheduled(false),
           mAccountedTime(Duration::seconds(0)),
-          mBytesDiscarded(0),
+          mBytesDiscardedBlocked(0),
+          mBytesDiscardedUnderflow(0),
           mBytesUsed(0)
 {
 }
@@ -54,7 +55,8 @@ FairServerMessageQueue::~FairServerMessageQueue() {
     SILOG(fsmq,info,
         "FSMQ: Accounted time: " << mAccountedTime <<
         ", used: " << mBytesUsed <<
-        ", discarded: " << mBytesDiscarded <<
+        ", discarded (underflow): " << mBytesDiscardedUnderflow <<
+        ", discarded (blocked): " << mBytesDiscardedBlocked <<
         ", remaining: " << mRemainderSendBytes
     );
 }
@@ -133,7 +135,10 @@ void FairServerMessageQueue::service() {
         // queues were blocking us from sending, so we should discard the
         // bytes so we don't artificially collect extra, old bandwidth over
         // time.
-        mBytesDiscarded += send_bytes;
+        if (mServerQueues.empty())
+            mBytesDiscardedUnderflow += send_bytes;
+        else
+            mBytesDiscardedBlocked += send_bytes;
         mRemainderSendBytes = 0;
         mLastSendEndTime = tcur;
     }

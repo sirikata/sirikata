@@ -34,7 +34,8 @@ protected:
     Sirikata::AtomicValue<bool> mServiceScheduled;
 
     Duration mAccountedTime;
-    uint64 mBytesDiscarded;
+    uint64 mBytesDiscardedBlocked;
+    uint64 mBytesDiscardedUnderflow;
     uint64 mBytesUsed;
   public:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second);
