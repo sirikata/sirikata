@@ -83,8 +83,14 @@ void FairServerMessageQueue::service() {
 
     Message* next_msg = NULL;
     ServerID sid;
-    bool save_bytes = true;
+    bool ran_out_of_bytes = false;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&sid)) != NULL ) {
+        uint32 packet_size = next_msg->serializedSize();
+        if (packet_size > send_bytes) {
+            ran_out_of_bytes = true;
+            break;
+        }
+
         bool sent_success = trySend(sid, next_msg);
         if (!sent_success) {
             disableDownstream(sid);
@@ -94,10 +100,8 @@ void FairServerMessageQueue::service() {
         // Pop the message
         Message* next_msg_popped = mServerQueues.pop();
         assert(next_msg == next_msg_popped);
-        save_bytes = false;
 
         // Record trace send times
-        uint32 packet_size = next_msg->serializedSize();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
@@ -112,32 +116,26 @@ void FairServerMessageQueue::service() {
         delete next_msg;
     }
 
-    if (mServerQueues.empty()) {
+    if (ran_out_of_bytes) {
+        // We had a message but couldn't send it.
+        mRemainderSendBytes = send_bytes;
+        //mLastSendTime = already saved
+
+        // We reschedule only if we still have data to send
+        scheduleServicing();
+    }
+    else {
+        // There are 2 ways we could get here:
+        // 1. mServerQueues.empty() == true: We ran out of input messages to
+        // send.  We have to discard the bytes we didn't have input for
+        // 2. Otherwise, we had enough bytes, there were items in the queue,
+        // but we couldn't get a front item.  This means all downstream
+        // queues were blocking us from sending, so we should discard the
+        // bytes so we don't artificially collect extra, old bandwidth over
+        // time.
         mBytesDiscarded += send_bytes;
         mRemainderSendBytes = 0;
         mLastSendEndTime = tcur;
-    }
-    else {
-        // We reschedule only if we still have data to send
-        scheduleServicing();
-
-        // NOTE: we used to just leave mLastSendEndTime at the last time recorded since the leftover
-        // bytes should be used starting at that time. However, now when we exit the loop we can't tell
-        // if it was due to a) not having enough bytes for a message or b) not being able to send the
-        // message on the network.  Therefore, we're conservative and make time progress.  This could
-        // screw up the statistics a little bit, but only by the size of the largest packet. Further, if
-        // we don't do this, then when we consistently exit the loop due to not being able to push onto
-        // the network (which starts happening a lot when a queue gets backed up), then we stop accounting
-        // for time correctly and things get improperly recored.
-        if (save_bytes) {
-            mRemainderSendBytes = send_bytes;
-            //mLastSendTime = already saved
-        }
-        else {
-            mBytesDiscarded += send_bytes;
-            mRemainderSendBytes = 0;
-            mLastSendEndTime = tcur;
-        }
     }
 
     mLastServiceTime = tcur;
