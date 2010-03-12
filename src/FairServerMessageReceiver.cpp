@@ -51,11 +51,20 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
           mRemainderReceiveBytes(0),
           mLastReceiveEndTime(ctx->simTime()),
           mReceiveSet(),
-          mServiceScheduled(false)
+          mServiceScheduled(false),
+          mAccountedTime(Duration::seconds(0)),
+          mBytesDiscarded(0),
+          mBytesUsed(0)
 {
 }
 
 FairServerMessageReceiver::~FairServerMessageReceiver() {
+    SILOG(fsmr,info,
+        "FSMR: Accounted time: " << mAccountedTime <<
+        ", used: " << mBytesUsed <<
+        ", discarded: " << mBytesDiscarded <<
+        ", remaining: " << mRemainderReceiveBytes
+    );
 }
 
 void FairServerMessageReceiver::scheduleServicing() {
@@ -86,6 +95,7 @@ void FairServerMessageReceiver::service() {
 
     Time tcur = mContext->simTime();
     Duration since_last = tcur - mLastServiceTime;
+    mAccountedTime += since_last;
     uint64 recv_bytes = since_last.toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
     // Receive
@@ -101,6 +111,8 @@ void FairServerMessageReceiver::service() {
         Time end_time = mLastReceiveEndTime + recv_duration;
         mLastReceiveEndTime = end_time;
 
+        mBytesUsed += packet_size;
+
         /*
            FIXME at some point we should record this here instead of in Server.cpp
         mContext->trace()->serverDatagramReceived();
@@ -109,6 +121,7 @@ void FairServerMessageReceiver::service() {
     }
 
     if (mReceiveQueues.empty()) {
+        mBytesDiscarded += recv_bytes;
         mRemainderReceiveBytes = 0;
         mLastReceiveEndTime = tcur;
     }

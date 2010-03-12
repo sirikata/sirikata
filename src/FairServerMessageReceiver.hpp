@@ -83,6 +83,10 @@ private:
     ReceiveServerSet mReceiveSet;
 
     Sirikata::AtomicValue<bool> mServiceScheduled;
+
+    Duration mAccountedTime;
+    uint64 mBytesDiscarded;
+    uint64 mBytesUsed;
 };
 
 } // namespace CBR
