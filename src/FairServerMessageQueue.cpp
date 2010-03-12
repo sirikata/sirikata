@@ -43,8 +43,20 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
           mRate(send_bytes_per_second),
           mRemainderSendBytes(0),
           mLastSendEndTime(ctx->simTime()),
-          mServiceScheduled(false)
+          mServiceScheduled(false),
+          mAccountedTime(Duration::seconds(0)),
+          mBytesDiscarded(0),
+          mBytesUsed(0)
 {
+}
+
+FairServerMessageQueue::~FairServerMessageQueue() {
+    SILOG(fsmq,info,
+        "FSMQ: Accounted time: " << mAccountedTime <<
+        ", used: " << mBytesUsed <<
+        ", discarded: " << mBytesDiscarded <<
+        ", remaining: " << mRemainderSendBytes
+    );
 }
 
 void FairServerMessageQueue::scheduleServicing() {
@@ -64,6 +76,7 @@ void FairServerMessageQueue::service() {
 
     Time tcur = mContext->simTime();
     Duration since_last = tcur - mLastServiceTime;
+    mAccountedTime += since_last;
     uint64 send_bytes = since_last.toSeconds() * mRate + mRemainderSendBytes;
 
     // Send
@@ -92,11 +105,14 @@ void FairServerMessageQueue::service() {
         CONTEXT_TRACE_NO_TIME(serverDatagramSent, start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), packet_size);
 
+        mBytesUsed += packet_size;
+
         // Get rid of the message
         delete next_msg;
     }
 
     if (mServerQueues.empty()) {
+        mBytesDiscarded += send_bytes;
         mRemainderSendBytes = 0;
         mLastSendEndTime = tcur;
     }
@@ -117,6 +133,7 @@ void FairServerMessageQueue::service() {
             //mLastSendTime = already saved
         }
         else {
+            mBytesDiscarded += send_bytes;
             mRemainderSendBytes = 0;
             mLastSendEndTime = tcur;
         }

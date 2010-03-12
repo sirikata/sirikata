@@ -32,8 +32,13 @@ protected:
     ServerSet mDownstreamReady;
 
     Sirikata::AtomicValue<bool> mServiceScheduled;
+
+    Duration mAccountedTime;
+    uint64 mBytesDiscarded;
+    uint64 mBytesUsed;
   public:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second);
+    ~FairServerMessageQueue();
 
     virtual void addInputQueue(ServerID sid, float weight);
     virtual void updateInputQueueWeight(ServerID sid, float weight);
