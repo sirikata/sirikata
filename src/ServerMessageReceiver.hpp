@@ -64,8 +64,8 @@ public:
 
 protected:
     // Network::ReceiveListener Interface
-    virtual void networkReceivedConnection(const ServerID& from) = 0;
-    virtual void networkReceivedData(const ServerID& from) = 0;
+    virtual void networkReceivedConnection(Network::ReceiveStream* strm) = 0;
+    virtual void networkReceivedData(Network::ReceiveStream* strm) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 

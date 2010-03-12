@@ -4,7 +4,6 @@
 #include "FIFOQueue.hpp"
 #include "ServerMessageQueue.hpp"
 #include "FairQueue.hpp"
-#include "NetworkQueueWrapper.hpp"
 
 namespace CBR {
 class FIFOServerMessageQueue:public ServerMessageQueue {

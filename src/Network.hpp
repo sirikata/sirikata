@@ -15,6 +15,17 @@ class Network : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
+    /** Network::SendStream represents an incoming stream from a single
+     *  remote space server.
+     */
+    class SendStream {
+    public:
+        virtual ~SendStream() {}
+
+        virtual ServerID id() const = 0;
+        virtual bool send(const Chunk&) = 0;
+    };
+
     /** The Network::SendListener interface should be implemented by the object
      *  sending data to the network.  The listener actively pushes data to the
      *  Network queues, but this interface allows it to be notified when it is
@@ -28,6 +39,18 @@ public:
          *  determines it can accept more data.
          */
         virtual void networkReadyToSend(const ServerID& from) = 0;
+    };
+
+    /** Network::ReceiveStream represents an incoming stream from a single
+     *  remote space server.
+     */
+    class ReceiveStream {
+    public:
+        virtual ~ReceiveStream() {}
+
+        virtual ServerID id() const = 0;
+        virtual Chunk* front() = 0;
+        virtual Chunk* pop() = 0;
     };
 
     /** The Network::ReceiveListener interface should be implemented by the
@@ -44,27 +67,22 @@ public:
          *  should be used as an indication that a receive queue should be
          *  allocated and serviced for that connection.
          */
-        virtual void networkReceivedConnection(const ServerID& from) = 0;
+        virtual void networkReceivedConnection(ReceiveStream* strm) = 0;
 
         /** Invoked by the Network when data has been received on a queue that
          * was previously empty, i.e. when data is received taht causes
          * front(from) to change.
          */
-        virtual void networkReceivedData(const ServerID& from) = 0;
+        virtual void networkReceivedData(ReceiveStream* strm) = 0;
     };
 
 
     virtual ~Network();
 
     virtual void setSendListener(SendListener* sl) = 0;
-    // Checks if this chunk, when passed to send, would be successfully pushed.
-    virtual bool canSend(const ServerID&, uint32 size)=0;
-    virtual bool send(const ServerID&, const Chunk&)=0;
 
     virtual void listen (const ServerID& addr, ReceiveListener* receive_listener)=0;
-    virtual Chunk* front(const ServerID& from)=0;
-    virtual Chunk* receiveOne(const ServerID& from)=0;
-
+    virtual SendStream* connect(const ServerID& addr) = 0;
 
     // ServerIDMap -- used for converting received server ID to a (ip,port) pair.  We have to do
     // this because the remote side might just report 127.0.0.1 + its port.  FIXME We'd like to

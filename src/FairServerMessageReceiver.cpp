@@ -67,9 +67,9 @@ void FairServerMessageReceiver::scheduleServicing() {
     }
 }
 
-void FairServerMessageReceiver::handleReceived(const ServerID& from) {
+void FairServerMessageReceiver::handleReceived(Network::ReceiveStream* strm) {
     // Given the new data we need to update our view of the world
-    mReceiveQueues.notifyPushFront(from);
+    mReceiveQueues.notifyPushFront(strm->id());
 
     // Cancel any outstanding work callbacks
     mServiceTimer->cancel();
@@ -128,37 +128,37 @@ void FairServerMessageReceiver::service() {
     mProfiler->finished();
 }
 
-void FairServerMessageReceiver::setServerWeight(ServerID sid, float weight) {
-    if (!mReceiveQueues.hasQueue(sid)) {
-        mReceiveQueues.addQueue(
-            new NetworkQueueWrapper(mContext, sid, mNetwork, Trace::SPACE_TO_SPACE_READ_FROM_NET),
-            sid,
-            weight);
-    }
-    else
-        mReceiveQueues.setQueueWeight(sid, weight);
-
-    // add to the receive set
-    mReceiveSet.insert(sid);
+void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream* strm) {
+    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, strm) );
 }
 
-void FairServerMessageReceiver::networkReceivedConnection(const ServerID& from) {
-    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, from) );
-}
-
-void FairServerMessageReceiver::handleReceivedConnection(const ServerID& from) {
+void FairServerMessageReceiver::handleReceivedConnection(Network::ReceiveStream* strm) {
+    ServerID from = strm->id();
     double wt = mServerWeightCalculator->weight(mContext->id(), from);
     SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
-    setServerWeight(from, wt);
+
+    if (mReceiveQueues.hasQueue(from)) {
+        SILOG(FSMR,fatal,"Duplicate network connection received for server " << from << " and propagated up to receive queue.");
+        assert(false);
+    }
+
+    mReceiveQueues.addQueue(
+        new NetworkQueueWrapper(mContext, strm, Trace::SPACE_TO_SPACE_READ_FROM_NET),
+        from,
+        wt
+    );
+
+    // add to the receive set
+    mReceiveSet.insert(from);
 }
 
-void FairServerMessageReceiver::networkReceivedData(const ServerID& from) {
-    SILOG(fairreceiver,insane,"Received network data from " << from);
+void FairServerMessageReceiver::networkReceivedData(Network::ReceiveStream* strm) {
+    SILOG(fairreceiver,insane,"Received network data from " << strm->id());
 
     // No matter what, we'll post an event.  Since a new front() is available
     // this could completely change the amount of time we're waiting so the main
     // strand always needs to know.
-    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceived, this, from) );
+    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceived, this, strm) );
 }
 
 } // namespace CBR

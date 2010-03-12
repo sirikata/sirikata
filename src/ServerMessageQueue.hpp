@@ -88,6 +88,8 @@ public:
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;
     ServerWeightCalculator* mServerWeightCalculator;
+    typedef std::tr1::unordered_map<ServerID, Network::SendStream*> SendStreamMap;
+    SendStreamMap mSendStreams;
 };
 }
 

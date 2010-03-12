@@ -15,10 +15,11 @@ using namespace Sirikata;
 
 namespace CBR {
 
-TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::Stream*strm)
+TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::Stream*strm, ServerID remote_id, Address4 remote_net, Initiator init)
         : stream(strm),
-          network_endpoint(),
-          logical_endpoint(NullServerID),
+          network_endpoint(remote_net),
+          logical_endpoint(remote_id),
+          initiator(init),
           connected(false),
           shutting_down(false),
           front(NULL),
@@ -29,6 +30,204 @@ TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::St
 TCPNetwork::RemoteStream::~RemoteStream() {
     delete stream;
 }
+
+bool TCPNetwork::RemoteStream::push(Chunk& data) {
+    boost::lock_guard<boost::mutex> lck(mPushPopMutex);
+    if (front != NULL) {
+        // Space is occupied, pause and ignore
+        TCPNET_LOG(insane,"Pausing receive from " << logical_endpoint << ".");
+        paused = true;
+        return false;
+    }
+    else {
+        // Otherwise, give it its own chunk and push it up
+        TCPNET_LOG(insane,"Passing data up to next layer from " << logical_endpoint << ".");
+        Chunk* tmp = new Chunk;
+        tmp->swap(data);
+        front = tmp;
+        return true;
+    }
+}
+
+Chunk* TCPNetwork::RemoteStream::pop(IOService* ios) {
+    boost::lock_guard<boost::mutex> lck(mPushPopMutex);
+    // NOTE: the ordering in this method is very important since calls to push()
+    // and pop() are possibly concurrent.
+    // 1. We can always just unset paused since we're going to unpause. The
+    // ordering of unsetting pause isn't critical since we won't be getting
+    // another call to push at this point if paused was set to true (since
+    // reading will have been paused).
+    // 2. However, we need to call readyRead() *after* setting front to NULL so
+    // that a resulting call to push() will actually be able to push. Otherwise
+    // the call to push might fail, but another pop would not occur in order to
+    // generate another readyRead call.  Since readyRead is the last call, we
+    // are guaranteed another pop will be possible and we're back to a safe
+    // state.
+
+    Chunk* result = front;
+    bool was_paused = paused;
+
+    paused = false; // we can always unset pause
+    front = NULL;
+    if (was_paused) {
+        // Note: we're posting this to the network strand because
+        // bytesReceivedCallback may not have returned yet, causing
+        // pausing to appear to have occurred even though it may not
+        // have gone through yet.  Posting guarantees that the
+        // readyRead() will be processed after the stream has actually
+        // been paused.
+        ios->post(
+            std::tr1::bind(&Sirikata::Network::Stream::readyRead, stream)
+        );
+    }
+    return result;
+}
+
+
+TCPNetwork::RemoteSession::RemoteSession(ServerID sid)
+ : logical_endpoint(sid)
+{
+}
+
+TCPNetwork::RemoteSession::~RemoteSession() {
+    remote_stream.reset();
+    closing_stream.reset();
+    pending_out.reset();
+}
+
+
+
+TCPNetwork::TCPSendStream::TCPSendStream(ServerID sid, RemoteSessionPtr s)
+ : logical_endpoint(sid),
+   session(s)
+{
+}
+
+TCPNetwork::TCPSendStream::~TCPSendStream() {
+    session.reset();
+}
+
+ServerID TCPNetwork::TCPSendStream::id() const {
+    return logical_endpoint;
+}
+
+bool TCPNetwork::TCPSendStream::send(const Chunk& data) {
+    if (!session)
+        return false;
+
+    RemoteStreamPtr remote_stream = session->remote_stream;
+    if (!remote_stream)
+        return false;
+
+    bool success = (
+        remote_stream->connected &&
+        !remote_stream->shutting_down &&
+        remote_stream->stream->send(data, ReliableOrdered));
+
+    if (!success)
+        remote_stream->stream->requestReadySendCallback();
+
+    return success;
+}
+
+
+TCPNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios)
+ : logical_endpoint(sid),
+   session(s),
+   ios(_ios)
+{
+}
+
+TCPNetwork::TCPReceiveStream::~TCPReceiveStream()
+{
+    session.reset();
+    front_stream.reset();
+}
+
+ServerID TCPNetwork::TCPReceiveStream::id() const {
+    return logical_endpoint;
+}
+
+Chunk* TCPNetwork::TCPReceiveStream::front() {
+    if (!session)
+        return NULL;
+
+    RemoteStreamPtr stream(getCurrentRemoteStream());
+
+    if (!stream || !stream->front)
+        return NULL;
+
+    Chunk* result = stream->front;
+    return result;
+}
+
+Chunk* TCPNetwork::TCPReceiveStream::pop() {
+    if (!session)
+        return NULL;
+
+    // Use front() to get the next one.  We have a slight duplication of work in
+    // calling getCurrentRemoteStream twice...
+    Chunk* result = front();
+
+    // If front fails we can bail out now
+    if (result == NULL)
+        return NULL;
+
+    // Otherwise, just do cleanup before returning the front item
+    RemoteStreamPtr stream(getCurrentRemoteStream());
+    assert(stream);
+    // Pop...
+    Chunk* popped = stream->pop(ios);
+    assert(popped == result);
+    // Unmark this queue as the front queue
+    front_stream.reset();
+
+    return result;
+}
+
+bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr strm) {
+    return (
+        strm &&
+        strm->front != NULL &&
+        (strm->connected || strm->shutting_down)
+    );
+}
+
+TCPNetwork::RemoteStreamPtr TCPNetwork::TCPReceiveStream::getCurrentRemoteStream() {
+    // Consider
+    //  1) an already marked front stream
+    //  2) closing streams
+    //  3) active streams.
+    // In order to return a stream it must
+    //  a) exist
+    //  b) have data in its receive queue
+    //  c) be either connected or shutting_down
+
+    if (!session)
+        return RemoteStreamPtr();
+
+    // At least for closing streams, results may no longer be valid, need to
+    // double check.
+    if (canReadFrom(front_stream))
+        return front_stream;
+    else// It got invalidated, clean out and continue search
+        front_stream.reset();
+
+    RemoteStreamPtr closing_stream(session->closing_stream);
+    if (canReadFrom(closing_stream)) {
+        front_stream = closing_stream;
+        return closing_stream;
+    }
+
+    RemoteStreamPtr remote_stream(session->remote_stream);
+    if (canReadFrom(remote_stream)) {
+        front_stream = remote_stream;
+        return remote_stream;
+    }
+
+    return RemoteStreamPtr();
+}
+
 
 
 
@@ -61,21 +260,8 @@ TCPNetwork::~TCPNetwork() {
     }
     mClosingStreamTimers.clear();
 
-    // Clear out front streams to get rid of references to them
-    mFrontStreams.clear();
-
-    // Close all connections
-    for(RemoteStreamMap::iterator it = mClosingStreams.begin(); it != mClosingStreams.end(); it++) {
-        RemoteStreamPtr conn = it->second;
-        conn->stream->close();
-    }
-    mClosingStreams.clear();
-
-    for(RemoteStreamMap::iterator it = mRemoteStreams.begin(); it != mRemoteStreams.end(); it++) {
-        RemoteStreamPtr conn = it->second;
-        conn->stream->close();
-    }
-    mRemoteStreams.clear();
+    // Clear out all the remote sessions.
+    mRemoteData.clear();
 
 
     delete mIOWork;
@@ -89,6 +275,109 @@ TCPNetwork::~TCPNetwork() {
     IOServiceFactory::destroyIOService(mIOService);
     mIOService = NULL;
 }
+
+
+TCPNetwork::RemoteData* TCPNetwork::getRemoteData(ServerID sid) {
+    boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
+
+    RemoteDataMap::iterator it = mRemoteData.find(sid);
+    if (it != mRemoteData.end())
+        return it->second;
+
+    RemoteSessionPtr remote_session(new RemoteSession(sid));
+    RemoteData* result = new RemoteData( remote_session );
+    mRemoteData[sid] = result;
+    return result;
+}
+
+TCPNetwork::RemoteSessionPtr TCPNetwork::getRemoteSession(ServerID sid) {
+    boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
+    TCPNetwork::RemoteData* data = getRemoteData(sid);
+    return data->session;
+}
+
+TCPNetwork::TCPSendStream* TCPNetwork::getNewSendStream(ServerID sid) {
+    TCPSendStream* result = NULL;
+    bool notify = false;
+    {
+        boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
+
+        TCPNetwork::RemoteData* data = getRemoteData(sid);
+        if (data->send == NULL) {
+            notify = true;
+            data->send = new TCPSendStream(sid, data->session);
+        }
+        result = data->send;
+    }
+    if (notify) {
+        // And notify listeners.  We *must* do this here because the initial
+        // send may have failed due to not having a connection so the normal
+        // readySend callback will not occur since we couldn't register for
+        // it yet.
+        mSendListener->networkReadyToSend(sid);
+    }
+    return result;
+}
+
+TCPNetwork::TCPReceiveStream* TCPNetwork::getNewReceiveStream(ServerID sid) {
+    TCPReceiveStream* result = NULL;
+    bool notify = false;
+    {
+        boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
+
+        TCPNetwork::RemoteData* data = getRemoteData(sid);
+        if (data->receive == NULL) {
+            notify = true;
+            data->receive = new TCPReceiveStream(sid, data->session, mIOService);
+        }
+        result = data->receive;
+    }
+    if (notify) {
+        // Notifications only happen here so we don't notify them twice about
+        // what should look like the same connection to them.
+        mReceiveListener->networkReceivedConnection(result);
+    }
+    return result;
+}
+
+TCPNetwork::RemoteStreamPtr TCPNetwork::getNewOutgoingStream(ServerID sid, Address4 remote_net, RemoteStream::Initiator init) {
+    boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
+
+    RemoteSessionPtr session = getRemoteSession(sid);
+    RemoteStreamPtr pending = session->pending_out;
+    if (pending != RemoteStreamPtr())
+        return RemoteStreamPtr();
+
+    Sirikata::Network::Stream* strm = StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions);
+
+    pending = RemoteStreamPtr(
+        new RemoteStream(
+            this,
+            strm,
+            sid,
+            remote_net,
+            init
+        )
+    );
+    session->pending_out = pending;
+    return pending;
+}
+
+TCPNetwork::RemoteStreamPtr TCPNetwork::getNewIncomingStream(Address4 remote_net, RemoteStream::Initiator init, Sirikata::Network::Stream* strm) {
+    assert(strm != NULL);
+
+    RemoteStreamPtr pending(
+        new RemoteStream(
+            this,
+            strm,
+            NullServerID,
+            remote_net,
+            init
+        )
+    );
+    return pending;
+}
+
 
 
 
@@ -111,23 +400,32 @@ void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream,
     // set up our basic storage and then wait for the specification of
     // the remote endpoint ID before allowing use of the connection
 
-    RemoteStreamPtr remote_stream( new RemoteStream(this, newStream) );
+    Address4 source_address(newStream->getRemoteEndpoint());
+
+    RemoteNetStreamMap::iterator it = mPendingStreams.find(source_address);
+    if (it != mPendingStreams.end()) {
+        TCPNET_LOG(info,"Immediately closing incoming stream, pending connection already present.");
+        delete newStream;
+        return;
+    }
+
+    RemoteStreamPtr remote_stream( getNewIncomingStream(source_address, RemoteStream::Them, newStream) );
+    assert(remote_stream);
     RemoteStreamWPtr weak_remote_stream( remote_stream );
 
-    Address4 source_address(newStream->getRemoteEndpoint());
-    remote_stream->network_endpoint = source_address;
+    IndirectTCPReceiveStream ind_recv_stream( new TCPReceiveStream*(NULL) );
 
     setCallbacks(
         std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote_stream, _1, _2),
-        std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote_stream, _1),
+        std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote_stream, ind_recv_stream, _1),
         std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote_stream)
     );
 
     mPendingStreams[source_address] = remote_stream;
 }
 
-void TCPNetwork::connectionCallback(const RemoteStreamWPtr& rwstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
-    RemoteStreamPtr remote_stream(rwstream);
+void TCPNetwork::connectionCallback(RemoteStreamWPtr wstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
+    RemoteStreamPtr remote_stream(wstream);
 
     if (!remote_stream)
         TCPNET_LOG(warning,"Got connection callback on stream that is no longer referenced.");
@@ -138,9 +436,7 @@ void TCPNetwork::connectionCallback(const RemoteStreamWPtr& rwstream, const Siri
 
         remote_stream->connected = false;
         remote_stream->shutting_down = true;
-        mContext->mainStrand->post(
-            std::tr1::bind(&TCPNetwork::markDisconnected, this, remote_stream)
-                                   );
+        handleDisconnectedStream(remote_stream);
     }
     else if (status == Sirikata::Network::Stream::Connected) {
         // Note: We should only get Connected for connections we initiated.
@@ -149,19 +445,16 @@ void TCPNetwork::connectionCallback(const RemoteStreamWPtr& rwstream, const Siri
         sendServerIntro(remote_stream);
         // And after we're sure its sent, open things up for everybody else
         remote_stream->connected = true;
-        // And notify listeners.  We *must* do this here because the initial
-        // send may have failed due to not having a connection so the normal
-        // readySend callback will not occur since we couldn't register for
-        // it yet.
-        notifyListenersOfNewStream(remote_stream->logical_endpoint);
+        // Add to list of connections and notify listeners of connection
+        handleConnectedStream(remote_stream);
     }
     else {
         TCPNET_LOG(error,"Unhandled send stream connection status: " << status << " -- " << reason);
     }
 }
 
-Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(const RemoteStreamWPtr& rwstream, Chunk&data) {
-    RemoteStreamPtr remote_stream(rwstream);
+Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk&data) {
+    RemoteStreamPtr remote_stream(wstream);
 
     // If we've lost all references to the RemoteStream just ignore
     if (!remote_stream) {
@@ -172,6 +465,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
     // If the stream hasn't been marked as connected, this *should* be
     // the initial header
     if (remote_stream->connected == false) {
+        assert( *ind_recv_strm == NULL );
         // The stream might already be closing.  If so, just ignore this data.
         if (remote_stream->shutting_down)
             return Sirikata::Network::Stream::AcceptedData;
@@ -195,50 +489,34 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(co
         TCPNET_LOG(info,"Parsed remote endpoint information from " << intro.id());
         remote_stream->logical_endpoint = intro.id();
         remote_stream->connected = true;
-        mContext->mainStrand->post(
-            std::tr1::bind(&TCPNetwork::addNewStream,
-                           this,
-                           remote_stream
-                           )
-                                   );
-        notifyListenersOfNewStream(intro.id());
+        TCPReceiveStream* recv_strm = handleConnectedStream(remote_stream);
+        *ind_recv_strm = recv_strm;
     }
     else {
         TCPNET_LOG(insane,"Handling regular received data from " << remote_stream->logical_endpoint << ".");
+
+        TCPReceiveStream* recv_strm = *ind_recv_strm;
+        assert( recv_strm != NULL );
+
         // Normal case, we can just handle the message
-        if (remote_stream->front != NULL) {
-            // Space is occupied, pause and ignore
-            TCPNET_LOG(insane,"Pausing receive from " << remote_stream->logical_endpoint << ".");
-            remote_stream->paused = true;
+        bool pushed_success = remote_stream->push(data);
+        if (!pushed_success)
             return Sirikata::Network::Stream::PauseReceive;
-        }
-        else {
-            // Otherwise, give it its own chunk and push it up
-            TCPNET_LOG(insane,"Passing data up to next layer from " << remote_stream->logical_endpoint << ".");
-            Chunk* tmp = new Chunk;
-            tmp->swap(data);
-            remote_stream->front = tmp;
-            // Note that the notification happens on the IO thread
-            mReceiveListener->networkReceivedData( remote_stream->logical_endpoint );
-        }
+        else
+            mReceiveListener->networkReceivedData( recv_strm );
     }
 
     return Sirikata::Network::Stream::AcceptedData;
 }
 
-void TCPNetwork::readySendCallback(const RemoteStreamWPtr& rwstream) {
-    RemoteStreamPtr remote_stream(rwstream);
+void TCPNetwork::readySendCallback(RemoteStreamWPtr wstream) {
+    RemoteStreamPtr remote_stream(wstream);
     if (!remote_stream)
         return;
 
     assert(remote_stream->logical_endpoint != NullServerID);
 
     mSendListener->networkReadyToSend(remote_stream->logical_endpoint);
-}
-
-void TCPNetwork::notifyListenersOfNewStream(const ServerID& remote) {
-    mSendListener->networkReadyToSend(remote);
-    mReceiveListener->networkReceivedConnection(remote);
 }
 
 // Main Thread/Strand Methods
@@ -262,71 +540,6 @@ void hexPrint(const char *name, const Chunk&data) {
 
 } // namespace
 
-void TCPNetwork::openConnection(const ServerID& dest) {
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    TCPNET_LOG(info,"Initiating new connection to " << dest);
-
-    RemoteStreamPtr remote(
-        new RemoteStream(
-            this, StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions)
-                         )
-                           );
-    RemoteStreamWPtr weak_remote(remote);
-
-    // Insert before calling connect to ensure data is in place when event
-    // occurs.  Note that remote->connected is still false here so we won't
-    // prematurely use the connection for sending
-    Address4* addr = mServerIDMap->lookupInternal(dest);
-    assert(addr != NULL);
-    remote->network_endpoint = *addr;
-    remote->logical_endpoint = dest;
-    mRemoteStreams.insert(std::pair<ServerID,RemoteStreamPtr>(dest, remote));
-
-    Sirikata::Network::Stream::SubstreamCallback sscb(&Sirikata::Network::Stream::ignoreSubstreamCallback);
-    Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
-    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, _1));
-    Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
-    remote->stream->connect(convertAddress4ToSirikata(*addr),
-                            sscb,
-                            connCallback,
-                            br,
-                            readySendCallback);
-
-    // Note: Initial connection header is sent upon successful connection
-}
-
-void TCPNetwork::markDisconnected(const RemoteStreamWPtr& wstream) {
-    // When we get a disconnection signal, there's nothing we can even do
-    // anymore -- the other side has closed the connection for some reason and
-    // isn't going to accept any more data.  The connection has already been
-    // marked as disconnected and shutting down, we just have to do the removal
-    // from the main thread.
-
-    RemoteStreamPtr remote_stream(wstream);
-    if (!remote_stream)
-        return;
-
-    RemoteStreamMap::iterator it = mRemoteStreams.find(remote_stream->logical_endpoint);
-    // We may not even have the connection anymore, either because we explicitly
-    // removed it or the disconnection event came for a closing stream.
-    if (it == mRemoteStreams.end())
-        return;
-
-    // The stored one may not be the one we're looking for
-    RemoteStreamPtr stored_remote_stream = it->second;
-    if (stored_remote_stream != remote_stream)
-        return;
-
-    assert(remote_stream &&
-           !remote_stream->connected &&
-           remote_stream->shutting_down);
-
-    mRemoteStreams.erase(it);
-}
-
-
 void TCPNetwork::sendServerIntro(const RemoteStreamPtr& out_stream) {
     CBR::Protocol::Server::ServerIntro intro;
     intro.set_id(mContext->id());
@@ -339,179 +552,154 @@ void TCPNetwork::sendServerIntro(const RemoteStreamPtr& out_stream) {
     );
 }
 
-void TCPNetwork::addNewStream(RemoteStreamPtr remote_stream) {
-    RemoteStreamMap::iterator it = mRemoteStreams.find(remote_stream->logical_endpoint);
 
-    // If there's already a stream in the map, this incoming stream conflicts
-    // with one we started in the outgoing direction.  We need to cancel one and
-    // save the other in our map.
-    if (it != mRemoteStreams.end()) {
+// Connection Strand
+
+TCPNetwork::TCPSendStream* TCPNetwork::openConnection(const ServerID& dest) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    Address4* addr = mServerIDMap->lookupInternal(dest);
+    assert(addr != NULL);
+
+    TCPNET_LOG(info,"Initiating new connection to " << dest);
+    TCPSendStream* send_stream = getNewSendStream(dest);
+
+    RemoteStreamPtr remote = getNewOutgoingStream(dest, *addr, RemoteStream::Us);
+    if (remote == RemoteStreamPtr()) {
+        TCPNET_LOG(info,"Skipped connecting to " << dest << ", connection already present.");
+        return send_stream;
+    }
+
+    RemoteStreamWPtr weak_remote(remote);
+
+    TCPReceiveStream* recv_strm = getNewReceiveStream(dest);
+    IndirectTCPReceiveStream ind_recv_stream( new TCPReceiveStream*(recv_strm) );
+
+    Sirikata::Network::Stream::SubstreamCallback sscb(&Sirikata::Network::Stream::ignoreSubstreamCallback);
+    Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
+    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, ind_recv_stream, _1));
+    Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
+    remote->stream->connect(convertAddress4ToSirikata(*addr),
+                            sscb,
+                            connCallback,
+                            br,
+                            readySendCallback);
+
+    // Note: Initial connection header is sent upon successful connection
+
+    return send_stream;
+}
+
+TCPNetwork::TCPReceiveStream* TCPNetwork::handleConnectedStream(RemoteStreamPtr remote_stream) {
+    ServerID remote_id = remote_stream->logical_endpoint;
+    RemoteSessionPtr session = getRemoteSession(remote_id);
+
+    if (!session->remote_stream || session->remote_stream == remote_stream) {
+        session->remote_stream = remote_stream;
+        if (session->pending_out == remote_stream)
+            session->pending_out.reset();
+    } else {
+        // If there's already a stream in the map, this incoming stream conflicts
+        // with one we started in the outgoing direction.  We need to cancel one and
+        // save the other in our map.
+
         TCPNET_LOG(info,"Resolving multiple conflicting connections to " << remote_stream->logical_endpoint);
 
         RemoteStreamPtr new_remote_stream = remote_stream;
-        RemoteStreamPtr existing_remote_stream = it->second;
+        RemoteStreamPtr existing_remote_stream = session->remote_stream;
 
-        // The choice of which connection to maintain is arbitrary, but needs to
-        // be symmetric.
+        assert (new_remote_stream->initiator != existing_remote_stream->initiator);
+        assert(new_remote_stream->logical_endpoint == existing_remote_stream->logical_endpoint);
+        ServerID remote_ep = new_remote_stream->logical_endpoint;
+        assert(remote_ep != mContext->id());
+
+        // The choice of which connection to maintain is arbitrary,
+        // but needs to be symmetric. If we have a smaller ID, prefer
+        // the stream that we initiated. Otherwise, prefer the stream
+        // that they initiated
         RemoteStreamPtr stream_to_save;
         RemoteStreamPtr stream_to_close;
-        if (mContext->id() < remote_stream->logical_endpoint) {
+        if ((mContext->id() < remote_ep && new_remote_stream->initiator == RemoteStream::Us) ||
+            (mContext->id() > remote_ep && new_remote_stream->initiator == RemoteStream::Them)
+        ) {
+            stream_to_save = new_remote_stream;
+            stream_to_close = existing_remote_stream;
+        } else {
             stream_to_save = existing_remote_stream;
             stream_to_close = new_remote_stream;
         }
-        else {
-            stream_to_save = new_remote_stream;
-            stream_to_close = existing_remote_stream;
-        }
 
-        mRemoteStreams[stream_to_save->logical_endpoint] = stream_to_save;
         // We should never have 2 closing streams at the same time or else the
         // remote end is misbehaving
-        if (mClosingStreams.find(stream_to_close->logical_endpoint) != mClosingStreams.end()) {
+        if (session->closing_stream) {
             TCPNET_LOG(fatal,"Multiple closing streams for single remote server, server " << stream_to_close->logical_endpoint);
         }
-        assert(mClosingStreams.find(stream_to_close->logical_endpoint) == mClosingStreams.end());
+
+        session->closing_stream = stream_to_close;
+        session->remote_stream = stream_to_save;
         stream_to_close->shutting_down = true;
-        mClosingStreams[stream_to_close->logical_endpoint] = stream_to_close;
 
         Sirikata::Network::IOTimerPtr timer = Sirikata::Network::IOTimer::create(mIOService);
         timer->wait(
             Duration::seconds(5),
-            std::tr1::bind(&TCPNetwork::handleClosingStreamTimeout, this, timer, RemoteStreamWPtr(stream_to_close))
+            std::tr1::bind(&TCPNetwork::handleClosingStreamTimeout, this, timer, stream_to_close)
                    );
 
         mClosingStreamTimers.insert(timer);
-
-        return;
     }
 
-    // Otherwise this is the only connection for this endpoint we know about,
-    // just store it
-    mRemoteStreams[remote_stream->logical_endpoint] = remote_stream;
+    // With everything setup, simply try to get the send and receive streams,
+    // which will also cause any necessary notifications
+    TCPReceiveStream* receive_stream = getNewReceiveStream(remote_id);
+    TCPSendStream* send_stream = getNewSendStream(remote_id);
+
+    // And poke the stream in both directions -- since we're now ready to send
+    // and just in case the receive stream got paused
+    mSendListener->networkReadyToSend(remote_id);
+    remote_stream->stream->readyRead();
+    return receive_stream;
 }
 
-void TCPNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, RemoteStreamWPtr& wstream) {
+void TCPNetwork::handleDisconnectedStream(const RemoteStreamPtr& closed_stream) {
+    // When we get a disconnection signal, there's nothing we can even do
+    // anymore -- the other side has closed the connection for some reason and
+    // isn't going to accept any more data.  The connection has already been
+    // marked as disconnected and shutting down, we just have to do the removal
+    // from the main thread.
+
+    RemoteSessionPtr session = getRemoteSession(closed_stream->logical_endpoint);
+
+    assert(closed_stream &&
+           !closed_stream->connected &&
+           closed_stream->shutting_down);
+
+    // If this matches either of our streams, remove them immediately
+    if (session->remote_stream == closed_stream)
+        session->remote_stream.reset();
+    if (session->closing_stream == closed_stream)
+        session->closing_stream.reset();
+}
+
+void TCPNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, RemoteStreamPtr& stream) {
     mClosingStreamTimers.erase(timer);
 
-    RemoteStreamPtr rstream(wstream);
-    if (!rstream) {
+    if (!stream) {
         TCPNET_LOG(error,"Got close stream timeout for stream that is no longer in closing stream set.");
         return;
     }
 
-    TCPNET_LOG(info,"Closing stream due to timeout, server " << rstream->logical_endpoint);
+    TCPNET_LOG(info,"Closing stream due to timeout, server " << stream->logical_endpoint);
 
-    rstream->connected = false;
-    rstream->stream->close();
-
-    RemoteStreamMap::iterator it = mClosingStreams.find(rstream->logical_endpoint);
-    if (it == mClosingStreams.end()) return;
-    mClosingStreams.erase(it);
+    stream->connected = false;
+    stream->stream->close();
 }
 
-TCPNetwork::RemoteStreamPtr TCPNetwork::getReceiveQueue(const ServerID& addr) {
-    // Consider
-    //  1) an already marked front stream
-    //  2) closing streams
-    //  3) active streams.
-    // In order to return a stream it must
-    //  a) exist
-    //  b) have data in its receive queue
-    //  c) be either connected or shutting_down
-
-    RemoteStreamMap::iterator front_it = mFrontStreams.find(addr);
-    if (front_it != mFrontStreams.end()) {
-        // At least for closing streams, results may no longer be valid, need to
-        // double check.
-        RemoteStreamPtr result = front_it->second;
-        if (result &&
-            result->front != NULL &&
-            (result->connected || result->shutting_down)
-            ) {
-            return result;
-        }
-        else {
-            // It got invalidated, get it out of the front stream map and
-            // continue search.
-            clearReceiveQueue(addr);
-        }
-    }
-
-    RemoteStreamMap::iterator closing_it = mClosingStreams.find(addr);
-    if (closing_it != mClosingStreams.end()) {
-        RemoteStreamPtr result = closing_it->second;
-        if (result &&
-            result->front != NULL &&
-            (result->connected || result->shutting_down)
-            ) {
-            mFrontStreams[addr] = result;
-            return result;
-        }
-    }
-
-    RemoteStreamMap::iterator active_it = mRemoteStreams.find(addr);
-    if (active_it != mRemoteStreams.end()) {
-        RemoteStreamPtr result = active_it->second;
-        if (result &&
-            result->front != NULL &&
-            (result->connected || result->shutting_down)
-            ) {
-            mFrontStreams[addr] = result;
-            return result;
-        }
-    }
-
-    return RemoteStreamPtr();
-}
-
-void TCPNetwork::clearReceiveQueue(const ServerID& from) {
-    mFrontStreams.erase(from);
-}
 
 
 void TCPNetwork::setSendListener(SendListener* sl) {
     mSendListener = sl;
 }
-
-bool TCPNetwork::canSend(const ServerID& addr, uint32 size) {
-    RemoteStreamMap::iterator where = mRemoteStreams.find(addr);
-
-    // If we don't have a connection yet, we'll use this as a hint to make the
-    // connection, but return false since a call to send() would fail
-    if (where == mRemoteStreams.end()) {
-        openConnection(addr);
-        return false;
-    }
-
-    RemoteStreamPtr remote(where->second);
-    if (remote->connected &&
-        !remote->shutting_down &&
-        remote->stream->canSend(size))
-        return true;
-
-    return false;
-}
-
-bool TCPNetwork::send(const ServerID& addr, const Chunk& data) {
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    RemoteStreamMap::iterator where = mRemoteStreams.find(addr);
-
-    if (where == mRemoteStreams.end()) {
-        openConnection(addr);
-        return false;
-    }
-
-    RemoteStreamPtr remote(where->second);
-    bool success = (remote->connected &&
-                    !remote->shutting_down &&
-                    remote->stream->send(data,ReliableOrdered));
-    if (!success)
-        remote->stream->requestReadySendCallback();
-    return success;
-}
-
 
 void TCPNetwork::listen(const ServerID& as_server, ReceiveListener* receive_listener) {
     using std::tr1::placeholders::_1;
@@ -532,42 +720,8 @@ void TCPNetwork::listen(const ServerID& as_server, ReceiveListener* receive_list
                       );
 }
 
-
-Chunk* TCPNetwork::front(const ServerID& from) {
-    RemoteStreamPtr stream(getReceiveQueue(from));
-
-    if (!stream || !stream->front)
-        return NULL;
-
-    Chunk* result = stream->front;
-    return result;
-}
-
-Chunk* TCPNetwork::receiveOne(const ServerID& from) {
-    // Use front() to get the next one.  We have a slight duplication of work in
-    // calling getReceiveQueue twice...
-    Chunk* result = front(from);
-
-    // If front fails we can bail out now
-    if (result == NULL)
-        return NULL;
-
-    // Otherwise, just do cleanup before returning the front item
-    RemoteStreamPtr stream(getReceiveQueue(from));
-    assert(stream);
-    assert(stream->front == result);
-
-    // Unmark this queue as the front queue
-    clearReceiveQueue(from);
-    // Was already popped by front, just zero out the front ptr
-    stream->front = NULL;
-    // Unpause receiving if necessary
-    if (stream->paused) {
-        stream->paused = false;
-        stream->stream->readyRead();
-    }
-
-    return result;
+Network::SendStream* TCPNetwork::connect(const ServerID& addr) {
+    return openConnection(addr);
 }
 
 } // namespace Sirikata

@@ -52,14 +52,12 @@ public:
     virtual ~FairServerMessageReceiver();
 
 private:
-    void setServerWeight(ServerID sid, float weight);
-
-    virtual void networkReceivedConnection(const ServerID& from);
-    virtual void networkReceivedData(const ServerID& from);
+    virtual void networkReceivedConnection(Network::ReceiveStream* strm);
+    virtual void networkReceivedData(Network::ReceiveStream* strm);
 
     // Handles
-    void handleReceivedConnection(const ServerID& from);
-    void handleReceived(const ServerID& from);
+    void handleReceivedConnection(Network::ReceiveStream* from);
+    void handleReceived(Network::ReceiveStream* from);
 
     void scheduleServicing();
     // Internal service call -- generated either by a networkReceivedData event

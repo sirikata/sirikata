@@ -8,8 +8,7 @@
 namespace CBR {
 class NetworkQueueWrapper {
     Context* mContext;
-    Network* mNetwork;
-    ServerID mServerID;
+    Network::ReceiveStream* mReceiveStream;
     Message* mFront;
     Trace::MessagePath mPathTag;
     typedef Network::Chunk Chunk;
@@ -23,7 +22,7 @@ class NetworkQueueWrapper {
             return NULL;
         }
 
-        if (msg->source_server() != mServerID) {
+        if (msg->source_server() != mReceiveStream->id()) {
             // FIXME if this happens we're probably going to never remove the chunk from the network...
             SILOG(net,warning,"[NET] Message source doesn't match connection's ID");
             delete msg;
@@ -37,13 +36,13 @@ class NetworkQueueWrapper {
 public:
     typedef Message* ElementType;
 
-    NetworkQueueWrapper(Context* ctx, ServerID sid, Network* net, Trace::MessagePath tag) {
-        mContext = ctx;
-        mServerID=sid;
-        mNetwork=net;
-        mFront = NULL;
-        mPathTag = tag;
-    }
+    NetworkQueueWrapper(Context* ctx, Network::ReceiveStream* rstrm, Trace::MessagePath tag)
+     : mContext(ctx),
+       mReceiveStream(rstrm),
+       mFront(NULL),
+       mPathTag(tag)
+    {}
+
     ~NetworkQueueWrapper(){}
 
     QueueEnum::PushResult push(const Message *msg){
@@ -52,7 +51,7 @@ public:
 
     Message* front() {
         if (mFront == NULL) {
-            Chunk* c = mNetwork->front(mServerID);
+            Chunk* c = mReceiveStream->front();
             if (c != NULL)
                 mFront = parse(c);
         }
@@ -61,7 +60,7 @@ public:
     }
 
     Message* pop(){
-        Chunk* c = mNetwork->receiveOne(mServerID);
+        Chunk* c = mReceiveStream->pop();
 
         if (c == NULL) {
             assert(mFront == NULL);
@@ -81,8 +80,8 @@ public:
         return result;
     }
 
-    bool empty() const{
-        return mNetwork->front(mServerID)==NULL;
+    bool empty() const {
+        return mReceiveStream->front() == NULL;
     }
 };
 }

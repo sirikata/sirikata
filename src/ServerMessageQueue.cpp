@@ -54,9 +54,16 @@ void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const
 
 
 bool ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
+    SendStreamMap::iterator it = mSendStreams.find(dest);
+    if (it == mSendStreams.end()) {
+        mSendStreams[dest] = mNetwork->connect(dest);
+        return false;
+    }
+    Network::SendStream* strm_out = it->second;
+
     Network::Chunk serialized;
     msg->serialize(&serialized);
-    bool sent_success = mNetwork->send(dest, serialized);
+    bool sent_success = strm_out->send(serialized);
 
     if (sent_success)
         TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_HIT_NETWORK);
