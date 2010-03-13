@@ -62,13 +62,6 @@ public:
     ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc);
     virtual ~ServerMessageQueue();
 
-    /** Add an input queue using the specified weight. */
-    virtual void addInputQueue(ServerID sid, float weight) = 0;
-    /** Update the weight on an input queue. */
-    virtual void updateInputQueueWeight(ServerID sid, float weight) = 0;
-    /** Remove the specified input queue. */
-    virtual void removeInputQueue(ServerID sid) = 0;
-
     /** Indicate that a new message is available upstream, destined for the
      *   specified server.
      */

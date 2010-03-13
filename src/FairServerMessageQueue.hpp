@@ -41,14 +41,20 @@ protected:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second);
     ~FairServerMessageQueue();
 
-    virtual void addInputQueue(ServerID sid, float weight);
-    virtual void updateInputQueueWeight(ServerID sid, float weight);
-    virtual void removeInputQueue(ServerID sid);
-
   protected:
-    virtual void messageReady(ServerID sid);
+    // Must be thread safe:
 
+    // Public ServerMessageQueue interface
+    virtual void messageReady(ServerID sid);
+    // Network::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from);
+
+    // Should always be happening inside ServerMessageQueue thread
+
+    // Internal methods
+    void addInputQueue(ServerID sid, float weight);
+    void updateInputQueueWeight(ServerID sid, float weight);
+    void removeInputQueue(ServerID sid);
 
     float getServerWeight(ServerID);
 
