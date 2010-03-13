@@ -37,6 +37,7 @@ namespace CBR {
 
 ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc)
         : mContext(ctx),
+          mSenderStrand(ctx->ioService->createStrand()),
           mNetwork(net),
           mSender(sender),
           mServerWeightCalculator(swc)

@@ -58,6 +58,8 @@ protected:
 
     float getServerWeight(ServerID);
 
+    void handleMessageReady(ServerID sid);
+
     void enableDownstream(ServerID sid);
     void disableDownstream(ServerID sid);
 

@@ -64,7 +64,7 @@ FairServerMessageQueue::~FairServerMessageQueue() {
 void FairServerMessageQueue::scheduleServicing() {
     if (!mServiceScheduled.read()) {
         mServiceScheduled = true;
-        mContext->mainStrand->post(
+        mSenderStrand->post(
             std::tr1::bind(&FairServerMessageQueue::service, this)
         );
     }
@@ -150,6 +150,12 @@ void FairServerMessageQueue::service() {
 
 
 void FairServerMessageQueue::messageReady(ServerID sid) {
+    mSenderStrand->post(
+        std::tr1::bind(&FairServerMessageQueue::handleMessageReady, this, sid)
+    );
+}
+
+void FairServerMessageQueue::handleMessageReady(ServerID sid) {
     // Make sure we are setup for this server
     if (!mServerQueues.hasQueue(sid)) {
         addInputQueue(
@@ -166,7 +172,7 @@ void FairServerMessageQueue::messageReady(ServerID sid) {
 void FairServerMessageQueue::networkReadyToSend(const ServerID& from) {
     // The connection is ready to send again, enable the input queue associated
     // with it.
-    mContext->mainStrand->post(
+    mSenderStrand->post(
         std::tr1::bind(&FairServerMessageQueue::enableDownstream, this, from)
                                );
 }

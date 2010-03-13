@@ -77,6 +77,7 @@ public:
     bool trySend(const ServerID& addr, const Message* msg);
 
     SpaceContext* mContext;
+    IOStrand* mSenderStrand;
     Network* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;
