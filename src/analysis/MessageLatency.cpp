@@ -590,7 +590,8 @@ class PacketStageGraph {
             PacketSampleList next_set;
             uint32 cur_offset = us.offset;
             if (!isAsyncEntry(us.list[cur_offset].tag)) {
-                ERROR_LOG("First entry in list isn't async");
+                ERROR_LOG("First entry in list isn't async: " << getPacketStageName(us.list[cur_offset].tag));
+                ERROR_LOG("  Original: " << pd);
                 return false;
             }
 
