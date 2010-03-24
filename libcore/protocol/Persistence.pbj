@@ -67,7 +67,7 @@ message StorageElement {
     }
     optional ReturnStatus return_status=15;
     optional duration ttl=16;
-    optional int32 subscription_id=17;
+    optional sint32 subscription_id=17;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 }
