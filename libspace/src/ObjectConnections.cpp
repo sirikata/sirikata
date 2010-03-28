@@ -44,6 +44,12 @@
 #include "Space_Time.pbj.hpp"
 
 namespace Sirikata {
+
+namespace {
+void __pause_receive_noop() {
+}
+}
+
 ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                                      const Network::Address&listenAddress) {
 
@@ -69,7 +75,7 @@ void ObjectConnections::newStreamCallback(Network::Stream*stream, Network::Strea
         mTemporaryStreams.insert(TemporaryStreamMultimap::value_type(temporaryId,data));//record this stream to the mTemporaryStreams
         using std::tr1::placeholders::_1;    using std::tr1::placeholders::_2;
         callbacks(std::tr1::bind(&ObjectConnections::connectionCallback,this,stream,_1,_2),
-                  std::tr1::bind(&ObjectConnections::bytesReceivedCallback,this,stream,_1),
+            std::tr1::bind(&ObjectConnections::bytesReceivedCallback,this,stream,_1,_2),
                   &Network::Stream::ignoreReadySendCallback);
     }else{
         //whole object host has disconnected
@@ -107,13 +113,13 @@ void processTimePacket(MessageService* mSpace, Network::Stream *stream, const Ro
 }
 
 
-Network::Stream::ReceivedResponse ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Network::Chunk&chunk) {
+void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Network::Chunk&chunk, const Network::Stream::PauseReceiveCallback& pauseReceive) {
     RoutableMessageHeader hdr;
     MemoryReference chunkRef(chunk);//parse header
     MemoryReference message_body=hdr.ParseFromArray(chunkRef.data(),chunkRef.size());
     if (hdr.destination_port()==Services::TIMESYNC&&hdr.has_destination_object()&&hdr.destination_object()==ObjectReference::spaceServiceID()) {
         processTimePacket(mSpace,stream,hdr,message_body);//for low latency shortcut the other processing
-        return Network::Stream::AcceptedData;
+        return;
     }
     //find the temporary stream ID and connected boolean
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);
@@ -172,7 +178,6 @@ Network::Stream::ReceivedResponse ObjectConnections::bytesReceivedCallback(Netwo
             SILOG(space,warning,"Dropping message from "<<where->second.uuid().toString()<<" due to already disconnected object");
         }
     }
-    return Network::Stream::AcceptedData;
 }
 void ObjectConnections::forgeDisconnectionMessage(const ObjectReference&ref) {
     RoutableMessage rm;
@@ -380,13 +385,13 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                          ie=pendingMessages.end();
                                      i!=ie;
                                      ++i) {
-                                    bytesReceivedCallback(stream,*i);//process pending messages as if they were just received
+                                    bytesReceivedCallback(stream,*i,__pause_receive_noop);//process pending messages as if they were just received
                                 }
                                 for (std::vector<std::pair<Network::Stream*,Network::Chunk> >::iterator i=taggedPendingMessages.begin(),
                                          ie=taggedPendingMessages.end();
                                      i!=ie;
                                      ++i) {
-                                    bytesReceivedCallback(i->first,i->second);//process pending messages as if they were just received
+                                    bytesReceivedCallback(i->first,i->second,__pause_receive_noop);//process pending messages as if they were just received
                                 }
                                 return true;//new object ready to use
                             }else {

@@ -83,7 +83,7 @@ public:
         }
 
     }
-    Network::Stream::ReceivedResponse dataRecvCallback(Stream *s,int id, const Chunk&data) {
+    void dataRecvCallback(Stream *s,int id, const Chunk&data, const Stream::PauseReceiveCallback& pauseReceive) {
         static bool dopause=false;
         dopause=!dopause;
         if (dopause) {//rand()>RAND_MAX/10) {
@@ -107,23 +107,22 @@ public:
                 SILOG(tcpsst,error,"GHOST PACKET (size0)");
             }
             ++mCount;
-            return Network::Stream::AcceptedData;
+            return;
         }
-		mServicePool->service()->post(Duration::microseconds(100),
-
-                                      std::tr1::bind(&SstTest::lockReadyRead,this,s));
-        return Network::Stream::PauseReceive;
+        mServicePool->service()->post(Duration::microseconds(100),
+            std::tr1::bind(&SstTest::lockReadyRead,this,s));
+        pauseReceive();
     }
     void lockReadyRead(Network::Stream*s) {
         unique_mutex_lock lck(mMutex);
         if(std::find(dedStreams.begin(),dedStreams.end(),s)==dedStreams.end())
             s->readyRead();
     }
-    Network::Stream::ReceivedResponse connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
-        return dataRecvCallback(s,id,data);
+    void connectorDataRecvCallback(Stream *s,int id, const Chunk&data, const Stream::PauseReceiveCallback& pauseReceive) {
+        dataRecvCallback(s,id,data,pauseReceive);
     }
-    Network::Stream::ReceivedResponse listenerDataRecvCallback(Stream *s,int id, const Chunk&data) {
-        return dataRecvCallback(s,id,data);
+    void listenerDataRecvCallback(Stream *s,int id, const Chunk&data, const Stream::PauseReceiveCallback& pauseReceive) {
+        dataRecvCallback(s,id,data,pauseReceive);
     }
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
@@ -135,8 +134,8 @@ public:
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                         std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1),
-                         &Stream::ignoreReadySendCallback);
+                std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1,_2),
+                &Stream::ignoreReadySendCallback);
             ++newid;
             runRoutine(newStream);
         }else {
@@ -153,8 +152,8 @@ public:
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                         std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1),
-                         &Stream::ignoreReadySendCallback);
+                std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1,_2),
+                &Stream::ignoreReadySendCallback);
             ++newid;
             runRoutine(newStream);
         }
@@ -423,10 +422,10 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         s->connect(addy,
-                   std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
-                   std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
-                   std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1),
-                   &Stream::ignoreReadySendCallback);
+            std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
+            std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
+            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1,_2),
+            &Stream::ignoreReadySendCallback);
         --id;
     }
     void testInt30Serialization(void) {
@@ -510,7 +509,7 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         scb(std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
-            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1),
+            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1,_2),
             &Stream::ignoreReadySendCallback);
     }
     void testConnectSend (void )

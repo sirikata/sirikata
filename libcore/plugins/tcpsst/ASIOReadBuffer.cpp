@@ -40,6 +40,30 @@
 #include "ASIOReadBuffer.hpp"
 #include "VariableLength.hpp"
 namespace Sirikata { namespace Network {
+
+struct ASIOReadBufferUtil {
+    // A couple of static utility methods to help us track whether streams are being
+    // paused or not:
+    // 1. Wrapper for PauseReceiveCallbacks which allows the invoking method to
+    // track whether the callback was invoked without knowing anything about the
+    // callback itself
+    static void _mark_pause_bool_true(bool* pause_bool, const Stream::PauseReceiveCallback& cb) {
+        *pause_bool = true;
+        cb();
+    }
+    // 2. A noop pause receive callback
+    static void _pause_receive_callback_noop() {
+        return;
+    }
+    // 3. Callback which will set a read status and bool indicating if the read
+    //    buffer is full.
+    static void _pause_receive_callback__status_full(ASIOReadBuffer::ReadStatus* read_status, ASIOReadBuffer::ReadStatus read_status_value, bool* read_buffer_full) {
+        *read_status = read_status_value;
+        if (read_buffer_full) *read_buffer_full = true;
+    }
+};
+
+
 void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
 ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader) {
     ASIOReadBuffer *retval= parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
@@ -56,8 +80,13 @@ void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::s
     parentSocket->getASIOSocketWrapper(mWhichBuffer).clearReadBuffer();
     delete this;
 }
-Network::Stream::ReceivedResponse ASIOReadBuffer::processFullChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk){
-    return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
+ASIOReadBuffer::ReceivedResponse ASIOReadBuffer::processFullChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk, const Stream::PauseReceiveCallback& pauseReceive){
+    bool user_paused_stream = false;
+    parentSocket->receiveFullChunk(
+        whichSocket,id,newChunk,
+        std::tr1::bind(ASIOReadBufferUtil::_mark_pause_bool_true, &user_paused_stream, pauseReceive)
+    );
+    return (user_paused_stream ? PausedStream : AcceptedData);
 }
 static signed char WHITE_SPACE_ENC = -5; // Indicates white space in encoding
 static signed char EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
@@ -68,12 +97,12 @@ static int decode4to3(const signed char source[4],Chunk& destination, int destOf
         return 1;
     }
     outBuf|=(source[2]<<6);
-    destination[destOffset+1]=(uint8)((outBuf/256)&255);                
+    destination[destOffset+1]=(uint8)((outBuf/256)&255);
     if (source[3]==EQUALS_SIGN_ENC) {
             return 2;
     }
     outBuf|=source[3];
-    destination[destOffset+2]=(uint8)(outBuf&255);                        
+    destination[destOffset+2]=(uint8)(outBuf&255);
     return 3;
 }
 
@@ -136,33 +165,37 @@ static Stream::StreamID parseId(Chunk&newChunk,int&outBuffPosn) {
 
 //Adding this bug to the stream library and turning on base64 triggers a space server crash, so we need to fix it ASAP
 //#define TRIGGER_SPACE_BUG
-Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket,const uint8*begin, const uint8*end){
+ASIOReadBuffer::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket,const uint8*begin, const uint8*end, const Stream::PauseReceiveCallback& pauseReceive){
     if (mCachedRejectedChunk) {
-        Network::Stream::ReceivedResponse resp=parentSocket->receiveFullChunk(whichSocket,mNewChunkID,*mCachedRejectedChunk);
-        if (resp==Network::Stream::AcceptedData) {
+        bool user_paused_stream_cached = false;
+        parentSocket->receiveFullChunk(
+            whichSocket,mNewChunkID,*mCachedRejectedChunk,
+            std::tr1::bind(ASIOReadBufferUtil::_mark_pause_bool_true, &user_paused_stream_cached, pauseReceive)
+        );
+        if (!user_paused_stream_cached) {
             delete mCachedRejectedChunk;
             mCachedRejectedChunk=NULL;
         }
-        return resp;
+        return (user_paused_stream_cached ? PausedStream : AcceptedData);
     }
     Stream::StreamID id;
-    
+
     assert(begin!=end&&*begin<=127);
     ++begin;//begin should have 0x00-0x7f as initial byte to indicate 0xff delimitation
     unsigned int streamIdOffset=(unsigned int)(end-begin);
     bool parsedId=id.unserializeFromHex(begin,streamIdOffset);
     if (parsedId==false) {
-        return Network::Stream::AcceptedData;//burn it, runt packet
+        return AcceptedData;//burn it, runt packet
     }
 #ifdef TRIGGER_SPACE_BUG
     id=Stream::StreamID(id.read()%10);
 #endif
     begin+=streamIdOffset;
-   
+
 
     Chunk newChunk(((end-begin)*3)/4+3);//maximum of the size;
     int remainderShift=0;
-    
+
     int outBuffPosn=0;
     signed char b4[4];
     uint8 b4Posn=0;
@@ -170,7 +203,7 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
         uint8 cur=(*begin);
         uint8 sbiCrop = (uint8)(cur & 0x7f); // Only the low seven bits
         signed char sbiDecode = URLSAFEDECODABET[ sbiCrop ];   // Special value
-            
+
         // White space, Equals sign, or legit Base64 character
         // Note the values such as -5 and -9 in the
         // DECODABETs at the top of the file.
@@ -190,13 +223,18 @@ Network::Stream::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(cons
     }
     assert(outBuffPosn<=(int)newChunk.size());
     newChunk.resize(outBuffPosn);
-    Network::Stream::ReceivedResponse resp=parentSocket->receiveFullChunk(whichSocket,id,newChunk);
-    if (resp!=Network::Stream::AcceptedData) {
+
+    bool user_paused_stream = false;
+    parentSocket->receiveFullChunk(
+        whichSocket,id,newChunk,
+        std::tr1::bind(ASIOReadBufferUtil::_mark_pause_bool_true, &user_paused_stream, pauseReceive)
+    );
+    if (!user_paused_stream) {
         mCachedRejectedChunk=new Chunk;
         mCachedRejectedChunk->swap(newChunk);
         mNewChunkID=id;
     }
-    return resp;
+    return (user_paused_stream ? PausedStream : AcceptedData);
 }
 
 
@@ -222,11 +260,17 @@ void ASIOReadBuffer::ioReactorThreadResumeRead(MultiplexedSocketPtr&thus) {
             asioReadIntoZeroDelimChunk(ErrorCode(),0);
             break;
       case PAUSED_NEW_CHUNK:
-        if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk) == Stream::AcceptedData) {
-            mNewChunk.resize(0);
-            mBufferPos=0;
-            readIntoFixedBuffer(thus);
-        }
+          {
+              ReceivedResponse resp = processFullChunk(
+                  thus,mWhichBuffer,mNewChunkID,mNewChunk,
+                  ASIOReadBufferUtil::_pause_receive_callback_noop
+              );
+              if (resp == AcceptedData) {
+                  mNewChunk.resize(0);
+                  mBufferPos=0;
+                  readIntoFixedBuffer(thus);
+              }
+          }
         break;
       case READING_FIXED_BUFFER:
       case READING_NEW_CHUNK:
@@ -293,21 +337,26 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
                     mNewChunk.insert(mNewChunk.end(),mBuffer+chunkPos,mBuffer+mBufferPos);
                     BufferPrint(this,".rcx",&*mNewChunk.begin(),mBufferPos-chunkPos);
                     mBufferPos=remainder;
-                    readIntoZeroDelimChunk(thus);                    
+                    readIntoZeroDelimChunk(thus);
                     return;
                 }else {
                     break;
                 }
-            }else if (processFullZeroDelimChunk(thus,mWhichBuffer,mBuffer+chunkPos,where) == Stream::AcceptedData) {
-                chunkPos=(where-mBuffer)+1;
-            }else {          
-                mReadStatus=PAUSED_FIXED_BUFFER;
-                readBufferFull=true;
-                break;                    
+            }else {
+                ReceivedResponse process_resp = processFullZeroDelimChunk(
+                    thus,mWhichBuffer,mBuffer+chunkPos,where,
+                    std::tr1::bind(ASIOReadBufferUtil::_pause_receive_callback__status_full, &mReadStatus, PAUSED_FIXED_BUFFER, &readBufferFull)
+                );
+                if (process_resp == AcceptedData) {
+                    chunkPos=(where-mBuffer)+1;
+                }
+                else { // Paused
+                    break;
+                }
             }
-            
+            break;
         }else {
-            unsigned int packetHeaderLength= mBufferPos-chunkPos;    
+            unsigned int packetHeaderLength= mBufferPos-chunkPos;
             if (packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {//if there is enough room to parse the length of the length-delimited packet
                 if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
                     if (mBufferPos-chunkPos<sLowWaterMark) {
@@ -325,12 +374,15 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
                     Chunk resultChunk;
                     Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
                     size_t vectorSize=resultChunk.size();
-                    if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk) == Stream::AcceptedData) {
+
+                    ReceivedResponse process_resp = processFullChunk(
+                        thus,mWhichBuffer,resultID,resultChunk,
+                        std::tr1::bind(ASIOReadBufferUtil::_pause_receive_callback__status_full, &mReadStatus, PAUSED_FIXED_BUFFER, &readBufferFull)
+                    );
+                    if (process_resp == AcceptedData) {
                         chunkPos+=packetHeaderLength+packetLength.read();
-                    }else {
+                    } else { // Paused, most work already handled by callback
                         assert(resultChunk.size()==vectorSize);//if the user rejects the packet they should not munge it
-                        mReadStatus=PAUSED_FIXED_BUFFER;
-                        readBufferFull=true;
                         break;
                     }
                 }
@@ -364,13 +416,18 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
             if (mBufferPos>=mNewChunk.size()){
                 size_t vectorSize=mNewChunk.size();
                 assert(mBufferPos==vectorSize);
-                if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk) == Stream::AcceptedData) {
+
+                ReceivedResponse resp = processFullChunk(
+                    thus,mWhichBuffer,mNewChunkID,mNewChunk,
+                    std::tr1::bind(ASIOReadBufferUtil::_pause_receive_callback__status_full, &mReadStatus, PAUSED_NEW_CHUNK, (bool*)NULL)
+                );
+                if (resp == AcceptedData) {
                     mNewChunk.resize(0);
                     mBufferPos=0;
                     readIntoFixedBuffer(thus);
-                }else{
+                } else {
+                    // Paused, status already set by callback, just do this check
                     assert(mNewChunk.size()==vectorSize);//if the user rejects the packet they should not munge it. This is a high level check of that
-                    mReadStatus=PAUSED_NEW_CHUNK;
                 }
             }else {
                 readIntoChunk(thus);
@@ -399,23 +456,23 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
         }else {
             for (unsigned int i=curZeroScanLocation;i<mBufferPos;++i) {
                 if (mNewChunk[i]==0xff) {
-                    if (processFullZeroDelimChunk(thus,mWhichBuffer,&*(mNewChunk.begin()+curOffset),&*(mNewChunk.begin()+i)) == Stream::AcceptedData) {    
+                    ReadStatus read_status_value =
+                        (curOffset == 0) ? PAUSED_NEW_DELIM_CHUNK : PAUSED_FIXED_BUFFER;
+                    ReceivedResponse resp = processFullZeroDelimChunk(
+                        thus,mWhichBuffer,&*(mNewChunk.begin()+curOffset),&*(mNewChunk.begin()+i),
+                        std::tr1::bind(ASIOReadBufferUtil::_pause_receive_callback__status_full, &mReadStatus, read_status_value, &readBufferFull)
+                    );
+                    if (resp == AcceptedData) {
                         curOffset=i+1;
                         if (curOffset<mBufferPos&&mNewChunk[curOffset]>=128) {
                             //switch from zero delim mode to length mode, handled in translateBuffer loop
                             //eliminates need for duplicate length parsing code
-                            //and since it's a rare case that users switch modes midstream, 
+                            //and since it's a rare case that users switch modes midstream,
                             //we can afford an extra copy during the transition for simpler code
                             additionalLengthDelimMessagesToParse=true;
                             break;
                         }
-                    }else if (curOffset==0) {//still a single large chunk
-                        readBufferFull=true;
-                        mReadStatus=PAUSED_NEW_DELIM_CHUNK;   
-                        break;
-                    }else {//will definitely fit in the static buffer
-                        readBufferFull=true;
-                        mReadStatus=PAUSED_FIXED_BUFFER;
+                    } else { // PauseReceive
                         break;
                     }
                 }
@@ -431,7 +488,7 @@ void ASIOReadBuffer::asioReadIntoZeroDelimChunk(const ErrorCode&error,std::size_
                 }
                 mBufferPos-=curOffset;
                 mNewChunk.clear();
-                
+
                 if(!readBufferFull) {
                     if (additionalLengthDelimMessagesToParse) {
                         translateBuffer(thus);

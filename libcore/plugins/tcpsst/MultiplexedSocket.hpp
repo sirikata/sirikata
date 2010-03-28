@@ -188,7 +188,7 @@ public:
      * Control packets come in on Stream::StreamID() and others should be directed
      * to the appropriate callback
      */
-    Stream::ReceivedResponse receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,Chunk&newChunk);
+    void receiveFullChunk(unsigned int whichSocket, Stream::StreamID id, Chunk&newChunk, const Stream::PauseReceiveCallback& pauseReceive);
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods

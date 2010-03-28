@@ -35,6 +35,7 @@
 namespace Sirikata {
 namespace Network {
 class ASIOReadBuffer;
+struct ASIOReadBufferUtil;
     /**
      *  The only public interface to TCPReadBuffer is the constructor-like-function which takes in a MultiplexedSocket and an integer offset
      *  \param parentSocket the MultiplexedSocket which defines the whole connection (if the weak_ptr fails, the connection is bunk
@@ -57,6 +58,11 @@ public:
         sLowWaterMark=sBufferLength
     };
 private:
+    friend struct ASIOReadBufferUtil;
+    enum ReceivedResponse {
+        AcceptedData,
+        PausedStream
+    };
     enum ReadStatus{
         PAUSED_FIXED_BUFFER=0x0,
         READING_FIXED_BUFFER=0x1,
@@ -90,12 +96,15 @@ private:
      * \param whichSocket is the current ASIO socket responsible for having read the data. It must equal mWhichBuffer
      * \param sid is the StreamID that sent the data which made it to this socket and got processed. It will help determine which callback to call
      * \param newChunk is the chunk that was sent from the other side to this side and is ready for client processing (or server processing if sid==Stream::StreamID())
-     * \returns whether the host can accept a packet into a lower queue
+     * \param pauseReceive callback which pauses receiving packets on the stream
+     * \returns ReceivedResponse indicating whether the stream was paused or
+     *          data was accepted.
      */
-    Network::Stream::ReceivedResponse processFullChunk(const MultiplexedSocketPtr &parentSocket,
-                          unsigned int whichSocket,
-                          const Stream::StreamID& sid,
-                          Chunk&newChunk);
+    ReceivedResponse processFullChunk(const MultiplexedSocketPtr &parentSocket,
+        unsigned int whichSocket,
+        const Stream::StreamID& sid,
+        Chunk&newChunk,
+        const Stream::PauseReceiveCallback& pauseReceive);
 
     /**
      * This function passes the contents of a chunk to the multiplexed socket for callback handling
@@ -103,11 +112,14 @@ private:
      * \param whichSocket is the current ASIO socket responsible for having read the data. It must equal mWhichBuffer
      * \param bufferStart is the start of the chunk that was sent from the other side to this side and is ready for client processing (or server processing if sid==Stream::StreamID())
      * \param bufferEnd is the end of the chunk that was sent from the other side to this side and is ready for processing
-     * \returns whether the host can accept a packet into a lower queue
+     * \param pauseReceive callback which pauses receiving packets on the stream
+     * \returns ReceivedResponse indicating whether the stream was paused or
+     *          data was accepted.
      */
-    Network::Stream::ReceivedResponse processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket,
-                                                                unsigned int whichSocket,
-                                                                const uint8*bufferStart,const uint8*bufferEnd);
+    ReceivedResponse processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket,
+        unsigned int whichSocket,
+        const uint8*bufferStart,const uint8*bufferEnd,
+        const Stream::PauseReceiveCallback& pauseReceive);
     /**
      *  This function is called when either 0 information is known about the data to be read (such as size, etc)
      *  or if the data is known but the packet is sufficiently small that other packets may be conjoined with it in the buffer

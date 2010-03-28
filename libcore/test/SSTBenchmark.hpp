@@ -61,8 +61,8 @@ class SSTBenchmark{
     void pingPoller();
     void connected(Sirikata::Network::Stream::ConnectionStatus,const std::string&reason);
     void remoteConnected(Sirikata::Network::Stream*strm,Sirikata::Network::Stream::ConnectionStatus,const std::string&reason);
-    Sirikata::Network::Stream::ReceivedResponse computePingTime(Sirikata::Network::Chunk&chk);
-    Sirikata::Network::Stream::ReceivedResponse bouncePing(Sirikata::Network::Stream*, Sirikata::Network::Chunk&chk);
+    void computePingTime(Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pauseReceive);
+    void bouncePing(Sirikata::Network::Stream*, Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pauseReceive);
     void newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb);
 
 

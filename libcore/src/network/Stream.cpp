@@ -43,8 +43,8 @@ void Stream::ignoreSubstreamCallback(Stream * stream, SetCallbacks&) {
 void Stream::ignoreConnectionCallback(Stream::ConnectionStatus status, const std::string&) {
 }
 
-Stream::ReceivedResponse Stream::ignoreReceivedCallback(const Chunk&c) {
-    return AcceptedData;
+void Stream::ignoreReceivedCallback(const Chunk&c, const PauseReceiveCallback&) {
+    return;
 }
 
 void Stream::ignoreReadySendCallback() {

@@ -113,7 +113,7 @@ void TopLevelSpaceConnection::connectToAddress(const std::tr1::weak_ptr<TopLevel
                 *addy,
                 &Network::Stream::ignoreSubstreamCallback,
                 std::tr1::bind(&connectionStatus, weak_thus, _1, _2),
-                std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived, weak_sync, _1),
+                std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived, weak_sync, _1, _2),
                 &Network::Stream::ignoreReadySendCallback
             );
 

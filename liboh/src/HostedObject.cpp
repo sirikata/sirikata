@@ -326,7 +326,7 @@ struct HostedObject::PrivateCallbacks {
         }
     }
 
-    static Network::Stream::ReceivedResponse receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
+    static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk, const Network::Stream::PauseReceiveCallback& pauseReceive) {
         HostedObjectPtr realThis (thus.lock());
 
         RoutableMessageHeader header;
@@ -336,7 +336,7 @@ struct HostedObject::PrivateCallbacks {
 
         if (!realThis) {
             SILOG(objecthost,error,"Received message for dead HostedObject. SpaceID = "<<sid<<"; DestObject = <deleted>");
-            return Network::Stream::AcceptedData;
+            return;
         }
 
         {
@@ -350,7 +350,6 @@ struct HostedObject::PrivateCallbacks {
         }
 
         realThis->processRoutableMessage(header, bodyData);
-        return Network::Stream::AcceptedData;
     }
 
     static void handlePersistenceResponse(
@@ -663,7 +662,7 @@ HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,
                              std::tr1::bind(&PrivateCallbacks::receivedRoutableMessage,
                                             getWeakPtr(),
                                             sid,
-                                            _1),
+                                 _1, _2),
                              &Network::Stream::ignoreReadySendCallback)
             ))).first;
     return iter->second;

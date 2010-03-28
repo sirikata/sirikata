@@ -66,7 +66,7 @@ class ProxBridge : public ProximitySystem {
     public:
         uint32 query_id()const {return mQueryNumber;}
         Sirikata::uint32 port() const {return mPort;}
-        QueryID(uint32 queryNumber, Sirikata::uint32 port){ 
+        QueryID(uint32 queryNumber, Sirikata::uint32 port){
             mPort=port;
             mQueryNumber=queryNumber;
         }
@@ -74,7 +74,7 @@ class ProxBridge : public ProximitySystem {
             if (other.mQueryNumber==mQueryNumber) return mPort<other.mPort;
             return mQueryNumber<other.mQueryNumber;
         }
-        bool operator ==(const QueryID&other)const {        
+        bool operator ==(const QueryID&other)const {
             return other.mQueryNumber==mQueryNumber&&other.mPort==mPort;
         }
     };
@@ -101,7 +101,7 @@ class ProxBridge : public ProximitySystem {
      * The callback may come from an ASIO response thread
      */
     void newProxQuery(ObjectStateMap::iterator where,
-                      Sirikata::uint32 source_port, 
+                      Sirikata::uint32 source_port,
                       const Sirikata::Protocol::INewProxQuery&,
                       const void *optionalSerializedProximityQuery=NULL,
                       size_t optionalSerializedProximitySize=0);
@@ -127,9 +127,10 @@ class ProxBridge : public ProximitySystem {
     void delObj(ObjectStateMap::iterator wheres);
     ObjectStateMap::iterator newObj(ObjectReference&,const Sirikata::Protocol::IRetObj&objectData);
     void newObjectStreamCallback(Network::Stream*newStream, Network::Stream::SetCallbacks&setCallbacks);
-    Network::Stream::ReceivedResponse incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
+    void incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                          const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
-                         const Network::Chunk&data);
+        const Network::Chunk&data,
+        const Network::Stream::PauseReceiveCallback& pauseReceive);
     void disconnectionCallback(const std::tr1::shared_ptr<Network::Stream>&strm,
                                const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                Network::Stream::ConnectionStatus stat,

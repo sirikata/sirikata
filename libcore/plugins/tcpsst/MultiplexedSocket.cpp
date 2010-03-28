@@ -142,8 +142,8 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
 }
 
 size_t MultiplexedSocket::leastBusyStream(size_t favored) {
-   
-    
+
+
     size_t retval=rand()%mSockets.size();
     if(0)if (favored==retval||mSockets[favored].getResourceMonitor().filledSize()<mSockets[retval].getResourceMonitor().filledSize()) {
         return favored;
@@ -186,7 +186,7 @@ void MultiplexedSocket::closeStream(const MultiplexedSocketPtr& thus,const Strea
     closeRequest.unordered=false;
     closeRequest.unreliable=false;
     closeRequest.data=ASIOSocketWrapper::constructControlPacket(thus, code,sid);
-    
+
     sendBytes(thus,closeRequest);
 }
 
@@ -348,8 +348,7 @@ void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stre
         mFreeStreamIDs.push(id);
     }
 }
-Stream::ReceivedResponse MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,Chunk&newChunk){
-    Stream::ReceivedResponse retval = Stream::AcceptedData;
+void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::StreamID id, Chunk&newChunk, const Stream::PauseReceiveCallback& pauseReceive){
     if (id==Stream::StreamID()) {//control packet
         if(newChunk.size()) {
             unsigned int controlCode=*newChunk.begin();
@@ -396,7 +395,7 @@ Stream::ReceivedResponse MultiplexedSocket::receiveFullChunk(unsigned int whichS
         CommitCallbacks(registrations,CONNECTED,false);
         CallbackMap::iterator where=mCallbacks.find(id);
         if (where!=mCallbacks.end()) {
-            retval=where->second->mBytesReceivedCallback(newChunk);
+            where->second->mBytesReceivedCallback(newChunk, pauseReceive);
         }else if (mOneSidedClosingStreams.find(id)==mOneSidedClosingStreams.end()) {
             //new substream
             TCPStream*newStream=new TCPStream(getSharedPtr(),id);
@@ -404,7 +403,7 @@ Stream::ReceivedResponse MultiplexedSocket::receiveFullChunk(unsigned int whichS
             mNewSubstreamCallback(newStream,setCallbackFunctor);
             if (setCallbackFunctor.mCallbacks != NULL) {
                 CommitCallbacks(registrations,CONNECTED,false);//make sure bytes are received
-                retval=setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
+                setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk, pauseReceive);
             }else {
                 closeStream(getSharedPtr(),id);
             }
@@ -412,7 +411,6 @@ Stream::ReceivedResponse MultiplexedSocket::receiveFullChunk(unsigned int whichS
             //IGNORED MESSAGE
         }
     }
-    return retval;
 }
 void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&errorMessage) {
     Stream::ConnectionStatus stat=reportedProblem;

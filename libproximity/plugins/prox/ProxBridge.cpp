@@ -55,7 +55,7 @@ void ProxBridge::newObjectStreamCallback(Network::Stream*newStream, Network::Str
         std::tr1::shared_ptr<Network::Stream> stream(newStream);
         setCallbacks(
             std::tr1::bind(&ProxBridge::disconnectionCallback,this,stream,ref,_1,_2),
-            std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1),
+            std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1,_2),
             &Network::Stream::ignoreReadySendCallback);
     }else {
         //whole object host has disconnected;
@@ -228,7 +228,7 @@ ProxBridge::ObjectStateMap::iterator ProxBridge::newObj(ObjectReference&retval,
                                                         const Sirikata::Protocol::IRetObj&obj_status) {
 
     Sirikata::Protocol::ObjLoc location=obj_status.location();
-    
+
     BoundingSphere3f sphere(Vector3f(0,0,0),0);
     if(obj_status.has_bounding_sphere())
         sphere=obj_status.bounding_sphere();
@@ -238,12 +238,12 @@ ProxBridge::ObjectStateMap::iterator ProxBridge::newObj(ObjectReference&retval,
     UUID object_reference(obj_status.object_reference());
     retval=ObjectReference(object_reference);
     if ((where=mObjectStreams.find(ObjectReference(object_reference)))!=mObjectStreams.end()) {
-        
+
         if (where->second->mObject->bounds().radius()!=0&&boundingSphere.radius()==0) {
             where->second->mObject->unregister();
         }
         if (where->second->mObject->bounds().radius()==0&&boundingSphere.radius()!=0) {
-            mQueryHandler->registerObject(where->second->mObject);            
+            mQueryHandler->registerObject(where->second->mObject);
         }
 
         where->second->mObject->bounds(boundingSphere);
@@ -327,7 +327,7 @@ public:
     virtual void queryDeleted(const Prox::Query* query){delete this;}
 };
 void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
-                              Sirikata::uint32  source_port, 
+                              Sirikata::uint32  source_port,
                               const Sirikata::Protocol::INewProxQuery&new_query,
                               const void *optionalSerializedProximityQuery,
                               size_t optionalSerializedProximitySize){
@@ -370,7 +370,7 @@ void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
     }
 }
 void ProxBridge::delProxQuery(ObjectStateMap::iterator source,
-                              Sirikata::uint32  source_port, 
+                              Sirikata::uint32  source_port,
                               const Sirikata::Protocol::IDelProxQuery&del_query,
                               const void *optionalSerializedDelProxQuery,
                               size_t optionalSerializedDelProxQuerySize) {
@@ -477,9 +477,11 @@ void ProxBridge::delObj(const ObjectReference&source, const Sirikata::Protocol::
 }
 
 
-Network::Stream::ReceivedResponse ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
-                                 const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
-                                 const Network::Chunk&data) {
+void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
+    const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
+    const Network::Chunk&data,
+    const Network::Stream::PauseReceiveCallback& pauseReceive) {
+
     RoutableMessageHeader hdr;
 
     if (data.size()) {
@@ -517,7 +519,6 @@ Network::Stream::ReceivedResponse ProxBridge::incomingMessage(const std::tr1::we
             }
         }
     }
-    return Network::Stream::AcceptedData;
 }
 void ProxBridge::disconnectionCallback(const std::tr1::shared_ptr<Network::Stream> &stream,
                                        const std::tr1::shared_ptr<std::vector<ObjectReference> >&refs,

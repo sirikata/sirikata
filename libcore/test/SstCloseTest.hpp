@@ -57,7 +57,7 @@ class SstCloseTest : public CxxTest::TestSuite
             //printf ("ACTIVE\n");
         }
     }
-    Network::Stream::ReceivedResponse listenerDataRecvCallback(Stream *s,int id, const Chunk&data) {
+    void listenerDataRecvCallback(Stream *s,int id, const Chunk&data, const Stream::PauseReceiveCallback& pauseReceive) {
         if (mSendReceiveMap[id]==-1) {
             mSendReceiveMap[id]=(unsigned char)data[0];
         }
@@ -66,10 +66,10 @@ class SstCloseTest : public CxxTest::TestSuite
             pause=!pause;
         if (pause) {
             mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s));
-            return Network::Stream::PauseReceive;
+            pauseReceive();
+            return;
         }
         mReceiversData[mSendReceiveMap[id]]+=(int)(data.size()*2);
-        return Network::Stream::AcceptedData;
     }
 
     void listenerNewStreamCallback (Stream * newStream, Stream::SetCallbacks& setCallbacks) {
@@ -80,7 +80,7 @@ class SstCloseTest : public CxxTest::TestSuite
                     using std::tr1::placeholders::_1;
                     using std::tr1::placeholders::_2;
                     setCallbacks(std::tr1::bind(&SstCloseTest::listenerConnectionCallback,this,i,_1,_2),
-                                 std::tr1::bind(&SstCloseTest::listenerDataRecvCallback,this,newStream,i,_1),
+                        std::tr1::bind(&SstCloseTest::listenerDataRecvCallback,this,newStream,i,_1,_2),
                                  &Stream::ignoreReadySendCallback);
                     break;
                 }

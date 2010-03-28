@@ -100,7 +100,7 @@ public:
             std::reverse(destination,destination+count);
             destination[count++]='%';
             return count;
-        }        
+        }
         bool unserializeFromHex(const uint8*src, unsigned int&size) {
             if (size==0) return false;
             unsigned int maxsize=size;
@@ -120,7 +120,7 @@ public:
             *this=StreamID((uint32)retval);
             return success;
         }
-        
+
     };
 
     /// Specifies the current state of a connection.
@@ -130,13 +130,11 @@ public:
         Disconnected
     };
 
-    /** Specifies whether the user accepted a chunk or wants the stream to retain ownership
-     *  and pause receive callbacks.
+    /** Callback which is passed to a ReceivedCallback, allowing it to pause
+     *  receiving data.  Pausing is guaranteed to have finished when the method
+     *  returns.
      */
-    enum ReceivedResponse {
-        AcceptedData,
-        PauseReceive
-    };
+    typedef std::tr1::function<void(void)> PauseReceiveCallback;
 
     /** Callback generated when the current state of the underlying connection changes.
      *  The parameters are a ConnectionStatus indicating the event and a string specifying
@@ -155,14 +153,16 @@ public:
     /** Callback generated when another chunk of data is ready. The chunk is an entire chunk
      *  provided by the sender and will not be fragmented.
      *
-     *  The return value provided by the user specifies whether they have accepted the data
-     *  or if the stream should retain ownership. If the stream retains ownership, receive
-     *  calbacks are paused and will not resume until the user callse readyRead().
+     *  The second parameter is a callback which the receiver can invoke to
+     *  pause the receive stream.  If this is invoked, the stream maintains
+     *  ownership of the data.  The stream will resume receive callbacks when
+     *  the user calls readyRead().  This callback is only valid while the
+     *  ReceivedCallback is still executing.
      *
      *  The chunk is mutable.  It may be destroyed by the user during the callback, but if
-     *  it is, the user must be sure to return Accepted to indicate it has taken ownership.
+     *  it is, the user must be sure not to invoke the PauseReceiveCallback.
      */
-    typedef std::tr1::function<ReceivedResponse(Chunk&)> ReceivedCallback;
+    typedef std::tr1::function<void(Chunk&, const PauseReceiveCallback&)> ReceivedCallback;
 
     /** Callback generated when the previous send failed and the stream is now ready to accept
      *  a message the same size as the message that caused the failure.
@@ -189,7 +189,7 @@ public:
     /** Default ConnectionCallback which ignores the update. */
     static void ignoreConnectionCallback(ConnectionStatus status,const std::string&reason);
     /** Default ReceivedCallback which accepts, but ignores, the data. */
-    static ReceivedResponse ignoreReceivedCallback(const Chunk&);
+    static void ignoreReceivedCallback(const Chunk&, const PauseReceiveCallback& );
     /** Default ReadySendCallback which ignores the update. */
     static void ignoreReadySendCallback();
 

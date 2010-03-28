@@ -47,10 +47,11 @@ void connectionCallback(ProximityConnection* con, Network::Stream::ConnectionSta
     if (status!=Network::Stream::Connected)
         con->streamDisconnected();
 }
-Network::Stream::ReceivedResponse readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
+void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
                           MessageService** system,
                           const ObjectReference &object,
-                          const Network::Chunk&chunk) {
+    const Network::Chunk&chunk,
+    const Network::Stream::PauseReceiveCallback& pauseReceive) {
     std::tr1::shared_ptr<Network::Stream> lok=mLock.lock();//make sure this proximity connection will not disappear;
     if (lok) {
         MessageService*sys=*system;
@@ -61,7 +62,7 @@ Network::Stream::ReceivedResponse readProximityMessage(std::tr1::weak_ptr<Networ
             sys->processMessage(hdr,body);
         }
     }
-    return Network::Stream::AcceptedData;
+    return;
 }
 }
 
@@ -143,7 +144,7 @@ SingleStreamProximityConnection::~SingleStreamProximityConnection() {
 void SingleStreamProximityConnection::constructObjectStream(const ObjectReference&obc) {
     mObjectStreams[obc]
         = mConnectionStream->clone(&Network::Stream::ignoreConnectionCallback,
-                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1),
+            std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1,_2),
             &Network::Stream::ignoreReadySendCallback);
 }
 void SingleStreamProximityConnection::deleteObjectStream(const ObjectReference&obc) {
