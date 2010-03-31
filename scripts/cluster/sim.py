@@ -65,6 +65,7 @@ class ClusterSimSettings:
         self.debug = True
         self.valgrind = False
         self.profile = True
+        self.oprofile = False
         self.loc = 'standard'
         self.space_server_pool = space_svr_pool
 
@@ -154,6 +155,10 @@ class ClusterSim:
             params.append("--debug")
         if (self.settings.valgrind):
             params.append("--valgrind")
+        if (self.settings.oprofile):
+            params.append("--oprofile")
+        # NOTE: Since --profile=x gets passed through to the actual executable,
+        # nothing added after this will be processed by the wrapper script.
         if (self.settings.profile):
             params.append("--profile=true")
         class_params = {}

@@ -190,6 +190,17 @@ class ClusterBuild:
 
         return ClusterRunSummaryCode(retcodes)
 
+    def oprofile(self, binary):
+        cd_code_cmd = self.cd_to_code()
+        cd_scripts_cmd = self.cd_to_scripts()
+        prof_cmd = "opreport -cl ~/%s/build/cmake/%s > oprofile.out" % (self.config.code_dir, binary)
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_scripts_cmd, prof_cmd]))
+
+        oprof_pattern = "oprofile-%(node)04d.txt"
+        ClusterSCP(self.config, ["remote:"+self.config.code_dir+"/scripts/oprofile.out", oprof_pattern])
+
+        return ClusterRunSummaryCode(retcodes)
+
 
 if __name__ == "__main__":
     cc = ClusterConfig()
@@ -288,6 +299,12 @@ if __name__ == "__main__":
                 profile_binary = filtered_args[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.profile(profile_binary)
+        elif cmd == 'oprofile':
+            profile_binary = 'cbr'
+            if (cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['cbr', 'oh', 'cseg', 'analysis']):
+                profile_binary = filtered_args[cur_arg_idx]
+                cur_arg_idx += 1
+            retval = cluster_build.oprofile(profile_binary)
         else:
             print "Unknown command: ", cmd
             exit(-1)

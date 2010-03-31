@@ -48,6 +48,7 @@ export CBR_WRAPPER=true
 want_valgrind=0
 want_debug=0
 want_interactive=0
+want_oprofile=0
 while [ $# -gt 0 ]; do
   case "$1" in
     cbr | oh | cseg | analysis | bench)
@@ -65,6 +66,11 @@ while [ $# -gt 0 ]; do
       shift ;;
     --valgrind )
       want_valgrind=1
+      shift ;;
+    --oprofile )
+      if [ `which opcontrol` ] ; then
+          want_oprofile=1
+      fi
       shift ;;
     -- ) # Stop option prcessing
       shift
@@ -110,6 +116,18 @@ else
     export PATH=/home/meru/usr/bin:$PATH
     exec valgrind --error-limit=no --num-callers=12 $APPDIR/$APPNAME "$@"
   else
+    # Note that oprofile support will only work properly if you both have
+    # oprofile installed and have enabled sudo'ing for opcontrol without
+    # a password via your /etc/sudoers file, e.g. by adding the line
+    #  meru    ALL = NOPASSWD: /usr/bin/opcontrol
+    # to allow the user meru to run opcontrol as root without a password
+    if [ $want_oprofile -eq 1 ] ; then
+      sudo opcontrol --no-vmlinux --start
+    fi
+    echo "$@"
     exec $APPDIR/$APPNAME "$@"
+    if [ $want_oprofile -eq 1 ] ; then
+      sudo opcontrol --stop
+    fi
   fi
 fi
