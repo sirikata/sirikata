@@ -123,11 +123,12 @@ else
     # to allow the user meru to run opcontrol as root without a password
     if [ $want_oprofile -eq 1 ] ; then
       sudo opcontrol --no-vmlinux --start
+      sudo opcontrol --reset
     fi
-    echo "$@"
     exec $APPDIR/$APPNAME "$@"
     if [ $want_oprofile -eq 1 ] ; then
       sudo opcontrol --stop
+      sudo opcontrol --shutdown
     fi
   fi
 fi
