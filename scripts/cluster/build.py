@@ -193,7 +193,7 @@ class ClusterBuild:
     def oprofile(self, binary):
         cd_code_cmd = self.cd_to_code()
         cd_scripts_cmd = self.cd_to_scripts()
-        prof_cmd = "opreport -l ~/%s/build/cmake/%s > oprofile.out" % (self.config.code_dir, binary)
+        prof_cmd = "opreport -l \\*cbr\\* > oprofile.out"
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_scripts_cmd, prof_cmd]))
 
         oprof_pattern = "oprofile-%(node)04d.txt"
