@@ -116,8 +116,9 @@ void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage
 }
 void ByteTransferScenario::generatePings() {
     if (mSourceObject == NULL ||
-        mDestinationObject == UUID::null() &&
-        mObjectTracker->numServerIDs()>1) {
+        (mDestinationObject == UUID::null() &&
+            mObjectTracker->numServerIDs()>1)
+    ) {
         mPingProfiler->started();
         unsigned int maxDistance=mObjectTracker->numServerIDs();
         unsigned int distance=0;

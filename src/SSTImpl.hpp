@@ -147,13 +147,13 @@ public:
 
   void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
     boost::mutex::scoped_lock lock(mMutex);
-    
+
     ObjectMessage* objectMessage = new ObjectMessage();
     objectMessage->set_source_object(src->endPoint);
     objectMessage->set_source_port(src->port);
     objectMessage->set_dest_object(dest->endPoint);
-    objectMessage->set_dest_port(dest->port);    
-    objectMessage->set_payload(String((char*) data, len));    
+    objectMessage->set_dest_port(dest->port);
+    objectMessage->set_payload(String((char*) data, len));
 
     bool val = mRouter->route(  objectMessage  );
   }
@@ -343,7 +343,7 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
-  bool serviceConnection(const Time& curTime) { 
+  bool serviceConnection(const Time& curTime) {
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) return false;
@@ -388,10 +388,10 @@ private:
 
 	  mLastTransmitTime = curTime;
 
-	  inSendingMode = false;  
+	  inSendingMode = false;
       }
     }
-    else { 
+    else {
       if ( (curTime - mLastTransmitTime).toMicroseconds() < mRTOMicroseconds)
       {
 	return true;
@@ -889,7 +889,7 @@ public:
   }
 
   static void service() {
-    Time curTime = Timer::now();    
+    Time curTime = Timer::now();
 
     for (typename ConnectionMap::iterator it = mConnectionMap.begin();
 	 it != mConnectionMap.end();
@@ -964,7 +964,7 @@ public:
       sstMsg.set_lsid( lsid );
       sstMsg.set_type(sstMsg.DATAGRAM);
       sstMsg.set_flags(0);
-      sstMsg.set_window( 1024 );
+      sstMsg.set_window( (unsigned char)10 );
       sstMsg.set_src_port(local_port);
       sstMsg.set_dest_port(remote_port);
 
@@ -1559,8 +1559,8 @@ private:
 	//this should wait for the queue to get occupied... right now it is
 	//just polling...
 
-        if ( mLastSendTime != Time::null() 
-             && (curTime - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds) 
+        if ( mLastSendTime != Time::null()
+             && (curTime - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds)
         {
 	  resendUnackedPackets();
 	  mLastSendTime = curTime;
