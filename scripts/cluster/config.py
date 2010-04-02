@@ -43,6 +43,7 @@ class ClusterConfig:
         self.nodes = []
         self.deploy_nodes = []
         self.code_dir = "cbr"
+        self.oseg_code_dir = "oseg.git"
         self.port_base = 6666
         self.unique = None
         self.ccache = False
@@ -99,6 +100,8 @@ class ClusterConfig:
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "code_dir"):
                 self.code_dir = opt_value.strip()
+            elif (opt_name == "oseg_code_dir"):
+                self.oseg_code_dir = opt_value.strip()
             elif (opt_name == "port"):
                 self.port_base = int(opt_value)
             elif (opt_name == "unique"):
