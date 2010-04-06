@@ -1,4 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+
+if [ `hostname` != "meru05" ]; then
+    exit 0
+fi
 
 # FIXME It would be much better if we didn't depend on Behram's layout
 rm -r /home/meru/bmistree/tmp/zookeeper_2/version-2
