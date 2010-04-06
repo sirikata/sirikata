@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ `hostname` != "meru05" ]; then
+if [ `hostname` != "$1" ]; then
     exit 0
 fi
 

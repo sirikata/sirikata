@@ -3,10 +3,11 @@
 import sys
 import subprocess
 import time
+import settings # Craq Settings
 
 def main():
         print "Starting zookeeper"
-        subprocess.Popen('./cluster/zookeeper/start_zookeeper.sh', shell=True)
+        subprocess.Popen(['./cluster/zookeeper/start_zookeeper.sh', settings.CRAQ_ZOOKEEPER_NODE])
 	print "Finished starting zookeeper"
 
 	time.sleep(45)
