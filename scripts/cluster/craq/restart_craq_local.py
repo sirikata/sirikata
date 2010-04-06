@@ -12,13 +12,13 @@ def main():
 	time.sleep(45)
 
         print "Starting Craqs"
-        subprocess.Popen(['python', './cluster/zookeeper/start_craq_server.py'], shell=True)
+        subprocess.Popen('./cluster/craq/start_craq_server.py', shell=True)
 	print "Finished starting Craqs"
 
 	time.sleep(45)
 
         print "Starting Router"
-        subprocess.Popen(['python', './cluster/zookeeper/start_craq_router.py'], shell=True)
+        subprocess.Popen('./cluster/craq/start_craq_router.py', shell=True)
 	print "Finished starting Router"
 
         return 0
