@@ -32,6 +32,7 @@ namespace CBR
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;
+class ODPFlowScheduler;
 
 class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
 		    public ServerMessageRouter, public ObjectMessageRouter,
@@ -71,8 +72,9 @@ private:
     ServiceMap mServiceIDMap;
 
     // Per-Service ServerMessage Router's
-    Router<Message*>* mObjectMessageRouter;
     Router<Message*>* mOSegCacheUpdateRouter;
+    typedef std::tr1::unordered_map<ServerID, ODPFlowScheduler*> ODPRouterMap;
+    ODPRouterMap mODPRouters;
 
     Sirikata::ThreadSafeQueueWithNotification<Message*> mReceivedMessages;
 
@@ -88,6 +90,14 @@ private:
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
   private:
+    // Init method: adds an odp routing service to the ForwarderServiceQueue and
+    // sets up the callback used to create new ODP input queues.
+    void addODPServerMessageService();
+    // Allocates a new ODPFlowScheduler, invoked by ForwarderServiceQueue when a
+    // new server connection is made.  This creates it and gets it setup so the
+    // Forwarder can get weight updates sent to the remote endpoint.
+    ODPFlowScheduler* createODPFlowScheduler(ServerID remote_server, uint32 max_size);
+
     // -- Public routing interface
   public:
     virtual Router<Message*>* createServerMessageService(const String& name);

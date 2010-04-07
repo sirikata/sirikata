@@ -48,10 +48,11 @@ class ForwarderServiceQueue {
   public:
     typedef uint32 ServiceID;
     typedef AbstractQueue<Message*> MessageQueue;
-    // Functor for creating a new input message queue. Must take a single uint32
-    // parameter specifying its maximum size.  This will be invoked once for
-    // each (server, service) pair.
-    typedef std::tr1::function<MessageQueue*(uint32)> MessageQueueCreator;
+    // Functor for creating a new input message queue. Must take 2 parameters.
+    // The first is the ServerID this queue is being allocated for .  The second
+    // is a uint32 parameter specifying its maximum size.  This will be invoked
+    // once for each (server, service) pair.
+    typedef std::tr1::function<MessageQueue*(ServerID,uint32)> MessageQueueCreator;
 
     class Listener {
       public:
@@ -67,7 +68,9 @@ class ForwarderServiceQueue {
     Message* pop(ServerID sid);
     bool empty(ServerID sid);
   private:
+    friend class Forwarder;
     friend class ForwarderServerMessageRouter;
+    friend class ODPFlowScheduler;
 
     typedef FairQueue<Message, ServiceID, MessageQueue> OutgoingFairQueue;
     typedef std::tr1::unordered_map<ServerID, OutgoingFairQueue*> ServerQueueMap;
@@ -80,7 +83,17 @@ class ForwarderServiceQueue {
     Listener* mListener;
     boost::mutex mMutex;
 
+    // Normal push
     QueueEnum::PushResult push(ServiceID svc, Message* msg);
+    // Use prePush to indicate you need to push to the queue.  This has to be
+    // here because we need to keep organized with the
+    // Forwarder/ODPFlowSchedulers, which need us to get them allocated before
+    // they can be pushed to.
+    void prePush(ServerID sid);
+    // Notifies the queue that a push has been successfully performed for the
+    // given service on the given server.
+    void notifyPushFront(ServerID sid, ServiceID svc);
+
     uint32 size(ServerID sid, ServiceID svc);
 
     // Utilities

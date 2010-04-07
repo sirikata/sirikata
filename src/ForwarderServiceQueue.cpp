@@ -91,6 +91,22 @@ QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
     return success;
 }
 
+void ForwarderServiceQueue::prePush(ServerID sid) {
+    {
+        boost::lock_guard<boost::mutex> lock(mMutex);
+        OutgoingFairQueue* ofq = getServerFairQueue(sid);
+    }
+}
+
+void ForwarderServiceQueue::notifyPushFront(ServerID sid, ServiceID svc) {
+    {
+        boost::lock_guard<boost::mutex> lock(mMutex);
+        OutgoingFairQueue* ofq = checkServiceQueue(getServerFairQueue(sid), svc);
+        ofq->notifyPushFront(svc);
+    }
+    mListener->forwarderServiceMessageReady(sid);
+}
+
 uint32 ForwarderServiceQueue::size(ServerID sid, ServiceID svc) {
     boost::lock_guard<boost::mutex> lock(mMutex);
     return checkServiceQueue(getServerFairQueue(sid), svc)->size(svc);
@@ -106,7 +122,7 @@ ForwarderServiceQueue::OutgoingFairQueue* ForwarderServiceQueue::getServerFairQu
             ServiceID svc_id = creator_it->first;
             MessageQueueCreator& creator = creator_it->second;
             if (creator)
-                ofq->addQueue(creator(mQueueSize), svc_id, 1.0);
+                ofq->addQueue(creator(sid, mQueueSize), svc_id, 1.0);
             else
                 ofq->addQueue(new Queue<Message*>(mQueueSize), svc_id, 1.0);
         }

@@ -18,6 +18,9 @@
 
 #include "Random.hpp"
 
+#include "ODPFlowScheduler.hpp"
+#include "RegionODPFlowScheduler.hpp"
+
 // FIXME we shouldn't have oseg specific things here, this should be delegated
 // to OSeg as necessary
 #include "CBR_OSeg.pbj.hpp"
@@ -46,9 +49,10 @@ class ForwarderServerMessageRouter : public Router<Message*> {
     ForwarderServiceQueue::ServiceID mServiceID;
 };
 
-
 // -- First, all the boring boiler plate type stuff; initialization,
 // -- destruction, delegation to base classes
+
+#define ODP_SERVER_MESSAGE_SERVICE "object-messages"
 
   /*
     Constructor for Forwarder
@@ -79,14 +83,13 @@ Forwarder::Forwarder(SpaceContext* ctx)
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
 
     // Generate router queues for services we provide
-    mObjectMessageRouter = createServerMessageService("object-messages");
+    addODPServerMessageService();
     mOSegCacheUpdateRouter = createServerMessageService("oseg-cache-update");
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
-      delete mObjectMessageRouter;
       delete mOSegCacheUpdateRouter;
 
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
@@ -164,6 +167,27 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
 // -- where the payload is either an already serialized ODP message, meaning its
 // -- information isn't available, or may simply be between two space servers so
 // -- that object information doesn't even exist.
+
+void Forwarder::addODPServerMessageService() {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    assert(mServiceIDMap.find(ODP_SERVER_MESSAGE_SERVICE) == mServiceIDMap.end());
+
+    ForwarderServiceQueue::ServiceID svc_id = mServiceIDSource++;
+    mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE] = svc_id;
+    mOutgoingMessages->addService(
+        svc_id,
+        std::tr1::bind(&Forwarder::createODPFlowScheduler, this, _1, _2)
+    );
+}
+
+ODPFlowScheduler* Forwarder::createODPFlowScheduler(ServerID remote_server, uint32 max_size) {
+    ODPFlowScheduler* new_flow_scheduler =
+        new RegionODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
+    mODPRouters[remote_server] = new_flow_scheduler;
+    return new_flow_scheduler;
+}
 
 Router<Message*>* Forwarder::createServerMessageService(const String& name) {
     ServiceMap::iterator it = mServiceIDMap.find(name);
@@ -301,24 +325,16 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   //send out all server updates associated with an object with this message:
   UUID obj_id =  obj_msg->dest_object();
 
-  Message* svr_obj_msg = new Message(
-      mContext->id(),
-      SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-      dest_serv,
-      SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-      obj_msg
-  );
-
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
 
-  bool send_success = mObjectMessageRouter->route(svr_obj_msg);
+  // Will force allocation of ODPFlowScheduler if its not there already
+  mOutgoingMessages->prePush(dest_serv);
+  // And then we can actually push
+  bool send_success = mODPRouters[dest_serv]->push(obj_msg);
   if (!send_success) {
-      delete svr_obj_msg;
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
-  }else {
-      // timestamping handled by Message routing code
-      delete obj_msg;
   }
+  delete obj_msg;
 
   // Note that this is done *after* the real message is sent since it is an optimization and
   // we don't want it blocking useful traffic
