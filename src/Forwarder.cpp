@@ -33,6 +33,7 @@ class ForwarderServerMessageRouter : public Router<Message*> {
             : mForwarderServiceQueue(svc_queues),
               mServiceID(service_id)
     {
+        mForwarderServiceQueue->addService(service_id);
     }
 
     WARN_UNUSED

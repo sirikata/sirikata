@@ -51,23 +51,27 @@ ForwarderServiceQueue::~ForwarderServiceQueue() {
     }
 }
 
+void ForwarderServiceQueue::addService(ServiceID svc, MessageQueueCreator creator) {
+    mQueueCreators[svc] = creator;
+}
+
 Message* ForwarderServiceQueue::front(ServerID sid) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
     ServiceID svc;
-    return getFairQueue(sid)->front(&svc);
+    return getServerFairQueue(sid)->front(&svc);
 }
 
 Message* ForwarderServiceQueue::pop(ServerID sid) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
-    return getFairQueue(sid)->pop();
+    return getServerFairQueue(sid)->pop();
 }
 
 bool ForwarderServiceQueue::empty(ServerID sid) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
-    return getFairQueue(sid)->empty();
+    return getServerFairQueue(sid)->empty();
 }
 
 QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
@@ -79,7 +83,7 @@ QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
     QueueEnum::PushResult success;
     {
         boost::lock_guard<boost::mutex> lock(mMutex);
-        OutgoingFairQueue* ofq = checkServiceQueue(getFairQueue(msg->dest_server()), svc);
+        OutgoingFairQueue* ofq = checkServiceQueue(getServerFairQueue(msg->dest_server()), svc);
         success = ofq->push(svc, msg);
     }
     if (success == QueueEnum::PushSucceeded)
@@ -89,14 +93,25 @@ QueueEnum::PushResult ForwarderServiceQueue::push(ServiceID svc, Message* msg) {
 
 uint32 ForwarderServiceQueue::size(ServerID sid, ServiceID svc) {
     boost::lock_guard<boost::mutex> lock(mMutex);
-    return checkServiceQueue(getFairQueue(sid), svc)->size(svc);
+    return checkServiceQueue(getServerFairQueue(sid), svc)->size(svc);
 }
 
 
-ForwarderServiceQueue::OutgoingFairQueue* ForwarderServiceQueue::getFairQueue(ServerID sid) {
+ForwarderServiceQueue::OutgoingFairQueue* ForwarderServiceQueue::getServerFairQueue(ServerID sid) {
     ServerQueueMap::iterator it = mQueues.find(sid);
     if (it == mQueues.end()) {
-        mQueues[sid] = new OutgoingFairQueue();
+        OutgoingFairQueue* ofq = new OutgoingFairQueue();
+        // Create service queues for all the services
+        for(MessageQueueCreatorMap::iterator creator_it = mQueueCreators.begin(); creator_it != mQueueCreators.end(); creator_it++) {
+            ServiceID svc_id = creator_it->first;
+            MessageQueueCreator& creator = creator_it->second;
+            if (creator)
+                ofq->addQueue(creator(mQueueSize), svc_id, 1.0);
+            else
+                ofq->addQueue(new Queue<Message*>(mQueueSize), svc_id, 1.0);
+        }
+
+        mQueues[sid] = ofq;
         it = mQueues.find(sid);
     }
     assert(it != mQueues.end());
@@ -105,8 +120,7 @@ ForwarderServiceQueue::OutgoingFairQueue* ForwarderServiceQueue::getFairQueue(Se
 }
 
 ForwarderServiceQueue::OutgoingFairQueue* ForwarderServiceQueue::checkServiceQueue(OutgoingFairQueue* ofq, ServiceID svc_id) {
-    if (!ofq->hasQueue(svc_id))
-        ofq->addQueue(new Queue<Message*>(mQueueSize), svc_id, 1.0);
+    assert(ofq->hasQueue(svc_id));
     return ofq;
 }
 

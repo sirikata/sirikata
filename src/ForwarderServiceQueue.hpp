@@ -40,11 +40,18 @@
 namespace CBR {
 
 /** Fairly distributes inter-space node bandwidth between services, e.g. object
- *  message routing, PINTO, Loc, etc.
+ *  message routing, PINTO, Loc, etc.  Messages are broken down by destination
+ *  server, then by service.  The entire ForwarderServiceQueue is a set of fair
+ *  queues over services, grouped by destination server.
  */
 class ForwarderServiceQueue {
   public:
     typedef uint32 ServiceID;
+    typedef AbstractQueue<Message*> MessageQueue;
+    // Functor for creating a new input message queue. Must take a single uint32
+    // parameter specifying its maximum size.  This will be invoked once for
+    // each (server, service) pair.
+    typedef std::tr1::function<MessageQueue*(uint32)> MessageQueueCreator;
 
     class Listener {
       public:
@@ -54,16 +61,20 @@ class ForwarderServiceQueue {
     ForwarderServiceQueue(ServerID this_server, uint32 size, Listener* listener);
     ~ForwarderServiceQueue();
 
+    void addService(ServiceID svc, MessageQueueCreator creator = 0);
+
     Message* front(ServerID sid);
     Message* pop(ServerID sid);
     bool empty(ServerID sid);
   private:
     friend class ForwarderServerMessageRouter;
 
-    typedef FairQueue<Message, ServiceID, AbstractQueue<Message*> > OutgoingFairQueue;
+    typedef FairQueue<Message, ServiceID, MessageQueue> OutgoingFairQueue;
     typedef std::tr1::unordered_map<ServerID, OutgoingFairQueue*> ServerQueueMap;
+    typedef std::tr1::unordered_map<ServiceID, MessageQueueCreator> MessageQueueCreatorMap;
 
     ServerID mThisServer;
+    MessageQueueCreatorMap mQueueCreators;
     ServerQueueMap mQueues;
     uint32 mQueueSize;
     Listener* mListener;
@@ -74,7 +85,10 @@ class ForwarderServiceQueue {
 
     // Utilities
 
-    OutgoingFairQueue* getFairQueue(ServerID sid);
+    // Gets the FairQueue over services for the specified server.
+    OutgoingFairQueue* getServerFairQueue(ServerID sid);
+    // This is just a sanity check -- verifies ofq has an input queue for svc_id
+    // and returns ofq.
     OutgoingFairQueue* checkServiceQueue(OutgoingFairQueue* ofq, ServiceID svc_id);
 };
 
