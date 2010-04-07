@@ -37,7 +37,6 @@
 #include "SpaceContext.hpp"
 #include "Network.hpp"
 #include "CoordinateSegmentation.hpp"
-#include "ServerWeightCalculator.hpp"
 
 namespace CBR{
 
@@ -59,13 +58,20 @@ public:
         virtual bool serverMessageEmpty(ServerID dest) = 0;
     };
 
-    ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc);
+    ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender);
     virtual ~ServerMessageQueue();
 
     /** Indicate that a new message is available upstream, destined for the
      *   specified server.
      */
     virtual void messageReady(ServerID sid) = 0;
+
+    /** Update the weight for an input queue. Allows the Forwarder to update
+     *  this element with new information about the fraction of weighted flows
+     *  destined for each server.
+     */
+    virtual void updateInputQueueWeight(ServerID sid, float weight) = 0;
+
   protected:
     // Network::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from) = 0;
@@ -81,7 +87,6 @@ public:
     Network* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;
-    ServerWeightCalculator* mServerWeightCalculator;
     typedef std::tr1::unordered_map<ServerID, Network::SendStream*> SendStreamMap;
     SendStreamMap mSendStreams;
 };

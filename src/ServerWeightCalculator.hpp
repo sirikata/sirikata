@@ -51,7 +51,7 @@ public:
 
     typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> WeightFunction;
 
-    ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc);
+    ServerWeightCalculator(CoordinateSegmentation* cseg, const WeightFunction& weightFunc);
     ~ServerWeightCalculator();
 
     float64 weight(ServerID source, ServerID dest, Normalization norm = NORMALIZE_MODE);

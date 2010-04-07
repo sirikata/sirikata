@@ -322,6 +322,15 @@ public:
         return it->second->messageQueue->size();
     }
 
+    // FIXME we really shouldn't have to expose this
+    float avg_weight() const {
+        if (mQueuesByKey.size() == 0) return 1.f;
+        float w_sum = 0.f;
+        for(ConstByKeyIterator it = mQueuesByKey.begin(); it != mQueuesByKey.end(); it++)
+            w_sum += it->second->weight;
+        return w_sum / mQueuesByKey.size();
+    }
+
     // Key iteration support
     class const_iterator {
       public:

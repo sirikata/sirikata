@@ -35,12 +35,11 @@
 
 namespace CBR {
 
-ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc)
+ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender)
         : mContext(ctx),
           mSenderStrand(ctx->ioService->createStrand()),
           mNetwork(net),
-          mSender(sender),
-          mServerWeightCalculator(swc)
+          mSender(sender)
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
     mNetwork->setSendListener(this);

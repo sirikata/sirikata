@@ -36,8 +36,8 @@ bool FairServerMessageQueue::SenderAdapterQueue::empty() {
 }
 
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second)
-        : ServerMessageQueue(ctx, net, sender, swc),
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second)
+        : ServerMessageQueue(ctx, net, sender),
           mServerQueues(),
           mLastServiceTime(ctx->simTime()),
           mRate(send_bytes_per_second),
@@ -156,17 +156,23 @@ void FairServerMessageQueue::messageReady(ServerID sid) {
 }
 
 void FairServerMessageQueue::handleMessageReady(ServerID sid) {
-    // Make sure we are setup for this server
+    // Make sure we are setup for this server. We don't have a weight for this
+    // server yet, so we must use a default. We use the average of all known
+    // weights, and hope to get an update soon.
     if (!mServerQueues.hasQueue(sid)) {
         addInputQueue(
             sid,
-            mServerWeightCalculator->weight(mContext->id(), sid)
-                      );
+            getAverageServerWeight()
+        );
     }
 
     // Notify and service
     mServerQueues.notifyPushFront(sid);
     scheduleServicing();
+}
+
+float FairServerMessageQueue::getAverageServerWeight() const {
+    return mServerQueues.avg_weight();
 }
 
 void FairServerMessageQueue::networkReadyToSend(const ServerID& from) {

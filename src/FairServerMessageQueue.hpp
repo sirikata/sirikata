@@ -38,8 +38,10 @@ protected:
     uint64 mBytesDiscardedUnderflow;
     uint64 mBytesUsed;
   public:
-    FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, ServerWeightCalculator* swc, uint32 send_bytes_per_second);
+    FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second);
     ~FairServerMessageQueue();
+
+    virtual void updateInputQueueWeight(ServerID sid, float weight);
 
   protected:
     // Must be thread safe:
@@ -53,10 +55,11 @@ protected:
 
     // Internal methods
     void addInputQueue(ServerID sid, float weight);
-    void updateInputQueueWeight(ServerID sid, float weight);
     void removeInputQueue(ServerID sid);
 
-    float getServerWeight(ServerID);
+    // Get average weight over all queues.  Used when we don't have a weight for
+    // a new input queue yet.
+    float getAverageServerWeight() const;
 
     void handleMessageReady(ServerID sid);
 

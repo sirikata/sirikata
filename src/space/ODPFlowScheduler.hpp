@@ -33,6 +33,7 @@
 #ifndef _ODP_FLOW_SCHEDULER_HPP_
 #define _ODP_FLOW_SCHEDULER_HPP_
 
+#include "Utility.hpp"
 #include "AbstractQueue.hpp"
 #include "ForwarderServiceQueue.hpp"
 

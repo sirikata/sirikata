@@ -38,6 +38,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mObjectHostConnectionManager(NULL),
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>()))
 {
+    mContext->mCSeg = mCSeg;
+
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
@@ -557,9 +559,11 @@ void Server::handleMigration(const UUID& obj_id)
 }
 
 void Server::start() {
+    mForwarder->start();
 }
 
 void Server::stop() {
+    mForwarder->stop();
     mObjectHostConnectionManager->shutdown();
     mShutdownRequested = true;
 }

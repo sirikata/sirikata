@@ -65,6 +65,10 @@ Forwarder::Forwarder(SpaceContext* ctx)
              mOSegLookups(NULL),
              mUniqueConnIDs(0),
              mServiceIDSource(0),
+             mServerWeightPoller(
+                 ctx->mainStrand,
+                 std::tr1::bind(&Forwarder::updateServerWeights, this),
+                 Duration::milliseconds((int64)100)),
              mReceivedMessages(std::tr1::bind(&Forwarder::scheduleProcessReceivedServerMessages, this))
 {
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), 16384, (ForwarderServiceQueue::Listener*)this);
@@ -113,6 +117,15 @@ void Forwarder::dispatchMessage(Message*msg) const {
 
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
     ObjectMessageDispatcher::dispatchMessage(msg);
+}
+
+// Service Implementation
+void Forwarder::start() {
+    mServerWeightPoller.start();
+}
+
+void Forwarder::stop() {
+    mServerWeightPoller.stop();
 }
 
 // -- Object Connection Management - Object connections are available locally,
@@ -187,6 +200,15 @@ ODPFlowScheduler* Forwarder::createODPFlowScheduler(ServerID remote_server, uint
         new RegionODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
     mODPRouters[remote_server] = new_flow_scheduler;
     return new_flow_scheduler;
+}
+
+void Forwarder::updateServerWeights() {
+    for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++) {
+        ServerID serv_id = it->first;
+        ODPFlowScheduler* serv_flow_sched = it->second;
+        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_flow_sched->totalActiveWeight());
+        // FIXME message to remote space server
+    }
 }
 
 Router<Message*>* Forwarder::createServerMessageService(const String& name) {

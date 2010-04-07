@@ -39,7 +39,8 @@ class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher
                     public MessageRecipient,
                     public ServerMessageQueue::Sender,
                   public ServerMessageReceiver::Listener,
-                  private ForwarderServiceQueue::Listener
+                  private ForwarderServiceQueue::Listener,
+                  public Service
 {
 private:
     SpaceContext* mContext;
@@ -75,6 +76,8 @@ private:
     Router<Message*>* mOSegCacheUpdateRouter;
     typedef std::tr1::unordered_map<ServerID, ODPFlowScheduler*> ODPRouterMap;
     ODPRouterMap mODPRouters;
+    Poller mServerWeightPoller; // For updating ServerMessageQueue, remote
+                                // ServerMessageReceiver with per-server weights
 
     Sirikata::ThreadSafeQueueWithNotification<Message*> mReceivedMessages;
 
@@ -84,6 +87,9 @@ private:
       ~Forwarder();
     void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr);
 
+    // Service Implementation
+    void start();
+    void stop();
   protected:
 
     virtual void dispatchMessage(Message* msg) const;
@@ -97,6 +103,11 @@ private:
     // new server connection is made.  This creates it and gets it setup so the
     // Forwarder can get weight updates sent to the remote endpoint.
     ODPFlowScheduler* createODPFlowScheduler(ServerID remote_server, uint32 max_size);
+
+    // Invoked periodically by an (internal) poller to update server fair queue
+    // weights. Updates local ServerMessageQueue and sends messages to remote
+    // ServerMessageReceivers.
+    void updateServerWeights();
 
     // -- Public routing interface
   public:

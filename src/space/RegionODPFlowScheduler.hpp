@@ -38,17 +38,16 @@
 
 namespace CBR {
 
+class ServerWeightCalculator;
+
 /** RegionODPFlowScheduler doesn't collect any real statistics about ODP flows.
  *  Instead, it uses a simple FIFO queue for packets and just reports
  *  region-to-region weights.
  */
 class RegionODPFlowScheduler : public ODPFlowScheduler {
 public:
-    RegionODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
-     : ODPFlowScheduler(ctx, parent, sid, serv_id),
-       mQueue(max_size)
-    {}
-    virtual ~RegionODPFlowScheduler() {}
+    RegionODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size);
+    virtual ~RegionODPFlowScheduler();
 
     // Interface: AbstractQueue<Message*>
     virtual const Type& front() const { return mQueue.front(); }
@@ -58,27 +57,13 @@ public:
     virtual uint32 size() const { return mQueue.size(); }
 
     // ODP push interface
-    virtual bool push(CBR::Protocol::Object::ObjectMessage* msg) {
-        bool was_empty = empty();
-
-        Message* serv_msg = createMessageFromODP(msg, mDestServer);
-        if (mQueue.push(serv_msg) == QueueEnum::PushExceededMaximumSize) {
-            delete serv_msg;
-            return false;
-        }
-
-        notifyPushFront();
-        return true;
-    }
-
+    virtual bool push(CBR::Protocol::Object::ObjectMessage* msg);
     // Get the sum of the weights of active queues.
-    virtual float totalActiveWeight() {
-        assert(false);
-        return 0;
-    }
+    virtual float totalActiveWeight();
 
 private:
     Queue<Message*> mQueue;
+    ServerWeightCalculator* mWeightCalculator;
 }; // class RegionODPFlowScheduler
 
 } // namespace CBR

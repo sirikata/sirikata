@@ -157,7 +157,6 @@ int main(int argc, char** argv) {
     if (GetOption("gaussian")->as<bool>()) {
         weight_calc =
             new ServerWeightCalculator(
-                server_id,
                 cseg,
                 std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
                     std::tr1::placeholders::_1,
@@ -168,7 +167,6 @@ int main(int argc, char** argv) {
     }else {
         weight_calc =
             new ServerWeightCalculator(
-                server_id,
                 cseg,
                 std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
                     std::tr1::placeholders::_1,
@@ -193,7 +191,6 @@ int main(int argc, char** argv) {
         sq = new FairServerMessageQueue(
             space_context, gNetwork,
             (ServerMessageQueue::Sender*)forwarder,
-            weight_calc,
             GetOption(SEND_BANDWIDTH)->as<uint32>());
     }
     /*

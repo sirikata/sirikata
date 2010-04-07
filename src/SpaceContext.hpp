@@ -49,6 +49,8 @@ class MockForwarder;
 template <class EndPointType>
 class Stream;
 
+class CoordinateSegmentation;
+
 /** SpaceContext holds a number of useful items that are effectively global
  *  for each space node and used throughout the system -- ServerID, time information,
  *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
@@ -78,6 +80,10 @@ public:
         return mObjectDispatcher.read();
     }
 
+    CoordinateSegmentation* cseg() const {
+        return mCSeg.read();
+    }
+
     void newStream(int err, boost::shared_ptr< Stream<UUID> > s);
 
     boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
@@ -91,6 +97,7 @@ public:
 private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
+    friend class Server;
 
     Sirikata::AtomicValue<ServerID> mID;
 
@@ -98,6 +105,8 @@ private:
     Sirikata::AtomicValue<ObjectMessageRouter*> mObjectRouter;
     Sirikata::AtomicValue<ServerMessageDispatcher*> mServerDispatcher;
     Sirikata::AtomicValue<ObjectMessageDispatcher*> mObjectDispatcher;
+
+    Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
     std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
 }; // class SpaceContext
