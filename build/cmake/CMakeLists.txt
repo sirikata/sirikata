@@ -291,7 +291,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/ServerMessageQueue.cpp
-#  ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp

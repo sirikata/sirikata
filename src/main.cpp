@@ -50,7 +50,6 @@
 #include "StandardLocationService.hpp"
 #include "TCPNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
-//#include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"
