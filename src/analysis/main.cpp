@@ -44,8 +44,6 @@
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 
-#include "ServerWeightCalculator.hpp"
-
 #include "Message.hpp"
 
 namespace {
