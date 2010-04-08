@@ -384,6 +384,7 @@ SET(CBR_PROTOCOLS
   Session.pbj
   OSeg.pbj
   SSTHeader.pbj
+  Forwarder.pbj
 )
 SET(PBJ_CPP_HEADER "\n")
 # protocol targets

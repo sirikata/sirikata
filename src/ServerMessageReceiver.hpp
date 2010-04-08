@@ -62,12 +62,19 @@ public:
     ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener);
     virtual ~ServerMessageReceiver();
 
+    // Invoked by Forwarder when it needs to update the weight for a given
+    // server.  Implementations shouldn't override, instead they should
+    // implement the protected handleUpdateInputQueuWeight which will occur on
+    // receiver strand.
+    void updateInputQueueWeight(ServerID sid, float weight);
 protected:
     // Network::ReceiveListener Interface
     virtual void networkReceivedConnection(Network::ReceiveStream* strm) = 0;
     virtual void networkReceivedData(Network::ReceiveStream* strm) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
+    // ServerMessageReceiver Protected (Implementation) Interface
+    virtual void handleUpdateInputQueueWeight(ServerID sid, float weight) = 0;
 
     SpaceContext* mContext;
     IOStrand* mReceiverStrand;

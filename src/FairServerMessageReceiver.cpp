@@ -32,14 +32,12 @@
 
 #include "FairServerMessageReceiver.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
-#include "ServerWeightCalculator.hpp"
 
 namespace CBR {
 
-FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, ServerWeightCalculator* swc, Listener* listener, uint32 recv_bytes_per_sec)
+FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener, uint32 recv_bytes_per_sec)
         : ServerMessageReceiver(ctx, net, listener),
           mRecvRate(recv_bytes_per_sec),
-          mServerWeightCalculator(swc),
           mServiceTimer(
               IOTimer::create(
                   ctx->ioService,
@@ -146,13 +144,18 @@ void FairServerMessageReceiver::service() {
     mProfiler->finished();
 }
 
+void FairServerMessageReceiver::handleUpdateInputQueueWeight(ServerID sid, float weight) {
+    assert(mReceiveQueues.hasQueue(sid));
+    mReceiveQueues.setQueueWeight(sid, weight);
+}
+
 void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream* strm) {
     mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, strm) );
 }
 
 void FairServerMessageReceiver::handleReceivedConnection(Network::ReceiveStream* strm) {
     ServerID from = strm->id();
-    double wt = mServerWeightCalculator->weight(mContext->id(), from);
+    double wt = mReceiveQueues.avg_weight();
     SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
 
     if (mReceiveQueues.hasQueue(from)) {

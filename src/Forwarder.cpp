@@ -25,6 +25,8 @@
 // to OSeg as necessary
 #include "CBR_OSeg.pbj.hpp"
 
+#include "CBR_Forwarder.pbj.hpp"
+
 #include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR
@@ -85,18 +87,22 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
+    this->registerMessageRecipient(SERVER_PORT_FORWARDER_WEIGHT_UPDATE, this);
 
     // Generate router queues for services we provide
     addODPServerMessageService();
     mOSegCacheUpdateRouter = createServerMessageService("oseg-cache-update");
+    mForwarderWeightRouter = createServerMessageService("forwarder-weights");
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
       delete mOSegCacheUpdateRouter;
+      delete mForwarderWeightRouter;
 
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
+      this->unregisterMessageRecipient(SERVER_PORT_FORWARDER_WEIGHT_UPDATE, this);
   }
 
   /*
@@ -206,8 +212,23 @@ void Forwarder::updateServerWeights() {
     for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++) {
         ServerID serv_id = it->first;
         ODPFlowScheduler* serv_flow_sched = it->second;
-        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_flow_sched->totalActiveWeight());
-        // FIXME message to remote space server
+        double serv_weight = serv_flow_sched->totalActiveWeight();
+        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_weight);
+
+        CBR::Protocol::Forwarder::WeightUpdate weight_update;
+        weight_update.set_weight(serv_weight);
+
+        Message* weight_up_msg = new Message(
+            mContext->id(),
+            SERVER_PORT_FORWARDER_WEIGHT_UPDATE,
+            serv_id,
+            SERVER_PORT_FORWARDER_WEIGHT_UPDATE,
+            serializePBJMessage(weight_update)
+        );
+
+        bool success = mForwarderWeightRouter->route(weight_up_msg);
+        if (!success)
+            SILOG(forwarder,warn,"Overflow in forwarder weight message queue!");
     }
 }
 
@@ -258,8 +279,16 @@ void Forwarder::receiveMessage(Message* msg) {
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
     // or needs to forward them.
-    assert(msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+    assert(msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING ||
+        msg->dest_port() == SERVER_PORT_FORWARDER_WEIGHT_UPDATE);
 
+    if (msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING)
+        receiveObjectRoutingMessage(msg);
+    else if (msg->dest_port() == SERVER_PORT_FORWARDER_WEIGHT_UPDATE)
+        receiveWeightUpdateMessage(msg);
+}
+
+void Forwarder::receiveObjectRoutingMessage(Message* msg) {
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parsed = parsePBJMessage(obj_msg, msg->payload());
     assert(parsed);
@@ -285,6 +314,14 @@ void Forwarder::receiveMessage(Message* msg) {
     }
 
     delete msg;
+}
+
+void Forwarder::receiveWeightUpdateMessage(Message* msg) {
+    CBR::Protocol::Forwarder::WeightUpdate weight_update;
+    bool parsed = parsePBJMessage(&weight_update, msg->payload());
+    assert(parsed);
+
+    mServerMessageReceiver->updateInputQueueWeight(msg->source_server(), weight_update.weight());
 }
 
 

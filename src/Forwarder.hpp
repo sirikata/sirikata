@@ -74,6 +74,7 @@ private:
 
     // Per-Service ServerMessage Router's
     Router<Message*>* mOSegCacheUpdateRouter;
+    Router<Message*>* mForwarderWeightRouter;
     typedef std::tr1::unordered_map<ServerID, ODPFlowScheduler*> ODPRouterMap;
     ODPRouterMap mODPRouters;
     Poller mServerWeightPoller; // For updating ServerMessageQueue, remote
@@ -127,6 +128,9 @@ private:
   private:
     // Received from other space server, needs forwarding decision
     void receiveMessage(Message* msg);
+
+    void receiveObjectRoutingMessage(Message* msg);
+    void receiveWeightUpdateMessage(Message* msg);
 
   private:
     // --- Worker Methods - do the real forwarding decision making and work

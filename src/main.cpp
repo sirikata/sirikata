@@ -53,14 +53,11 @@
 //#include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
-#include "ExpIntegral.hpp"
-#include "SqrIntegral.hpp"
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
 #include "CraqObjectSegmentation.hpp"
 
-#include "ServerWeightCalculator.hpp"
 #include "SpaceContext.hpp"
 
 
@@ -153,29 +150,6 @@ int main(int argc, char** argv) {
     }
 
 
-    ServerWeightCalculator* weight_calc = NULL;
-    if (GetOption("gaussian")->as<bool>()) {
-        weight_calc =
-            new ServerWeightCalculator(
-                cseg,
-                std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
-                    std::tr1::placeholders::_1,
-                    std::tr1::placeholders::_2,
-                    std::tr1::placeholders::_3,
-                    std::tr1::placeholders::_4)
-            );
-    }else {
-        weight_calc =
-            new ServerWeightCalculator(
-                cseg,
-                std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
-                    std::tr1::placeholders::_1,
-                    std::tr1::placeholders::_2,
-                    std::tr1::placeholders::_3,
-                    std::tr1::placeholders::_4)
-                                       );
-    }
-
 
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
@@ -208,7 +182,7 @@ int main(int argc, char** argv) {
     String server_receiver_type = GetOption(SERVER_RECEIVER)->as<String>();
     if (server_queue_type == "fair")
         server_message_receiver =
-                new FairServerMessageReceiver(space_context, gNetwork, weight_calc, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
+                new FairServerMessageReceiver(space_context, gNetwork, (ServerMessageReceiver::Listener*)forwarder, GetOption(RECEIVE_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);
@@ -313,10 +287,6 @@ int main(int argc, char** argv) {
     delete server_message_receiver;
     delete prox;
     delete server_id_map;
-
-
-    if (weight_calc != NULL)
-      delete weight_calc;
 
 
     delete cseg;

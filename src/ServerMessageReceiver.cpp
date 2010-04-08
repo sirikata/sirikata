@@ -49,6 +49,10 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
 ServerMessageReceiver::~ServerMessageReceiver() {
 }
 
+void ServerMessageReceiver::updateInputQueueWeight(ServerID sid, float weight) {
+    mReceiverStrand->post( std::tr1::bind(&ServerMessageReceiver::handleUpdateInputQueueWeight, this, sid, weight) );
+}
+
 void ServerMessageReceiver::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
     NOT_IMPLEMENTED();
 }
