@@ -4,5 +4,25 @@
 package CBR.Protocol.Forwarder;
 
 message WeightUpdate {
-    required double weight = 1;
+    // These flow from the sender to the receiver:
+
+    // Max weight is the maximum weight that could be used by this sender,
+    // i.e. the sum of all active object pair weights.
+    required double sender_total_weight = 1;
+
+    // Used weight is the amount of the maximum weight that this sender is
+    // actually using up.
+    required double sender_used_weight = 2;
+
+
+    // These flow from the receiver to the sender:
+
+    // Current total weight the receiver knows about, i.e. the sum of all
+    // object pair weights where the receiver is on the receiver. This should
+    // just be the sum of all reported max_weights.
+    required double receiver_total_weight = 3;
+
+    // Current total capacity the receiver is handling, in bytes
+    // per second.
+    required double receiver_capacity = 4;
 }

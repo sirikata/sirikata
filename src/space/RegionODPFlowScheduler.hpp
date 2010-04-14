@@ -60,7 +60,9 @@ public:
     virtual bool push(CBR::Protocol::Object::ObjectMessage* msg);
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight();
-
+    // Get the total used weight of active queues.  If all flows are saturating,
+    // this should equal totalActiveWeights, otherwise it will be smaller.
+    virtual float totalUsedWeight();
 private:
     Queue<Message*> mQueue;
     ServerWeightCalculator* mWeightCalculator;

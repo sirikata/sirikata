@@ -212,11 +212,22 @@ void Forwarder::updateServerWeights() {
     for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++) {
         ServerID serv_id = it->first;
         ODPFlowScheduler* serv_flow_sched = it->second;
-        double serv_weight = serv_flow_sched->totalActiveWeight();
-        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_weight);
 
+        // Update remote server
         CBR::Protocol::Forwarder::WeightUpdate weight_update;
-        weight_update.set_weight(serv_weight);
+
+        weight_update.set_sender_total_weight( serv_flow_sched->totalActiveWeight() );
+        weight_update.set_sender_used_weight( serv_flow_sched->totalUsedWeight() );
+
+        weight_update.set_receiver_total_weight( mServerMessageReceiver->totalWeight() );
+        weight_update.set_receiver_capacity( mServerMessageReceiver->capacity() );
+
+        SILOG(forwarder,insane,"Sending weights: " << mContext->id() << " -> " << serv_id <<
+            " sender_total_weight: " << weight_update.sender_total_weight() <<
+            " sender_used_weight: " << weight_update.sender_used_weight() <<
+            " receiver_total_weight: " << weight_update.receiver_total_weight() <<
+            " receiver_capacity: " << weight_update.receiver_capacity()
+        );
 
         Message* weight_up_msg = new Message(
             mContext->id(),
@@ -229,6 +240,10 @@ void Forwarder::updateServerWeights() {
         bool success = mForwarderWeightRouter->route(weight_up_msg);
         if (!success)
             SILOG(forwarder,warn,"Overflow in forwarder weight message queue!");
+
+        // Update send scheduler.
+        // FIXME is this the value we really want here?
+        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_flow_sched->totalActiveWeight());
     }
 }
 
@@ -317,11 +332,33 @@ void Forwarder::receiveObjectRoutingMessage(Message* msg) {
 }
 
 void Forwarder::receiveWeightUpdateMessage(Message* msg) {
+    ServerID source = msg->source_server();
+
     CBR::Protocol::Forwarder::WeightUpdate weight_update;
     bool parsed = parsePBJMessage(&weight_update, msg->payload());
     assert(parsed);
 
-    mServerMessageReceiver->updateInputQueueWeight(msg->source_server(), weight_update.weight());
+    SILOG(forwarder,insane,"Received weights: " << source << " -> " << mContext->id() <<
+        " sender_total_weight: " << weight_update.sender_total_weight() <<
+        " sender_used_weight: " << weight_update.sender_used_weight() <<
+        " receiver_total_weight: " << weight_update.receiver_total_weight() <<
+        " receiver_capacity: " << weight_update.receiver_capacity()
+    );
+
+    mServerMessageReceiver->updateSenderStats(
+        source,
+        weight_update.sender_total_weight(),
+        weight_update.sender_used_weight()
+    );
+
+    ODPRouterMap::iterator flow_sched_it = mODPRouters.find(source);
+    if (flow_sched_it != mODPRouters.end()) {
+        ODPFlowScheduler* serv_flow_sched = flow_sched_it->second;
+        serv_flow_sched->updateReceiverStats(
+            weight_update.receiver_total_weight(),
+            weight_update.receiver_capacity()
+        );
+    }
 }
 
 

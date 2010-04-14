@@ -64,7 +64,9 @@ public:
      : mContext(ctx),
        mParent(parent),
        mDestServer(sid),
-       mServiceID(serv_id)
+       mServiceID(serv_id),
+       mReceiverTotalWeight(0.0),
+       mReceiverCapacity(0.0)
     {}
 
     virtual ~ODPFlowScheduler() {}
@@ -82,7 +84,17 @@ public:
 
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight() = 0;
+    // Get the total used weight of active queues.  If all flows are saturating,
+    // this should equal totalActiveWeights, otherwise it will be smaller.
+    virtual float totalUsedWeight() = 0;
 
+    // Updates statistics from the receiver.  These are just stored and are used
+    // to compute rate information for this scheduler and is input for stats
+    // which are sent back to the receiver.
+    void updateReceiverStats(double total_weight, double capacity) {
+        mReceiverTotalWeight = total_weight;
+        mReceiverCapacity = capacity;
+    }
 protected:
     // Should be called by implementations when an ODP message is successfully added.
     void notifyPushFront() {
@@ -104,6 +116,9 @@ protected:
     ForwarderServiceQueue* mParent;
     ServerID mDestServer;
     uint32 mServiceID;
+
+    double mReceiverTotalWeight; // Total input weight to receiver
+    double mReceiverCapacity; // Capacity of receiver
 }; // class ODPFlowScheduler
 
 } // namespace CBR

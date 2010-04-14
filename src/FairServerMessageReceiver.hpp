@@ -51,7 +51,7 @@ public:
 
 private:
     // ServerMessageReceiver Protected (Implementation) Interface
-    virtual void handleUpdateInputQueueWeight(ServerID sid, float weight);
+    virtual void handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight);
 
     // Network::ReceiveListener Interface
     virtual void networkReceivedConnection(Network::ReceiveStream* strm);

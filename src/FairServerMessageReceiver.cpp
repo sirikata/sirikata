@@ -144,9 +144,9 @@ void FairServerMessageReceiver::service() {
     mProfiler->finished();
 }
 
-void FairServerMessageReceiver::handleUpdateInputQueueWeight(ServerID sid, float weight) {
+void FairServerMessageReceiver::handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight) {
     assert(mReceiveQueues.hasQueue(sid));
-    mReceiveQueues.setQueueWeight(sid, weight);
+    mReceiveQueues.setQueueWeight(sid, used_weight);
 }
 
 void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream* strm) {

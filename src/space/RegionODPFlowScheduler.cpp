@@ -88,4 +88,11 @@ float RegionODPFlowScheduler::totalActiveWeight() {
     return mWeightCalculator->weight(mContext->id(), mDestServer);
 }
 
+// Get the total used weight of active queues.  If all flows are saturating,
+// this should equal totalActiveWeights, otherwise it will be smaller.
+float RegionODPFlowScheduler::totalUsedWeight() {
+    // No flow tracking, so we just give the entire server weight
+    return mWeightCalculator->weight(mContext->id(), mDestServer);
+}
+
 } // namespace CBR

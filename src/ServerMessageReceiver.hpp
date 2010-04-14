@@ -64,9 +64,14 @@ public:
 
     // Invoked by Forwarder when it needs to update the weight for a given
     // server.  Implementations shouldn't override, instead they should
-    // implement the protected handleUpdateInputQueuWeight which will occur on
+    // implement the protected handleUpdateSenderStats which will occur on
     // receiver strand.
-    void updateInputQueueWeight(ServerID sid, float weight);
+    void updateSenderStats(ServerID sid, double total_weight, double used_weight);
+
+    // Get the total weight (real total, not just used) feeding into this queue.
+    double totalWeight();
+    // Get the capacity of this receiver in bytes per second.
+    double capacity();
 protected:
     // Network::ReceiveListener Interface
     virtual void networkReceivedConnection(Network::ReceiveStream* strm) = 0;
@@ -74,13 +79,20 @@ protected:
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
     // ServerMessageReceiver Protected (Implementation) Interface
-    virtual void handleUpdateInputQueueWeight(ServerID sid, float weight) = 0;
+    virtual void handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight) = 0;
 
     SpaceContext* mContext;
     IOStrand* mReceiverStrand;
     Network* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Listener* mListener;
+
+    // Total weights are handled by the main strand since that's the only place
+    // they are needed. Handling of used weights is implementation dependent and
+    // goes to the receiver strand.
+    typedef std::tr1::unordered_map<ServerID, double> WeightMap;
+    WeightMap mTotalWeights;
+    double mTotalWeightSum;
 };
 
 } // namespace CBR

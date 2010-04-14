@@ -40,7 +40,8 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
         : mContext(ctx),
           mReceiverStrand(ctx->ioService->createStrand()),
           mNetwork(net),
-          mListener(listener)
+          mListener(listener),
+          mTotalWeightSum(0.0)
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
     net->listen(mContext->id(), this);
@@ -49,8 +50,27 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
 ServerMessageReceiver::~ServerMessageReceiver() {
 }
 
-void ServerMessageReceiver::updateInputQueueWeight(ServerID sid, float weight) {
-    mReceiverStrand->post( std::tr1::bind(&ServerMessageReceiver::handleUpdateInputQueueWeight, this, sid, weight) );
+double ServerMessageReceiver::totalWeight() {
+    return mTotalWeightSum;
+}
+
+double ServerMessageReceiver::capacity() {
+    return 0;
+}
+
+void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {
+    // FIXME we add things in here but we have no removal process
+    WeightMap::iterator weight_it = mTotalWeights.find(sid);
+    float old_total_weight = weight_it == mTotalWeights.end() ? 0.0 : weight_it->second;
+    mTotalWeights[sid] = total_weight;
+    mTotalWeightSum += (total_weight - old_total_weight);
+
+    mReceiverStrand->post(
+        std::tr1::bind(
+            &ServerMessageReceiver::handleUpdateSenderStats, this,
+            sid, total_weight, used_weight
+        )
+    );
 }
 
 void ServerMessageReceiver::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
