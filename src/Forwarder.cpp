@@ -243,7 +243,7 @@ void Forwarder::updateServerWeights() {
 
         // Update send scheduler.
         // FIXME is this the value we really want here?
-        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_flow_sched->totalActiveWeight());
+        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_flow_sched->totalUsedWeight());
     }
 }
 
