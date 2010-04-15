@@ -1,5 +1,5 @@
 /*  cbr
- *  ServerMessageReceiver.cpp
+ *  RateEstimator.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,52 +30,75 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ServerMessageReceiver.hpp"
-#include "SpaceContext.hpp"
-#include "Network.hpp"
+#ifndef _CBR_RATE_ESTIMATOR_HPP_
+#define _CBR_RATE_ESTIMATOR_HPP_
+
+#include "Utility.hpp"
 
 namespace CBR {
 
-ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
-        : mContext(ctx),
-          mReceiverStrand(ctx->ioService->createStrand()),
-          mNetwork(net),
-          mListener(listener),
-          mTotalWeightSum(0.0),
-          mCapacityEstimator(Duration::milliseconds((int64)200).toSeconds())
-{
-    mProfiler = mContext->profiler->addStage("Server Message Receiver");
-    net->listen(mContext->id(), this);
-}
+/** Exponential weighted average rate estimator. */
+class RateEstimator {
+public:
+    RateEstimator()
+     : _value(0),
+       _t(Time::null()),
+       _backlog(0)
+    {}
 
-ServerMessageReceiver::~ServerMessageReceiver() {
-}
+    RateEstimator(double good_guess)
+     : _value(good_guess),
+       _t(Time::null()),
+       _backlog(0)
+    {}
 
-double ServerMessageReceiver::totalWeight() {
-    return mTotalWeightSum;
-}
+    double get()const {
+        return _value;
+    }
 
-double ServerMessageReceiver::capacity() {
-    return mCapacityEstimator.get();
-}
+    double estimate_rate(const Time& t, uint32 len, double K) {
+        Duration diff = t - _t;
+        double dt = diff.toSeconds();
+        if (dt<1.0e-9) {
+            _backlog += len;
+            return _value;
+        }
+        double blend = exp(-dt/K);
+        uint32_t new_bytes = len + _backlog;
+        _value=_value*blend+(1-blend)*new_bytes/dt;
+        _t = t;
+        _backlog = 0;
+        return _value;
+    }
+private:
+    double _value;
+    Time _t;
+    uint32_t _backlog;
+};
 
-void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {
-    // FIXME we add things in here but we have no removal process
-    WeightMap::iterator weight_it = mTotalWeights.find(sid);
-    float old_total_weight = weight_it == mTotalWeights.end() ? 0.0 : weight_it->second;
-    mTotalWeights[sid] = total_weight;
-    mTotalWeightSum += (total_weight - old_total_weight);
+/** RateEstimator that holds its falloff parameter with it.  This should only be
+ * used when the cost of storing the falloff parameter per estimator is low,
+ * i.e. if the estimator is unique.
+ */
+class SimpleRateEstimator : public RateEstimator {
+public:
+    SimpleRateEstimator(double K)
+     : RateEstimator(),
+       _K(K)
+    {}
 
-    mReceiverStrand->post(
-        std::tr1::bind(
-            &ServerMessageReceiver::handleUpdateSenderStats, this,
-            sid, total_weight, used_weight
-        )
-    );
-}
+    SimpleRateEstimator(double good_guess, double K)
+     : RateEstimator(good_guess),
+       _K(K)
+    {}
 
-void ServerMessageReceiver::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
-    NOT_IMPLEMENTED();
-}
+    double estimate_rate(const Time& t, uint32 len) {
+        return RateEstimator::estimate_rate(t, len, _K);
+    }
+private:
+    double _K;
+};
 
 } // namespace CBR
+
+#endif //_CBR_RATE_ESTIMATOR_HPP_

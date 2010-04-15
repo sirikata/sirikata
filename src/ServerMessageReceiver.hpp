@@ -38,6 +38,7 @@
 #include "TimeProfiler.hpp"
 #include "Network.hpp"
 #include "CoordinateSegmentation.hpp"
+#include "RateEstimator.hpp"
 
 namespace CBR{
 
@@ -93,6 +94,8 @@ protected:
     typedef std::tr1::unordered_map<ServerID, double> WeightMap;
     WeightMap mTotalWeights;
     double mTotalWeightSum;
+
+    SimpleRateEstimator mCapacityEstimator;
 };
 
 } // namespace CBR

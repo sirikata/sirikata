@@ -116,6 +116,8 @@ void FairServerMessageReceiver::service() {
         recv_bytes -= packet_size;
         mBytesUsed += packet_size;
 
+        mCapacityEstimator.estimate_rate(tcur, packet_size);
+
         /*
            FIXME at some point we should record this here instead of in Server.cpp
         mContext->trace()->serverDatagramReceived();
