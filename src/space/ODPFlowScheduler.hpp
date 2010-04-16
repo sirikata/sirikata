@@ -65,6 +65,8 @@ public:
        mParent(parent),
        mDestServer(sid),
        mServiceID(serv_id),
+       mSenderTotalWeight(0.0),
+       mSenderCapacity(0.0),
        mReceiverTotalWeight(0.0),
        mReceiverCapacity(0.0)
     {}
@@ -85,12 +87,26 @@ public:
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight() = 0;
     // Get the total used weight of active queues.  If all flows are saturating,
-    // this should equal totalActiveWeights, otherwise it will be smaller.
-    virtual float totalUsedWeight() = 0;
+    // this should equal totalActiveWeights, otherwise it will be smaller.  This
+    // version computes used weights from the perspective of the downstream send
+    // scheduler, i.e. ServerMessageQueue, using its total weight and capacity.
+    virtual float totalSenderUsedWeight() = 0;
+    // Get the total used weight of active queues.  If all flows are saturating,
+    // this should equal totalActiveWeights, otherwise it will be smaller.  This
+    // version computes used weights from the perspective of the downstream recv
+    // scheduler, i.e. ServerMessageReceiver, using its total weight and capacity.
+    virtual float totalReceiverUsedWeight() = 0;
 
-    // Updates statistics from the receiver.  These are just stored and are used
-    // to compute rate information for this scheduler and is input for stats
-    // which are sent back to the receiver.
+    // Updates statistics from the downstream send scheduler.  These are just
+    // stored and are used to compute rate information for this scheduler and is
+    // input for stats which are sent back to the sender.
+    void updateSenderStats(double total_weight, double capacity) {
+        mSenderTotalWeight = total_weight;
+        mSenderCapacity = capacity;
+    }
+    // Updates statistics from the downstream receive scheduler.  These are just
+    // stored and are used to compute rate information for this scheduler and is
+    // input for stats which are sent back to the receiver.
     void updateReceiverStats(double total_weight, double capacity) {
         mReceiverTotalWeight = total_weight;
         mReceiverCapacity = capacity;
@@ -117,6 +133,9 @@ protected:
     ServerID mDestServer;
     uint32 mServiceID;
 
+
+    double mSenderTotalWeight; // Total input weight for this pair
+    double mSenderCapacity; // Capacity of sender
     double mReceiverTotalWeight; // Total input weight to receiver
     double mReceiverCapacity; // Capacity of receiver
 }; // class ODPFlowScheduler

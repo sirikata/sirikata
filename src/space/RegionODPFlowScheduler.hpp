@@ -62,7 +62,10 @@ public:
     virtual float totalActiveWeight();
     // Get the total used weight of active queues.  If all flows are saturating,
     // this should equal totalActiveWeights, otherwise it will be smaller.
-    virtual float totalUsedWeight();
+    virtual float totalSenderUsedWeight();
+    // Get the total used weight of active queues.  If all flows are saturating,
+    // this should equal totalActiveWeights, otherwise it will be smaller.
+    virtual float totalReceiverUsedWeight();
 private:
     Queue<Message*> mQueue;
     ServerWeightCalculator* mWeightCalculator;

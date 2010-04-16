@@ -213,20 +213,33 @@ void Forwarder::updateServerWeights() {
         ServerID serv_id = it->first;
         ODPFlowScheduler* serv_flow_sched = it->second;
 
-        // Update remote server
+        double odp_total_weight = serv_flow_sched->totalActiveWeight();
+        double odp_sender_used_weight = serv_flow_sched->totalSenderUsedWeight();
+        double odp_receiver_used_weight = serv_flow_sched->totalReceiverUsedWeight();
+        double sender_total_weight = mServerMessageQueue->totalWeight();
+        double sender_capacity = mServerMessageQueue->capacity();
+        double receiver_total_weight = mServerMessageReceiver->totalWeight();
+        double receiver_capacity = mServerMessageReceiver->capacity();
+
+        // Update remote server, i.e. the receive scheduler, with
+        // stats from the ODP server.
         CBR::Protocol::Forwarder::WeightUpdate weight_update;
 
-        weight_update.set_sender_total_weight( serv_flow_sched->totalActiveWeight() );
-        weight_update.set_sender_used_weight( serv_flow_sched->totalUsedWeight() );
+        // Note that the naming here is a bit confusing.
+        weight_update.set_server_pair_total_weight( odp_total_weight );
+        weight_update.set_server_pair_used_weight( odp_receiver_used_weight );
 
-        weight_update.set_receiver_total_weight( mServerMessageReceiver->totalWeight() );
-        weight_update.set_receiver_capacity( mServerMessageReceiver->capacity() );
+        weight_update.set_receiver_total_weight( receiver_total_weight );
+        weight_update.set_receiver_capacity( receiver_capacity );
 
-        SILOG(forwarder,insane,"Sending weights: " << mContext->id() << " -> " << serv_id <<
-            " sender_total_weight: " << weight_update.sender_total_weight() <<
-            " sender_used_weight: " << weight_update.sender_used_weight() <<
-            " receiver_total_weight: " << weight_update.receiver_total_weight() <<
-            " receiver_capacity: " << weight_update.receiver_capacity()
+        SILOG(forwarder,fatal,"Sending weights: " << mContext->id() << " -> " << serv_id <<
+            " odp_total_weight: " << odp_total_weight <<
+            " odp_sender_used_weight: " << odp_sender_used_weight <<
+            " odp_receiver_used_weight: " << odp_receiver_used_weight <<
+            " sender_total_weight: " << sender_total_weight <<
+            " sender_capacity: " << sender_capacity <<
+            " receiver_total_weight: " << receiver_total_weight <<
+            " receiver_capacity: " << receiver_capacity
         );
 
         Message* weight_up_msg = new Message(
@@ -241,9 +254,8 @@ void Forwarder::updateServerWeights() {
         if (!success)
             SILOG(forwarder,warn,"Overflow in forwarder weight message queue!");
 
-        // Update send scheduler.
-        // FIXME is this the value we really want here?
-        mServerMessageQueue->updateInputQueueWeight(serv_id, serv_flow_sched->totalUsedWeight());
+        // Update send scheduler with values from the ODP flow scheduler.
+        mServerMessageQueue->updateReceiverStats(serv_id, odp_total_weight, odp_sender_used_weight);
     }
 }
 
@@ -339,24 +351,33 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
     assert(parsed);
 
     SILOG(forwarder,insane,"Received weights: " << source << " -> " << mContext->id() <<
-        " sender_total_weight: " << weight_update.sender_total_weight() <<
-        " sender_used_weight: " << weight_update.sender_used_weight() <<
+        " server_pair_total_weight: " << weight_update.server_pair_total_weight() <<
+        " server_pair_used_weight: " << weight_update.server_pair_used_weight() <<
         " receiver_total_weight: " << weight_update.receiver_total_weight() <<
         " receiver_capacity: " << weight_update.receiver_capacity()
     );
 
     mServerMessageReceiver->updateSenderStats(
         source,
-        weight_update.sender_total_weight(),
-        weight_update.sender_used_weight()
+        weight_update.server_pair_total_weight(),
+        weight_update.server_pair_used_weight()
     );
 
     ODPRouterMap::iterator flow_sched_it = mODPRouters.find(source);
     if (flow_sched_it != mODPRouters.end()) {
         ODPFlowScheduler* serv_flow_sched = flow_sched_it->second;
+        // Update with receiver stats from this remote server.
         serv_flow_sched->updateReceiverStats(
             weight_update.receiver_total_weight(),
             weight_update.receiver_capacity()
+        );
+        // And with sender stats from our own server (arbitrarily
+        // chose now to update, see similar choice in
+        // updateServerWeights for updates flowing in the other
+        // direction).
+        serv_flow_sched->updateSenderStats(
+            mServerMessageQueue->totalWeight(),
+            mServerMessageQueue->capacity()
         );
     }
 }

@@ -114,6 +114,9 @@ void FairServerMessageQueue::service() {
         send_bytes -= packet_size;
         mBytesUsed += packet_size;
 
+        // Update capacity estimate.
+        mCapacityEstimator.estimate_rate(tcur, packet_size);
+
         // Get rid of the message
         delete next_msg;
     }
@@ -189,9 +192,9 @@ void FairServerMessageQueue::addInputQueue(ServerID sid, float weight) {
     mServerQueues.addQueue(new SenderAdapterQueue(mSender,sid),sid,weight);
 }
 
-void FairServerMessageQueue::updateInputQueueWeight(ServerID sid, float weight) {
+void FairServerMessageQueue::handleUpdateReceiverStats(ServerID sid, double total_weight, double used_weight) {
     assert( mServerQueues.hasQueue(sid) );
-    mServerQueues.setQueueWeight(sid, weight);
+    mServerQueues.setQueueWeight(sid, used_weight);
 }
 
 void FairServerMessageQueue::removeInputQueue(ServerID sid) {

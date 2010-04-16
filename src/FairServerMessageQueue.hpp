@@ -41,8 +41,6 @@ protected:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second);
     ~FairServerMessageQueue();
 
-    virtual void updateInputQueueWeight(ServerID sid, float weight);
-
   protected:
     // Must be thread safe:
 
@@ -52,6 +50,9 @@ protected:
     virtual void networkReadyToSend(const ServerID& from);
 
     // Should always be happening inside ServerMessageQueue thread
+
+    // ServerMessageReceiver Protected (Implementation) Interface
+    virtual void handleUpdateReceiverStats(ServerID sid, double total_weight, double used_weight);
 
     // Internal methods
     void addInputQueue(ServerID sid, float weight);

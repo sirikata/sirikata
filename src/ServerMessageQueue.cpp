@@ -39,7 +39,9 @@ ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* 
         : mContext(ctx),
           mSenderStrand(ctx->ioService->createStrand()),
           mNetwork(net),
-          mSender(sender)
+          mSender(sender),
+          mTotalWeightSum(0.0),
+          mCapacityEstimator(Duration::milliseconds((int64)200).toSeconds())
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
     mNetwork->setSendListener(this);
@@ -69,6 +71,29 @@ bool ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
         TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_HIT_NETWORK);
 
     return sent_success;
+}
+
+double ServerMessageQueue::totalWeight() {
+    return mTotalWeightSum;
+}
+
+double ServerMessageQueue::capacity() {
+    return mCapacityEstimator.get();
+}
+
+void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, double used_weight) {
+    // FIXME we add things in here but we have no removal process
+    WeightMap::iterator weight_it = mTotalWeights.find(sid);
+    float old_total_weight = weight_it == mTotalWeights.end() ? 0.0 : weight_it->second;
+    mTotalWeights[sid] = total_weight;
+    mTotalWeightSum += (total_weight - old_total_weight);
+
+    mSenderStrand->post(
+        std::tr1::bind(
+            &ServerMessageQueue::handleUpdateReceiverStats, this,
+            sid, total_weight, used_weight
+        )
+    );
 }
 
 } // namespace CBR

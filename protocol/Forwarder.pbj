@@ -7,12 +7,14 @@ message WeightUpdate {
     // These flow from the sender to the receiver:
 
     // Max weight is the maximum weight that could be used by this sender,
-    // i.e. the sum of all active object pair weights.
-    required double sender_total_weight = 1;
+    // to the receiver (destination of message), i.e. the sum of all
+    // active object pair weights.
+    required double server_pair_total_weight = 1;
 
-    // Used weight is the amount of the maximum weight that this sender is
+    // Used weight is the amount of the maximum weight (to the
+    // receiver (destination of the message) that this sender is
     // actually using up.
-    required double sender_used_weight = 2;
+    required double server_pair_used_weight = 2;
 
 
     // These flow from the receiver to the sender:

@@ -37,6 +37,7 @@
 #include "SpaceContext.hpp"
 #include "Network.hpp"
 #include "CoordinateSegmentation.hpp"
+#include "RateEstimator.hpp"
 
 namespace CBR{
 
@@ -66,17 +67,24 @@ public:
      */
     virtual void messageReady(ServerID sid) = 0;
 
-    /** Update the weight for an input queue. Allows the Forwarder to update
-     *  this element with new information about the fraction of weighted flows
-     *  destined for each server.
-     */
-    virtual void updateInputQueueWeight(ServerID sid, float weight) = 0;
+    // Get the total weight (real total, not just used) feeding into this queue.
+    double totalWeight();
+    // Get the capacity of this receiver in bytes per second.
+    double capacity();
 
+    // Invoked by Forwarder when it needs to update the weight for a given
+    // server.  Implementations shouldn't override, instead they should
+    // implement the protected handleUpdateSenderStats which will occur on
+    // receiver strand.
+    void updateReceiverStats(ServerID sid, double total_weight, double used_weight);
   protected:
     // Network::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
+
+    // ServerMessageReceiver Protected (Implementation) Interface
+    virtual void handleUpdateReceiverStats(ServerID sid, double total_weight, double used_weight) = 0;
 
     // Tries to send the Message to the Network, and tags it for analysis if
     // successful. Helper method for implementations.
@@ -89,6 +97,15 @@ public:
     Sender* mSender;
     typedef std::tr1::unordered_map<ServerID, Network::SendStream*> SendStreamMap;
     SendStreamMap mSendStreams;
+
+    // Total weights are handled by the main strand since that's the only place
+    // they are needed. Handling of used weights is implementation dependent and
+    // goes to the receiver strand.
+    typedef std::tr1::unordered_map<ServerID, double> WeightMap;
+    WeightMap mTotalWeights;
+    double mTotalWeightSum;
+
+    SimpleRateEstimator mCapacityEstimator;
 };
 }
 
