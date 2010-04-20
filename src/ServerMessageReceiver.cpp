@@ -41,7 +41,7 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
           mReceiverStrand(ctx->ioService->createStrand()),
           mNetwork(net),
           mListener(listener),
-          mTotalWeightSum(0.0),
+          mUsedWeightSum(0.0),
           mCapacityEstimator(Duration::milliseconds((int64)200).toSeconds())
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
@@ -51,8 +51,8 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
 ServerMessageReceiver::~ServerMessageReceiver() {
 }
 
-double ServerMessageReceiver::totalWeight() {
-    return mTotalWeightSum;
+double ServerMessageReceiver::totalUsedWeight() {
+    return mUsedWeightSum;
 }
 
 double ServerMessageReceiver::capacity() {
@@ -61,10 +61,10 @@ double ServerMessageReceiver::capacity() {
 
 void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {
     // FIXME we add things in here but we have no removal process
-    WeightMap::iterator weight_it = mTotalWeights.find(sid);
-    float old_total_weight = weight_it == mTotalWeights.end() ? 0.0 : weight_it->second;
-    mTotalWeights[sid] = total_weight;
-    mTotalWeightSum += (total_weight - old_total_weight);
+    WeightMap::iterator weight_it = mUsedWeights.find(sid);
+    float old_used_weight = weight_it == mUsedWeights.end() ? 0.0 : weight_it->second;
+    mUsedWeights[sid] = used_weight;
+    mUsedWeightSum += (used_weight - old_used_weight);
 
     mReceiverStrand->post(
         std::tr1::bind(

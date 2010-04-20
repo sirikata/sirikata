@@ -216,9 +216,9 @@ void Forwarder::updateServerWeights() {
         double odp_total_weight = serv_flow_sched->totalActiveWeight();
         double odp_sender_used_weight = serv_flow_sched->totalSenderUsedWeight();
         double odp_receiver_used_weight = serv_flow_sched->totalReceiverUsedWeight();
-        double sender_total_weight = mServerMessageQueue->totalWeight();
+        double sender_total_weight = mServerMessageQueue->totalUsedWeight();
         double sender_capacity = mServerMessageQueue->capacity();
-        double receiver_total_weight = mServerMessageReceiver->totalWeight();
+        double receiver_total_weight = mServerMessageReceiver->totalUsedWeight();
         double receiver_capacity = mServerMessageReceiver->capacity();
 
         // Update remote server, i.e. the receive scheduler, with
@@ -376,7 +376,7 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
         // updateServerWeights for updates flowing in the other
         // direction).
         serv_flow_sched->updateSenderStats(
-            mServerMessageQueue->totalWeight(),
+            mServerMessageQueue->totalUsedWeight(),
             mServerMessageQueue->capacity()
         );
     }

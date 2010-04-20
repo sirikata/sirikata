@@ -67,8 +67,9 @@ public:
      */
     virtual void messageReady(ServerID sid) = 0;
 
-    // Get the total weight (real total, not just used) feeding into this queue.
-    double totalWeight();
+    // Get the total used weight feeding into this queue. (Sum of used_weight's
+    // received via updateReceiverStats()).
+    double totalUsedWeight();
     // Get the capacity of this receiver in bytes per second.
     double capacity();
 
@@ -102,8 +103,8 @@ public:
     // they are needed. Handling of used weights is implementation dependent and
     // goes to the receiver strand.
     typedef std::tr1::unordered_map<ServerID, double> WeightMap;
-    WeightMap mTotalWeights;
-    double mTotalWeightSum;
+    WeightMap mUsedWeights;
+    double mUsedWeightSum;
 
     SimpleRateEstimator mCapacityEstimator;
 };
