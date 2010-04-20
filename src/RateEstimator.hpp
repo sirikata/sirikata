@@ -56,6 +56,17 @@ public:
         return _value;
     }
 
+    double get(const Time& t, double K) const {
+        Duration diff = t - _t;
+        double dt = diff.toSeconds();
+        if (dt<1.0e-9) {
+            return _value;
+        }
+        double blend = exp(-dt/K);
+        uint32_t new_bytes = _backlog;
+        return _value*blend+(1-blend)*new_bytes/dt;
+    }
+
     double estimate_rate(const Time& t, uint32 len, double K) {
         Duration diff = t - _t;
         double dt = diff.toSeconds();
