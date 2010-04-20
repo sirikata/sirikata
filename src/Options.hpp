@@ -71,6 +71,7 @@
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"
 #define SERVER_RECEIVER      "server.receiver"
+#define SERVER_ODP_FLOW_SCHEDULER   "server.odp.flowsched"
 
 #define NETWORK_TYPE         "net"
 

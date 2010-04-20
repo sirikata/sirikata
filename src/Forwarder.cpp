@@ -202,8 +202,16 @@ void Forwarder::addODPServerMessageService() {
 }
 
 ODPFlowScheduler* Forwarder::createODPFlowScheduler(ServerID remote_server, uint32 max_size) {
-    ODPFlowScheduler* new_flow_scheduler =
-        new RegionODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
+    String flow_sched_type = GetOption(SERVER_ODP_FLOW_SCHEDULER)->as<String>();
+    ODPFlowScheduler* new_flow_scheduler = NULL;
+
+    if (flow_sched_type == "region") {
+        new_flow_scheduler =
+            new RegionODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
+    }
+
+    assert(new_flow_scheduler != NULL);
+
     mODPRouters[remote_server] = new_flow_scheduler;
     return new_flow_scheduler;
 }

@@ -37,6 +37,7 @@ class ClusterSimSettings:
         self.flatness = 500
         self.server_queue = 'fair'
         self.server_queue_length = 8192
+        self.odp_flow_scheduler = 'region'
 
         # OH: basic oh settings
         self.num_oh = num_object_hosts
@@ -359,6 +360,7 @@ class ClusterSim:
                 "--capexcessbandwidth=false",
                 "--server.queue=" + self.settings.server_queue,
                 "--server.queue.length=" + str(self.settings.server_queue_length),
+                "--server.odp.flowsched=" + self.settings.odp_flow_scheduler,
                 "--loc=" + self.settings.loc,
                 "--cseg=" + self.settings.cseg,
                 "--cseg-service-host=" + self.settings.cseg_service_host,
