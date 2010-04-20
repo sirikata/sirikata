@@ -83,6 +83,14 @@ public:
         return curt;
     }
 
+    // A low cost alternative to simTime(). Gets that last value simTime()
+    // returned. This should be used when a Time is needed, but the cost of
+    // calling simTime() is too high. Obviously not everybody can use this or
+    // simTime() will never progress.
+    Time recentSimTime() const {
+        return this->mLastSimTime.read();
+    }
+
     void add(Service* ps) {
         mServices.push_back(ps);
         ps->start();
