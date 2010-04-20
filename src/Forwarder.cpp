@@ -232,7 +232,7 @@ void Forwarder::updateServerWeights() {
         weight_update.set_receiver_total_weight( receiver_total_weight );
         weight_update.set_receiver_capacity( receiver_capacity );
 
-        SILOG(forwarder,fatal,"Sending weights: " << mContext->id() << " -> " << serv_id <<
+        SILOG(forwarder,insane,"Sending weights: " << mContext->id() << " -> " << serv_id <<
             " odp_total_weight: " << odp_total_weight <<
             " odp_sender_used_weight: " << odp_sender_used_weight <<
             " odp_receiver_used_weight: " << odp_receiver_used_weight <<
