@@ -134,9 +134,9 @@ protected:
     uint32 mServiceID;
 
 
-    double mSenderTotalWeight; // Total input weight for this pair
+    double mSenderTotalWeight; // Total input weight for this pair (sum of used weights)
     double mSenderCapacity; // Capacity of sender
-    double mReceiverTotalWeight; // Total input weight to receiver
+    double mReceiverTotalWeight; // Total input weight to receiver (sum of used weights)
     double mReceiverCapacity; // Capacity of receiver
 }; // class ODPFlowScheduler
 
