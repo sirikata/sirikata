@@ -288,6 +288,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/SqrIntegral.cpp
   ${CBR_SOURCE_DIR}/space/RegionODPFlowScheduler.cpp
+  ${CBR_SOURCE_DIR}/space/CSFQODPFlowScheduler.cpp
   ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/ServerMessageQueue.cpp

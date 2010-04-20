@@ -20,6 +20,7 @@
 
 #include "ODPFlowScheduler.hpp"
 #include "RegionODPFlowScheduler.hpp"
+#include "CSFQODPFlowScheduler.hpp"
 
 // FIXME we shouldn't have oseg specific things here, this should be delegated
 // to OSeg as necessary
@@ -208,6 +209,10 @@ ODPFlowScheduler* Forwarder::createODPFlowScheduler(ServerID remote_server, uint
     if (flow_sched_type == "region") {
         new_flow_scheduler =
             new RegionODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
+    }
+    else if (flow_sched_type == "csfq") {
+        new_flow_scheduler =
+            new CSFQODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
     }
 
     assert(new_flow_scheduler != NULL);
