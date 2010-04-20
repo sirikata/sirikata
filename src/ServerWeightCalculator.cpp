@@ -45,9 +45,14 @@ ServerWeightCalculator::ServerWeightCalculator(CoordinateSegmentation* cseg, con
 ServerWeightCalculator::~ServerWeightCalculator() {
 }
 
+float64 ServerWeightCalculator::weight(const BoundingBox3f& source_bbox, BoundingBox3f& dest_bbox) {
+    return mWeightFunc(Vector3d(source_bbox.min()),Vector3d(source_bbox.max()),Vector3d(dest_bbox.min()),Vector3d(dest_bbox.max()));
+}
+
 float64 ServerWeightCalculator::weight(ServerID source, ServerID dest, Normalization norm) {
     BoundingBox3f source_bbox = mCSeg->serverRegion(source)[0];
     BoundingBox3f dest_bbox = mCSeg->serverRegion(dest)[0];
+
     //how much data am I able to send if I was sending everywhere
     double totalSendBandwidth=mWeightFunc(Vector3d(source_bbox.min()),Vector3d(source_bbox.max()),Vector3d(mCSeg->region().min()),Vector3d(mCSeg->region().max()))-mWeightFunc(Vector3d(source_bbox.min()),Vector3d(source_bbox.max()),Vector3d(source_bbox.min()),Vector3d(source_bbox.max()));
     //how much data is my destination able to receive
@@ -55,7 +60,8 @@ float64 ServerWeightCalculator::weight(ServerID source, ServerID dest, Normaliza
     //take the min of recv and send
     double totalBandwidthCap=totalSendBandwidth>totalReceiveBandwidth?totalSendBandwidth:totalReceiveBandwidth;
     //we only want to normalize by what the poor fool will receive, our fair queue will apportion our send bandwidth
-    double unnormalized_result=mWeightFunc(Vector3d(source_bbox.min()),Vector3d(source_bbox.max()),Vector3d(dest_bbox.min()),Vector3d(dest_bbox.max()));
+
+    double unnormalized_result = weight(source_bbox, dest_bbox);
     double result = unnormalized_result;
 
     switch (norm) {

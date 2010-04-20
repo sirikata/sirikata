@@ -54,6 +54,7 @@ public:
     ServerWeightCalculator(CoordinateSegmentation* cseg, const WeightFunction& weightFunc);
     ~ServerWeightCalculator();
 
+    float64 weight(const BoundingBox3f& source_bbox, BoundingBox3f& dest_bbox);
     float64 weight(ServerID source, ServerID dest, Normalization norm = NORMALIZE_MODE);
 private:
     ServerID mServerID;
