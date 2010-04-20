@@ -99,6 +99,10 @@ Forwarder::Forwarder(SpaceContext* ctx)
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
+      for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++)
+          delete it->second;
+      mODPRouters.clear();
+
       delete mOSegCacheUpdateRouter;
       delete mForwarderWeightRouter;
 
