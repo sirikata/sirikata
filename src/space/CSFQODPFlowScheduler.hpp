@@ -35,6 +35,7 @@
 
 #include "ODPFlowScheduler.hpp"
 #include "Queue.hpp"
+#include "RateEstimator.hpp"
 
 namespace CBR {
 
@@ -49,9 +50,9 @@ public:
     virtual ~CSFQODPFlowScheduler();
 
     // Interface: AbstractQueue<Message*>
-    virtual const Type& front() const { return mQueue.front(); }
-    virtual Type& front() { return mQueue.front(); }
-    virtual Type pop() { return mQueue.pop(); }
+    virtual const Type& front() const { return mQueue.front().msg; }
+    virtual Type& front() { return mQueue.front().msg; }
+    virtual Type pop();
     virtual bool empty() const { return mQueue.empty(); }
     virtual uint32 size() const { return mQueue.size(); }
 
@@ -66,8 +67,98 @@ public:
     // this should equal totalActiveWeights, otherwise it will be smaller.
     virtual float totalReceiverUsedWeight();
 private:
-    Queue<Message*> mQueue;
+
+    enum {
+        SENDER = 0,
+        RECEIVER = 1,
+        NUM_DOWNSTREAM = 2
+    };
+
+    struct ObjectPair {
+        ObjectPair(const UUID& s, const UUID& d)
+         : source(s), dest(d)
+        {}
+
+        bool operator<(const ObjectPair& rhs) const {
+            return (source < rhs.source || (source == rhs.source && dest < rhs.dest));
+        }
+
+        bool operator==(const ObjectPair& rhs) const {
+            return (source == rhs.source && dest == rhs.dest);
+        }
+
+        class Hasher {
+        public:
+            size_t operator() (const ObjectPair& op) const {
+                return std::tr1::hash<unsigned int>()(op.source.hash()^op.dest.hash());
+            }
+        };
+
+        UUID source;
+        UUID dest;
+    };
+
+    struct FlowInfo {
+        FlowInfo(double w)
+         : weight(w)
+        {
+            for(int i = 0; i < NUM_DOWNSTREAM; i++)
+                usedWeight[i] = 0.0;
+        }
+
+        RateEstimator rate;
+        double weight;
+        double usedWeight[NUM_DOWNSTREAM];
+    };
+
+    struct QueuedMessage {
+        QueuedMessage()
+         : msg(NULL),
+           _size(0)
+        {}
+
+        QueuedMessage(Message* m, int32 s)
+         : msg(m),
+           _size(s)
+        {}
+
+        int32 size() const { return _size; }
+
+        Message* msg;
+        int32 _size;
+    };
+
+    FlowInfo* getFlow(const ObjectPair& new_packet_pair);
+    void removeFlow(const ObjectPair& packet_pair);
+    int flowCount() const;
+    float normalizedFlowWeight(float unnorm_weight);
+
+    void estimateAlpha(int32 packet_size, Time& arrival_time, double label, bool dropped);
+    bool queueExceedsLowWaterMark() const { return true; } // Not necessary in our implementation
+    double minCongestedAlpha() const { return mCapacityRate.get() / std::max(1, flowCount()); }
+
+    Queue<QueuedMessage> mQueue;
     ServerWeightCalculator* mWeightCalculator;
+
+    // CSFQ Summary Information
+    SimpleRateEstimator mArrivalRate;
+    SimpleRateEstimator mAcceptedRate;
+    SimpleRateEstimator mCapacityRate; // Actual capacity observed (no dummy packets)
+
+    // CSFQ Control Information
+    double mAlpha;
+    double mAlphaWindowed;
+    bool mCongested;
+    Time mCongestionStartTime;
+    Duration mCongestionWindow;
+    int mKAlphaReductionsLeft;
+
+    // Per Flow Information
+    typedef std::tr1::unordered_map<ObjectPair, FlowInfo, ObjectPair::Hasher> FlowMap;
+    FlowMap mFlows;
+    // Flow Summary Information
+    double mTotalActiveWeight;
+    double mTotalUsedWeight[NUM_DOWNSTREAM];
 }; // class CSFQODPFlowScheduler
 
 } // namespace CBR

@@ -35,12 +35,30 @@
 #include "ExpIntegral.hpp"
 #include "SqrIntegral.hpp"
 #include "Options.hpp"
+#include "Random.hpp"
+
+#define _Ka (Duration::milliseconds((int64)200))
+#define _Ka_double (_Ka.toSeconds())
+
+#define KALPHA 29 // Max times fair rate can be decreased during interval
+
+#define CSFQLOG(level, msg) SILOG(csfqodp,level, mContext->id() << "->" << mDestServer << ": " << msg)
 
 namespace CBR {
 
 CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
-   mQueue(max_size)
+   mQueue(max_size),
+   mArrivalRate(_Ka_double),
+   mAcceptedRate(_Ka_double),
+   mCapacityRate(_Ka_double),
+   mAlpha(0.0),
+   mAlphaWindowed(0.0),
+   mCongested(true),
+   mCongestionStartTime(Time::null()),
+   mCongestionWindow(_Ka),
+   mKAlphaReductionsLeft(KALPHA),
+   mTotalActiveWeight(0)
 {
     if (GetOption("gaussian")->as<bool>()) {
         mWeightCalculator =
@@ -63,6 +81,9 @@ CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQu
                     std::tr1::placeholders::_4)
                                        );
     }
+
+    for(int i = 0; i < NUM_DOWNSTREAM; i++)
+        mTotalUsedWeight[i] = 0.0;
 }
 
 CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
@@ -73,33 +94,215 @@ CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
 bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
     bool was_empty = empty();
 
-    Message* serv_msg = createMessageFromODP(msg, mDestServer);
-    if (mQueue.push(serv_msg) == QueueEnum::PushExceededMaximumSize) {
-        delete serv_msg;
+    ObjectPair op(msg->source_object(), msg->dest_object());
+    FlowInfo* flow_info = getFlow(op);
+
+    // FIXME update weights, due to possible movement?
+    double weight = flow_info->weight;
+
+    // Priority computation failure...
+    if (!weight) {
         return false;
     }
 
-    notifyPushFront();
+    int32 packet_size = msg->ByteSize();
+    Time curtime = mContext->recentSimTime();
+
+    double label = 0;
+#define _edge true // Maybe someday we'll bother with core routers
+    if (_edge) {
+        // Remove old used weight
+        for(int i = 0; i < NUM_DOWNSTREAM; i++)
+            mTotalUsedWeight[i] -= flow_info->usedWeight[i];
+
+        // Compute label, updating the rate
+        double flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Ka_double);
+        double w_norm = normalizedFlowWeight(weight);
+        label = flow_rate / w_norm;
+
+        // If we were setting label annotations, we would do it here
+        // setLabel(p,label);
+
+        // Add updated used weight
+        // For acc_rate and total_rates, use_global_values controls
+        // whether we're using the values for the entire fair queue
+        // (which must be collected downstream and reported back) or
+        // the local values (which can obviously only take into
+        // account flows we know about).  Note that the correct
+        // setting is use_global_values == true.
+        double sender_acc_rate = std::max(mSenderCapacity, 1.0);
+        double sender_total_weights = mSenderTotalWeight;
+        flow_info->usedWeight[SENDER] = std::min(flow_rate * (sender_total_weights / sender_acc_rate), weight);
+
+        double receiver_acc_rate = std::max(mReceiverCapacity, 1.0);
+        double receiver_total_weights = mReceiverTotalWeight;
+        flow_info->usedWeight[RECEIVER] = std::min(flow_rate * (receiver_total_weights / receiver_acc_rate), weight);
+
+        for(int i = 0; i < NUM_DOWNSTREAM; i++)
+            mTotalUsedWeight[i] += flow_info->usedWeight[i];
+    }
+
+    double prob_drop = std::max(0.0, label ? 1.0 - mAlpha / label : 0);
+
+    // Initialization and reinitialization case: if mAlpha is 0, allow
+    // everything through.
+    if (mAlpha != 0.0) {
+        if ((randFloat() < prob_drop)) {
+            estimateAlpha(packet_size, curtime, label, true);
+            return false;
+        }
+    }
+
+    // We're not labelling packets, but in case we do at some point, this is
+    // where we'd do it.
+    //if (prob_drop > 0) {
+        // Annotate packet, label = mAlpha
+    //}
+
+    // Try to enqueue.
+    Message* serv_msg = createMessageFromODP(msg, mDestServer);
+    QueuedMessage qmsg(serv_msg, packet_size);
+    bool enqueue_success = (mQueue.push(qmsg) == QueueEnum::PushSucceeded);
+    // If we overflowed, drop and adjust alpha
+    if (!enqueue_success) {
+        if (mKAlphaReductionsLeft-- >= 0)
+            mAlpha *= 0.99;
+        delete qmsg.msg;
+        return false;
+    }
+
+    // Finally, restimate alpha.
+    estimateAlpha(packet_size, curtime, label, false);
+
+    if (was_empty)
+        notifyPushFront();
+
     return true;
 }
 
+void CSFQODPFlowScheduler::estimateAlpha(int32 packet_size, Time& arrival_time, double label, bool dropped) {
+    mArrivalRate.estimate_rate(arrival_time, packet_size);
+    if (!dropped)
+        mAcceptedRate.estimate_rate(arrival_time, packet_size);
+
+    // compute the initial value of mAlpha
+    if (mAlpha == 0.) {
+        if (!queueExceedsLowWaterMark()) {
+            if (mAlphaWindowed < label) mAlphaWindowed = label;
+            return;
+        }
+        if (mAlpha < mAlphaWindowed)
+            mAlpha = mAlphaWindowed;
+        if (mAlpha == 0.)
+            mAlpha = minCongestedAlpha(); // arbitrary initialization
+        mAlphaWindowed = 0.;
+    }
+
+    // Update mAlpha
+
+    // We need to deal with both down stream queues. The capacity dedicated to
+    // us is the only parameter dependent on the downstream queues.  Therefore,
+    // we compute for both and work with the minimum.
+    double sender_cap = mSenderCapacity;
+    if (mSenderTotalWeight != 0.0) sender_cap *= mTotalUsedWeight[SENDER] / mSenderTotalWeight;
+    double receiver_cap = mReceiverCapacity;
+    if (mReceiverTotalWeight != 0.0) receiver_cap *= mTotalUsedWeight[RECEIVER] / mReceiverTotalWeight;
+
+    double cap = std::min(sender_cap, receiver_cap);
+
+    if (cap <= mArrivalRate.get()) { // link congested
+        if (!mCongested) { // uncongested -> congested
+            mCongested = true;
+            mCongestionStartTime = arrival_time;
+            mKAlphaReductionsLeft = KALPHA;
+        } else {
+            if (arrival_time < mCongestionStartTime + mCongestionWindow)
+                return;
+            mCongestionStartTime = arrival_time;
+            mAlpha *= cap/mAcceptedRate.get(arrival_time, _Ka_double);
+            if (cap < mAlpha) {
+                mAlpha = cap;
+            }
+        }
+    } else {  // (_capacity_rate.get() > mArrivalRate.get()) => link uncongested
+        if (mCongested) { // congested -> uncongested
+            mCongested = false;
+            mCongestionStartTime = arrival_time;
+            mAlphaWindowed = 0;
+        } else {
+            if (arrival_time < mCongestionStartTime + mCongestionWindow) {
+                if (mAlphaWindowed < label) mAlphaWindowed = label;
+            } else {
+                mAlpha = mAlphaWindowed;
+                mCongestionStartTime = arrival_time;
+                if (!queueExceedsLowWaterMark())
+                    mAlpha = 0.;
+                else
+                    mAlphaWindowed = 0.;
+            }
+        }
+    }
+}
+
+CSFQODPFlowScheduler::Type CSFQODPFlowScheduler::pop() {
+    QueuedMessage qmsg = mQueue.pop();
+    mCapacityRate.estimate_rate(mContext->recentSimTime(), qmsg.size());
+    return qmsg.msg;
+}
+
+
 // Get the sum of the weights of active queues.
 float CSFQODPFlowScheduler::totalActiveWeight() {
-    return mWeightCalculator->weight(mContext->id(), mDestServer);
+    return mTotalActiveWeight;
 }
 
 // Get the total used weight of active queues.  If all flows are saturating,
 // this should equal totalActiveWeights, otherwise it will be smaller.
 float CSFQODPFlowScheduler::totalSenderUsedWeight() {
     // No flow tracking, so we just give the entire server weight
-    return mWeightCalculator->weight(mContext->id(), mDestServer);
+    return mTotalUsedWeight[SENDER];
 }
 
 // Get the total used weight of active queues.  If all flows are saturating,
 // this should equal totalActiveWeights, otherwise it will be smaller.
 float CSFQODPFlowScheduler::totalReceiverUsedWeight() {
-    // No flow tracking, so we just give the entire server weight
-    return mWeightCalculator->weight(mContext->id(), mDestServer);
+    return mTotalUsedWeight[RECEIVER];
+}
+
+CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair) {
+    FlowMap::iterator where = mFlows.find(new_packet_pair);
+    if (where==mFlows.end()) {
+        double weight = 1.0; // FIXME mWeightCalculator->weight(new_packet_pair->source, new_packet_pair->dest);
+        mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight)));
+        mTotalActiveWeight += weight;
+        //mTotalUsedWeight[X] += 0.0;
+
+        where = mFlows.find(new_packet_pair);
+    }
+    return &(where->second);
+}
+
+void CSFQODPFlowScheduler::removeFlow(const ObjectPair& packet_pair) {
+    FlowMap::iterator where = mFlows.find(packet_pair);
+    assert(where != mFlows.end());
+    assert(0);
+    FlowInfo* fi = &(where->second);
+    mTotalActiveWeight -= fi->weight;
+    for(int i = 0; i < NUM_DOWNSTREAM; i++)
+        mTotalUsedWeight[i] -= fi->usedWeight[i];
+    fi = NULL;
+    mFlows.erase(where);
+}
+
+int CSFQODPFlowScheduler::flowCount() const {
+    return mFlows.size();
+}
+
+float CSFQODPFlowScheduler::normalizedFlowWeight(float unnorm_weight) {
+    // We need normalized weights or else things won't add up properly to give
+    // us C total output.  The paper ignores this, presumably because they have
+    // a static set of weights which they have already normalized.
+    return unnorm_weight / mTotalActiveWeight;
 }
 
 } // namespace CBR
