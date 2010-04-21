@@ -176,8 +176,8 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
     // Finally, restimate alpha.
     estimateAlpha(packet_size, curtime, label, false);
 
-    if (was_empty)
-        notifyPushFront();
+    //if (was_empty)
+    notifyPushFront();
 
     return true;
 }
