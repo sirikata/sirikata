@@ -94,7 +94,8 @@ void FairServerMessageReceiver::service() {
     Time tcur = mContext->simTime();
     Duration since_last = tcur - mLastServiceTime;
     mAccountedTime += since_last;
-    uint64 recv_bytes = since_last.toSeconds() * mRecvRate + mRemainderReceiveBytes;
+    uint64 new_recv_bytes = since_last.toSeconds() * mRecvRate;
+    uint64 recv_bytes = new_recv_bytes + mRemainderReceiveBytes;
 
     // Receive
     ServerID sid;
@@ -116,14 +117,19 @@ void FairServerMessageReceiver::service() {
         recv_bytes -= packet_size;
         mBytesUsed += packet_size;
 
-        mCapacityEstimator.estimate_rate(tcur, packet_size);
-
         /*
            FIXME at some point we should record this here instead of in Server.cpp
         mContext->trace()->serverDatagramReceived();
         */
         mListener->serverMessageReceived(next_recv_msg);
     }
+
+    // Note: We don't do this per accepted packet because we need to get
+    // *capacity*, not accepted rate.  This is critical because we need to know
+    // without sending any data that this link can accept more data. We could do
+    // this without any computation since here we're limiting the rate strictly,
+    // but this is how we'd really do it.
+    mCapacityEstimator.estimate_rate(tcur, new_recv_bytes);
 
     if (mReceiveQueues.empty()) {
         mBytesDiscarded += recv_bytes;

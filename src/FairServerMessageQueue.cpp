@@ -79,7 +79,8 @@ void FairServerMessageQueue::service() {
     Time tcur = mContext->simTime();
     Duration since_last = tcur - mLastServiceTime;
     mAccountedTime += since_last;
-    uint64 send_bytes = since_last.toSeconds() * mRate + mRemainderSendBytes;
+    uint64 new_send_bytes = since_last.toSeconds() * mRate;
+    uint64 send_bytes = new_send_bytes + mRemainderSendBytes;
 
     // Send
 
@@ -114,12 +115,15 @@ void FairServerMessageQueue::service() {
         send_bytes -= packet_size;
         mBytesUsed += packet_size;
 
-        // Update capacity estimate.
-        mCapacityEstimator.estimate_rate(tcur, packet_size);
-
         // Get rid of the message
         delete next_msg;
     }
+
+    // Update capacity estimate.
+    // Since we need capacity rather than accepted rate, we do this from the
+    // total rate calculation.  If we remove the send limitation, then we'd need
+    // a different solution to this.
+    mCapacityEstimator.estimate_rate(tcur, new_send_bytes);
 
     if (ran_out_of_bytes) {
         // We had a message but couldn't send it.
