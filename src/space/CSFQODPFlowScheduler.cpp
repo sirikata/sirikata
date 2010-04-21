@@ -131,11 +131,13 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
         // account flows we know about).  Note that the correct
         // setting is use_global_values == true.
         double sender_acc_rate = std::max(mSenderCapacity, 1.0);
-        double sender_total_weights = mSenderTotalWeight;
+        // Using the max avoids possible zeros
+        double sender_total_weights = std::max(mSenderTotalWeight, weight);
         flow_info->usedWeight[SENDER] = std::min(flow_rate * (sender_total_weights / sender_acc_rate), weight);
 
         double receiver_acc_rate = std::max(mReceiverCapacity, 1.0);
-        double receiver_total_weights = mReceiverTotalWeight;
+        // Using the max avoids possible zeros
+        double receiver_total_weights = std::max(mReceiverTotalWeight, weight);
         flow_info->usedWeight[RECEIVER] = std::min(flow_rate * (receiver_total_weights / receiver_acc_rate), weight);
 
         for(int i = 0; i < NUM_DOWNSTREAM; i++)
