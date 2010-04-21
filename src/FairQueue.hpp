@@ -116,11 +116,22 @@ public:
         ConstByKeyIterator it = mQueuesByKey.find(key);
         if (it != mQueuesByKey.end()) {
             QueueInfo* qi = it->second;
+            float old_weight = qi->weight;
             qi->weight = weight;
             // FIXME should we update the finish time here, or just wait until the next packet?
             // Updating here requires either starting from current time or keeping track of
             // the last dequeued time
             //updateNextFinishTime(qi);
+
+            // Currently, we just special case queues going from zero
+            // to non-zero weight so they don't get stuck.  Computing
+            // based on the current virtual time is pretty much always
+            // better than waiting the default maximum amount of time
+            // for the current head packet to pass through.
+            if (old_weight == 0.0) {
+                removeFromTimeIndex(qi);
+                computeNextFinishTime(qi);
+            }
         }
     }
 
