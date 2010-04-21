@@ -275,7 +275,8 @@ CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& 
         double weight = 1.0; // FIXME mWeightCalculator->weight(new_packet_pair->source, new_packet_pair->dest);
         mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight)));
         mTotalActiveWeight += weight;
-        //mTotalUsedWeight[X] += 0.0;
+        for(int i = 0; i < NUM_DOWNSTREAM; i++)
+            mTotalUsedWeight[i] += weight;
 
         where = mFlows.find(new_packet_pair);
     }

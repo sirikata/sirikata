@@ -103,7 +103,7 @@ private:
          : weight(w)
         {
             for(int i = 0; i < NUM_DOWNSTREAM; i++)
-                usedWeight[i] = 0.0;
+                usedWeight[i] = w;
         }
 
         RateEstimator rate;
