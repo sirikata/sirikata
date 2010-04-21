@@ -36,6 +36,7 @@
 #include "ODPFlowScheduler.hpp"
 #include "Queue.hpp"
 #include "RateEstimator.hpp"
+#include <sirikata/util/SizedThreadSafeQueue.hpp>
 
 namespace CBR {
 
@@ -50,11 +51,11 @@ public:
     virtual ~CSFQODPFlowScheduler();
 
     // Interface: AbstractQueue<Message*>
-    virtual const Type& front() const { return mQueue.front().msg; }
-    virtual Type& front() { return mQueue.front().msg; }
+    virtual const Type& front() const;
+    virtual Type& front();
     virtual Type pop();
-    virtual bool empty() const { return mQueue.empty(); }
-    virtual uint32 size() const { return mQueue.size(); }
+    virtual bool empty() const;
+    virtual uint32 size() const { return mQueue.getResourceMonitor().filledSize(); }
 
     // ODP push interface
     virtual bool push(CBR::Protocol::Object::ObjectMessage* msg);
@@ -137,7 +138,12 @@ private:
     bool queueExceedsLowWaterMark() const { return true; } // Not necessary in our implementation
     double minCongestedAlpha() const { return mCapacityRate.get() / std::max(1, flowCount()); }
 
-    Queue<QueuedMessage> mQueue;
+    // Note: unfortunately we need to mark these as mutable because a)
+    // SizedThreadSafeQueue doesn't have methods marked properly as const and b)
+    // ThreadSafeQueue doesn't provide a front() method.
+    mutable QueuedMessage mQueueBuffer;
+    mutable Sirikata::SizedThreadSafeQueue<QueuedMessage> mQueue;
+    mutable Sirikata::AtomicValue<bool> mNeedsNotification;
     ServerWeightCalculator* mWeightCalculator;
 
     // CSFQ Summary Information

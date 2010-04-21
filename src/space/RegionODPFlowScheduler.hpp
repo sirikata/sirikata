@@ -35,6 +35,7 @@
 
 #include "ODPFlowScheduler.hpp"
 #include "Queue.hpp"
+#include <sirikata/util/SizedThreadSafeQueue.hpp>
 
 namespace CBR {
 
@@ -50,11 +51,11 @@ public:
     virtual ~RegionODPFlowScheduler();
 
     // Interface: AbstractQueue<Message*>
-    virtual const Type& front() const { return mQueue.front(); }
-    virtual Type& front() { return mQueue.front(); }
-    virtual Type pop() { return mQueue.pop(); }
-    virtual bool empty() const { return mQueue.empty(); }
-    virtual uint32 size() const { return mQueue.size(); }
+    virtual const Type& front() const;
+    virtual Type& front();
+    virtual Type pop();
+    virtual bool empty() const;
+    virtual uint32 size() const { return mQueue.getResourceMonitor().filledSize(); }
 
     // ODP push interface
     virtual bool push(CBR::Protocol::Object::ObjectMessage* msg);
@@ -67,7 +68,12 @@ public:
     // this should equal totalActiveWeights, otherwise it will be smaller.
     virtual float totalReceiverUsedWeight();
 private:
-    Queue<Message*> mQueue;
+    // Note: unfortunately we need to mark these as mutable because a)
+    // SizedThreadSafeQueue doesn't have methods marked properly as const and b)
+    // ThreadSafeQueue doesn't provide a front() method.
+    mutable Message* mQueueBuffer;
+    mutable Sirikata::SizedThreadSafeQueue<Message*> mQueue;
+    mutable Sirikata::AtomicValue<bool> mNeedsNotification;
     ServerWeightCalculator* mWeightCalculator;
 }; // class RegionODPFlowScheduler
 

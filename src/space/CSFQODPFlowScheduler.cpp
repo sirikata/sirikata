@@ -48,7 +48,9 @@ namespace CBR {
 
 CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
-   mQueue(max_size),
+   mQueueBuffer(),
+   mQueue(Sirikata::SizedResourceMonitor(max_size)),
+   mNeedsNotification(true),
    mArrivalRate(_Ka_double),
    mAcceptedRate(_Ka_double),
    mCapacityRate(_Ka_double),
@@ -92,8 +94,6 @@ CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
 
 // ODP push interface
 bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
-    bool was_empty = empty();
-
     ObjectPair op(msg->source_object(), msg->dest_object());
     FlowInfo* flow_info = getFlow(op);
 
@@ -164,7 +164,7 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
     // Try to enqueue.
     Message* serv_msg = createMessageFromODP(msg, mDestServer);
     QueuedMessage qmsg(serv_msg, packet_size);
-    bool enqueue_success = (mQueue.push(qmsg) == QueueEnum::PushSucceeded);
+    bool enqueue_success = mQueue.push(qmsg, false);
     // If we overflowed, drop and adjust alpha
     if (!enqueue_success) {
         if (mKAlphaReductionsLeft-- >= 0)
@@ -176,8 +176,10 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
     // Finally, restimate alpha.
     estimateAlpha(packet_size, curtime, label, false);
 
-    //if (was_empty)
-    notifyPushFront();
+    if (mNeedsNotification) {
+        mNeedsNotification = false;
+        notifyPushFront();
+    }
 
     return true;
 }
@@ -246,10 +248,52 @@ void CSFQODPFlowScheduler::estimateAlpha(int32 packet_size, Time& arrival_time, 
     }
 }
 
+static CSFQODPFlowScheduler::Type null_response = NULL;
+
+const CSFQODPFlowScheduler::Type& CSFQODPFlowScheduler::front() const {
+    if (mQueueBuffer.msg == NULL) {
+        bool avail = mQueue.pop(mQueueBuffer);
+        if (!avail) {
+            mNeedsNotification = true;
+            return null_response;
+        }
+    }
+
+    return mQueueBuffer.msg;
+}
+
+CSFQODPFlowScheduler::Type& CSFQODPFlowScheduler::front() {
+    if (mQueueBuffer.msg == NULL) {
+        bool avail = mQueue.pop(mQueueBuffer);
+        if (!avail) {
+            mNeedsNotification = true;
+            return null_response;
+        }
+    }
+
+    return mQueueBuffer.msg;
+}
+
+bool CSFQODPFlowScheduler::empty() const {
+    bool is_empty = mQueueBuffer.msg == NULL && mQueue.probablyEmpty();
+    if (is_empty) mNeedsNotification = true;
+    return is_empty;
+}
+
 CSFQODPFlowScheduler::Type CSFQODPFlowScheduler::pop() {
-    QueuedMessage qmsg = mQueue.pop();
-    mCapacityRate.estimate_rate(mContext->recentSimTime(), qmsg.size());
-    return qmsg.msg;
+    front(); // Prime front element
+    QueuedMessage result = mQueueBuffer;
+    mQueueBuffer = QueuedMessage();
+    if (result.msg == NULL)
+        return NULL;
+
+    // If the queue reads as empty after a pop, we're going to need
+    // notification.  Otherwise, even if it got emptied, we weren't able to
+    // observe it before it got another element.
+    front(); // Reprimes front element, might mark for notification on next round
+
+    mCapacityRate.estimate_rate(mContext->recentSimTime(), result.size());
+    return result.msg;
 }
 
 

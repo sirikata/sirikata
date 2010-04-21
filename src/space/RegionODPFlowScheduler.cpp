@@ -40,7 +40,9 @@ namespace CBR {
 
 RegionODPFlowScheduler::RegionODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
-   mQueue(max_size)
+   mQueueBuffer(),
+   mQueue(Sirikata::SizedResourceMonitor(max_size)),
+   mNeedsNotification(true)
 {
     if (GetOption("gaussian")->as<bool>()) {
         mWeightCalculator =
@@ -71,17 +73,67 @@ RegionODPFlowScheduler::~RegionODPFlowScheduler() {
 
 // ODP push interface
 bool RegionODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
-    bool was_empty = empty();
-
     Message* serv_msg = createMessageFromODP(msg, mDestServer);
-    if (mQueue.push(serv_msg) == QueueEnum::PushExceededMaximumSize) {
+    if (!mQueue.push(serv_msg, false)) {
         delete serv_msg;
         return false;
     }
 
-    notifyPushFront();
+    if (mNeedsNotification) {
+        mNeedsNotification = false;
+        notifyPushFront();
+    }
     return true;
 }
+
+
+static RegionODPFlowScheduler::Type null_response = NULL;
+
+const RegionODPFlowScheduler::Type& RegionODPFlowScheduler::front() const {
+    if (mQueueBuffer == NULL) {
+        bool avail = mQueue.pop(mQueueBuffer);
+        if (!avail) {
+            mNeedsNotification = true;
+            return null_response;
+        }
+    }
+
+    return mQueueBuffer;
+}
+
+RegionODPFlowScheduler::Type& RegionODPFlowScheduler::front() {
+    if (mQueueBuffer == NULL) {
+        bool avail = mQueue.pop(mQueueBuffer);
+        if (!avail) {
+            mNeedsNotification = true;
+            return null_response;
+        }
+    }
+
+    return mQueueBuffer;
+}
+
+bool RegionODPFlowScheduler::empty() const {
+    bool is_empty = mQueueBuffer == NULL && mQueue.probablyEmpty();
+    if (is_empty) mNeedsNotification = true;
+    return is_empty;
+}
+
+RegionODPFlowScheduler::Type RegionODPFlowScheduler::pop() {
+    front(); // Prime front element
+    Message* result = mQueueBuffer;
+    mQueueBuffer = NULL;
+    if (result == NULL)
+        return NULL;
+
+    // If the queue reads as empty after a pop, we're going to need
+    // notification.  Otherwise, even if it got emptied, we weren't able to
+    // observe it before it got another element.
+    front(); // Reprimes front element, might mark for notification on next round
+
+    return result;
+}
+
 
 // Get the sum of the weights of active queues.
 float RegionODPFlowScheduler::totalActiveWeight() {
