@@ -123,6 +123,7 @@ public:
     static const uint8 MessageTimestampTag = 30;
     static const uint8 MessageCreationTimestampTag = 31;
 
+    static const uint8 ObjectConnectedTag = 33;
 
     enum MessagePath {
         NONE, // Used when tag is needed but we don't have a name for it
@@ -187,6 +188,8 @@ public:
     CREATE_TRACE_DECL(timestampMessage, const Time&t, uint64 packetId, MessagePath path);
 
     CREATE_TRACE_DECL(prox, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
+
+    CREATE_TRACE_DECL(objectConnected, const Time& t, const UUID& receiver, const ServerID& sid);
     CREATE_TRACE_DECL(objectLoc, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds);
 

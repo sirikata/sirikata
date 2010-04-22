@@ -38,6 +38,10 @@ struct ObjectEvent : public Event {
     UUID source;
 };
 
+struct ObjectConnectedEvent : public ObjectEvent {
+    ServerID server;
+};
+
 struct ProximityEvent : public ObjectEvent {
     bool entered;
     TimedMotionVector3f loc;

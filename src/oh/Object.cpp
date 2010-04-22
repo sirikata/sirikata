@@ -211,6 +211,7 @@ void Object::handleSpaceConnection(ServerID sid) {
     const Time tnow = mContext->simTime();
     TimedMotionVector3f curLoc = location();
     BoundingSphere3f curBounds = bounds();
+    CONTEXT_TRACE_NO_TIME(objectConnected, tnow, mID, sid);
     CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, curBounds);
 
     // Start normal processing

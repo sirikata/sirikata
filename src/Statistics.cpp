@@ -126,6 +126,8 @@ const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
 const uint8 Trace::OSegCumulativeTraceAnalysisTag;
 
+const uint8 Trace::ObjectConnectedTag;
+
 OptionValue* Trace::mLogObject;
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogOSeg;
@@ -252,6 +254,18 @@ CREATE_TRACE_DEF(prox, mLogObject, const Time& t, const UUID& receiver, const UU
         BatchedBuffer::IOVec(&loc, sizeof(loc))
     };
     writeRecord(ProximityTag, data_vec, num_data);
+}
+
+CREATE_TRACE_DEF(objectConnected, mLogObject, const Time& t, const UUID& source, const ServerID& sid) {
+    if (mShuttingDown) return;
+
+    const uint32 num_data = 3;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        BatchedBuffer::IOVec(&t, sizeof(t)),
+        BatchedBuffer::IOVec(&source, sizeof(source)),
+        BatchedBuffer::IOVec(&sid, sizeof(sid)),
+    };
+    writeRecord(ObjectConnectedTag, data_vec, num_data);
 }
 
 CREATE_TRACE_DEF(objectGenLoc, mLogObject, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {

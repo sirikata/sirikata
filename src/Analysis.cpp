@@ -84,6 +84,16 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt = pevt;
           }
           break;
+      case Trace::ObjectConnectedTag:
+          {
+              ObjectConnectedEvent* levt = new ObjectConnectedEvent;
+              record_is.read( (char*)&levt->time, sizeof(levt->time) );
+              record_is.read( (char*)&levt->source, sizeof(levt->source) );
+              levt->receiver = UUID::null();
+              record_is.read( (char*)&levt->server, sizeof(levt->server) );
+              evt = levt;
+          }
+          break;
       case Trace::ObjectLocationTag:
           {
               LocationEvent* levt = new LocationEvent;
