@@ -31,8 +31,10 @@
  */
 
 #include "ServerWeightCalculator.hpp"
-#include "ServerMessageQueue.hpp"
-#include "ServerMessageReceiver.hpp"
+#include "CoordinateSegmentation.hpp"
+#include "ExpIntegral.hpp"
+#include "SqrIntegral.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
@@ -80,6 +82,38 @@ float64 ServerWeightCalculator::weight(ServerID source, ServerID dest, Normaliza
       default:
         assert(false);
         break;
+    }
+
+    return result;
+}
+
+
+ServerWeightCalculator* WeightCalculatorFactory(CoordinateSegmentation* cseg) {
+    String type = GetOption("falloff")->as<String>();
+    ServerWeightCalculator* result = NULL;
+    if (type == "gaussian") {
+        result =
+            new ServerWeightCalculator(
+                cseg,
+                std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
+                    std::tr1::placeholders::_1,
+                    std::tr1::placeholders::_2,
+                    std::tr1::placeholders::_3,
+                    std::tr1::placeholders::_4)
+            );
+    } else if (type == "sqr") {
+        result =
+            new ServerWeightCalculator(
+                cseg,
+                std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
+                    std::tr1::placeholders::_1,
+                    std::tr1::placeholders::_2,
+                    std::tr1::placeholders::_3,
+                    std::tr1::placeholders::_4)
+                                       );
+    }
+    else {
+        assert(false);
     }
 
     return result;

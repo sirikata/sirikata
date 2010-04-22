@@ -34,11 +34,12 @@
 #define _CBR_SERVER_WEIGHT_CALCULATOR_HPP_
 
 #include "Utility.hpp"
-#include "CoordinateSegmentation.hpp"
 
 #define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
 
 namespace CBR {
+
+class CoordinateSegmentation;
 
 class ServerWeightCalculator {
 public:
@@ -61,6 +62,11 @@ private:
     CoordinateSegmentation* mCSeg;
     WeightFunction mWeightFunc;
 }; // class ServerWeightCalculator
+
+
+// Generates a ServerWeightCalculator. Note that all parameters, including the
+// type of falloff function, are currently extracted from options.
+ServerWeightCalculator* WeightCalculatorFactory(CoordinateSegmentation* cseg);
 
 } // namespace CBR
 

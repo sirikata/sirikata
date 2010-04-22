@@ -44,9 +44,11 @@ void InitOptions() {
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
         .addOption(new OptionValue("test", "none", Sirikata::OptionValueType<String>(), "Type of test to run"))
+
+        .addOption(new OptionValue("falloff", "sqr", Sirikata::OptionValueType<String>(), "Type of communication falloff function to use.  Valid values are sqr and guassian. Default is sqr."))
         .addOption(new OptionValue("flatness", "100", Sirikata::OptionValueType<double>(), "k where e^-kx is the bandwidth function and x is the distance between 2 server points"))
         .addOption(new OptionValue("const-cutoff", "80", Sirikata::OptionValueType<double>(), "cutoff below with a constant bandwidth is used"))
-        .addOption(new OptionValue("gaussian", "false", Sirikata::OptionValueType<bool>(), "Use tried and true gaussian falloff function"))
+
         .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))
         .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))
         .addOption(new OptionValue("host", "127.0.0.1", Sirikata::OptionValueType<String>(), "Host to connect to for test"))

@@ -32,9 +32,6 @@
 
 #include "CSFQODPFlowScheduler.hpp"
 #include "ServerWeightCalculator.hpp"
-#include "ExpIntegral.hpp"
-#include "SqrIntegral.hpp"
-#include "Options.hpp"
 #include "Random.hpp"
 
 #define _Ka (Duration::milliseconds((int64)200))
@@ -62,27 +59,7 @@ CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQu
    mKAlphaReductionsLeft(KALPHA),
    mTotalActiveWeight(0)
 {
-    if (GetOption("gaussian")->as<bool>()) {
-        mWeightCalculator =
-            new ServerWeightCalculator(
-                mContext->cseg(),
-                std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
-                    std::tr1::placeholders::_1,
-                    std::tr1::placeholders::_2,
-                    std::tr1::placeholders::_3,
-                    std::tr1::placeholders::_4)
-            );
-    } else {
-        mWeightCalculator =
-            new ServerWeightCalculator(
-                mContext->cseg(),
-                std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
-                    std::tr1::placeholders::_1,
-                    std::tr1::placeholders::_2,
-                    std::tr1::placeholders::_3,
-                    std::tr1::placeholders::_4)
-                                       );
-    }
+    mWeightCalculator = WeightCalculatorFactory(mContext->cseg());
 
     for(int i = 0; i < NUM_DOWNSTREAM; i++)
         mTotalUsedWeight[i] = 0.0;
