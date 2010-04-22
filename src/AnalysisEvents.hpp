@@ -82,6 +82,7 @@ struct PingEvent : public ObjectEvent {
 
 struct GeneratedLocationEvent : public ObjectEvent {
     TimedMotionVector3f loc;
+    BoundingSphere3f bounds;
 };
 
 

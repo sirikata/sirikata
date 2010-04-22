@@ -130,7 +130,7 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 	}
 
         // XXX FIXME do something on failure
-        CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc);
+        CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, bounds());
     }
 
     scheduleNextLocUpdate();
@@ -210,7 +210,8 @@ void Object::handleSpaceConnection(ServerID sid) {
     // Always record our initial position, may be the only "update" we ever send
     const Time tnow = mContext->simTime();
     TimedMotionVector3f curLoc = location();
-    CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc);
+    BoundingSphere3f curBounds = bounds();
+    CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, curBounds);
 
     // Start normal processing
     mContext->mainStrand->post(

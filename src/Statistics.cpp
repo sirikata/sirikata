@@ -254,14 +254,15 @@ CREATE_TRACE_DEF(prox, mLogObject, const Time& t, const UUID& receiver, const UU
     writeRecord(ProximityTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(objectGenLoc, mLogObject, const Time& t, const UUID& source, const TimedMotionVector3f& loc) {
+CREATE_TRACE_DEF(objectGenLoc, mLogObject, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
     if (mShuttingDown) return;
 
-    const uint32 num_data = 3;
+    const uint32 num_data = 4;
     BatchedBuffer::IOVec data_vec[num_data] = {
         BatchedBuffer::IOVec(&t, sizeof(t)),
         BatchedBuffer::IOVec(&source, sizeof(source)),
         BatchedBuffer::IOVec(&loc, sizeof(loc)),
+        BatchedBuffer::IOVec(&bnds, sizeof(bnds)),
     };
     writeRecord(ObjectGeneratedLocationTag, data_vec, num_data);
 }

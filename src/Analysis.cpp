@@ -101,6 +101,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               levt->receiver = UUID::null();
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              record_is.read( (char*)&levt->bounds, sizeof(levt->bounds) );
               evt = levt;
           }
           break;

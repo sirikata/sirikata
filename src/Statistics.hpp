@@ -188,7 +188,7 @@ public:
 
     CREATE_TRACE_DECL(prox, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     CREATE_TRACE_DECL(objectLoc, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
-    CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds);
 
     // Server received a loc update
     CREATE_TRACE_DECL(serverLoc, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
