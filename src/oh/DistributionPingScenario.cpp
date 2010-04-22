@@ -13,6 +13,7 @@ void DPSInitOptions(DistributionPingScenario *thus) {
                                          new OptionValue("allow-same-object-host","false",Sirikata::OptionValueType<bool>(),"allow pings to occasionally hit the same object host you are on"),
                                          new OptionValue("force-same-object-host","false",Sirikata::OptionValueType<bool>(),"force pings to only go through 1 spaec server hop"),
                                          new OptionValue("ping-server-distribution","uniform",Sirikata::OptionValueType<String>(),"objects on which space server are chosen?"),
+        new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         NULL);
 }
 DistributionPingScenario::DistributionPingScenario(const String &options)
@@ -28,6 +29,8 @@ DistributionPingScenario::DistributionPingScenario(const String &options)
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mSameObjectHostPings=optionsSet->referenceOption("allow-same-object-host")->as<bool>();
     mForceSameObjectHostPings=optionsSet->referenceOption("force-same-object-host")->as<bool>();
+
+    mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
 
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
@@ -159,7 +162,7 @@ void DistributionPingScenario::sendPings() {
             SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
             break;
         }
-        if (!mContext->objectHost->ping(t, result.objA, result.objB, result.dist))
+        if (!mContext->objectHost->ping(t, result.objA, result.objB, result.dist, mPingPayloadSize))
             break;
     }
     mNumTotalPings += i;

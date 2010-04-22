@@ -556,7 +556,7 @@ void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, con
 }
 
 
-bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double distance) {
+bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     CBR::Protocol::Object::Ping ping_msg;
@@ -564,6 +564,10 @@ bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double di
     if (distance>=0)
         ping_msg.set_distance(distance);
     ping_msg.set_id(mPingId++);
+    if (payload_size > 0) {
+        std::string pl(payload_size, 'a');
+        ping_msg.set_payload(pl);
+    }
 
     ServerID destServer = mObjectConnections.getConnectedServer(src);
     if (destServer == NullServerID)

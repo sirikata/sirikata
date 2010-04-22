@@ -31,6 +31,7 @@ class DistributionPingScenario : public Scenario {
     unsigned int mPingID;
     bool mSameObjectHostPings;
     bool mForceSameObjectHostPings;
+    uint32 mPingPayloadSize;
     Time mStartTime;
     int64 mNumTotalPings;
     int64 mMaxPingsPerRound;

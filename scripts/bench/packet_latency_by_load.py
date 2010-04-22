@@ -65,17 +65,19 @@ def get_stage_samples_filename(trial):
 
 
 class PacketLatencyByLoad:
-    def __init__(self, cc, cs, local_messages=True, remote_messages=True):
+    def __init__(self, cc, cs, local_messages=True, remote_messages=True, payload=0):
         """
         cc - ClusterConfig
         cs - ClusterSimSettings
         local_messages - if True, generate messages to objects connected to the same space server
         remote_messages - if True, generate messages to objects connected to other space servers
+        payload - size of ping payloads in bytes
         """
         self.cc = cc
         self.cs = cs
         self.local_messages = local_messages
         self.remote_messages = remote_messages
+        self.payload_size = payload
         self._last_rate = None
         self._all_rates = []
 
@@ -85,6 +87,7 @@ class PacketLatencyByLoad:
             ['--num-pings-per-second=' + str(rate),
              '--allow-same-object-host=' + str(self.local_messages),
              '--force-same-object-host=' + str(self.local_messages and not self.remote_messages),
+             '--ping-size=' + str(self.payload_size,
              ]
             )
 
@@ -148,7 +151,7 @@ if __name__ == "__main__":
     cs.duration = '100s'
 
     rates = sys.argv[1:]
-    plan = PacketLatencyByLoad(cc, cs, local_messages=True, remote_messages=True)
+    plan = PacketLatencyByLoad(cc, cs, local_messages=True, remote_messages=True, payload=1024)
     for rate in rates:
         plan.run(rate)
         plan.analysis()

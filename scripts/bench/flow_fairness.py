@@ -44,7 +44,7 @@ def get_flowstats_name(trial):
     return log_file
 
 class FlowFairness:
-    def __init__(self, cc, cs, scheme):
+    def __init__(self, cc, cs, scheme, payload=0):
         """
         Note that local vs. remote aren't options here.  We only care
         about remote messages, so we only generate remote messages.
@@ -52,12 +52,14 @@ class FlowFairness:
         cc - ClusterConfig
         cs - ClusterSimSettings
         scheme - the fairness scheme used.  Current valid values are 'region' and 'csfq'.
+        payload - size of ping payloads
         """
         self.cc = cc
         self.cs = cs
         self.local_messages = False
         self.remote_messages = True
         self.scheme = scheme
+        self.payload_size = payload
         self._last_rate = None
         self._all_rates = []
 
@@ -67,6 +69,7 @@ class FlowFairness:
             ['--num-pings-per-second=' + str(rate),
              '--allow-same-object-host=' + str(self.local_messages),
              '--force-same-object-host=' + str(self.local_messages and not self.remote_messages),
+             '--ping-size=' + str(self.payload_size),
              ]
             )
         self.cs.odp_flow_scheduler = self.scheme
@@ -130,7 +133,7 @@ if __name__ == "__main__":
     cs.duration = '100s'
 
     rates = sys.argv[1:]
-    plan = FlowFairness(cc, cs, scheme='csfq')
+    plan = FlowFairness(cc, cs, scheme='csfq', payload=1024)
     for rate in rates:
         plan.run(rate)
         plan.analysis()

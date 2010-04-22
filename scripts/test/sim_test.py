@@ -118,12 +118,13 @@ class ClusterSimTest(test.Test):
 
 
 class PacketLatencyByLoadTest(ClusterSimTest):
-    def __init__(self, name, rate, local_pings=True, remote_pings=True, **kwargs):
+    def __init__(self, name, rate, local_pings=True, remote_pings=True, payload=0, **kwargs):
         """
         name: Name of the test
         rate: Ping rate to test with
         local_pings: if True, pings to objects on the same server are generated
         remote_pings: if True, pings to objects on remote servers are generated
+        payload: Size of ping payloads
         Others: see ClusterSimTest.__init__
         """
         assert type(rate) != list
@@ -151,7 +152,7 @@ class PacketLatencyByLoadTest(ClusterSimTest):
             post_sim_func = self.__post_sim_func
 
         ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
-        self.bench = PacketLatencyByLoad(self._cc, self._cs, local_messages=local_pings, remote_messages=remote_pings)
+        self.bench = PacketLatencyByLoad(self._cc, self._cs, local_messages=local_pings, remote_messages=remote_pings, payload=payload)
 
     def __pre_sim_func(self, cc, cs, io):
         pass
@@ -166,11 +167,12 @@ class PacketLatencyByLoadTest(ClusterSimTest):
 
 
 class FlowFairnessTest(ClusterSimTest):
-    def __init__(self, name, rate, scheme, **kwargs):
+    def __init__(self, name, rate, scheme, payload, **kwargs):
         """
         name: Name of the test
         rate: Ping rate to test with
         scheme: Fairness scheme to use. ('region', 'csfq')
+        payload: Size of ping payloads
         Others: see ClusterSimTest.__init__
         """
         assert type(rate) != list
@@ -199,7 +201,7 @@ class FlowFairnessTest(ClusterSimTest):
             post_sim_func = self.__post_sim_func
 
         ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
-        self.bench = FlowFairness(self._cc, self._cs, scheme=self.scheme)
+        self.bench = FlowFairness(self._cc, self._cs, scheme=self.scheme, payload=payload)
 
     def __pre_sim_func(self, cc, cs, io):
         pass
