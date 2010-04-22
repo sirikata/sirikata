@@ -44,16 +44,16 @@ public:
     RecordedMotionPath();
 
     template<typename EventList>
-    RecordedMotionPath(const EventList& evtlist) {
-        for(typename EventList::const_iterator it = evtlist.begin(); it != evtlist.end(); it++) {
-            GeneratedLocationEvent* evt = dynamic_cast<GeneratedLocationEvent*>(*it);
-            if (!evt)
-                continue;
-            addUpdate(evt->loc);
-        }
+    RecordedMotionPath(const EventList& evtlist)
+    {
+        for(typename EventList::const_iterator it = evtlist.begin(); it != evtlist.end(); it++)
+            add(*it);
     }
 
     virtual ~RecordedMotionPath();
+
+    void add(Event* evt);
+    void add(GeneratedLocationEvent* evt);
 
     virtual const TimedMotionVector3f initial() const;
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
@@ -64,7 +64,8 @@ private:
 
     void addUpdate(const TimedMotionVector3f& up);
 
-    std::vector<TimedMotionVector3f> mUpdates;
+    typedef std::map<Time, TimedMotionVector3f> UpdateMap;
+    UpdateMap mUpdates;
 }; // class MotionPath
 
 } // namespace CBR

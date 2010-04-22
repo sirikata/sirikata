@@ -36,41 +36,58 @@ namespace CBR {
 
 TimedMotionVector3f RecordedMotionPath::DummyUpdate;
 
-RecordedMotionPath::RecordedMotionPath() {
+RecordedMotionPath::RecordedMotionPath()
+{
 }
 
 RecordedMotionPath::~RecordedMotionPath() {
+}
+
+void RecordedMotionPath::add(Event* evt) {
+    GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(evt);
+    if (gen_loc_evt != NULL)
+        add(gen_loc_evt);
+}
+
+void RecordedMotionPath::add(GeneratedLocationEvent* evt) {
+    addUpdate(evt->loc);
 }
 
 const TimedMotionVector3f RecordedMotionPath::initial() const {
     if (mUpdates.empty())
         return DummyUpdate;
 
-    return mUpdates[0];
+    return mUpdates.begin()->second;
 }
 
-const TimedMotionVector3f* RecordedMotionPath::nextUpdate(const Time& curtime) const {
+const TimedMotionVector3f* RecordedMotionPath::nextUpdate(const Time& t) const {
     if (mUpdates.empty())
-        return &DummyUpdate;
+        return NULL;
 
-    for(uint32 i = 0; i < mUpdates.size(); i++)
-        if (mUpdates[i].time() > curtime) return &mUpdates[i];
-    return NULL;
+    UpdateMap::const_iterator it = mUpdates.upper_bound(t);
+    if (it == mUpdates.end())
+        return NULL;
+
+    assert(it != mUpdates.end() && t < it->first);
+
+    return &(it->second);
 }
 
 const TimedMotionVector3f RecordedMotionPath::at(const Time& t) const {
-    if (mUpdates.empty())
+    if (mUpdates.empty() || t < mUpdates.begin()->second.time())
         return DummyUpdate;
 
-    for(uint32 i = 1; i < mUpdates.size(); i++)
-        if (mUpdates[i].time() > t) return mUpdates[i-1];
+    UpdateMap::const_iterator it = mUpdates.upper_bound(t);
+    if (it == mUpdates.end())
+        return DummyUpdate;
 
-    return mUpdates[ mUpdates.size()-1 ];
+    assert(it != mUpdates.end() && t < it->first);
+
+    return TimedMotionVector3f(t, it->second.extrapolate(t));
 }
 
 void RecordedMotionPath::addUpdate(const TimedMotionVector3f& up) {
-    mUpdates.push_back(up);
-    // FIXME do we need to sort here just to ensure ordering?
+    mUpdates[up.time()] = up;
 }
 
 } // namespace CBR

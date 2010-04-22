@@ -2369,43 +2369,6 @@ OSegCacheErrorAnalysis::~OSegCacheErrorAnalysis()
 
 
 
-
-/** A motion path reconstructed from an event stream. */
-class TraceEventMotionPath {
-public:
-    TraceEventMotionPath()
-     : dirty(false)
-    {}
-
-    void add(GeneratedLocationEvent* evt) {
-        dirty = true;
-        events.push_back(evt);
-    }
-
-    MotionVector3f at(const Time& t) {
-        if (dirty) {
-            if (!events.empty())
-                std::sort(events.begin(), events.end(), EventTimeComparator());
-            dirty = false;
-        }
-
-        if (events.empty() || t < events[0]->loc.time())
-            return MotionVector3f(Vector3f(0,0,0), Vector3f(0,0,0));
-
-        uint32 i = 0;
-        while(i+1 < events.size() && t >= events[i+1]->loc.time() )
-            i++;
-
-        if (i >= events.size())
-            return MotionVector3f(Vector3f(0,0,0), Vector3f(0,0,0));
-
-        return events[i]->loc.extrapolate(t);
-    }
-private:
-    bool dirty;
-    std::vector<GeneratedLocationEvent*> events;
-};
-
 void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
@@ -2416,7 +2379,7 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
         // Source Object -> List of Location Events
         EventListMap locEvents;
         // Object -> Motion path
-        typedef std::map<UUID, TraceEventMotionPath*> MotionPathMap;
+        typedef std::map<UUID, RecordedMotionPath*> MotionPathMap;
         MotionPathMap paths;
 
         // Extract all loc and gen loc events
@@ -2442,7 +2405,7 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
 
                 if (gen_loc_evt) {
                     if (paths.find(source) == paths.end())
-                        paths[source] = new TraceEventMotionPath();
+                        paths[source] = new RecordedMotionPath();
                     paths[source]->add(gen_loc_evt);
                 }
 
@@ -2481,7 +2444,7 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
                         continue;
 
 
-                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( gen_loc_evt->time );
+                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( gen_loc_evt->time ).value();
                     MotionVector3f source_loc = loc_evt->loc.extrapolate( gen_loc_evt->time );
 
                     Duration latency = loc_evt->time - gen_loc_evt->time;
