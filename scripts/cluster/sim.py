@@ -474,6 +474,20 @@ class ClusterSim:
     def prox_dump_analysis(self):
         RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
+    def flow_stats_analysis(self, filename=None):
+        stdout_fp = None
+        if filename != None:
+            stdout_fp = open(filename, 'w')
+
+        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.flow.stats=true', '--max-servers=' + str(self.max_space_servers()),
+                '--falloff=' + str(self.settings.falloff),
+                "--flatness=" + str(self.settings.flatness)
+                ],
+               io=self.io,
+               stdout=stdout_fp,
+               stderr=stdout_fp)
+        if stdout_fp != None:
+            stdout_fp.close()
 
 
 if __name__ == "__main__":

@@ -124,6 +124,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
               record_is.read((char*)&pevt->id,sizeof(pevt->id));
               record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
+              record_is.read((char*)&pevt->size,sizeof(pevt->size));
               evt=pevt;
           }
         break;
@@ -137,6 +138,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->id,sizeof(pevt->id));
               record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
               record_is.read((char*)&pevt->uid,sizeof(pevt->uid));
+              record_is.read((char*)&pevt->size,sizeof(pevt->size));
               evt=pevt;
           }
         break;

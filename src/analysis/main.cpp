@@ -39,6 +39,7 @@
 #include "Analysis.hpp"
 #include "MessageLatency.hpp"
 #include "ObjectLatency.hpp"
+#include "FlowStats.hpp"
 #include "Visualization.hpp"
 #include "TabularServerIDMap.hpp"
 #include "UniformCoordinateSegmentation.hpp"
@@ -99,7 +100,8 @@ bool is_analysis() {
         GetOption(ANALYSIS_OSEG)->as<bool>() ||
         GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ||
         GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() ||
-        !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty())
+        !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty() ||
+        GetOption(ANALYSIS_FLOW_STATS)->as<bool>())
         return true;
 
     return false;
@@ -444,6 +446,10 @@ int main(int argc, char** argv) {
     }
     else if ( !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty() ) {
         ProximityDumpAnalysis(STATS_TRACE_FILE, nservers, GetOption(ANALYSIS_PROX_DUMP)->as<String>());
+        exit(0);
+    }
+    else if ( GetOption(ANALYSIS_FLOW_STATS)->as<bool>() ) {
+        FlowStatsAnalysis(STATS_TRACE_FILE, nservers);
         exit(0);
     }
 

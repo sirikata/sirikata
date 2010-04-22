@@ -8,7 +8,7 @@ import os.path
 import traceback
 import datetime
 from test import Test, ShellCommandTest
-from sim_test import ClusterSimTest, PacketLatencyByLoadTest
+from sim_test import ClusterSimTest, PacketLatencyByLoadTest, FlowFairnessTest
 
 import sys
 # FIXME It would be nice to have a better way of making this script able to find
@@ -122,6 +122,10 @@ if __name__ == "__main__":
     suite.add( PacketLatencyByLoadTest('packet_latency_with_caching_mixed_8', 10, local_pings=True, remote_pings=True, settings=packet_latency_with_caching_settings, space_layout=(8,1), time_limit=datetime.timedelta(minutes=10) ) )
 
 
+
+    flow_fairness_with_caching_settings = {'duration' : '300s', 'oseg_cache_entry_lifetime' : '300s', 'num_random_objects': 50}
+    suite.add( FlowFairnessTest('flow_fairness_region_4x1_1000', 1000, scheme='region', settings=flow_fairness_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
+    suite.add( FlowFairnessTest('flow_fairness_region_4x1_10000', 10000, scheme='region', settings=flow_fairness_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
 
     if len(sys.argv) < 2:
         suite.clean()

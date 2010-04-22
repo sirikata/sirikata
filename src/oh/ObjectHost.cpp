@@ -577,7 +577,8 @@ bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double di
         mContext->simTime(),
         dest,
         ping_msg.has_id()?ping_msg.id():(uint64)-1,
-        ping_msg.has_distance()?ping_msg.distance():-1
+        ping_msg.has_distance()?ping_msg.distance():-1,
+        ping_msg.ByteSize()
     );
 
     return send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
@@ -726,7 +727,8 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
             msg->dest_object(),
             ping_msg.has_id()?ping_msg.id():(uint64)-1,
             ping_msg.has_distance()?ping_msg.distance():-1,
-            msg->unique()
+            msg->unique(),
+            ping_msg.ByteSize()
         );
     }
 

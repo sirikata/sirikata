@@ -66,6 +66,7 @@ struct PingCreatedEvent : public ObjectEvent {
     virtual Time end_time() const {
         return time;
     }
+    uint32 size;
 };
 
 struct PingEvent : public ObjectEvent {
@@ -82,6 +83,7 @@ struct PingEvent : public ObjectEvent {
     virtual Time end_time() const {
         return time;
     }
+    uint32 size;
 };
 
 struct GeneratedLocationEvent : public ObjectEvent {

@@ -266,6 +266,9 @@ SET(CBR_CORE_SOURCES
   ${CBR_SOURCE_DIR}/Timer.cpp
   ${CBR_SOURCE_DIR}/TimeSync.cpp
   ${CBR_SOURCE_DIR}/VWTypes.cpp
+  ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
+  ${CBR_SOURCE_DIR}/ExpIntegral.cpp
+  ${CBR_SOURCE_DIR}/SqrIntegral.cpp
 )
 
 SET(CBR_SOURCES
@@ -285,8 +288,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
-  ${CBR_SOURCE_DIR}/ExpIntegral.cpp
-  ${CBR_SOURCE_DIR}/SqrIntegral.cpp
   ${CBR_SOURCE_DIR}/space/RegionODPFlowScheduler.cpp
   ${CBR_SOURCE_DIR}/space/CSFQODPFlowScheduler.cpp
   ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
@@ -307,7 +308,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
-  ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
   ${CBR_SOURCE_DIR}/SSTImpl.cpp
   ${CBR_SOURCE_DIR}/TCPNetwork.cpp
@@ -347,6 +347,7 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${CBR_SOURCE_DIR}/analysis/FlowStats.cpp
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/analysis/MessageLatency.cpp
   ${CBR_SOURCE_DIR}/analysis/ObjectLatency.cpp
@@ -453,6 +454,7 @@ TARGET_LINK_LIBRARIES(cseg
 ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(analysis
   cbr-core
+        ${GSL_CONFIG_LIBS}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}

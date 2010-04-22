@@ -16,6 +16,7 @@ import time
 import util.stdio
 import cluster.sim
 from bench.packet_latency_by_load import PacketLatencyByLoad
+from bench.flow_fairness import FlowFairness
 
 def __standard_pre_sim_func__(cc, cs, io):
     cluster_sim = cluster.sim.ClusterSim(cc, cs, io)
@@ -151,6 +152,54 @@ class PacketLatencyByLoadTest(ClusterSimTest):
 
         ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
         self.bench = PacketLatencyByLoad(self._cc, self._cs, local_messages=local_pings, remote_messages=remote_pings)
+
+    def __pre_sim_func(self, cc, cs, io):
+        pass
+
+    def __sim_func(self, cc, cs, io):
+        self.bench.run(self.rate, io)
+
+    def __post_sim_func(self, cc, cs, io):
+        self.bench.analysis(io)
+        self.bench.graph(io)
+
+
+
+class FlowFairnessTest(ClusterSimTest):
+    def __init__(self, name, rate, scheme, **kwargs):
+        """
+        name: Name of the test
+        rate: Ping rate to test with
+        scheme: Fairness scheme to use. ('region', 'csfq')
+        Others: see ClusterSimTest.__init__
+        """
+        assert type(rate) != list
+        self.rate = rate
+        self.scheme = scheme
+
+        # pre_sim_func
+        if 'pre_sim_func' in kwargs:
+            pre_sim_func = kwargs['pre_sim_func']
+            del kwargs['pre_sim_func']
+        else:
+            pre_sim_func = self.__pre_sim_func
+
+        # sim_func
+        if 'sim_func' in kwargs:
+            sim_func = kwargs['sim_func']
+            del kwargs['sim_func']
+        else:
+            sim_func = self.__sim_func
+
+        # post_sim_func
+        if 'post_sim_func' in kwargs:
+            post_sim_func = kwargs['post_sim_func']
+            del kwargs['post_sim_func']
+        else:
+            post_sim_func = self.__post_sim_func
+
+        ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
+        self.bench = FlowFairness(self._cc, self._cs, scheme=self.scheme)
 
     def __pre_sim_func(self, cc, cs, io):
         pass

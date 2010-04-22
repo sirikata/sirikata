@@ -320,22 +320,7 @@ CREATE_TRACE_DEF(timestampMessage, mLogMessage, const Time&sent, uint64 uid, Mes
     writeRecord(MessageTimestampTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(pingCreated, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 6;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&src, sizeof(src)),
-        BatchedBuffer::IOVec(&sender, sizeof(sender)),
-        BatchedBuffer::IOVec(&dst, sizeof(dst)),
-        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
-        BatchedBuffer::IOVec(&id, sizeof(id)),
-        BatchedBuffer::IOVec(&distance, sizeof(distance)),
-    };
-    writeRecord(ObjectPingCreatedTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(ping, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid) {
+CREATE_TRACE_DEF(pingCreated, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint32 sz) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 7;
@@ -346,7 +331,24 @@ CREATE_TRACE_DEF(ping, mLogPing, const Time& src, const UUID&sender, const Time&
         BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
         BatchedBuffer::IOVec(&id, sizeof(id)),
         BatchedBuffer::IOVec(&distance, sizeof(distance)),
+        BatchedBuffer::IOVec(&sz, sizeof(sz)),
+    };
+    writeRecord(ObjectPingCreatedTag, data_vec, num_data);
+}
+
+CREATE_TRACE_DEF(ping, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid, uint32 sz) {
+    if (mShuttingDown) return;
+
+    const uint32 num_data = 8;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        BatchedBuffer::IOVec(&src, sizeof(src)),
+        BatchedBuffer::IOVec(&sender, sizeof(sender)),
+        BatchedBuffer::IOVec(&dst, sizeof(dst)),
+        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
+        BatchedBuffer::IOVec(&id, sizeof(id)),
+        BatchedBuffer::IOVec(&distance, sizeof(distance)),
         BatchedBuffer::IOVec(&uid, sizeof(uid)),
+        BatchedBuffer::IOVec(&sz, sizeof(sz)),
     };
     writeRecord(ObjectPingTag, data_vec, num_data);
 }

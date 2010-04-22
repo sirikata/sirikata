@@ -100,6 +100,8 @@ void InitOptions() {
 
         .addOption(new OptionValue(ANALYSIS_PROX_DUMP, "", Sirikata::OptionValueType<String>(), "Run proximity dump analysis -- just dumps a textual form of all proximity events to the specified file"))
 
+        .addOption(new OptionValue(ANALYSIS_FLOW_STATS, "false", Sirikata::OptionValueType<bool>(), "Get summary object pair flow statistics"))
+
         .addOption(new OptionValue(OBJECT_NUM_RANDOM, "100", Sirikata::OptionValueType<uint32>(), "Number of random objects to generate."))
         .addOption(new OptionValue(OBJECT_NUM_PACK, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
         .addOption(new OptionValue(OBJECT_CONNECT_PHASE, "0s", Sirikata::OptionValueType<Duration>(), "Length of time to initiate connections over. Connection requests will be uniformly distributed."))

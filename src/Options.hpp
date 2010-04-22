@@ -56,6 +56,7 @@
 #define ANALYSIS_OSEG        "analysis.oseg"
 #define ANALYSIS_LOC_LATENCY "analysis.loc.latency"
 #define ANALYSIS_PROX_DUMP "analysis.prox.dump"
+#define ANALYSIS_FLOW_STATS "analysis.flow.stats"
 
 #define OBJECT_NUM_RANDOM    "object.num.random"
 #define OBJECT_NUM_PACK      "object.num.pack"
