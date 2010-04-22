@@ -207,6 +207,11 @@ void Object::handleSpaceConnection(ServerID sid) {
     OBJ_LOG(insane,"Got space connection callback");
     mConnectedTo = sid;
 
+    // Always record our initial position, may be the only "update" we ever send
+    const Time tnow = mContext->simTime();
+    TimedMotionVector3f curLoc = location();
+    CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc);
+
     // Start normal processing
     mContext->mainStrand->post(
         std::tr1::bind(&Object::scheduleNextLocUpdate, this)
