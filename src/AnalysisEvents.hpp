@@ -47,6 +47,23 @@ struct LocationEvent : public ObjectEvent {
     TimedMotionVector3f loc;
 };
 
+// NOTE: This could just reuse PingEvent except we have some backwards
+// compatibility problems where analyses would interpret it as an actual ping
+// event instead of just a creation, causing double counting.
+struct PingCreatedEvent : public ObjectEvent {
+    Time sentTime;
+    //ping count
+    uint64 id;
+    double distance;
+    PingCreatedEvent():sentTime(Time::null()){}
+    virtual Time begin_time() const {
+        return sentTime;
+    }
+    virtual Time end_time() const {
+        return time;
+    }
+};
+
 struct PingEvent : public ObjectEvent {
     Time sentTime;
     //ping count

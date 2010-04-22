@@ -104,6 +104,18 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt = levt;
           }
           break;
+      case Trace::ObjectPingCreatedTag:
+          {
+              PingCreatedEvent *pevt = new PingCreatedEvent;
+              record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
+              record_is.read((char*)&pevt->source, sizeof(pevt->source));
+              record_is.read((char*)&pevt->time, sizeof(pevt->time));
+              record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
+              record_is.read((char*)&pevt->id,sizeof(pevt->id));
+              record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
+              evt=pevt;
+          }
+        break;
       case Trace::ObjectPingTag:
           {
               PingEvent *pevt = new PingEvent;

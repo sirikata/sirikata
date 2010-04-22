@@ -102,6 +102,7 @@ const uint8 Trace::MessageTimestampTag;
 const uint8 Trace::MessageCreationTimestampTag;
 
 const uint8 Trace::ObjectPingTag;
+const uint8 Trace::ObjectPingCreatedTag;
 const uint8 Trace::ProximityTag;
 const uint8 Trace::ObjectLocationTag;
 const uint8 Trace::ServerDatagramQueuedTag;
@@ -302,6 +303,21 @@ CREATE_TRACE_DEF(timestampMessage, mLogMessage, const Time&sent, uint64 uid, Mes
         BatchedBuffer::IOVec(&path, sizeof(path)),
     };
     writeRecord(MessageTimestampTag, data_vec, num_data);
+}
+
+CREATE_TRACE_DEF(pingCreated, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance) {
+    if (mShuttingDown) return;
+
+    const uint32 num_data = 6;
+    BatchedBuffer::IOVec data_vec[num_data] = {
+        BatchedBuffer::IOVec(&src, sizeof(src)),
+        BatchedBuffer::IOVec(&sender, sizeof(sender)),
+        BatchedBuffer::IOVec(&dst, sizeof(dst)),
+        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
+        BatchedBuffer::IOVec(&id, sizeof(id)),
+        BatchedBuffer::IOVec(&distance, sizeof(distance)),
+    };
+    writeRecord(ObjectPingCreatedTag, data_vec, num_data);
 }
 
 CREATE_TRACE_DEF(ping, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid) {
