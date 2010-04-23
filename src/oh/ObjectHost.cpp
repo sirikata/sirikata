@@ -575,17 +575,20 @@ bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double di
                      // just means there was latency between ping
                      // creation and ping sending.
 
-    CONTEXT_TRACE_NO_TIME(pingCreated,
-        ping_msg.ping(),
-        src,
-        mContext->simTime(),
-        dest,
-        ping_msg.has_id()?ping_msg.id():(uint64)-1,
-        ping_msg.has_distance()?ping_msg.distance():-1,
-        ping_msg.ByteSize()
-    );
+    bool send_success = send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
 
-    return send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
+    if (send_success)
+        CONTEXT_TRACE_NO_TIME(pingCreated,
+            ping_msg.ping(),
+            src,
+            mContext->simTime(),
+            dest,
+            ping_msg.has_id()?ping_msg.id():(uint64)-1,
+            ping_msg.has_distance()?ping_msg.distance():-1,
+            ping_msg.ByteSize()
+        );
+
+    return send_success;
 }
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
