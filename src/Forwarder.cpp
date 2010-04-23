@@ -526,6 +526,15 @@ bool Forwarder::serverMessageEmpty(ServerID dest) {
 void Forwarder::serverMessageReceived(Message* msg) {
     assert(msg != NULL);
     TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
+
+    // FIXME currently this is how we're learning about other servers.  We need
+    // to handle these events to get information flowing.  Currently, the
+    // important information that needs to start flowing is capacity/weight
+    // info, which requires having and ODPFlowScheduler for the remote side.
+    // This should probably be generalized (maybe just by listening to the
+    // network for new connections.
+    mOutgoingMessages->prePush(msg->source_server());
+
     mReceivedMessages.push(msg);
 }
 
