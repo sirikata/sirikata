@@ -197,8 +197,10 @@ void FairServerMessageQueue::addInputQueue(ServerID sid, float weight) {
 }
 
 void FairServerMessageQueue::handleUpdateReceiverStats(ServerID sid, double total_weight, double used_weight) {
-    assert( mServerQueues.hasQueue(sid) );
-    mServerQueues.setQueueWeight(sid, used_weight);
+    if (!mServerQueues.hasQueue(sid))
+        addInputQueue(sid, used_weight);
+    else
+        mServerQueues.setQueueWeight(sid, used_weight);
 }
 
 void FairServerMessageQueue::removeInputQueue(ServerID sid) {
