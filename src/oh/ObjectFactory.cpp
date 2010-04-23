@@ -101,7 +101,6 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
     if (nobjects == 0) return;
     bool simple                  =   GetOption(OBJECT_SIMPLE)->as<bool>();
     bool only_2d                 =       GetOption(OBJECT_2D)->as<bool>();
-    float zfactor                =                  (only_2d ? 0.f : 1.f);
     std::string motion_path_type = GetOption(OBJECT_STATIC)->as<String>();
     float driftX                 = GetOption(OBJECT_DRIFT_X)->as<float>();
     float driftY                 = GetOption(OBJECT_DRIFT_Y)->as<float>();
@@ -117,7 +116,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
 
         ObjectInputs* inputs = new ObjectInputs;
 
-        Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z * zfactor);
+        Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, (only_2d ? 0.5 : randFloat())*region_extents.z);
 
         float bounds_radius = (simple ? 10.f : (randFloat()*20));
 
@@ -128,10 +127,10 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         else if (motion_path_type == "drift") //drift
         {
           //   inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
-          inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor, driftVecDir); // FIXME
+          inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, 0.5, driftVecDir); // FIXME
         }
         else //random
-            inputs->motion = new RandomMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
+            inputs->motion = new RandomMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, (only_2d ? 0.0 : 1.0)); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
         inputs->registerQuery = (randFloat() <= percent_queriers);
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
