@@ -94,8 +94,8 @@ void DistributionPingScenario::stop() {
 }
 bool DistributionPingScenario::generateOnePing(ServerID minServer, unsigned int distance, const Time& t, PingInfo* result) {
     unsigned int maxDistance = mObjectTracker->numServerIDs();
-    Object * objA = mObjectTracker->randomObject((ServerID)minServer);
-    Object * objB = mObjectTracker->randomObject((ServerID)(minServer+distance));
+    Object * objA = mObjectTracker->randomObjectFromServer((ServerID)minServer);
+    Object * objB = mObjectTracker->randomObjectFromServer((ServerID)(minServer+distance));
 
     if (rand()<RAND_MAX/2) {
         std::swap(objA, objB);

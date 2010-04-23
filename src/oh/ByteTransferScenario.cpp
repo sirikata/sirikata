@@ -134,8 +134,8 @@ void ByteTransferScenario::generatePings() {
         }
         unsigned int minServer=(rand()%(maxDistance-distance+1))+1;
 
-        Object * objA = mObjectTracker->randomObject((ServerID)minServer);
-        Object * objB = mObjectTracker->randomObject((ServerID)(minServer+distance));
+        Object * objA = mObjectTracker->randomObjectFromServer((ServerID)minServer);
+        Object * objB = mObjectTracker->randomObjectFromServer((ServerID)(minServer+distance));
 
 
         if (rand()<RAND_MAX/2) {

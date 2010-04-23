@@ -46,7 +46,8 @@ public:
 
     // Select random objects uniformly, uniformly from server, using round robin
     Object* randomObject();
-    Object* randomObject(ServerID whichServer);
+    Object* randomObjectFromServer(ServerID whichServer);
+    Object* randomObjectExcludingServer(ServerID whichServer, uint max_tries=3);
     Object* roundRobinObject();
     Object* roundRobinObject(ServerID whichServer);
     ServerID numServerIDs() const;

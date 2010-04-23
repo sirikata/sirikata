@@ -61,31 +61,30 @@ UUID selectID(const ObjectIDSet& uuidMap) {
     const UUID& objid = *id_it;
     return objid;
 }
+
+typedef std::tr1::unordered_map<UUID, Object*, UUID::Hasher> ObjectsByID;
+Object* selectID(const ObjectsByID& uuidMap) {
+    ObjectsByID::const_iterator id_it = uuidMap.begin();
+    uint32 obj_num = rand() % uuidMap.size();
+    for(uint32 index = 0; index < obj_num; index++,id_it++) {}
+    Object* obj = id_it->second;
+    return obj;
+}
 }
 
 Object* ConnectedObjectTracker::randomObject() {
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 
-    if (mObjectsByServer.size()==0)
+    if (mObjectsByID.size()==0)
         return NULL;
 
-    // Pick a server
-    int iteratorLevel = rand() % mObjectsByServer.size();
-    ObjectsByServerMap::iterator server_it = mObjectsByServer.begin();
-    for (int index=0; index<iteratorLevel; ++index,++server_it++) {}
-
-    // Pick a UUID in that server
-    const ObjectIDSet& uuidMap = server_it->second;
-    if (uuidMap.empty())
-        return NULL;
-    return getObject(selectID(uuidMap));
+    return selectID(mObjectsByID);
 }
 
-Object* ConnectedObjectTracker::randomObject(ServerID whichServer) {
+Object* ConnectedObjectTracker::randomObjectFromServer(ServerID whichServer) {
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 
-    if (whichServer==NullServerID)
-        return randomObject();
+    assert (whichServer != NullServerID);
 
     ObjectsByServerMap::iterator server_it = mObjectsByServer.find(whichServer);
     if (server_it == mObjectsByServer.end())
@@ -96,6 +95,28 @@ Object* ConnectedObjectTracker::randomObject(ServerID whichServer) {
     if (uuidMap.empty())
         return NULL;
     return getObject(selectID(uuidMap));
+}
+
+Object* ConnectedObjectTracker::randomObjectExcludingServer(ServerID whichServer, uint32 max_tries) {
+    boost::unique_lock<boost::shared_mutex> lck(mMutex);
+
+    assert (whichServer != NullServerID);
+
+    if (mObjectsByID.size() == 0)
+        return NULL;
+
+    ObjectsByServerMap::iterator server_it = mObjectsByServer.find(whichServer);
+    static ObjectIDSet dummy_id_set; // If the server is missing, whatever we
+                                     // choose should pass
+    const ObjectIDSet& uuidMap = (server_it == mObjectsByServer.end()) ? dummy_id_set : server_it->second;
+
+    for(uint32 tr = 0; tr < max_tries; tr++) {
+        Object* obj = selectID(mObjectsByID);
+        if (uuidMap.find(obj->uuid()) == uuidMap.end())
+            return obj;
+    }
+
+    return NULL;
 }
 
 Object* ConnectedObjectTracker::roundRobinObject() {

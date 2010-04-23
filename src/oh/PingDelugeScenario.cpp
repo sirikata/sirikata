@@ -123,10 +123,12 @@ void PingDelugeScenario::stop() {
     mGeneratePingPoller->stop();
 }
 bool PingDelugeScenario::generateOnePing(const Time& t, PingInfo* result) {
-    Object * objA = mObjectTracker->randomObject();
+    Object * objA = mFloodServer == 0 ?
+        mObjectTracker->randomObject() :
+        mObjectTracker->randomObjectExcludingServer(mFloodServer);
     Object * objB = mFloodServer == 0 ?
         mObjectTracker->randomObject() :
-        mObjectTracker->randomObject(mFloodServer);
+        mObjectTracker->randomObjectFromServer(mFloodServer);
 
     if (!objA || !objB) {
         return false;
