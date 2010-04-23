@@ -43,6 +43,7 @@ void PDSInitOptions(PingDelugeScenario *thus) {
     Sirikata::InitializeClassOptions ico("PingDelugeScenario",thus,
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
+        new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         NULL);
 }
 
@@ -59,6 +60,7 @@ PingDelugeScenario::PingDelugeScenario(const String &options)
 
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
+    mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
 
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
@@ -122,7 +124,9 @@ void PingDelugeScenario::stop() {
 }
 bool PingDelugeScenario::generateOnePing(const Time& t, PingInfo* result) {
     Object * objA = mObjectTracker->randomObject();
-    Object * objB = mObjectTracker->randomObject();
+    Object * objB = mFloodServer == 0 ?
+        mObjectTracker->randomObject() :
+        mObjectTracker->randomObject(mFloodServer);
 
     if (!objA || !objB) {
         return false;

@@ -68,6 +68,8 @@ class PingDelugeScenario : public Scenario {
     int64 mMaxPingsPerRound;
     TimeProfiler::Stage* mPingProfiler;
 
+    uint32 mFloodServer;
+
     bool generateOnePing(const Time& t, PingInfo* result);
     void generatePings();
 
