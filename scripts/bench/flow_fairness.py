@@ -35,12 +35,36 @@ def run_flow_stats_analysis(cluster_sim, log_file, flowstats_file):
     if os.path.exists('flow_stats.txt'):
         subprocess.call(['cp', 'flow_stats.txt', flowstats_file])
 
+# Runs MessageLatencyAnalysis and moves data to appropriate location
+def run_message_latency_analysis(cluster_sim, log_file, histogram_file, samples_file):
+    cluster_sim.message_latency_analysis(log_file)
+    # individual packetx(stage-stage) samples are always in stage_samples.txt
+    if os.path.exists('stage_samples.txt'):
+        subprocess.call(['cp', 'stage_samples.txt', samples_file])
+
+    cluster_sim.object_latency_analysis()
+    # object latency histogram always goes to 'distance_latency_histogram.csv'
+    if os.path.exists('distance_latency_histogram.csv'):
+        subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
+
 def get_logfile_name(trial):
     log_file = 'flow_fairness.log.' + str(trial)
     return log_file
 
+def get_latency_logfile_name(trial):
+    log_file = 'flow_fairness.latency.log.' + str(trial)
+    return log_file
+
 def get_flowstats_name(trial):
     log_file = 'flow_stats.' + str(trial)
+    return log_file
+
+def get_latencyfile_name(trial):
+    log_file = 'packet_latency_histogram.' + str(trial)
+    return log_file
+
+def get_stage_samples_filename(trial):
+    log_file = 'packet_latency_samples.' + str(trial)
     return log_file
 
 class FlowFairness:
@@ -72,6 +96,7 @@ class FlowFairness:
 
         if 'object' not in self.cs.traces: self.cs.traces.append('object')
         if 'ping' not in self.cs.traces: self.cs.traces.append('ping')
+        if 'message' not in self.cs.traces: self.cs.traces.append('message')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
@@ -90,6 +115,11 @@ class FlowFairness:
                                 get_logfile_name(rate),
                                 get_flowstats_name(rate)
                                 )
+        run_message_latency_analysis(cluster_sim,
+                                     get_latency_logfile_name(rate),
+                                     get_latencyfile_name(rate),
+                                     get_stage_samples_filename(rate)
+                                     )
 
     def graph(self, io=util.stdio.StdIO()):
         #log_files = [get_logfile_name(x) for x in self._all_rates]
@@ -116,8 +146,8 @@ if __name__ == "__main__":
 
     cs.loc = 'standard'
     cs.blocksize = 100
-    cs.tx_bandwidth = 500000
-    cs.rx_bandwidth = 500000
+    cs.tx_bandwidth = 50000000
+    cs.rx_bandwidth = 5000000
 
     cs.num_random_objects = 50
     cs.num_pack_objects = 0
