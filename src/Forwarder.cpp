@@ -91,7 +91,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
     this->registerMessageRecipient(SERVER_PORT_FORWARDER_WEIGHT_UPDATE, this);
 
     // Generate router queues for services we provide
-    addODPServerMessageService();
+    // NOTE: See addODPServerMessageService(loc); in initialize.  We need loc
+    // for it so we can't do it here.
     mOSegCacheUpdateRouter = createServerMessageService("oseg-cache-update");
     mForwarderWeightRouter = createServerMessageService("forwarder-weights");
 }
@@ -113,8 +114,10 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc)
   {
+      addODPServerMessageService(loc);
+
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg);
     mServerMessageQueue = smq;
     mServerMessageReceiver = smr;
@@ -192,7 +195,7 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
 // -- information isn't available, or may simply be between two space servers so
 // -- that object information doesn't even exist.
 
-void Forwarder::addODPServerMessageService() {
+void Forwarder::addODPServerMessageService(LocationService* loc) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -202,11 +205,11 @@ void Forwarder::addODPServerMessageService() {
     mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE] = svc_id;
     mOutgoingMessages->addService(
         svc_id,
-        std::tr1::bind(&Forwarder::createODPFlowScheduler, this, _1, _2)
+        std::tr1::bind(&Forwarder::createODPFlowScheduler, this, loc, _1, _2)
     );
 }
 
-ODPFlowScheduler* Forwarder::createODPFlowScheduler(ServerID remote_server, uint32 max_size) {
+ODPFlowScheduler* Forwarder::createODPFlowScheduler(LocationService* loc, ServerID remote_server, uint32 max_size) {
     String flow_sched_type = GetOption(SERVER_ODP_FLOW_SCHEDULER)->as<String>();
     ODPFlowScheduler* new_flow_scheduler = NULL;
 
@@ -216,7 +219,7 @@ ODPFlowScheduler* Forwarder::createODPFlowScheduler(ServerID remote_server, uint
     }
     else if (flow_sched_type == "csfq") {
         new_flow_scheduler =
-            new CSFQODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
+            new CSFQODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size, loc);
     }
 
     assert(new_flow_scheduler != NULL);

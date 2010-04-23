@@ -231,7 +231,7 @@ int main(int argc, char** argv) {
 
 
     // We have all the info to initialize the forwarder now
-    forwarder->initialize(oseg, sq, server_message_receiver);
+    forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
 
     Proximity* prox = new Proximity(space_context, loc_service);

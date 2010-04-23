@@ -33,6 +33,7 @@ namespace CBR
   class OSegLookupQueue;
 class ForwarderServiceQueue;
 class ODPFlowScheduler;
+class LocationService;
 
 class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
 		    public ServerMessageRouter, public ObjectMessageRouter,
@@ -86,7 +87,7 @@ private:
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
-    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr);
+    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc);
 
     // Service Implementation
     void start();
@@ -99,11 +100,11 @@ private:
   private:
     // Init method: adds an odp routing service to the ForwarderServiceQueue and
     // sets up the callback used to create new ODP input queues.
-    void addODPServerMessageService();
+    void addODPServerMessageService(LocationService* loc);
     // Allocates a new ODPFlowScheduler, invoked by ForwarderServiceQueue when a
     // new server connection is made.  This creates it and gets it setup so the
     // Forwarder can get weight updates sent to the remote endpoint.
-    ODPFlowScheduler* createODPFlowScheduler(ServerID remote_server, uint32 max_size);
+    ODPFlowScheduler* createODPFlowScheduler(LocationService* loc, ServerID remote_server, uint32 max_size);
 
     // Invoked periodically by an (internal) poller to update server fair queue
     // weights. Updates local ServerMessageQueue and sends messages to remote

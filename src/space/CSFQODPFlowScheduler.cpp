@@ -32,6 +32,8 @@
 
 #include "CSFQODPFlowScheduler.hpp"
 #include "ServerWeightCalculator.hpp"
+#include "LocationService.hpp"
+#include "CoordinateSegmentation.hpp"
 #include "Random.hpp"
 
 #define _Ka (Duration::milliseconds((int64)200))
@@ -43,11 +45,12 @@
 
 namespace CBR {
 
-CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
+CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size, LocationService* loc)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
    mQueueBuffer(),
    mQueue(Sirikata::SizedResourceMonitor(max_size)),
    mNeedsNotification(true),
+   mLoc(loc),
    mArrivalRate(_Ka_double),
    mAcceptedRate(_Ka_double),
    mCapacityRate(_Ka_double),
@@ -292,10 +295,36 @@ float CSFQODPFlowScheduler::totalReceiverUsedWeight() {
     return mTotalUsedWeight[RECEIVER];
 }
 
+BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, ServerID sid) const {
+    // We might have exact info
+    if (mLoc->contains(objid)) {
+        Vector3f pos = mLoc->currentPosition(objid);
+        BoundingSphere3f bounds = mLoc->bounds(objid);
+        BoundingBox3f bb(pos + bounds.center(), bounds.radius());
+        return bb;
+    }
+
+    if (sid == mContext->id())
+        CSFQLOG(warn,"Using approximation for local object!");
+
+    // Otherwise, we need to use server info
+    // Blech, why is this a bbox list?
+    BoundingBoxList server_bbox_list = mContext->cseg()->serverRegion(sid);
+    BoundingBox3f server_bbox = BoundingBox3f::null();
+    for(uint32 i = 0; i < server_bbox_list.size(); i++)
+        server_bbox.mergeIn(server_bbox_list[i]);
+    // fixme object size, currently approximated as 1.0
+    return BoundingBox3f(server_bbox.center(), 1.0);
+}
+
 CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair) {
     FlowMap::iterator where = mFlows.find(new_packet_pair);
     if (where==mFlows.end()) {
-        double weight = 1.0; // FIXME mWeightCalculator->weight(new_packet_pair->source, new_packet_pair->dest);
+        BoundingBox3f source_bbox = getObjectWeightRegion(new_packet_pair.source, mContext->id());
+        BoundingBox3f dest_bbox = getObjectWeightRegion(new_packet_pair.dest, mDestServer);
+
+        double weight = mWeightCalculator->weight(source_bbox, dest_bbox);
+
         mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight)));
         mTotalActiveWeight += weight;
         for(int i = 0; i < NUM_DOWNSTREAM; i++)

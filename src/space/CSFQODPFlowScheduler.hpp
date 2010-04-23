@@ -41,13 +41,14 @@
 namespace CBR {
 
 class ServerWeightCalculator;
+class LocationService;
 
 /** CSFQODPFlowScheduler tracks all active flows and uses a CSFQ-style
  *  approach to enforce fairness over those flows.
  */
 class CSFQODPFlowScheduler : public ODPFlowScheduler {
 public:
-    CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size);
+    CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size, LocationService* loc);
     virtual ~CSFQODPFlowScheduler();
 
     // Interface: AbstractQueue<Message*>
@@ -138,6 +139,9 @@ private:
     bool queueExceedsLowWaterMark() const { return true; } // Not necessary in our implementation
     double minCongestedAlpha() const { return mCapacityRate.get() / std::max(1, flowCount()); }
 
+    // Helper to get the region we compute weight over
+    BoundingBox3f getObjectWeightRegion(const UUID& objid, ServerID sid) const;
+
     // Note: unfortunately we need to mark these as mutable because a)
     // SizedThreadSafeQueue doesn't have methods marked properly as const and b)
     // ThreadSafeQueue doesn't provide a front() method.
@@ -145,6 +149,8 @@ private:
     mutable Sirikata::SizedThreadSafeQueue<QueuedMessage> mQueue;
     mutable Sirikata::AtomicValue<bool> mNeedsNotification;
     ServerWeightCalculator* mWeightCalculator;
+    // Used to collect information for weight computation
+    LocationService* mLoc;
 
     // CSFQ Summary Information
     SimpleRateEstimator mArrivalRate;
