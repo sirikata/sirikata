@@ -56,19 +56,15 @@ class FlowFairness:
         """
         self.cc = cc
         self.cs = cs
-        self.local_messages = False
-        self.remote_messages = True
         self.scheme = scheme
         self.payload_size = payload
         self._last_rate = None
         self._all_rates = []
 
     def _setup_cluster_sim(self, rate, io):
-        self.cs.scenario = 'ping'
+        self.cs.scenario = 'deluge'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
-             '--allow-same-object-host=' + str(self.local_messages),
-             '--force-same-object-host=' + str(self.local_messages and not self.remote_messages),
              '--ping-size=' + str(self.payload_size),
              ]
             )
