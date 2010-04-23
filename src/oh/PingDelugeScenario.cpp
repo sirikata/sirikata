@@ -115,6 +115,14 @@ void PingDelugeScenario::initialize(ObjectHostContext*ctx) {
 }
 
 void PingDelugeScenario::start() {
+    Duration connect_phase = GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
+    mContext->mainStrand->post(
+        connect_phase,
+        std::tr1::bind(&PingDelugeScenario::delayedStart, this)
+    );
+}
+void PingDelugeScenario::delayedStart() {
+    mStartTime = mContext->simTime();
     mGeneratePingPoller->start();
     mPingPoller->start();
 }

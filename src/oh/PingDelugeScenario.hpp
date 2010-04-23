@@ -70,6 +70,8 @@ class PingDelugeScenario : public Scenario {
 
     uint32 mFloodServer;
 
+    void delayedStart();
+
     bool generateOnePing(const Time& t, PingInfo* result);
     void generatePings();
 
