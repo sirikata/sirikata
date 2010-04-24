@@ -169,11 +169,17 @@ if __name__ == "__main__":
         cs.num_pack_objects = 0
         cs.object_pack = ''
         cs.pack_dump = packname
-    else:
+    elif (numoh > 1):
         # Use pack across multiple ohs
         cs.num_random_objects = 0
         cs.num_pack_objects = nobjects / cs.num_oh
         cs.object_pack = packname
+        cs.pack_dump = ''
+    else:
+        # Only 1 oh, just use random
+        cs.num_random_objects = nobjects
+        cs.num_pack_objects = 0
+        cs.object_pack = ''
         cs.pack_dump = ''
 
     cs.object_connect_phase = '0s'
