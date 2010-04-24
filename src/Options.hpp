@@ -64,10 +64,11 @@
 #define OBJECT_SIMPLE        "object.simple"
 #define OBJECT_2D            "object.2d"
 #define OBJECT_QUERY_FRAC    "object.query-frac"
+#define OBJECT_PACK_DIR      "object.pack-dir"
 #define OBJECT_PACK          "object.pack"
 #define OBJECT_PACK_OFFSET   "object.pack-offset"
 #define OBJECT_PACK_NUM      "object.pack-num"
-
+#define OBJECT_PACK_DUMP     "object.pack-dump"
 
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"

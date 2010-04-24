@@ -137,20 +137,45 @@ class FlowFairness:
         pass
 
 if __name__ == "__main__":
+    nobjects = 50
+    packname = 'objects.pack'
+    # If genpack is True, the sim will be run the first time with a
+    # single object host to generate data, dump it, and pull it down.
+    # Then run with genpack = False to push that pack up to all nodes
+    # and use it across multiple object hosts.
+    genpack = False
+    numoh = 1;
+
+    if (genpack):
+        numoh = 1
+
     cc = ClusterConfig()
-    cs = ClusterSimSettings(cc, 4, (4,1), 1)
+    cs = ClusterSimSettings(cc, 4, (4,1), numoh)
 
     cs.debug = False
     cs.valgrind = False
     cs.profile = True
+    cs.oprofile = False
 
     cs.loc = 'standard'
     cs.blocksize = 100
     cs.tx_bandwidth = 50000000
     cs.rx_bandwidth = 5000000
 
-    cs.num_random_objects = 50
-    cs.num_pack_objects = 0
+    if (genpack):
+        # Pack generation, run with 1 oh
+        assert(cs.num_oh == 1)
+        cs.num_random_objects = nobjects
+        cs.num_pack_objects = 0
+        cs.object_pack = ''
+        cs.pack_dump = packname
+    else:
+        # Use pack across multiple ohs
+        cs.num_random_objects = 0
+        cs.num_pack_objects = nobjects / cs.num_oh
+        cs.object_pack = packname
+        cs.pack_dump = ''
+
     cs.object_connect_phase = '0s'
 
     cs.object_static = 'static'

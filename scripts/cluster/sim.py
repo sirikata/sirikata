@@ -54,8 +54,11 @@ class ClusterSimSettings:
         self.object_query_frac = 0.0
 
         # OH: pack object generation settings
+        self.pack_dir = '/home/meru/data/'
+        self.object_pack = 'objects.pack'
         self.num_pack_objects = 0
-        self.object_pack = '/home/meru/data/objects.pack'
+
+        self.pack_dump = ''
 
         # OH: scenario / ping settings
         self.scenario = 'ping'
@@ -144,6 +147,9 @@ class ClusterSim:
     def scripts_dir(self):
         return self.config.code_dir + "/scripts/"
 
+    def pack_filename(self, relname):
+        return "remote:" + self.settings.pack_dir + relname
+
     # x_parameters get parameters which affect x category of options
     # Will be returned as a tuple (params, class_params) where
     # params is an array of strings containing the parameters
@@ -178,12 +184,19 @@ class ClusterSim:
             '--object.simple=' + self.settings.object_simple,
             '--object.2d=' + self.settings.object_2d,
             '--object.query-frac=' + str(self.settings.object_query_frac),
-            '--object.pack=' + self.settings.object_pack,
+            '--object.pack-dir=' + self.settings.pack_dir
+            ]
+        if (len(self.settings.object_pack)):
+            params.append('--object.pack=' + self.settings.object_pack)
+        if (len(self.settings.pack_dump)):
+            params.append('--object.pack-dump=' + self.settings.pack_dump)
+        params.extend(
+            [
             '%(packoffset)s',
             '--object.pack-num=' + str(self.settings.num_pack_objects),
             '--scenario=' + self.settings.scenario,
             '--scenario-options=' + self.settings.scenario_options,
-            ]
+            ])
         class_params = {
             'packoffset' : {
                 'oh' : lambda index : ['--object.pack-offset=' + str(index*self.oh_objects_per_server())]
@@ -285,6 +298,17 @@ class ClusterSim:
 
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()], io=self.io)
+
+        # note: we do this here since we added push_init_data after a
+        # bunch of things were already setup to use the old sequence
+        # of initialization
+        self.push_init_data()
+
+
+    def push_init_data(self):
+        # If we're using a dump file, push it
+        if (len(self.settings.object_pack)):
+            ClusterSCP(self.config, [self.settings.object_pack, self.pack_filename(self.settings.object_pack)], io=self.io)
 
 
     def fill_parameters(self, node_params, param_dict, node_class, idx):
@@ -434,6 +458,10 @@ class ClusterSim:
         # Copy the trace and sync data back here
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
         ClusterSCP(self.config, [trace_file_pattern, "."], io=self.io)
+
+        # If one was dumped, pull the dump file
+        if (len(self.settings.pack_dump)):
+            ClusterSCP(self.config, [self.pack_filename(self.settings.pack_dump), "."], io=self.io)
 
     def bandwidth_analysis(self):
         RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ], io=self.io)

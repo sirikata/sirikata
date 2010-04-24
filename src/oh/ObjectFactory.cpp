@@ -57,7 +57,7 @@ static UUID randomUUID() {
     return id;
 }
 
-static UUID packUUID(const uint64 packid) {
+static UUID pack2UUID(const uint64 packid) {
     uint8 raw_uuid[UUID::static_size];
     const uint8* data_src = (const uint8*)&packid;
     for(uint32 ui = 0; ui < UUID::static_size; ui++)
@@ -75,6 +75,9 @@ ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region
     generatePackObjects(region, duration);
     generateRandomObjects(region, duration);
     setConnectTimes();
+
+    // Possibly dump pack data.
+    dumpObjectPack();
 }
 
 ObjectFactory::~ObjectFactory() {
@@ -165,6 +168,10 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     uint32 nobjects = GetOption(OBJECT_PACK_NUM)->as<uint32>();
     if (nobjects == 0) return;
     String pack_filename = GetOption(OBJECT_PACK)->as<String>();
+    assert(!pack_filename.empty());
+
+    String pack_dir = GetOption(OBJECT_PACK_DIR)->as<String>();
+    pack_filename = pack_dir + pack_filename;
 
     FILE* pack_file = fopen(pack_filename.c_str(), "rb");
     if (pack_file == NULL) {
@@ -200,7 +207,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
         fread( &z, sizeof(double), 1, pack_file );
         fread( &rad, sizeof(double), 1, pack_file );
 
-        UUID id = packUUID(pack_objid);
+        UUID id = pack2UUID(pack_objid);
 
         Vector3f startpos((float)x, (float)y, (float)z);
         float bounds_radius = (float)rad;
@@ -212,8 +219,42 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
         inputs->queryAngle = SolidAngle::Max;
         inputs->connectAt = Duration::seconds(0.f);
 
+        inputs->startTimer = IOTimer::create(mContext->ioService);
+
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
+    }
+
+    fclose(pack_file);
+}
+
+void ObjectFactory::dumpObjectPack() const {
+    String pack_filename = GetOption(OBJECT_PACK_DUMP)->as<String>();
+    if (pack_filename.empty())
+        return;
+
+    String pack_dir = GetOption(OBJECT_PACK_DIR)->as<String>();
+    pack_filename = pack_dir + pack_filename;
+
+    FILE* pack_file = fopen(pack_filename.c_str(), "wb");
+    if (pack_file == NULL) {
+        SILOG(objectfactory,error,"Couldn't open object pack file, not dumping any objects.");
+        return;
+    }
+
+    uint64 pack_id_gen = 1;
+    for(ObjectInputsMap::const_iterator it = mInputs.begin(); it != mInputs.end(); it++) {
+        uint64 pack_objid = pack_id_gen++;
+        ObjectInputs* inputs = it->second;
+
+        fwrite( &pack_objid, sizeof(uint64), 1, pack_file );
+        Vector3f startpos = inputs->motion->initial().position();
+        float64 x = startpos.x, y = startpos.y, z = startpos.z;
+        fwrite( &(x), sizeof(x), 1, pack_file );
+        fwrite( &(y), sizeof(x), 1, pack_file );
+        fwrite( &(z), sizeof(x), 1, pack_file );
+        float64 rad = inputs->bounds.radius();
+        fwrite( &rad, sizeof(rad), 1, pack_file );
     }
 
     fclose(pack_file);

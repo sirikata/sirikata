@@ -77,6 +77,8 @@ private:
     void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
     // Generates connection initiation times for all objects *after* they have been created
     void setConnectTimes();
+    // If requested, dumps objects to
+    void dumpObjectPack() const;
 
     void handleObjectInit(const UUID& objid);
 
