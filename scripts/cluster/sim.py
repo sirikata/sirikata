@@ -178,11 +178,11 @@ class ClusterSim:
             '--object.simple=' + self.settings.object_simple,
             '--object.2d=' + self.settings.object_2d,
             '--object.query-frac=' + str(self.settings.object_query_frac),
-            '--object.num.pack=' + str(self.settings.num_pack_objects),
             '--object.pack=' + self.settings.object_pack,
+            '%(packoffset)s',
+            '--object.pack-num=' + str(self.settings.num_pack_objects),
             '--scenario=' + self.settings.scenario,
             '--scenario-options=' + self.settings.scenario_options,
-            '%(packoffset)s',
             ]
         class_params = {
             'packoffset' : {

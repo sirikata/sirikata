@@ -59,7 +59,6 @@
 #define ANALYSIS_FLOW_STATS "analysis.flow.stats"
 
 #define OBJECT_NUM_RANDOM    "object.num.random"
-#define OBJECT_NUM_PACK      "object.num.pack"
 #define OBJECT_CONNECT_PHASE "object.connect"
 #define OBJECT_STATIC        "object.static"
 #define OBJECT_SIMPLE        "object.simple"
@@ -67,6 +66,7 @@
 #define OBJECT_QUERY_FRAC    "object.query-frac"
 #define OBJECT_PACK          "object.pack"
 #define OBJECT_PACK_OFFSET   "object.pack-offset"
+#define OBJECT_PACK_NUM      "object.pack-num"
 
 
 #define SERVER_QUEUE         "server.queue"

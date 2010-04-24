@@ -162,7 +162,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects = GetOption(OBJECT_NUM_PACK)->as<uint32>();
+    uint32 nobjects = GetOption(OBJECT_PACK_NUM)->as<uint32>();
     if (nobjects == 0) return;
     String pack_filename = GetOption(OBJECT_PACK)->as<String>();
 

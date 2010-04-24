@@ -103,7 +103,7 @@ void InitOptions() {
         .addOption(new OptionValue(ANALYSIS_FLOW_STATS, "false", Sirikata::OptionValueType<bool>(), "Get summary object pair flow statistics"))
 
         .addOption(new OptionValue(OBJECT_NUM_RANDOM, "100", Sirikata::OptionValueType<uint32>(), "Number of random objects to generate."))
-        .addOption(new OptionValue(OBJECT_NUM_PACK, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
+
         .addOption(new OptionValue(OBJECT_CONNECT_PHASE, "0s", Sirikata::OptionValueType<Duration>(), "Length of time to initiate connections over. Connection requests will be uniformly distributed."))
         .addOption(new OptionValue(OBJECT_STATIC, "random", Sirikata::OptionValueType<String>(), "Whether objects should be static (static) or move randomly (randome) or drift in one direction (drift)."))
       .addOption(new OptionValue(OBJECT_DRIFT_X, "0",Sirikata::OptionValueType<float>(), "If select drift for motion path (under OBJECT_STATIC), then this is the x component of all objects' drifts"))
@@ -115,6 +115,7 @@ void InitOptions() {
         .addOption(new OptionValue(OBJECT_QUERY_FRAC, "0.1", Sirikata::OptionValueType<float>(), "Percent of objects which should issue prox queries."))
         .addOption(new OptionValue(OBJECT_PACK, "", Sirikata::OptionValueType<String>(), "Filename of the object pack to use to generate objects."))
         .addOption(new OptionValue(OBJECT_PACK_OFFSET, "0", Sirikata::OptionValueType<uint32>(), "Offset into the object pack to start generating objects at."))
+        .addOption(new OptionValue(OBJECT_PACK_NUM, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
         .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
         .addOption(new OptionValue(SERVER_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each server."))
         .addOption(new OptionValue(SERVER_RECEIVER, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageReceiver to use for routing."))
