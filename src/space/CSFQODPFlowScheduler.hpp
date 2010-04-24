@@ -38,6 +38,8 @@
 #include "RateEstimator.hpp"
 #include <sirikata/util/SizedThreadSafeQueue.hpp>
 
+//#define CSFQODP_DEBUG
+
 namespace CBR {
 
 class ServerWeightCalculator;
@@ -103,6 +105,11 @@ private:
     struct FlowInfo {
         FlowInfo(double w)
          : weight(w)
+#ifdef CSFQODP_DEBUG
+           ,
+           arrived(0),
+           accepted(0)
+#endif
         {
             for(int i = 0; i < NUM_DOWNSTREAM; i++)
                 usedWeight[i] = w;
@@ -111,6 +118,10 @@ private:
         RateEstimator rate;
         double weight;
         double usedWeight[NUM_DOWNSTREAM];
+#ifdef CSFQODP_DEBUG
+        uint64 arrived;
+        uint64 accepted;
+#endif
     };
 
     struct QueuedMessage {

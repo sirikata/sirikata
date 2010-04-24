@@ -70,6 +70,22 @@ CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQu
 
 CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
     delete mWeightCalculator;
+
+#ifdef CSFQODP_DEBUG
+    CSFQLOG(warn,"Flow");
+    for(FlowMap::iterator flow_it = mFlows.begin(); flow_it != mFlows.end(); flow_it++) {
+        ObjectPair op = flow_it->first;
+        const FlowInfo& fi = flow_it->second;
+        CSFQLOG(warn,"  " <<
+            "[" << op.source.toString() << ":" << op.dest.toString() << "] " <<
+            "weight: " << fi.weight <<
+            " sused: " << fi.usedWeight[SENDER] <<
+            " rused: " << fi.usedWeight[RECEIVER] <<
+            " -> arrived: " << fi.arrived <<
+            " accepted: " << fi.accepted
+        );
+    }
+#endif
 }
 
 // ODP push interface
@@ -87,6 +103,10 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
 
     int32 packet_size = msg->ByteSize();
     Time curtime = mContext->recentSimTime();
+
+#ifdef CSFQODP_DEBUG
+    flow_info->arrived += packet_size;
+#endif
 
     double label = 0;
 #define _edge true // Maybe someday we'll bother with core routers
@@ -154,6 +174,9 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
     }
 
     // Finally, restimate alpha.
+#ifdef CSFQODP_DEBUG
+    flow_info->accepted += packet_size;
+#endif
     estimateAlpha(packet_size, curtime, label, false);
 
     if (mNeedsNotification) {
