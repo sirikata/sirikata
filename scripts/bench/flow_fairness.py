@@ -56,15 +56,15 @@ def get_latency_logfile_name(trial):
     return log_file
 
 def get_flowstats_name(trial):
-    log_file = 'flow_stats.' + str(trial)
+    log_file = 'flow_fairness.stats.' + str(trial)
     return log_file
 
 def get_latencyfile_name(trial):
-    log_file = 'packet_latency_histogram.' + str(trial)
+    log_file = 'flow_fairness.latency.histogram.' + str(trial)
     return log_file
 
 def get_stage_samples_filename(trial):
-    log_file = 'packet_latency_samples.' + str(trial)
+    log_file = 'flow_fairness.latency.samples.' + str(trial)
     return log_file
 
 class FlowFairness:
