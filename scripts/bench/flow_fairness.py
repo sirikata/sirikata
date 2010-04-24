@@ -144,7 +144,7 @@ if __name__ == "__main__":
     # Then run with genpack = False to push that pack up to all nodes
     # and use it across multiple object hosts.
     genpack = False
-    numoh = 1;
+    numoh = 1
 
     if (genpack):
         numoh = 1
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     cs.oprofile = False
 
     cs.loc = 'standard'
-    cs.blocksize = 100
+    cs.blocksize = 110
     cs.tx_bandwidth = 50000000
     cs.rx_bandwidth = 5000000
 
