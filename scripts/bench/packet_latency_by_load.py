@@ -87,7 +87,7 @@ class PacketLatencyByLoad:
             ['--num-pings-per-second=' + str(rate),
              '--allow-same-object-host=' + str(self.local_messages),
              '--force-same-object-host=' + str(self.local_messages and not self.remote_messages),
-             '--ping-size=' + str(self.payload_size,
+             '--ping-size=' + str(self.payload_size),
              ]
             )
 
