@@ -20,6 +20,7 @@
 
 #include "ForwarderServiceQueue.hpp"
 
+#include <sirikata/util/SizedThreadSafeQueue.hpp>
 #include <sirikata/util/ThreadSafeQueueWithNotification.hpp>
 
 namespace CBR
@@ -81,7 +82,11 @@ private:
     Poller mServerWeightPoller; // For updating ServerMessageQueue, remote
                                 // ServerMessageReceiver with per-server weights
 
-    Sirikata::ThreadSafeQueueWithNotification<Message*> mReceivedMessages;
+    // Note: This is kinda stupid, but we need to protect this thread safe queue
+    // with another lock because we don't have a sized thread safe queue with
+    // notification.
+    boost::mutex mReceivedMessagesMutex;
+    Sirikata::SizedThreadSafeQueue<Message*> mReceivedMessages;
 
     // -- Boiler plate stuff - initialization, destruction, methods to satisfy interfaces
   public:

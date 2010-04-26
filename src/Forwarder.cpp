@@ -72,7 +72,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
                  Duration::milliseconds((int64)100)),
-             mReceivedMessages(std::tr1::bind(&Forwarder::scheduleProcessReceivedServerMessages, this))
+             mReceivedMessages(Sirikata::SizedResourceMonitor(16384))
 {
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), 16384, (ForwarderServiceQueue::Listener*)this);
 
@@ -535,7 +535,16 @@ void Forwarder::serverMessageReceived(Message* msg) {
     // network for new connections.
     mOutgoingMessages->prePush(msg->source_server());
 
-    mReceivedMessages.push(msg);
+    bool got_empty;
+    bool push_success;
+    {
+        boost::lock_guard<boost::mutex> lock(mReceivedMessagesMutex);
+        got_empty = mReceivedMessages.probablyEmpty();
+        push_success = mReceivedMessages.push(msg, false);
+    }
+
+    if (got_empty && push_success)
+        scheduleProcessReceivedServerMessages();
 }
 
 void Forwarder::scheduleProcessReceivedServerMessages() {
@@ -545,11 +554,27 @@ void Forwarder::scheduleProcessReceivedServerMessages() {
 }
 
 void Forwarder::processReceivedServerMessages() {
-    while(!mReceivedMessages.empty()) {
-        Message* msg;
-        mReceivedMessages.pop(msg);
-        dispatchMessage(msg);
+#define MAX_RECEIVED_MESSAGES_PROCESSED 20 // need a better way to decide this
+
+    // First, pull out messages we're going to process in this round
+    uint32 pulled = 0;
+    Message* messages[MAX_RECEIVED_MESSAGES_PROCESSED];
+    bool got_empty;
+    {
+        boost::lock_guard<boost::mutex> lock(mReceivedMessagesMutex);
+        while(!mReceivedMessages.probablyEmpty() && pulled < MAX_RECEIVED_MESSAGES_PROCESSED) {
+            bool popped = mReceivedMessages.pop( messages[pulled] );
+            if (!popped) break;
+            pulled++;
+        }
+        got_empty = mReceivedMessages.probablyEmpty();
     }
+
+    for(uint32 i = 0; i < pulled; i++)
+        dispatchMessage(messages[i]);
+
+    if (!got_empty)
+        scheduleProcessReceivedServerMessages();
 }
 
 } //end namespace
