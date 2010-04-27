@@ -56,7 +56,7 @@ namespace CBR
 
   //nothing to initialize
   AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-    : PollingService(strand_this_runs_on),
+   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)0), con, "AsyncCraqGet"),
       ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
@@ -126,7 +126,7 @@ namespace CBR
       {
         percentageConnectionsServed = ((double)s)/((double) STREAM_CRAQ_NUM_CONNECTIONS_GET);
         whichRouterServing = (int)(percentageConnectionsServed*((double)ipAddPort.size()));
-        
+
         if (whichRouterServing  != whichRouterServingPrevious)
         {
           boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
@@ -179,7 +179,7 @@ namespace CBR
   {
     Duration beginGetEnqueueManager  = Time::local() - Time::epoch();
     traceToken->getManagerEnqueueBegin = beginGetEnqueueManager.toMicroseconds();
-    
+
     CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
     QueueValue* qValue = new QueueValue;
     qValue->cdQuery = cdQuery;
@@ -188,7 +188,7 @@ namespace CBR
 
     Duration endGetEnqueueManager = Time::local() - Time::epoch();
     traceToken->getManagerEnqueueEnd = endGetEnqueueManager.toMicroseconds();
-    
+
     int numTries = 0;
     while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_GET))
     {
@@ -257,7 +257,7 @@ void AsyncCraqGet::checkConnections(int s)
 
       Duration dequeueManager  = Time::local() - Time::epoch();
       qVal->traceToken->getManagerDequeued = dequeueManager.toMicroseconds();
-      
+
       if (cdSG->messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.

@@ -31,6 +31,7 @@
  */
 
 #include "PollingService.hpp"
+#include "Context.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
@@ -68,9 +69,26 @@ void Poller::handleExec() {
 
 
 
-PollingService::PollingService(IOStrand* str, const Duration& max_rate)
- : Poller(str, std::tr1::bind(&PollingService::poll, this), max_rate)
+PollingService::PollingService(IOStrand* str, const Duration& max_rate, Context* ctx, const String& name)
+ : Poller(str, std::tr1::bind(&PollingService::indirectPoll, this), max_rate),
+   mProfiler(NULL)
 {
+    if (ctx != NULL && !name.empty())
+        mProfiler = ctx->profiler->addStage(name);
+}
+
+PollingService::~PollingService() {
+    delete mProfiler;
+}
+
+void PollingService::indirectPoll() {
+    if (mProfiler != NULL)
+        mProfiler->started();
+
+    poll();
+
+    if (mProfiler != NULL)
+        mProfiler->finished();
 }
 
 void PollingService::stop() {

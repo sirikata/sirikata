@@ -34,8 +34,11 @@
 #define _CBR_POLLING_SERVICE_HPP_
 
 #include "Utility.hpp"
+#include "TimeProfiler.hpp"
 
 namespace CBR {
+
+class Context;
 
 /** A Service is simply something that runs during the main loop.
  *  It must implement methods which allow it to start and indicate
@@ -83,7 +86,8 @@ private:
  */
 class PollingService : public Poller {
 public:
-    PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0));
+    PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "");
+    ~PollingService();
 
     virtual void stop();
 protected:
@@ -91,6 +95,10 @@ protected:
     virtual void poll() = 0;
     /** Override this method to clean up when a shutdown is requested. */
     virtual void shutdown() {}
+
+private:
+    void indirectPoll();
+    TimeProfiler::Stage* mProfiler;
 };
 
 } // namespace CBR
