@@ -52,14 +52,14 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 
 
 LocationService::LocationService(SpaceContext* ctx)
- : PollingService(ctx->mainStrand),
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
    mContext(ctx)
 {
-    mProfiler = mContext->profiler->addStage("Location Service");     
+    mProfiler = mContext->profiler->addStage("Location Service");
 
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
 
-    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);    
+    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);
 }
 
 LocationService::~LocationService() {

@@ -35,7 +35,7 @@
 namespace CBR {
 
 CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
- : PollingService(ctx->mainStrand),
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
    mContext(ctx)
 {
     mServiceStage = mContext->profiler->addStage("CSeg");

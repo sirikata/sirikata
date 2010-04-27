@@ -51,7 +51,7 @@ const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_
 static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
 
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
- : PollingService(ctx->mainStrand),
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
    mContext(ctx),
    mLocService(locservice),
    mCSeg(NULL),
@@ -367,7 +367,7 @@ void Proximity::poll() {
         else {
           object_sent = false;
         }
-   
+
         if (object_sent)
             mObjectResultsToSend.pop_front();
     }
