@@ -56,7 +56,7 @@ namespace CBR
 
   //nothing to initialize
   AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)0), con, "AsyncCraqGet"),
+   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)1), con, "AsyncCraqGet"),
       ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),

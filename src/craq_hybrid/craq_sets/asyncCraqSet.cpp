@@ -45,7 +45,7 @@ namespace CBR
   }
 
   AsyncCraqSet::AsyncCraqSet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)0), con, "AsyncCraqSet"),
+   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)1), con, "AsyncCraqSet"),
       ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
