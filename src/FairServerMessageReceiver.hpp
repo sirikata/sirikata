@@ -57,10 +57,6 @@ private:
     virtual void networkReceivedConnection(Network::ReceiveStream* strm);
     virtual void networkReceivedData(Network::ReceiveStream* strm);
 
-    // Handles
-    void handleReceivedConnection(Network::ReceiveStream* from);
-    void handleReceived(Network::ReceiveStream* from);
-
     void scheduleServicing();
     // Internal service call -- generated either by a networkReceivedData event
     // or by a timer as we wait for enough bandwidth to be available to service
@@ -88,6 +84,9 @@ private:
     Duration mAccountedTime;
     uint64 mBytesDiscarded;
     uint64 mBytesUsed;
+
+    // Protects mReceiveQueues, mReceiveSet
+    boost::mutex mMutex;
 };
 
 } // namespace CBR

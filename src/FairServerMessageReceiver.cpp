@@ -67,23 +67,12 @@ FairServerMessageReceiver::~FairServerMessageReceiver() {
 
 void FairServerMessageReceiver::scheduleServicing() {
     if (!mServiceScheduled.read()) {
+        mServiceTimer->cancel();
         mServiceScheduled = true;
         mReceiverStrand->post(
             std::tr1::bind(&FairServerMessageReceiver::service, this)
         );
     }
-}
-
-void FairServerMessageReceiver::handleReceived(Network::ReceiveStream* strm) {
-    // Given the new data we need to update our view of the world
-    mReceiveQueues.notifyPushFront(strm->id());
-
-    // Cancel any outstanding work callbacks
-    mServiceTimer->cancel();
-
-    // And run service (which will handle setting up
-    // any new service callbacks that may be needed).
-    scheduleServicing();
 }
 
 void FairServerMessageReceiver::service() {
@@ -100,14 +89,22 @@ void FairServerMessageReceiver::service() {
     // Receive
     ServerID sid;
     Message* next_recv_msg = NULL;
-    while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&sid)) != NULL ) {
-        uint32 packet_size = next_recv_msg->serializedSize();
+    while( recv_bytes > 0 ) {
+        uint32 packet_size = 0;
+        {
+            boost::lock_guard<boost::mutex> lck(mMutex);
 
-        if (packet_size > recv_bytes)
-            break;
+            next_recv_msg = mReceiveQueues.front(&sid);
+            if (next_recv_msg == NULL) break;
 
-        Message* next_recv_msg_popped = mReceiveQueues.pop();
-        assert(next_recv_msg_popped == next_recv_msg);
+            packet_size = next_recv_msg->serializedSize();
+
+            if (packet_size > recv_bytes)
+                break;
+
+            Message* next_recv_msg_popped = mReceiveQueues.pop();
+            assert(next_recv_msg_popped == next_recv_msg);
+        }
 
         Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
         Time start_time = mLastReceiveEndTime;
@@ -128,7 +125,12 @@ void FairServerMessageReceiver::service() {
     // but this is how we'd really do it.
     mCapacityEstimator.estimate_rate(tcur, new_recv_bytes);
 
-    if (mReceiveQueues.empty()) {
+    bool went_empty;
+    {
+        boost::lock_guard<boost::mutex> lck(mMutex);
+        went_empty = mReceiveQueues.empty();
+    }
+    if (went_empty) {
         mBytesDiscarded += recv_bytes;
         mRemainderReceiveBytes = 0;
         mLastReceiveEndTime = tcur;
@@ -150,15 +152,15 @@ void FairServerMessageReceiver::service() {
 }
 
 void FairServerMessageReceiver::handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight) {
+    boost::lock_guard<boost::mutex> lck(mMutex);
+
     assert(mReceiveQueues.hasQueue(sid));
     mReceiveQueues.setQueueWeight(sid, used_weight);
 }
 
 void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream* strm) {
-    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceivedConnection, this, strm) );
-}
+    boost::lock_guard<boost::mutex> lck(mMutex);
 
-void FairServerMessageReceiver::handleReceivedConnection(Network::ReceiveStream* strm) {
     ServerID from = strm->id();
     double wt = mReceiveQueues.avg_weight();
     SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
@@ -179,12 +181,20 @@ void FairServerMessageReceiver::handleReceivedConnection(Network::ReceiveStream*
 }
 
 void FairServerMessageReceiver::networkReceivedData(Network::ReceiveStream* strm) {
+    // FIXME This should only be triggered when the underlying network queue
+    // went empty -> non-empty, so hopefully lock contention shouldn't be an issue.
+
     SILOG(fairreceiver,insane,"Received network data from " << strm->id());
 
-    // No matter what, we'll post an event.  Since a new front() is available
-    // this could completely change the amount of time we're waiting so the main
-    // strand always needs to know.
-    mReceiverStrand->post( std::tr1::bind(&FairServerMessageReceiver::handleReceived, this, strm) );
+    {
+        boost::lock_guard<boost::mutex> lck(mMutex);
+        // Given the new data we need to update our view of the world
+        mReceiveQueues.notifyPushFront(strm->id());
+    }
+
+    // And run service (which will handle setting up
+    // any new service callbacks that may be needed).
+    scheduleServicing();
 }
 
 } // namespace CBR

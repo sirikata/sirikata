@@ -81,7 +81,7 @@ public:
     }
 
     bool empty() const {
-        return mReceiveStream->front() == NULL;
+        return mFront == NULL && mReceiveStream->front() == NULL;
     }
 };
 }
