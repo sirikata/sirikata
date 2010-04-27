@@ -99,6 +99,8 @@ bool ObjectHost::SpaceNodeConnection::empty() {
 }
 
 Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk) {
+    parent->mHandleReadProfiler->started();
+
     // Parse
     ObjectMessage* msg = new ObjectMessage();
     bool parse_success = msg->ParseFromArray(chunk.data(), chunk.size());
@@ -122,6 +124,8 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
     }
+
+    parent->mHandleReadProfiler->finished();
 
     // No matter what, we've "handled" the data, either for real or by dropping
     return Sirikata::Network::Stream::AcceptedData;
@@ -286,6 +290,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap
 
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
 
+    mHandleReadProfiler = mContext->profiler->addStage("Handle Read Network");
     mHandleMessageProfiler = mContext->profiler->addStage("Handle Server Message");
 
     mContext->objectHost = this;
@@ -300,7 +305,7 @@ ObjectHost::~ObjectHost() {
     }
     mConnections.clear();
 
-
+    delete mHandleReadProfiler;
     delete mHandleMessageProfiler;
 
     delete mIOStrand;

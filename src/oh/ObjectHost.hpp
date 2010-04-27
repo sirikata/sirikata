@@ -204,6 +204,7 @@ private:
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
 
+    TimeProfiler::Stage* mHandleReadProfiler;
     TimeProfiler::Stage* mHandleMessageProfiler;
 
     Sirikata::SerializationCheck mSerialization;
@@ -245,6 +246,7 @@ private:
 
         ReceiveCallback mReceiveCB;
     };
+    friend struct SpaceNodeConnection;
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
     typedef std::tr1::unordered_map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
