@@ -167,17 +167,17 @@ class PacketLatencyByLoadTest(ClusterSimTest):
 
 
 class FlowFairnessTest(ClusterSimTest):
-    def __init__(self, name, rate, scheme, payload, **kwargs):
+    def __init__(self, name, rate, scheme, payload, local=False, **kwargs):
         """
         name: Name of the test
         rate: Ping rate to test with
         scheme: Fairness scheme to use. ('region', 'csfq')
         payload: Size of ping payloads
+        local: Whether only local messages should be generated, False by default
         Others: see ClusterSimTest.__init__
         """
         assert type(rate) != list
         self.rate = rate
-        self.scheme = scheme
 
         # pre_sim_func
         if 'pre_sim_func' in kwargs:
@@ -201,7 +201,7 @@ class FlowFairnessTest(ClusterSimTest):
             post_sim_func = self.__post_sim_func
 
         ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
-        self.bench = FlowFairness(self._cc, self._cs, scheme=self.scheme, payload=payload)
+        self.bench = FlowFairness(self._cc, self._cs, scheme=scheme, payload=payload, local=local)
 
     def __pre_sim_func(self, cc, cs, io):
         pass

@@ -44,6 +44,7 @@ void PDSInitOptions(PingDelugeScenario *thus) {
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
+        new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
         NULL);
 }
 
@@ -61,6 +62,7 @@ PingDelugeScenario::PingDelugeScenario(const String &options)
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
     mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
+    mLocalTraffic = optionsSet->referenceOption("local")->as<bool>();
 
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
@@ -131,12 +133,37 @@ void PingDelugeScenario::stop() {
     mGeneratePingPoller->stop();
 }
 bool PingDelugeScenario::generateOnePing(const Time& t, PingInfo* result) {
-    Object * objA = mFloodServer == 0 ?
-        mObjectTracker->randomObject() :
-        mObjectTracker->randomObjectExcludingServer(mFloodServer);
-    Object * objB = mFloodServer == 0 ?
-        mObjectTracker->randomObject() :
-        mObjectTracker->randomObjectFromServer(mFloodServer);
+    Object* objA = NULL;
+    Object* objB = NULL;
+    if (mFloodServer == 0) {
+        // When we don't have a flood server, we have a slightly different process.
+        if (mLocalTraffic) {
+            // If we need local traffic, pick a server and pin both of
+            // them to that server.
+            ServerID ss = rand() % mObjectTracker->numServerIDs();
+            objA = mObjectTracker->randomObjectFromServer(ss);
+            objB = mObjectTracker->randomObjectFromServer(ss);
+        }
+        else {
+            // Otherwise, we don't care about the origin of either
+            objA = mObjectTracker->randomObject();
+            objB = mObjectTracker->randomObject();
+        }
+    }
+    else {
+        // When we do have a flood server, we always pick the dest
+        // from that server.
+        objB = mObjectTracker->randomObjectFromServer(mFloodServer);
+
+        if (mLocalTraffic) {
+            // If forcing local traffic, pick source from same server
+            objA = mObjectTracker->randomObjectFromServer(mFloodServer);
+        }
+        else {
+            // Otherwise, pick from any *other* server.
+            objA = mObjectTracker->randomObjectExcludingServer(mFloodServer);
+        }
+    }
 
     if (!objA || !objB) {
         return false;

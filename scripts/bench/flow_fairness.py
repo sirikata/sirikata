@@ -68,7 +68,7 @@ def get_stage_samples_filename(trial):
     return log_file
 
 class FlowFairness:
-    def __init__(self, cc, cs, scheme, payload=0):
+    def __init__(self, cc, cs, scheme, payload=0, local=False):
         """
         Note that local vs. remote aren't options here.  We only care
         about remote messages, so we only generate remote messages.
@@ -77,19 +77,26 @@ class FlowFairness:
         cs - ClusterSimSettings
         scheme - the fairness scheme used.  Current valid values are 'region' and 'csfq'.
         payload - size of ping payloads
+        local - force messages to be to local objects
         """
         self.cc = cc
         self.cs = cs
         self.scheme = scheme
         self.payload_size = payload
+        self.local = local
         self._last_rate = None
         self._all_rates = []
 
     def _setup_cluster_sim(self, rate, io):
         self.cs.scenario = 'deluge'
+
+        if self.local: localval = 'true'
+        else: localval = 'false'
+
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
              '--ping-size=' + str(self.payload_size),
+             '--local=' + localval,
              ]
             )
         self.cs.odp_flow_scheduler = self.scheme

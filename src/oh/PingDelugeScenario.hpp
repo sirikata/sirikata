@@ -69,6 +69,7 @@ class PingDelugeScenario : public Scenario {
     TimeProfiler::Stage* mPingProfiler;
 
     uint32 mFloodServer;
+    bool mLocalTraffic;
 
     void delayedStart();
 
