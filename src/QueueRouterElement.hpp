@@ -55,7 +55,8 @@ public:
     QueueRouterElement(uint32 max_size, SizeFunctor sizefunc)
      : mSizeFunctor(sizefunc),
        mMaxSize(max_size),
-       mSize(0)
+       mSize(0),
+       mWentNonEmpty(false)
     {
     }
 
@@ -63,6 +64,10 @@ public:
         PacketType* pkt = NULL;
         while( (pkt = pull()) != NULL)
             delete pkt;
+    }
+
+    bool empty() {
+        return (mSize.read() == 0);
     }
 
     bool push(PacketType* pkt) {
@@ -86,11 +91,22 @@ public:
         {
             unique_lock guard(mMutex);
             // else store, must recompute since mSize may have changed
+            if (mSize.read() == 0)
+                mWentNonEmpty = true;
             mSize += sz;
             mPackets.push(pkt);
         }
 
         return true;
+    }
+
+    /** If a push causes the queue to go from empty to non-empty, this will
+     *  return true.  Calling this resets the value.
+     */
+    bool wentNonEmpty() {
+        bool wne = mWentNonEmpty;
+        mWentNonEmpty = false;
+        return wne;
     }
 
     PacketType* pull() {
@@ -127,6 +143,8 @@ private:
     const SizeFunctor mSizeFunctor;
     uint32 mMaxSize;
     Sirikata::AtomicValue<uint32> mSize;
+
+    bool mWentNonEmpty;
 }; // class QueueRouterElement
 
 } // namespace CBR

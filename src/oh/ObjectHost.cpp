@@ -93,6 +93,10 @@ ObjectMessage* ObjectHost::SpaceNodeConnection::pull() {
     return receive_queue.pull();
 }
 
+bool ObjectHost::SpaceNodeConnection::empty() {
+    return receive_queue.empty();
+}
+
 Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk) {
     // Parse
     ObjectMessage* msg = new ObjectMessage();
@@ -111,7 +115,8 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
         // handleConnectionRead() could be called from any thread/strand. Everything that is not
         // thread safe that could result from a new message needs to happen in the main strand,
         // so just post the whole handler there.
-        mReceiveCB(this);
+        if (receive_queue.wentNonEmpty())
+            mReceiveCB(this);
     }
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
@@ -650,9 +655,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
         mIOStrand,
         mStreamOptions,
         server,
-        mContext->mainStrand->wrap(
-            std::tr1::bind(&ObjectHost::handleServerMessage, this, _1)
-        )
+        std::tr1::bind(&ObjectHost::scheduleHandleServerMessages, this, _1)
     );
     conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
@@ -708,16 +711,33 @@ void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::Connecti
     conn->connectCallbacks.clear();
 }
 
-void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
+void ObjectHost::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectHost::handleServerMessages, this, conn)
+    );
+}
+
+void ObjectHost::handleServerMessages(SpaceNodeConnection* conn) {
+#define MAX_HANDLE_SERVER_MESSAGES 20
     mHandleMessageProfiler->started();
 
-    // Pull it off the queue
-    ObjectMessage* msg = conn->pull();
-    if (msg == NULL) {
-        mHandleMessageProfiler->finished();
-        return;
+    for(uint ii = 0; ii < MAX_HANDLE_SERVER_MESSAGES; ii++) {
+        // Pull it off the queue
+        ObjectMessage* msg = conn->pull();
+        if (msg == NULL) {
+            mHandleMessageProfiler->finished();
+            return;
+        }
+        handleServerMessage(msg, conn);
     }
 
+    if (!conn->empty())
+        scheduleHandleServerMessages(conn);
+
+    mHandleMessageProfiler->finished();
+}
+
+void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* conn) {
     TIMESTAMP_START(tstamp, msg);
 
     // Mark as received
@@ -757,8 +777,6 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn) {
     }
 
     TIMESTAMP_END(tstamp, Trace::DESTROYED);
-
-    mHandleMessageProfiler->finished();
 }
 
 void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {

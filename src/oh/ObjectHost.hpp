@@ -130,10 +130,12 @@ private:
     bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
 
-
+    // Schedules received server messages for handling
+    void scheduleHandleServerMessages(SpaceNodeConnection* conn);
+    void handleServerMessages(SpaceNodeConnection* conn);
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
-    void handleServerMessage(SpaceNodeConnection* conn);
+    void handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* conn);
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
     void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
@@ -220,6 +222,7 @@ private:
         // Pull a packet from the receive queue
         ObjectMessage* pull();
 
+        bool empty();
         void shutdown();
 
 
