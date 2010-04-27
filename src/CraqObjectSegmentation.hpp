@@ -45,6 +45,8 @@ namespace CBR
   class CraqObjectSegmentation : public ObjectSegmentation
   {
   private:
+      typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectSet;
+
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
       Router<Message*>* mOSegServerMessageService;
@@ -85,7 +87,7 @@ namespace CBR
     typedef std::map<int, TrackedSetResultsData> TrackedMessageMap;
     TrackedMessageMap trackingMessages;
 
-    std::vector<UUID> mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
+      ObjectSet mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
     boost::mutex receivingObjects_m;
 
 
@@ -119,10 +121,9 @@ namespace CBR
 
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
-    std::vector <UUID> mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
+      ObjectSet mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
     bool checkOwn(const UUID& obj_id);
     bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
-    std::vector<UUID> vectorObjectsInMigration ;
 
     void removeFromInTransOrLookup(const UUID& obj_id);
     void removeFromReceivingObjects(const UUID& obj_id);

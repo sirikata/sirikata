@@ -148,7 +148,7 @@ namespace CBR
     //    Duration beginningDur = mTimer.elapsed();
     Duration beginningDur = Time::local() - Time::epoch();
 
-    if (std::find(mObjects.begin(),mObjects.end(), obj_id) == mObjects.end())
+    if (mObjects.find(obj_id) == mObjects.end())
     {
       //means that the object isn't hosted on this space server
 
@@ -198,7 +198,7 @@ namespace CBR
     inTransOrLookup_m.unlock();
 
     receivingObjects_m.lock();
-    bool migratingToHere = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) != mReceivingObjects.end();
+    bool migratingToHere = (mReceivingObjects.find(obj_id) != mReceivingObjects.end());
     //means that the object migrating to here has not yet received an acknowledge, and therefore shouldn't begin migrating again.
     receivingObjects_m.unlock();
 
@@ -482,14 +482,7 @@ namespace CBR
       CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
 
       receivingObjects_m.lock();
-
-      //shouldn't need to check if it already exists, but may as well.
-      if (std::find(mReceivingObjects.begin(),mReceivingObjects.end(),obj_id) == mReceivingObjects.end())
-      {
-        //means that this object has been pushed to this server, but its migration isn't complete yet.
-        mReceivingObjects.push_back(obj_id);
-      }
-
+      mReceivingObjects.insert(obj_id);
       receivingObjects_m.unlock();
 
       TrackedSetResultsData tsrd;
@@ -512,9 +505,9 @@ namespace CBR
       craqDhtSet.set(cdSetGet, trackID);
 
 
-      if (std::find(mObjects.begin(), mObjects.end(), obj_id) == mObjects.end())
+      std::pair<ObjectSet::iterator, bool> inserted = mObjects.insert(obj_id);
+      if (inserted.second)
       {
-        mObjects.push_back(obj_id);
         std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n";
       }
     }
@@ -552,24 +545,18 @@ namespace CBR
     UUID tmp_id = obj_id; //note: can probably delete this line
 
     //erase the local copy of the object.
-    std::vector<UUID>::iterator iter = std::find(mObjects.begin(),mObjects.end(),obj_id);
-    if (iter != mObjects.end())
-    {
-      //erase the local copy of the object.
-      mObjects.erase (iter);
-    }
-    else
-    {
-
+    size_t num_erased = mObjects.erase(obj_id);
 #ifdef CRAQ_DEBUG
+    if (num_erased == 0)
+    {
         std::cout<<"\n\nThe object clearly wasn't registered on this server.  This is obj id:  " <<  obj_id.toString() <<  ".  This is time:   " <<mContext->simTime().raw() << " Oh no.   ";
 
       if (clearToMigrate(obj_id))
         std::cout<<"  Likely a problem with clear to migrate\n\n";
       else
         std::cout<<"\n\n clear to migrate is fine migration is being called from somewhere besides server.cpp\n\n";
-#endif
     }
+#endif
   }
 
 
@@ -903,13 +890,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
     //remove this object from mReceivingObjects,
     //this removal indicates that this object can now be safely migrated from this server to another if need be.
     receivingObjects_m.lock();
-    std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id);
-    if (recObjIter != mReceivingObjects.end())
-    {
-      //the object should be removed from receiving objects
-      mReceivingObjects.erase(recObjIter);
-    }
-
+    mReceivingObjects.erase(obj_id);
     //done removing from receivingObjects.
     receivingObjects_m.unlock();
   }
@@ -940,7 +921,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, mContext->id()));
 
       //add tomObjects the uuid associated with trackedMessage (ie, now we know that we own the object.)
-      mObjects.push_back(obj_id);
+      mObjects.insert(obj_id);
 
       //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
       removeFromInTransOrLookup(obj_id);
@@ -975,7 +956,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
     {
 
       //means that we just finished adding first object
-      mObjects.push_back(trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid() );//need to add obj_id
+      mObjects.insert( trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid() );//need to add obj_id
 
       UUID written_obj = trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid();
       mWriteListener->osegWriteFinished(written_obj);
