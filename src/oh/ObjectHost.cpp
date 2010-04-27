@@ -69,14 +69,15 @@ ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
 }
 
 bool ObjectHost::SpaceNodeConnection::push(const ObjectMessage& msg) {
+    TIMESTAMP_START(tstamp, (&msg));
+
     std::string data;
     msg.serialize(&data);
 
-    TIMESTAMP_START(tstamp, (&msg));
-
     // Try to push to the network
     bool success = socket->send(
-        Sirikata::MemoryReference(&(data[0]), data.size()),
+        //Sirikata::MemoryReference(&(data[0]), data.size()),
+        Sirikata::MemoryReference(data),
         Sirikata::Network::ReliableOrdered
                                 );
     if (success) {
@@ -560,40 +561,48 @@ void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, con
     }
 }
 
-
-bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size) {
-    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-
-    CBR::Protocol::Object::Ping ping_msg;
-    ping_msg.set_ping(t);
+void ObjectHost::fillPing(double distance, uint32 payload_size, CBR::Protocol::Object::Ping* result) {
     if (distance>=0)
-        ping_msg.set_distance(distance);
-    ping_msg.set_id(mPingId++);
+        result->set_distance(distance);
+    result->set_id(mPingId++);
     if (payload_size > 0) {
         std::string pl(payload_size, 'a');
-        ping_msg.set_payload(pl);
+        result->set_payload(pl);
     }
+}
 
+bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, CBR::Protocol::Object::Ping* ping_msg) {
     ServerID destServer = mObjectConnections.getConnectedServer(src);
     if (destServer == NullServerID)
         return true; // We mark this as sent because this probably
                      // just means there was latency between ping
                      // creation and ping sending.
 
-    bool send_success = send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
+    ping_msg->set_ping(t);
+    String ping_serialized = serializePBJMessage(*ping_msg);
+    bool send_success = send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,ping_serialized,destServer);
 
     if (send_success)
         CONTEXT_TRACE_NO_TIME(pingCreated,
-            ping_msg.ping(),
+            ping_msg->ping(),
             src,
-            mContext->simTime(),
+            t,
             dest,
-            ping_msg.has_id()?ping_msg.id():(uint64)-1,
-            ping_msg.has_distance()?ping_msg.distance():-1,
-            ping_msg.ByteSize()
+            ping_msg->id(),
+            ping_msg->has_distance()?ping_msg->distance():-1,
+            ping_serialized.size()
         );
 
     return send_success;
+}
+
+bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    CBR::Protocol::Object::Ping ping_msg;
+    fillPing(distance, payload_size, &ping_msg);
+
+    return sendPing(t, src, dest, &ping_msg);
 }
 
 void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {

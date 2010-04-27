@@ -86,6 +86,13 @@ public:
     bool send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload);
 
     /* Ping Utility Methods. */
+    // Fill the basic parameters in a ping message.  This is reentrant.
+    void fillPing(double distance, uint32 payload_size, CBR::Protocol::Object::Ping* result);
+    // Given a ping message constructed with fillPing(), finish constructing and
+    // send it. Must be called from main strand.
+    bool sendPing(const Time& t, const UUID& src, const UUID& dest, CBR::Protocol::Object::Ping* pmsg);
+    // Construct and send a ping.  May be expensive since it needs to be
+    // performed in main strand.
     bool ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size);
 
     boost::shared_ptr<Stream<UUID> > getSpaceStream(const UUID& objectID);
@@ -317,7 +324,7 @@ private:
     ObjectConnections mObjectConnections;
 
     bool mShuttingDown;
-    uint64 mPingId;
+    Sirikata::AtomicValue<uint32> mPingId;
     std::tr1::unordered_map<uint64, ObjectMessageCallback > mRegisteredServices;
 
 

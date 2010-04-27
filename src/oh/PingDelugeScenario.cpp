@@ -104,6 +104,9 @@ void PingDelugeScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&PingDelugeScenario::sendPings, this),
+        mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
+                                    // scheduling cost
+        Duration::seconds(10.0/mNumPingsPerSecond) :
         Duration::seconds(1.0/mNumPingsPerSecond)
     );
 
@@ -112,6 +115,9 @@ void PingDelugeScenario::initialize(ObjectHostContext*ctx) {
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&PingDelugeScenario::generatePings, this),
+        mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
+                                    // scheduling cost
+        Duration::seconds(10.0/mNumPingsPerSecond) :
         Duration::seconds(1.0/mNumPingsPerSecond)
     );
 }
@@ -172,6 +178,8 @@ bool PingDelugeScenario::generateOnePing(const Time& t, PingInfo* result) {
     result->objA = objA->uuid();
     result->objB = objB->uuid();
     result->dist = (objA->location().position(t) - objB->location().position(t)).length();
+    result->ping = new CBR::Protocol::Object::Ping();
+    mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
     return true;
 }
 
@@ -215,7 +223,9 @@ void PingDelugeScenario::sendPings() {
             SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
             break;
         }
-        if (!mContext->objectHost->ping(t, result.objA, result.objB, result.dist, mPingPayloadSize))
+        bool sent_success = mContext->objectHost->sendPing(t, result.objA, result.objB, result.ping);
+        delete result.ping;
+        if (!sent_success)
             break;
     }
     mNumTotalPings += i;

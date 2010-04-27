@@ -56,6 +56,7 @@ class PingDelugeScenario : public Scenario {
         UUID objA;
         UUID objB;
         float dist;
+        CBR::Protocol::Object::Ping* ping;
     };
     Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>* mPings;
     int64 mNumGeneratedPings;
