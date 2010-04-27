@@ -159,7 +159,13 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     if (mLocalForwarder->tryForward(obj_msg))
         return true;
 
-    // 4. Otherwise, we're going to have to ship this to the main thread, either
+    // 4. Try to shortcut them main thread. Use forwarder to try to forward
+    // using the cache. FIXME when we do this, we skip over some checks that
+    // happen during the full forwarding
+    if (mForwarder->tryCacheForward(obj_msg))
+        return true;
+
+    // 5. Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
     // routing decision.
     bool hit_empty;

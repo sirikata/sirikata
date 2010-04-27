@@ -78,6 +78,7 @@ private:
     Router<Message*>* mOSegCacheUpdateRouter;
     Router<Message*>* mForwarderWeightRouter;
     typedef std::tr1::unordered_map<ServerID, ODPFlowScheduler*> ODPRouterMap;
+    boost::mutex mODPRouterMapMutex;
     ODPRouterMap mODPRouters;
     Poller mServerWeightPoller; // For updating ServerMessageQueue, remote
                                 // ServerMessageReceiver with per-server weights
@@ -119,6 +120,12 @@ private:
     // -- Public routing interface
   public:
     virtual Router<Message*>* createServerMessageService(const String& name);
+
+    // Used only by Server.  Called from networking thready to try to forward
+    // quickly (avoiding going through OSeg Lookup Queue) by checking OSeg
+    // cache.
+    WARN_UNUSED
+    bool tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg);
 
     WARN_UNUSED
     bool route(CBR::Protocol::Object::ObjectMessage* msg);

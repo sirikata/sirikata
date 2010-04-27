@@ -76,6 +76,11 @@ OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg)
     mOSeg->setLookupListener(this);
 }
 
+ServerID OSegLookupQueue::cacheLookup(const UUID& destid) const {
+    //if get a cache hit from oseg, do not return;
+    return mOSeg->cacheLookup(destid);
+}
+
 bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)
 {
   UUID dest_obj = msg->dest_object();

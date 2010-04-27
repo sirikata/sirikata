@@ -90,6 +90,8 @@ CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
 
 // ODP push interface
 bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
+    boost::lock_guard<boost::mutex> lck(mPushMutex); // FIXME
+
     ObjectPair op(msg->source_object(), msg->dest_object());
     FlowInfo* flow_info = getFlow(op);
 

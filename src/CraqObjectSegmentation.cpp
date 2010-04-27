@@ -287,19 +287,8 @@ namespace CBR
 
   ServerID CraqObjectSegmentation::cacheLookup(const UUID& obj_id)
   {
-    if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
-    {
-      ++numOnThisServer;
-      return mContext->id();
-    }
-
-
-    if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
-    {
-      ++numMigrationNotCompleteYet;
-      return mContext->id();
-    }
-
+      // NOTE: This must be thread safe, so don't access most state.  Don't
+      // bother with local/migration checks.  Just check the cache and move on.
     ServerID cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {

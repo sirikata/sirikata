@@ -224,11 +224,16 @@ ODPFlowScheduler* Forwarder::createODPFlowScheduler(LocationService* loc, Server
 
     assert(new_flow_scheduler != NULL);
 
-    mODPRouters[remote_server] = new_flow_scheduler;
+    {
+        boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+        mODPRouters[remote_server] = new_flow_scheduler;
+    }
     return new_flow_scheduler;
 }
 
 void Forwarder::updateServerWeights() {
+    boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+
     for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++) {
         ServerID serv_id = it->first;
         ODPFlowScheduler* serv_flow_sched = it->second;
@@ -383,9 +388,14 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
         weight_update.server_pair_used_weight()
     );
 
-    ODPRouterMap::iterator flow_sched_it = mODPRouters.find(source);
-    if (flow_sched_it != mODPRouters.end()) {
-        ODPFlowScheduler* serv_flow_sched = flow_sched_it->second;
+    ODPFlowScheduler* serv_flow_sched = NULL;
+    {
+        boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+        ODPRouterMap::iterator flow_sched_it = mODPRouters.find(source);
+        if (flow_sched_it != mODPRouters.end())
+            serv_flow_sched = flow_sched_it->second;
+    }
+    if (serv_flow_sched != NULL) {
         // Update with receiver stats from this remote server.
         serv_flow_sched->updateReceiverStats(
             weight_update.receiver_total_weight(),
@@ -439,6 +449,20 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
     return accepted;
 }
 
+WARN_UNUSED
+bool Forwarder::tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg) {
+    ServerID destserver = mOSegLookups->cacheLookup(msg->dest_object());
+    if (destserver == NullServerID)
+        return false;
+
+    if (destserver == mContext->id())
+        return false;
+
+    // Use normal routing mechanism if we have a non-local dest
+    bool send_success = routeObjectMessageToServer(msg, destserver, OSegLookupQueue::ResolvedFromCache, NullServerID);
+    return true; // If we got here, the cache was successful, we just dropped it.
+}
+
 
 bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
 {
@@ -453,6 +477,8 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
     // It's possible we got the object after we started the query, resulting in
     // use pointing the message back at ourselves.  In this case, just dispatch
     // it.
+    // NOTE: This isn't thread safe, but the network thread shouldn't ge here
+    // since it will just need to cross a thread boundary anyway.
     if (dest_serv == mContext->id()) {
         dispatchMessage(*obj_msg);
         delete obj_msg;
@@ -467,7 +493,12 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   // Will force allocation of ODPFlowScheduler if its not there already
   mOutgoingMessages->prePush(dest_serv);
   // And then we can actually push
-  bool send_success = mODPRouters[dest_serv]->push(obj_msg);
+  ODPFlowScheduler* flow_sched = NULL;
+  {
+      boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+      flow_sched = mODPRouters[dest_serv];
+  }
+  bool send_success = flow_sched->push(obj_msg);
   if (!send_success) {
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
   }
@@ -475,6 +506,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
   // Note that this is done *after* the real message is sent since it is an optimization and
   // we don't want it blocking useful traffic
+  // NOTE: Again, not thread safe, but the OH networking thread will never hit this.
   if (forwardFrom != NullServerID) {
       // FIXME we used to kind of keep track of sending the same OSeg cache fix to a server multiple
       // times, but it really only applied for the rate of lookups/migrations.  We should a) determine

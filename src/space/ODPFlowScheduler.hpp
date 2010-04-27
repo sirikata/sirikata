@@ -81,7 +81,7 @@ public:
     virtual bool empty() const = 0;
     virtual uint32 size() const = 0;
 
-    // ODP push interface
+    // ODP push interface. Note: Must be thread safe!
     virtual bool push(CBR::Protocol::Object::ObjectMessage* msg) = 0;
 
     // Get the sum of the weights of active queues.

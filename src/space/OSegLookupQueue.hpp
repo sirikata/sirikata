@@ -103,6 +103,10 @@ public:
      */
     OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg);
 
+    /** Perform an OSeg cache lookup, returning the ServerID or NullServerID if
+     *  the cache doesn't contain an entry for the object.
+     */
+    ServerID cacheLookup(const UUID& destid) const;
     /** Perform an OSeg lookup, calling the specified callback when the result is available.
      *  If the result is available immediately, the callback may be triggered during this
      *  call.  Otherwise, it will be triggered when a service() call produces a result.

@@ -153,6 +153,9 @@ private:
     // Helper to get the region we compute weight over
     BoundingBox3f getObjectWeightRegion(const UUID& objid, ServerID sid) const;
 
+
+    boost::mutex mPushMutex;
+
     // Note: unfortunately we need to mark these as mutable because a)
     // SizedThreadSafeQueue doesn't have methods marked properly as const and b)
     // ThreadSafeQueue doesn't provide a front() method.
