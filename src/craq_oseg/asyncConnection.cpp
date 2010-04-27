@@ -3,7 +3,7 @@
 #include <boost/bind.hpp>
 #include "../SpaceContext.hpp"
 #include <sirikata/network/IOStrandImpl.hpp>
-
+#include "CraqEntry.hpp"
 namespace CBR
 {
 
@@ -128,6 +128,7 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
   //creating stream buffer
   boost::asio::streambuf* sBuff = new boost::asio::streambuf;
 
+
   //creating a read-callback.
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
@@ -143,23 +144,16 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
 
 
   //generating the query to write.
+  
   std::string query;
   query.append(CRAQ_DATA_SET_PREFIX);
   query.append(dataToSet); //this is the re
 
   query.append(CRAQ_DATA_TO_SET_SIZE);
   query.append(CRAQ_DATA_SET_END_LINE);
+  float radius=235.23523523;
 
-  //convert from integer to string.
-  std::stringstream ss;
-  ss << dataToSetTo;
-  std::string tmper = ss.str();
-  for (int s=0; s< CRAQ_SERVER_SIZE - ((int) tmper.size()); ++s)
-  {
-    query.append("0");
-  }
-
-  query.append(tmper);
+  query.append(CraqEntry(dataToSetTo,radius).serialize());
   query.append(CRAQ_TO_SET_SUFFIX);
 
   query.append(CRAQ_DATA_SET_END_LINE);
@@ -431,7 +425,8 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
         else
         {
           //means that the line was long enough to be a response
-          CraqOperationResult* tmper  = new CraqOperationResult (std::atoi(value.c_str()),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
+          CraqEntry entry((unsigned char*)value.data());
+          CraqOperationResult* tmper  = new CraqOperationResult (entry.server(),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
           mOperationResultVector.push_back(tmper);
         }
       } //added here.

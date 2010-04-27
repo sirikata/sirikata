@@ -286,6 +286,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
   ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/Base64.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
   ${CBR_SOURCE_DIR}/space/RegionODPFlowScheduler.cpp

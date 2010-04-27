@@ -176,4 +176,4 @@ def graph_message_latency(log_files, labels, filename=None):
 
 #do main loop through stats file
 if __name__ == "__main__":
-    graph_message_latency(sys.argv[1:])
+    graph_message_latency(sys.argv[1:],sys.argv[1:])
