@@ -73,11 +73,14 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
         if (!conn->enabled())
             return false;
 
+        // FIXME we can't sanity check here because we use this after
+        // receiving from another space server (in which case we won't
+        // have the source object...).
         // We only sanity check the source object when we're sure we're going to be able to
         // ship it.
-        ObjectConnectionMap::iterator src_it = mActiveConnections.find(msg->source_object());
-        if (src_it == mActiveConnections.end())
-            return false;
+        //ObjectConnectionMap::iterator src_it = mActiveConnections.find(msg->source_object());
+        //if (src_it == mActiveConnections.end())
+        //    return false;
     }
 
     assert(conn != NULL);

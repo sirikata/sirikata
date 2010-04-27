@@ -35,6 +35,7 @@ namespace CBR
 class ForwarderServiceQueue;
 class ODPFlowScheduler;
 class LocationService;
+class LocalForwarder;
 
 class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
 		    public ServerMessageRouter, public ObjectMessageRouter,
@@ -50,6 +51,7 @@ private:
     ServerMessageQueue* mServerMessageQueue;
     ServerMessageReceiver* mServerMessageReceiver;
 
+    LocalForwarder* mLocalForwarder;
     OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
@@ -94,6 +96,8 @@ private:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
     void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc);
+
+    void setLocalForwarder(LocalForwarder* lf) { mLocalForwarder = lf; }
 
     // Service Implementation
     void start();

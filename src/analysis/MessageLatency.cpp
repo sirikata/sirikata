@@ -858,7 +858,12 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::SPACE_TO_SPACE_HIT_NETWORK, Trace::SPACE_TO_SPACE_READ_FROM_NET, PacketStageGraph::ASYNC);
 
     stage_graph.addEdge(Trace::SPACE_TO_SPACE_READ_FROM_NET, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
+
+    // Slow path out of SMR
     stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMR_DEQUEUED, Trace::HANDLE_SPACE_MESSAGE);
+    // Fast path(s) out of SMR
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMR_DEQUEUED, Trace::FORWARDED_LOCALLY);
+    stage_graph.addEdge(Trace::SPACE_TO_SPACE_SMR_DEQUEUED, Trace::OSEG_CACHE_LOOKUP_FINISHED);
 
     stage_graph.addEdge(Trace::SPACE_TO_OH_ENQUEUED, Trace::OH_NET_RECEIVED, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::OH_NET_RECEIVED, Trace::OH_RECEIVED);

@@ -59,6 +59,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     );
 
     mLocalForwarder = new LocalForwarder(mContext);
+    mForwarder->setLocalForwarder(mLocalForwarder);
 
     mMigrationTimer.start();
 

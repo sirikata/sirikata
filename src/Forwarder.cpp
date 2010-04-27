@@ -15,6 +15,7 @@
 #include "ObjectConnection.hpp"
 
 #include "ForwarderServiceQueue.hpp"
+#include "LocalForwarder.hpp"
 
 #include "Random.hpp"
 
@@ -65,6 +66,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
              mOutgoingMessages(NULL),
              mServerMessageQueue(NULL),
              mServerMessageReceiver(NULL),
+             mLocalForwarder(NULL),
              mOSegLookups(NULL),
              mUniqueConnIDs(0),
              mServiceIDSource(0),
@@ -561,12 +563,45 @@ void Forwarder::serverMessageReceived(Message* msg) {
     // network for new connections.
     mOutgoingMessages->prePush(msg->source_server());
 
+    // Routing, check if we can route immediately.
+    if (msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        bool parsed = parsePBJMessage(obj_msg, msg->payload());
+        assert(parsed);
+
+        // This process is very similar to the one followed in Server for
+        // handling OH messages.  We should probably merge them....
+
+        // Local
+        if (mLocalForwarder->tryForward(obj_msg)) {
+            delete msg;
+            return;
+        }
+
+        // OSeg Cache
+        // 4. Try to shortcut them main thread. Use forwarder to try to forward
+        // using the cache. FIXME when we do this, we skip over some checks that
+        // happen during the full forwarding
+        if (tryCacheForward(obj_msg)) {
+            delete msg;
+            return;
+        }
+
+        // Couldn't get rid of it, forward normally.
+        delete obj_msg;
+    }
+
     bool got_empty;
     bool push_success;
     {
         boost::lock_guard<boost::mutex> lock(mReceivedMessagesMutex);
         got_empty = mReceivedMessages.probablyEmpty();
         push_success = mReceivedMessages.push(msg, false);
+    }
+
+    if (!push_success) {
+        SILOG(forwarder,fatal,"FATAL: Unhandled drop in Forwarder.");
+        delete msg;
     }
 
     if (got_empty && push_success)
