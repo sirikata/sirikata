@@ -162,14 +162,20 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // 4. Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
     // routing decision.
-    if (mRouteObjectMessage.push(ConnectionIDObjectMessagePair(conn_id,obj_msg),false)) {
-        mContext->mainStrand->post(
-            std::tr1::bind(
-                &Server::handleObjectHostMessageRouting,
-                this));
-    } else {
-        TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
+    bool hit_empty;
+    bool push_for_processing_success;
+    {
+        boost::lock_guard<boost::mutex> lock(mRouteObjectMessageMutex);
+        hit_empty = (mRouteObjectMessage.probablyEmpty());
+        push_for_processing_success = mRouteObjectMessage.push(ConnectionIDObjectMessagePair(conn_id,obj_msg),false);
     }
+    if (!push_for_processing_success) {
+        TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
+    } else {
+        if (hit_empty)
+            scheduleObjectHostMessageRouting();
+    }
+
     // NOTE: We always "accept" the data, even if we're just dropping
     // it.  This keeps packets flowing.  We could use flow control to
     // slow things down, but since the data path splits in this method
@@ -178,7 +184,24 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     return true;
 }
 
+void Server::scheduleObjectHostMessageRouting() {
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &Server::handleObjectHostMessageRouting,
+            this));
+}
+
 void Server::handleObjectHostMessageRouting() {
+#define MAX_OH_MESSAGES_HANDLED 20
+
+    for(uint32 i = 0; i < MAX_OH_MESSAGES_HANDLED && !mRouteObjectMessage.probablyEmpty(); i++)
+        handleSingleObjectHostMessageRouting();
+
+    if (!mRouteObjectMessage.probablyEmpty())
+        scheduleObjectHostMessageRouting();
+}
+
+void Server::handleSingleObjectHostMessageRouting() {
     ConnectionIDObjectMessagePair front(ObjectHostConnectionManager::ConnectionID(),NULL);
     if (!mRouteObjectMessage.pop(front)) {
         SILOG(cbr,error,"Got requested to pull an item off mRouteObjectMessage but no message awaited me");

@@ -74,10 +74,13 @@ private:
     // network strand to allow for fast forwarding, see
     // handleObjectHostMessageRouting for continuation in main strand
     bool handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    // Schedule main thread to handle oh message routing
+    void scheduleObjectHostMessageRouting();
+    void handleObjectHostMessageRouting();
     // Perform forwarding for a message on the front of mRouteObjectMessage from the object host which
     // couldn't be forwarded directly by the networking code
     // (i.e. needs routing to another node)
-    void handleObjectHostMessageRouting();
+    void handleSingleObjectHostMessageRouting();
 
     // Handle Session messages from an object
     void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg);
@@ -178,6 +181,10 @@ private:
             return obj_msg->ByteSize();
         }
     };
+
+    // FIXME Another place where needing a size queue and notifications causes
+    // double locking...
+    boost::mutex mRouteObjectMessageMutex;
     Sirikata::SizedThreadSafeQueue<ConnectionIDObjectMessagePair>mRouteObjectMessage;
 }; // class Server
 
