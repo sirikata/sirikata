@@ -100,7 +100,6 @@ private:
     void stop();
   protected:
 
-    virtual void dispatchMessage(Message* msg) const;
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
   private:

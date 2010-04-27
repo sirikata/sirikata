@@ -123,12 +123,6 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
     mServerMessageReceiver = smr;
   }
 
-void Forwarder::dispatchMessage(Message*msg) const {
-    CONTEXT_TRACE(serverDatagramReceived, mContext->simTime(), msg->source_server(), msg->id(), msg->serializedSize());
-
-    ServerMessageDispatcher::dispatchMessage(msg);
-}
-
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
     ObjectMessageDispatcher::dispatchMessage(msg);
 }
@@ -603,7 +597,7 @@ void Forwarder::processReceivedServerMessages() {
     }
 
     for(uint32 i = 0; i < pulled; i++)
-        dispatchMessage(messages[i]);
+        ServerMessageDispatcher::dispatchMessage(messages[i]);
 
     if (!got_empty)
         scheduleProcessReceivedServerMessages();

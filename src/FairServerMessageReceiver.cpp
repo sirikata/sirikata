@@ -117,10 +117,7 @@ void FairServerMessageReceiver::service() {
         recv_bytes -= packet_size;
         mBytesUsed += packet_size;
 
-        /*
-           FIXME at some point we should record this here instead of in Server.cpp
-        mContext->trace()->serverDatagramReceived();
-        */
+        CONTEXT_TRACE(serverDatagramReceived, mContext->simTime(), next_recv_msg->source_server(), next_recv_msg->id(), next_recv_msg->serializedSize());
         mListener->serverMessageReceived(next_recv_msg);
     }
 
