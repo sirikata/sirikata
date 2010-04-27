@@ -36,56 +36,51 @@
 namespace CBR {
 
 
-LocalForwarder::LocalForwarder(SpaceContext* ctx, IOStrand* net_strand)
-        : mContext(ctx),
-          mNetStrand(net_strand)
+LocalForwarder::LocalForwarder(SpaceContext* ctx)
+        : mContext(ctx)
 {
 }
 
 void LocalForwarder::addActiveConnection(ObjectConnection* conn) {
-    mNetStrand->post(
-        std::tr1::bind(&LocalForwarder::handleAddActiveConnection, this, conn)
-                     );
-}
+    boost::lock_guard<boost::mutex> lock(mMutex);
 
-void LocalForwarder::handleAddActiveConnection(ObjectConnection* conn) {
     assert(mActiveConnections.find(conn->id()) == mActiveConnections.end());
 
     mActiveConnections[conn->id()] = conn;
 }
 
 void LocalForwarder::removeActiveConnection(const UUID& objid) {
-    mNetStrand->post(
-        std::tr1::bind(&LocalForwarder::handleRemoveActiveConnection, this, objid)
-                     );
-}
+    boost::lock_guard<boost::mutex> lock(mMutex);
 
-void LocalForwarder::handleRemoveActiveConnection(const UUID& objid) {
     ObjectConnectionMap::iterator it = mActiveConnections.find(objid);
     if (it == mActiveConnections.end())
         return;
 
-    ObjectConnection* conn = it->second;
     mActiveConnections.erase(it);
 }
 
 bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
-    // Destination connection must exist and be enabled
-    ObjectConnectionMap::iterator it = mActiveConnections.find(msg->dest_object());
-    if (it == mActiveConnections.end())
-        return false;
+    ObjectConnection* conn = NULL;
+    {
+        boost::lock_guard<boost::mutex> lock(mMutex);
 
-    ObjectConnection* conn = it->second;
+        // Destination connection must exist and be enabled
+        ObjectConnectionMap::iterator it = mActiveConnections.find(msg->dest_object());
+        if (it == mActiveConnections.end())
+            return false;
 
-    if (!conn->enabled())
-        return false;
+        conn = it->second;
+        if (!conn->enabled())
+            return false;
 
+        // We only sanity check the source object when we're sure we're going to be able to
+        // ship it.
+        ObjectConnectionMap::iterator src_it = mActiveConnections.find(msg->source_object());
+        if (src_it == mActiveConnections.end())
+            return false;
+    }
 
-    // We only sanity check the source object when we're sure we're going to be able to
-    // ship it.
-    ObjectConnectionMap::iterator src_it = mActiveConnections.find(msg->source_object());
-    if (src_it == mActiveConnections.end())
-        return false;
+    assert(conn != NULL);
 
     // Finally, with all checks done, we can commit to doing local routing
     TIMESTAMP_START(tstamp, msg);

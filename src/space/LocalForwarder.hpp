@@ -47,9 +47,8 @@ class LocalForwarder {
   public:
     /** Create a LocalForwarder.
      *  \param ctx SpaceContext for this LocalForwarder to operate in
-     *  \param net_strand IOStrand in which network operations occur
      */
-    LocalForwarder(SpaceContext* ctx, IOStrand* net_strand);
+    LocalForwarder(SpaceContext* ctx);
 
     /** Notify the LocalForwarder that a new object connection is now
      *  available.  This transfers ownership of the ObjectConnection to the
@@ -71,16 +70,11 @@ class LocalForwarder {
      */
     bool tryForward(CBR::Protocol::Object::ObjectMessage* msg);
   private:
-    // -- Handlers for events from main thread
-    void handleAddActiveConnection(ObjectConnection* conn);
-    void handleRemoveActiveConnection(const UUID& objid);
-
-
     typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUID::Hasher> ObjectConnectionMap;
 
     SpaceContext* mContext;
-    IOStrand* mNetStrand;
     ObjectConnectionMap mActiveConnections;
+    boost::mutex mMutex;
 };
 
 } // namespace CBR

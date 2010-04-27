@@ -58,10 +58,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
     );
 
-    mLocalForwarder = new LocalForwarder(
-        mContext,
-        mObjectHostConnectionManager->netStrand()
-                                         );
+    mLocalForwarder = new LocalForwarder(mContext);
 
     mMigrationTimer.start();
 
