@@ -33,13 +33,10 @@ public:
 
 
 
-class ObjectSegmentation : public MessageRecipient, public PollingService
+class ObjectSegmentation : public MessageRecipient, public Service
   {
   protected:
-    virtual void poll() = 0;
-
     SpaceContext* mContext;
-    TimeProfiler::Stage* mServiceStage;
     OSegLookupListener* mLookupListener;
       OSegWriteListener* mWriteListener;
     IOStrand* oStrand;
@@ -49,17 +46,18 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
 
 
     ObjectSegmentation(SpaceContext* ctx,IOStrand* o_strand)
-     : PollingService(o_strand),
-       mContext(ctx),
+     : mContext(ctx),
        mLookupListener(NULL),
        mWriteListener(NULL),
        oStrand(o_strand)
     {
       fflush(stdout);
-        mServiceStage = mContext->profiler->addStage("OSeg");
     }
 
     virtual ~ObjectSegmentation() {}
+
+      virtual void start() {
+      }
 
       void setLookupListener(OSegLookupListener* listener) {
           mLookupListener = listener;

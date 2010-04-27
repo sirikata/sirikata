@@ -156,8 +156,6 @@ namespace CBR
     void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken);
 
 
-    virtual void poll();
-
     SpaceContext* ctx;
     bool mReceivedStopRequest;
 

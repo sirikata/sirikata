@@ -79,7 +79,6 @@ namespace CBR
   {
     craqDhtSet.stop();
     craqDhtGet.stop();
-    Poller::stop();
 
     mReceivedStopRequest = true;
   }
@@ -557,22 +556,6 @@ namespace CBR
         std::cout<<"\n\n clear to migrate is fine migration is being called from somewhere besides server.cpp\n\n";
     }
 #endif
-  }
-
-
-
-  void CraqObjectSegmentation::poll()
-  {
-    if (mReceivedStopRequest)
-      return;
-
-
-    mServiceStage->started();
-    //shouldn't really need to do anything in here.
-    //    well, maybe try to re-send the messages that failed;
-    //    maybe also deal with not founds.
-
-    mServiceStage->finished();
   }
 
 
