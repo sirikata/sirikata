@@ -76,7 +76,7 @@ OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg)
     mOSeg->setLookupListener(this);
 }
 
-ServerID OSegLookupQueue::cacheLookup(const UUID& destid) const {
+CraqEntry OSegLookupQueue::cacheLookup(const UUID& destid) const {
     //if get a cache hit from oseg, do not return;
     return mOSeg->cacheLookup(destid);
 }
@@ -102,8 +102,8 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
   }
 
   //if get a cache hit from oseg, do not return;
-  ServerID destServer= mOSeg->cacheLookup(msg->dest_object());
-  if (destServer != NullServerID)
+  CraqEntry destServer= mOSeg->cacheLookup(msg->dest_object());
+  if (destServer.notNull())
   {
     cb(msg, destServer, ResolvedFromCache);
     return true;
@@ -116,7 +116,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
   //  otherwise, do full oseg lookup;
   destServer = mOSeg->lookup(msg->dest_object());
   // If we already have a server, handle the callback right away
-  if (destServer != NullServerID) {
+  if (destServer.notNull()) {
     cb(msg, destServer, ResolvedFromCache);
     return true;
   }
@@ -130,13 +130,13 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
   return true;
 }
 
-void OSegLookupQueue::osegLookupCompleted(const UUID& id, const ServerID& dest) {
+void OSegLookupQueue::osegLookupCompleted(const UUID& id, const CraqEntry& dest) {
     mNetworkStrand->post(
         std::tr1::bind(&OSegLookupQueue::handleLookupCompleted, this, id, dest)
     );
 }
 
-void OSegLookupQueue::handleLookupCompleted(const UUID& id, const ServerID& dest) {
+void OSegLookupQueue::handleLookupCompleted(const UUID& id, const CraqEntry& dest) {
     //Now sending messages that we had saved up from oseg lookup calls.
     LookupMap::iterator iterQueueMap = mLookups.find(id);
     if (iterQueueMap == mLookups.end())

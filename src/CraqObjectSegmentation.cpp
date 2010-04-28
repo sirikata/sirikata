@@ -142,12 +142,12 @@ namespace CBR
   /*
     This function checks to see whether the obj_id is hosted on this space server
   */
-  bool CraqObjectSegmentation::checkOwn(const UUID& obj_id)
+  bool CraqObjectSegmentation::checkOwn(const UUID& obj_id, float*radius)
   {
     //    Duration beginningDur = mTimer.elapsed();
     Duration beginningDur = Time::local() - Time::epoch();
-
-    if (mObjects.find(obj_id) == mObjects.end())
+    ObjectSet::iterator where=mObjects.find(obj_id);
+    if (where == mObjects.end())
     {
       //means that the object isn't hosted on this space server
 
@@ -160,7 +160,7 @@ namespace CBR
 
       return false;
     }
-
+    *radius=where->second.radius();
     //means that the object *is* hosted on this space server
     //    Duration endingDur = mTimer.elapsed();
     Duration endingDur = Time::local() - Time::epoch();
@@ -188,7 +188,7 @@ namespace CBR
     if (mInTransIter != mInTransitOrLookup.end())
     {
       //means that the object is either being looked up or in transit
-      if (mInTransIter->second.sID != CRAQ_OSEG_LOOKUP_SERVER_ID)
+      if (mInTransIter->second.sID.notNull())
       {
         //means that the object is migrating from here.
         migratingFromHere = true;
@@ -208,7 +208,7 @@ namespace CBR
 
 
   //this call returns true if the object is migrating from this server to another server, but hasn't yet received an ack message (which will disconnect the object connection.)
-  bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id)
+bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id, float*radius)
   {
     if (mReceivedStopRequest)
       return false;
@@ -221,8 +221,9 @@ namespace CBR
       inTransOrLookup_m.unlock();
       return false;
     }
-    if (iterInTransOrLookup->second.sID != CRAQ_OSEG_LOOKUP_SERVER_ID)
+    if (iterInTransOrLookup->second.sID.notNull())
     {
+      *radius=iterInTransOrLookup->second.sID.radius();
       inTransOrLookup_m.unlock();
       return true;
     }
@@ -234,11 +235,11 @@ namespace CBR
 
   //checks value against cache.
   //should only be called from the "postingStrand"
-  ServerID CraqObjectSegmentation::satisfiesCache(const UUID& obj_id)
+  CraqEntry CraqObjectSegmentation::satisfiesCache(const UUID& obj_id)
   {
 
 #ifndef CRAQ_CACHE
-    return NullServerID;
+    return CraqEntry::null();
 #endif
 
     return mCraqCache.get(obj_id);
@@ -256,18 +257,17 @@ namespace CBR
   }
 
 
-  void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id)
+  void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id, float radius)
   {
     if (mReceivedStopRequest)
       return ;
 
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
-
-    CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
+    CraqDataSetGet cdSetGet(cdk, CraqEntry(mContext->id(),radius) ,true,CraqDataSetGet::SET);
 
     TrackedSetResultsDataAdded tsrda;
-    tsrda.msgAdded  = generateAddedMessage(obj_id);
+    tsrda.msgAdded  = generateAddedMessage(obj_id,radius);
     //    tsrda.dur       = mTimer.elapsed();
     tsrda.dur = Time::local() - Time::epoch();
 
@@ -278,25 +278,26 @@ namespace CBR
   }
 
 
-  CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id)
+CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id, float radius)
   {
     CBR::Protocol::OSeg::AddedObjectMessage* oadd = new CBR::Protocol::OSeg::AddedObjectMessage();
     oadd->set_m_objid(obj_id);
+    oadd->set_m_objradius(radius);
     return oadd;
   }
 
-  ServerID CraqObjectSegmentation::cacheLookup(const UUID& obj_id)
+  CraqEntry CraqObjectSegmentation::cacheLookup(const UUID& obj_id)
   {
       // NOTE: This must be thread safe, so don't access most state.  Don't
       // bother with local/migration checks.  Just check the cache and move on.
-    ServerID cacheReturn = satisfiesCache(obj_id);
-    if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
+    CraqEntry cacheReturn = satisfiesCache(obj_id);
+    if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
       ++numCacheHits;
       return cacheReturn;
     }
 
-    return NullServerID;
+    return CraqEntry::null();
   }
 
 
@@ -304,24 +305,24 @@ namespace CBR
     After insuring that the object isn't in transit, the lookup should querry the dht.
     Only called from postingStrand
   */
-  ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
+  CraqEntry CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
     Duration beginDur = Time::local() - Time::epoch();
 
     if (mReceivedStopRequest)
-      return NullServerID;
+      return CraqEntry::null();
 
 
     OSegLookupTraceToken* traceToken = new OSegLookupTraceToken(obj_id);
     traceToken->initialLookupTime    = beginDur.toMicroseconds();
 
     ++numLookups;
-
-    if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
+    float radius=0;
+    if (checkOwn(obj_id,&radius))  //this call just checks through to see whether the object is on this space server.
     {
       ++numOnThisServer;
       delete traceToken;
-      return mContext->id();
+      return CraqEntry(mContext->id(),radius);
     }
 
     //log the request.
@@ -330,21 +331,21 @@ namespace CBR
         mContext->id());
 
 
-    if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
+    if (checkMigratingFromNotCompleteYet(obj_id,&radius))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
     {
       ++numMigrationNotCompleteYet;
       delete traceToken;
-      return mContext->id();
+      return CraqEntry(mContext->id(),radius);
     }
 
     Duration cacheBeginDur = Time::local() - Time::epoch();
     traceToken->checkCacheLocalBegin = cacheBeginDur.toMicroseconds();
 
-    ServerID cacheReturn = satisfiesCache(obj_id);
-    if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
+    CraqEntry cacheReturn = satisfiesCache(obj_id);
+    if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
         CONTEXT_TRACE(osegCacheResponse,
-            cacheReturn,
+            cacheReturn.server(),
             obj_id);
 
       ++numCacheHits;
@@ -362,7 +363,7 @@ namespace CBR
 
     oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id, traceToken));
 
-    return NullServerID;
+    return CraqEntry::null();
   }
 
 
@@ -397,7 +398,7 @@ namespace CBR
       indexer.append(1,myUniquePrefixKey);
       indexer.append(tmper.rawHexData());
 
-      CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
+      CraqDataSetGet cdSetGet (indexer,CraqEntry::null(),false,CraqDataSetGet::GET); //bftm modified
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
@@ -414,7 +415,7 @@ namespace CBR
       Duration timerDur =  Time::local() - Time::epoch();
 
       TransLookup tmpTransLookup;
-      tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
+      tmpTransLookup.sID = CraqEntry::null();  //means that we're performing a lookup, rather than a migrate.
       tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
 
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
@@ -438,7 +439,7 @@ namespace CBR
   /*
     This creates an acknowledge message to be sent out through forwarder.  Acknowledge message says that this oseg now knows that it's in charge of the object obj, acknowledge message recipient is sID_to.
   */
-  CBR::Protocol::OSeg::MigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to)
+  CBR::Protocol::OSeg::MigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,float radius, ServerID sID_to)
   {
     CBR::Protocol::OSeg::MigrateMessageAcknowledge* oseg_ack_msg = new CBR::Protocol::OSeg::MigrateMessageAcknowledge();
     oseg_ack_msg->set_m_servid_from(mContext->id());
@@ -446,7 +447,7 @@ namespace CBR
     oseg_ack_msg->set_m_message_destination(sID_to);
     oseg_ack_msg->set_m_message_from(mContext->id());
     oseg_ack_msg->set_m_objid(obj_id);
-
+    oseg_ack_msg->set_m_objradius(radius);
     return oseg_ack_msg;
   }
 
@@ -456,7 +457,7 @@ namespace CBR
 
     If you're initially adding an object to the world, you should use the newObjectAdd function instead.
   */
-  void CraqObjectSegmentation::addObject(const UUID& obj_id, const ServerID idServerAckTo, bool generateAck)
+void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool generateAck)
   {
     if (mReceivedStopRequest)
       return;
@@ -467,14 +468,14 @@ namespace CBR
       CraqDataKey cdk;
       convert_obj_id_to_dht_key(obj_id,cdk);
 
-      CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, CraqEntry(mContext->id(),radius) ,true,CraqDataSetGet::SET);
 
       receivingObjects_m.lock();
-      mReceivingObjects.insert(obj_id);
+      mReceivingObjects.insert(ObjectSet::value_type(obj_id,CraqEntry(mContext->id(),radius)));
       receivingObjects_m.unlock();
 
       TrackedSetResultsData tsrd;
-      tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
+      tsrd.migAckMsg = generateAcknowledgeMessage(obj_id, radius, idServerAckTo);
       //      tsrd.dur       = mTimer.elapsed();
       tsrd.dur =  Time::local() - Time::epoch();
 
@@ -488,12 +489,12 @@ namespace CBR
       CraqDataKey cdk;
       convert_obj_id_to_dht_key(obj_id,cdk);
 
-      CraqDataSetGet cdSetGet(cdk, mContext->id() ,false,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, CraqEntry(mContext->id(),radius) ,false,CraqDataSetGet::SET);
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet, trackID);
 
 
-      std::pair<ObjectSet::iterator, bool> inserted = mObjects.insert(obj_id);
+      std::pair<ObjectSet::iterator, bool> inserted = mObjects.insert(ObjectSet::value_type(obj_id,CraqEntry(mContext->id(),radius)));
       if (inserted.second)
       {
         std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n";
@@ -507,7 +508,7 @@ namespace CBR
     Whatever calls this must verify that the object is on this server.
     I can do the check in the function by querrying bambooDht as well
   */
-  void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const ServerID new_server_id)
+  void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const CraqEntry& new_server_id)
   {
     if (mReceivedStopRequest)
       return;
@@ -515,7 +516,7 @@ namespace CBR
     //log the message.
     CONTEXT_TRACE(objectBeginMigrate,
         obj_id,mContext->id(),
-        new_server_id);
+        new_server_id.server());
 
     std::map<UUID,TransLookup>::const_iterator transIter = mInTransitOrLookup.find(obj_id);
 
@@ -549,7 +550,7 @@ namespace CBR
 
 
   //should be called from inside of o_strand and posts to postingStrand mainStrand->post.
-  void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken)
+  void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken)
   {
     if (mReceivedStopRequest)
     {
@@ -618,7 +619,7 @@ namespace CBR
     if (mReceivedStopRequest)
       return;
 
-    postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on()));
+    postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, update_oseg_msg.m_objid(), CraqEntry(update_oseg_msg.servid_obj_on(),update_oseg_msg.m_objradius())));
   }
 
   //called from within o_strand
@@ -627,11 +628,9 @@ namespace CBR
     if (mReceivedStopRequest)
       return;
 
-    ServerID serv_from, serv_to;
+    CraqEntry serv_from(msg.m_servid_from(),msg.m_objradius()), serv_to(msg.m_servid_to(),msg.m_objradius());
     UUID obj_id;
 
-    serv_from = msg.m_servid_from();
-    serv_to   = msg.m_servid_to();
     obj_id    = msg.m_objid();
 
 
@@ -654,8 +653,8 @@ namespace CBR
 
       //log reception of acknowled message
       CONTEXT_TRACE(objectAcknowledgeMigrate,
-              obj_id,serv_from,
-              mContext->id());
+                    obj_id,serv_from.server(),
+                    mContext->id());
     }
     inTransOrLookup_m.unlock();
 
@@ -747,7 +746,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
         indexer.append(1,myUniquePrefixKey);
         indexer.append(nfd->obj_id.rawHexData());
 
-        CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
+        CraqDataSetGet cdSetGet (indexer,CraqEntry(NullServerID,0),false,CraqDataSetGet::GET); //bftm modified
         craqDhtGet.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
 
         mNfData.pop(); //remove the item from the queue.
@@ -774,7 +773,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       return;
     }
 
-    if (cor->servID == NullServerID)
+    if (cor->servID.isNull())
     {
       notFoundFunction(cor);
 
@@ -785,7 +784,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       std::cout<<"\n\nWe have an object that does not exist in craq system.  This shouldn't have really been called.\n\n";
 
-      std::cout<<"Object:  "<<cor->objID<<"  server id:  "<<cor->servID<<"  tracking  "<<cor->tracking<<"  suceeded: "<<cor->succeeded<<"  GET or set:   "<<cor->whichOperation<<"\n\n";
+      std::cout<<"Object:  "<<cor->objID<<"  server id:  "<<cor->servID.server()<<"  radius  "<<cor->servID.radius()<<"  tracking  "<<cor->tracking<<"  suceeded: "<<cor->succeeded<<"  GET or set:   "<<cor->whichOperation<<"\n\n";
 
       assert(false);
       return;
@@ -806,12 +805,12 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       CONTEXT_TRACE(objectSegmentationProcessedRequest,
           tmper,
-          cor->servID,
+          cor->servID.server(),
           mContext->id(),
           (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)),
           (uint32) craqDhtGet.queueSize()  );
 
-      if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
+      if(iter->second.sID.isNull())
       {
         //means that after receiving a lookup request, we did not intermediarilly receive a migrate request.
         //if above predicate is not true, means that we did receive a migrate request, and therefore should not delete that migrate request from mInTransitOrLookup (ie do nothing).
@@ -881,19 +880,20 @@ void CraqObjectSegmentation::trySendMigAcks() {
       delete trackedSetResult;
       return;
     }
-
-
-    if (trackingMessages.find(trackedSetResult->trackedMessage) != trackingMessages.end())
+    TrackedMessageMapAdded::iterator awhere;
+    TrackedMessageMap::iterator where=trackingMessages.find(trackedSetResult->trackedMessage);
+    if (where != trackingMessages.end())
     {
       //means that we have a record of locally tracking this message and that we'll have to send an ack.
 
-      UUID obj_id = trackingMessages[trackedSetResult->trackedMessage].migAckMsg->m_objid();
+      UUID obj_id = where->second.migAckMsg->m_objid();
+      float radius=where->second.migAckMsg->m_objradius();
 
       //add this to the cache
-      postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, mContext->id()));
+      postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, CraqEntry(mContext->id(),radius)));
 
       //add tomObjects the uuid associated with trackedMessage (ie, now we know that we own the object.)
-      mObjects.insert(obj_id);
+      mObjects.insert(ObjectSet::value_type(obj_id,CraqEntry(mContext->id(),radius)));
 
       //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
       removeFromInTransOrLookup(obj_id);
@@ -924,13 +924,15 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       trackingMessages.erase(trackedSetResult->trackedMessage);//stop tracking this message.
     }
-    else if (trackedAddMessages.find(trackedSetResult->trackedMessage) != trackedAddMessages.end())
+    else if ((awhere=trackedAddMessages.find(trackedSetResult->trackedMessage)) != trackedAddMessages.end())
     {
 
       //means that we just finished adding first object
-      mObjects.insert( trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid() );//need to add obj_id
+        mObjects.insert( ObjectSet::value_type(awhere->second.msgAdded->m_objid(),
+                                               CraqEntry(mContext->id(),
+                                                         awhere->second.msgAdded->m_objradius())));//need to add obj_id
 
-      UUID written_obj = trackedAddMessages[trackedSetResult->trackedMessage].msgAdded->m_objid();
+      UUID written_obj = awhere->second.msgAdded->m_objid();
       mWriteListener->osegWriteFinished(written_obj);
     }
 

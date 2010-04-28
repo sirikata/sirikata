@@ -26,8 +26,8 @@ public:
 
   AsyncConnectionSet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
-  void setBound(const CraqObjectID& obj_dataToGet, const int& dataToSetTo, const bool&  track, const int& trackNum);
-  void set(const CraqDataKey& dataToSet, const int& dataToSetTo, const bool&  track, const int& trackNum);
+  void setBound(const CraqObjectID& obj_dataToGet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
+  void set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
   
   ~AsyncConnectionSet();
   AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg);
@@ -41,10 +41,11 @@ private:
 
   struct IndividualQueryData
   {
+    IndividualQueryData():currentlySettingTo(CraqEntry::null()){}
     enum GetOrSet {GET,SET};
     GetOrSet gs;
     CraqDataKey currentlySearchingFor;
-    int currentlySettingTo;
+    CraqEntry currentlySettingTo;
     bool is_tracking;
     int tracking_number;
     uint64 time_admitted; //in milliseconds what time was when lookup was requested.

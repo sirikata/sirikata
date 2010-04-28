@@ -447,11 +447,11 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 
 WARN_UNUSED
 bool Forwarder::tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg) {
-    ServerID destserver = mOSegLookups->cacheLookup(msg->dest_object());
-    if (destserver == NullServerID)
+    CraqEntry destserver = mOSegLookups->cacheLookup(msg->dest_object());
+    if (destserver.isNull())
         return false;
 
-    if (destserver == mContext->id())
+    if (destserver.server() == mContext->id())
         return false;
 
     // Use normal routing mechanism if we have a non-local dest
@@ -460,7 +460,7 @@ bool Forwarder::tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg) {
 }
 
 
-bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
+bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
 {
     Trace::MessagePath mp = (resolved_from == OSegLookupQueue::ResolvedFromCache)
         ? Trace::OSEG_CACHE_LOOKUP_FINISHED
@@ -475,7 +475,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
     // it.
     // NOTE: This isn't thread safe, but the network thread shouldn't ge here
     // since it will just need to cross a thread boundary anyway.
-    if (dest_serv == mContext->id()) {
+    if (dest_serv.server() == mContext->id()) {
         dispatchMessage(*obj_msg);
         delete obj_msg;
         return true;
@@ -487,12 +487,12 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
 
   // Will force allocation of ODPFlowScheduler if its not there already
-  mOutgoingMessages->prePush(dest_serv);
+  mOutgoingMessages->prePush(dest_serv.server());
   // And then we can actually push
   ODPFlowScheduler* flow_sched = NULL;
   {
       boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
-      flow_sched = mODPRouters[dest_serv];
+      flow_sched = mODPRouters[dest_serv.server()];
   }
   bool send_success = flow_sched->push(obj_msg);
   if (!send_success) {
@@ -516,9 +516,9 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
       CBR::Protocol::OSeg::UpdateOSegMessage contents;
       contents.set_servid_sending_update(mContext->id());
-      contents.set_servid_obj_on(dest_serv);
+      contents.set_servid_obj_on(dest_serv.server());
       contents.set_m_objid(obj_id);
-
+      contents.set_m_objradius(dest_serv.radius());
       Message* up_os = new Message(
           mContext->id(),
           SERVER_PORT_OSEG_UPDATE,

@@ -354,7 +354,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     //update our oseg to show that we know that we have this object now.
     //    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
-    mOSeg->newObjectAdd(obj_id);
+    mOSeg->newObjectAdd(obj_id,connect_msg.bounds().radius());
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
@@ -544,7 +544,7 @@ void Server::handleMigration(const UUID& obj_id)
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
-    mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
+    mOSeg->addObject(obj_id, obj_bounds.radius(), idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
 
     // Handle any data packed into the migration message for space components
@@ -627,8 +627,8 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             );
             // Sent directly via object host connection manager because ObjectConnection is disappearing
             sendSessionMessageWithRetry(obj_conn->connID(), init_migr_obj_msg, Duration::seconds(0.05));
-
-            mOSeg->migrateObject(obj_id,new_server_id);
+            BoundingSphere3f obj_bounds=mLocationService->bounds(obj_id);
+            mOSeg->migrateObject(obj_id,CraqEntry(new_server_id,obj_bounds.radius()));
 
             // Send out the migrate message
             CBR::Protocol::Migration::MigrationMessage migrate_msg;
@@ -639,7 +639,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             migrate_loc.set_t( obj_loc.updateTime() );
             migrate_loc.set_position( obj_loc.position() );
             migrate_loc.set_velocity( obj_loc.velocity() );
-            migrate_msg.set_bounds( mLocationService->bounds(obj_id) );
+            migrate_msg.set_bounds( obj_bounds );
 
             // FIXME we should allow components to package up state here
             // FIXME we should generate these from some map instead of directly
@@ -772,8 +772,8 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
 
     //update our oseg to show that we know that we have this object now.
-    ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
-    mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
+    CraqEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());
+    mOSeg->addObject(obj_id, idOSegAckTo.radius(), idOSegAckTo.server(), true);//true states to send an ack message to idOSegAckTo
 
 
 

@@ -134,7 +134,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
       outQueriesIter->second->traceToken->deadlineExpired = true;
       
       //says that this is a get.
-      CraqOperationResult* cor  = new CraqOperationResult(0,
+      CraqOperationResult* cor  = new CraqOperationResult(CraqEntry(NullServerID,0),
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
                                                           false,
@@ -349,7 +349,7 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
   {
     traceToken->notReady = true;
     
-    CraqOperationResult* cor = new CraqOperationResult (0,
+    CraqOperationResult* cor = new CraqOperationResult (CraqEntry(NullServerID,0),
                                                         dataToGet,
                                                         0,
                                                         false, //means that the operation has failed
@@ -694,7 +694,7 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
       outQueriesIter->second->traceToken->notFound = true;
       
       //says that this is a get.
-      CraqOperationResult* cor  = new CraqOperationResult (0,
+      CraqOperationResult* cor  = new CraqOperationResult (CraqEntry(NullServerID,0),
                                                            outQueriesIter->second->currentlySearchingFor,
                                                            outQueriesIter->second->tracking_number,
                                                            true,
@@ -768,7 +768,7 @@ bool AsyncConnectionGet::checkValue(std::string& response)
       //      response = prefixed +suffixed;
 
       std::string dataKey;
-      int sID;
+      CraqEntry sID(NullServerID,0);
       if (parseValueValue(valuePhrase,dataKey,sID)) //sends it
       {
         processValueFound(dataKey,sID);
@@ -788,7 +788,7 @@ bool AsyncConnectionGet::checkValue(std::string& response)
       response = prefixed;
 
       std::string dataKey;
-      int sID;
+      CraqEntry sID(NullServerID,0);
       if (parseValueValue(valuePhrase,dataKey,sID)) //sends it
       {
         processValueFound(dataKey,sID);
@@ -807,7 +807,7 @@ bool AsyncConnectionGet::checkValue(std::string& response)
 
 
 //takes the string associated with the datakey of a value found message and inserts it into operation value found
-void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
+void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry& sID)
 {
   if ( mReceivedStopRequest)
     return;
@@ -860,7 +860,7 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
 
 //VALUE|CRAQ KEY|SIZE|VALUE
 //returns the datakey and id associated with a value found response.
-bool AsyncConnectionGet::parseValueValue(std::string response, std::string& dataKey,int& sID)
+bool AsyncConnectionGet::parseValueValue(std::string response, std::string& dataKey,CraqEntry& sID)
 {
   size_t valueIndex = response.find(STREAM_CRAQ_VALUE_RESP);
 
@@ -898,7 +898,7 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
     return false; //didn't read enough of the key header to find server id
 
   //parse tmpSID to int
-  sID = std::atoi(tmpSID.c_str());
+  sID=CraqEntry((unsigned char*)tmpSID.c_str());
 
   return true;
 }

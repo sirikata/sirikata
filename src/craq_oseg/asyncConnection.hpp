@@ -8,9 +8,9 @@
 
 
 //#define ASYNC_CONNECTION_DEBUG
-
 namespace CBR
 {
+class CraqEntry;
 
 class AsyncConnection
 {
@@ -26,7 +26,7 @@ public:
   AsyncConnection::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
 
-  bool set(CraqDataKey& dataToSet, int&  dataToSetTo, bool& track, int& trackNum);
+  bool set(CraqDataKey& dataToSet, const CraqEntry&  dataToSetTo, bool& track, int& trackNum);
   bool get(CraqDataKey& dataToGet);
   
   ~AsyncConnection();
@@ -37,7 +37,7 @@ private:
   boost::asio::ip::tcp::socket* mSocket;
 
   CraqDataKey currentlySearchingFor;
-  int currentlySettingTo;
+  CraqEntry currentlySettingTo;
   ConnectionState mReady;
 
   SpaceContext* ctx;

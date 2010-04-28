@@ -7,7 +7,7 @@
 namespace CBR
 {
 
-AsyncConnection::AsyncConnection()
+AsyncConnection::AsyncConnection():currentlySettingTo(NullServerID,0)
 {
   mReady = NEED_NEW_SOCKET;
   mTrackNumber = 1;
@@ -98,7 +98,7 @@ void AsyncConnection::connect_handler(const boost::system::error_code& error)
   mReady = READY;
 }
 
-bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track, int& trackNum)
+bool AsyncConnection::set(CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, bool& track, int& trackNum)
 {
   if (mReady != READY)
   {
@@ -153,7 +153,7 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track,
   query.append(CRAQ_DATA_SET_END_LINE);
   float radius=235.23523523;
 
-  query.append(CraqEntry(dataToSetTo,radius).serialize());
+  query.append(dataToSetTo.serialize());
   query.append(CRAQ_TO_SET_SUFFIX);
 
   query.append(CRAQ_DATA_SET_END_LINE);
@@ -426,7 +426,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
         {
           //means that the line was long enough to be a response
           CraqEntry entry((unsigned char*)value.data());
-          CraqOperationResult* tmper  = new CraqOperationResult (entry.server(),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
+          CraqOperationResult* tmper  = new CraqOperationResult (entry,currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
           mOperationResultVector.push_back(tmper);
         }
       } //added here.
@@ -445,7 +445,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
         //        CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
         //        mOperationResultErrorVector.push_back(tmper);
 
-        CraqOperationResult* tmper = new CraqOperationResult(0,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::GET,mTracking); //false means that it didn't succeed...but we're just saying that the index was at 0
+        CraqOperationResult* tmper = new CraqOperationResult(CraqEntry::null(),currentlySearchingFor, mTrackNumber,true,CraqOperationResult::GET,mTracking); //false means that it didn't succeed...but we're just saying that the index was at 0
         mOperationResultVector.push_back(tmper);
         delete sBuff;
       }
@@ -465,7 +465,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
         //        mOperationResultErrorVector.push_back(tmper);
         //bftm modified
 
-        CraqOperationResult* tmper = new CraqOperationResult(0,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::GET,mTracking); //false means that it didn't succeed...but we're just saying that the index was at 0
+        CraqOperationResult* tmper = new CraqOperationResult(CraqEntry::null(),currentlySearchingFor, mTrackNumber,true,CraqOperationResult::GET,mTracking); //false means that it didn't succeed...but we're just saying that the index was at 0
         mOperationResultVector.push_back(tmper);
 
         delete sBuff;

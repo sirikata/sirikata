@@ -34,18 +34,19 @@ namespace CBR
 
   struct TransLookup
   {
-    ServerID sID;
+    CraqEntry sID;
+   
     int timeAdmitted;
+    TransLookup():sID(CraqEntry::null()){}
   };
 
 
-  const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
   static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
 
   class CraqObjectSegmentation : public ObjectSegmentation
   {
   private:
-      typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectSet;
+      typedef std::tr1::unordered_map<UUID, CraqEntry, UUID::Hasher> ObjectSet;
 
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
@@ -122,8 +123,8 @@ namespace CBR
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
       ObjectSet mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
-    bool checkOwn(const UUID& obj_id);
-    bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
+    bool checkOwn(const UUID& obj_id, float*radius);
+    bool checkMigratingFromNotCompleteYet(const UUID& obj_id,float*radius);
 
     void removeFromInTransOrLookup(const UUID& obj_id);
     void removeFromReceivingObjects(const UUID& obj_id);
@@ -136,13 +137,13 @@ namespace CBR
     };
     typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
     TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
-    CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id);
+    CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id, float radius);
     //end message addition.
 
 
 
     //building for the cache
-    ServerID satisfiesCache(const UUID& obj_id);
+    CraqEntry satisfiesCache(const UUID& obj_id);
     CraqCacheGood mCraqCache;
     //end building for the cache
 
@@ -153,7 +154,7 @@ namespace CBR
       void trySendMigAcks();
 
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
-    void callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken);
+    void callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken);
 
 
     SpaceContext* ctx;
@@ -164,13 +165,13 @@ namespace CBR
 
 
     virtual ~CraqObjectSegmentation();
-    virtual ServerID lookup(const UUID& obj_id);
-    virtual ServerID cacheLookup(const UUID& obj_id);
-    virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
-    virtual void addObject(const UUID& obj_id, const ServerID idServerAckTo, bool);
+    virtual CraqEntry lookup(const UUID& obj_id);
+    virtual CraqEntry cacheLookup(const UUID& obj_id);
+    virtual void migrateObject(const UUID& obj_id, const CraqEntry& new_server_id);
+    virtual void addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool);
     virtual void receiveMessage(Message* msg);
     virtual bool clearToMigrate(const UUID& obj_id);
-    virtual void newObjectAdd(const UUID& obj_id);
+    virtual void newObjectAdd(const UUID& obj_id, float radius);
     virtual void craqGetResult(CraqOperationResult* cor);
     virtual void craqSetResult(CraqOperationResult* cor);
     virtual std::vector<PollingService*> getNestedPollers();
@@ -179,7 +180,7 @@ namespace CBR
 
 
 
-    CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
+    CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
     void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
     void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);
     void processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);

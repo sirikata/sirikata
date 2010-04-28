@@ -12,7 +12,7 @@
 #include "Utility.hpp"
 #include "Timer.hpp"
 #include <boost/thread/mutex.hpp>
-
+#include "craq_oseg/CraqEntry.hpp"
 
 namespace CBR
 {
@@ -20,7 +20,8 @@ namespace CBR
   {
     UUID obj_id;
     int age;
-    ServerID sID;
+    CraqEntry sID;
+    CraqCacheRecord():sID(CraqEntry::null()){}
   };
 
 
@@ -54,8 +55,8 @@ namespace CBR
     CraqCacheGood();
     ~CraqCacheGood();
 
-    void insert(const UUID& uuid, const ServerID& sID);
-    ServerID get(const UUID& uuid);
+    void insert(const UUID& uuid, const CraqEntry& sID);
+    const CraqEntry& get(const UUID& uuid);
   };
 }
 

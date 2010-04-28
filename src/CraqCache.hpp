@@ -33,7 +33,7 @@ namespace CBR
   class CraqCache
   {
   private:
-    typedef std::map<UUID,ServerID> ServIDMap;
+    typedef std::map<UUID,CraqEntry> ServIDMap;
     ServIDMap mMap;
     typedef std::list < IDAge > AgeList;
     AgeList mAgeList;
@@ -47,8 +47,8 @@ namespace CBR
     CraqCache();
     ~CraqCache();
 
-    void insert(const UUID& uuid, const ServerID& sID);
-    ServerID get(const UUID& uuid);
+    void insert(const UUID& uuid, const CraqEntry& sID);
+    CraqEntry get(const UUID& uuid);
   };
 }
 

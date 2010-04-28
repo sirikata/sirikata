@@ -133,7 +133,7 @@ namespace CBR
 
 
 
-  void AsyncConnectionSet::setBound(const CraqObjectID& obj_dataToGet, const int& dataToSetTo, const bool&  track, const int& trackNum)
+  void AsyncConnectionSet::setBound(const CraqObjectID& obj_dataToGet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum)
   {
     set(obj_dataToGet.cdk,dataToSetTo,track,trackNum);
   }
@@ -141,7 +141,7 @@ namespace CBR
 
 
   //public interface for setting data in craq via this connection.
-  void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const int& dataToSetTo, const bool&  track, const int& trackNum)
+  void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum)
   {
     if(mReceivedStopRequest)
       return;
@@ -152,7 +152,7 @@ namespace CBR
 #ifdef ASYNC_CONNECTION_DEBUG
       std::cout<<"\n\nI'm not ready yet in asyncConnectionSet\n\n";
 #endif
-      CraqOperationResult* cor  = new CraqOperationResult(0,
+      CraqOperationResult* cor  = new CraqOperationResult(CraqEntry::null(),
                                                           dataToSet,
                                                           trackNum,
                                                           false, //means that the operation has failed
@@ -198,16 +198,8 @@ namespace CBR
     query.append(CRAQ_DATA_TO_SET_SIZE);
     query.append(CRAQ_DATA_SET_END_LINE);
 
-    //convert from integer to string.
-    std::stringstream ss;
-    ss << dataToSetTo;
-    std::string tmper = ss.str();
-    for (int s=0; s< CRAQ_SERVER_SIZE - ((int) tmper.size()); ++s)
-    {
-      query.append("0");
-    }
 
-    query.append(tmper);
+    query.append(dataToSetTo.serialize());
     query.append(STREAM_CRAQ_TO_SET_SUFFIX);
     query.append(CRAQ_DATA_SET_END_LINE);
 

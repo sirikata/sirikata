@@ -74,7 +74,7 @@ namespace CBR
   }
 
 
-  void CraqCacheGood::insert(const UUID& uuid, const ServerID& sID)
+  void CraqCacheGood::insert(const UUID& uuid, const CraqEntry& sID)
   {
     Duration beginningDur = mTimer.elapsed();
 
@@ -153,7 +153,7 @@ namespace CBR
   }
 
 
-  ServerID CraqCacheGood::get(const UUID& uuid)
+  const CraqEntry& CraqCacheGood::get(const UUID& uuid)
   {
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
 
@@ -165,7 +165,8 @@ namespace CBR
         return idRecMapIter->second->sID;
       }
     }
-    return NullServerID;
+    static CraqEntry justnothin(CraqEntry::null());
+    return justnothin;
   }
 
 

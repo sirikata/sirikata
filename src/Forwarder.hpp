@@ -160,7 +160,7 @@ private:
 
     // This version is provided if you already know which server the message should be sent to
     WARN_UNUSED
-    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
 
 
     // ServerMessageQueue::Sender Interface

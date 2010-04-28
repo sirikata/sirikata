@@ -20,7 +20,7 @@ namespace CBR
  */
 class OSegLookupListener {
 public:
-    virtual void osegLookupCompleted(const UUID& id, const ServerID& dest) = 0;
+    virtual void osegLookupCompleted(const UUID& id, const CraqEntry& dest) = 0;
 }; // class OSegLookupListener
 
 
@@ -67,11 +67,11 @@ class ObjectSegmentation : public MessageRecipient, public Service
           mWriteListener = listener;
       }
 
-    virtual ServerID lookup(const UUID& obj_id) = 0;
-    virtual ServerID cacheLookup(const UUID& obj_id) = 0;
-    virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
-    virtual void addObject(const UUID& obj_id, const ServerID ourID, bool) = 0;
-    virtual void newObjectAdd(const UUID& obj_id) = 0;
+    virtual CraqEntry lookup(const UUID& obj_id) = 0;
+    virtual CraqEntry cacheLookup(const UUID& obj_id) = 0;
+    virtual void migrateObject(const UUID& obj_id, const CraqEntry& new_server_id) = 0;
+      virtual void addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) = 0;
+    virtual void newObjectAdd(const UUID& obj_id, float radius) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
     virtual void craqGetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
     virtual void craqSetResult(CraqOperationResult* cor) = 0; //also responsible for destroying

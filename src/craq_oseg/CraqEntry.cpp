@@ -22,7 +22,7 @@ void CraqEntry::deserialize(unsigned char xinput[CRAQ_SERVER_SIZE]) {
     memcpy(radiusArray,&radiusle,sizeof(float));
     memcpy(&mRadius,radiusArray,sizeof(float));
 }
-void CraqEntry::serialize(unsigned char output[CRAQ_SERVER_SIZE]) {
+void CraqEntry::serialize(unsigned char output[CRAQ_SERVER_SIZE]) const{
   char radiusle[sizeof(float)];
   memcpy(radiusle,&mRadius,sizeof(float));
   uint32_t radiusbe;

@@ -23,10 +23,11 @@ class AsyncConnectionGet
 private:
   struct IndividualQueryData
   {
+    IndividualQueryData():currentlySettingTo(CraqEntry::null()){}
     enum GetOrSet {GET,SET};
     GetOrSet gs;
     CraqDataKey currentlySearchingFor;
-    int currentlySettingTo;
+    CraqEntry currentlySettingTo;
     bool is_tracking;
     int tracking_number;
     uint64 time_admitted; //in milliseconds what time was when lookup was requested.
@@ -94,12 +95,12 @@ private:
   
   
   void processValueNotFound(std::string dataKey); //takes in 
-  void processValueFound(std::string dataKey, int sID);
+  void processValueFound(std::string dataKey, const CraqEntry& sID);
   void processStoredValue(std::string dataKey);
 
   
   bool parseValueNotFound(std::string response, std::string& dataKey);
-  bool parseValueValue(std::string response, std::string& dataKey,int& sID);
+  bool parseValueValue(std::string response, std::string& dataKey,CraqEntry& sID);
   bool parseStoredValue(const std::string& response, std::string& dataKey);
 
   bool processEntireResponse(std::string response);

@@ -3,8 +3,7 @@
 
 #include <string>
 #include "../OSegLookupTraceToken.hpp"
-
-
+#include "CraqEntry.hpp"
 namespace CBR
 {
 
@@ -36,7 +35,7 @@ const int  CRAQ_DATA_SET_END_LINE_SIZE  =      2;
 
 const char CRAQ_DATA_TO_SET_SIZE[]      = " 12";
 const int  CRAQ_DATA_TO_SET_SIZE_SIZE   =     3; //There are 3 digits in the above.
-const int  CRAQ_SERVER_SIZE             =    10;
+
 const int  CRAQ_TO_SET_SUFFIX_SIZE      =     2;
 const char CRAQ_TO_SET_SUFFIX[]         =  "ND";
 const int  CRAQ_DATA_VALUE_SIZE         =    12;
@@ -70,17 +69,18 @@ struct CraqObjectID
   CraqDataKey cdk;
 };
 
+
 struct CraqOperationResult
 {
-  int servID;
+  CraqEntry servID;
   CraqDataKey objID;
   int trackedMessage; //id assigned to track
   bool tracking;  //are we tracking this message
   bool succeeded;
   enum GetOrSet {GET, SET};
   GetOrSet whichOperation;
-  CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not);
-  CraqOperationResult(const int& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not, OSegLookupTraceToken* ttoken);
+  CraqOperationResult(const CraqEntry& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not);
+  CraqOperationResult(const CraqEntry& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not, OSegLookupTraceToken* ttoken);
   std::string idToString();
   OSegLookupTraceToken* traceToken;
 };
@@ -90,17 +90,16 @@ struct CraqInitializeArgs
   std::string ipAdd;
   std::string port;
 };
-
 struct CraqDataSetGet
 {
   CraqDataKey dataKey;
-  int dataKeyValue;
+  CraqEntry dataKeyValue;
   bool trackMessage;
   int trackingID;
   enum TypeMessage {GET,SET};
   TypeMessage messageType;
-  CraqDataSetGet(const std::string& dKey, const int& dKeyValue, const bool& tMessage, const TypeMessage& message_type);
-  CraqDataSetGet(const CraqDataKey& dKey, const int& dKeyValue, const bool& tMessage, const TypeMessage& message_type);
+  CraqDataSetGet(const std::string& dKey, const CraqEntry& dKeyValue, const bool& tMessage, const TypeMessage& message_type);
+  CraqDataSetGet(const CraqDataKey& dKey, const CraqEntry& dKeyValue, const bool& tMessage, const TypeMessage& message_type);
 };
 
 
