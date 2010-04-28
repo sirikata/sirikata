@@ -66,6 +66,7 @@ public:
     typedef std::map<int,Average> AverageHistogram;
     void histogramDistanceData(uint32 numBuckets, AverageHistogram &retval);
     void printHistogramDistanceData(std::ostream&out, uint32 numBuckets);
+    void printTotalAverage(std::ostream&out);
 };
 
 } // namespace CBR

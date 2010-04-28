@@ -119,4 +119,15 @@ void ObjectLatencyAnalysis::printHistogramDistanceData(std::ostream&out, uint32 
     }
 }
 
+void ObjectLatencyAnalysis::printTotalAverage(std::ostream&out) {
+    Duration total_lat = Duration::zero();
+    for (PingMap::iterator it = mLatency.begin(); it != mLatency.end(); ++it) {
+        double sample_dist = it->first;
+        Duration sample_lat = it->second;
+        total_lat += sample_lat;
+    }
+
+    out << (total_lat / (float)mLatency.size()) << "  (" <<  mLatency.size() << " samples)\n";
+}
+
 } // namespace CBR

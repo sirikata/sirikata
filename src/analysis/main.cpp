@@ -192,6 +192,7 @@ int main(int argc, char** argv) {
         ObjectLatencyAnalysis la(STATS_TRACE_FILE,nservers);
         std::ofstream histogram_data("distance_latency_histogram.csv");
         la.printHistogramDistanceData(histogram_data,10);
+        la.printTotalAverage(histogram_data);
         histogram_data.close();
         exit(0);
     }
