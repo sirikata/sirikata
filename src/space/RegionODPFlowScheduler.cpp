@@ -49,7 +49,7 @@ RegionODPFlowScheduler::~RegionODPFlowScheduler() {
 }
 
 // ODP push interface
-bool RegionODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
+bool RegionODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&,const CraqEntry&) {
     Message* serv_msg = createMessageFromODP(msg, mDestServer);
     if (!mQueue.push(serv_msg, false)) {
         delete serv_msg;

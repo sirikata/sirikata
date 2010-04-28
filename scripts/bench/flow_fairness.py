@@ -89,10 +89,10 @@ class FlowFairness:
 
     def _setup_cluster_sim(self, rate, io):
         self.cs.scenario = 'deluge'
-
+        
         if self.local: localval = 'true'
         else: localval = 'false'
-
+        self.cs.object_simple='false'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
              '--ping-size=' + str(self.payload_size),

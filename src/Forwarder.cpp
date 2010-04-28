@@ -494,7 +494,11 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
       flow_sched = mODPRouters[dest_serv.server()];
   }
-  bool send_success = flow_sched->push(obj_msg);
+  CraqEntry source_object_data(CraqEntry::null());//FIXME: do we want mandatory lookup for nonlocal guys?! = mOSegLookups->cacheLookup(obj_msg->source_object());
+  if (source_object_data.isNull()) {
+      source_object_data=CraqEntry(mContext->id(),1.0);//FIXME dumb default: RADIUS of reforwarded messages are 1.0
+  }
+  bool send_success = flow_sched->push(obj_msg,source_object_data,dest_serv);
   if (!send_success) {
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
   }

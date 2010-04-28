@@ -58,7 +58,7 @@ public:
     virtual uint32 size() const { return mQueue.getResourceMonitor().filledSize(); }
 
     // ODP push interface
-    virtual bool push(CBR::Protocol::Object::ObjectMessage* msg);
+    virtual bool push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&,const CraqEntry&);
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight();
     // Get the total used weight of active queues.  If all flows are saturating,

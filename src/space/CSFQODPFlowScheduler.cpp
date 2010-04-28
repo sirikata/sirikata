@@ -35,7 +35,7 @@
 #include "LocationService.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Random.hpp"
-
+#include "craq_oseg/CraqEntry.hpp"
 #define _Ka (Duration::milliseconds((int64)200))
 #define _Ka_double (_Ka.toSeconds())
 
@@ -89,11 +89,11 @@ CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
 }
 
 // ODP push interface
-bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg) {
+bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&source_entry, const CraqEntry& dest_entry) {
     boost::lock_guard<boost::mutex> lck(mPushMutex); // FIXME
 
     ObjectPair op(msg->source_object(), msg->dest_object());
-    FlowInfo* flow_info = getFlow(op);
+    FlowInfo* flow_info = getFlow(op,source_entry,dest_entry);
 
     // FIXME update weights, due to possible movement?
     double weight = flow_info->weight;
@@ -320,7 +320,7 @@ float CSFQODPFlowScheduler::totalReceiverUsedWeight() {
     return mTotalUsedWeight[RECEIVER];
 }
 
-BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, ServerID sid) const {
+BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, const CraqEntry& info) const {
     // We might have exact info
     if (mLoc->contains(objid)) {
         Vector3f pos = mLoc->currentPosition(objid);
@@ -329,24 +329,25 @@ BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, Ser
         return bb;
     }
 
-    if (sid == mContext->id())
+    if (info.server() == mContext->id())
         CSFQLOG(warn,"Using approximation for local object!");
-
+    if (info.radius()==1.0) {
+        CSFQLOG(warn,"Radius approximation failure! (migration? should we do a cache lookup)");
+    }
     // Otherwise, we need to use server info
     // Blech, why is this a bbox list?
-    BoundingBoxList server_bbox_list = mContext->cseg()->serverRegion(sid);
+    BoundingBoxList server_bbox_list = mContext->cseg()->serverRegion(info.server());
     BoundingBox3f server_bbox = BoundingBox3f::null();
     for(uint32 i = 0; i < server_bbox_list.size(); i++)
         server_bbox.mergeIn(server_bbox_list[i]);
-    // fixme object size, currently approximated as 1.0
-    return BoundingBox3f(server_bbox.center(), 1.0);
+    return BoundingBox3f(server_bbox.center(), info.radius());
 }
 
-CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair) {
+CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair, const CraqEntry&source_info, const CraqEntry&dst_info) {
     FlowMap::iterator where = mFlows.find(new_packet_pair);
     if (where==mFlows.end()) {
-        BoundingBox3f source_bbox = getObjectWeightRegion(new_packet_pair.source, mContext->id());
-        BoundingBox3f dest_bbox = getObjectWeightRegion(new_packet_pair.dest, mDestServer);
+        BoundingBox3f source_bbox = getObjectWeightRegion(new_packet_pair.source, source_info);
+        BoundingBox3f dest_bbox = getObjectWeightRegion(new_packet_pair.dest, dst_info);
 
         double weight = mWeightCalculator->weight(source_bbox, dest_bbox);
 
