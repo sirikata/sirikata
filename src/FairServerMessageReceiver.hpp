@@ -61,7 +61,7 @@ private:
     // Internal service call -- generated either by a networkReceivedData event
     // or by a timer as we wait for enough bandwidth to be available to service
     // the next packet.
-    void service();
+    bool service();
 
     uint32 mRecvRate;
 
@@ -87,6 +87,8 @@ private:
 
     // Protects mReceiveQueues, mReceiveSet
     boost::mutex mMutex;
+    // Protects processing code
+    boost::mutex mServiceMutex;
 };
 
 } // namespace CBR

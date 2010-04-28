@@ -67,15 +67,24 @@ FairServerMessageReceiver::~FairServerMessageReceiver() {
 
 void FairServerMessageReceiver::scheduleServicing() {
     if (!mServiceScheduled.read()) {
-        mServiceTimer->cancel();
-        mServiceScheduled = true;
-        mReceiverStrand->post(
-            std::tr1::bind(&FairServerMessageReceiver::service, this)
-        );
+        // If we can safely do it, just manage the servicing ourselves.  If
+        // we have leftovers, things will get properly rescheduled on the
+        // FSMR strand.
+        if (!service()) {
+            // We couldn't service, just schedule it
+            mServiceTimer->cancel();
+            mServiceScheduled = true;
+            mReceiverStrand->post(
+                std::tr1::bind(&FairServerMessageReceiver::service, this)
+            );
+        }
     }
 }
 
-void FairServerMessageReceiver::service() {
+bool FairServerMessageReceiver::service() {
+    boost::mutex::scoped_try_lock lock(mServiceMutex);
+    if (!lock.owns_lock()) return false;
+
     mProfiler->started();
 
     mServiceScheduled = false;
@@ -143,12 +152,14 @@ void FairServerMessageReceiver::service() {
         // insufficient budget of bytes.  Setup a timer to let us check again
         // soon.
         // FIXME we should calculate an exact duration instead of making it up
-        mServiceTimer->wait( Duration::microseconds(100) );
+        mServiceTimer->wait( Duration::microseconds(10) );
     }
 
     mLastServiceTime = tcur;
 
     mProfiler->finished();
+
+    return true;
 }
 
 void FairServerMessageReceiver::handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight) {
