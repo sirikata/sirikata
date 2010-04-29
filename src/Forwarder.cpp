@@ -540,15 +540,13 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 }
 
 Message* Forwarder::serverMessagePull(ServerID dest) {
-    Message* next_msg = mOutgoingMessages->front(dest);
+    Message* next_msg = mOutgoingMessages->pop(dest);
     if (next_msg == NULL)
         return NULL;
 
     CONTEXT_TRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
 
-    Message* pop_msg = mOutgoingMessages->pop(dest);
-    assert(pop_msg == next_msg);
-    return pop_msg;
+    return next_msg;
 }
 
 bool Forwarder::serverMessageEmpty(ServerID dest) {
