@@ -34,7 +34,8 @@ public:
   
   int numStillProcessing();
   void stop();
-  
+    ///sets the ready state to be in the processing mode, meaning work has been posted to its strand
+  void setProcessing();  
   
 private:
   Sirikata::Network::TCPSocket* mSocket;
@@ -60,8 +61,7 @@ private:
   AsyncCraqScheduler*   mSchedulerMaster;
   ObjectSegmentation*              mOSeg;
   
-  ConnectionState mReady;
-
+  volatile ConnectionState mReady;
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
 

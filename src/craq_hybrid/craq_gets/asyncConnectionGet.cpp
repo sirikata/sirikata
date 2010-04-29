@@ -347,8 +347,12 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
   Duration beginningDur = Time::local() - Time::epoch();
   traceToken->getConnectionNetworkGetBegin = beginningDur.toMicroseconds();
   
+  assert(mReady==PROCESSING);
+/*******************************************
+Ready needs to be set as soon as the posting thread posts the set message so that nothing else gets posted to be async_writ'd afterwards
   if (mReady != READY)
   {
+      assert(false);
     traceToken->notReady = true;
     
     CraqOperationResult* cor = new CraqOperationResult (CraqEntry(NullServerID,0),
@@ -365,7 +369,7 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
     mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
     return;
   }
-
+************************************/
   IndividualQueryData* iqd = new IndividualQueryData;
   iqd->is_tracking = false;
   iqd->tracking_number = 0;
@@ -405,13 +409,15 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
   }
 
 
-
+void AsyncConnectionGet::setProcessing() {
+    mReady=PROCESSING;
+}
 
 bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
 {
   if ( mReceivedStopRequest)
     return true;
-  mReady = PROCESSING;
+  assert(mReady == PROCESSING);
   //crafts query
   std::string query;
   query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
@@ -432,7 +438,8 @@ void AsyncConnectionGet::write_some_handler_get(  const boost::system::error_cod
 {
   if ( mReceivedStopRequest)
     return;
-
+  mReady=READY;
+  mPostErrorsStrand->post(mReadyStateChangedCallback);  
   if (error)
   {
     printf("\n\nin write_some_handler_get\n\n");

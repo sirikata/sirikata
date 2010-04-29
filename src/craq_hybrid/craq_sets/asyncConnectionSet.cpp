@@ -140,13 +140,18 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStran
   }
 
 
-
+  void AsyncConnectionSet::setProcessing() {
+    mReady=PROCESSING;
+  }
   //public interface for setting data in craq via this connection.
   void AsyncConnectionSet::set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum)
   {
     if(mReceivedStopRequest)
       return;
 
+    assert(mReady==PROCESSING);
+/*********************
+Ready needs to be set as soon as the posting thread posts the set message so that nothing else gets posted to be async_writ'd afterwards
 
     if (mReady != READY)
     {
@@ -165,7 +170,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStran
 
       return;
     }
-
+*********************************/
     IndividualQueryData* iqd    =    new IndividualQueryData;
     iqd->is_tracking            =                      track;
     iqd->tracking_number        =                   trackNum;
@@ -189,7 +194,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStran
     iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
 
 
-    mReady = PROCESSING;
+
 
     //generating the query to write.
     std::string query;
@@ -219,7 +224,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStran
     if (mReceivedStopRequest)
       return;
 
-
+    mReady=READY;
     static int thisWrite = 0;
 
     ++thisWrite;
@@ -431,8 +436,6 @@ void AsyncConnectionSet::generic_read_stored_not_found_error_handler ( const boo
   }
   else
   {
-    mReady = READY;
-    mErrorStrand->post(mReadyStateChangedCallback);
   }
 
   set_generic_stored_not_found_error_handler();

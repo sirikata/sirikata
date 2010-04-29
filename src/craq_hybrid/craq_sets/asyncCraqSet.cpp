@@ -221,11 +221,13 @@ namespace CBR
   void AsyncCraqSet::pushQueue(const CraqDataSetGet&dataToSet){
       mQueue.push(dataToSet);//push and try to empty the queue
       while (!mReadyConnections.empty()) {
-          if (checkConnections(mReadyConnections.back())) {
+          unsigned int rnd=rand()%mReadyConnections.size();
+          if (checkConnections(mReadyConnections[rnd])) {
               if (mQueue.empty()) {
                   break;
               }
           }else {
+              mReadyConnections[rnd]=mReadyConnections.back();
               mReadyConnections.pop_back();
           }
       }
@@ -265,7 +267,7 @@ namespace CBR
           //performing a set in connections.
           CraqObjectID tmpCraqID;
           memcpy(tmpCraqID.cdk, cdSG.dataKey, CRAQ_DATA_KEY_SIZE);
-
+          mConnections[s]->setProcessing();
           mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::setBound, mConnections[s], tmpCraqID, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID));
         }
       }

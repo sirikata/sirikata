@@ -245,11 +245,13 @@ void AsyncCraqGet::readyStateChanged(int s) {
 void AsyncCraqGet::pushQueue(QueueValue*qv) {
     mQueue.push(qv);
     while (!mReadyConnections.empty()) {
-        if (checkConnections(mReadyConnections.back())) {
+        unsigned int rnd=rand()%mReadyConnections.size();
+        if (checkConnections(mReadyConnections[rnd])) {
             if (mQueue.empty()) {
                 break;
             }
         }else {
+            mReadyConnections[rnd]=mReadyConnections.back();
             mReadyConnections.pop_back();
         }
     }
@@ -285,6 +287,7 @@ bool AsyncCraqGet::checkConnections(int s)
         //perform a get in  connections.
         CraqObjectID tmpCraqID;
         memcpy(tmpCraqID.cdk, cdSG->dataKey, CRAQ_DATA_KEY_SIZE);
+        mConnections[s]->setProcessing();
         mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::getBound,mConnections[s],tmpCraqID, qVal->traceToken));
 
       }

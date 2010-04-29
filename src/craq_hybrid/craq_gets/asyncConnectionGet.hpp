@@ -61,6 +61,8 @@ public:
 
   int getRespCount();
 
+  ///indicate that some work has been posted to this connection's strand
+  void setProcessing();
   void stop();
   
 private:
@@ -82,7 +84,7 @@ private:
   typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
   
-  ConnectionState mReady;
+  volatile ConnectionState mReady;
 
   bool getQuery(const CraqDataKey& dataToGet);
 
