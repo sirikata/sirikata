@@ -179,7 +179,7 @@ namespace CBR
     Duration beginGetEnqueueManager  = Time::local() - Time::epoch();
     traceToken->getManagerEnqueueBegin = beginGetEnqueueManager.toMicroseconds();
 
-    CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
+    //    CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
 
     QueueValue* qValue = new QueueValue;
     qValue->cdQuery = cdQuery;

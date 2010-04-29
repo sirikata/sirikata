@@ -38,6 +38,14 @@ public:
     float radius () const{
         return mRadius;
     }
+  void setServer(uint32 server)
+  {
+    mServer = server;
+  }
+  void setRadius(float radius)
+  {
+    mRadius = radius;
+  }
     
 };
 }

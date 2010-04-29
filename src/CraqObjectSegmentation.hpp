@@ -24,9 +24,6 @@
 #include "CBR_OSeg.pbj.hpp"
 
 #include <sirikata/util/ThreadSafeQueueWithNotification.hpp>
-#include <sirikata/util/AtomicTypes.hpp>
-#include "BatchCraqQueue.hpp"
-
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
@@ -35,16 +32,6 @@
 namespace CBR
 {
 
-  struct CraqAtomicInt
-  {
-    CraqAtomicInt()
-      : mAtom(10)
-    {
-    }
-    int getUniqueTrackID();
-    Sirikata::AtomicValue<int> mAtom;
-  };
-  
   struct TransLookup
   {
     CraqEntry sID;
@@ -92,8 +79,6 @@ namespace CBR
     boost::mutex inTransOrLookup_m;
 
 
-    //useful so that we know who to send acknowledgment messages to after
-    //migrations have completed
     struct TrackedSetResultsData
     {
       CBR::Protocol::OSeg::MigrateMessageAcknowledge* migAckMsg;
@@ -116,12 +101,17 @@ namespace CBR
       UUID obj_id;
       OSegLookupTraceToken* traceToken;
     };
-    typedef std::map<int, TrackedSetResultsData>              TrackedMessageMap;
-    
+    typedef std::queue<NotFoundData*> NfDataQ;
+    NfDataQ mNfData;
+    void checkNotFoundData();
+    //end what to do when craq can't find the object
+
 
     //for lookups and sets respectively
     AsyncCraqHybrid craqDhtGet;
     AsyncCraqHybrid craqDhtSet;
+
+
 
     int mAtomicTrackID;
     boost::mutex atomic_track_id_m;
@@ -140,48 +130,16 @@ namespace CBR
     void removeFromReceivingObjects(const UUID& obj_id);
 
     //for message addition. when add an object, send a message to the server that you can now finish adding it to forwarder, loc services, etc.
-
     struct TrackedSetResultsDataAdded
     {
-      CBR::Protocol::OSeg::AddedObjectMessage*                         msgAdded;
-      Duration                                                              dur;
+      CBR::Protocol::OSeg::AddedObjectMessage* msgAdded;
+      Duration dur;
     };
+    typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
+    TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
+    CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id, float radius);
+    //end message addition.
 
-    typedef std::map<int, TrackedSetResultsDataAdded>    TrackedMessageMapAdded;
-
-    
-  private: //variables
-    IOStrand*                                                     postingStrand;
-    IOStrand*                                                           mStrand;
-    Sirikata::AtomicValue<int>                                      mStrandQLen;
-    SpaceContext*                                                           ctx;
-    bool                                                   mReceivedStopRequest;
-
-    //each person has a separate one character long prefix to
-    //append to object ids so things don't get too mixed up.
-    char                                                      myUniquePrefixKey; 
-    
-    //    std::vector<>;lkjs;
-    //    objid and traceToken;
-
-
-    
-  private: //services
-    CoordinateSegmentation*                                               mCSeg;
-    Router<Message*>*                                 mOSegServerMessageService;
-    AsyncCraqHybrid                                                  craqDhtGet;
-    AsyncCraqHybrid                                                  craqDhtSet;
-    CraqCacheGood                                                    mCraqCache;
-    CraqAtomicInt                                                     mUniqueID;
-    Sirikata::ThreadSafeQueueWithNotification<Message*>         mMigAckMessages;
-    Message*                                                       mFrontMigAck;
-    BatchCraqQueue*                                                 mBatchQueue;
-
-
-    
-  private: //data structures
-    std::map<std::string, UUID >                               mapDataKeyToUUID;
->>>>>>> Trying to resolve the problem of backup in the event queue leading to the oseg strand by adding some batching.:src/CraqObjectSegmentation.hpp
 
 
     //building for the cache
@@ -190,10 +148,10 @@ namespace CBR
     //end building for the cache
 
 
-    Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
-    Message* mFrontMigAck;
-    void handleNewMigAckMessages();
-    void trySendMigAcks();
+      Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
+      Message* mFrontMigAck;
+      void handleNewMigAckMessages();
+      void trySendMigAcks();
 
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
     void callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken);
@@ -202,37 +160,6 @@ namespace CBR
     SpaceContext* ctx;
     bool mReceivedStopRequest;
 
-    bool              checkOwn(const UUID& obj_id);
-    ServerID          satisfiesCache(const UUID& obj_id);
-    bool              checkMigratingFromNotCompleteYet(const UUID& obj_id);
-    void              placeInTransOrLookup(const UUID& objid, OSegLookupTraceToken* traceToken );
-    void              removeFromInTransOrLookup(const UUID& obj_id);
-    void              removeFromReceivingObjects(const UUID& obj_id);
-    void              handleNewMigAckMessages();
-    void              trySendMigAcks();
-    void              beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken, bool decrement=true);
-
-    CraqDataSetGet*   generateLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
-    void              callOsegLookupCompleted(const UUID& obj_id, const ServerID& sID, OSegLookupTraceToken* traceToken);
-    void              addObjectRequiresAck(const UUID& obj_id, const ServerID idServerAckTo);
-    void              addObjectRequiresNoAck(const UUID& obj_id);
-
-    void              finishProcessGetResult(CraqOperationResult* cor);
-    void              processCraqGetResult(CraqOperationResult* cor);
-    void              processCraqSetResult(CraqOperationResult* cor);
-    void              processSetSendAck(CraqOperationResult* trackedSetResult);
-    void              processSetNoAck(CraqOperationResult* trackedSetResult);
-    void              testSanityQLen();
-
-    void              beginCraqLookupQueue(QueryQueue* qq);
-    
-    //simple utility to create a craq data key from a uuid
-    void              convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
-
-    //no real function anymore.
-    virtual void      poll();
-
-        
   public:
     CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
 
@@ -251,12 +178,13 @@ namespace CBR
     virtual void stop();
 
 
-    virtual std::vector<PollingService*>         getNestedPollers();
+
 
     CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
     void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
     void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);
     void processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
+
   };
 }
 #endif

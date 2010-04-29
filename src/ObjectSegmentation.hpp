@@ -77,7 +77,7 @@ class ObjectSegmentation : public MessageRecipient, public Service
     virtual void craqGetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
     virtual void craqSetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
     virtual std::vector<PollingService*> getNestedPollers() = 0;
-    virtual void lookupQueue(QueryQueue* qq) = 0;
+
 
   };
 }

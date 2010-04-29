@@ -277,11 +277,12 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
-  ${CBR_SOURCE_DIR}/BatchCraqQueue.cpp
+#  ${CBR_SOURCE_DIR}/BatchCraqQueue.cpp
   ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
   ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
   ${CBR_SOURCE_DIR}/caches/CacheRecords.cpp
-#  ${CBR_SOURCE_DIR}/caches/FCache.cpp
+  ${CBR_SOURCE_DIR}/caches/FCache.cpp
+  ${CBR_SOURCE_DIR}/caches/CommunicationCache.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
