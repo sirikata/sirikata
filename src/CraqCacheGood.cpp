@@ -76,6 +76,8 @@ namespace CBR
 
   void CraqCacheGood::insert(const UUID& uuid, const CraqEntry& sID)
   {
+      boost::lock_guard<boost::mutex> lck(mMutex);
+
     Duration beginningDur = mTimer.elapsed();
 
     Duration currentDur = mTimer.elapsed();
@@ -155,6 +157,8 @@ namespace CBR
 
   const CraqEntry& CraqCacheGood::get(const UUID& uuid)
   {
+      boost::lock_guard<boost::mutex> lck(mMutex);
+
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
 
     if (idRecMapIter != idRecMap.end())
