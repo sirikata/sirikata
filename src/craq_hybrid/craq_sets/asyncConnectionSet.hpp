@@ -30,7 +30,7 @@ public:
   void set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
   
   ~AsyncConnectionSet();
-  AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg);
+  AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readySetChanged);
   
   int numStillProcessing();
   void stop();
@@ -38,7 +38,6 @@ public:
   
 private:
   Sirikata::Network::TCPSocket* mSocket;
-
   struct IndividualQueryData
   {
     IndividualQueryData():currentlySettingTo(CraqEntry::null()){}
@@ -86,7 +85,7 @@ private:
   
   std::string mPrevReadFrag;
   bool mReceivedStopRequest;
-  
+  std::tr1::function<void()> mReadyStateChangedCallback;  
   void clear_all_deadline_timers();  
   //***********handlers**************
   //timeout callback handler

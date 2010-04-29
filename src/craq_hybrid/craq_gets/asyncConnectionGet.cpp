@@ -18,14 +18,15 @@
 namespace CBR
 {
 //constructor
-  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg)
+  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>&readyStateChangedCallback)
   : ctx(con),
     mStrand(str),
     mPostErrorsStrand(error_strand),
     mResultStrand(result_strand),
     mSchedulerMaster (master),
     mOSeg(oseg),
-    mReceivedStopRequest(false)
+    mReceivedStopRequest(false),
+    mReadyStateChangedCallback(readyStateChangedCallback)
 {
   mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
 
@@ -254,6 +255,7 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
     delete mSocket;
     mSocket = NULL;
     mReady = NEED_NEW_SOCKET;
+    mPostErrorsStrand->post(mReadyStateChangedCallback);
 
     std::cout<<"\n\nError in connection\n\n";
     return;
@@ -264,7 +266,7 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 #endif
 
   mReady = READY;
-
+  mPostErrorsStrand->post(mReadyStateChangedCallback);
 
   set_generic_stored_not_found_error_handler();
 
@@ -409,7 +411,7 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
 {
   if ( mReceivedStopRequest)
     return true;
-
+  mReady = PROCESSING;
   //crafts query
   std::string query;
   query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
@@ -449,6 +451,7 @@ void AsyncConnectionGet::killSequence()
     return;
 
   mReady = NEED_NEW_SOCKET;
+  mPostErrorsStrand->post(mReadyStateChangedCallback);
   mSocket->cancel();
   mSocket->close();
   delete mSocket;

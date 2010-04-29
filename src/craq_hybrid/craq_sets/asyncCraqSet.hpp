@@ -51,8 +51,11 @@ namespace CBR
     std::queue<CraqDataSetGet> mQueue;
 
     void reInitializeNode(int s);
-    void checkConnections(int s);
-    
+    ///return false if the connection is not indeed ready
+    bool checkConnections(int s);
+    void readyStateChanged(int s);
+    void pushQueue(const CraqDataSetGet&dataToSet);
+    std::vector<int> mReadyConnections;
     SpaceContext*                    ctx;
     IOStrand*                    mStrand;
     IOStrand*             mResultsStrand;

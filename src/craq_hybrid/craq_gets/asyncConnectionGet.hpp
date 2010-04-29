@@ -51,7 +51,7 @@ public:
 
   
   ~AsyncConnectionGet();
-  AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg );
+    AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()> &readyStateChangedCb );
   
   int numStillProcessing();
   void printOutstanding();
@@ -146,6 +146,7 @@ private:
   double getTime;
   int numGets;
   bool mReceivedStopRequest;  
+  std::tr1::function<void()> mReadyStateChangedCallback;
 };
 
 }

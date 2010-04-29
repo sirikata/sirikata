@@ -62,8 +62,10 @@ namespace CBR
     std::queue<QueueValue*>mQueue;
 
     void reInitializeNode(int s);
-    void checkConnections(int s);
-
+    void readyStateChanged(int s);
+    bool checkConnections(int s);
+    void pushQueue(QueueValue*qv);
+    std::vector<int> mReadyConnections;
 
     SpaceContext* ctx;
     IOStrand* mStrand;        //strand that the asyncCraqGet is running on.

@@ -75,7 +75,8 @@ namespace CBR
                                                            mStrand,                 //strand that the connection will return errors on
                                                            mResultsStrand,          //strand that the connection will return results on.
                                                            this,                    //will return errors to this master
-                                                           mOSeg);                   //will return results to this oseg
+                                                           mOSeg,
+                                                           std::tr1::bind(&AsyncCraqSet::readyStateChanged,this,s));                   //will return results to this oseg
 
       mConnections.push_back(tmpConn);
     }
@@ -134,13 +135,8 @@ namespace CBR
     if (dataToSet.trackMessage)
     {
       dataToSet.trackingID = track_num;
-      mQueue.push(dataToSet);
     }
-    else
-    {
-      //we got all the way through without finding a ready connection.  Need to add query to queue.
-      mQueue.push(dataToSet);
-    }
+    pushQueue(dataToSet);
 
 
     int numTries = 0;
@@ -196,7 +192,7 @@ namespace CBR
     else
     {
       CraqDataSetGet cdSG(errorRes->objID,errorRes->servID,errorRes->tracking, CraqDataSetGet::SET);
-      mQueue.push(cdSG);
+      pushQueue(cdSG);
     }
 
     delete errorRes;
@@ -205,6 +201,7 @@ namespace CBR
 
   void AsyncCraqSet::poll()
   {
+    return;
     int numTries = 0;
     while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_SET))
     {
@@ -213,15 +210,35 @@ namespace CBR
       checkConnections(rand_connection);
     }
   }
-
-
+  void AsyncCraqSet::readyStateChanged(int s) {
+      mReadyConnections.push_back(s);
+      while (checkConnections(s)) {
+          if (mQueue.empty()) {
+              break;
+          }
+      }
+  }
+  void AsyncCraqSet::pushQueue(const CraqDataSetGet&dataToSet){
+      mQueue.push(dataToSet);//push and try to empty the queue
+      while (!mReadyConnections.empty()) {
+          if (checkConnections(mReadyConnections.back())) {
+              if (mQueue.empty()) {
+                  break;
+              }
+          }else {
+              mReadyConnections.pop_back();
+          }
+      }
+  }
   /*
     This function checks connection s to see if it needs a new socket or if it's ready to accept another query.
   */
-  void AsyncCraqSet::checkConnections(int s)
+  bool AsyncCraqSet::checkConnections(int s)
   {
-    if (s >= (int)mConnections.size())
-      return;
+    if (s>=(int)mConnections.size()) {
+        return false;
+    }
+    assert (s<(int)mConnections.size());
 
     int numOperations = 0;
 
@@ -261,6 +278,11 @@ namespace CBR
       std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
 #endif
     }
+    else
+    {
+        return false;
+    }
+    return true;
   }
 
 
