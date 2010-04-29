@@ -77,7 +77,7 @@ PingDelugeScenario::PingDelugeScenario(const String &options)
     // on pings.  This allows us to burst to catch up when there is time (and
     // amortize the constant overhead of doing 1 round), but if
     // there is other work to be done we won't make our target rate.
-    mMaxPingsPerRound = 20;
+    mMaxPingsPerRound = 40;
     // Do we want to vary this based on mNumPingsPerSecond? 20 is a decent
     // burst, but at 10k/s can take 2ms (we're seeing about 100us/ping
     // currently), which is potentially a long delay for other things in this
@@ -85,6 +85,9 @@ PingDelugeScenario::PingDelugeScenario(const String &options)
     // long to block other things on the main strand.
 }
 PingDelugeScenario::~PingDelugeScenario(){
+    SILOG(deluge,fatal,
+        "PingDeluge: Generated: " << mNumGeneratedPings <<
+        " Sent: " << mNumTotalPings);
     delete mPings;
     delete mPingPoller;
     delete mPingProfiler;
@@ -198,7 +201,8 @@ void PingDelugeScenario::generatePings() {
             break;
         if (!generateOnePing(t, &result))
             break;
-        mPings->push(result, false);
+        if (!mPings->push(result, false))
+            break;
     }
     mNumGeneratedPings += i;
 
