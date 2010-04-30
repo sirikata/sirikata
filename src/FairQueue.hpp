@@ -383,25 +383,6 @@ public:
     }
 
 protected:
-    // Checks if the given queue is satisfactory.  Returns false if the queue would violate a constraint, and the
-    // consideration of any later queues should stop.  Otherwise it returns true.  The other outputs indicate whether
-    // the queue was actually satisfactory, i.e. if *result_out != NULL then there was the queue was truly satisfactory.
-    // Note that, despite passing in a QueueInfo*, we have additional parameters which are actually used.  This is because
-    // this method may be used when the info in a QueueInfo is out of date.
-    // FIXME this no longer really checks anything since we don't check sizes
-    // anymore, just sets up output
-    bool satisfies(QueueInfo* qi, QueueInfo** qiout, Message** result_out, Time* vftime_out) {
-        *result_out = NULL;
-
-        assert(qi->nextFinishMessage != NULL);
-
-        // Otherwsie, we have enough space and can use this queue.
-        *qiout = qi;
-        *vftime_out = qi->nextFinishTime;
-        *result_out = qi->nextFinishMessage;
-        return true;
-    }
-
     // Retrieves the next message to deliver, along with its virtual finish time
     // for transmission. Returns null if the queue is empty.
     void nextMessage(Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
@@ -423,87 +404,15 @@ protected:
             if (!min_queue_info->enabled)
                 continue;
 
-            // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
-            // strict queue semantics, e.g. the FairQueue itself
-            Message* min_queue_front = min_queue_info->messageQueue->front();
-
+            // These just assert that this queue is just sane.
             assert(min_queue_info->nextFinishMessage != NULL);
+            assert(min_queue_info->nextFinishMessage == min_queue_info->messageQueue->front());
 
-            // NOTE: We would like to assert this:
-            // assert(min_queue_front == min_queue_info->nextFinishMessage);
-            // but doing so is not safe.  During operations, a queue may have pushed downstream
-            // causing predicates to change for any number of queues, including this one.  Since
-            // we can't assume they are the same, we'll check and try to degrade gracefully.
-            if (min_queue_front != min_queue_info->nextFinishMessage) {
-                // Our solution is to recompute the information and try to work with it, despite the
-                // fact that its out of the by-time-list.  There are three possibilities:
-                // 1) The new front is NULL.  This is simple, just ignore and continue.
-                // 2) The new front will have a finish time later in the by-time-list.  We can save
-                //    this information and consider it again later when it is appropriate.
-                // 3) The new front will have a finish time earlier in the by-time-list.  In this case
-                //    we've screwed up -- we should have considered this option earlier and may even
-                //    have missed it on earlier iterations.  NOTE: We are okay with this because it
-                //    appears to be fairly rare, and requires a number of conditions to be true to
-                //    occur (observation and theory imply that it will be relatively rare).  In this
-                //    case we'll consider the option immediately, and be sure to fix up the by-time-list.
-
-                // Log to insane just for debugging purposes.
-                SILOG(fairqueue,error,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front");
-
-                // Advance iterator to make it safe, update entry for this queue (includes fixing up empty queues)
-                advance = false;
-                it++;
-                removeFromTimeIndex(min_queue_info);
-                ByTimeIterator new_it = computeNextFinishTime(min_queue_info, min_queue_info->nextFinishStartTime);
-
-                // Case 1
-                if (min_queue_front == NULL) {
-                    // No need to reconsider, just continue with the next item.
-                    continue;
-                }
-
-                Time new_next_finish_time = min_queue_info->nextFinishTime;
-
-                if (new_next_finish_time > min_queue_finish_time) {
-                    // Case 2
-                    // Has been inserted in later, will be considered again when it is reached.
-
-                    // But since we advanced the main iterator, we need to double check that the updated version
-                    // wasn't inserted before the new main iterator -- either because the new main iterator is
-                    // past the last item, or because the jump increased the current time beyond the new time, even
-                    // though it was larger than the time we were at.
-                    // Just stepping back to the new_it is sufficient to take care of this case since it will be
-                    // considered at the next iteration.
-                    if (it == mQueuesByTime.end() || new_next_finish_time <= it->first)
-                        it = new_it;
-                }
-                else {
-                    // Case 3 -- log to debug, since this is the only case that actually causes problems
-                    SILOG(fairqueue,error,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front to earlier virtual finish time.");
-
-                    // It should have been moved earlier, check if its satisfactory
-                    bool satis = satisfies(
-                        min_queue_info,
-                        min_queue_info_out, result_out, vftime_out
-                    );
-                    if (!satis || (satis && *result_out != NULL))
-                        break;
-
-                    // And if not, just continue
-                    continue;
-                }
-            }
-
-            assert(min_queue_info->nextFinishMessage != NULL);
-            bool satis = satisfies(
-                min_queue_info,
-                min_queue_info_out, result_out, vftime_out
-            );
-            if (!satis || (satis && *result_out != NULL))
-                break;
+            *min_queue_info_out = min_queue_info;
+            *vftime_out = min_queue_info->nextFinishTime;
+            *result_out = min_queue_info->nextFinishMessage;
+            break;
         }
-
-        return;
     }
 
     // Finds and removes this queue from the time index (mQueuesByTime).
@@ -565,11 +474,6 @@ protected:
             transmitTime = Duration::microseconds(1); // just make sure we take *some* time
         }
         return last_finish_time + transmitTime;
-    }
-
-    /** Finish time for a packet inserted into an empty queue, i.e. based on the most recent virtual time. */
-    Time finishTime(uint32 size, float weight) const {
-        return finishTime(size, weight, mCurrentVirtualTime);
     }
 
 protected:
