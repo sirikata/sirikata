@@ -123,26 +123,20 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::Conn
 }
 
 bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    static UUID spaceID = UUID::null();
+
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
     // exceptions for bootstrapping purposes (namely session messages to the space).
-
-    // Initial sanity check
-    // 1. If the source is the space, somebody is messing with us.
-    bool space_source = (obj_msg->source_object() == UUID::null());
-    if (space_source) {
-        SILOG(cbr,error,"Got message from object host claiming to be from space.");
-        delete obj_msg;
-        return true;
-    }
 
     // 2. For connection bootstrapping purposes we need to exempt session messages destined for the space.
     // Note that we need to check this before the connected sanity check since obviously the object won't
     // be connected yet.  We dispatch directly from here since this needs information about the object host
     // connection to be passed along as well.
-    bool space_dest = (obj_msg->dest_object() == UUID::null());
     bool session_msg = (obj_msg->dest_port() == OBJECT_PORT_SESSION);
-    if (space_dest && session_msg)
+    if (session_msg)
     {
+        bool space_dest = (obj_msg->dest_object() == spaceID);
+
         // FIXME infinite queue
         mContext->mainStrand->post(
             std::tr1::bind(
@@ -165,6 +159,15 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // happen during the full forwarding
     if (mForwarder->tryCacheForward(obj_msg))
         return true;
+
+    // 1. If the source is the space, somebody is messing with us.  Only need to
+    // check this here since otherwise the other paths should fail.
+    bool space_source = (obj_msg->source_object() == spaceID);
+    if (space_source) {
+        SILOG(cbr,error,"Got message from object host claiming to be from space.");
+        delete obj_msg;
+        return true;
+    }
 
     // 5. Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
