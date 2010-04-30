@@ -88,13 +88,14 @@ class FlowFairness:
         self._all_rates = []
 
     def _setup_cluster_sim(self, rate, io):
-        self.cs.scenario = 'deluge'
+        self.cs.scenario = 'delugepair'
         
         if self.local: localval = 'true'
         else: localval = 'false'
         self.cs.object_simple='false'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
+             '--num-objects-per-server=' + str(500),
              '--ping-size=' + str(self.payload_size),
              '--local=' + localval,
              ]
@@ -157,9 +158,9 @@ if __name__ == "__main__":
         numoh = 1
 
     cc = ClusterConfig()
-    cs = ClusterSimSettings(cc, 4, (4,1), numoh)
+    cs = ClusterSimSettings(cc, 8, (8,1), numoh)
 
-    cs.debug = False
+    cs.debug = True
     cs.valgrind = False
     cs.profile = True
     cs.oprofile = False

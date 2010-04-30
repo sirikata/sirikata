@@ -69,7 +69,8 @@ class DelugePairScenario : public Scenario {
     int64 mMaxPingsPerRound;
     TimeProfiler::Stage* mPingProfiler;
 
-    uint32 mFloodServer;
+    ServerID mFloodServer;
+    uint32 mNumObjectsPerServer;
     bool mLocalTraffic;
     bool mSourceFloodServer;
     struct MessageFlow {
@@ -81,6 +82,7 @@ class DelugePairScenario : public Scenario {
             return cumulativeProbability<flow.cumulativeProbability;
         }
     };
+    Duration mGenPhase;
     class MessageFlowLess{public:
             bool operator()(const MessageFlow&a,const MessageFlow&b) const{return a<b;}
     };

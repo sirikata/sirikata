@@ -43,6 +43,7 @@ void DPSInitOptions(DelugePairScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("DelugePairScenario",thus,
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
+        new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
         new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         new OptionValue("source-flood-server","false",Sirikata::OptionValueType<bool>(),"This makes the flood server the source of all the packets rather than the destination, so that we can validate that egress routing gets proper fairness."),
@@ -65,7 +66,7 @@ DelugePairScenario::DelugePairScenario(const String &options)
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
     mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
     mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
-    
+    mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
     mLocalTraffic = optionsSet->referenceOption("local")->as<bool>();
 
     mNumGeneratedPings = 0;
@@ -106,6 +107,7 @@ void DelugePairScenario::addConstructorToFactory(ScenarioFactory*thus){
 }
 
 void DelugePairScenario::initialize(ObjectHostContext*ctx) {
+    mGenPhase=GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
     mContext=ctx;    
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
     
@@ -147,11 +149,26 @@ void DelugePairScenario::stop() {
     mPingPoller->stop();
     mGeneratePingPoller->stop();
 }
+#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
 void DelugePairScenario::generatePairs() {
     std::vector<Object*> floodedObjects;
     Time t=mContext->simTime();
+    if (t-mStartTime<mGenPhase) {
+        return;
+    }
+    
     if (mSendCDF.empty()) {
+        for (int i=0;i<mObjectTracker->numServerIDs();++i) {
+            if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {
+                return;
+            }
+        }
+        OH_LOG(debug, "Beginning object seed phase at " << (t-mStartTime)<<"\n");
         Object* first=mObjectTracker->roundRobinObject(mFloodServer);
+        if (!first) {
+            assert(0);
+            return;
+        }
         Object* cur=first;
         do {
             floodedObjects.push_back(cur);
@@ -161,11 +178,17 @@ void DelugePairScenario::generatePairs() {
             ServerID sid=mObjectTracker->getServerID(i);
             if (sid==mFloodServer) continue;
             Object* first=mObjectTracker->roundRobinObject(sid);
+            if (!first) {
+                assert(0);
+                return;
+            }
             Object* cur=first;
             do {
                 //generate message from/to cur to a floodedObject
                 Object* dest=floodedObjects[rand()%floodedObjects.size()];
+                assert(dest);
                 Object* src=cur=mObjectTracker->roundRobinObject(sid);
+                assert(src);
                 if (mSourceFloodServer) {
                     std::swap(src,dest);
                 }
@@ -173,6 +196,12 @@ void DelugePairScenario::generatePairs() {
                 pi.dest=dest->uuid();
                 pi.source=src->uuid();
                 pi.dist=(src->location().position(t)-dest->location().position(t)).length();
+/*
+                printf ("Sending data from object size %f to object size %f, %f meters away\n",
+                        src->bounds().radius(),
+                        dest->bounds().radius(),
+                        pi.dist);
+*/
                 BoundingBox3f srcbb(src->location().position(t),src->bounds().radius());
                 BoundingBox3f dstbb(dest->location().position(t),dest->bounds().radius());
                 pi.cumulativeProbability= this->mWeightCalculator->weight(srcbb,dstbb);
@@ -200,7 +229,8 @@ bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
         {
             MessageFlow comparator;
             comparator.cumulativeProbability=which;
-            where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
+            where=mSendCDF.begin()+which*(mSendCDF.size()-1);
+//            where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
         }
         if (where==mSendCDF.end()) {
             --where;       

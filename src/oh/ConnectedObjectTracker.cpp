@@ -71,6 +71,12 @@ Object* selectID(const ObjectsByID& uuidMap) {
     return obj;
 }
 }
+size_t ConnectedObjectTracker::numObjectsConnected(ServerID sid) {
+    ObjectsByServerMap::iterator iter=mObjectsByServer.find(sid);
+    if (iter!=mObjectsByServer.end())
+        return iter->second.size();
+    return 0;
+}
 ServerID ConnectedObjectTracker::getServerID(int objectByServerMapNumber) {
     ObjectsByServerMap::iterator iter=mObjectsByServer.begin();
     for (int i=0;i<objectByServerMapNumber;++i,++iter) {

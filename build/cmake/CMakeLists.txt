@@ -327,6 +327,7 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/oh/ConnectedObjectTracker.cpp
   ${CBR_SOURCE_DIR}/oh/DistributionPingScenario.cpp
   ${CBR_SOURCE_DIR}/oh/PingDelugeScenario.cpp
+  ${CBR_SOURCE_DIR}/oh/DelugePairScenario.cpp
   ${CBR_SOURCE_DIR}/oh/ByteTransferScenario.cpp
   ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
   ${CBR_SOURCE_DIR}/SSTImpl.cpp
@@ -433,6 +434,7 @@ TARGET_LINK_LIBRARIES(cbr
 ADD_EXECUTABLE(oh ${OH_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(oh
   cbr-core
+        ${GSL_CONFIG_LIBS}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}

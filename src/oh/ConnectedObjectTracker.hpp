@@ -53,6 +53,7 @@ public:
     ServerID numServerIDs() const;
     ///WARNING: expensive (linear search)
     ServerID getServerID(int ObjectsByServerMapNumber);
+    size_t numObjectsConnected(ServerID id);
 private:
     void generatePairs();
     Object* getObject(const UUID& objid) const;
