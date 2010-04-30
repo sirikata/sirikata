@@ -124,6 +124,7 @@ else
     if [ $want_oprofile -eq 1 ] ; then
       sudo opcontrol --no-vmlinux --start
       sudo opcontrol --reset
+      sudo opcontrol --callgraph=6
     fi
     exec $APPDIR/$APPNAME "$@"
     if [ $want_oprofile -eq 1 ] ; then
