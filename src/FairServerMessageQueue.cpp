@@ -29,10 +29,9 @@ Message* FairServerMessageQueue::SenderAdapterQueue::pop() {
 }
 
 bool FairServerMessageQueue::SenderAdapterQueue::empty() {
-    return
-        (mFront == NULL &&
-            mSender->serverMessageEmpty(mDestServer)
-        );
+    // Don't bother with server message empty since it'll require a lock anyway,
+    // just try pulling and buffering.
+    return front() == NULL;
 }
 
 FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second)
