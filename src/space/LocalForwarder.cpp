@@ -70,8 +70,6 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
             return false;
 
         conn = it->second;
-        if (!conn->enabled())
-            return false;
 
         // FIXME we can't sanity check here because we use this after
         // receiving from another space server (in which case we won't

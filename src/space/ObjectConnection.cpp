@@ -49,11 +49,8 @@ UUID ObjectConnection::id() const {
 }
 
 bool ObjectConnection::send(CBR::Protocol::Object::ObjectMessage* msg) {
-    if (!mEnabled) {
-        SILOG(objconn,error,"Tried to send before ObjectConnection was enabled.");
-        assert(false);
+    if (!mEnabled)
         return false;
-    }
 
     return mConnectionManager->send(mOHConnection, msg);
 }
