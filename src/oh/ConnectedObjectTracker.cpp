@@ -71,7 +71,13 @@ Object* selectID(const ObjectsByID& uuidMap) {
     return obj;
 }
 }
-
+ServerID ConnectedObjectTracker::getServerID(int objectByServerMapNumber) {
+    ObjectsByServerMap::iterator iter=mObjectsByServer.begin();
+    for (int i=0;i<objectByServerMapNumber;++i,++iter) {
+        
+    }
+    return iter->first;
+}
 Object* ConnectedObjectTracker::randomObject() {
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 

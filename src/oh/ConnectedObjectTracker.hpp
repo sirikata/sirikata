@@ -51,8 +51,10 @@ public:
     Object* roundRobinObject();
     Object* roundRobinObject(ServerID whichServer);
     ServerID numServerIDs() const;
-
+    ///WARNING: expensive (linear search)
+    ServerID getServerID(int ObjectsByServerMapNumber);
 private:
+    void generatePairs();
     Object* getObject(const UUID& objid) const;
 
     virtual void objectHostConnectedObject(ObjectHost* oh, Object* obj, const ServerID& server);

@@ -32,12 +32,14 @@
 #include "sirikata/util/Platform.hpp"
 #include "ScenarioFactory.hpp"
 #include "DistributionPingScenario.hpp"
+#include "DelugePairScenario.hpp"
 #include "PingDelugeScenario.hpp"
 #include "ByteTransferScenario.hpp"
 AUTO_SINGLETON_INSTANCE(CBR::ScenarioFactory);
 namespace CBR {
 ScenarioFactory::ScenarioFactory(){
     DistributionPingScenario::addConstructorToFactory(this);
+    DelugePairScenario::addConstructorToFactory(this);
     PingDelugeScenario::addConstructorToFactory(this);
     ByteTransferScenario::addConstructorToFactory(this);
 }
