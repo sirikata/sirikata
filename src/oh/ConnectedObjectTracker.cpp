@@ -53,7 +53,7 @@ Object* ConnectedObjectTracker::getObject(const UUID& objid) const {
 }
 
 namespace {
-typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
+typedef std::tr1::unordered_set<UUID, UUIDHasher> ObjectIDSet;
 UUID selectID(const ObjectIDSet& uuidMap) {
     ObjectIDSet::const_iterator id_it = uuidMap.begin();
     uint32 obj_num = rand() % uuidMap.size();
@@ -62,7 +62,7 @@ UUID selectID(const ObjectIDSet& uuidMap) {
     return objid;
 }
 
-typedef std::tr1::unordered_map<UUID, Object*, UUID::Hasher> ObjectsByID;
+typedef std::tr1::unordered_map<UUID, Object*, UUIDHasher> ObjectsByID;
 Object* selectID(const ObjectsByID& uuidMap) {
     ObjectsByID::const_iterator id_it = uuidMap.begin();
     uint32 obj_num = rand() % uuidMap.size();

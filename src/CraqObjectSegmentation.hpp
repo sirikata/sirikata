@@ -35,7 +35,7 @@ namespace CBR
   struct TransLookup
   {
     CraqEntry sID;
-   
+
     int timeAdmitted;
     TransLookup():sID(CraqEntry::null()){}
   };
@@ -46,7 +46,7 @@ namespace CBR
   class CraqObjectSegmentation : public ObjectSegmentation
   {
   private:
-      typedef std::tr1::unordered_map<UUID, CraqEntry, UUID::Hasher> ObjectSet;
+      typedef std::tr1::unordered_map<UUID, CraqEntry, UUIDHasher> ObjectSet;
 
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 

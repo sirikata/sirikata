@@ -57,8 +57,8 @@ class ObjectFactory : public Service {
 
         IOTimerPtr startTimer;
     };
-    typedef std::tr1::unordered_map<UUID, ObjectInputs*,UUID::Hasher> ObjectInputsMap;
-    typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;
+    typedef std::tr1::unordered_map<UUID, ObjectInputs*,UUIDHasher> ObjectInputsMap;
+    typedef std::tr1::unordered_map<UUID, Object*,UUIDHasher> ObjectMap;
 
 public:
     ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration);
