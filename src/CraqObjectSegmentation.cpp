@@ -37,6 +37,7 @@ namespace CBR
    craqDhtSet(con, o_strand, this),
    postingStrand(strand_to_post_to),
    mStrand(o_strand),
+   mCraqCache(con),
    mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
    mFrontMigAck(NULL),
    ctx(con),

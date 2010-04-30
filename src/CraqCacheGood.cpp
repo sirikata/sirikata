@@ -13,9 +13,10 @@
 namespace CBR
 {
 
-  CraqCacheGood::CraqCacheGood()
+  CraqCacheGood::CraqCacheGood(Context* ctx)
+   : mContext(ctx)
   {
-    mTimer.start();
+      mTimer.start();
     insertMilliseconds = 0;
     numInserted = 0;
     maintainDur = 0;
@@ -41,7 +42,8 @@ namespace CBR
   {
     if (idRecMap.size() > mMaxCacheSize)
     {
-      Duration beginningDur = mTimer.elapsed();
+        static Time nulltime = Time::null();
+        Duration beginningDur = mContext->recentSimTime()-nulltime;
       int numObjectsDeleted = 0;
 
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
@@ -178,7 +180,8 @@ namespace CBR
 //otherwise, return false
 bool CraqCacheGood::satisfiesCacheAgeCondition(int inAge)
 {
-  Duration currentDur = mTimer.elapsed();
+    static Time nulltime = Time::null();
+    Duration currentDur = mContext->recentSimTime()-nulltime;
   if (currentDur.toMilliseconds() - inAge > mEntryLifetime.toMilliseconds())
   {
     return false;

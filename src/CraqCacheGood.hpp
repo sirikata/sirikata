@@ -13,6 +13,7 @@
 #include "Timer.hpp"
 #include <boost/thread/mutex.hpp>
 #include "craq_oseg/CraqEntry.hpp"
+#include "Context.hpp"
 
 namespace CBR
 {
@@ -28,7 +29,9 @@ namespace CBR
   class CraqCacheGood
   {
   private:
-    typedef std::map<UUID,CraqCacheRecord*> IDRecordMap;
+      Context* mContext;
+
+      typedef std::tr1::unordered_map<UUID,CraqCacheRecord*,UUIDHasher> IDRecordMap;
     IDRecordMap idRecMap;
 
     typedef std::multimap<int,CraqCacheRecord*> TimeRecordMap;
@@ -52,7 +55,7 @@ namespace CBR
       Duration mEntryLifetime; //maximum age of a cache entry
 
   public:
-    CraqCacheGood();
+    CraqCacheGood(Context* ctx);
     ~CraqCacheGood();
 
     void insert(const UUID& uuid, const CraqEntry& sID);
