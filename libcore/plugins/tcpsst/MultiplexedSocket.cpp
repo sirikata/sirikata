@@ -262,7 +262,7 @@ MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallba
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t max_send_buffer_size, bool zeroDelimited)
+MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, bool zeroDelimited)
  :SerializationCheck(),
   mIO(io),
      mNewSubstreamCallback(substreamCallback),
@@ -270,8 +270,12 @@ MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vec
     mZeroDelim=zeroDelimited;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
+}
+
+void MultiplexedSocket::initFromSockets(const std::vector<TCPSocket*>&sockets, size_t max_send_buffer_size) {
     for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
-        mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,max_send_buffer_size>ASIO_SEND_BUFFER_SIZE?max_send_buffer_size:ASIO_SEND_BUFFER_SIZE));
+        mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,max_send_buffer_size>ASIO_SEND_BUFFER_SIZE?max_send_buffer_size:ASIO_SEND_BUFFER_SIZE,getSharedPtr()));
+        mSockets.back().bindFunctions(getSharedPtr());
     }
 }
 void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol){
@@ -452,7 +456,8 @@ void MultiplexedSocket::prepareConnect(unsigned int numSockets, size_t max_enque
     unsigned int oldSize=(unsigned int)mSockets.size();
     if (numSockets>mSockets.size()) {
         for (unsigned int i=oldSize;i<numSockets;++i) {
-            mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, max_enqueued_send_size>ASIO_SEND_BUFFER_SIZE?max_enqueued_send_size:ASIO_SEND_BUFFER_SIZE));
+            mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, max_enqueued_send_size>ASIO_SEND_BUFFER_SIZE?max_enqueued_send_size:ASIO_SEND_BUFFER_SIZE,getSharedPtr()));
+            mSockets.back().bindFunctions(getSharedPtr());
             mSockets.back().createSocket(getASIOService(), kernelSendBufferSize, kernelReceiveBufferSize);
         }
     }

@@ -177,7 +177,8 @@ void buildStream(TcpSstHeaderArray *buffer,
                     where->second.mSockets.push_back(socket);
                     if (numConnections==(unsigned int)where->second.mSockets.size()) {
                         MultiplexedSocketPtr shared_socket(
-                            MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,where->second.mSockets,data->cb,data->mSendBufferSize, base64Stream));
+                            MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,data->cb,base64Stream));
+                        shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
                         std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
                         std::string resource_name='/'+humanReadableUUID;
                         MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol);

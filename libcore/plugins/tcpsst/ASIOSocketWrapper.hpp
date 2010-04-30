@@ -84,14 +84,16 @@ class ASIOSocketWrapper {
 
 	};
     EWA<Duration> mAverageSendLatency;
-
+    
     std::vector<Stream::StreamID> mPausedSendStreams;
-
+    std::deque<TimestampedChunk> mToSend;
+    std::tr1::weak_ptr<MultiplexedSocket>mParent;
     /** Call this any time a chunk finishes being sent so statistics can be collected. */
     void finishedSendingChunk(const TimestampedChunk& tc);
 
 
     typedef boost::system::error_code ErrorCode;
+    std::tr1::function<void(const ErrorCode &error, std::size_t bytes_sent)>mSendManyDequeItems;
     /**
      * This function sets the QUEUE_CHECK_FLAG and checks the sendQueue for additional packets to send out.
      * If nothing is in the queue then it unsets the ASYNCHRONOUS_SEND_FLAG and QUEUE_CHECK_FLAGS
@@ -104,7 +106,7 @@ class ASIOSocketWrapper {
      * If the whole large Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the sendToWire function is called with the rest of the queue unless it is empty in which case the finishAsyncSend is called
      */
-    void sendManyDequeItems(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk> &const_toSend, const ErrorCode &error, std::size_t bytes_sent);
+    void sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedSocket>&parentMultiSocket, const ErrorCode &error, std::size_t bytes_sent);
 
 /**
  * When there's a single packet to be sent to the network, mSocket->async_send is simply called upon the Chunk to be sent
@@ -115,7 +117,7 @@ class ASIOSocketWrapper {
  *  This function sends a while queue of packets to the network
  * The function sends each item using a vector of asio::buffers made from the passed in deque
  */
-    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<TimestampedChunk>&const_toSend);
+    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, std::deque<TimestampedChunk>&const_toSend);
 
 /**
  * If another thread claimed to be sending data asynchronously
@@ -130,14 +132,16 @@ class ASIOSocketWrapper {
 
 public:
 
-    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize)
+    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize, const MultiplexedSocketPtr&parent)
      : mSocket(socket),
        mReadBuffer(NULL),
        mSendingStatus(0),
        mSendQueue(SizedResourceMonitor(queuedBufferSize)),
-       mAverageSendLatency(SEND_LATENCY_EWA_ALPHA)
+       mAverageSendLatency(SEND_LATENCY_EWA_ALPHA),
+       mParent(parent)
     {
         //mPacketLogger.reserve(268435456);
+        bindFunctions(parent);
     }
 
     ASIOSocketWrapper(const ASIOSocketWrapper& socket)
@@ -147,18 +151,22 @@ public:
        mSendQueue(socket.getResourceMonitor()),
        mAverageSendLatency(SEND_LATENCY_EWA_ALPHA)
     {
-        //mPacketLogger.reserve(268435456);
+        MultiplexedSocketPtr parent(socket.mParent.lock());
+        mParent=parent;
+        bindFunctions(parent);
     }
 
-    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize)
+    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize,const MultiplexedSocketPtr&parent)
      : mSocket(NULL),
        mReadBuffer(NULL),
        mSendingStatus(0),
        mSendQueue(SizedResourceMonitor(queuedBufferSize)),
-       mAverageSendLatency(SEND_LATENCY_EWA_ALPHA)
+       mAverageSendLatency(SEND_LATENCY_EWA_ALPHA),
+       mParent(parent)
     {
+        bindFunctions(parent);
     }
-
+    void bindFunctions(const MultiplexedSocketPtr&parent);
     ~ASIOSocketWrapper() {
 
     }
