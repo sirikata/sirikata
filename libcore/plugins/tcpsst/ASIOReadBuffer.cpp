@@ -63,6 +63,22 @@ struct ASIOReadBufferUtil {
     }
 };
 
+void ASIOReadBuffer::bindFunctions() {
+    mAsioReadIntoChunk=std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
+                                      this,
+                                      _1,
+                                      _2);
+    mAsioReadIntoFixedBuffer=std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
+                                      this,
+                                      _1,
+                                      _2);
+
+    mAsioReadIntoZeroDelimChunk=std::tr1::bind(&ASIOReadBuffer::asioReadIntoZeroDelimChunk,
+                                      this,
+                                      _1,
+                                      _2);
+
+}
 
 void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
 ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader) {
@@ -243,11 +259,7 @@ void ASIOReadBuffer::readIntoFixedBuffer(const MultiplexedSocketPtr &parentSocke
 
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
-        .async_receive(boost::asio::buffer(mBuffer+mBufferPos,sBufferLength-mBufferPos),
-                       std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
-                                   this,
-                                   _1,
-                                   _2));
+        .async_receive(boost::asio::buffer(mBuffer+mBufferPos,sBufferLength-mBufferPos),mAsioReadIntoFixedBuffer);
 }
 void ASIOReadBuffer::ioReactorThreadResumeRead(MultiplexedSocketPtr&thus) {
     SerializationCheck::Scoped ss(thus.get());
@@ -285,11 +297,7 @@ void ASIOReadBuffer::readIntoChunk(const MultiplexedSocketPtr &parentSocket){
     assert(mBufferPos<mNewChunk.size());
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
-        .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),
-                       std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
-                                   this,
-                                   _1,
-                                   _2));
+        .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),mAsioReadIntoChunk);
 }
 
 
@@ -300,11 +308,7 @@ void ASIOReadBuffer::readIntoZeroDelimChunk(const MultiplexedSocketPtr &parentSo
     mNewChunk.resize(mBufferPos+sBufferLength);
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
-        .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),
-                       std::tr1::bind(&ASIOReadBuffer::asioReadIntoZeroDelimChunk,
-                                   this,
-                                   _1,
-                                   _2));
+        .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),mAsioReadIntoZeroDelimChunk);
 }
 
 
@@ -524,6 +528,7 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
     }
 }
 ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
+    bindFunctions();
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;
