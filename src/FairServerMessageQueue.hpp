@@ -37,6 +37,11 @@ protected:
     uint64 mBytesDiscardedBlocked;
     uint64 mBytesDiscardedUnderflow;
     uint64 mBytesUsed;
+
+    // These must be recursive because networkReadyToSend callbacks may or may
+    // not be triggered by this code.
+    mutable boost::recursive_mutex mMutex;
+    typedef boost::lock_guard<boost::recursive_mutex> MutexLock;
   public:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second);
     ~FairServerMessageQueue();
@@ -61,8 +66,6 @@ protected:
     // Get average weight over all queues.  Used when we don't have a weight for
     // a new input queue yet.
     float getAverageServerWeight() const;
-
-    void handleMessageReady(ServerID sid);
 
     void enableDownstream(ServerID sid);
     void disableDownstream(ServerID sid);
