@@ -486,14 +486,25 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
 
-  // Will force allocation of ODPFlowScheduler if its not there already
-  mOutgoingMessages->prePush(dest_serv.server());
   // And then we can actually push
+  // We try to look up the ODPFlowScheduler efficiently first, and only prePush
+  // if we fail to find it.
   ODPFlowScheduler* flow_sched = NULL;
   {
       boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
-      flow_sched = mODPRouters[dest_serv.server()];
+      ODPRouterMap::iterator odp_it = mODPRouters.find(dest_serv.server());
+      if (odp_it != mODPRouters.end())
+          flow_sched = odp_it->second;
   }
+  if (flow_sched == NULL) {
+      // Will force allocation of ODPFlowScheduler if its not there already
+      mOutgoingMessages->prePush(dest_serv.server());
+      {
+          boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+          flow_sched = mODPRouters[dest_serv.server()];
+      }
+  }
+
   CraqEntry source_object_data(CraqEntry::null());//FIXME: do we want mandatory lookup for nonlocal guys?! = mOSegLookups->cacheLookup(obj_msg->source_object());
   if (source_object_data.isNull()) {
       source_object_data=CraqEntry(mContext->id(),1.0);//FIXME dumb default: RADIUS of reforwarded messages are 1.0
