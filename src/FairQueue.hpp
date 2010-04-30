@@ -305,17 +305,9 @@ public:
 
     bool empty() const {
         // Queues won't be in mQueuesByTime unless they have something in them
-        // This allows us to efficiently answer false if we know we have pending items
-        if (!mQueuesByTime.empty())
-            return false;
-
-        // Otherwise we must be careful and check all the queues since some queues may have been
-        // pushed to behind our back, so we can't be certain they would be in mQueuesByTime
-        for(ConstByKeyIterator it = mQueuesByKey.begin(); it != mQueuesByKey.end(); it++) {
-            QueueInfo* qi = it->second;
-            if (!qi->messageQueue->empty()) return false;
-        }
-        return true;
+        // This allows us to efficiently answer false if we know we have pending
+        // items
+        return mQueuesByTime.empty();
     }
 
     // Returns the total amount of space that can be allocated for the destination
