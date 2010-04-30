@@ -31,11 +31,12 @@ TCPNetwork::RemoteStream::~RemoteStream() {
     delete stream;
 }
 
-bool TCPNetwork::RemoteStream::push(Chunk& data) {
+bool TCPNetwork::RemoteStream::push(Chunk& data, bool* was_empty) {
     boost::lock_guard<boost::mutex> lck(mPushPopMutex);
 
     Chunk* tmp = new Chunk;
     tmp->swap(data);
+    *was_empty = receive_queue.probablyEmpty();
     bool pushed = receive_queue.push(tmp, false);
 
     if (!pushed) {
@@ -506,11 +507,15 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(Re
         assert( recv_strm != NULL );
 
         // Normal case, we can just handle the message
-        bool pushed_success = remote_stream->push(data);
-        if (!pushed_success)
+        bool was_empty = false;
+        bool pushed_success = remote_stream->push(data, &was_empty);
+        if (!pushed_success) {
             return Sirikata::Network::Stream::PauseReceive;
-        else
-            mReceiveListener->networkReceivedData( recv_strm );
+        }
+        else {
+            if (was_empty)
+                mReceiveListener->networkReceivedData( recv_strm );
+        }
     }
 
     return Sirikata::Network::Stream::AcceptedData;

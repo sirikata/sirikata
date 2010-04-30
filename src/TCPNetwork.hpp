@@ -29,7 +29,7 @@ class TCPNetwork : public Network {
 
         ~RemoteStream();
 
-        bool push(Chunk& data);
+        bool push(Chunk& data, bool* was_empty);
         Chunk* pop(IOService* ios);
 
         Sirikata::Network::Stream* stream;
