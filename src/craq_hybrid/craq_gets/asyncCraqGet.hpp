@@ -42,7 +42,7 @@ namespace CBR
     virtual void erroredSetValue(CraqOperationResult* cor);
 
   
-    void get(CraqDataSetGet* cdGet, OSegLookupTraceToken* traceToken);
+    void get(const CraqDataSetGet& cdGet, OSegLookupTraceToken* traceToken);
 
     int queueSize();
     int numStillProcessing();

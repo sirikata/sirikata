@@ -28,7 +28,7 @@ namespace CBR
 
     void initialize(std::vector<CraqInitializeArgs>);
   
-    void set(CraqDataSetGet* cdSet, uint64 tracking_number = 0);
+    void set(CraqDataSetGet cdSet, uint64 tracking_number = 0);
 
 
     int queueSize();
@@ -48,7 +48,7 @@ namespace CBR
     
     bool connected;
 
-    std::queue<CraqDataSetGet*> mQueue;
+    std::queue<CraqDataSetGet> mQueue;
 
     void reInitializeNode(int s);
     void checkConnections(int s);

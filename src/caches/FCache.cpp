@@ -12,7 +12,6 @@
 #include <sys/time.h>
 #include <vector>
 #include <map>
-#include <tr1/functional>
 #include <cassert>
 #include <string>
 #include <cmath>

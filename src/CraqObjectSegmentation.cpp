@@ -12,22 +12,20 @@
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
 
+#include "caches/Cache.hpp"
+#include "caches/CommunicationCache.hpp"
+#include "caches/CacheLRUOriginal.hpp"
+
+#include "Options.hpp"
+
 #include "CoordinateSegmentation.hpp"
 #include <sstream>
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
-
-
-#include "caches/Cache.hpp"
-#include "caches/CommunicationCache.hpp"
-#include "caches/CacheLRUOriginal.hpp"
-
 #include <boost/thread/mutex.hpp>
 #include "OSegLookupTraceToken.hpp"
 #include "Utility.hpp"
-
-#include "Options.hpp"
 
 #include <sirikata/network/IOStrandImpl.hpp>
 
@@ -49,6 +47,8 @@ namespace CBR
    ctx(con),
    mReceivedStopRequest(false)
   {
+
+
     std::string cacheSelector     =  GetOption(CACHE_SELECTOR)->as<String>();
     uint32  cacheSize             =  GetOption(OSEG_CACHE_SIZE)->as<uint32>();
     uint32  cacheCleanGroupSize   =  GetOption(OSEG_CACHE_CLEAN_GROUP_SIZE)->as<uint32>();
@@ -131,7 +131,6 @@ namespace CBR
       delete nfd;
     }
 
-    delete mCraqCache;
 
     for (TrackedMessageMapAdded::iterator tmessmapit  = trackedAddMessages.begin(); tmessmapit != trackedAddMessages.end(); ++tmessmapit)
       delete tmessmapit->second.msgAdded;
@@ -294,7 +293,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
 
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
-    CraqDataSetGet* cdSetGet = new CraqDataSetGet(cdk, CraqEntry(mContext->id(),radius) ,true,CraqDataSetGet::SET);
+    CraqDataSetGet cdSetGet(cdk, CraqEntry(mContext->id(),radius) ,true,CraqDataSetGet::SET);
 
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id,radius);
@@ -428,7 +427,7 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
       indexer.append(1,myUniquePrefixKey);
       indexer.append(tmper.rawHexData());
 
-      CraqDataSetGet* cdSetGet  = new CraqDataSetGet(indexer,CraqEntry::null(),false,CraqDataSetGet::GET); //bftm modified
+      CraqDataSetGet cdSetGet (indexer,CraqEntry::null(),false,CraqDataSetGet::GET); //bftm modified
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
@@ -498,7 +497,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       CraqDataKey cdk;
       convert_obj_id_to_dht_key(obj_id,cdk);
 
-      CraqDataSetGet* cdSetGet = new CraqDataSetGet(cdk, CraqEntry(mContext->id(),radius) ,true,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, CraqEntry(mContext->id(),radius) ,true,CraqDataSetGet::SET);
 
       receivingObjects_m.lock();
       mReceivingObjects.insert(ObjectSet::value_type(obj_id,CraqEntry(mContext->id(),radius)));
@@ -519,7 +518,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       CraqDataKey cdk;
       convert_obj_id_to_dht_key(obj_id,cdk);
 
-      CraqDataSetGet* cdSetGet = new CraqDataSetGet(cdk, CraqEntry(mContext->id(),radius) ,false,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, CraqEntry(mContext->id(),radius) ,false,CraqDataSetGet::SET);
       int trackID = getUniqueTrackID();
       craqDhtSet.set(cdSetGet, trackID);
 
@@ -677,7 +676,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       //add it to mFinishedMove.  serv_from
 
       //put the value in the cache!
-      postingStrand->post(std::tr1::bind(&CraqCache::insert, mCraqCache, obj_id, serv_from));
+      postingStrand->post(std::tr1::bind(&CraqCache::insert,mCraqCache, obj_id, serv_from));
       callOsegLookupCompleted(obj_id,serv_from, NULL);
 
 
@@ -776,7 +775,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
         indexer.append(1,myUniquePrefixKey);
         indexer.append(nfd->obj_id.rawHexData());
 
-        CraqDataSetGet* cdSetGet = new CraqDataSetGet (indexer,CraqEntry(NullServerID,0),false,CraqDataSetGet::GET); //bftm modified
+        CraqDataSetGet cdSetGet (indexer,CraqEntry(NullServerID,0),false,CraqDataSetGet::GET); //bftm modified
         craqDhtGet.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
 
         mNfData.pop(); //remove the item from the queue.

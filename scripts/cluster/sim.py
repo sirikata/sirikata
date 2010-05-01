@@ -243,7 +243,7 @@ class ClusterSim:
 
 
     def run_analysis(self):
-#        self.bandwidth_analysis()
+        self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
@@ -396,8 +396,8 @@ class ClusterSim:
                 "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
                 "--oseg=" + self.settings.oseg,
                 "--oseg_unique_craq_prefix=" + self.settings.unique(),
-                "--oseg-cache-selector=" + self.settings.oseg_cache_selector(),
-                "--oseg-cache-scaling=" + self.setting.oseg_cache_comm_scaling(),
+                "--oseg-cache-selector=" + self.settings.oseg_cache_selector,
+                "--oseg-cache-scaling=" + self.settings.oseg_cache_comm_scaling,
                 "--object_drift_x=" + self.settings.object_drift_x,
                 "--object_drift_y=" + self.settings.object_drift_y,
                 "--object_drift_z=" + self.settings.object_drift_z,

@@ -14,11 +14,9 @@
 #include <string.h>
 #include <vector>
 
-
 #include "caches/Cache.hpp"
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
-
 
 #include "OSegLookupTraceToken.hpp"
 #include "craq_hybrid/asyncCraqHybrid.hpp"
@@ -117,6 +115,7 @@ namespace CBR
     AsyncCraqHybrid craqDhtSet;
 
 
+
     int mAtomicTrackID;
     boost::mutex atomic_track_id_m;
     int getUniqueTrackID();
@@ -149,7 +148,6 @@ namespace CBR
     //building for the cache
     CraqEntry satisfiesCache(const UUID& obj_id);
     CraqCache* mCraqCache;
-    //    CraqCacheGood mCraqCache;
     //end building for the cache
 
 

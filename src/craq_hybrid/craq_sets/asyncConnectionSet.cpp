@@ -324,8 +324,9 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      //      mResultsStrand->post(std::tr1::bind(&ObjectSegmentation::craqSetResult,mOSeg,cor));
-      mOSeg->craqSetResult(cor);
+      mResultsStrand->post(std::tr1::bind(&ObjectSegmentation::craqSetResult,mOSeg,cor));
+
+
 
 
       //cancel the callback
