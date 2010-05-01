@@ -89,7 +89,8 @@ public:
 
     // Tries to send the Message to the Network, and tags it for analysis if
     // successful. Helper method for implementations.
-    bool trySend(const ServerID& addr, const Message* msg);
+    // If sent, returns the size of the serialized packet.  Otherwise, returns 0.
+    uint32 trySend(const ServerID& addr, const Message* msg);
 
     SpaceContext* mContext;
     IOStrand* mSenderStrand;
@@ -107,6 +108,9 @@ public:
     double mUsedWeightSum;
 
     SimpleRateEstimator mCapacityEstimator;
+    bool mBlocked; // Implementations should set this when the network gets
+                   // blocked.  It will cause us to report actual measured
+                   // capacity instead of an overestimate.
 };
 }
 

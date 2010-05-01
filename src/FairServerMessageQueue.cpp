@@ -34,28 +34,19 @@ bool FairServerMessageQueue::SenderAdapterQueue::empty() {
     return front() == NULL;
 }
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender, uint32 send_bytes_per_second)
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender)
         : ServerMessageQueue(ctx, net, sender),
           mServerQueues(),
-          mLastServiceTime(ctx->simTime()),
-          mRate(send_bytes_per_second),
-          mRemainderSendBytes(0),
-          mLastSendEndTime(ctx->simTime()),
           mServiceScheduled(false),
-          mAccountedTime(Duration::seconds(0)),
-          mBytesDiscardedBlocked(0),
-          mBytesDiscardedUnderflow(0),
-          mBytesUsed(0)
+          mStoppedBlocked(0),
+          mStoppedUnderflow(0)
 {
 }
 
 FairServerMessageQueue::~FairServerMessageQueue() {
     SILOG(fsmq,info,
-        "FSMQ: Accounted time: " << mAccountedTime <<
-        ", used: " << mBytesUsed <<
-        ", discarded (underflow): " << mBytesDiscardedUnderflow <<
-        ", discarded (blocked): " << mBytesDiscardedBlocked <<
-        ", remaining: " << mRemainderSendBytes
+        "FSMQ: underflow: " << mStoppedUnderflow <<
+        ", blocked: " << mStoppedBlocked
     );
 }
 
@@ -69,24 +60,22 @@ void FairServerMessageQueue::scheduleServicing() {
 }
 
 void FairServerMessageQueue::service() {
+#define MAX_MESSAGES_PER_ROUND 100
+
     mProfiler->started();
 
     // Unmark scheduling
     mServiceScheduled = false;
 
     Time tcur = mContext->simTime();
-    Duration since_last = tcur - mLastServiceTime;
-    mAccountedTime += since_last;
-    uint64 new_send_bytes = since_last.toSeconds() * mRate;
-    uint64 send_bytes = new_send_bytes + mRemainderSendBytes;
 
     // Send
-
     Message* next_msg = NULL;
     ServerID sid;
-    bool ran_out_of_bytes = false;
     bool last_blocked = false;
-    while( send_bytes > 0 ) {
+    uint32 num_sent = 0;
+    uint32 cum_sent_size = 0;
+    while( num_sent < MAX_MESSAGES_PER_ROUND ) {
         uint32 packet_size = 0;
         {
             MutexLock lck(mMutex);
@@ -97,13 +86,8 @@ void FairServerMessageQueue::service() {
 
             last_blocked = false;
 
-            packet_size = next_msg->serializedSize();
-            if (packet_size > send_bytes) {
-                ran_out_of_bytes = true;
-                break;
-            }
-
-            bool sent_success = trySend(sid, next_msg);
+            uint32 sent_size = trySend(sid, next_msg);
+            bool sent_success = (sent_size != 0);
             if (!sent_success) {
                 last_blocked = true;
                 disableDownstream(sid);
@@ -113,39 +97,33 @@ void FairServerMessageQueue::service() {
             // Pop the message
             Message* next_msg_popped = mServerQueues.pop();
             assert(next_msg == next_msg_popped);
+
+            cum_sent_size += sent_size;
         }
 
         // Record trace send times
-        Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
-        Time start_time = mLastSendEndTime;
-        Time end_time = mLastSendEndTime + send_duration;
-        mLastSendEndTime = end_time;
+        // FIXME serverDatagramSent can't rely on these anymore
+        /*
+        static Time start_time = Time::null();
+        static Time end_time = Time::null();
         {
             // Lock needed for getQueueWeight
             MutexLock lck(mMutex);
         CONTEXT_TRACE_NO_TIME(serverDatagramSent, start_time, end_time, mServerQueues.getQueueWeight(next_msg->dest_server()),
             next_msg->dest_server(), next_msg->id(), packet_size);
         }
-
-        send_bytes -= packet_size;
-        mBytesUsed += packet_size;
+        */
 
         // Get rid of the message
+        num_sent++;
         delete next_msg;
     }
 
     // Update capacity estimate.
-    // Since we need capacity rather than accepted rate, we do this from the
-    // total rate calculation.  If we remove the send limitation, then we'd need
-    // a different solution to this.
-    mCapacityEstimator.estimate_rate(tcur, new_send_bytes);
+    mCapacityEstimator.estimate_rate(tcur, cum_sent_size);
 
-    if (ran_out_of_bytes) {
-        // We had a message but couldn't send it.
-        mRemainderSendBytes = send_bytes;
-        //mLastSendTime = already saved
-
-        // We reschedule only if we still have data to send
+    if (num_sent == MAX_MESSAGES_PER_ROUND) {
+        // We ran out of our budget, need to reschedule.
         scheduleServicing();
     }
     else {
@@ -158,15 +136,15 @@ void FairServerMessageQueue::service() {
         // queues were blocking us from sending, so we should discard the
         // bytes so we don't artificially collect extra, old bandwidth over
         // time.
-        if (!last_blocked)
-            mBytesDiscardedUnderflow += send_bytes;
-        else
-            mBytesDiscardedBlocked += send_bytes;
-        mRemainderSendBytes = 0;
-        mLastSendEndTime = tcur;
+        if (!last_blocked) {
+            mBlocked = false;
+            mStoppedUnderflow++;
+        }
+        else {
+            mBlocked = true;
+            mStoppedBlocked++;
+        }
     }
-
-    mLastServiceTime = tcur;
 
     mProfiler->finished();
 }

@@ -41,7 +41,8 @@ ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* 
           mNetwork(net),
           mSender(sender),
           mUsedWeightSum(0.0),
-          mCapacityEstimator(Duration::milliseconds((int64)200).toSeconds())
+          mCapacityEstimator(Duration::milliseconds((int64)200).toSeconds()),
+          mBlocked(false)
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
     mNetwork->setSendListener(this);
@@ -55,22 +56,25 @@ void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const
 }
 
 
-bool ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
+uint32 ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
     SendStreamMap::iterator it = mSendStreams.find(dest);
     if (it == mSendStreams.end()) {
         mSendStreams[dest] = mNetwork->connect(dest);
-        return false;
+        return 0;
     }
     Network::SendStream* strm_out = it->second;
 
     Network::Chunk serialized;
     msg->serialize(&serialized);
+    uint32 packet_size = serialized.size();
     bool sent_success = strm_out->send(serialized);
 
-    if (sent_success)
+    if (sent_success) {
         TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_HIT_NETWORK);
+        return packet_size;
+    }
 
-    return sent_success;
+    return 0; // Failed
 }
 
 double ServerMessageQueue::totalUsedWeight() {
@@ -78,7 +82,13 @@ double ServerMessageQueue::totalUsedWeight() {
 }
 
 double ServerMessageQueue::capacity() {
-    return mCapacityEstimator.get();
+    // If we're blocked, we report the measured rate of packets moving through
+    // the system.  Otherwise, we overestimate so that upstream queues will try
+    // to grow their bandwidth if they can.
+    if (mBlocked)
+        return mCapacityEstimator.get();
+    else
+        return mCapacityEstimator.get() + (512*1024); // .5 Mbps overestimate
 }
 
 void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, double used_weight) {

@@ -163,8 +163,7 @@ int main(int argc, char** argv) {
     if (server_queue_type == "fair") {
         sq = new FairServerMessageQueue(
             space_context, gNetwork,
-            (ServerMessageQueue::Sender*)forwarder,
-            GetOption(SEND_BANDWIDTH)->as<uint32>());
+            (ServerMessageQueue::Sender*)forwarder);
     }
     /*
     else if (server_queue_type == "fifo")

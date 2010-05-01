@@ -62,7 +62,7 @@ void InitOptions() {
         .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
         .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
 
-        .addOption(new OptionValue(SEND_BANDWIDTH, "2000000000", Sirikata::OptionValueType<uint32>(), "Total outbound bandwidth for this server in bytes per second"))
+        .addOption(new OptionValue(SEND_BANDWIDTH, "2000000000", Sirikata::OptionValueType<uint32>(), "Total outbound bandwidth for this server in bytes per second")) // FIXME remove
         .addOption(new OptionValue(RECEIVE_BANDWIDTH, "2000000000", Sirikata::OptionValueType<uint32>(), "Total inbound bandwidth for this server in bytes per second"))
         .addOption(new OptionValue("capexcessbandwidth", "false", Sirikata::OptionValueType<bool>(), "Total bandwidth for this server in bytes per second"))
 
