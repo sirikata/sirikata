@@ -453,17 +453,22 @@ protected:
     /** Finish time for a packet that was inserted into a non-empty queue, i.e. based on the previous packet's
      *  finish time. */
     Time finishTime(uint32 size, float weight, const Time& last_finish_time) const {
+        static Duration zero_time = Duration::zero();
+        static Duration min_tx_time = Duration::microseconds(1);
+        static Duration default_tx_time = Duration::seconds((float)1000);
+
         float queue_frac = weight;
-        Duration transmitTime = Duration::seconds((float)1000);
+        Duration transmitTime(default_tx_time);
+
         static uint32 warn_count = 0;
         if (queue_frac == 0 && !(warn_count++))
             SILOG(fairqueue,fatal,"[FQ] Encountered 0 weight.");
         else
             transmitTime = Duration::seconds( size / queue_frac );
 
-        if (transmitTime == Duration::zero()) {
+        if (transmitTime == zero_time) {
             SILOG(fairqueue,fatal,"[FQ] Encountered 0 duration transmission");
-            transmitTime = Duration::microseconds(1); // just make sure we take *some* time
+            transmitTime = min_tx_time; // just make sure we take *some* time
         }
         return last_finish_time + transmitTime;
     }
