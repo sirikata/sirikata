@@ -196,8 +196,8 @@ Chunk* TCPNetwork::TCPReceiveStream::pop() {
 bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr strm) {
     return (
         strm &&
-        ( (front_elem != NULL && strm == front_stream) || !strm->receive_queue.probablyEmpty()) &&
-        (strm->connected || strm->shutting_down)
+        (strm->connected || strm->shutting_down) &&
+        ( (front_elem != NULL && strm == front_stream) || !strm->receive_queue.probablyEmpty())
     );
 }
 
