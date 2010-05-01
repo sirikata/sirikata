@@ -109,7 +109,7 @@ namespace CBR
 
 //This gets called with a pointer to query data as its argument.  The query data inside of this has waited too long to be processed.
 //Therefore, we must return an error as our operation result and remove the query from our list of outstanding queries.
-void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_code& e, IndividualQueryData* iqd)
+void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_code& e, const std::string&currentlySearchingFor)
 {
   if ( mReceivedStopRequest)
     return;
@@ -120,7 +120,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
   bool foundInIterator = false;
 
   //look through multimap to find
-  std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(iqd->currentlySearchingFor);
+  std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(currentlySearchingFor);
 
   std::cout<<"\n\nQuery timeout callback\n";
 
@@ -173,7 +173,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 
 //this function gets called whenever we haven't received a response to our query.  (Essentially, we just re-issue the query.)
 //it should be called wrapped inside of osegStrand because interfacing with outstandingqueries.
-void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::error_code& e, IndividualQueryData* iqd)
+void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::error_code& e, const std::string&)
 {
   if ( mReceivedStopRequest)
     return;
@@ -381,7 +381,8 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
 
   iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
-  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, iqd)));
+  std::string bind_this_currently_searching_for(iqd->currentlySearchingFor);
+  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, bind_this_currently_searching_for)));
 
   iqd->traceToken = traceToken;
 

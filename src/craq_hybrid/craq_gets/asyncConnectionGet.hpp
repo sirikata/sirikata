@@ -87,8 +87,8 @@ private:
   bool getQuery(const CraqDataKey& dataToGet);
 
 
-  void queryTimedOutCallbackGet(const boost::system::error_code& e, IndividualQueryData* iqd);
-  void queryTimedOutCallbackGetPrint(const boost::system::error_code& e, IndividualQueryData* iqd);
+  void queryTimedOutCallbackGet(const boost::system::error_code& e, const std::string&searchFor);
+  void queryTimedOutCallbackGetPrint(const boost::system::error_code& e, const std::string&searchFor);
   
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
