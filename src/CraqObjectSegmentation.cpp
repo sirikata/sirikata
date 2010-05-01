@@ -17,10 +17,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
-#include "CraqCacheGood.hpp"
+
+
+#include "caches/Cache.hpp"
+#include "caches/CommunicationCache.hpp"
+#include "caches/CacheLRUOriginal.hpp"
+
 #include <boost/thread/mutex.hpp>
 #include "OSegLookupTraceToken.hpp"
 #include "Utility.hpp"
+
+#include "Options.hpp"
 
 #include <sirikata/network/IOStrandImpl.hpp>
 
@@ -37,13 +44,34 @@ namespace CBR
    craqDhtSet(con, o_strand, this),
    postingStrand(strand_to_post_to),
    mStrand(o_strand),
-   mCraqCache(con),
    mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
    mFrontMigAck(NULL),
    ctx(con),
    mReceivedStopRequest(false)
   {
+    std::string cacheSelector     =  GetOption(CACHE_SELECTOR)->as<String>();
+    uint32  cacheSize             =  GetOption(OSEG_CACHE_SIZE)->as<uint32>();
+    uint32  cacheCleanGroupSize   =  GetOption(OSEG_CACHE_CLEAN_GROUP_SIZE)->as<uint32>();
+    double  cacheCommScaling      =  GetOption(CACHE_COMM_SCALING)->as<double>();
+    Duration entryLifetime        =  GetOption(OSEG_CACHE_ENTRY_LIFETIME)->as<Duration>();
+    
+    
+    if (cacheSelector == CACHE_TYPE_COMMUNICATION)
+    {
+      std::cout<<"\n\n\nRunning communication cache\n\n";
+      
+      mCraqCache = new CommunicationCache(ctx,cacheCommScaling,mCSeg,cacheSize);
+    }
+    else if (cacheSelector == CACHE_TYPE_ORIGINAL_LRU)
+      mCraqCache = new CacheLRUOriginal(ctx, cacheSize,cacheCleanGroupSize,entryLifetime);
+    else
+    {
+      std::cout<<"\n\nUNKNOWN CACHE TYPE SELECTED.  Please re-try.\n\n";
+      std::cout.flush();
+      assert(false);
+    }
 
+      
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
@@ -103,6 +131,7 @@ namespace CBR
       delete nfd;
     }
 
+    delete mCraqCache;
 
     for (TrackedMessageMapAdded::iterator tmessmapit  = trackedAddMessages.begin(); tmessmapit != trackedAddMessages.end(); ++tmessmapit)
       delete tmessmapit->second.msgAdded;
@@ -243,7 +272,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
     return CraqEntry::null();
 #endif
 
-    return mCraqCache.get(obj_id);
+    return mCraqCache->get(obj_id);
   }
 
 
@@ -620,7 +649,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     if (mReceivedStopRequest)
       return;
 
-    postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, update_oseg_msg.m_objid(), CraqEntry(update_oseg_msg.servid_obj_on(),update_oseg_msg.m_objradius())));
+    postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, update_oseg_msg.m_objid(), CraqEntry(update_oseg_msg.servid_obj_on(),update_oseg_msg.m_objradius())));
   }
 
   //called from within o_strand
@@ -637,7 +666,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
 
     std::map<UUID,TransLookup>::iterator inTransIt;
 
-    postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, serv_from));
+    postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, obj_id, serv_from));
 
     inTransOrLookup_m.lock();
     inTransIt = mInTransitOrLookup.find(obj_id);
@@ -648,7 +677,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       //add it to mFinishedMove.  serv_from
 
       //put the value in the cache!
-      postingStrand->post(std::tr1::bind(&CraqCacheGood::insert, &mCraqCache, obj_id, serv_from));
+      postingStrand->post(std::tr1::bind(&CraqCache::insert, mCraqCache, obj_id, serv_from));
       callOsegLookupCompleted(obj_id,serv_from, NULL);
 
 
@@ -794,7 +823,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
     UUID tmper = mapDataKeyToUUID[cor->idToString()];
 
     //put the value in the cache!
-    postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, tmper, cor->servID));
+    postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, tmper, cor->servID));
 
     inTransOrLookup_m.lock();
     std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
@@ -891,7 +920,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       float radius=where->second.migAckMsg->m_objradius();
 
       //add this to the cache
-      postingStrand->post(boost::bind( &CraqCacheGood::insert, &mCraqCache, obj_id, CraqEntry(mContext->id(),radius)));
+      postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, obj_id, CraqEntry(mContext->id(),radius)));
 
       //add tomObjects the uuid associated with trackedMessage (ie, now we know that we own the object.)
       mObjects.insert(ObjectSet::value_type(obj_id,CraqEntry(mContext->id(),radius)));

@@ -137,6 +137,10 @@ void InitOptions() {
         .addOption(new OptionValue(OSEG_LOOKUP_QUEUE_SIZE, "2000", Sirikata::OptionValueType<uint32>(), "Number of new lookups you can have on oseg lookup queue."))
 
         .addOption(new OptionValue(OSEG_CACHE_SIZE, "200", Sirikata::OptionValueType<uint32>(), "Maximum number of entries in the OSeg cache."))
+
+        .addOption(new OptionValue(CACHE_SELECTOR,CACHE_TYPE_ORIGINAL_LRU,Sirikata::OptionValueType<String>(),"Which caching algorithm to use."))
+
+         .addOption(new OptionValue(CACHE_COMM_SCALING,"1.0",Sirikata::OptionValueType<double>(),"What the communication falloff function scaling factor is."))
         .addOption(new OptionValue(OSEG_CACHE_CLEAN_GROUP_SIZE, "25", Sirikata::OptionValueType<uint32>(), "Number of items to remove from the OSeg cache when it reaches the maximum size."))
         .addOption(new OptionValue(OSEG_CACHE_ENTRY_LIFETIME, "8s", Sirikata::OptionValueType<Duration>(), "Maximum lifetime for an OSeg cache entry."))
 

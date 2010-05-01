@@ -96,6 +96,16 @@
 
 
 
+#define CACHE_SELECTOR              "oseg-cache-selector"
+#define CACHE_TYPE_COMMUNICATION    "cache_communication"
+#define CACHE_TYPE_ORIGINAL_LRU     "cache_originallru"
+
+
+#define CACHE_COMM_SCALING          "oseg-cache-scaling"
+
+
+
+
 #define OBJECT_DRIFT_X             "object_drift_x"
 #define OBJECT_DRIFT_Y             "object_drift_y"
 #define OBJECT_DRIFT_Z             "object_drift_z"

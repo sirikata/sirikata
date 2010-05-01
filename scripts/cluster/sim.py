@@ -93,7 +93,9 @@ class ClusterSimSettings:
         self.oseg_cache_size = 200
         self.oseg_cache_clean_group = 25
         self.oseg_cache_entry_lifetime = "8s"
-
+        self.oseg_cache_selector = "cache_originallru"
+        self.oseg_cache_comm_scaling = "1.0"
+        
         self.vis_mode = 'object'
         self.vis_seed = 1
 
@@ -394,6 +396,8 @@ class ClusterSim:
                 "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
                 "--oseg=" + self.settings.oseg,
                 "--oseg_unique_craq_prefix=" + self.settings.unique(),
+                "--oseg-cache-selector=" + self.settings.oseg_cache_selector(),
+                "--oseg-cache-scaling=" + self.setting.oseg_cache_comm_scaling(),
                 "--object_drift_x=" + self.settings.object_drift_x,
                 "--object_drift_y=" + self.settings.object_drift_y,
                 "--object_drift_z=" + self.settings.object_drift_z,
@@ -537,6 +541,9 @@ if __name__ == "__main__":
     # For command line, enable traces by default that are needed for the analyses.
     cs.traces = ['oseg', 'migration', 'ping', 'message']
 
+    cs.oseg_cache_selector = "cache_communication";
+    cs.oseg_cache_comm_scaling = "1.0";
+    
     cluster_sim = ClusterSim(cc, cs)
 
     if len(sys.argv) < 2:
