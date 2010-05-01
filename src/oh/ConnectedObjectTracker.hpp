@@ -47,7 +47,7 @@ public:
     // Select random objects uniformly, uniformly from server, using round robin
     Object* randomObject();
     Object* randomObjectFromServer(ServerID whichServer);
-    Object* randomObjectExcludingServer(ServerID whichServer, uint max_tries=3);
+    Object* randomObjectExcludingServer(ServerID whichServer);
     Object* roundRobinObject();
     Object* roundRobinObject(ServerID whichServer);
     ServerID numServerIDs() const;
@@ -70,6 +70,7 @@ private:
 
     boost::shared_mutex mMutex;
 
+    uint32 mNumObjects;
     ObjectsByServerMap mObjectsByServer;
     ObjectsByID mObjectsByID;
 

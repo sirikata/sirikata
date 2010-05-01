@@ -38,6 +38,7 @@ namespace CBR {
 
 ConnectedObjectTracker::ConnectedObjectTracker(ObjectHost* parent)
  : mParent(parent),
+   mNumObjects(0),
    mLastRRObject(UUID::null())
 {
     mParent->addListener(this);
@@ -80,7 +81,7 @@ size_t ConnectedObjectTracker::numObjectsConnected(ServerID sid) {
 ServerID ConnectedObjectTracker::getServerID(int objectByServerMapNumber) {
     ObjectsByServerMap::iterator iter=mObjectsByServer.begin();
     for (int i=0;i<objectByServerMapNumber;++i,++iter) {
-        
+
     }
     return iter->first;
 }
@@ -109,7 +110,7 @@ Object* ConnectedObjectTracker::randomObjectFromServer(ServerID whichServer) {
     return getObject(selectID(uuidMap));
 }
 
-Object* ConnectedObjectTracker::randomObjectExcludingServer(ServerID whichServer, uint32 max_tries) {
+Object* ConnectedObjectTracker::randomObjectExcludingServer(ServerID whichServer) {
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 
     assert (whichServer != NullServerID);
@@ -117,15 +118,27 @@ Object* ConnectedObjectTracker::randomObjectExcludingServer(ServerID whichServer
     if (mObjectsByID.size() == 0)
         return NULL;
 
-    ObjectsByServerMap::iterator server_it = mObjectsByServer.find(whichServer);
-    static ObjectIDSet dummy_id_set; // If the server is missing, whatever we
-                                     // choose should pass
-    const ObjectIDSet& uuidMap = (server_it == mObjectsByServer.end()) ? dummy_id_set : server_it->second;
+    // Our approach is to select a server based on the CDF of num objects on
+    // all servers except the one we're excluding, then select uniformly from
+    // that one.
 
-    for(uint32 tr = 0; tr < max_tries; tr++) {
-        Object* obj = selectID(mObjectsByID);
-        if (uuidMap.find(obj->uuid()) == uuidMap.end())
-            return obj;
+    // Figure out total number of objects on other servers so we can properly
+    // evaluate the cdf
+    uint32 num_objects_on_other_servers = mNumObjects;
+    ObjectsByServerMap::iterator exclude_server_it = mObjectsByServer.find(whichServer);
+    if (exclude_server_it != mObjectsByServer.end())
+        num_objects_on_other_servers -= exclude_server_it->second.size();
+
+    // Now find the server
+    float server_sample = rand() / (float)RAND_MAX;
+    float cdf_sum = 0.0;
+    for(ObjectsByServerMap::iterator server_it = mObjectsByServer.begin(); server_it != mObjectsByServer.end(); server_it++) {
+        if (server_it->first == whichServer) continue;
+
+        float frac = server_it->second.size() / (float)num_objects_on_other_servers;
+        float next_cdf_sum = cdf_sum + frac;
+        if (server_sample > cdf_sum && server_sample <= next_cdf_sum)
+            return getObject(selectID(server_it->second));
     }
 
     return NULL;
@@ -182,6 +195,8 @@ ServerID ConnectedObjectTracker::numServerIDs() const {
 void ConnectedObjectTracker::objectHostConnectedObject(ObjectHost* oh, Object* obj, const ServerID& server) {
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 
+    mNumObjects++;
+
     mObjectsByServer[server].insert(obj->uuid());
     mObjectsByID[obj->uuid()] = obj;
 }
@@ -190,19 +205,24 @@ void ConnectedObjectTracker::objectHostMigratedObject(ObjectHost* oh, const UUID
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 
     {
-        ObjectIDSet& server_objects = mObjectsByServer[from_server];
-        ObjectIDSet::iterator it = server_objects.find(objid);
-        if (it != server_objects.end()) server_objects.erase(it);
+        ObjectIDSet& server_data = mObjectsByServer[from_server];
+        ObjectIDSet::iterator it = server_data.find(objid);
+        if (it != server_data.end())
+            server_data.erase(it);
     }
+
     mObjectsByServer[to_server].insert(objid);
 }
 
 void ConnectedObjectTracker::objectHostDisconnectedObject(ObjectHost* oh, const UUID& objid, const ServerID& server) {
     boost::unique_lock<boost::shared_mutex> lck(mMutex);
 
-    ObjectIDSet& server_objects = mObjectsByServer[server];
-    ObjectIDSet::iterator it = server_objects.find(objid);
-    if (it != server_objects.end()) server_objects.erase(it);
+    mNumObjects--;
+
+    ObjectIDSet& server_data = mObjectsByServer[server];
+    ObjectIDSet::iterator it = server_data.find(objid);
+    if (it != server_data.end())
+        server_data.erase(it);
 
     mObjectsByID.erase(objid);
 }
