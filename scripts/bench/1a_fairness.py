@@ -20,6 +20,29 @@ from cluster.config import ClusterConfig
 from cluster.sim import ClusterSimSettings,ClusterSim
 import flow_fairness
 
+class FlowPairFairness(flow_fairness.FlowFairness):
+    def _setup_cluster_sim(self, rate, io):
+        self.cs.scenario = 'delugepair'
+
+        if self.local: localval = 'true'
+        else: localval = 'false'
+        self.cs.object_simple='false'
+        self.cs.scenario_options = ' '.join(
+            ['--num-pings-per-second=' + str(rate),
+             '--num-objects-per-server=' + str(500),
+             '--ping-size=' + str(self.payload_size),
+             '--local=' + localval,
+             ]
+            )
+        self.cs.odp_flow_scheduler = self.scheme
+
+        if 'object' not in self.cs.traces: self.cs.traces.append('object')
+        if 'ping' not in self.cs.traces: self.cs.traces.append('ping')
+        if 'message' not in self.cs.traces: self.cs.traces.append('message')
+
+        cluster_sim = ClusterSim(self.cc, self.cs, io=io)
+        return cluster_sim
+
 
 if __name__ == "__main__":
     nss=9
@@ -76,7 +99,7 @@ if __name__ == "__main__":
     cs.duration = '120s'
 
     rates = sys.argv[1:]
-    plan = flow_fairness.FlowFairness(cc, cs, scheme='csfq', payload=128)
+    plan = FlowPairFairness(cc, cs, scheme='csfq', payload=128)
     for rate in rates:
         plan.run(rate)
         plan.analysis()
