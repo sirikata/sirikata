@@ -70,14 +70,14 @@ void FairServerMessageReceiver::scheduleServicing() {
         // If we can safely do it, just manage the servicing ourselves.  If
         // we have leftovers, things will get properly rescheduled on the
         // FSMR strand.
-        if (!service()) {
+        //if (!service()) {
             // We couldn't service, just schedule it
             mServiceTimer->cancel();
             mServiceScheduled = true;
             mReceiverStrand->post(
                 std::tr1::bind(&FairServerMessageReceiver::service, this)
             );
-        }
+            //}
     }
 }
 
