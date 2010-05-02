@@ -177,7 +177,6 @@ namespace CBR
     virtual void newObjectAdd(const UUID& obj_id, float radius);
     virtual void craqGetResult(CraqOperationResult* cor);
     virtual void craqSetResult(CraqOperationResult* cor);
-    virtual std::vector<PollingService*> getNestedPollers();
     virtual void stop();
 
 

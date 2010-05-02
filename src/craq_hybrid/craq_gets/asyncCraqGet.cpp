@@ -25,10 +25,6 @@ namespace CBR
 #endif
     for (int s=0; s < (int) mConnections.size(); ++s)
       mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::stop,mConnections[s]));
-
-
-    PollingService::stop();
-
   }
 
   AsyncCraqGet::~AsyncCraqGet()
@@ -56,8 +52,7 @@ namespace CBR
 
   //nothing to initialize
   AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)1), con, "AsyncCraqGet"),
-      ctx(con),
+   : ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
       mOSeg(parent_oseg_called)
@@ -164,18 +159,6 @@ namespace CBR
     return returner;
   }
 
-  void AsyncCraqGet::poll()
-  {
-    return;
-    int numTries = 0;
-    while((mQueue.size() != 0) && (numTries < CRAQ_MAX_PUSH_GET))
-    {
-      ++numTries;
-      int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
-      checkConnections(rand_connection);
-    }
-  }
-
   void AsyncCraqGet::get(const CraqDataSetGet& dataToGet, OSegLookupTraceToken* traceToken)
   {
     Duration beginGetEnqueueManager  = Time::local() - Time::epoch();
@@ -186,7 +169,7 @@ namespace CBR
     qValue->cdQuery = cdQuery;
     qValue->traceToken = traceToken;
     pushQueue(qValue);
-    
+
     Duration endGetEnqueueManager = Time::local() - Time::epoch();
     traceToken->getManagerEnqueueEnd = endGetEnqueueManager.toMicroseconds();
 

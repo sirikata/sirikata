@@ -970,18 +970,4 @@ void CraqObjectSegmentation::trySendMigAcks() {
   }
 
 
-  std::vector<PollingService*> CraqObjectSegmentation::getNestedPollers()
-  {
-    std::vector <PollingService*> returner;
-
-    std::vector <PollingService*> getPollingServices = craqDhtGet.getPollingServices();
-    std::vector <PollingService*> setPollingServices = craqDhtSet.getPollingServices();
-
-    returner.insert(returner.end(),getPollingServices.begin(), getPollingServices.end());
-    returner.insert(returner.end(),setPollingServices.begin(), setPollingServices.end());
-
-    return returner;
-  }
-
-
 }//namespace CBR

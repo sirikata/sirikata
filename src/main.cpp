@@ -264,11 +264,6 @@ int main(int argc, char** argv) {
     space_context->add(sstConnMgr);
 
 
-    std::vector<PollingService*>oseg_nested_pollers =  oseg->getNestedPollers();
-    for (int s=0; s < (int) oseg_nested_pollers.size(); ++s)
-      space_context->add(oseg_nested_pollers[s]);
-
-
     space_context->run(2);
 
     space_context->cleanup();

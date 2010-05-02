@@ -19,8 +19,7 @@ namespace CBR
 {
 
 
-  class AsyncCraqGet : public AsyncCraqScheduler,
-                       public PollingService
+class AsyncCraqGet : public AsyncCraqScheduler
   {
   private:
 
@@ -30,26 +29,25 @@ namespace CBR
       OSegLookupTraceToken* traceToken;
     };
 
-    
+
   public:
     AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
     ~AsyncCraqGet();
-    
+
     int runReQuery();
     void initialize(std::vector<CraqInitializeArgs>);
 
     virtual void erroredGetValue(CraqOperationResult* cor);
     virtual void erroredSetValue(CraqOperationResult* cor);
 
-  
+
     void get(const CraqDataSetGet& cdGet, OSegLookupTraceToken* traceToken);
 
     int queueSize();
     int numStillProcessing();
     int getRespCount();
     virtual void stop();
-    virtual void poll();
-    
+
   private:
 
     void straightPoll();
@@ -71,12 +69,10 @@ namespace CBR
     IOStrand* mStrand;        //strand that the asyncCraqGet is running on.
     IOStrand* mResultsStrand; //strand that we post our results to.
     ObjectSegmentation* mOSeg;
-  
+
   };
 
 
 }//end namespace
 
 #endif
-
-

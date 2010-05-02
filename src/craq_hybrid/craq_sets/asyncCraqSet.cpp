@@ -28,8 +28,6 @@ namespace CBR
 #endif
     for (int s=0; s < (int) mConnections.size(); ++s)
       mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::stop,mConnections[s]));
-
-    PollingService::stop();
   }
 
 
@@ -45,8 +43,7 @@ namespace CBR
   }
 
   AsyncCraqSet::AsyncCraqSet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
-   : PollingService(strand_this_runs_on, Duration::milliseconds((int64)1), con, "AsyncCraqSet"),
-      ctx(con),
+   : ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
       mOSeg(parent_oseg_called)
@@ -199,17 +196,6 @@ namespace CBR
   }
 
 
-  void AsyncCraqSet::poll()
-  {
-    return;
-    int numTries = 0;
-    while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_SET))
-    {
-      ++numTries;
-      int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_SET;
-      checkConnections(rand_connection);
-    }
-  }
   void AsyncCraqSet::readyStateChanged(int s) {
       mReadyConnections.push_back(s);
       while (checkConnections(s)) {

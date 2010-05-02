@@ -57,12 +57,4 @@ namespace CBR
     return aCraqSet.numStillProcessing() + aCraqGet.numStillProcessing();
   }
 
-  std::vector <PollingService*> AsyncCraqHybrid::getPollingServices()
-  {
-    std::vector<PollingService*> returner;
-    returner.push_back(&aCraqSet);
-    returner.push_back(&aCraqGet);
-    return returner;
-  }
-
 }//end namespace

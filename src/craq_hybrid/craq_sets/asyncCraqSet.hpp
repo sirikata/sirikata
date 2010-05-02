@@ -17,8 +17,7 @@
 namespace CBR
 {
 
-  class AsyncCraqSet : public AsyncCraqScheduler,
-                       public PollingService
+class AsyncCraqSet : public AsyncCraqScheduler
   {
   public:
 
@@ -27,7 +26,7 @@ namespace CBR
 
 
     void initialize(std::vector<CraqInitializeArgs>);
-  
+
     void set(CraqDataSetGet cdSet, uint64 tracking_number = 0);
 
 
@@ -36,16 +35,15 @@ namespace CBR
 
     virtual void erroredGetValue(CraqOperationResult* cor);
     virtual void erroredSetValue(CraqOperationResult* cor);
-    virtual void poll();
     virtual void stop();
-    
+
   private:
 
     std::vector<CraqInitializeArgs> mIpAddPort;
     std::vector<AsyncConnectionSet*> mConnections;
     std::vector<IOStrand*>mConnectionsStrands;
-    
-    
+
+
     bool connected;
 
     std::queue<CraqDataSetGet> mQueue;
@@ -65,7 +63,5 @@ namespace CBR
 
 }//end namespace
 
-  
+
 #endif
-
-
