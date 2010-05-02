@@ -71,7 +71,7 @@ private:
         class Hasher {
         public:
             size_t operator() (const ObjectPair& op) const {
-                return std::tr1::hash<unsigned int>()(op.source.hash()^op.dest.hash());
+                return *(uint32*)op.source.getArray().data() ^ *(uint32*)op.dest.getArray().data();
             }
         };
 
