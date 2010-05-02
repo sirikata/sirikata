@@ -35,33 +35,24 @@
 
 namespace CBR {
 
-FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener, uint32 recv_bytes_per_sec)
+FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
         : ServerMessageReceiver(ctx, net, listener),
-          mRecvRate(recv_bytes_per_sec),
           mServiceTimer(
               IOTimer::create(
                   ctx->ioService,
                   mReceiverStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
                               )
                         ),
-          mLastServiceTime(ctx->simTime()),
           mReceiveQueues(),
-          mRemainderReceiveBytes(0),
-          mLastReceiveEndTime(ctx->simTime()),
           mReceiveSet(),
           mServiceScheduled(false),
-          mAccountedTime(Duration::seconds(0)),
-          mBytesDiscarded(0),
           mBytesUsed(0)
 {
 }
 
 FairServerMessageReceiver::~FairServerMessageReceiver() {
     SILOG(fsmr,info,
-        "FSMR: Accounted time: " << mAccountedTime <<
-        ", used: " << mBytesUsed <<
-        ", discarded: " << mBytesDiscarded <<
-        ", remaining: " << mRemainderReceiveBytes
+        "FSMR: Bytes used: " << mBytesUsed
     );
 }
 
@@ -82,6 +73,8 @@ void FairServerMessageReceiver::scheduleServicing() {
 }
 
 bool FairServerMessageReceiver::service() {
+#define MAX_MESSAGES_PER_ROUND 100
+
     boost::mutex::scoped_try_lock lock(mServiceMutex);
     if (!lock.owns_lock()) return false;
 
@@ -90,72 +83,43 @@ bool FairServerMessageReceiver::service() {
     mServiceScheduled = false;
 
     Time tcur = mContext->simTime();
-    Duration since_last = tcur - mLastServiceTime;
-    mAccountedTime += since_last;
-    uint64 new_recv_bytes = since_last.toSeconds() * mRecvRate;
-    uint64 recv_bytes = new_recv_bytes + mRemainderReceiveBytes;
 
     // Receive
     ServerID sid;
     Message* next_recv_msg = NULL;
-    while( recv_bytes > 0 ) {
-        uint32 packet_size = 0;
+    uint32 num_recv = 0;
+    uint32 cum_recv_size = 0;
+    uint32 went_empty = false;
+    while( num_recv < MAX_MESSAGES_PER_ROUND ) {
         {
             boost::lock_guard<boost::mutex> lck(mMutex);
 
-            next_recv_msg = mReceiveQueues.front(&sid);
-            if (next_recv_msg == NULL) break;
-
-            packet_size = next_recv_msg->serializedSize();
-
-            if (packet_size > recv_bytes)
-                break;
-
-            Message* next_recv_msg_popped = mReceiveQueues.pop();
-            assert(next_recv_msg_popped == next_recv_msg);
+            next_recv_msg = mReceiveQueues.pop(&sid);
         }
 
-        Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
-        Time start_time = mLastReceiveEndTime;
-        Time end_time = mLastReceiveEndTime + recv_duration;
-        mLastReceiveEndTime = end_time;
+        if (next_recv_msg == NULL) {
+            went_empty = true;
+            break;
+        }
 
-        recv_bytes -= packet_size;
-        mBytesUsed += packet_size;
+        cum_recv_size += next_recv_msg->size();
 
         CONTEXT_TRACE(serverDatagramReceived, mContext->simTime(), next_recv_msg->source_server(), next_recv_msg->id(), next_recv_msg->serializedSize());
         mListener->serverMessageReceived(next_recv_msg);
+
+        num_recv++;
     }
 
-    // Note: We don't do this per accepted packet because we need to get
-    // *capacity*, not accepted rate.  This is critical because we need to know
-    // without sending any data that this link can accept more data. We could do
-    // this without any computation since here we're limiting the rate strictly,
-    // but this is how we'd really do it.
-    mCapacityEstimator.estimate_rate(tcur, new_recv_bytes);
+    mBytesUsed += cum_recv_size;
+    mCapacityEstimator.estimate_rate(tcur, cum_recv_size);
 
-    bool went_empty;
-    {
-        boost::lock_guard<boost::mutex> lck(mMutex);
-        went_empty = mReceiveQueues.empty();
-    }
-    if (went_empty) {
-        mBytesDiscarded += recv_bytes;
-        mRemainderReceiveBytes = 0;
-        mLastReceiveEndTime = tcur;
-    }
-    else {
-        mRemainderReceiveBytes = recv_bytes;
-        //mLastReceiveEndTime = already recorded, last end receive time
-
+    if (!went_empty) {
         // Since the queues are not empty that means we must have stopped due to
         // insufficient budget of bytes.  Setup a timer to let us check again
         // soon.
         // FIXME we should calculate an exact duration instead of making it up
-        mServiceTimer->wait( Duration::microseconds(10) );
+        mServiceTimer->wait( Duration::microseconds(1) );
     }
-
-    mLastServiceTime = tcur;
 
     mProfiler->finished();
 

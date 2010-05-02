@@ -97,6 +97,7 @@ protected:
     WeightMap mUsedWeights;
     double mUsedWeightSum;
 
+    bool mBlocked;
     SimpleRateEstimator mCapacityEstimator;
 };
 

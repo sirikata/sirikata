@@ -42,6 +42,7 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
           mNetwork(net),
           mListener(listener),
           mUsedWeightSum(0.0),
+          mBlocked(false),
           mCapacityEstimator(Duration::milliseconds((int64)200).toSeconds())
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
@@ -56,7 +57,13 @@ double ServerMessageReceiver::totalUsedWeight() {
 }
 
 double ServerMessageReceiver::capacity() {
-    return mCapacityEstimator.get();
+    // If we're blocked, we report the measured rate of packets moving through
+    // the system.  Otherwise, we overestimate so that upstream queues will try
+    // to grow their bandwidth if they can.
+    if (mBlocked)
+        return mCapacityEstimator.get();
+    else
+        return mCapacityEstimator.get() + (512*1024); // .5 Mbps overestimate
 }
 
 void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {

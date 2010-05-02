@@ -78,7 +78,7 @@
 #define NETWORK_TYPE         "net"
 
 #define SEND_BANDWIDTH       "send-bandwidth" // FIXME remove
-#define RECEIVE_BANDWIDTH       "receive-bandwidth"
+#define RECEIVE_BANDWIDTH       "receive-bandwidth" // FIXME remove
 
 #define CSEG                "cseg"
 

@@ -63,7 +63,7 @@ void InitOptions() {
         .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
 
         .addOption(new OptionValue(SEND_BANDWIDTH, "2000000000", Sirikata::OptionValueType<uint32>(), "Total outbound bandwidth for this server in bytes per second")) // FIXME remove
-        .addOption(new OptionValue(RECEIVE_BANDWIDTH, "2000000000", Sirikata::OptionValueType<uint32>(), "Total inbound bandwidth for this server in bytes per second"))
+        .addOption(new OptionValue(RECEIVE_BANDWIDTH, "2000000000", Sirikata::OptionValueType<uint32>(), "Total inbound bandwidth for this server in bytes per second")) // FIXME remove
         .addOption(new OptionValue("capexcessbandwidth", "false", Sirikata::OptionValueType<bool>(), "Total bandwidth for this server in bytes per second"))
 
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))

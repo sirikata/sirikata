@@ -46,7 +46,7 @@ namespace CBR {
  */
 class FairServerMessageReceiver : public ServerMessageReceiver {
 public:
-    FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener, uint32 recv_bytes_per_sec);
+    FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener);
     virtual ~FairServerMessageReceiver();
 
 private:
@@ -63,27 +63,19 @@ private:
     // the next packet.
     bool service();
 
-    uint32 mRecvRate;
-
     IOTimerPtr mServiceTimer; // Timer used to generate another service callback
                               // when waiting for enough bytes to service next
                               // packet
-    Time mLastServiceTime; // last time we called service, to properly track
-                           // rate limiting
 
     FairQueue<Message, ServerID, NetworkQueueWrapper > mReceiveQueues;
-    uint32 mRemainderReceiveBytes;
-    Time mLastReceiveEndTime; // last packet receive finish time, if there are
-                              // still messages waiting
 
     typedef std::set<ServerID> ReceiveServerSet;
     ReceiveServerSet mReceiveSet;
 
+
     Sirikata::AtomicValue<bool> mServiceScheduled;
 
-    Duration mAccountedTime;
-    uint64 mBytesDiscarded;
-    uint64 mBytesUsed;
+    uint32 mBytesUsed;
 
     // Protects mReceiveQueues, mReceiveSet
     boost::mutex mMutex;
