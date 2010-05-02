@@ -50,8 +50,21 @@ static bool craqSerializationUnitTest(){
     if (input.radius()!=result.radius()) {
         fprintf (stderr,"%f != %f  serialized:%s\n",input.radius(),result.radius(),output);
     }
+
     assert(input.server()==result.server());
     assert(input.radius()==result.radius());
+    output[0]=';';
+    output[1]=':';
+    output[2]='_';
+    output[3]='-';
+    output[4]='0';
+    CraqEntry hacked(output);
+    unsigned char hackedoutput[CRAQ_SERVER_SIZE];
+    hacked.serialize(hackedoutput);
+    assert(memcmp(hackedoutput,output,CRAQ_SERVER_SIZE)==0);
+    if (memcmp(hackedoutput,output,CRAQ_SERVER_SIZE)!=0){
+        printf("CRAQ SERIALIZATION failure with : and ;\n");
+    }
     if (input.server()!=result.server()||input.radius()!=result.radius()) {
         while(true) {
             static bool test=true;
