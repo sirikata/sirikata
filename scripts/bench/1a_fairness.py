@@ -63,14 +63,17 @@ if __name__ == "__main__":
 
     cs.debug = True
     cs.valgrind = False
-    cs.profile = True
+    cs.profile = False
     cs.oprofile = False
     cs.loglevels["oh"]="insane";
     cs.loc = 'standard'
     cs.blocksize = 110
     cs.tx_bandwidth = 50000000
     cs.rx_bandwidth = 5000000
-
+    cs.oseg_cache_size=65536;
+    cs.oseg_cache_clean_group=25;
+    cs.oseg_cache_entry_lifetime= "1000s"
+    
     if (genpack):
         # Pack generation, run with 1 oh
         assert(cs.num_oh == 1)

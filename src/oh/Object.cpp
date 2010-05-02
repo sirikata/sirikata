@@ -69,6 +69,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
 }
 
 Object::~Object() {
+    stop();
     disconnect();
     mObjectFactory->notifyDestroyed(mID);
 }

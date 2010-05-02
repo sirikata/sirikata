@@ -114,7 +114,7 @@ else
   if [ $want_valgrind -eq 1 ] ; then
     export LD_LIBRARY_PATH=/home/meru/usr/lib:$LD_LIBRARY_PATH
     export PATH=/home/meru/usr/bin:$PATH
-    exec valgrind --error-limit=no --num-callers=12 $APPDIR/$APPNAME "$@"
+    exec valgrind --leak-check=full --error-limit=no --num-callers=12 $APPDIR/$APPNAME "$@"
   else
     # Note that oprofile support will only work properly if you both have
     # oprofile installed and have enabled sudo'ing for opcontrol without
