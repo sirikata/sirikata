@@ -916,13 +916,14 @@ bool AsyncConnectionGet::parseValueValue(std::string response, std::string& data
 
   std::string tmpSID = response.substr(STREAM_CRAQ_VALUE_RESP_SIZE + CRAQ_DATA_KEY_SIZE + STREAM_SIZE_SIZE_TAG_GET_RESPONSE, CRAQ_SERVER_SIZE); // the +2 is from
 
-  //the above is calling sig abrt
+
+
+//   if ((int)tmpSID.size() != CRAQ_SERVER_SIZE)
+//     return false; //didn't read enough of the key header to find server id
 
 
 
-  if ((int)tmpSID.size() != CRAQ_SERVER_SIZE)
-    return false; //didn't read enough of the key header to find server id
-
+  
   //parse tmpSID to int
   sID=CraqEntry((unsigned char*)tmpSID.c_str());
 
@@ -1033,6 +1034,7 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
   }
 
 
+  
   mHandlerState = false;
 
   if (error)
@@ -1062,6 +1064,15 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
   }
 
 
+  if(response[response.size()-1] !='Z')
+  {
+    std::cout<<"\nResponse:  "<<response<<"\n";
+  }
+
+
+  if (mPrevReadFrag.size() > 10)
+    std::cout<<"\n Prev frag:  "<<mPrevReadFrag<<"\n";
+  
   bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
 
   delete sBuff;
