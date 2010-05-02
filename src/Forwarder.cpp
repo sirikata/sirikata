@@ -125,6 +125,11 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
     mServerMessageReceiver = smr;
   }
 
+void Forwarder::handleObjectMessageLoop(CBR::Protocol::Object::ObjectMessage* obj_msg) const {
+    dispatchMessage(*obj_msg);
+    delete obj_msg;
+}
+
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
     ObjectMessageDispatcher::dispatchMessage(msg);
 }
@@ -431,10 +436,8 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 
     bool accepted = mOSegLookups->lookup(
         msg,
-        mContext->mainStrand->wrap(
-            boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
-                                   )
-                                         );
+        std::tr1::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
+    );
 
     return accepted;
 }
@@ -467,11 +470,11 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
     // It's possible we got the object after we started the query, resulting in
     // use pointing the message back at ourselves.  In this case, just dispatch
     // it.
-    // NOTE: This isn't thread safe, but the network thread shouldn't ge here
-    // since it will just need to cross a thread boundary anyway.
+    // This is rare, so we suffer the cost of posting back to the main thread.
     if (dest_serv.server() == mContext->id()) {
-        dispatchMessage(*obj_msg);
-        delete obj_msg;
+        mContext->mainStrand->post(
+            std::tr1::bind(&Forwarder::handleObjectMessageLoop, this, obj_msg)
+        );
         return true;
     }
 

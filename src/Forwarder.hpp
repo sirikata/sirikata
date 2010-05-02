@@ -162,6 +162,9 @@ private:
     WARN_UNUSED
     bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
 
+    // Handles the case where OSeg told us we have the object. Post this to the
+    // main strand.
+    void handleObjectMessageLoop(CBR::Protocol::Object::ObjectMessage* msg) const;
 
     // ServerMessageQueue::Sender Interface
     virtual Message* serverMessagePull(ServerID dest);
