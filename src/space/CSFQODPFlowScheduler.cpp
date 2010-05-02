@@ -351,12 +351,14 @@ CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& 
 
         double weight = mWeightCalculator->weight(source_bbox, dest_bbox);
 
-        mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight)));
+        std::pair<FlowMap::iterator, bool> ins_it = mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight)));
+        assert(ins_it.second == true);
+
         mTotalActiveWeight += weight;
         for(int i = 0; i < NUM_DOWNSTREAM; i++)
             mTotalUsedWeight[i] += weight;
 
-        where = mFlows.find(new_packet_pair);
+        where = ins_it.first;
     }
     return &(where->second);
 }
