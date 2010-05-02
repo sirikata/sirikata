@@ -84,9 +84,7 @@ public:
     IOStrand* const netStrand() const {
         return mIOStrand;
     }
-    void unpauseObjectStream(const ConnectionID&id);
 private:
-    void unpauseObjectStreamOnIOStrand(const ConnectionID&id);
     SpaceContext* mContext;
 
     IOService* mIOService; // FIXME we should be able to use main IOService, but need underlying connections to be stranded

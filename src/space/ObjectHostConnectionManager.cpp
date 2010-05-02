@@ -210,14 +210,10 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleC
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 
-    return mMessageReceivedCallback(conn->conn_id(), obj_msg)?Sirikata::Network::Stream::AcceptedData:Sirikata::Network::Stream::PauseReceive;
-}
-void ObjectHostConnectionManager::unpauseObjectStream(const ConnectionID&id){
-    mIOStrand->post(std::tr1::bind(&ObjectHostConnectionManager::unpauseObjectStreamOnIOStrand,this,id));
-}
-void ObjectHostConnectionManager::unpauseObjectStreamOnIOStrand(const ConnectionID&id){
-    if (mConnections.find(id.conn)!=mConnections.end())
-        id.conn->socket->readyRead();
+    mMessageReceivedCallback(conn->conn_id(), obj_msg);
+
+    // We either got it or dropped it, either way it was accepted.
+    return Sirikata::Network::Stream::AcceptedData;
 }
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
     mConnections.insert(conn);
