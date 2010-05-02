@@ -123,7 +123,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
   //look through multimap to find
   std::pair <MultiOutstandingQueries::iterator, MultiOutstandingQueries::iterator> eqRange =  allOutstandingQueries.equal_range(currentlySearchingFor);
 
-  std::cout<<"\n\nQuery timeout callback\n";
+  //  std::cout<<"\n\nQuery timeout callback\n";
 
   MultiOutstandingQueries::iterator outQueriesIter;
   outQueriesIter = eqRange.first;
@@ -148,7 +148,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
       mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
 
 
-      std::cout<<"\n\nSending error\n\n";
+      //      std::cout<<"\n\nSending error\n\n";
 
       if (outQueriesIter->second->deadline_timer != NULL)
       {
@@ -628,7 +628,7 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
       else
       {
         //the notfound phrase was incomplete.  we can't process it.  we return the response to its original state and return false immediately.
-        response = response + notFoundPhrase + suffixed;
+        response = prefixed + notFoundPhrase + suffixed;
         return false;
       }
 
@@ -1127,7 +1127,7 @@ bool AsyncConnectionGet::checkStored(std::string& response)
     }
     else
     {
-      response = response + storedPhrase;
+      response = prefixed + storedPhrase;
       return false;
     }
   }

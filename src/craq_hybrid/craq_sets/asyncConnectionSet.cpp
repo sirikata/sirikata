@@ -494,7 +494,7 @@ bool AsyncConnectionSet::checkStored(std::string& response)
     }
     else
     {
-      response = response + storedPhrase;
+      response = prefixed + storedPhrase;
       return false;
     }
   }
