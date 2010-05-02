@@ -907,8 +907,6 @@ public:
 	  ConnectionReturnCallbackFunction cb = mConnectionReturnCallbackMap[conn->localEndPoint()];
 	  boost::shared_ptr<Connection>  failed_conn = it->second;
 
-	  mConnectionReturnCallbackMap[conn->localEndPoint()] (FAILURE, conn);
-
 	  mConnectionReturnCallbackMap.erase(conn->localEndPoint());
 
 	  mConnectionMap.erase(it);
