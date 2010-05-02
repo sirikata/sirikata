@@ -1925,7 +1925,7 @@ private:
 class SSTConnectionManager : public PollingService {
 public:
     SSTConnectionManager(Context* ctx)
-     : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1)), // FIXME
+     : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)), // FIXME
        mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
     {
     }

@@ -830,11 +830,13 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 				);
 
 	    //create an SST stream from the space server to object 'obj'.
+            /*
 	    Stream<UUID>::connectStream(mObjectConnections.object(obj),
                                 EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
 					std::tr1::bind( &ObjectHost::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
                                 );
+            */
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -896,12 +898,13 @@ void ObjectHost::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> >
 
   if (err != SUCCESS) {
     // retry creating an SST stream from the space server to object 'obj'.
+/*
     Stream<UUID>::connectStream(mObjectConnections.object(obj),
                                 EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
                                 std::tr1::bind( &ObjectHost::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
                                 );
-
+*/
     return;
   }
 
