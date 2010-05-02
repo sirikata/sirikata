@@ -45,7 +45,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
 
 
 if __name__ == "__main__":
-    nss=9
+    nss=3
     nobjects = 1500*nss
     packname = '1a_objects.pack'
     # If genpack is True, the sim will be run the first time with a
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # Then run with genpack = False to push that pack up to all nodes
     # and use it across multiple object hosts.
     genpack = False
-    numoh = 2
+    numoh = 1
 
     if (genpack):
         numoh = 1
