@@ -5,7 +5,7 @@ static const uint8 _URL_SAFE_ALPHABET []= {
         (uint8)'A', (uint8)'B', (uint8)'C', (uint8)'D', (uint8)'E', (uint8)'F', (uint8)'G',
         (uint8)'H', (uint8)'I', (uint8)'J', (uint8)'K', (uint8)'L', (uint8)'M', (uint8)'N',
         (uint8)'O', (uint8)'P', (uint8)'Q', (uint8)'R', (uint8)'S', (uint8)'T', (uint8)'U', 
-        (uint8)'V', (uint8)'W', (uint8)'X', (uint8)'Y', (uint8)'Z',
+        (uint8)'V', (uint8)'W', (uint8)'X', (uint8)':', (uint8)';',
         (uint8)'a', (uint8)'b', (uint8)'c', (uint8)'d', (uint8)'e', (uint8)'f', (uint8)'g',
         (uint8)'h', (uint8)'i', (uint8)'j', (uint8)'k', (uint8)'l', (uint8)'m', (uint8)'n',
         (uint8)'o', (uint8)'p', (uint8)'q', (uint8)'r', (uint8)'s', (uint8)'t', (uint8)'u', 
@@ -30,7 +30,7 @@ static signed char URLSAFEDECODABET [] = {
         -9,62,-9,                                   // Decimal 44 - 46
         63,                                         // Slash at decimal 47
         52,53,54,55,56,57,58,59,60,61,              // Numbers zero through nine
-        -9,-9,-9,                                   // Decimal 58 - 60
+        24,25,-9,                                   // Decimal 58 - 60
         -1,                                         // Equals sign at decimal 61
         -9,-9,-9,                                      // Decimal 62 - 64
         0,1,2,3,4,5,6,7,8,9,10,11,12,13,            // Letters 'A' through 'N'
