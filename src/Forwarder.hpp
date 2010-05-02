@@ -63,11 +63,11 @@ private:
       uint64 id;
       ObjectConnection* conn;
     };
-    typedef std::map<UUID, UniqueObjConn> ObjectConnectionMap;
+    typedef std::tr1::unordered_map<UUID, UniqueObjConn, UUIDHasher> ObjectConnectionMap;
     ObjectConnectionMap mObjectConnections;
 
     typedef std::vector<ServerID> ListServersUpdate;
-    typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
+    typedef std::tr1::unordered_map<UUID,ListServersUpdate, UUIDHasher> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate; // Map of object id -> servers which should be notified of new result
 
 
