@@ -94,10 +94,32 @@ private:
     ByteBatch* filling;
     std::deque<ByteBatch*> batches;
 };
-
+#define TRACE_DROP(nam) ((mContext->trace()->drops.n[::CBR::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::CBR::Trace::Drops::nam]))
 
 class Trace {
 public:
+    struct Drops {
+        enum {
+            OH_DROPPED_AT_SEND,
+            OH_DROPPED_AT_RECEIVE_QUEUE,
+            SPACE_DROPPED_AT_MAIN_STRAND_CROSSING,
+            DROPPED_AT_FORWARDED_LOCALLY,
+            DROPPED_DURING_FORWARDING,
+            DROPPED_DURING_FORWARDING_ROUTING,
+            DROPPED_AT_SPACE_ENQUEUED,
+            NUM_DROPS
+        };
+        uint64 d[NUM_DROPS];
+        const char*n[NUM_DROPS];
+        Drops() {
+            memset(d,0,NUM_DROPS*sizeof(uint64));
+            memset(n,0,NUM_DROPS*sizeof(const char*));
+        }
+        std::ostream&output(std::ostream&output);
+    }drops;
+
+
+    ~Trace();
     static const uint8 ProximityTag = 0;
     static const uint8 ObjectLocationTag = 1;
     static const uint8 ServerDatagramQueuedTag = 4;

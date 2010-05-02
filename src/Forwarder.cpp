@@ -74,9 +74,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
                  Duration::milliseconds((int64)100)),
-             mReceivedMessages(Sirikata::SizedResourceMonitor(16384))
+            mReceivedMessages(Sirikata::SizedResourceMonitor(GetOption(FORWARDER_RECEIVE_QUEUE_SIZE)->as<uint32>()))
 {
-    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), 16384, (ForwarderServiceQueue::Listener*)this);
+    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOption(FORWARDER_SEND_QUEUE_SIZE)->as<uint32>(), (ForwarderServiceQueue::Listener*)this);
 
     // Fill in the rest of the context
     mContext->mServerRouter = this;
@@ -312,6 +312,7 @@ void Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     bool forwarded = forward(obj_msg);
     if (!forwarded) {
         TIMESTAMP(obj_msg, Trace::DROPPED_DURING_FORWARDING);
+        TRACE_DROP(DROPPED_DURING_FORWARDING);
         delete obj_msg;
     }
 }
@@ -358,6 +359,7 @@ void Forwarder::receiveObjectRoutingMessage(Message* msg) {
 
     if (!forward_success) {
         TIMESTAMP(obj_msg, Trace::DROPPED_DURING_FORWARDING);
+        TRACE_DROP(DROPPED_DURING_FORWARDING_ROUTING);
         delete obj_msg;
     }
 
@@ -512,6 +514,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   bool send_success = flow_sched->push(obj_msg,source_object_data,dest_serv);
   if (!send_success) {
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
+      TRACE_DROP(DROPPED_AT_SPACE_ENQUEUED);
   }
   delete obj_msg;
 

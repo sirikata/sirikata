@@ -233,6 +233,20 @@ void Trace::writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data_orig, uint3
     data.write(data_vec, iovcnt+2);
 }
 
+
+std::ostream&Trace::Drops::output(std::ostream&output) {
+    for (int i=0;i<NUM_DROPS;++i) {
+        if (d[i]&&n[i]) {
+            output<<n[i]<<':'<<d[i]<<'\n';
+        }
+    }
+    return output;
+}
+
+Trace::~Trace() {
+    std::cout<<"Summary of drop data:\n";
+    drops.output(std::cout)<<"EOF\n";
+}
 // This macro simplifies creating the methods that check if we should actually
 // perform the trace.
 #define CREATE_TRACE_CHECK_DEF(___name , ___log_var)  \

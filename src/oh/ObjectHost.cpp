@@ -85,6 +85,7 @@ bool ObjectHost::SpaceNodeConnection::push(const ObjectMessage& msg) {
     }
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_SEND);
+        TRACE_DROP(OH_DROPPED_AT_SEND);
     }
 
     return success;
@@ -123,6 +124,7 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
     }
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
+        TRACE_DROP(OH_DROPPED_AT_RECEIVE_QUEUE);
     }
 
     parent->mHandleReadProfiler->finished();

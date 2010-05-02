@@ -103,7 +103,8 @@
 
 #define CACHE_COMM_SCALING          "oseg-cache-scaling"
 
-
+#define FORWARDER_SEND_QUEUE_SIZE "forwarder.send-queue-size"
+#define FORWARDER_RECEIVE_QUEUE_SIZE "forwarder.receive-queue-size"
 
 
 #define OBJECT_DRIFT_X             "object_drift_x"

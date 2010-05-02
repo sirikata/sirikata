@@ -182,6 +182,7 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     }
     if (!push_for_processing_success) {
         TIMESTAMP(obj_msg, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
+        TRACE_DROP(SPACE_DROPPED_AT_MAIN_STRAND_CROSSING);
         delete obj_msg;
     } else {
         if (hit_empty)
