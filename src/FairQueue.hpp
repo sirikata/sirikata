@@ -249,16 +249,26 @@ public:
         QueueInfo* queue_info = qi_it->second;
         removeFromTimeIndex(queue_info);
         computeNextFinishTime(queue_info);
+
+        // Reevaluate front queue
+        mFrontQueue = NULL;
     }
 
     // Returns the next message to deliver
     // \returns the next message, or NULL if the queue is empty
     Message* front(Key* keyAtFront) {
         Message* result = NULL;
-        Time vftime(Time::null());
-        mFrontQueue = NULL;
 
-        nextMessage(&result, &vftime, &mFrontQueue);
+        if (mFrontQueue == NULL) {
+            Time vftime(Time::null());
+            nextMessage(&result, &vftime, &mFrontQueue);
+        }
+        else { // Otherwise, just fill in the information we need from the marked queue
+            assert(!mFrontQueue->messageQueue->empty());
+            result = mFrontQueue->nextFinishMessage;
+            assert(result == mFrontQueue->messageQueue->front());
+        }
+
         if (result != NULL) {
             *keyAtFront = mFrontQueue->key;
             assert(mFrontQueue->enabled);
