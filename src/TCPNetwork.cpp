@@ -164,11 +164,11 @@ Chunk* TCPNetwork::TCPReceiveStream::front() {
         return front_elem;
 
     // Need to get a new front_elem
-    RemoteStreamPtr stream(getCurrentRemoteStream());
-    if (!stream)
+    getCurrentRemoteStream();
+    if (!front_stream)
         return NULL;
 
-    Chunk* result = stream->pop(ios);
+    Chunk* result = front_stream->pop(ios);
     front_elem = result;
     return result;
 }
@@ -182,8 +182,7 @@ Chunk* TCPNetwork::TCPReceiveStream::pop() {
         return NULL;
 
     // Otherwise, just do cleanup before returning the front item
-    RemoteStreamPtr stream(front_stream);
-    assert(stream);
+    assert(front_stream);
     assert(result == front_elem);
     // We've already popped in front, we just clear out the front element and
     // front queue
@@ -193,7 +192,7 @@ Chunk* TCPNetwork::TCPReceiveStream::pop() {
     return result;
 }
 
-bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr strm) {
+bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr& strm) {
     return (
         strm &&
         (strm->connected || strm->shutting_down) &&
@@ -201,7 +200,7 @@ bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr strm) {
     );
 }
 
-TCPNetwork::RemoteStreamPtr TCPNetwork::TCPReceiveStream::getCurrentRemoteStream() {
+void TCPNetwork::TCPReceiveStream::getCurrentRemoteStream() {
     // Consider
     //  1) an already marked front stream
     //  2) closing streams
@@ -212,28 +211,18 @@ TCPNetwork::RemoteStreamPtr TCPNetwork::TCPReceiveStream::getCurrentRemoteStream
     //  c) be either connected or shutting_down
 
     if (!session)
-        return RemoteStreamPtr();
+        return;
 
-    // At least for closing streams, results may no longer be valid, need to
-    // double check.
+    front_stream = session->closing_stream;
     if (canReadFrom(front_stream))
-        return front_stream;
-    else// It got invalidated, clean out and continue search
-        front_stream.reset();
+        return;
 
-    RemoteStreamPtr closing_stream(session->closing_stream);
-    if (canReadFrom(closing_stream)) {
-        front_stream = closing_stream;
-        return closing_stream;
-    }
+    front_stream = session->remote_stream;
+    if (canReadFrom(front_stream))
+        return;
 
-    RemoteStreamPtr remote_stream(session->remote_stream);
-    if (canReadFrom(remote_stream)) {
-        front_stream = remote_stream;
-        return remote_stream;
-    }
-
-    return RemoteStreamPtr();
+    // Just make sure we don't have a leftover pointer
+    front_stream.reset();
 }
 
 

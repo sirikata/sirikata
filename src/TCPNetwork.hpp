@@ -130,9 +130,11 @@ class TCPNetwork : public Network {
         // available on the stream as well, so a closing stream with no
         // data available will *not* be returned when an active stream
         // with data available also exists.
-        RemoteStreamPtr getCurrentRemoteStream();
+        // NOTE: Now this just ensures that front_stream will either
+        // point to the right thing or to NULL, so there is no return value.
+        void getCurrentRemoteStream();
 
-        bool canReadFrom(RemoteStreamPtr strm);
+        bool canReadFrom(RemoteStreamPtr& strm);
 
         ServerID logical_endpoint;
         RemoteSessionPtr session;
