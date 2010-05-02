@@ -1063,15 +1063,6 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
     is >> tmpLine;
   }
 
-
-  if(response[response.size()-1] !='Z')
-  {
-    std::cout<<"\nResponse:  "<<response<<"\n";
-  }
-
-
-  if (mPrevReadFrag.size() > 10)
-    std::cout<<"\n Prev frag:  "<<mPrevReadFrag<<"\n";
   
   bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
 
