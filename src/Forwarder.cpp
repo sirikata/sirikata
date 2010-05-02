@@ -421,17 +421,9 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
     TIMESTAMP_START(tstamp, msg);
     TIMESTAMP_END(tstamp, Trace::FORWARDING_STARTED);
 
-    // Check if we can forward locally
-    ObjectConnection* conn = getObjectConnection(msg->dest_object());
-    if (conn != NULL) {
-        TIMESTAMP_END(tstamp, Trace::FORWARDED_LOCALLY_SLOW_PATH);
-
-        bool send_success = false;
-        if (conn->enabled())
-            send_success = conn->send(msg);
-
-        return send_success;
-    }
+    // Note: We used to try forwarding locally here.  Now we don't bother
+    // because we should have tried this when the message arrived, either
+    // from the OH or another SS.
 
     // If we can't forward locally, do an OSeg lookup to find out where we need
     // to forward the message to
