@@ -205,7 +205,7 @@ void Server::scheduleObjectHostMessageRouting() {
 }
 
 void Server::handleObjectHostMessageRouting() {
-#define MAX_OH_MESSAGES_HANDLED 20
+#define MAX_OH_MESSAGES_HANDLED 100
 
     for(uint32 i = 0; i < MAX_OH_MESSAGES_HANDLED && !mRouteObjectMessage.probablyEmpty(); i++)
         handleSingleObjectHostMessageRouting();
