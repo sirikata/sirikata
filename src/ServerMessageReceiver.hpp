@@ -57,6 +57,8 @@ public:
       public:
         virtual ~Listener() {}
 
+        virtual void serverConnectionReceived(ServerID sid) = 0;
+
         virtual void serverMessageReceived(Message* msg) = 0;
     };
 

@@ -189,6 +189,9 @@ void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream
 
     // add to the receive set
     mReceiveSet.insert(from);
+
+    // Notify upstream
+    mListener->serverConnectionReceived(from);
 }
 
 void FairServerMessageReceiver::networkReceivedData(Network::ReceiveStream* strm) {

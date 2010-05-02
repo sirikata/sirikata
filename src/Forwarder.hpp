@@ -167,6 +167,7 @@ private:
     virtual Message* serverMessagePull(ServerID dest);
     virtual bool serverMessageEmpty(ServerID dest);
     // ServerMessageReceiver::Listener Interface
+    virtual void serverConnectionReceived(ServerID sid);
     virtual void serverMessageReceived(Message* msg);
 
     void scheduleProcessReceivedServerMessages();

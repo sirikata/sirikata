@@ -564,17 +564,16 @@ bool Forwarder::serverMessageEmpty(ServerID dest) {
     return mOutgoingMessages->empty(dest);
 }
 
+void Forwarder::serverConnectionReceived(ServerID sid) {
+    // With a new connection, we just need to make sure we get
+    // information flowing back and forth (e.g. capacity/weight for
+    // ODPFlowScheduler). This just gets that process started.
+    mOutgoingMessages->prePush(sid);
+}
+
 void Forwarder::serverMessageReceived(Message* msg) {
     assert(msg != NULL);
     TIMESTAMP_PAYLOAD(msg, Trace::SPACE_TO_SPACE_SMR_DEQUEUED);
-
-    // FIXME currently this is how we're learning about other servers.  We need
-    // to handle these events to get information flowing.  Currently, the
-    // important information that needs to start flowing is capacity/weight
-    // info, which requires having and ODPFlowScheduler for the remote side.
-    // This should probably be generalized (maybe just by listening to the
-    // network for new connections.
-    mOutgoingMessages->prePush(msg->source_server());
 
     // Routing, check if we can route immediately.
     if (msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
