@@ -169,7 +169,7 @@ void InitOptions() {
       .addOption(new OptionValue("scenario-options", "", Sirikata::OptionValueType<String>(), "Options for ObjectHost-wide script dictating mass wide object behaviors"))
       .addOption(new OptionValue("object-host-receive-buffer", "16384", Sirikata::OptionValueType<size_t>(), "size of the object host space node connection receive queue"))
       .addOption(new OptionValue("object-host-send-buffer", "16384", Sirikata::OptionValueType<size_t>(), "size of the object host space node cnonection send queue"))
-      .addOption(new OptionValue("route-object-message-buffer", "65536", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
+      .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
 
       ;
 }

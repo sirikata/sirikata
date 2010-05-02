@@ -178,7 +178,7 @@ private:
             this->obj_msg=msg;
         }
         size_t size() const{
-            return obj_msg->ByteSize();
+            return 1;
         }
     };
 
