@@ -50,6 +50,7 @@ private:
          : key(),
            messageQueue(NULL),
            weight(1.f),
+           weight_inv(1.f),
            nextFinishMessage(NULL),
            nextFinishStartTime(Time::null()),
            nextFinishTime(Time::null()),
@@ -61,6 +62,7 @@ private:
          : key(_key),
            messageQueue(queue),
            weight(w),
+           weight_inv( w == 0.f ? 0.f : (1.f / w) ),
            nextFinishMessage(NULL),
            nextFinishStartTime(Time::null()),
            nextFinishTime(Time::null()),
@@ -74,6 +76,7 @@ private:
         Key key;
         TQueue* messageQueue;
         float weight;
+        float weight_inv;
         Message* nextFinishMessage; // Need to verify this matches when we pop it off
         Time nextFinishStartTime; // The time the next message to finish started at, used to recompute if front() changed
         Time nextFinishTime;
@@ -118,6 +121,7 @@ public:
             QueueInfo* qi = it->second;
             float old_weight = qi->weight;
             qi->weight = weight;
+            qi->weight_inv = (weight == 0.f ? 0.f : (1.f/weight));
             // FIXME should we update the finish time here, or just wait until the next packet?
             // Updating here requires either starting from current time or keeping track of
             // the last dequeued time
@@ -438,7 +442,7 @@ protected:
         }
 
         qi->nextFinishMessage = front_msg;
-        qi->nextFinishTime = finishTime( front_msg->size(), qi->weight, last_finish_time);
+        qi->nextFinishTime = finishTime( front_msg->size(), qi, last_finish_time);
         qi->nextFinishStartTime = last_finish_time;
 
         ByTimeIterator new_it = mQueuesByTime.insert( typename QueueInfoByFinishTime::value_type(qi->nextFinishTime, qi) );
@@ -452,20 +456,19 @@ protected:
 
     /** Finish time for a packet that was inserted into a non-empty queue, i.e. based on the previous packet's
      *  finish time. */
-    Time finishTime(uint32 size, float weight, const Time& last_finish_time) const {
+    Time finishTime(uint32 size, QueueInfo* qi, const Time& last_finish_time) const {
         static Duration zero_time = Duration::zero();
         static Duration min_tx_time = Duration::microseconds(1);
         static Duration default_tx_time = Duration::seconds((float)1000);
 
-        float queue_frac = weight;
-        Duration transmitTime(default_tx_time);
-
         static uint32 warn_count = 0;
-        if (queue_frac == 0 && !(warn_count++))
-            SILOG(fairqueue,fatal,"[FQ] Encountered 0 weight.");
-        else
-            transmitTime = Duration::seconds( size / queue_frac );
+        if (qi->weight == 0) {
+            if (!(warn_count++))
+                SILOG(fairqueue,fatal,"[FQ] Encountered 0 weight.");
+            return last_finish_time + default_tx_time;
+        }
 
+        Duration transmitTime = Duration::seconds( size * qi->weight_inv );
         if (transmitTime == zero_time) {
             SILOG(fairqueue,fatal,"[FQ] Encountered 0 duration transmission");
             transmitTime = min_tx_time; // just make sure we take *some* time
