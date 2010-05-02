@@ -230,19 +230,20 @@ void Server::handleSingleObjectHostMessageRouting() {
     // connections and allow messages through.
     // NOTE that we check connecting objects as well since we need to get past this point to deliver
     // Session messages.
+    UUID source_object = front.obj_msg->source_object();
     bool source_connected =
-        mObjects.find(front.obj_msg->source_object()) != mObjects.end() ||
-        mMigratingConnections.find(front.obj_msg->source_object()) != mMigratingConnections.end();
+        mObjects.find(source_object) != mObjects.end() ||
+        mMigratingConnections.find(source_object) != mMigratingConnections.end();
     if (!source_connected)
     {
-        if (mObjectsAwaitingMigration.find(front.obj_msg->source_object()) == mObjectsAwaitingMigration.end() &&
-            mObjectMigrations.find(front.obj_msg->source_object()) == mObjectMigrations.end())
+        if (mObjectsAwaitingMigration.find(source_object) == mObjectsAwaitingMigration.end() &&
+            mObjectMigrations.find(source_object) == mObjectMigrations.end())
         {
-            SILOG(cbr,warn,"Got message for unknown object: " << front.obj_msg->source_object().toString());
+            SILOG(cbr,warn,"Got message for unknown object: " << source_object.toString());
         }
         else
         {
-            SILOG(cbr,warn,"Server got message from object after migration started: " << front.obj_msg->source_object().toString());
+            SILOG(cbr,warn,"Server got message from object after migration started: " << source_object.toString());
         }
 
         delete front.obj_msg;

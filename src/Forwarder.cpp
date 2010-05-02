@@ -421,8 +421,6 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
 
 bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom)
 {
-    UUID dest_obj = msg->dest_object();
-
     TIMESTAMP_START(tstamp, msg);
     TIMESTAMP_END(tstamp, Trace::FORWARDING_STARTED);
 
@@ -479,8 +477,6 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
     }
 
   //send out all server updates associated with an object with this message:
-  UUID obj_id =  obj_msg->dest_object();
-
   TIMESTAMP(obj_msg, Trace::SPACE_TO_SPACE_ENQUEUED);
 
   // And then we can actually push
@@ -517,6 +513,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   // we don't want it blocking useful traffic
   // NOTE: Again, not thread safe, but the OH networking thread will never hit this.
   if (forwardFrom != NullServerID) {
+      UUID obj_id =  obj_msg->dest_object();
       // FIXME we used to kind of keep track of sending the same OSeg cache fix to a server multiple
       // times, but it really only applied for the rate of lookups/migrations.  We should a) determine
       // if this is actually a problem and b) if it is, take a more principled approach to solving it.

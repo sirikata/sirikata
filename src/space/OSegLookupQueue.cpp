@@ -84,7 +84,6 @@ CraqEntry OSegLookupQueue::cacheLookup(const UUID& destid) const {
 bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)
 {
   UUID dest_obj = msg->dest_object();
-
   size_t cursize = msg->ByteSize();
 
   //if already looking up, do not call lookup on mOSeg;
@@ -103,7 +102,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
   }
 
   //if get a cache hit from oseg, do not return;
-  CraqEntry destServer= mOSeg->cacheLookup(msg->dest_object());
+  CraqEntry destServer= mOSeg->cacheLookup(dest_obj);
   if (destServer.notNull())
   {
     cb(msg, destServer, ResolvedFromCache);
@@ -115,7 +114,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
     return false;
 
   //  otherwise, do full oseg lookup;
-  destServer = mOSeg->lookup(msg->dest_object());
+  destServer = mOSeg->lookup(dest_obj);
   // If we already have a server, handle the callback right away
   if (destServer.notNull()) {
     cb(msg, destServer, ResolvedFromCache);
