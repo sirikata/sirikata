@@ -96,11 +96,15 @@ private:
     typedef std::set<QueueInfo*> QueueInfoSet;
 public:
     FairQueue()
-     :mCurrentVirtualTime(Time::null()),
+     :zero_time(Duration::zero()),
+      min_tx_time(Duration::microseconds(1)),
+      default_tx_time(Duration::seconds((float)1000)),
+      mCurrentVirtualTime(Time::null()),
       mQueuesByKey(),
       mQueuesByTime(),
       mFrontQueue(NULL)
     {
+        warn_count = 0;
     }
 
     ~FairQueue() {
@@ -457,11 +461,6 @@ protected:
     /** Finish time for a packet that was inserted into a non-empty queue, i.e. based on the previous packet's
      *  finish time. */
     Time finishTime(uint32 size, QueueInfo* qi, const Time& last_finish_time) const {
-        static Duration zero_time = Duration::zero();
-        static Duration min_tx_time = Duration::microseconds(1);
-        static Duration default_tx_time = Duration::seconds((float)1000);
-
-        static uint32 warn_count = 0;
         if (qi->weight == 0) {
             if (!(warn_count++))
                 SILOG(fairqueue,fatal,"[FQ] Encountered 0 weight.");
@@ -477,6 +476,11 @@ protected:
     }
 
 protected:
+    const Duration zero_time;
+    const Duration min_tx_time;
+    const Duration default_tx_time;
+    mutable uint32 warn_count;
+
     uint32 mRate;
     Time mCurrentVirtualTime;
     // FIXME if I could get the templates to work, using multi_index_container instead of 2 containers would be preferable
