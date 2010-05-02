@@ -80,7 +80,7 @@ private:
     // Perform forwarding for a message on the front of mRouteObjectMessage from the object host which
     // couldn't be forwarded directly by the networking code
     // (i.e. needs routing to another node)
-    void handleSingleObjectHostMessageRouting();
+    bool handleSingleObjectHostMessageRouting();
 
     // Handle Session messages from an object
     void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg);

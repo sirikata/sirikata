@@ -207,21 +207,21 @@ void Server::scheduleObjectHostMessageRouting() {
 void Server::handleObjectHostMessageRouting() {
 #define MAX_OH_MESSAGES_HANDLED 100
 
-    for(uint32 i = 0; i < MAX_OH_MESSAGES_HANDLED && !mRouteObjectMessage.probablyEmpty(); i++)
-        handleSingleObjectHostMessageRouting();
+    for(uint32 i = 0; i < MAX_OH_MESSAGES_HANDLED; i++)
+        if (!handleSingleObjectHostMessageRouting())
+            break;
 
-    if (!mRouteObjectMessage.probablyEmpty())
-        scheduleObjectHostMessageRouting();
+    {
+        boost::lock_guard<boost::mutex> lock(mRouteObjectMessageMutex);
+        if (!mRouteObjectMessage.probablyEmpty())
+            scheduleObjectHostMessageRouting();
+    }
 }
 
-void Server::handleSingleObjectHostMessageRouting() {
+bool Server::handleSingleObjectHostMessageRouting() {
     ConnectionIDObjectMessagePair front(ObjectHostConnectionManager::ConnectionID(),NULL);
-    if (!mRouteObjectMessage.pop(front)) {
-        SILOG(cbr,error,"Got requested to pull an item off mRouteObjectMessage but no message awaited me");
-        return;
-    }
-
-    mObjectHostConnectionManager->unpauseObjectStream(front.conn_id);
+    if (!mRouteObjectMessage.pop(front))
+        return false;
 
     // If we don't have a connection for the source object, we can't do anything with it.
     // The object could be migrating and we get outdated packets.  Currently this can
@@ -248,12 +248,13 @@ void Server::handleSingleObjectHostMessageRouting() {
 
         delete front.obj_msg;
 
-        return;
+        return true;
     }
 
 
     // Finally, if we've passed all these tests, then everything looks good and we can route it
     mForwarder->routeObjectHostMessage(front.obj_msg);
+    return true;
 }
 
 // Handle Session messages from an object
