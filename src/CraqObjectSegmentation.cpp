@@ -648,7 +648,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     if (mReceivedStopRequest)
       return;
 
-    postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, update_oseg_msg.m_objid(), CraqEntry(update_oseg_msg.servid_obj_on(),update_oseg_msg.m_objradius())));
+    mCraqCache->insert(update_oseg_msg.m_objid(), CraqEntry(update_oseg_msg.servid_obj_on(),update_oseg_msg.m_objradius()));
   }
 
   //called from within o_strand
@@ -665,7 +665,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
 
     InTransitMap::iterator inTransIt;
 
-    postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, obj_id, serv_from));
+    mCraqCache->insert(obj_id, serv_from);
 
     inTransOrLookup_m.lock();
     inTransIt = mInTransitOrLookup.find(obj_id);
@@ -676,7 +676,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       //add it to mFinishedMove.  serv_from
 
       //put the value in the cache!
-      postingStrand->post(std::tr1::bind(&CraqCache::insert,mCraqCache, obj_id, serv_from));
+      mCraqCache->insert(obj_id, serv_from);
       callOsegLookupCompleted(obj_id,serv_from, NULL);
 
 
@@ -822,7 +822,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
     UUID tmper = mapDataKeyToUUID[cor->idToString()];
 
     //put the value in the cache!
-    postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, tmper, cor->servID));
+    mCraqCache->insert(tmper, cor->servID);
 
     inTransOrLookup_m.lock();
     InTransitMap::iterator iter = mInTransitOrLookup.find(tmper);
@@ -919,7 +919,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       float radius=where->second.migAckMsg->m_objradius();
 
       //add this to the cache
-      postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, obj_id, CraqEntry(mContext->id(),radius)));
+      mCraqCache->insert(obj_id, CraqEntry(mContext->id(),radius));
 
       //add tomObjects the uuid associated with trackedMessage (ie, now we know that we own the object.)
       mObjects.insert(ObjectSet::value_type(obj_id,CraqEntry(mContext->id(),radius)));
