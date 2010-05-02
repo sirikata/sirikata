@@ -54,12 +54,12 @@ namespace CBR
     uint32  cacheCleanGroupSize   =  GetOption(OSEG_CACHE_CLEAN_GROUP_SIZE)->as<uint32>();
     double  cacheCommScaling      =  GetOption(CACHE_COMM_SCALING)->as<double>();
     Duration entryLifetime        =  GetOption(OSEG_CACHE_ENTRY_LIFETIME)->as<Duration>();
-    
-    
+
+
     if (cacheSelector == CACHE_TYPE_COMMUNICATION)
     {
       std::cout<<"\n\n\nRunning communication cache\n\n";
-      
+
       mCraqCache = new CommunicationCache(ctx,cacheCommScaling,mCSeg,cacheSize);
     }
     else if (cacheSelector == CACHE_TYPE_ORIGINAL_LRU)
@@ -71,7 +71,7 @@ namespace CBR
       assert(false);
     }
 
-      
+
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
@@ -140,7 +140,7 @@ namespace CBR
 
     //delete retries
     while( !mMigAckMessages.empty() ) {
-        Message* msg;
+        Message* msg = NULL;
         mMigAckMessages.pop(msg);
         delete msg;
     }
