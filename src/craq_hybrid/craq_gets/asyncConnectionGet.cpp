@@ -742,6 +742,20 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 //eg: VALUE000000000000000000000000000000000Z120000000000YY
 bool AsyncConnectionGet::checkValue(std::string& response)
 {
+//   static int debugCounter = 0;
+  
+//   if (response.size() > 8000)
+//   {
+//     ++debugCounter;
+//     std::cout<<"\n\nRESPONSE GOT TOO BIG: \n\n";
+//     std::cout<<response<<"\n";
+//     std::cout.flush();
+
+//     if (debugCounter > 5)
+//       assert(false);
+//   }
+
+    
   bool returner = false;
   size_t valueIndex = response.find(STREAM_CRAQ_VALUE_RESP);
 
@@ -788,7 +802,8 @@ bool AsyncConnectionGet::checkValue(std::string& response)
       }
       else
       {
-        response = response + valuePhrase + suffixed;
+        response = prefixed + valuePhrase + suffixed;
+        //        response = response + valuePhrase + suffixed;
         return false;
       }
     }
