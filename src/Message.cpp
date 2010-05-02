@@ -47,23 +47,33 @@ void Message::fillMessage(ServerID src, uint16 src_port, ServerID dest, ServerID
     set_payload(pl);
 }
 
-Message::Message() {
+Message::Message()
+ : mCachedSize(0)
+{
 }
 
-Message::Message(const ServerID& src) {
+Message::Message(const ServerID& src)
+ : mCachedSize(0)
+{
     set_source_server(src);
 }
 
-Message::Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port) {
+Message::Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port)
+ : mCachedSize(0)
+{
     fillMessage(src, src_port, dest, dest_port);
 }
 
 
-Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl) {
+Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl)
+ : mCachedSize(0)
+{
     fillMessage(src, src_port, dest, dest_port, pl);
 }
 
-Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const CBR::Protocol::Object::ObjectMessage* pl) {
+Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const CBR::Protocol::Object::ObjectMessage* pl)
+ : mCachedSize(0)
+{
     fillMessage(src, src_port, dest, dest_port, serializePBJMessage(*pl));
     set_payload_id(pl->unique());
 }
@@ -105,12 +115,15 @@ Message* Message::deserialize(const Network::Chunk& wire) {
         delete result;
         return NULL;
     }
+    result->mCachedSize = wire.size();
     return result;
 }
 
 uint32 Message::serializedSize() const {
-    // FIXME caching would be useful here
-    return mImpl.ByteSize();
+    if (mCachedSize != 0)
+        return mCachedSize;
+
+    return (mCachedSize = mImpl.ByteSize());
 }
 
 

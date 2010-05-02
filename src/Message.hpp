@@ -200,6 +200,7 @@ private:
     void fillMessage(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl);
 
     CBR::Protocol::Server::ServerMessage mImpl;
+    mutable uint32 mCachedSize;
 }; // class Message
 
 
