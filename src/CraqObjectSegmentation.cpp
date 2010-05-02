@@ -593,7 +593,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
         delete traceToken;
     }
 
-    postingStrand->post(std::tr1::bind (&OSegLookupListener::osegLookupCompleted,mLookupListener,obj_id,sID));
+    mLookupListener->osegLookupCompleted(obj_id,sID);
   }
 
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
