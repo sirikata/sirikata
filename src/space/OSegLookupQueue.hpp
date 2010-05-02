@@ -62,6 +62,7 @@ private:
     struct OSegLookup {
         CBR::Protocol::Object::ObjectMessage* msg;
         LookupCallback cb;
+        uint32 size;
     };
 
     /** A normal vector of OSegLookups except it also maintains the

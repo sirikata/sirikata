@@ -51,7 +51,7 @@ OSegLookupQueue::OSegLookup& OSegLookupQueue::OSegLookupList::operator[](size_t 
 }
 
 void OSegLookupQueue::OSegLookupList::push_back(const OSegLookup& lu) {
-    mTotalSize += lu.msg->ByteSize();
+    mTotalSize += lu.size;
     OSegLookupVector::push_back(lu);
 }
 
@@ -97,6 +97,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
     OSegLookup lu;
     lu.msg = msg;
     lu.cb = cb;
+    lu.size = cursize;
     mLookups[dest_obj].push_back(lu);
     return true;
   }
@@ -126,6 +127,7 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
   OSegLookup lu;
   lu.msg = msg;
   lu.cb = cb;
+  lu.size = cursize;
   mLookups[dest_obj].push_back(lu);
   return true;
 }
@@ -144,7 +146,7 @@ void OSegLookupQueue::handleLookupCompleted(const UUID& id, const CraqEntry& des
 
     for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s) {
         const OSegLookup& lu = (iterQueueMap->second[s]);
-        mTotalSize -= lu.msg->ByteSize();
+        mTotalSize -= lu.size;
         lu.cb(lu.msg, dest, ResolvedFromServer);
     }
     mLookups.erase(iterQueueMap);
