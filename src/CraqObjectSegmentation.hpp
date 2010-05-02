@@ -78,7 +78,8 @@ namespace CBR
     //end for logging.
 
     std::map<std::string, UUID > mapDataKeyToUUID;
-    std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
+      typedef std::tr1::unordered_map<UUID,TransLookup,UUIDHasher> InTransitMap;
+      InTransitMap mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
     boost::mutex inTransOrLookup_m;
 
 
@@ -88,7 +89,7 @@ namespace CBR
       Duration dur;
     };
 
-    typedef std::map<int, TrackedSetResultsData> TrackedMessageMap;
+      typedef std::tr1::unordered_map<int, TrackedSetResultsData> TrackedMessageMap;
     TrackedMessageMap trackingMessages;
 
       ObjectSet mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
@@ -138,7 +139,7 @@ namespace CBR
       CBR::Protocol::OSeg::AddedObjectMessage* msgAdded;
       Duration dur;
     };
-    typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
+      typedef std::tr1::unordered_map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
     TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
     CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id, float radius);
     //end message addition.

@@ -211,7 +211,7 @@ namespace CBR
 
     //set a mutex lock.
     inTransOrLookup_m.lock();
-    std::map<UUID,TransLookup>::iterator mInTransIter = mInTransitOrLookup.find(obj_id);
+    InTransitMap::iterator mInTransIter = mInTransitOrLookup.find(obj_id);
 
     bool migratingFromHere = false;
     if (mInTransIter != mInTransitOrLookup.end())
@@ -243,7 +243,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
       return false;
 
     inTransOrLookup_m.lock();
-    std::map<UUID,TransLookup>::const_iterator iterInTransOrLookup = mInTransitOrLookup.find(obj_id);
+    InTransitMap::const_iterator iterInTransOrLookup = mInTransitOrLookup.find(obj_id);
 
     if (iterInTransOrLookup == mInTransitOrLookup.end())
     {
@@ -411,7 +411,7 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
 
 
     UUID tmper = obj_id;
-    std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
+    InTransitMap::const_iterator iter = mInTransitOrLookup.find(tmper);
 
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
@@ -547,7 +547,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
         obj_id,mContext->id(),
         new_server_id.server());
 
-    std::map<UUID,TransLookup>::const_iterator transIter = mInTransitOrLookup.find(obj_id);
+    InTransitMap::const_iterator transIter = mInTransitOrLookup.find(obj_id);
 
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = new_server_id;
@@ -663,7 +663,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     obj_id    = msg.m_objid();
 
 
-    std::map<UUID,TransLookup>::iterator inTransIt;
+    InTransitMap::iterator inTransIt;
 
     postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, obj_id, serv_from));
 
@@ -825,7 +825,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
     postingStrand->post(boost::bind( &CraqCache::insert, mCraqCache, tmper, cor->servID));
 
     inTransOrLookup_m.lock();
-    std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
+    InTransitMap::iterator iter = mInTransitOrLookup.find(tmper);
 
     if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
     {
@@ -868,7 +868,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
     inTransOrLookup_m.lock();
 
     //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
-    std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(obj_id);
+    InTransitMap::iterator inTransLookIter = mInTransitOrLookup.find(obj_id);
 
     if (inTransLookIter != mInTransitOrLookup.end())
     {
