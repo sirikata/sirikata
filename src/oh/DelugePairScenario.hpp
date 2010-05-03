@@ -73,6 +73,7 @@ class DelugePairScenario : public Scenario {
     uint32 mNumObjectsPerServer;
     bool mLocalTraffic;
     bool mSourceFloodServer;
+    double mFractionMessagesUniform;
     struct MessageFlow {
         float cumulativeProbability;
         float dist;

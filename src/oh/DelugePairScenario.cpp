@@ -43,6 +43,7 @@ void DPSInitOptions(DelugePairScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("DelugePairScenario",thus,
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
+        new OptionValue("prob-messages-uniform","1",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
         new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
@@ -68,7 +69,7 @@ DelugePairScenario::DelugePairScenario(const String &options)
     mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
     mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
     mLocalTraffic = optionsSet->referenceOption("local")->as<bool>();
-
+    mFractionMessagesUniform= optionsSet->referenceOption("prob-messages-uniform")->as<double>();
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
     mGeneratePingPoller = NULL;
@@ -223,6 +224,7 @@ void DelugePairScenario::generatePairs() {
     }
 
 }
+static unsigned int even=0;
 bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
     generatePairs();
     double which =(rand()/(double)RAND_MAX);
@@ -231,8 +233,10 @@ bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
         {
             MessageFlow comparator;
             comparator.cumulativeProbability=which;
-            where=mSendCDF.begin()+which*(mSendCDF.size()-1);
-//            where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
+            if (rand()<mFractionMessagesUniform*RAND_MAX)
+                where=mSendCDF.begin()+which*(mSendCDF.size()-1);
+            else
+                where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
         }
         if (where==mSendCDF.end()) {
             --where;       

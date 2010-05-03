@@ -118,9 +118,11 @@ bool FairServerMessageReceiver::service() {
         // insufficient budget of bytes.  Setup a timer to let us check again
         // soon.
         // FIXME we should calculate an exact duration instead of making it up
+        mBlocked=true;
         mServiceTimer->wait( Duration::microseconds(1) );
+    }else {
+        mBlocked=false;
     }
-
     mProfiler->finished();
 
     return true;

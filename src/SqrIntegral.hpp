@@ -25,6 +25,7 @@ public:
     double computeInfiniteIntegral(int whichCutoff);
     double operator()(float cutoff, float flatness, const Vector3d&xymin, const Vector3d&xymax, const Vector3d &uvmin, const Vector3d &uvmax){
         double deltaLocation=(((xymin+xymax)-(uvmin+uvmax))*.5).length();
+        deltaLocation/=flatness;
         deltaLocation+=cutoff;
         if (deltaLocation<2.7) deltaLocation=2.7;
         double logLocDelta=deltaLocation*log(deltaLocation);

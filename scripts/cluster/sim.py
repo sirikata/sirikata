@@ -34,7 +34,7 @@ class ClusterSimSettings:
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.falloff = 'sqr'
-        self.flatness = 500
+        self.flatness = 8
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.odp_flow_scheduler = 'region'
