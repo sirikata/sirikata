@@ -176,6 +176,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     FILE* pack_file = fopen(pack_filename.c_str(), "rb");
     if (pack_file == NULL) {
         SILOG(objectfactory,error,"Couldn't open object pack file, not generating any objects.");
+        assert(false);
         return;
     }
 
@@ -239,6 +240,7 @@ void ObjectFactory::dumpObjectPack() const {
     FILE* pack_file = fopen(pack_filename.c_str(), "wb");
     if (pack_file == NULL) {
         SILOG(objectfactory,error,"Couldn't open object pack file, not dumping any objects.");
+        assert(false);
         return;
     }
 
