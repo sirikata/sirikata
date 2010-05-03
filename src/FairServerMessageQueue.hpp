@@ -21,9 +21,6 @@ protected:
     typedef FairQueue<Message, ServerID, SenderAdapterQueue> FairSendQueue;
     FairSendQueue mServerQueues;
 
-    typedef std::set<ServerID> ServerSet;
-    ServerSet mDownstreamReady;
-
     Sirikata::AtomicValue<bool> mServiceScheduled;
 
     uint64 mStoppedBlocked;

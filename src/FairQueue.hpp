@@ -180,7 +180,8 @@ public:
     // or removing options.
     void enableQueue(Key key) {
         ByKeyIterator it = mQueuesByKey.find(key);
-        assert(it != mQueuesByKey.end());
+        if (it == mQueuesByKey.end())
+            return;
         QueueInfo* qi = it->second;
         qi->enabled = true;
         // Enabling a queue *might* affect the choice of the front queue if
