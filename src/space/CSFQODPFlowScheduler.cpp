@@ -114,9 +114,12 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
 #define _edge true // Maybe someday we'll bother with core routers
     if (_edge) {
         // Remove old used weight
-        for(int i = 0; i < NUM_DOWNSTREAM; i++)
-            mTotalUsedWeight[i] -= flow_info->usedWeight[i];
+        double savedTotalUsedWeight[NUM_DOWNSTREAM]={0};
 
+        for(int i = 0; i < NUM_DOWNSTREAM; i++) {
+            savedTotalUsedWeight[i]=mTotalUsedWeight[i];
+            mTotalUsedWeight[i] -= flow_info->usedWeight[i];
+        }
         // Compute label, updating the rate
         double flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Ka_double);
         double w_norm = normalizedFlowWeight(weight);
@@ -134,12 +137,12 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
         // setting is use_global_values == true.
         double sender_acc_rate = std::max(mSenderCapacity, 1.0);
         // Using the max avoids possible zeros
-        double sender_total_weights = std::max(mSenderTotalWeight, weight);
+        double sender_total_weights = std::max(mSenderTotalWeight, savedTotalUsedWeight[SENDER]);
         flow_info->usedWeight[SENDER] = std::min(flow_rate * (sender_total_weights / sender_acc_rate), weight);
 
         double receiver_acc_rate = std::max(mReceiverCapacity, 1.0);
         // Using the max avoids possible zeros
-        double receiver_total_weights = std::max(mReceiverTotalWeight, weight);
+        double receiver_total_weights = std::max(mReceiverTotalWeight, savedTotalUsedWeight[RECEIVER]);
         flow_info->usedWeight[RECEIVER] = std::min(flow_rate * (receiver_total_weights / receiver_acc_rate), weight);
 
         for(int i = 0; i < NUM_DOWNSTREAM; i++)
