@@ -36,6 +36,7 @@
 #include "CoordinateSegmentation.hpp"
 #include "Random.hpp"
 #include "craq_oseg/CraqEntry.hpp"
+#include "Statistics.hpp"
 #define _Ka (Duration::milliseconds((int64)200))
 #define _Ka_double (_Ka.toSeconds())
 
@@ -156,6 +157,7 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
     if (mAlpha != 0.0) {
         if ((randFloat() < prob_drop)) {
             estimateAlpha(packet_size, curtime, label, true);
+            TRACE_DROP(DROPPED_CSFQ_PROBABILISTIC);
             return false;
         }
     }
@@ -175,6 +177,7 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
         if (mKAlphaReductionsLeft-- >= 0)
             mAlpha *= 0.99;
         delete qmsg.msg;
+        TRACE_DROP(DROPPED_CSFQ_OVERFLOW);
         return false;
     }
 

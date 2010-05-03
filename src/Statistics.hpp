@@ -107,6 +107,8 @@ public:
             DROPPED_DURING_FORWARDING,
             DROPPED_DURING_FORWARDING_ROUTING,
             DROPPED_AT_SPACE_ENQUEUED,
+            DROPPED_CSFQ_OVERFLOW,
+            DROPPED_CSFQ_PROBABILISTIC,
             NUM_DROPS
         };
         uint64 d[NUM_DROPS];
@@ -249,7 +251,7 @@ public:
 
     CREATE_TRACE_DECL(osegCumulativeResponse, const Time &t, OSegLookupTraceToken* traceToken);
 
-  
+
 public:
 
   void prepareShutdown();
