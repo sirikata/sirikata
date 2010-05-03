@@ -47,7 +47,7 @@ void InitOptions() {
 
         .addOption(new OptionValue("falloff", "sqr", Sirikata::OptionValueType<String>(), "Type of communication falloff function to use.  Valid values are sqr and guassian. Default is sqr."))
         .addOption(new OptionValue("flatness", "100", Sirikata::OptionValueType<double>(), "k where e^-kx is the bandwidth function and x is the distance between 2 server points"))
-        .addOption(new OptionValue("const-cutoff", "80", Sirikata::OptionValueType<double>(), "cutoff below with a constant bandwidth is used"))
+        .addOption(new OptionValue("const-cutoff", "64", Sirikata::OptionValueType<double>(), "cutoff below with a constant bandwidth is used"))
 
         .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))
         .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))

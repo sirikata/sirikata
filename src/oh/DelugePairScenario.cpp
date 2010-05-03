@@ -151,13 +151,14 @@ void DelugePairScenario::stop() {
 }
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
 void DelugePairScenario::generatePairs() {
-    std::vector<Object*> floodedObjects;
-    Time t=mContext->simTime();
-    if (t-mStartTime<mGenPhase) {
-        return;
-    }
     
     if (mSendCDF.empty()) {
+        std::vector<Object*> floodedObjects;
+        Time t=mContext->simTime();
+        if (t-mStartTime<mGenPhase) {
+            return;
+        }
+
         for (int i=0;i<mObjectTracker->numServerIDs();++i) {
             if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {
                 return;
@@ -209,15 +210,16 @@ void DelugePairScenario::generatePairs() {
                 
             }while(cur!=first);
         }
-    }
-    double cumulative=0;
-    for (size_t i=0;i<mSendCDF.size();++i) {
-        cumulative+=mSendCDF[i].cumulativeProbability;
-        mSendCDF[i].cumulativeProbability=cumulative;
-    }
-    
-    for (size_t i=0;i<mSendCDF.size();++i) {
-        mSendCDF[i].cumulativeProbability/=cumulative;
+        std::sort(mSendCDF.begin(),mSendCDF.end());
+        double cumulative=0;
+        for (size_t i=0;i<mSendCDF.size();++i) {
+            cumulative+=mSendCDF[i].cumulativeProbability;
+            mSendCDF[i].cumulativeProbability=cumulative;
+        }
+        
+        for (size_t i=0;i<mSendCDF.size();++i) {
+            mSendCDF[i].cumulativeProbability/=cumulative;
+        }
     }
 
 }

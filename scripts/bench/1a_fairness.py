@@ -38,14 +38,14 @@ class FlowPairFairness(flow_fairness.FlowFairness):
 
         if 'object' not in self.cs.traces: self.cs.traces.append('object')
         if 'ping' not in self.cs.traces: self.cs.traces.append('ping')
-        if 'message' not in self.cs.traces: self.cs.traces.append('message')
+        #if 'message' not in self.cs.traces: self.cs.traces.append('message')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
 
 
 if __name__ == "__main__":
-    nss=3
+    nss=9
     nobjects = 1500*nss
     packname = '1a_objects.pack'
     # If genpack is True, the sim will be run the first time with a
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # Then run with genpack = False to push that pack up to all nodes
     # and use it across multiple object hosts.
     genpack = False
-    numoh = 1
+    numoh = 2
 
     if (genpack):
         numoh = 1
