@@ -46,6 +46,8 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
           mReceiveQueues(),
           mReceiveSet(),
           mServiceScheduled(false),
+          mStoppedUnderflow(0),
+          mStoppedMaxMessages(0),
           mBytesUsed(0)
 {
 }
@@ -53,6 +55,10 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network*
 FairServerMessageReceiver::~FairServerMessageReceiver() {
     SILOG(fsmr,info,
         "FSMR: Bytes used: " << mBytesUsed
+    );
+    SILOG(fsmr,info,
+        "FSMR: Underflow: " << mStoppedUnderflow <<
+        " max messages: " << mStoppedMaxMessages
     );
 }
 
@@ -119,8 +125,10 @@ bool FairServerMessageReceiver::service() {
         // soon.
         // FIXME we should calculate an exact duration instead of making it up
         mBlocked=true;
+        mStoppedMaxMessages++;
         mServiceTimer->wait( Duration::microseconds(1) );
     }else {
+        mStoppedUnderflow++;
         mBlocked=false;
     }
     mProfiler->finished();

@@ -75,6 +75,9 @@ private:
 
     Sirikata::AtomicValue<bool> mServiceScheduled;
 
+    uint32 mStoppedUnderflow;
+    uint32 mStoppedMaxMessages;
+
     uint32 mBytesUsed;
 
     // Protects mReceiveQueues, mReceiveSet
