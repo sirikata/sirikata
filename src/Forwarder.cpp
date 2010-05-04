@@ -434,7 +434,7 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 
     bool accepted = mOSegLookups->lookup(
         msg,
-        std::tr1::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, _3, forwardFrom)
+        std::tr1::bind(&Forwarder::routeObjectMessageToServer, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, forwardFrom)
     );
 
     return accepted;
