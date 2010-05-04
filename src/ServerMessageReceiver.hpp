@@ -102,6 +102,7 @@ protected:
 
     bool mBlocked;
     SimpleRateEstimator mCapacityEstimator;
+    double mCapacityOverestimate;
 };
 
 } // namespace CBR

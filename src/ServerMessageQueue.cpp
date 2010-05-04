@@ -32,7 +32,7 @@
 
 #include "ServerMessageQueue.hpp"
 #include "Statistics.hpp"
-
+#include "Options.hpp"
 namespace CBR {
 
 ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender)
@@ -46,6 +46,7 @@ ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* 
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
     mNetwork->setSendListener(this);
+    mCapacityOverestimate=GetOption("send-capacity-overestimate")->as<double>();
 }
 
 ServerMessageQueue::~ServerMessageQueue(){}
@@ -85,10 +86,10 @@ double ServerMessageQueue::capacity() {
     // If we're blocked, we report the measured rate of packets moving through
     // the system.  Otherwise, we overestimate so that upstream queues will try
     // to grow their bandwidth if they can.
-    if (mBlocked)
+    if (false&&mBlocked)
         return mCapacityEstimator.get();
     else
-        return mCapacityEstimator.get() + (512*1024); // .5 Mbps overestimate
+        return mCapacityEstimator.get() + mCapacityOverestimate; // .5 Mbps overestimate
 }
 
 void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, double used_weight) {

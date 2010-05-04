@@ -33,7 +33,7 @@
 #include "ServerMessageReceiver.hpp"
 #include "SpaceContext.hpp"
 #include "Network.hpp"
-
+#include "Options.hpp"
 namespace CBR {
 
 ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
@@ -47,6 +47,7 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Li
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
     net->listen(mContext->id(), this);
+    mCapacityOverestimate=GetOption("receive-capacity-overestimate")->as<double>();
 }
 
 ServerMessageReceiver::~ServerMessageReceiver() {
@@ -64,10 +65,10 @@ double ServerMessageReceiver::capacity() {
     //return 875306;
     //return 42428800.0;
     //return 7000000;
-    if (mBlocked)
+    if (false&&mBlocked)
         return mCapacityEstimator.get();
     else
-        return mCapacityEstimator.get()+1024*512; // 64 KBps overestimate
+        return mCapacityEstimator.get()+mCapacityOverestimate; // 64 KBps overestimate
 }
 
 void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {

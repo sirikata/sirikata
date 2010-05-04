@@ -94,7 +94,7 @@ public:
     // successful. Helper method for implementations.
     // If sent, returns the size of the serialized packet.  Otherwise, returns 0.
     uint32 trySend(const ServerID& addr, const Message* msg);
-
+    double mCapacityOverestimate;
     SpaceContext* mContext;
     IOStrand* mSenderStrand;
     Network* mNetwork;
