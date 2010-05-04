@@ -63,10 +63,11 @@ double ServerMessageReceiver::capacity() {
     //return 1500000;
     //return 875306;
     //return 42428800.0;
+    //return 7000000;
     if (mBlocked)
         return mCapacityEstimator.get();
     else
-        return mCapacityEstimator.get()+1024*64; // 64 KBps overestimate
+        return mCapacityEstimator.get()+1024*512; // 64 KBps overestimate
 }
 
 void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {

@@ -73,7 +73,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
              mServerWeightPoller(
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
-                 Duration::milliseconds((int64)100)),
+                 Duration::milliseconds((int64)10)),
             mReceivedMessages(Sirikata::SizedResourceMonitor(GetOption(FORWARDER_RECEIVE_QUEUE_SIZE)->as<uint32>()))
 {
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOption(FORWARDER_SEND_QUEUE_SIZE)->as<uint32>(), (ForwarderServiceQueue::Listener*)this);
@@ -226,14 +226,14 @@ ODPFlowScheduler* Forwarder::createODPFlowScheduler(LocationService* loc, Server
     assert(new_flow_scheduler != NULL);
 
     {
-        boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+        boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
         mODPRouters[remote_server] = new_flow_scheduler;
     }
     return new_flow_scheduler;
 }
 
 void Forwarder::updateServerWeights() {
-    boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+    boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
 
     for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++) {
         ServerID serv_id = it->first;
@@ -264,8 +264,10 @@ void Forwarder::updateServerWeights() {
             " odp_receiver_used_weight: " << odp_receiver_used_weight <<
             " sender_total_weight: " << sender_total_weight <<
             " sender_capacity: " << sender_capacity <<
+            "sender_blok: "<<mServerMessageQueue->isBlocked() <<
             " receiver_total_weight: " << receiver_total_weight <<
-            " receiver_capacity: " << receiver_capacity
+            " receiver_capacity: " << receiver_capacity<<
+            "receiver_blok: "<<mServerMessageReceiver->isBlocked()
         );
 
         Message* weight_up_msg = new Message(
@@ -278,7 +280,7 @@ void Forwarder::updateServerWeights() {
 
         bool success = mForwarderWeightRouter->route(weight_up_msg);
         if (!success)
-            SILOG(forwarder,warn,"Overflow in forwarder weight message queue!");
+            SILOG(forwarder,insane,"Overflow in forwarder weight message queue!");
 
         // Update send scheduler with values from the ODP flow scheduler.
         mServerMessageQueue->updateReceiverStats(serv_id, odp_total_weight, odp_sender_used_weight);
@@ -393,7 +395,7 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
 
     ODPFlowScheduler* serv_flow_sched = NULL;
     {
-        boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+        boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
         ODPRouterMap::iterator flow_sched_it = mODPRouters.find(source);
         if (flow_sched_it != mODPRouters.end())
             serv_flow_sched = flow_sched_it->second;
@@ -484,16 +486,16 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   // if we fail to find it.
   ODPFlowScheduler* flow_sched = NULL;
   {
-      boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+      boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
       ODPRouterMap::iterator odp_it = mODPRouters.find(dest_serv.server());
       if (odp_it != mODPRouters.end())
           flow_sched = odp_it->second;
   }
   if (flow_sched == NULL) {
       // Will force allocation of ODPFlowScheduler if its not there already
-      mOutgoingMessages->prePush(dest_serv.server());
       {
-          boost::lock_guard<boost::mutex> lck(mODPRouterMapMutex);
+          boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
+          mOutgoingMessages->prePush(dest_serv.server());
           flow_sched = mODPRouters[dest_serv.server()];
       }
   }
@@ -560,6 +562,9 @@ bool Forwarder::serverMessageEmpty(ServerID dest) {
 }
 
 void Forwarder::serverConnectionReceived(ServerID sid) {
+    ///need to take the lock because createODPFlowScheduler will want the lock later but an intervening lock will be taken
+    boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
+
     // With a new connection, we just need to make sure we get
     // information flowing back and forth (e.g. capacity/weight for
     // ODPFlowScheduler). This just gets that process started.

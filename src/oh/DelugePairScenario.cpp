@@ -156,9 +156,6 @@ void DelugePairScenario::generatePairs() {
     if (mSendCDF.empty()) {
         std::vector<Object*> floodedObjects;
         Time t=mContext->simTime();
-        if (t-mStartTime<mGenPhase) {
-            return;
-        }
 
         for (int i=0;i<mObjectTracker->numServerIDs();++i) {
             if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {

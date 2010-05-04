@@ -29,6 +29,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         self.cs.object_simple='false'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
+             '--prob-messages-uniform=1.0',
              '--num-objects-per-server=' + str(500),
              '--ping-size=' + str(self.payload_size),
              '--local=' + localval,
@@ -60,8 +61,10 @@ if __name__ == "__main__":
 
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
-
+    
+    cs.flatness=8;
     cs.debug = True
+
     cs.valgrind = False
     cs.profile = False
     cs.oprofile = False
@@ -102,7 +105,7 @@ if __name__ == "__main__":
     cs.duration = '120s'
 
     rates = sys.argv[1:]
-    plan = FlowPairFairness(cc, cs, scheme='csfq', payload=128)
+    plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)
     for rate in rates:
         plan.run(rate)
         plan.analysis()

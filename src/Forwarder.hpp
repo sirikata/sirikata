@@ -80,7 +80,7 @@ private:
     Router<Message*>* mOSegCacheUpdateRouter;
     Router<Message*>* mForwarderWeightRouter;
     typedef std::tr1::unordered_map<ServerID, ODPFlowScheduler*> ODPRouterMap;
-    boost::mutex mODPRouterMapMutex;
+    boost::recursive_mutex mODPRouterMapMutex;
     ODPRouterMap mODPRouters;
     Poller mServerWeightPoller; // For updating ServerMessageQueue, remote
                                 // ServerMessageReceiver with per-server weights

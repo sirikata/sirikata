@@ -144,26 +144,27 @@ void FairServerMessageReceiver::handleUpdateSenderStats(ServerID sid, double tot
 }
 
 void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream* strm) {
-    boost::lock_guard<boost::mutex> lck(mMutex);
-
     ServerID from = strm->id();
-    double wt = mReceiveQueues.avg_weight();
-    SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
-
-    if (mReceiveQueues.hasQueue(from)) {
-        SILOG(FSMR,fatal,"Duplicate network connection received for server " << from << " and propagated up to receive queue.");
-        assert(false);
+    {
+        boost::lock_guard<boost::mutex> lck(mMutex);
+        
+        double wt = mReceiveQueues.avg_weight();
+        SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
+        
+        if (mReceiveQueues.hasQueue(from)) {
+            SILOG(FSMR,fatal,"Duplicate network connection received for server " << from << " and propagated up to receive queue.");
+            assert(false);
+        }
+        
+        mReceiveQueues.addQueue(
+            new NetworkQueueWrapper(mContext, strm, Trace::SPACE_TO_SPACE_READ_FROM_NET),
+            from,
+            wt
+            );
+        
+        // add to the receive set
+        mReceiveSet.insert(from);
     }
-
-    mReceiveQueues.addQueue(
-        new NetworkQueueWrapper(mContext, strm, Trace::SPACE_TO_SPACE_READ_FROM_NET),
-        from,
-        wt
-    );
-
-    // add to the receive set
-    mReceiveSet.insert(from);
-
     // Notify upstream
     mListener->serverConnectionReceived(from);
 }
