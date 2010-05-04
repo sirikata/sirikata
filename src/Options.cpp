@@ -125,7 +125,7 @@ void InitOptions() {
         .addOption(new OptionValue(SERVER_RECEIVER, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageReceiver to use for routing."))
         .addOption(new OptionValue(SERVER_ODP_FLOW_SCHEDULER, "region", Sirikata::OptionValueType<String>(), "The type of ODPFlowScheduler to use for routing."))
         .addOption(new OptionValue(FORWARDER_RECEIVE_QUEUE_SIZE, "16384", Sirikata::OptionValueType<uint32>(), "The type of ODPFlowScheduler to use for routing."))
-        .addOption(new OptionValue(FORWARDER_SEND_QUEUE_SIZE, "32768", Sirikata::OptionValueType<uint32>(), "The type of ODPFlowScheduler to use for routing."))
+        .addOption(new OptionValue(FORWARDER_SEND_QUEUE_SIZE, "65536", Sirikata::OptionValueType<uint32>(), "The type of ODPFlowScheduler to use for routing."))
 
         .addOption(new OptionValue(NETWORK_TYPE, "tcp", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
@@ -167,8 +167,8 @@ void InitOptions() {
       .addOption(new OptionValue("additional-cseg-duration", "5s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
       .addOption(new OptionValue("scenario", "ping", Sirikata::OptionValueType<String>(), "ObjectHost-wide script dictating mass wide object behaviors"))
       .addOption(new OptionValue("scenario-options", "", Sirikata::OptionValueType<String>(), "Options for ObjectHost-wide script dictating mass wide object behaviors"))
-      .addOption(new OptionValue("object-host-receive-buffer", "16384", Sirikata::OptionValueType<size_t>(), "size of the object host space node connection receive queue"))
-      .addOption(new OptionValue("object-host-send-buffer", "16384", Sirikata::OptionValueType<size_t>(), "size of the object host space node cnonection send queue"))
+      .addOption(new OptionValue("object-host-receive-buffer", "32768", Sirikata::OptionValueType<size_t>(), "size of the object host space node connection receive queue"))
+      .addOption(new OptionValue("object-host-send-buffer", "32768", Sirikata::OptionValueType<size_t>(), "size of the object host space node cnonection send queue"))
       .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
 
       ;
