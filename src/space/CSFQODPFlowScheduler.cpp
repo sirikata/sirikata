@@ -37,6 +37,8 @@
 #include "Random.hpp"
 #include "craq_oseg/CraqEntry.hpp"
 #include "Statistics.hpp"
+#define _Kf (Duration::milliseconds((int64)10000))
+#define _Kf_double (_Kf.toSeconds())
 #define _Ka (Duration::milliseconds((int64)200))
 #define _Ka_double (_Ka.toSeconds())
 
@@ -122,7 +124,7 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
             mTotalUsedWeight[i] -= flow_info->usedWeight[i];
         }
         // Compute label, updating the rate
-        double flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Ka_double);
+        double flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Kf_double);
         double w_norm = normalizedFlowWeight(weight);
         label = flow_rate / w_norm;
 
