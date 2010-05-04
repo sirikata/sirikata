@@ -78,6 +78,9 @@ public:
     // implement the protected handleUpdateSenderStats which will occur on
     // receiver strand.
     void updateReceiverStats(ServerID sid, double total_weight, double used_weight);
+    bool isBlocked() const{
+        return mBlocked;
+    }
   protected:
     // Network::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from) = 0;

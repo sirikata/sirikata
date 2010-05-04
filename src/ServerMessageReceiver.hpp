@@ -75,6 +75,9 @@ public:
     double totalUsedWeight();
     // Get the capacity of this receiver in bytes per second.
     double capacity();
+    bool isBlocked() const{
+        return mBlocked;
+    }
 protected:
     // Network::ReceiveListener Interface
     virtual void networkReceivedConnection(Network::ReceiveStream* strm) = 0;

@@ -60,10 +60,13 @@ double ServerMessageReceiver::capacity() {
     // If we're blocked, we report the measured rate of packets moving through
     // the system.  Otherwise, we overestimate so that upstream queues will try
     // to grow their bandwidth if they can.
+    //return 1500000;
+    //return 875306;
+    //return 42428800.0;
     if (mBlocked)
         return mCapacityEstimator.get();
     else
-        return mCapacityEstimator.get() + (512*1024); // .5 Mbps overestimate
+        return mCapacityEstimator.get()+1024*64; // 64 KBps overestimate
 }
 
 void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight, double used_weight) {
