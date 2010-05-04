@@ -55,6 +55,7 @@ CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQu
    mNeedsNotification(true),
    mLoc(loc),
    mArrivalRate(_Ka_double),
+   mSumEstimatedArrivalRates(0),
    mAcceptedRate(_Ka_double),
    mCapacityRate(_Ka_double),
    mAlpha(0.0),
@@ -124,7 +125,11 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
             mTotalUsedWeight[i] -= flow_info->usedWeight[i];
         }
         // Compute label, updating the rate
-        double flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Kf_double);
+        double old_rate = flow_info->rate.get();
+        mSumEstimatedArrivalRates -= old_rate;
+        double est_flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Kf_double);
+        mSumEstimatedArrivalRates += est_flow_rate;
+        double flow_rate = (est_flow_rate / mSumEstimatedArrivalRates) * mArrivalRate.get();
         double w_norm = normalizedFlowWeight(weight);
         label = flow_rate / w_norm;
 

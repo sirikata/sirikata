@@ -169,6 +169,7 @@ private:
 
     // CSFQ Summary Information
     SimpleRateEstimator mArrivalRate;
+    double mSumEstimatedArrivalRates;
     SimpleRateEstimator mAcceptedRate;
     SimpleRateEstimator mCapacityRate; // Actual capacity observed (no dummy packets)
 
