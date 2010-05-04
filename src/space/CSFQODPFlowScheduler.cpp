@@ -244,13 +244,16 @@ void CSFQODPFlowScheduler::estimateAlpha(int32 packet_size, Time& arrival_time, 
             mCongested = true;
             mCongestionStartTime = arrival_time;
             mKAlphaReductionsLeft = KALPHA;
+            mAlphaWindowed = 0;
         } else {
-            if (arrival_time < mCongestionStartTime + mCongestionWindow)
+            if (arrival_time < mCongestionStartTime + mCongestionWindow) {
+                if (mAlphaWindowed < label) mAlphaWindowed = label;
                 return;
+            }
             mCongestionStartTime = arrival_time;
             mAlpha *= cap/mAcceptedRate.get(arrival_time, _Ka_double);
-            if (cap < mAlpha) {
-                mAlpha = cap;
+            if (mAlphaWindowed < mAlpha) {
+                mAlpha = mAlphaWindowed;
             }
         }
     } else {  // (_capacity_rate.get() > mArrivalRate.get()) => link uncongested
