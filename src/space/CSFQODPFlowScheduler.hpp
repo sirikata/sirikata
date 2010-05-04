@@ -103,8 +103,9 @@ private:
     };
 
     struct FlowInfo {
-        FlowInfo(double w)
-         : weight(w)
+        FlowInfo(double w, const Time& start)
+         : rate(0.0, start),
+           weight(w)
 #ifdef CSFQODP_DEBUG
            ,
            arrived(0),
@@ -141,7 +142,7 @@ private:
         int32 _size;
     };
 
-    FlowInfo* getFlow(const ObjectPair& new_packet_pair, const CraqEntry&src_info,const CraqEntry&dst_info);
+    FlowInfo* getFlow(const ObjectPair& new_packet_pair, const CraqEntry&src_info,const CraqEntry&dst_info, const Time& t);
     void removeFlow(const ObjectPair& packet_pair);
     int flowCount() const;
     float normalizedFlowWeight(float unnorm_weight);

@@ -46,9 +46,9 @@ public:
        _backlog(0)
     {}
 
-    RateEstimator(double good_guess)
+    RateEstimator(double good_guess, const Time& start)
      : _value(good_guess),
-       _t(Time::null()),
+       _t(start),
        _backlog(0)
     {}
 
@@ -98,8 +98,8 @@ public:
        _K(K)
     {}
 
-    SimpleRateEstimator(double good_guess, double K)
-     : RateEstimator(good_guess),
+    SimpleRateEstimator(double good_guess, const Time& start, double K)
+     : RateEstimator(good_guess, start),
        _K(K)
     {}
 

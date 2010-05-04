@@ -94,7 +94,8 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
     boost::lock_guard<boost::mutex> lck(mPushMutex); // FIXME
 
     ObjectPair op(msg->source_object(), msg->dest_object());
-    FlowInfo* flow_info = getFlow(op,source_entry,dest_entry);
+    Time curtime = mContext->recentSimTime();
+    FlowInfo* flow_info = getFlow(op,source_entry,dest_entry, curtime);
 
     // FIXME update weights, due to possible movement?
     double weight = flow_info->weight;
@@ -105,7 +106,6 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
     }
 
     int32 packet_size = msg->ByteSize();
-    Time curtime = mContext->recentSimTime();
 
 #ifdef CSFQODP_DEBUG
     flow_info->arrived += packet_size;
@@ -349,7 +349,7 @@ BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, con
     return BoundingBox3f(server_bbox.center(), info.radius());
 }
 
-CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair, const CraqEntry&source_info, const CraqEntry&dst_info) {
+CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair, const CraqEntry&source_info, const CraqEntry&dst_info, const Time& t) {
     FlowMap::iterator where = mFlows.find(new_packet_pair);
     if (where==mFlows.end()) {
         BoundingBox3f source_bbox = getObjectWeightRegion(new_packet_pair.source, source_info);
@@ -357,7 +357,7 @@ CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& 
 
         double weight = mWeightCalculator->weight(source_bbox, dest_bbox);
 
-        std::pair<FlowMap::iterator, bool> ins_it = mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight)));
+        std::pair<FlowMap::iterator, bool> ins_it = mFlows.insert(FlowMap::value_type(new_packet_pair,FlowInfo(weight, t)));
         assert(ins_it.second == true);
 
         mTotalActiveWeight += weight;
