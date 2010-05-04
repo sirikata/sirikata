@@ -39,6 +39,8 @@
 #include "Statistics.hpp"
 #define _Kf (Duration::milliseconds((int64)10000))
 #define _Kf_double (_Kf.toSeconds())
+#define _Kcwin (Duration::milliseconds((int64)10))
+#define _Kcwin_double (_Ka.toSeconds())
 #define _Ka (Duration::milliseconds((int64)200))
 #define _Ka_double (_Ka.toSeconds())
 
@@ -62,7 +64,7 @@ CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQu
    mAlphaWindowed(0.0),
    mCongested(true),
    mCongestionStartTime(Time::null()),
-   mCongestionWindow(_Ka),
+   mCongestionWindow(_Kcwin),
    mKAlphaReductionsLeft(KALPHA),
    mTotalActiveWeight(0)
 {
