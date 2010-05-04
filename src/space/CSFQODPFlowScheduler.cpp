@@ -129,7 +129,10 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
         mSumEstimatedArrivalRates -= old_rate;
         double est_flow_rate = flow_info->rate.estimate_rate(curtime, packet_size, _Kf_double);
         mSumEstimatedArrivalRates += est_flow_rate;
-        double flow_rate = (est_flow_rate / mSumEstimatedArrivalRates) * mArrivalRate.get();
+        double flow_rate =
+            (mSumEstimatedArrivalRates == 0) ?
+            mArrivalRate.get() :
+            (est_flow_rate / mSumEstimatedArrivalRates) * mArrivalRate.get();
         double w_norm = normalizedFlowWeight(weight);
         label = flow_rate / w_norm;
 
