@@ -239,7 +239,7 @@ void CSFQODPFlowScheduler::estimateAlpha(int32 packet_size, Time& arrival_time, 
     double sender_cap = mSenderCapacity;
     double sender_total_weights = std::max(mSenderTotalWeight, mTotalUsedWeight[SENDER]);
     double sfrac = (sender_total_weights != 0.0) ? mTotalUsedWeight[SENDER] / sender_total_weights : 1.0;
-    sender_cap *= mTotalUsedWeight[SENDER] / mSenderTotalWeight;
+    sender_cap *= sfrac;
     double receiver_cap = mReceiverCapacity;
     double receiver_total_weights = std::max(mReceiverTotalWeight, mTotalUsedWeight[RECEIVER]);
     double rfrac = (receiver_total_weights != 0.0) ? mTotalUsedWeight[RECEIVER] / receiver_total_weights : 1.0;
