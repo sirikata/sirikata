@@ -56,15 +56,26 @@ void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const
     NOT_IMPLEMENTED();
 }
 
+void ServerMessageQueue::connect(const ServerID& dest) {
+   
+    Network::SendStream** where=&mSendStreams[dest];
+    if (*where==NULL) {
+        *where= mNetwork->connect(dest);
+    }
+}
 
 uint32 ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
     SendStreamMap::iterator it = mSendStreams.find(dest);
     if (it == mSendStreams.end()) {
-        mSendStreams[dest] = mNetwork->connect(dest);
+        mSendStreams[dest]=NULL;
+        mSenderStrand->post(std::tr1::bind(&ServerMessageQueue::connect,this,dest));
         return 0;
     }
-    Network::SendStream* strm_out = it->second;
 
+    Network::SendStream* strm_out = it->second;
+    if (strm_out==NULL) {
+        return 0;
+    }
     Network::Chunk serialized;
     msg->serialize(&serialized);
     uint32 packet_size = serialized.size();
@@ -86,6 +97,7 @@ double ServerMessageQueue::capacity() {
     // If we're blocked, we report the measured rate of packets moving through
     // the system.  Otherwise, we overestimate so that upstream queues will try
     // to grow their bandwidth if they can.
+    //return 7399147;
     if (false&&mBlocked)
         return mCapacityEstimator.get();
     else

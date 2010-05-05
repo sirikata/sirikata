@@ -82,6 +82,8 @@ public:
         return mBlocked;
     }
   protected:
+    //actually initiate a connection, must be called from the mSenderStrand
+    void connect(const ServerID&dest);
     // Network::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from) = 0;
     // CoordinateSegmentation::Listener Interface

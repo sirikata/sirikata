@@ -35,12 +35,14 @@
 #include "DelugePairScenario.hpp"
 #include "PingDelugeScenario.hpp"
 #include "ByteTransferScenario.hpp"
+#include "LoadPacketTrace.hpp"
 AUTO_SINGLETON_INSTANCE(CBR::ScenarioFactory);
 namespace CBR {
 ScenarioFactory::ScenarioFactory(){
     DistributionPingScenario::addConstructorToFactory(this);
     DelugePairScenario::addConstructorToFactory(this);
     PingDelugeScenario::addConstructorToFactory(this);
+    LoadPacketTrace::addConstructorToFactory(this);
     ByteTransferScenario::addConstructorToFactory(this);
 }
 ScenarioFactory::~ScenarioFactory(){}

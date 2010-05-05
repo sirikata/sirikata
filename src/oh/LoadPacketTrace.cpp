@@ -187,7 +187,7 @@ void LoadPacketTrace::generatePairs() {
                 return;
             }
         }
-        OH_LOG(debug, "Beginning object seed phase at " << (t-mStartTime)<<"\n");
+        OH_LOG(warning, "Beginning object seed phase at " << (t-mStartTime)<<"\n");
         Object* first=mObjectTracker->roundRobinObject(mFloodServer);
         if (!first) {
             assert(0);
