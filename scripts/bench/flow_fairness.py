@@ -103,7 +103,7 @@ class FlowFairness:
 
         if 'object' not in self.cs.traces: self.cs.traces.append('object')
         if 'ping' not in self.cs.traces: self.cs.traces.append('ping')
-        #if 'message' not in self.cs.traces: self.cs.traces.append('message')
+        if 'message' not in self.cs.traces: self.cs.traces.append('message')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
