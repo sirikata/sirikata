@@ -57,8 +57,12 @@ class ClusterSimSettings:
         self.pack_dir = '/home/meru/data/'
         self.object_pack = 'objects.pack'
         self.num_pack_objects = 0
-
         self.pack_dump = ''
+
+        # OH: SL trace data loading
+        self.object_sl_file = 'sl.dat'
+        self.object_sl_center = (0,0,0)
+        self.num_sl_objects = 0
 
         # OH: scenario / ping settings
         self.scenario = 'ping'
@@ -95,7 +99,7 @@ class ClusterSimSettings:
         self.oseg_cache_entry_lifetime = "8s"
         self.oseg_cache_selector = "cache_originallru"
         self.oseg_cache_comm_scaling = "1.0"
-        
+
         self.vis_mode = 'object'
         self.vis_seed = 1
 
@@ -192,6 +196,13 @@ class ClusterSim:
             params.append('--object.pack=' + self.settings.object_pack)
         if (len(self.settings.pack_dump)):
             params.append('--object.pack-dump=' + self.settings.pack_dump)
+
+        if (len(self.settings.object_sl_file)):
+            params.append('--object.sl-file=' + self.settings.object_sl_file)
+        if (self.settings.num_sl_objects):
+            params.append('--object.sl-num=' + str(self.settings.num_sl_objects))
+        params.append('--object.sl-center=' + ('<%f,%f,%f>' % self.settings.object_sl_center))
+
         params.extend(
             [
             '%(packoffset)s',
@@ -312,6 +323,8 @@ class ClusterSim:
         # If we're using a dump file, push it
         if (len(self.settings.object_pack)):
             ClusterSCP(self.config, [self.settings.object_pack, self.pack_filename(self.settings.object_pack)], io=self.io)
+        if (len(self.settings.object_sl_file)):
+            ClusterSCP(self.config, [self.settings.object_sl_file, self.pack_filename(self.settings.object_sl_file)], io=self.io)
 
 
     def fill_parameters(self, node_params, param_dict, node_class, idx):
