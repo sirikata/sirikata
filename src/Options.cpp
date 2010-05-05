@@ -143,8 +143,8 @@ void InitOptions() {
         .addOption(new OptionValue(CACHE_SELECTOR,CACHE_TYPE_ORIGINAL_LRU,Sirikata::OptionValueType<String>(),"Which caching algorithm to use."))
 
          .addOption(new OptionValue(CACHE_COMM_SCALING,"1.0",Sirikata::OptionValueType<double>(),"What the communication falloff function scaling factor is."))
-         .addOption(new OptionValue("send-capacity-overestimate","524288",Sirikata::OptionValueType<double>(),"How much to overestimate send capacity when queue is not blocked."))
-         .addOption(new OptionValue("receive-capacity-overestimate","524288",Sirikata::OptionValueType<double>(),"How much to overestimate recv capacity when queue is not blocked."))
+         .addOption(new OptionValue("send-capacity-overestimate","65536",Sirikata::OptionValueType<double>(),"How much to overestimate send capacity when queue is not blocked."))
+         .addOption(new OptionValue("receive-capacity-overestimate","65536",Sirikata::OptionValueType<double>(),"How much to overestimate recv capacity when queue is not blocked."))
         .addOption(new OptionValue(OSEG_CACHE_CLEAN_GROUP_SIZE, "25", Sirikata::OptionValueType<uint32>(), "Number of items to remove from the OSeg cache when it reaches the maximum size."))
         .addOption(new OptionValue(OSEG_CACHE_ENTRY_LIFETIME, "8s", Sirikata::OptionValueType<Duration>(), "Maximum lifetime for an OSeg cache entry."))
 

@@ -150,16 +150,21 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
         // setting is use_global_values == true.
         double sender_acc_rate = std::max(mSenderCapacity, 1.0);
         // Using the max avoids possible zeros
-        double sender_total_weights = std::max(mSenderTotalWeight, savedTotalUsedWeight[SENDER]);
+        double sender_total_weights = std::max(std::max(mSenderTotalWeight, savedTotalUsedWeight[SENDER]),.0001);
         flow_info->usedWeight[SENDER] = std::min(flow_rate * (sender_total_weights / sender_acc_rate), weight);
 
         double receiver_acc_rate = std::max(mReceiverCapacity, 1.0);
         // Using the max avoids possible zeros
-        double receiver_total_weights = std::max(mReceiverTotalWeight, savedTotalUsedWeight[RECEIVER]);
+        double receiver_total_weights = std::max(std::max(mReceiverTotalWeight, savedTotalUsedWeight[RECEIVER]),.0001);
         flow_info->usedWeight[RECEIVER] = std::min(flow_rate * (receiver_total_weights / receiver_acc_rate), weight);
 
         for(int i = 0; i < NUM_DOWNSTREAM; i++)
             mTotalUsedWeight[i] += flow_info->usedWeight[i];
+        if (false) {
+            double prob_drop = std::max(0.0, label ? 1.0 - mAlpha / label : 0);
+            static Time start(curtime);
+            CSFQLOG(error,"p:"<<prob_drop<<" r:"<<flow_rate<<" w:"<<w_norm<<" tws:"<<sender_total_weights<<" sacc:"<<sender_acc_rate<<" swu:"<<savedTotalUsedWeight[SENDER]<<" swt:"<<mSenderTotalWeight<<" twr:"<<receiver_total_weights<<" racc:"<<receiver_acc_rate<<" rwu:"<<savedTotalUsedWeight[RECEIVER]<<" rwt:"<<mReceiverTotalWeight<<" a:"<<mAlpha<<" aw:"<<mAlphaWindowed<<" scap:"<<mSenderCapacity<<" rcap:"<<mReceiverCapacity<<" t:"<<(curtime-start).toSeconds()<<'\n');
+        }
     }
 
     double prob_drop = std::max(0.0, label ? 1.0 - mAlpha / label : 0);
@@ -186,6 +191,7 @@ bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const
     bool enqueue_success = mQueue.push(qmsg, false);
     // If we overflowed, drop and adjust alpha
     if (!enqueue_success) {
+        estimateAlpha(packet_size, curtime, label, false);
         if (mKAlphaReductionsLeft-- >= 0)
             mAlpha *= 0.99;
         delete qmsg.msg;
