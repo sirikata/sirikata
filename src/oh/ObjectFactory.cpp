@@ -74,6 +74,7 @@ ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region
     // Note: we do random second in order make sure they get later connect times
     generatePackObjects(region, duration);
     generateRandomObjects(region, duration);
+    generateStaticTraceObjects(region, duration);
     setConnectTimes();
 
     // Possibly dump pack data.
@@ -227,6 +228,96 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     }
 
     fclose(pack_file);
+}
+
+/** This is another simple format. This is purely textual, so easier to generate
+ *  from scripting languages.  It contains a list of motion updates. Currently
+ *  we just load the first (by time) update for each object. Objects are static,
+ *  and we use OBJECT_SL_NUM parameter to control how many we add. Note,
+ *  however, that we load them sorted by an extra parameter, distance from
+ *  OBJECT_SL_CENTER so we add them with increasing distance. We reuse the
+ *  OBJECT_PACK_DIR to specify where to find the files.
+ */
+struct SLEntry {
+    UUID uuid;
+    Vector3f pos;
+    float rad;
+    uint32 t;
+};
+typedef std::map<uint32, SLEntry> ObjectUpdateList; // Want ordered so we can pick out the first
+typedef std::map<UUID, ObjectUpdateList> TraceObjectMap;
+struct SortObjectUpdateListByDist {
+    SortObjectUpdateListByDist(Vector3f orig) : o(orig) {}
+
+    bool operator()(const ObjectUpdateList& lhs, const ObjectUpdateList& rhs) {
+        return ( (lhs.begin()->second.pos-o).lengthSquared() < (rhs.begin()->second.pos-o).lengthSquared());
+    }
+
+    Vector3f o;
+};
+
+void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, const Duration& duration) {
+    Time start(Time::null());
+    Time end = start + duration;
+    Vector3f region_extents = region.extents();
+
+    uint32 nobjects = GetOption(OBJECT_SL_NUM)->as<uint32>();
+    if (nobjects == 0) return;
+    String pack_filename = GetOption(OBJECT_SL_FILE)->as<String>();
+    assert(!pack_filename.empty());
+    String pack_dir = GetOption(OBJECT_PACK_DIR)->as<String>();
+    pack_filename = pack_dir + pack_filename;
+
+    Vector3f sim_center = GetOption(OBJECT_SL_CENTER)->as<Vector3f>();
+
+    // First, load in all the objects.
+    FILE* pack_file = fopen(pack_filename.c_str(), "rb");
+    if (pack_file == NULL) {
+        SILOG(objectfactory,error,"Couldn't open object pack file, not generating any objects.");
+        assert(false);
+        return;
+    }
+
+    TraceObjectMap trace_objects;
+    // parse each line: uuid x y z t rad
+    SLEntry ent;
+    char uuid[256];
+    while( !feof(pack_file) && fscanf(pack_file, "%s %f %f %f %d %f", uuid, &ent.pos.x, &ent.pos.y, &ent.pos.z, &ent.t, &ent.rad) ) {
+        ent.uuid = UUID(std::string(uuid), UUID::HumanReadable());
+
+        TraceObjectMap::iterator obj_it = trace_objects.find(ent.uuid);
+        if (obj_it == trace_objects.end()) {
+            trace_objects[ent.uuid] = ObjectUpdateList();
+            obj_it = trace_objects.find(ent.uuid);
+        }
+        obj_it->second[ent.t] = ent;
+    }
+    fclose(pack_file);
+
+    // Now get a version sorted by distance from
+    typedef std::set<ObjectUpdateList, SortObjectUpdateListByDist> ObjectsByDistanceList;
+    ObjectsByDistanceList objs_by_dist = ObjectsByDistanceList( SortObjectUpdateListByDist(sim_center) );
+    for(TraceObjectMap::iterator obj_it = trace_objects.begin(); obj_it != trace_objects.end(); obj_it++)
+        objs_by_dist.insert(obj_it->second);
+
+    // Finally, for the number of objects requested, insert the data
+    ObjectsByDistanceList::iterator obj_it = objs_by_dist.begin();
+    for(uint32 i = 0; i < nobjects; i++, obj_it++) {
+        ObjectInputs* inputs = new ObjectInputs;
+        SLEntry first = (obj_it->begin())->second;
+
+        inputs->localID = mLocalIDSource++;
+        inputs->motion = new StaticMotionPath(Time::microseconds(first.t*1000), first.pos);
+        inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), first.rad );
+        inputs->registerQuery = false;
+        inputs->queryAngle = SolidAngle::Max;
+        inputs->connectAt = Duration::seconds(0.f);
+
+        inputs->startTimer = IOTimer::create(mContext->ioService);
+
+        mObjectIDs.insert(first.uuid);
+        mInputs[first.uuid] = inputs;
+    }
 }
 
 void ObjectFactory::dumpObjectPack() const {

@@ -75,6 +75,8 @@ private:
 
     void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);
     void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
+    void generateStaticTraceObjects(const BoundingBox3f& region, const Duration& duration);
+
     // Generates connection initiation times for all objects *after* they have been created
     void setConnectTimes();
     // If requested, dumps objects to

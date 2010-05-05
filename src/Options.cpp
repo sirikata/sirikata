@@ -120,6 +120,11 @@ void InitOptions() {
         .addOption(new OptionValue(OBJECT_PACK_NUM, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
         .addOption(new OptionValue(OBJECT_PACK_DUMP, "", Sirikata::OptionValueType<String>(), "If non-empty, dumps any generated objects to the specified file."))
 
+        .addOption(new OptionValue(OBJECT_SL_FILE, "", Sirikata::OptionValueType<String>(), "Filename of the object pack to use to generate objects."))
+        .addOption(new OptionValue(OBJECT_SL_NUM, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
+        .addOption(new OptionValue(OBJECT_SL_CENTER, "", Sirikata::OptionValueType<Vector3f>(), "The center point to start adding SL objects from. They will be added in order of increasing distance from this point."))
+
+
         .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
         .addOption(new OptionValue(SERVER_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each server."))
         .addOption(new OptionValue(SERVER_RECEIVER, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageReceiver to use for routing."))

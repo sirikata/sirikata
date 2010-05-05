@@ -70,6 +70,10 @@
 #define OBJECT_PACK_NUM      "object.pack-num"
 #define OBJECT_PACK_DUMP     "object.pack-dump"
 
+#define OBJECT_SL_FILE       "object.sl-file"
+#define OBJECT_SL_NUM        "object.sl-num"
+#define OBJECT_SL_CENTER     "object.sl-center"
+
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"
 #define SERVER_RECEIVER      "server.receiver"
