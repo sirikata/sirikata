@@ -47,7 +47,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
 if __name__ == "__main__":
     nss=16
     
-    nobjects = 19000#326
+    nobjects = 1000#19000#326
     packname = '1a_objects.pack'
     # If genpack is True, the sim will be run the first time with a
     # single object host to generate data, dump it, and pull it down.
@@ -77,9 +77,8 @@ if __name__ == "__main__":
     cs.blocksize = 256
     cs.tx_bandwidth = 50000000
     cs.rx_bandwidth = 5000000
-    cs.oseg_cache_size=15;
     cs.oseg_cache_clean_group=25;
-    cs.oseg_cache_entry_lifetime= "30s"
+    cs.oseg_cache_entry_lifetime= "10000s"
 
 
     
@@ -104,14 +103,6 @@ if __name__ == "__main__":
     #    cs.pack_dump = ''
     cs.num_random_objects = 0
     cs.object_sl_file='sl.trace.'+str(edgex)+'x'+str(edgey);
-    global trmsgfile
-    msgfile='messagetrace.'+str(nobjects);
-    cs.message_trace_file=msgfile;
-    trace_location=cs.pack_dir+'/'+msgfile
-    trmsgfile=trace_location
-    cs.scp(cs.config,[msgfile,trace_location]);
-    print 'loading file '+cs.object_sl_file+' with trace '+msgfile
-    cs.num_sl_objects=nobjects;
     cs.object_sl_center=(384,384,0);
     cs.object_connect_phase = '20s'
     cs.center=[cs.blocksize*edgex/2,cs.blocksize*edgey/2,0]
@@ -123,12 +114,26 @@ if __name__ == "__main__":
 
     rates = sys.argv[1:]
 
+    nobjectlist=[125,250,500]+range(1000,20000,1000)
+    caches=[28]*len(nobjectlist)#[10,15,20,25,30,35,40]
+    cs.oseg_cache_size=caches[0];
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)
     oldoptions=plan.cs.scenario_options;
     
     print "SCENARIO OPTIONS ",plan.cs.scenario_options
+    rate=rates[0];
+    for nobjectsindex in range(len(nobjectlist)):
+        cs.oseg_cache_size=caches[nobjectsindex];
+    
+        nobjects=nobjectlist[nobjectsindex]
+        msgfile='messagetrace.'+str(nobjects);
+        global trmsgfile
 
-    for rate in rates:
+        cs.num_sl_objects=nobjects;
+        cs.message_trace_file=msgfile;
+        trace_location=cs.pack_dir+'/'+msgfile
+        trmsgfile=trace_location
+        print 'loading file '+cs.object_sl_file+' with trace '+msgfile
         plan.run(rate)
         plan.analysis()
         nam='endtoend.';

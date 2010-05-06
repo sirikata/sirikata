@@ -59,20 +59,34 @@ void LoadPacketTrace::loadPacketTrace(const std::string &tracefile, std::vector<
         char line[1025];
         line[1024]='\0';
         int msgcount=0;
-        while (fgets(line,1024,fp)) {
-            char source[UUIDLEN];
-            char dest[UUIDLEN];
+        while ((!feof(fp))&&fgets(line,1024,fp)) {
+            if (strlen(line)<UUIDLEN*2+1)continue;
+            char source[UUIDLEN+1];
+            char dest[UUIDLEN+1];
+            source[UUIDLEN]='\0';
+            dest[UUIDLEN]='\0';
             memcpy(source,line,UUIDLEN);
             memcpy(dest,line+UUIDLEN+1,UUIDLEN);
+            //fprintf (stderr,"sd %s %s\n",source,dest);
+            //SILOG(loadpackettrace,fatal,"source  "<<source << " dest "<<dest<<'\n');
+
+            
             UUID s(source,UUID::HumanReadable());
             UUID d(dest,UUID::HumanReadable());
             Object *ss=mObjectTracker->getObject(s);
             
             Object *dd=mObjectTracker->getObject(d);
+            std::string sstr(s.toString()),dstr(d.toString());
+            //SILOG(loadpackettrace,fatal,"source  "<<sstr<< " dest "<<dstr<<'\n');
+            
+            //fprintf (stderr,"zd %s %s\n",sstr.c_str(),dstr.c_str());
             if (ss&&dd&&ss->connected()&&dd->connected()) {
+                //fprintf (stderr,"xd %s %s\n",sstr.c_str(),dstr.c_str());
+                //SILOG(loadpackettrace,fatal,"source  "<<s.toString() << " dest "<<d.toString()<<'\n');
                 retval.push_back(std::pair<UUID,UUID>(s,d));
                 ++msgcount;
             }
+            line[0]='\0';//clear the entry
             
         }
         
