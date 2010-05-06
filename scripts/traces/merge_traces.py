@@ -22,6 +22,8 @@ if __name__ == "__main__":
     max_x = -10000
     min_y = 10000
     max_y = -10000
+    min_z = 10000
+    max_z = -10000
     fout = file(combined_file, 'w')
     for sy in range(servers_per_side):
         for sx in range(servers_per_side):
@@ -44,6 +46,8 @@ if __name__ == "__main__":
                 min_x = min(min_x, x)
                 max_y = max(max_y, y)
                 min_y = min(min_y, y)
+                max_z = max(max_z, z)
+                min_z = min(min_z, z)
 
                 # the output should be sane, we should notice if
                 # something's awry in the output for min and max,
@@ -57,3 +61,4 @@ if __name__ == "__main__":
     print "Radii:", max_rad, "(max)", min_rad, "(min)"
     print "X:", max_x, "(max)", min_x, "(min)"
     print "Y:", max_y, "(max)", min_y, "(min)"
+    print "Z:", max_z, "(max)", min_z, "(min)"
