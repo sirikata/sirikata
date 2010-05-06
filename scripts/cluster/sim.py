@@ -27,6 +27,7 @@ CBR_WRAPPER = "util/cbr_wrapper.sh"
 class ClusterSimSettings:
     def __init__(self, config, space_svr_pool, layout, num_object_hosts):
         self.config = config
+        self.scp=ClusterSCP
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
@@ -64,11 +65,16 @@ class ClusterSimSettings:
         self.object_sl_center = (0,0,0)
         self.num_sl_objects = 0
 
+        # OH: message trace data loading
+        self.message_trace_file = ''
+
+        
         # OH: scenario / ping settings
         self.scenario = 'ping'
         self.scenario_options = '--num-pings-per-second=1000'
 
         self.blocksize = 200
+        self.zrange=(-10000.,10000)
         self.center = (0, 0, 0)
 
         self.debug = True
@@ -102,6 +108,7 @@ class ClusterSimSettings:
 
         self.vis_mode = 'object'
         self.vis_seed = 1
+        
 
         # Trace:
         # list of trace types to enable, e.g. ['object', 'oseg'] will
@@ -126,7 +133,7 @@ class ClusterSimSettings:
         half_extents = [ self.blocksize * x / 2 for x in (self.layout_x, self.layout_y, 1)]
         neg = [ -x for x in half_extents ]
         pos = [ x for x in half_extents ]
-        return "<<%f,%f,%f>,<%f,%f,%f>>" % (neg[0]+self.center[0], neg[1]+self.center[1], neg[2]+self.center[2], pos[0]+self.center[0], pos[1]+self.center[1], pos[2]+self.center[2])
+        return "<<%f,%f,%f>,<%f,%f,%f>>" % (neg[0]+self.center[0], neg[1]+self.center[1], self.zrange[0], pos[0]+self.center[0], pos[1]+self.center[1], self.zrange[1])
 
     def unique(self):
         if (self.config.unique == None):
@@ -202,7 +209,7 @@ class ClusterSim:
         if (self.settings.num_sl_objects):
             params.append('--object.sl-num=' + str(self.settings.num_sl_objects))
         params.append('--object.sl-center=' + ('<%f,%f,%f>' % self.settings.object_sl_center))
-
+        print "EXTENDING"
         params.extend(
             [
             '%(packoffset)s',
@@ -325,6 +332,9 @@ class ClusterSim:
             ClusterSCP(self.config, [self.settings.object_pack, self.pack_filename(self.settings.object_pack)], io=self.io)
         if (len(self.settings.object_sl_file)):
             ClusterSCP(self.config, [self.settings.object_sl_file, self.pack_filename(self.settings.object_sl_file)], io=self.io)
+        if (len(self.settings.message_trace_file)):
+            print "coopying ",self.settings.message_trace_file, self.pack_filename(self.settings.message_trace_file)
+            ClusterSCP(self.config, [self.settings.message_trace_file, self.pack_filename(self.settings.message_trace_file)], io=self.io)
 
 
     def fill_parameters(self, node_params, param_dict, node_class, idx):
@@ -423,7 +433,7 @@ class ClusterSim:
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
         cmd_seq.extend(cseg_params)
-
+        print "COMMAND AS FOLLOWS ",cmd_seq
         for tracetype in self.settings.traces:
             cmd_seq.append( '--trace-%s=true' % (tracetype) )
 

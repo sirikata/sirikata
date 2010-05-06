@@ -54,9 +54,9 @@ public:
     ///WARNING: expensive (linear search)
     ServerID getServerID(int ObjectsByServerMapNumber);
     size_t numObjectsConnected(ServerID id);
+    Object* getObject(const UUID& objid) const;
 private:
     void generatePairs();
-    Object* getObject(const UUID& objid) const;
 
     virtual void objectHostConnectedObject(ObjectHost* oh, Object* obj, const ServerID& server);
     virtual void objectHostMigratedObject(ObjectHost* oh, const UUID& objid, const ServerID& from_server, const ServerID& to_server);

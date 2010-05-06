@@ -73,7 +73,6 @@ class LoadPacketTrace : public Scenario {
     uint32 mNumObjectsPerServer;
     bool mLocalTraffic;
     bool mSourceFloodServer;
-    double mFractionMessagesUniform;
     struct MessageFlow {
         float cumulativeProbability;
         float dist;
@@ -99,6 +98,9 @@ class LoadPacketTrace : public Scenario {
     static LoadPacketTrace*create(const String&options);
     void generatePairs();
     std::vector<std::pair<UUID,UUID> >mPacketTrace;
+    unsigned int mPacketTraceIndex;
+    std::string mPacketTraceFileName;
+    void loadPacketTrace(const std::string &tracefile, std::vector<std::pair<UUID,UUID> >&retval);
 public:
     LoadPacketTrace(const String &options);
     ~LoadPacketTrace();

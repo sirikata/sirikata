@@ -45,29 +45,44 @@ void DPSInitOptions(LoadPacketTrace *thus) {
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("prob-messages-uniform","1",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
-        new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
-        new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
+        new OptionValue("ping-size","30",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
+        new OptionValue("flood-server","4",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         new OptionValue("source-flood-server","false",Sirikata::OptionValueType<bool>(),"This makes the flood server the source of all the packets rather than the destination, so that we can validate that egress routing gets proper fairness."),
         new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
         new OptionValue("tracefile","messagetrace",Sirikata::OptionValueType<String>(),"File that will store the traces in ascii with the source then destination object UUIDs separated by one character and ending with a newline of some sort"),
         NULL);
 }
 enum {UUIDLEN =36};
-void loadPacketTrace(const std::string &tracefile, std::vector<std::pair<UUID,UUID> >&retval) {
+void LoadPacketTrace::loadPacketTrace(const std::string &tracefile, std::vector<std::pair<UUID,UUID> >&retval) {
     FILE *fp=fopen(tracefile.c_str(),"rb");
     if (fp) {
-    char line[1025];
-    line[1024]='\0';
-    while (fgets(line,1024,fp)) {
-        char source[UUIDLEN];
-        char dest[UUIDLEN];
-        memcpy(source,line,UUIDLEN);
-        memcpy(dest,line+UUIDLEN+1,UUIDLEN);
-        UUID s(source,UUID::HumanReadable());
-        UUID d(dest,UUID::HumanReadable());
-        retval.push_back(std::pair<UUID,UUID>(s,d));
-                                              
-    }
+        char line[1025];
+        line[1024]='\0';
+        int msgcount=0;
+        while (fgets(line,1024,fp)) {
+            char source[UUIDLEN];
+            char dest[UUIDLEN];
+            memcpy(source,line,UUIDLEN);
+            memcpy(dest,line+UUIDLEN+1,UUIDLEN);
+            UUID s(source,UUID::HumanReadable());
+            UUID d(dest,UUID::HumanReadable());
+            Object *ss=mObjectTracker->getObject(s);
+            
+            Object *dd=mObjectTracker->getObject(d);
+            if (ss&&dd&&ss->connected()&&dd->connected()) {
+                retval.push_back(std::pair<UUID,UUID>(s,d));
+                ++msgcount;
+            }
+            
+        }
+        
+        fclose(fp);
+
+        if (retval.empty()){
+            Object* first=mObjectTracker->roundRobinObject(mFloodServer);
+            Object* second=mObjectTracker->roundRobinObject();
+            retval.push_back(std::pair<UUID,UUID>(first->uuid(),second->uuid()));
+        }
     }else{
         SILOG(loadpackettrace,fatal,"Unable to open file "<<tracefile);
     }
@@ -83,7 +98,7 @@ LoadPacketTrace::LoadPacketTrace(const String &options)
     DPSInitOptions(this);
     OptionSet* optionsSet = OptionSet::getOptions("LoadPacketTrace",this);
     optionsSet->parse(options);
-    loadPacketTrace(optionsSet->referenceOption("tracefile")->as<String>(),mPacketTrace);
+    mPacketTraceFileName=optionsSet->referenceOption("tracefile")->as<String>();
     
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
@@ -91,7 +106,6 @@ LoadPacketTrace::LoadPacketTrace(const String &options)
     mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
     mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
     mLocalTraffic = optionsSet->referenceOption("local")->as<bool>();
-    mFractionMessagesUniform= optionsSet->referenceOption("prob-messages-uniform")->as<double>();
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
     mGeneratePingPoller = NULL;
@@ -178,100 +192,27 @@ void LoadPacketTrace::stop() {
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
 void LoadPacketTrace::generatePairs() {
     
-    if (mSendCDF.empty()) {
+    if (mPacketTrace.empty()) {
         std::vector<Object*> floodedObjects;
         Time t=mContext->simTime();
-
+        int nobjects=0;
         for (int i=0;i<(int)mObjectTracker->numServerIDs();++i) {
-            if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {
-                return;
-            }
+            nobjects+=mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i));
         }
-        OH_LOG(warning, "Beginning object seed phase at " << (t-mStartTime)<<"\n");
-        Object* first=mObjectTracker->roundRobinObject(mFloodServer);
-        if (!first) {
-            assert(0);
-            return;
-        }
-        Object* cur=first;
-        do {
-            floodedObjects.push_back(cur);
-            cur=mObjectTracker->roundRobinObject(mFloodServer);
-        }while(cur!=first);        
-        for (size_t i=0;i<mObjectTracker->numServerIDs();++i) {
-            ServerID sid=mObjectTracker->getServerID(i);
-            if (sid==mFloodServer) continue;
-            Object* first=mObjectTracker->roundRobinObject(sid);
-            if (!first) {
-                assert(0);
-                return;
-            }
-            Object* cur=first;
-            do {
-                //generate message from/to cur to a floodedObject
-                Object* dest=floodedObjects[rand()%floodedObjects.size()];
-                assert(dest);
-                Object* src=cur=mObjectTracker->roundRobinObject(sid);
-                assert(src);
-                if (mSourceFloodServer) {
-                    std::swap(src,dest);
-                }
-                MessageFlow pi;
-                pi.dest=dest->uuid();
-                pi.source=src->uuid();
-                pi.dist=(src->location().position(t)-dest->location().position(t)).length();
-/*
-                printf ("Sending data from object size %f to object size %f, %f meters away\n",
-                        src->bounds().radius(),
-                        dest->bounds().radius(),
-                        pi.dist);
-*/
-                BoundingBox3f srcbb(src->location().position(t),src->bounds().radius());
-                BoundingBox3f dstbb(dest->location().position(t),dest->bounds().radius());
-                pi.cumulativeProbability= this->mWeightCalculator->weight(srcbb,dstbb);
-                mSendCDF.push_back(pi);
-                
-            }while(cur!=first);
-        }
-        std::sort(mSendCDF.begin(),mSendCDF.end());
-        double cumulative=0;
-        for (size_t i=0;i<mSendCDF.size();++i) {
-            cumulative+=mSendCDF[i].cumulativeProbability;
-            mSendCDF[i].cumulativeProbability=cumulative;
-        }
-        
-        for (size_t i=0;i<mSendCDF.size();++i) {
-            mSendCDF[i].cumulativeProbability/=cumulative;
-        }
+        loadPacketTrace(mPacketTraceFileName,mPacketTrace);
+        OH_LOG(warning, "Beginning object seed phase at " << (t-mStartTime)<<" with "<<nobjects<<" connected objects and "<<mPacketTrace.size()<<"messages\n");
     }
 
 }
 static unsigned int even=0;
 bool LoadPacketTrace::generateOnePing(const Time& t, PingInfo* result) {
     generatePairs();
-    double which =(rand()/(double)RAND_MAX);
-    if (!mSendCDF.empty()) {
-        FlowCDF::iterator where;
-        {
-            MessageFlow comparator;
-            comparator.cumulativeProbability=which;
-            if (rand()<mFractionMessagesUniform*RAND_MAX)
-                where=mSendCDF.begin()+which*(mSendCDF.size()-1);
-            else
-                where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
-        }
-        if (where==mSendCDF.end()) {
-            --where;       
-        }
-        result->objA = where->source;
-        result->objB = where->dest;
-        result->dist = where->dist;
-        result->ping = new CBR::Protocol::Object::Ping();
-        mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
-        return true;
-    }
-    
-    return false;
+    result->objA=mPacketTrace[mPacketTraceIndex%mPacketTrace.size()].first;
+    result->objB=mPacketTrace[mPacketTraceIndex++%mPacketTrace.size()].second;
+    result->ping = new CBR::Protocol::Object::Ping();
+    result->dist=(double)mPacketTraceIndex;
+    mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
+    return true;
 }
 
 void LoadPacketTrace::generatePings() {
