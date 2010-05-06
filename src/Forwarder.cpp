@@ -444,7 +444,11 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 
 WARN_UNUSED
 bool Forwarder::tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg) {
+    TIMESTAMP_START(tstamp, msg);
+
+    TIMESTAMP_END(tstamp, Trace::OSEG_CACHE_CHECK_STARTED);
     CraqEntry destserver = mOSegLookups->cacheLookup(msg->dest_object());
+    TIMESTAMP_END(tstamp, Trace::OSEG_CACHE_CHECK_FINISHED);
     if (destserver.isNull())
         return false;
 
