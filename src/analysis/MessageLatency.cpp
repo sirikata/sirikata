@@ -835,6 +835,7 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
     stage_graph.addEdge(Trace::OH_HIT_NETWORK, Trace::HANDLE_OBJECT_HOST_MESSAGE, PacketStageGraph::ASYNC);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::FORWARDED_LOCALLY);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::OSEG_CACHE_CHECK_STARTED);
+    stage_graph.addEdge(Trace::OSEG_CACHE_CHECK_STARTED, Trace::OSEG_CACHE_CHECK_FINISHED);
     stage_graph.addEdge(Trace::OSEG_CACHE_CHECK_FINISHED, Trace::OSEG_CACHE_LOOKUP_FINISHED);
     stage_graph.addEdge(Trace::OSEG_CACHE_CHECK_FINISHED, Trace::FORWARDING_STARTED);
     stage_graph.addEdge(Trace::HANDLE_OBJECT_HOST_MESSAGE, Trace::SPACE_DROPPED_AT_MAIN_STRAND_CROSSING); // drop
