@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ObjectScriptManagerFactory.hpp
+/*  Sirikata
+ *  JSLogging.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,24 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#define _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
+#ifndef _SIRIKATA_JS_LOGGING_HPP_
+#define _SIRIKATA_JS_LOGGING_HPP_
+
 #include <oh/Platform.hpp>
-namespace Sirikata{
 
-class ObjectScriptManager;
+#define JSLOG(level, msg) SILOG(js, level, "[JS]" << msg)
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT ObjectScriptManagerFactory
-    : public AutoSingleton<ObjectScriptManagerFactory>,
-      public Factory1<ObjectScriptManager*,
-                      const String&> //options string for the object script manager
-{
-public:
-    static ObjectScriptManagerFactory&getSingleton();
-    static void destroy();
-};
-
-
-}
-#endif
+#endif //_SIRIKATA_JS_LOGGING_HPP_

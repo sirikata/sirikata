@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ObjectScriptManagerFactory.hpp
+/*  Sirikata
+ *  JSObjectScript.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,24 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#define _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#include <oh/Platform.hpp>
-namespace Sirikata{
+#ifndef _SIRIKATA_JS_OBJECT_SCRIPT_HPP_
+#define _SIRIKATA_JS_OBJECT_SCRIPT_HPP_
 
-class ObjectScriptManager;
+#include <oh/ObjectScript.hpp>
+#include <oh/ObjectScriptManager.hpp>
+#include <oh/HostedObject.hpp>
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT ObjectScriptManagerFactory
-    : public AutoSingleton<ObjectScriptManagerFactory>,
-      public Factory1<ObjectScriptManager*,
-                      const String&> //options string for the object script manager
-{
+namespace Sirikata {
+namespace JS {
+
+class JSObjectScript : public ObjectScript {
 public:
-    static ObjectScriptManagerFactory&getSingleton();
-    static void destroy();
+    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args);
+    ~JSObjectScript();
+
+    bool forwardMessagesTo(MessageService*);
+    bool endForwardingMessagesTo(MessageService*);
+    bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
+    void processMessage(const RoutableMessageHeader& header, MemoryReference body);
+
+    /** Returns true if this script is valid, i.e. if it was successfully loaded
+     *  and initialized.
+     */
+    bool valid() const;
+
+private:
+    HostedObjectPtr mParent;
 };
 
+} // namespace JS
+} // namespace Sirikata
 
-}
-#endif
+#endif //_SIRIKATA_JS_OBJECT_SCRIPT_HPP_

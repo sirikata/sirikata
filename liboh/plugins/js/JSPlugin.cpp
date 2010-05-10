@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ObjectScriptManagerFactory.hpp
+/*  Sirikata
+ *  JSPlugin.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,24 +30,55 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#define _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
 #include <oh/Platform.hpp>
-namespace Sirikata{
+#include <oh/ObjectScriptManagerFactory.hpp>
+#include "JSObjectScriptManager.hpp"
+#include "JSLogging.hpp"
 
-class ObjectScriptManager;
-
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT ObjectScriptManagerFactory
-    : public AutoSingleton<ObjectScriptManagerFactory>,
-      public Factory1<ObjectScriptManager*,
-                      const String&> //options string for the object script manager
-{
-public:
-    static ObjectScriptManagerFactory&getSingleton();
-    static void destroy();
-};
+static int js_plugin_refcount = 0;
 
 
+SIRIKATA_PLUGIN_EXPORT_C const char* name() {
+    return "js";
 }
-#endif
+
+
+SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
+    return ++js_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
+    assert(js_plugin_refcount>0);
+    return --js_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int refcount() {
+    return js_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void init() {
+    using namespace Sirikata;
+    using std::tr1::placeholders::_1;
+    if (js_plugin_refcount == 0) {
+        JSLOG(info,"Initializing JS Plugin.");
+        ObjectScriptManagerFactory::getSingleton().registerConstructor(
+            name(),
+            std::tr1::bind(
+                &Sirikata::JS::JSObjectScriptManager::createObjectScriptManager,
+                _1
+            )
+        );
+    }
+    js_plugin_refcount++;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy() {
+    using namespace Sirikata;
+    if (js_plugin_refcount>0) {
+        js_plugin_refcount--;
+        assert(js_plugin_refcount==0);
+        if (js_plugin_refcount==0) {
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor(name());
+        }
+    }
+}

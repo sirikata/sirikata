@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ObjectScriptManagerFactory.hpp
+/*  Sirikata
+ *  JSObjectScriptManager.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,24 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#define _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#include <oh/Platform.hpp>
-namespace Sirikata{
+#ifndef _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
+#define _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 
-class ObjectScriptManager;
+#include <oh/ObjectScriptManager.hpp>
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT ObjectScriptManagerFactory
-    : public AutoSingleton<ObjectScriptManagerFactory>,
-      public Factory1<ObjectScriptManager*,
-                      const String&> //options string for the object script manager
-{
+namespace Sirikata {
+namespace JS {
+
+class JSObjectScriptManager : public ObjectScriptManager {
 public:
-    static ObjectScriptManagerFactory&getSingleton();
-    static void destroy();
+    static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
+
+
+    JSObjectScriptManager(const Sirikata::String& arguments);
+    virtual ~JSObjectScriptManager();
+
+    virtual ObjectScript* createObjectScript(HostedObjectPtr ho,
+        const Arguments &args);
+    virtual void destroyObjectScript(ObjectScript* toDestroy);
+private:
 };
 
+} // namespace JS
+} // namespace Sirikata
 
-}
-#endif
+#endif //_SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
