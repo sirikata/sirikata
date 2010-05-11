@@ -283,11 +283,16 @@ IF(MONO_FOUND)
 ENDIF(MONO_FOUND)
 
 # V8 for JS plugin
-# FIXME
-SET(V8_FOUND TRUE)
-SET(V8_CFLAGS)
-SET(V8_LDFLAGS)
-SET(V8_LIBRARIES)
+IF(NOT V8_ROOT)
+  IF(WIN32)
+    # TODO: Add path to some prebuilt version of V8 for Win32
+  ELSEIF(APPLE)
+    SET(V8_ROOT ${PLATFORM_LIBS}/installed-v8)
+  ELSE()
+    SET(V8_ROOT ${PLATFORM_LIBS}/installed-v8)
+  ENDIF()
+ENDIF()
+FIND_PACKAGE(V8)
 
 #dependency: protocolbuffers
 IF(EXISTS ${PLATFORM_LIBS}/installed-protobufs/bin)
@@ -652,6 +657,9 @@ IF(OpenCOLLADA_FOUND)
 ENDIF()
 IF(bullet_FOUND)
   SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${bullet_INCLUDE_DIRS})
+ENDIF()
+IF(V8_FOUND)
+  SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${V8_INCLUDE_DIRS})
 ENDIF()
 
 
@@ -1415,8 +1423,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
 IF(V8_FOUND)
 ADD_PLUGIN_TARGET(scripting-js
                     SOURCES ${LIBOH_PLUGIN_JS_SOURCES}
-                    TARGET_CXXFLAGS ${V8_CFLAGS}
-                    TARGET_LDFLAGS ${V8_LDFLAGS} ${sirikata_LDFLAGS}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${V8_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     )
