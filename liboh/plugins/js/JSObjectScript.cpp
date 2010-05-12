@@ -36,15 +36,19 @@
 #include "JSObjectScript.hpp"
 #include "JSObjectScriptManager.hpp"
 
+using namespace v8;
+
 namespace Sirikata {
 namespace JS {
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args)
- : mParent(ho)
+ : mParent(ho),
+   mContext(Context::New())
 {
 }
 
 JSObjectScript::~JSObjectScript() {
+    mContext.Dispose();
 }
 
 bool JSObjectScript::forwardMessagesTo(MessageService*){

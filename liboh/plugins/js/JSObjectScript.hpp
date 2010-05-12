@@ -36,6 +36,7 @@
 #include <oh/ObjectScript.hpp>
 #include <oh/ObjectScriptManager.hpp>
 #include <oh/HostedObject.hpp>
+#include <v8.h>
 
 namespace Sirikata {
 namespace JS {
@@ -57,6 +58,7 @@ public:
 
 private:
     HostedObjectPtr mParent;
+    v8::Persistent<v8::Context> mContext;
 };
 
 } // namespace JS

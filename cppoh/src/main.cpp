@@ -174,7 +174,14 @@ int main ( int argc,const char**argv ) {
                                 NULL);
 
     PluginManager plugins;
-    const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics", "bulletphysics","colladamodels", NULL};
+    const char* pluginNames[] = {
+        "tcpsst", "monoscript",
+#ifdef HAVE_JS_SCRIPTING
+        "scripting-js",
+#endif
+        "sqlite", "ogregraphics", "bulletphysics","colladamodels",
+        NULL
+    };
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
         plugins.load( DynamicLibrary::filename(*plugin_name) );
 
