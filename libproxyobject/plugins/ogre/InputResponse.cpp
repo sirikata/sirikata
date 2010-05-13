@@ -353,5 +353,35 @@ InputResponse::InputEventDescriptorList StringMapInputResponse::getInputEvents(c
 }
 
 
+
+WebViewStringMapInputResponse::WebViewStringMapInputResponse(ResponseCallback cb)
+ : mCallback(cb)
+{
+}
+
+void WebViewStringMapInputResponse::invoke(WebViewEventPtr& wvevt) {
+    const std::vector<String>& args = wvevt->args;
+    StringMap data;
+    if (args.size() % 2 != 0) {
+        SILOG(input,error,"Odd number of string arguments to WebViewStringMapInputResponse.");
+        return;
+    }
+
+    for(uint32 idx = 0; idx < args.size(); idx += 2)
+        data[args[idx]] = args[idx+1];
+    mCallback(wvevt->wv, data);
+}
+
+InputResponse::InputEventDescriptorList WebViewStringMapInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isWeb()) {
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName()));
+    }
+
+    return result;
+}
+
+
 } // namespace Graphics
 } // namespace Sirikata

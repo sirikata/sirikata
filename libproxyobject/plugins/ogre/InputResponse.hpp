@@ -171,6 +171,22 @@ private:
     ResponseCallback mCallback;
 };
 
+
+// Input response that takes a webview and string -> string map.
+class WebViewStringMapInputResponse : public InputResponse {
+public:
+    typedef std::tr1::unordered_map<String, String> StringMap;
+    typedef std::tr1::function<void(WebView*, StringMap)> ResponseCallback;
+
+    WebViewStringMapInputResponse(ResponseCallback cb);
+
+    virtual void invoke(Input::WebViewEventPtr&);
+
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
+private:
+    ResponseCallback mCallback;
+};
+
 } // namespace Graphics
 } // namespace Sirikata
 

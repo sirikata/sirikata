@@ -647,6 +647,7 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
 HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,const std::tr1::shared_ptr<TopLevelSpaceConnection>&tls) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
+    mSpaces.insert(sid);
     SpaceDataMap::iterator iter = mSpaceData->insert(
         SpaceDataMap::value_type(
             sid,
@@ -1077,6 +1078,24 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     obj->initializeScript(script_type, script_args);
                 }
                 return;
+    }
+    if (name == "InitScript") {
+        Protocol::ScriptingInit si;
+        si.ParseFromArray(args.data(),args.size());
+
+        if (si.has_script()) {
+            String script_type = si.script();
+            ObjectScriptManager::Arguments script_args;
+            if (si.has_script_args()) {
+                Protocol::StringMapProperty args_map = si.script_args();
+                assert(args_map.keys_size() == args_map.values_size());
+                for (int i = 0; i < args_map.keys_size(); ++i)
+                    script_args[ args_map.keys(i) ] = args_map.values(i);
+            }
+            initializeScript(script_type, script_args);
+        }
+
+        return;
     }
     if (name == "ConnectToSpace") {
         // Fixme: move connection logic here so it's possible to reply later on.

@@ -32,9 +32,11 @@
 
 #include <oh/Platform.hpp>
 #include <util/RoutableMessageHeader.hpp>
+#include <util/KnownServices.hpp>
 
 #include "JSObjectScript.hpp"
 #include "JSObjectScriptManager.hpp"
+#include "JSLogging.hpp"
 
 using namespace v8;
 
@@ -45,9 +47,21 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
  : mParent(ho),
    mContext(Context::New())
 {
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    if (spaces.size() > 1)
+        JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
+
+    for(HostedObject::SpaceSet::iterator space_it = spaces.begin(); space_it != spaces.end(); space_it++) {
+        mScriptingPort = mParent->bindODPPort(*space_it, Services::SCRIPTING);
+        if (mScriptingPort)
+            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
+    }
 }
 
 JSObjectScript::~JSObjectScript() {
+    if (mScriptingPort)
+        delete mScriptingPort;
+
     mContext.Dispose();
 }
 
@@ -82,6 +96,9 @@ bool JSObjectScript::valid() const {
     return (mParent);
 }
 
+void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
+    NOT_IMPLEMENTED(js);
+}
 
 } // namespace JS
 } // namespace Sirikata

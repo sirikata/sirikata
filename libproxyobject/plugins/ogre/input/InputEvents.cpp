@@ -90,17 +90,19 @@ IdPair::Primary DragAndDropEvent::Id("DragAndDrop");
 
 IdPair::Primary WebViewEvent::Id("WebView");
 
-WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std::vector<String>& _args)
+WebViewEvent::WebViewEvent(Graphics::WebView* _wv, const String &wvName, const String& _name, const std::vector<String>& _args)
  : InputEvent(InputDeviceWPtr(), IdPair(Id, _name)),
+   wv(_wv),
    webview(wvName),
    name(_name),
    args(_args)
 {
 }
 
-WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
+WebViewEvent::WebViewEvent(Graphics::WebView* _wv, const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
  : InputEvent(InputDeviceWPtr(), IdPair(Id,
        jsargs.empty()?std::string():std::string(jsargs[0].data(), jsargs[0].length()))),
+   wv(_wv),
    webview(wvName)
 {
     if (jsargs.size() >= 1) {

@@ -94,7 +94,10 @@ protected:
     };
 
 //------- Members
-
+  public:
+    typedef std::set<SpaceID> SpaceSet;
+  private:
+    SpaceSet mSpaces;
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
@@ -136,6 +139,12 @@ private:
     // When a connection to a space is setup, initialize it to handle default behaviors
     void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
 public:
+
+    /** Get a set of spaces the object is currently connected to. */
+    const SpaceSet& spaces() const {
+        return mSpaces;
+    }
+
 //------- Public member functions:
     ///makes a new object that is not in the persistence database.
     void initializeDefault(

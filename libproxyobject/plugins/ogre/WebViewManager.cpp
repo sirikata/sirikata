@@ -765,7 +765,7 @@ void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& ar
     JSArguments event_args;
     event_args.insert(event_args.begin(), args.begin() + 1, args.end());
 
-    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
+    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview, webview->getName(), args) ));
 #endif
 }
 

@@ -1,0 +1,34 @@
+<html>
+  <head>
+    <script language="javascript" type="text/javascript">
+      function addMessage(msg) {
+        var new_p = document.createElement('p');
+        new_p.appendChild( document.createTextNode(msg) );
+        var results_div = document.getElementById('Results');
+        results_div.appendChild( new_p );
+      }
+
+      function runCommand() {
+        var command = document.getElementById('Command').value;
+
+        addMessage(command);
+
+        var arg_map = [
+          'ExecScript',
+          'Command', command
+        ];
+        chrome.send("event", arg_map);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="Results">
+    </div>
+    <div>
+      <form>
+        <input type="text" id="Command" name="Command" value="" />
+        <button type="button" onclick="runCommand()">Run</button>
+      </form>
+    </div>
+  </body>
+</html>

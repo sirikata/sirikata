@@ -101,7 +101,7 @@ message ReadOnlyMessage {
 
 /////////////Built-in messages///////////////
 
-message SpaceServices {   
+message SpaceServices {
    optional uint32 rpc_port=32;
    optional uint32 registration_port=33;
    optional uint32 loc_port=34;
@@ -223,7 +223,7 @@ message ProxCall {
 // May be sent back as a return value if space does not support standing queries
 message DelProxQuery {
     //delete a query by client id
-    optional uint32 query_id=2;  
+    optional uint32 query_id=2;
 }
 
 
@@ -320,4 +320,25 @@ message CreateObject {
 
     optional string script = 9;
     optional StringMapProperty script_args = 10;
+}
+
+
+message ScriptingInit {
+    optional string script = 1;
+    optional StringMapProperty script_args = 2;
+}
+
+message ScriptingRequest {
+    optional uint32 id = 1;
+    optional string body = 2;
+}
+
+message ScriptingReply {
+    optional uint32 id = 1;
+    optional string body = 2;
+}
+
+message ScriptingMessage {
+    repeated ScriptingRequest requests = 1;
+    repeated ScriptingReply replies = 2;
 }

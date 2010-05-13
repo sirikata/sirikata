@@ -124,6 +124,23 @@ class OgreSystem::MouseHandler {
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
+
+    struct UIInfo {
+        UIInfo()
+         : scripting(NULL)
+        {}
+
+        WebView* scripting;
+    };
+    typedef std::map<SpaceObjectReference, UIInfo> ObjectUIMap;
+    ObjectUIMap mObjectUIs;
+    // Currently we don't have a good way to push the space object reference to
+    // the webview because doing it too early causes it to fail since the JS in
+    // the page hasn't been executed yet.  Instead, we maintain a map so we can
+    // extract it from the webview ID.
+    typedef std::map<WebView*, ProxyObjectWPtr> ScriptingUIObjectMap;
+    ScriptingUIObjectMap mScriptingUIObjects;
+
     SpaceObjectReference mLastShiftSelected;
     IntersectResult mMouseDownTri;
     ProxyObjectWPtr mMouseDownObject;
@@ -633,6 +650,43 @@ private:
         ui_wv->loadFile(ui_page);
     }
 
+    /** Create a UI element for interactively scripting an object. */
+    void createScriptingUIAction() {
+        // Ask all the objects to initialize scripting
+        initScriptOnSelectedObjects();
+
+        // Then bring up windows for each of them
+        for(SelectedObjectSet::iterator sel_it = mSelectedObjects.begin(); sel_it != mSelectedObjects.end(); sel_it++) {
+            ProxyObjectPtr obj(sel_it->lock());
+            if (!obj) continue;
+
+            SpaceObjectReference objid = obj->getObjectReference();
+
+            ObjectUIMap::iterator ui_it = mObjectUIs.find(objid);
+            if (ui_it == mObjectUIs.end()) {
+                mObjectUIs.insert( ObjectUIMap::value_type(objid, UIInfo()) );
+                ui_it = mObjectUIs.find(objid);
+            }
+            UIInfo& ui_info = ui_it->second;
+
+            if (ui_info.scripting != NULL) {
+                // Already there, just make sure its showing
+                ui_info.scripting->show();
+            }
+            else {
+                WebView* new_scripting_ui =
+                    WebViewManager::getSingleton().createWebView(
+                        "__scripting", 300, 300,
+                        OverlayPosition(RP_BOTTOMCENTER)
+                    );
+                new_scripting_ui->loadFile("../scripting/prompt.html");
+
+                ui_info.scripting = new_scripting_ui;
+                mScriptingUIObjects[new_scripting_ui] = obj;
+            }
+        }
+    }
+
     void LOCAL_createWebviewAction() {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
@@ -706,7 +760,7 @@ private:
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
         typedef std::tr1::unordered_map<String, String> StringMap;
-        printf("createScriptedObjectAction: %d\n", args.size());
+        printf("createScriptedObjectAction: %d\n", (int)args.size());
         // Filter out the script type from rest of args
         String script_type = "";
         StringMap filtered_args = args;
@@ -752,6 +806,63 @@ private:
         camera->getProxy().sendMessage(
             Services::RPC,
             MemoryReference(serialized.data(), serialized.length())
+        );
+    }
+
+    void initScriptOnSelectedObjects() {
+        for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
+             selectIter != mSelectedObjects.end(); ++selectIter) {
+            ProxyObjectPtr obj(selectIter->lock());
+
+            Protocol::ScriptingInit init_script;
+
+            // Filter out the script type from rest of args
+            String script_type = "js"; // FIXME how to decide this?
+            init_script.set_script(script_type);
+
+            std::string serializedInitScript;
+            init_script.SerializeToString(&serializedInitScript);
+
+            RoutableMessageBody body;
+            body.add_message("InitScript", serializedInitScript);
+            std::string serialized;
+            body.SerializeToString(&serialized);
+            obj->sendMessage(
+                Services::RPC,
+                MemoryReference(serialized.data(), serialized.length())
+            );
+        }
+    }
+
+    /** Executes a script chunk in an object.
+     *  Implicit parameters in args:
+     *   Command: (string) command(s) to execute.
+     *  The target of the command is determined implicitly based on
+     *  the webview this is coming from.
+     */
+    void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args) {
+        typedef std::tr1::unordered_map<String, String> StringMap;
+
+        ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
+        if (objit == mScriptingUIObjects.end())
+            return;
+        ProxyObjectPtr target_obj(objit->second.lock());
+
+        if (!target_obj) return;
+
+        StringMap::const_iterator command_it = args.find("Command");
+        assert(command_it != args.end());
+
+        //Get Proxy
+        Protocol::ScriptingMessage scripting_msg;
+        Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+        scripting_req.set_id(0);
+        scripting_req.set_body(command_it->second);
+        std::string serialized_scripting_request;
+        scripting_msg.SerializeToString(&serialized_scripting_request);
+        target_obj->sendMessage(
+            Services::SCRIPTING,
+            MemoryReference(serialized_scripting_request)
         );
     }
 
@@ -1515,8 +1626,11 @@ public:
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
 
         mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "../object/object.html"));
+        mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptingUIAction, this));
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
+        mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+
         mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
@@ -1577,6 +1691,7 @@ public:
         // Various other actions
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_ALT), mInputResponses["openScriptingUI"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
@@ -1630,6 +1745,8 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
 
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
+
+        mInputBinding.add(InputBindingEvent::Web("__scripting", "ExecScript"), mInputResponses["executeScript"]);
     }
 
     ~MouseHandler() {

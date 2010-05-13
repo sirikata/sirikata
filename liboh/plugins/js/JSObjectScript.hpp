@@ -57,8 +57,13 @@ public:
     bool valid() const;
 
 private:
+
+    void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
+
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
+
+    ODP::Port* mScriptingPort;
 };
 
 } // namespace JS
