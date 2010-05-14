@@ -62,7 +62,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     if (js_plugin_refcount == 0) {
         JSLOG(info,"Initializing JS Plugin.");
         ObjectScriptManagerFactory::getSingleton().registerConstructor(
-            name(),
+            "js",
             std::tr1::bind(
                 &Sirikata::JS::JSObjectScriptManager::createObjectScriptManager,
                 _1
@@ -78,7 +78,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         js_plugin_refcount--;
         assert(js_plugin_refcount==0);
         if (js_plugin_refcount==0) {
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor(name());
+            JSLOG(info,"Destroying JS Plugin.");
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("js");
         }
     }
 }
