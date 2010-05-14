@@ -1,15 +1,32 @@
 <html>
   <head>
+    <style type="text/css">
+      p.command {
+        border-width: 1px 1px 1px 1px;
+        border-color: black;
+        border-style: solid;
+        padding: 0px;
+      }
+    </style>
     <script language="javascript" type="text/javascript">
+      function pageScroll() {
+        window.scrollBy(0,1000); // horizontal and vertical scroll increments
+      }
+
       function addMessage(msg) {
         var new_p = document.createElement('p');
         new_p.appendChild( document.createTextNode(msg) );
+        new_p.className = 'command';
         var results_div = document.getElementById('Results');
         results_div.appendChild( new_p );
+
+        setTimeout('pageScroll()',100);
       }
 
       function runCommand() {
-        var command = document.getElementById('Command').value;
+        var command_area = document.getElementById('Command');
+        var command = command_area.value;
+        command_area.value = '';
 
         addMessage(command);
 
@@ -26,7 +43,7 @@
     </div>
     <div>
       <form>
-        <input type="text" id="Command" name="Command" value="" />
+        <input type="textarea" id="Command" name="Command" value="" />
         <button type="button" onclick="runCommand()">Run</button>
       </form>
     </div>
