@@ -179,7 +179,11 @@ int main ( int argc,const char**argv ) {
 #ifdef HAVE_JS_SCRIPTING
         "scripting-js",
 #endif
-        "sqlite", "ogregraphics", "bulletphysics","colladamodels",
+        "sqlite", "ogregraphics",
+#ifdef WANT_CRASHING
+        "bulletphysics",
+#endif
+        "colladamodels",
         NULL
     };
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
