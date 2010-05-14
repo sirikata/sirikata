@@ -124,12 +124,30 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
 
         v8::HandleScope handle_scope;
 
-        v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
-        v8::Handle<v8::Script> script = v8::Script::Compile(source);
-        v8::Handle<v8::Value> result = script->Run();
+        TryCatch try_catch;
 
-        v8::String::AsciiValue ascii(result);
-        JSLOG(info, "Script result: " << *ascii);
+        v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
+
+        // Compile
+        v8::Handle<v8::Script> script = v8::Script::Compile(source);
+        if (script.IsEmpty()) {
+            v8::String::Utf8Value error(try_catch.Exception());
+            JSLOG(error, "Compile error: " << *error);
+            continue;
+        }
+
+        // Execute
+        v8::Handle<v8::Value> result = script->Run();
+        if (result.IsEmpty()) {
+            v8::String::Utf8Value error(try_catch.Exception());
+            JSLOG(error, "Uncaught exception: " << *error);
+            continue;
+        }
+
+        if (!result->IsUndefined()) {
+            v8::String::AsciiValue ascii(result);
+            JSLOG(info, "Script result: " << *ascii);
+        }
     }
 }
 
