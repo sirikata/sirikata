@@ -781,6 +781,16 @@ ADD_PBJ_TARGET(Sirikata Physics
   ${PROTOCOLBUFFERS_GENS}
 )
 
+ADD_PBJ_TARGET(Sirikata
+  INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "JS"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES JS_PBJ_CPP_FILES
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  ${PROTOCOLBUFFERS_GENS}
+)
+
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "ObjectHostBinary"
@@ -1416,10 +1426,11 @@ ENDIF()
 
 SET(LIBOH_PLUGIN_JS_DIR ${LIBOH_PLUGIN_DIR}/js)
 SET(LIBOH_PLUGIN_JS_SOURCES
- ${LIBOH_PLUGIN_JS_DIR}/JSPlugin.cpp
- ${LIBOH_PLUGIN_JS_DIR}/JSObjectScriptManager.cpp
- ${LIBOH_PLUGIN_JS_DIR}/JSObjectScript.cpp
-    )
+  ${JS_PBJ_CPP_FILES}
+  ${LIBOH_PLUGIN_JS_DIR}/JSPlugin.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectScriptManager.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectScript.cpp
+  )
 IF(V8_FOUND)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
 ADD_PLUGIN_TARGET(scripting-js

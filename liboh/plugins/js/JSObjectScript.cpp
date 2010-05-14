@@ -31,7 +31,11 @@
  */
 
 #include <oh/Platform.hpp>
+
+#include "JS_Sirikata.pbj.hpp"
+
 #include <util/RoutableMessageHeader.hpp>
+#include <util/RoutableMessageBody.hpp>
 #include <util/KnownServices.hpp>
 
 #include "JSObjectScript.hpp"
@@ -97,7 +101,34 @@ bool JSObjectScript::valid() const {
 }
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
-    NOT_IMPLEMENTED(js);
+    // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
+    // in "Header")
+    RoutableMessageBody body;
+    body.ParseFromArray(payload.data(), payload.size());
+    Protocol::ScriptingMessage scripting_msg;
+    bool parsed = scripting_msg.ParseFromString(body.payload());
+    if (!parsed) {
+        JSLOG(fatal, "Parsing failed.");
+        return;
+    }
+
+    // Start scope
+    Context::Scope context_scope(mContext);
+
+    // Handle all requests
+    for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++) {
+        Protocol::ScriptingRequest req = scripting_msg.requests(ii);
+        String script_str = req.body();
+
+        v8::HandleScope handle_scope;
+
+        v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
+        v8::Handle<v8::Script> script = v8::Script::Compile(source);
+        v8::Handle<v8::Value> result = script->Run();
+
+        v8::String::AsciiValue ascii(result);
+        JSLOG(info, "Script result: " << *ascii);
+    }
 }
 
 } // namespace JS

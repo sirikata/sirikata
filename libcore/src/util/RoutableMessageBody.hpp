@@ -107,6 +107,10 @@ public:
     using Protocol::MessageBody::ParseFromString;
     using Protocol::MessageBody::SerializeToString;
     using Protocol::MessageBody::AppendToString;
+
+    using Protocol::MessageBody::set_payload;
+    using Protocol::MessageBody::has_payload;
+    using Protocol::MessageBody::payload;
 };
 }
 #endif

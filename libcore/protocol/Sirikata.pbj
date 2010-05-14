@@ -46,6 +46,7 @@ message MessageBody {
 
     repeated bytes message_arguments=10;
 
+    optional bytes payload = 11;
 }
 
 //This is the standard message container. All items sent over the wire may be read with the following message format. It should not be used to encode message since header fields may not end up before other fields
@@ -97,6 +98,8 @@ message ReadOnlyMessage {
     // If a response, and the length is smaller than the length of the request, it is to be assumed that the bodies of all remaining response messages are empty.
     repeated bytes message_arguments=10;
 //******************END MESSAGE BODY*********************
+
+    optional bytes payload = 11;
 }
 
 /////////////Built-in messages///////////////

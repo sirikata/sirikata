@@ -448,8 +448,24 @@ void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryR
     HostedObject *realThis=this;
     /// Parse message_names and message_arguments.
 
+    // FIXME: Transitional. There are two ways this data could be
+    // stored. The old way is directly in the bodyData.  The other is
+    // in the payload section of bodyData.  Either way, we parse the
+    // body, but in the former, we need to parse a *secondary*
+    // RoutableMessageBody in the payload field.  Eventually this
+    // should just be in the "header", i.e. the entire packet should
+    // just be unified.
     RoutableMessageBody msg;
-    msg.ParseFromArray(bodyData.data(), bodyData.length());
+    RoutableMessageBody outer_msg;
+    outer_msg.ParseFromArray(bodyData.data(), bodyData.length());
+    if (outer_msg.has_payload()) {
+        assert( outer_msg.message_size() == 0 );
+        msg.ParseFromString(outer_msg.payload());
+    }
+    else {
+        msg = outer_msg;
+    }
+
     int numNames = msg.message_size();
     if (numNames <= 0) {
         // Invalid message!
@@ -1382,7 +1398,13 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
     hdr.SerializeToString(&serialized_hdr);
     MemoryReference hdr_data(serialized_hdr);
 
-    return space_conn.getStream()->send(hdr_data, payload, Network::ReliableOrdered);
+    RoutableMessageBody body;
+    body.set_payload(payload.data(), payload.size());
+    String serialized_body;
+    body.SerializeToString(&serialized_body);
+    MemoryReference body_data(serialized_body);
+
+    return space_conn.getStream()->send(hdr_data, body_data, Network::ReliableOrdered);
 }
 
 }
