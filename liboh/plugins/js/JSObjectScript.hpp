@@ -43,7 +43,7 @@ namespace JS {
 
 class JSObjectScript : public ObjectScript {
 public:
-    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args);
+    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template);
     ~JSObjectScript();
 
     bool forwardMessagesTo(MessageService*);

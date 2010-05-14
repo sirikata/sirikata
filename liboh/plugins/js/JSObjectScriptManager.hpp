@@ -34,6 +34,7 @@
 #define _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 
 #include <oh/ObjectScriptManager.hpp>
+#include <v8.h>
 
 namespace Sirikata {
 namespace JS {
@@ -50,6 +51,10 @@ public:
         const Arguments &args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 private:
+
+    // The manager tracks the templates so they can be reused by all the
+    // individual scripts.
+    v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
 };
 
 } // namespace JS

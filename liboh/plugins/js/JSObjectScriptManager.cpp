@@ -38,6 +38,31 @@
 namespace Sirikata {
 namespace JS {
 
+static const char* ToCString(const v8::String::Utf8Value& value) {
+  return *value ? *value : "<string conversion failed>";
+}
+
+// The callback that is invoked by v8 whenever the JavaScript 'print'
+// function is called.  Prints its arguments on stdout separated by
+// spaces and ending with a newline.
+static v8::Handle<v8::Value> Print(const v8::Arguments& args) {
+  bool first = true;
+  for (int i = 0; i < args.Length(); i++) {
+    v8::HandleScope handle_scope;
+    if (first) {
+      first = false;
+    } else {
+      printf(" ");
+    }
+    v8::String::Utf8Value str(args[i]);
+    const char* cstr = ToCString(str);
+    printf("%s", cstr);
+  }
+  printf("\n");
+  fflush(stdout);
+  return v8::Undefined();
+}
+
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
     return new JSObjectScriptManager(arguments);
 }
@@ -45,6 +70,9 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
+    v8::HandleScope handle_scope;
+    mGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mGlobalTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
 }
 
 JSObjectScriptManager::~JSObjectScriptManager() {
@@ -52,7 +80,7 @@ JSObjectScriptManager::~JSObjectScriptManager() {
 
 ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,
                                                             const Arguments& args) {
-    JSObjectScript* new_script = new JSObjectScript(ho, args);
+    JSObjectScript* new_script = new JSObjectScript(ho, args, mGlobalTemplate);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;

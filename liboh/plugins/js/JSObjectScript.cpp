@@ -47,10 +47,12 @@ using namespace v8;
 namespace Sirikata {
 namespace JS {
 
-JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args)
- : mParent(ho),
-   mContext(Context::New())
+JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template)
+ : mParent(ho)
 {
+    v8::HandleScope handle_scope;
+    mContext = Context::New(NULL, global_template);
+
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
