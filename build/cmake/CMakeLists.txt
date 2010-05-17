@@ -1438,10 +1438,30 @@ IF(APPLE)
 
   ADD_CHROME_APP(
     APP ${CPPOH_BINARY_FILENAME}
+    DEPENDS ${CPPOH_BINARY}
     LINKS
     ${CMAKE_CURRENT_BINARY_DIR}/chrome/libplugin_carbon_interpose.dylib
     ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
+
+    ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
+
+    ${TOP_LEVEL}/cdn.txt
+    ${CMAKE_CURRENT_BINARY_DIR}/scene.db
     )
+
+  # FIXME for some reason, the links inside the .app aren't working
+  # here, even though they seem to work fine for Berkelium
+  ADD_CUSTOM_TARGET(cppoh_app_help
+    ALL COMMAND
+    ln -sf chrome/berkelium ${CMAKE_CURRENT_BINARY_DIR}/berkelium &&
+    ln -sf ${CHROME_APP_NAME}/Contents/Resources/chrome.pak ${CMAKE_CURRENT_BINARY_DIR}/chrome.pak &&
+    ln -sf ${CHROME_APP_NAME}/Contents/Resources/theme.pak ${CMAKE_CURRENT_BINARY_DIR}/theme.pak &&
+    ln -sf ${CHROME_APP_NAME}/Contents/Resources/linkCursor.png ${CMAKE_CURRENT_BINARY_DIR}/linkCursor.png &&
+    ln -sf ${CHROME_APP_NAME}/Contents/Resources/renderer.sb ${CMAKE_CURRENT_BINARY_DIR}/renderer.sb &&
+    ln -sf ${CHROME_APP_NAME}/Contents/Resources/en_US.lproj ${CMAKE_CURRENT_BINARY_DIR}/en_US.lproj
+    DEPENDS ${CPPOH_BINARY} ${CPPOH_BINARY_FILENAME}.app
+    )
+
 ENDIF()
 
 ADD_DEPENDENCIES(${BENCH_BINARY} ${SIRIKATA_CORE_LIB})
