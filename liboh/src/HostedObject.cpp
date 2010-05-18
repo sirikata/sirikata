@@ -1323,6 +1323,39 @@ void HostedObject::setLocation(const SpaceID& space, const Location& loc) {
     proxy->setLocation(tnow, loc);
 }
 
+Transfer::URI HostedObject::getVisual(const SpaceID& space) {
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    ProxyMeshObjectPtr mesh_proxy = std::tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy);
+    if (!mesh_proxy) return Transfer::URI();
+    return mesh_proxy->getMesh();
+}
+
+void HostedObject::setVisual(const SpaceID& space, const Transfer::URI& vis) {
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    ProxyMeshObjectPtr mesh_proxy = std::tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy);
+    if (!mesh_proxy) return;
+    return mesh_proxy->setMesh(vis);
+}
+
+Vector3f HostedObject::getVisualScale(const SpaceID& space) {
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    ProxyMeshObjectPtr mesh_proxy = std::tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy);
+    if (!mesh_proxy) return Vector3f();
+    return mesh_proxy->getScale();
+}
+
+void HostedObject::setVisualScale(const SpaceID& space, const Vector3f& scale) {
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    ProxyMeshObjectPtr mesh_proxy = std::tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy);
+    if (!mesh_proxy) return;
+    return mesh_proxy->setScale(scale);
+}
+
+
 void HostedObject::removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId) {
     SpaceID space = proximateObjectId.space();
     SpaceDataMap::iterator where = mSpaceData->find(space);

@@ -68,14 +68,34 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
     bool isLocal(const SpaceObjectReference&)const;
 
+    // Location
     Location getLocation(const SpaceID& space) {
         SILOG(space,fatal,"Spaces do not have locations.");
         assert(false);
         return Location();
     }
-
     void setLocation(const SpaceID& space, const Location& loc) {
         SILOG(space,fatal,"Cannot set location of space.");
+        assert(false);
+    }
+
+    // Visual (mesh)
+    virtual Transfer::URI getVisual(const SpaceID& space) {
+        SILOG(space,fatal,"Spaces do not have visual representations.");
+        assert(false);
+        return Transfer::URI();
+    }
+    virtual void setVisual(const SpaceID& space, const Transfer::URI& vis) {
+        SILOG(space,fatal,"Cannot set visual of space.");
+        assert(false);
+    }
+    virtual Vector3f getVisualScale(const SpaceID& space) {
+        SILOG(space,fatal,"Spaces do not have visual representations.");
+        assert(false);
+        return Vector3f();
+    }
+    virtual void setVisualScale(const SpaceID& space, const Vector3f& scale) {
+        SILOG(space,fatal,"Cannot set visual scale of space.");
         assert(false);
     }
 

@@ -294,8 +294,15 @@ public:
     ProxyManager* getProxyManager(const SpaceID&space);
     bool isLocal(const SpaceObjectReference&space)const;
 
+    // Location
     virtual Location getLocation(const SpaceID& space);
     virtual void setLocation(const SpaceID& space, const Location& loc);
+
+    // Visual (mesh)
+    virtual Transfer::URI getVisual(const SpaceID& space);
+    virtual void setVisual(const SpaceID& space, const Transfer::URI& vis);
+    virtual Vector3f getVisualScale(const SpaceID& space);
+    virtual void setVisualScale(const SpaceID& space, const Vector3f& scale);
 
     void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
     void addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId);

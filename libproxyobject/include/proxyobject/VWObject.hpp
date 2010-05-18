@@ -34,6 +34,7 @@
 #define _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 
 #include <core/odp/Service.hpp>
+#include <transfer/URI.hpp>
 
 namespace Sirikata {
 class PhysicalParameters;
@@ -103,8 +104,15 @@ public:
     ///determine if objectId is an object hosted by this computer so messages to it may directly reach it
     virtual bool isLocal(const SpaceObjectReference&objectId)const=0;
 
+    // Location
     virtual Location getLocation(const SpaceID& space) = 0;
     virtual void setLocation(const SpaceID& space, const Location& loc) = 0;
+
+    // Visual (mesh)
+    virtual Transfer::URI getVisual(const SpaceID& space) = 0;
+    virtual void setVisual(const SpaceID& space, const Transfer::URI& vis) = 0;
+    virtual Vector3f getVisualScale(const SpaceID& space) = 0;
+    virtual void setVisualScale(const SpaceID& space, const Vector3f& scale) = 0;
 
     ///a callback to this object telling it that an object has entered its region of interest for query query_id
     virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;

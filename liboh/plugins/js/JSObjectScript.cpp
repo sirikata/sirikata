@@ -112,12 +112,17 @@ void JSObjectScript::test() const {
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     assert(spaces.size() == 1);
 
-    Location loc = mParent->getLocation( *(spaces.begin()) );
+    SpaceID space = *(spaces.begin());
+
+    Location loc = mParent->getLocation( space );
     loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
     loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
     loc.setAxisOfRotation( Vector3<float32>(0.0f, 0.0f, 1.0f) );
     loc.setAngularSpeed(3.14159/10.0);
-    mParent->setLocation( *(spaces.begin()), loc );
+    mParent->setLocation( space, loc );
+
+    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
+    mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
 }
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
