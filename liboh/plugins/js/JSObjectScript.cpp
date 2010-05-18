@@ -109,7 +109,15 @@ bool JSObjectScript::valid() const {
 }
 
 void JSObjectScript::test() const {
-    fprintf(stderr, "JSObjectScript::test(): %d\n", this);
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    assert(spaces.size() == 1);
+
+    Location loc = mParent->getLocation( *(spaces.begin()) );
+    loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
+    loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
+    loc.setAxisOfRotation( Vector3<float32>(0.0f, 0.0f, 1.0f) );
+    loc.setAngularSpeed(3.14159/10.0);
+    mParent->setLocation( *(spaces.begin()), loc );
 }
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {

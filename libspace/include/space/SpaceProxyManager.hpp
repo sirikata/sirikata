@@ -67,6 +67,19 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
     bool isLocal(const SpaceObjectReference&)const;
+
+    Location getLocation(const SpaceID& space) {
+        SILOG(space,fatal,"Spaces do not have locations.");
+        assert(false);
+        return Location();
+    }
+
+    void setLocation(const SpaceID& space, const Location& loc) {
+        SILOG(space,fatal,"Cannot set location of space.");
+        assert(false);
+    }
+
+
     ProxyManager* getProxyManager(const SpaceID&);
     QueryTracker* getTracker(const SpaceID& space);
     void addQueryInterest(uint32 query_id, const SpaceObjectReference&);

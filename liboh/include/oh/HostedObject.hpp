@@ -293,6 +293,10 @@ public:
 
     ProxyManager* getProxyManager(const SpaceID&space);
     bool isLocal(const SpaceObjectReference&space)const;
+
+    virtual Location getLocation(const SpaceID& space);
+    virtual void setLocation(const SpaceID& space, const Location& loc);
+
     void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
     void addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId);
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {

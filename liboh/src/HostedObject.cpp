@@ -1305,6 +1305,23 @@ bool HostedObject::isLocal(const SpaceObjectReference&objref) const{
     return false;
 }
 
+// FIXME why in the following are we operating on a proxy of ourselves to update
+// our information?
+
+Location HostedObject::getLocation(const SpaceID& space) {
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    Time tnow = proxy->getProxyManager()->getTimeOffsetManager()->now(*proxy);
+    Location currentLoc = proxy->globalLocation(tnow);
+    return currentLoc;
+}
+
+void HostedObject::setLocation(const SpaceID& space, const Location& loc) {
+    ProxyObjectPtr proxy = getProxy(space);
+    if (!proxy) return;
+    Time tnow = proxy->getProxyManager()->getTimeOffsetManager()->now(*proxy);
+    proxy->setLocation(tnow, loc);
+}
 
 void HostedObject::removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId) {
     SpaceID space = proximateObjectId.space();

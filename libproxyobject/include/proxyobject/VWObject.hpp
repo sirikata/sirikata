@@ -103,6 +103,9 @@ public:
     ///determine if objectId is an object hosted by this computer so messages to it may directly reach it
     virtual bool isLocal(const SpaceObjectReference&objectId)const=0;
 
+    virtual Location getLocation(const SpaceID& space) = 0;
+    virtual void setLocation(const SpaceID& space, const Location& loc) = 0;
+
     ///a callback to this object telling it that an object has entered its region of interest for query query_id
     virtual void addQueryInterest(uint32 query_id, const SpaceObjectReference&ref)=0;
     ///a callback to this object telling it that an object with an instantiated ProxyObject has exited its region of interest for query query_id
