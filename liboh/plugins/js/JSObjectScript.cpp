@@ -53,6 +53,12 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     v8::HandleScope handle_scope;
     mContext = Context::New(NULL, global_template);
 
+    Local<Object> global_obj = mContext->Global();
+    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+    // The template actually generates the root objects prototype, not the root
+    // itself.
+    Handle<Object>::Cast(global_obj->GetPrototype())->SetInternalField(0, External::New(this));
+
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
@@ -100,6 +106,10 @@ void JSObjectScript::processMessage(
 
 bool JSObjectScript::valid() const {
     return (mParent);
+}
+
+void JSObjectScript::test() const {
+    fprintf(stderr, "JSObjectScript::test(): %d\n", this);
 }
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {

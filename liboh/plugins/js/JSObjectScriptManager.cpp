@@ -63,6 +63,24 @@ static v8::Handle<v8::Value> Print(const v8::Arguments& args) {
   return v8::Undefined();
 }
 
+JSObjectScript* GetTargetJSObjectScript(const v8::Arguments& args) {
+    v8::Local<v8::Object> self = args.Holder();
+    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+    // The template actually generates the root objects prototype, not the root
+    // itself.
+    v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(
+        v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(0)
+    );
+    void* ptr = wrap->Value();
+    return static_cast<JSObjectScript*>(ptr);
+}
+
+v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args) {
+    JSObjectScript* target = GetTargetJSObjectScript(args);
+    target->test();
+    return v8::Undefined();
+}
+
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
     return new JSObjectScriptManager(arguments);
 }
@@ -72,7 +90,11 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
     v8::HandleScope handle_scope;
     mGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    // An internal field holds the JSObjectScript*
+    mGlobalTemplate->SetInternalFieldCount(1);
+    // And we expose some functionality directly
     mGlobalTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
+    mGlobalTemplate->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
 }
 
 JSObjectScriptManager::~JSObjectScriptManager() {

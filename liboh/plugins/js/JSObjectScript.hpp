@@ -56,6 +56,8 @@ public:
      */
     bool valid() const;
 
+    /** Dummy callback for testing exposing new functionality to scripts. */
+    void test() const;
 private:
 
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
