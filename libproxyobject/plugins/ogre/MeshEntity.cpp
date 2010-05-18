@@ -199,7 +199,8 @@ void MeshEntity::unbindTexture(const std::string &textureName) {
 
 void MeshEntity::loadMesh(const String& meshname)
 {
-    Ogre::Entity * oldMeshObj=getOgreEntity();
+    unloadMesh();
+
     mReplacedMaterials.clear();
 
     /** FIXME we need a better way of generating unique id's. We should
@@ -220,13 +221,6 @@ void MeshEntity::loadMesh(const String& meshname)
     } catch (...) {
         SILOG(ogre,error,"Failed to load mesh "<<getProxy().getMesh()<< " (id "<<id()<<")!");
         new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
-        /*
-        init(NULL);
-        if (oldMeshObj) {
-            getScene()->getSceneManager()->destroyEntity(oldMeshObj);
-        }
-        return;
-        */
     }
     SILOG(ogre,debug,"Bounding box: " << new_entity->getBoundingBox());
     if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {
@@ -252,9 +246,6 @@ void MeshEntity::loadMesh(const String& meshname)
     }
 
     init(new_entity);
-    if (oldMeshObj) {
-        getScene()->getSceneManager()->destroyEntity(oldMeshObj);
-    }
     fixTextures();
 }
 
