@@ -145,11 +145,12 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     // And we expose some functionality directly
     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
+    system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
+    system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
     system_templ->SetInternalFieldCount(1);
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
-    mGlobalTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
-    mGlobalTemplate->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
+
 }
 
 JSObjectScriptManager::~JSObjectScriptManager() {
