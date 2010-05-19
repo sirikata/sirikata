@@ -42,6 +42,9 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
 
+#include <oh/ObjectHost.hpp>
+#include <network/IOService.hpp>
+
 using namespace v8;
 
 namespace Sirikata {
@@ -57,7 +60,13 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
     // itself.
-    Handle<Object>::Cast(global_obj->GetPrototype())->SetInternalField(0, External::New(this));
+    Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+    global_proto->SetInternalField(0, External::New(this));
+    // And we add an internal field to the system object as well to make it
+    // easier to find the pointer in different calls. Note that in this case we
+    // don't use the prototype -- non-global objects work as we would expect.
+    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
+    system_obj->SetInternalField(0, External::New(this));
 
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
@@ -123,6 +132,40 @@ void JSObjectScript::test() const {
 
     mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
     mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
+}
+
+void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
+    // FIXME using the raw pointer isn't safe
+    mParent->getObjectHost()->getSpaceIO()->post(
+        dur,
+        std::tr1::bind(
+            &JSObjectScript::handleTimeout,
+            this,
+            target,
+            cb
+        )
+    );
+}
+
+void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    TryCatch try_catch;
+
+    const int argc = 0;
+    Handle<Value> argv[argc] = { };
+
+    Handle<Value> result;
+    if (target->IsNull() || target->IsUndefined())
+        result = cb->Call(mContext->Global(), argc, argv);
+    else
+        result = cb->Call(target, argc, argv);
+
+    if (result.IsEmpty()) {
+        // FIXME what should we do with this exception?
+        v8::String::Utf8Value error(try_catch.Exception());
+    }
 }
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {

@@ -68,9 +68,15 @@ JSObjectScript* GetTargetJSObjectScript(const v8::Arguments& args) {
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
     // itself.
-    v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(
-        v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(0)
-    );
+    v8::Local<v8::External> wrap;
+    if (self->InternalFieldCount() > 0)
+        wrap = v8::Local<v8::External>::Cast(
+            self->GetInternalField(0)
+        );
+    else
+        wrap = v8::Local<v8::External>::Cast(
+            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(0)
+        );
     void* ptr = wrap->Value();
     return static_cast<JSObjectScript*>(ptr);
 }
@@ -78,6 +84,49 @@ JSObjectScript* GetTargetJSObjectScript(const v8::Arguments& args) {
 v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args) {
     JSObjectScript* target = GetTargetJSObjectScript(args);
     target->test();
+    return v8::Undefined();
+}
+
+/** Invokes a callback after a specified timeout.
+ *  Arguments:
+ *   float timeout: duration of timeout in seconds
+ *   object target: target of callback (this pointer when invoked), or null for
+ *                  the global (root) object
+ *   function cb: callback to invoke, with no parameters
+ */
+v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args) {
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
+
+    v8::Handle<v8::Value> dur = args[0];
+    v8::Handle<v8::Value> target_val = args[1];
+    v8::Handle<v8::Value> cb_val = args[2];
+
+    // Duration
+    double native_dur = 0;
+    if (dur->IsNumber())
+        native_dur = dur->NumberValue();
+    else if (dur->IsInt32())
+        native_dur = dur->Int32Value();
+    else
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Duration cannot be cast to float.")) );
+
+    // Target
+    if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
+
+    v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
+    v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
+
+    // Function
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    target_script->timeout(Duration::seconds(native_dur), target_persist, cb_persist);
+
     return v8::Undefined();
 }
 
@@ -92,7 +141,13 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     // An internal field holds the JSObjectScript*
     mGlobalTemplate->SetInternalFieldCount(1);
+
     // And we expose some functionality directly
+    v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
+    system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
+    system_templ->SetInternalFieldCount(1);
+
+    mGlobalTemplate->Set(v8::String::New("system"), system_templ);
     mGlobalTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     mGlobalTemplate->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
 }
