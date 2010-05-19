@@ -63,8 +63,9 @@ static v8::Handle<v8::Value> Print(const v8::Arguments& args) {
   return v8::Undefined();
 }
 
-JSObjectScript* GetTargetJSObjectScript(const v8::Arguments& args) {
-    v8::Local<v8::Object> self = args.Holder();
+template<typename WithHolderType>
+JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder) {
+    v8::Local<v8::Object> self = with_holder.Holder();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
     // itself.
@@ -130,6 +131,16 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
+v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getVisual();
+}
+
+void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setVisual(value);
+}
+
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
     return new JSObjectScriptManager(arguments);
 }
@@ -147,6 +158,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
+    system_templ->SetAccessor(v8::String::New("visual"), ScriptGetVisual, ScriptSetVisual);
     system_templ->SetInternalFieldCount(1);
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);

@@ -168,6 +168,32 @@ void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persis
     }
 }
 
+#define FIXME_GET_SPACE() \
+    const HostedObject::SpaceSet& spaces = mParent->spaces(); \
+    assert(spaces.size() == 1);                               \
+    SpaceID space = *(spaces.begin());
+
+v8::Handle<v8::String> JSObjectScript::getVisual() {
+    FIXME_GET_SPACE();
+
+    String url_string = mParent->getVisual(space).toString();
+    return v8::String::New( url_string.c_str(), url_string.size() );
+}
+
+void JSObjectScript::setVisual(v8::Local<v8::Value>& newvis) {
+    // Can/should we do anything about a failure here?
+    if (!newvis->IsString())
+        return;
+
+    v8::String::Utf8Value newvis_str(newvis);
+    if (! *newvis_str)
+        return; // FIXME failure?
+    Transfer::URI vis_uri(*newvis_str);
+
+    FIXME_GET_SPACE();
+    mParent->setVisual(space, vis_uri);
+}
+
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
     // in "Header")

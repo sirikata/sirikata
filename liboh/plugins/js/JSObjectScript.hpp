@@ -61,6 +61,10 @@ public:
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+
+
+    v8::Handle<v8::String> getVisual();
+    void setVisual(v8::Local<v8::Value>& newvis);
 private:
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
