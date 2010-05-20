@@ -1,5 +1,5 @@
 /*  Sirikata
- *  JSObjectScriptManager.hpp
+ *  JSNumeric.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,35 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
-#define _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
+#ifndef _SIRIKATA_JS_UTIL_HPP_
+#define _SIRIKATA_JS_UTIL_HPP_
 
-#include <oh/ObjectScriptManager.hpp>
+#include <oh/Platform.hpp>
 #include <v8.h>
+
+using namespace v8;
 
 namespace Sirikata {
 namespace JS {
 
-class JSObjectScriptManager : public ObjectScriptManager {
-public:
-    static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
+#define JS_STRING(x) (v8::String::New( #x ))
 
+bool ValidateNumericValue(const Handle<Value>& val) {
+    return (val->IsUint32() || val->IsInt32() || val->IsNumber());
+}
 
-    JSObjectScriptManager(const Sirikata::String& arguments);
-    virtual ~JSObjectScriptManager();
+double GetNumericValue(const Handle<Value>& val) {
+    if (val->IsUint32()) {
+        uint32 native_val = val->ToUint32()->Value();
+        return native_val;
+    }
+    else if (val->IsInt32()) {
+        int32 native_val = val->ToInt32()->Value();
+        return native_val;
+    }
+    else if (val->IsNumber()) {
+        double native_val = val->ToNumber()->Value();
+        return native_val;
+    }
 
-    virtual ObjectScript* createObjectScript(HostedObjectPtr ho,
-        const Arguments &args);
-    virtual void destroyObjectScript(ObjectScript* toDestroy);
-private:
+    assert(false);
+}
 
-    // The manager tracks the templates so they can be reused by all the
-    // individual scripts.
-    v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
-    v8::Persistent<v8::FunctionTemplate> mVec3Template;
-};
+#define NumericCheckAndExtract(native, value)                           \
+    if (!ValidateNumericValue(value))                                   \
+        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as numeric.")) ); \
+    double native = GetNumericValue(value);
 
 } // namespace JS
 } // namespace Sirikata
 
-#endif //_SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
+#endif //_SIRIKATA_JS_UTIL_HPP_

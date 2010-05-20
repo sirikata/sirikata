@@ -35,6 +35,9 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSObjectScript.hpp"
 
+#include "JSVec3.hpp"
+
+
 namespace Sirikata {
 namespace JS {
 
@@ -155,11 +158,17 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
     // And we expose some functionality directly
     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
+    // An internal field holds the JSObjectScript*
+    system_templ->SetInternalFieldCount(1);
+    // Functions / types
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
     system_templ->SetAccessor(v8::String::New("visual"), ScriptGetVisual, ScriptSetVisual);
-    system_templ->SetInternalFieldCount(1);
+
+    mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
+    system_templ->Set(v8::String::New("Vec3"), mVec3Template);
+
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 
