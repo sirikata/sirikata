@@ -41,29 +41,6 @@ namespace JS {
 
 static Persistent<FunctionTemplate> Vec3ConstructorTemplate;
 
-// These utility methods are used all over to translate to/from C++/JS vec3s
-
-template<typename VecType>
-void Vec3Fill(Handle<Object>& dest, const VecType& src) {
-    dest->Set(JS_STRING(x), Number::New(src.x));
-    dest->Set(JS_STRING(y), Number::New(src.y));
-    dest->Set(JS_STRING(z), Number::New(src.z));
-}
-
-template<typename VecType>
-Handle<Value> Vec3CloneAndFill(Handle<Object>& orig, const VecType& src) {
-    Handle<Object> result = orig->Clone();
-    Vec3Fill(result, src);
-    return result;
-}
-
-// This is sort of a misnomer, for scalar results we just return the
-// number itself.
-template<>
-Handle<Value> Vec3CloneAndFill(Handle<Object>& orig, const double& src) {
-    return Number::New(src);
-}
-
 bool Vec3Validate(Handle<Object>& src) {
     return (
         src->Has(JS_STRING(x)) && ValidateNumericValue(src->Get(JS_STRING(x))) &&
@@ -79,11 +56,6 @@ Vector3d Vec3Extract(Handle<Object>& src) {
     result.z = GetNumericValue( src->Get(JS_STRING(z)) );
     return result;
 }
-
-#define Vec3CheckAndExtract(native, value)                              \
-    if (!Vec3Validate(value))                                           \
-        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as Vec3.")) ); \
-    Vector3d native = Vec3Extract(value);
 
 // And this is the real implementation
 

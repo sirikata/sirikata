@@ -1,5 +1,5 @@
 /*  Sirikata
- *  JSUtil.hpp
+ *  JSQuaternion.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,34 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_JS_UTIL_HPP_
-#define _SIRIKATA_JS_UTIL_HPP_
+#ifndef _SIRIKATA_JS_QUATERNION_HPP_
+#define _SIRIKATA_JS_QUATERNION_HPP_
 
-#include <oh/Platform.hpp>
 #include <v8.h>
-
-using namespace v8;
 
 namespace Sirikata {
 namespace JS {
 
-#define JS_STRING(x) (v8::String::New( #x ))
-
-bool ValidateNumericValue(const Handle<Value>& val);
-double GetNumericValue(const Handle<Value>& val);
-
-#define NumericCheckAndExtract(native, value)                           \
-    if (!ValidateNumericValue(value))                                   \
-        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as numeric.")) ); \
-    double native = GetNumericValue(value);
-
-
-#define ObjectCheckAndCast(result, value)       \
-    if (!value->IsObject())                                             \
-        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Expected object.")) ); \
-    Handle<Object> result = Handle<Object>::Cast(value);
+/** Create a template for a Quaternion function. */
+v8::Handle<v8::FunctionTemplate> CreateQuaternionTemplate();
+void DestroyQuaternionTemplate();
 
 } // namespace JS
 } // namespace Sirikata
 
-#endif //_SIRIKATA_JS_UTIL_HPP_
+#endif //_SIRIKATA_JS_QUATERNION_HPP_

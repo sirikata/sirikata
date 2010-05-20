@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_JS_VEC3_HPP_
 #define _SIRIKATA_JS_VEC3_HPP_
 
+#include "JSUtil.hpp"
 #include <v8.h>
 
 namespace Sirikata {
@@ -41,6 +42,38 @@ namespace JS {
 /** Create a template for a Vec3 function. */
 v8::Handle<v8::FunctionTemplate> CreateVec3Template();
 void DestroyVec3Template();
+
+
+
+template<typename VecType>
+void Vec3Fill(Handle<Object>& dest, const VecType& src) {
+    dest->Set(JS_STRING(x), Number::New(src.x));
+    dest->Set(JS_STRING(y), Number::New(src.y));
+    dest->Set(JS_STRING(z), Number::New(src.z));
+}
+
+template<typename VecType>
+Handle<Value> Vec3CloneAndFill(Handle<Object>& orig, const VecType& src) {
+    Handle<Object> result = orig->Clone();
+    Vec3Fill(result, src);
+    return result;
+}
+
+// This is sort of a misnomer, for scalar results we just return the
+// number itself.
+template<>
+static Handle<Value> Vec3CloneAndFill(Handle<Object>& orig, const double& src) {
+    return Number::New(src);
+}
+
+bool Vec3Validate(Handle<Object>& src);
+Vector3d Vec3Extract(Handle<Object>& src);
+
+#define Vec3CheckAndExtract(native, value)                              \
+    if (!Vec3Validate(value))                                           \
+        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as Vec3.")) ); \
+    Vector3d native = Vec3Extract(value);
+
 
 } // namespace JS
 } // namespace Sirikata

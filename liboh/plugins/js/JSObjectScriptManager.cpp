@@ -36,6 +36,7 @@
 #include "JSObjectScript.hpp"
 
 #include "JSVec3.hpp"
+#include "JSQuaternion.hpp"
 
 
 namespace Sirikata {
@@ -168,6 +169,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);
+
+    mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
+    system_templ->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
 
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
