@@ -43,13 +43,14 @@ namespace JS {
 
 #define JS_STRING(x) (v8::String::New( #x ))
 
-bool ValidateNumericValue(const Handle<Value>& val);
-double GetNumericValue(const Handle<Value>& val);
+bool NumericValidate(const Handle<Value>& val);
+double NumericExtract(const Handle<Value>& val);
+Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src);
 
 #define NumericCheckAndExtract(native, value)                           \
-    if (!ValidateNumericValue(value))                                   \
+    if (!NumericValidate(value))                                        \
         return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as numeric.")) ); \
-    double native = GetNumericValue(value);
+    double native = NumericExtract(value);
 
 
 #define ObjectCheckAndCast(result, value)       \

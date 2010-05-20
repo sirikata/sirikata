@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_JS_QUATERNION_HPP_
 #define _SIRIKATA_JS_QUATERNION_HPP_
 
+#include "JSUtil.hpp"
 #include <v8.h>
 
 namespace Sirikata {
@@ -41,6 +42,8 @@ namespace JS {
 /** Create a template for a Quaternion function. */
 v8::Handle<v8::FunctionTemplate> CreateQuaternionTemplate();
 void DestroyQuaternionTemplate();
+
+v8::Handle<v8::Value> CreateJSResult(v8::Handle<v8::Object>& orig, const Quaternion& src);
 
 } // namespace JS
 } // namespace Sirikata

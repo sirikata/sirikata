@@ -53,35 +53,27 @@ void QuaternionFill(Handle<Object>& dest, const Quaternion& src) {
 
 // These generate a result, possibly using the first parameter as a prototype if
 // the result type is Quaternion.
-Handle<Value> CreateQuaternionResult(Handle<Object>& orig, const Quaternion& src) {
+Handle<Value> CreateJSResult(Handle<Object>& orig, const Quaternion& src) {
     Handle<Object> result = orig->Clone();
     QuaternionFill(result, src);
     return result;
 }
-Handle<Value> CreateQuaternionResult(Handle<Object>& orig, const Vector3d& src) {
-    Handle<Object> result = orig->Clone();
-    Vec3Fill(result, src);
-    return result;
-}
-Handle<Value> CreateQuaternionResult(Handle<Object>& orig, const double& src) {
-    return Number::New(src);
-}
 
 bool QuaternionValidate(Handle<Object>& src) {
     return (
-        src->Has(JS_STRING(x)) && ValidateNumericValue(src->Get(JS_STRING(x))) &&
-        src->Has(JS_STRING(y)) && ValidateNumericValue(src->Get(JS_STRING(y))) &&
-        src->Has(JS_STRING(z)) && ValidateNumericValue(src->Get(JS_STRING(z))) &&
-        src->Has(JS_STRING(w)) && ValidateNumericValue(src->Get(JS_STRING(w)))
+        src->Has(JS_STRING(x)) && NumericValidate(src->Get(JS_STRING(x))) &&
+        src->Has(JS_STRING(y)) && NumericValidate(src->Get(JS_STRING(y))) &&
+        src->Has(JS_STRING(z)) && NumericValidate(src->Get(JS_STRING(z))) &&
+        src->Has(JS_STRING(w)) && NumericValidate(src->Get(JS_STRING(w)))
     );
 }
 
 Quaternion QuaternionExtract(Handle<Object>& src) {
     Quaternion result(
-        GetNumericValue( src->Get(JS_STRING(x)) ),
-        GetNumericValue( src->Get(JS_STRING(y)) ),
-        GetNumericValue( src->Get(JS_STRING(z)) ),
-        GetNumericValue( src->Get(JS_STRING(w)) ),
+        NumericExtract( src->Get(JS_STRING(x)) ),
+        NumericExtract( src->Get(JS_STRING(y)) ),
+        NumericExtract( src->Get(JS_STRING(z)) ),
+        NumericExtract( src->Get(JS_STRING(w)) ),
         Quaternion::XYZW()
     );
     return result;
@@ -129,7 +121,7 @@ Handle<Value> QuaternionConstructor(const Arguments& args) {
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Quaternion." #name " should take zero parameters.")) ); \
                                                                         \
         QuaternionCheckAndExtract(lhs, self);                           \
-        Handle<Value> result = CreateQuaternionResult(self, ((lhs).*op)()); \
+        Handle<Value> result = CreateJSResult(self, ((lhs).*op)()); \
                                                                         \
         return result;                                                  \
 }
@@ -145,7 +137,7 @@ Handle<Value> QuaternionConstructor(const Arguments& args) {
                                                                         \
         QuaternionCheckAndExtract(lhs, self);                           \
         QuaternionCheckAndExtract(rhs, rhs_obj);                        \
-        Handle<Value> result = CreateQuaternionResult(self, ((lhs).*op)(rhs)); \
+        Handle<Value> result = CreateJSResult(self, ((lhs).*op)(rhs)); \
                                                                         \
         return result;                                                  \
     }
@@ -175,17 +167,17 @@ Handle<Value> QuaternionMul(const Arguments& args) {
 
     Handle<Value> result;
 
-    if (ValidateNumericValue(rhs_obj)) {
-        double rhs = GetNumericValue(rhs_obj);
-        result = CreateQuaternionResult(self, lhs * rhs);
+    if (NumericValidate(rhs_obj)) {
+        double rhs = NumericExtract(rhs_obj);
+        result = CreateJSResult(self, lhs * rhs);
     }
     else if (Vec3Validate(rhs_obj)) {
         Vector3d rhs = Vec3Extract(rhs_obj);
-        result = CreateQuaternionResult(self, lhs * rhs);
+        result = CreateJSResult(rhs_obj, lhs * rhs);
     }
     else if (QuaternionValidate(rhs_obj)) {
         Quaternion rhs = QuaternionExtract(rhs_obj);
-        result = CreateQuaternionResult(self, lhs * rhs);
+        result = CreateJSResult(rhs_obj, lhs * rhs);
     }
     else {
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Quaternion.mul parameter must be numeric, Vec3, or Quaternion.")) );

@@ -53,17 +53,10 @@ void Vec3Fill(Handle<Object>& dest, const VecType& src) {
 }
 
 template<typename VecType>
-Handle<Value> Vec3CloneAndFill(Handle<Object>& orig, const VecType& src) {
+Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src) {
     Handle<Object> result = orig->Clone();
     Vec3Fill(result, src);
     return result;
-}
-
-// This is sort of a misnomer, for scalar results we just return the
-// number itself.
-template<>
-static Handle<Value> Vec3CloneAndFill(Handle<Object>& orig, const double& src) {
-    return Number::New(src);
 }
 
 bool Vec3Validate(Handle<Object>& src);

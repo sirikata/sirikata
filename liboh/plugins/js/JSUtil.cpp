@@ -37,11 +37,11 @@ using namespace v8;
 namespace Sirikata {
 namespace JS {
 
-bool ValidateNumericValue(const Handle<Value>& val) {
+bool NumericValidate(const Handle<Value>& val) {
     return (val->IsUint32() || val->IsInt32() || val->IsNumber());
 }
 
-double GetNumericValue(const Handle<Value>& val) {
+double NumericExtract(const Handle<Value>& val) {
     if (val->IsUint32()) {
         uint32 native_val = val->ToUint32()->Value();
         return native_val;
@@ -56,6 +56,10 @@ double GetNumericValue(const Handle<Value>& val) {
     }
 
     assert(false);
+}
+
+Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src) {
+    return Number::New(src);
 }
 
 } // namespace JS

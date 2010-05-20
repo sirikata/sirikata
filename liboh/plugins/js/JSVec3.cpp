@@ -43,17 +43,17 @@ static Persistent<FunctionTemplate> Vec3ConstructorTemplate;
 
 bool Vec3Validate(Handle<Object>& src) {
     return (
-        src->Has(JS_STRING(x)) && ValidateNumericValue(src->Get(JS_STRING(x))) &&
-        src->Has(JS_STRING(y)) && ValidateNumericValue(src->Get(JS_STRING(y))) &&
-        src->Has(JS_STRING(z)) && ValidateNumericValue(src->Get(JS_STRING(z)))
+        src->Has(JS_STRING(x)) && NumericValidate(src->Get(JS_STRING(x))) &&
+        src->Has(JS_STRING(y)) && NumericValidate(src->Get(JS_STRING(y))) &&
+        src->Has(JS_STRING(z)) && NumericValidate(src->Get(JS_STRING(z)))
     );
 }
 
 Vector3d Vec3Extract(Handle<Object>& src) {
     Vector3d result;
-    result.x = GetNumericValue( src->Get(JS_STRING(x)) );
-    result.y = GetNumericValue( src->Get(JS_STRING(y)) );
-    result.z = GetNumericValue( src->Get(JS_STRING(z)) );
+    result.x = NumericExtract( src->Get(JS_STRING(x)) );
+    result.y = NumericExtract( src->Get(JS_STRING(y)) );
+    result.z = NumericExtract( src->Get(JS_STRING(z)) );
     return result;
 }
 
@@ -90,7 +90,7 @@ Handle<Value> Vec3Constructor(const Arguments& args) {
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Vec3." #name " should take zero parameters.")) ); \
                                                                         \
         Vec3CheckAndExtract(lhs, self);                                 \
-        Handle<Value> result = Vec3CloneAndFill(self, ((lhs).*op)());  \
+        Handle<Value> result = CreateJSResult(self, ((lhs).*op)());     \
                                                                         \
         return result;                                                  \
     }
@@ -106,7 +106,7 @@ Handle<Value> Vec3Constructor(const Arguments& args) {
                                                                         \
         Vec3CheckAndExtract(lhs, self);                                 \
         Vec3CheckAndExtract(rhs, rhs_obj);                              \
-        Handle<Value> result = Vec3CloneAndFill(self, ((lhs).*op)(rhs)); \
+        Handle<Value> result = CreateJSResult(self, ((lhs).*op)(rhs));  \
                                                                         \
         return result;                                                  \
     }
