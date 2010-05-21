@@ -43,7 +43,16 @@ namespace JS {
 v8::Handle<v8::FunctionTemplate> CreateQuaternionTemplate();
 void DestroyQuaternionTemplate();
 
-v8::Handle<v8::Value> CreateJSResult(v8::Handle<v8::Object>& orig, const Quaternion& src);
+void QuaternionFill(Handle<Object>& dest, const Quaternion& src);
+Handle<Value> CreateJSResult(Handle<Object>& orig, const Quaternion& src);
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Quaternion& src);
+bool QuaternionValidate(Handle<Object>& src);
+Quaternion QuaternionExtract(Handle<Object>& src);
+
+#define QuaternionCheckAndExtract(native, value)                              \
+    if (!QuaternionValidate(value))                                           \
+        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as Quaternion.")) ); \
+    Quaternion native = QuaternionExtract(value);
 
 } // namespace JS
 } // namespace Sirikata

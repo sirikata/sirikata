@@ -59,6 +59,16 @@ Handle<Value> CreateJSResult(Handle<Object>& orig, const Quaternion& src) {
     return result;
 }
 
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Quaternion& src) {
+    Handle<Function> quat_constructor = FunctionCast(
+        ObjectCast(GetGlobal(ctx, "system"))->Get(JS_STRING(Quaternion))
+    );
+
+    Handle<Object> result = quat_constructor->NewInstance();
+    QuaternionFill(result, src);
+    return result;
+}
+
 bool QuaternionValidate(Handle<Object>& src) {
     return (
         src->Has(JS_STRING(x)) && NumericValidate(src->Get(JS_STRING(x))) &&
@@ -78,11 +88,6 @@ Quaternion QuaternionExtract(Handle<Object>& src) {
     );
     return result;
 }
-
-#define QuaternionCheckAndExtract(native, value)                              \
-    if (!QuaternionValidate(value))                                           \
-        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as Quaternion.")) ); \
-    Quaternion native = QuaternionExtract(value);
 
 // And this is the real implementation
 

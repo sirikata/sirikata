@@ -59,6 +59,12 @@ Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src) {
     return result;
 }
 
+Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
+template<typename VecType>
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const VecType& src) {
+    return CreateJSResult_Vec3Impl(ctx, Vector3d(src));
+}
+
 bool Vec3Validate(Handle<Object>& src);
 Vector3d Vec3Extract(Handle<Object>& src);
 

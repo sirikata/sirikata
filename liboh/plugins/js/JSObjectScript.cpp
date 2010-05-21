@@ -42,6 +42,10 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
 
+#include "JSUtil.hpp"
+#include "JSVec3.hpp"
+#include "JSQuaternion.hpp"
+
 #include <oh/ObjectHost.hpp>
 #include <network/IOService.hpp>
 
@@ -193,6 +197,48 @@ void JSObjectScript::setVisual(v8::Local<v8::Value>& newvis) {
     FIXME_GET_SPACE();
     mParent->setVisual(space, vis_uri);
 }
+
+v8::Handle<v8::Value> JSObjectScript::getVisualScale() {
+    FIXME_GET_SPACE();
+    return CreateJSResult(mContext, mParent->getVisualScale(space));
+}
+
+void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
+    Handle<Object> scale_obj = ObjectCast(newscale);
+    if (!Vec3Validate(scale_obj))
+        return;
+
+    Vector3f native_scale(Vec3Extract(scale_obj));
+    FIXME_GET_SPACE();
+    mParent->setVisualScale(space, native_scale);
+}
+
+#define CreateLocationAccessorHandlers(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
+    v8::Handle<v8::Value> JSObjectScript::get##PropName() {             \
+        FIXME_GET_SPACE();                                              \
+        return CreateJSResult(mContext, mParent->getLocation(space).get##PropName()); \
+    }                                                                   \
+                                                                        \
+    void JSObjectScript::set##PropName(v8::Local<v8::Value>& newval) {  \
+        Handle<SubType> val_obj = SubTypeCast(newval);                  \
+        if (!Validator(val_obj))                                        \
+            return;                                                     \
+                                                                        \
+        PropType native_val(Extractor(val_obj));                        \
+                                                                        \
+        FIXME_GET_SPACE();                                              \
+        Location loc = mParent->getLocation(space);                     \
+        loc.set##PropName(native_val);                                  \
+        mParent->setLocation(space, loc);                               \
+    }
+
+#define NOOP_CAST(X) X
+
+CreateLocationAccessorHandlers(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
+CreateLocationAccessorHandlers(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
+CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, QuaternionValidate, QuaternionExtract)
+CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
+CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be

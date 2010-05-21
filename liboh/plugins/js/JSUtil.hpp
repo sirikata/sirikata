@@ -46,6 +46,10 @@ namespace JS {
 bool NumericValidate(const Handle<Value>& val);
 double NumericExtract(const Handle<Value>& val);
 Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src);
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const double& src);
+
+Handle<Value> CreateJSResult(Handle<Object>& orig, const float& src);
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const float& src);
 
 #define NumericCheckAndExtract(native, value)                           \
     if (!NumericValidate(value))                                        \
@@ -53,10 +57,25 @@ Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src);
     double native = NumericExtract(value);
 
 
+v8::Handle<v8::Object> ObjectCast(const v8::Handle<v8::Value>& v);
+
 #define ObjectCheckAndCast(result, value)       \
     if (!value->IsObject())                                             \
         return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Expected object.")) ); \
     Handle<Object> result = Handle<Object>::Cast(value);
+
+
+v8::Handle<v8::Function> FunctionCast(const v8::Handle<v8::Value>& v);
+
+#define FunctionCheckAndCast(result, value)                             \
+    if (!value->IsFunction())                                           \
+        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Expected function.")) ); \
+    Handle<Function> result = Handle<Function>::Cast(value);
+
+
+v8::Handle<v8::Value> GetGlobal(v8::Handle<v8::Context>& ctx, const char* obj_name);
+
+
 
 } // namespace JS
 } // namespace Sirikata

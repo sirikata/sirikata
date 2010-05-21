@@ -65,6 +65,21 @@ public:
 
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);
+
+    v8::Handle<v8::Value> getVisualScale();
+    void setVisualScale(v8::Local<v8::Value>& newvis);
+
+    v8::Handle<v8::Value> getPosition();
+    void setPosition(v8::Local<v8::Value>& newval);
+    v8::Handle<v8::Value> getVelocity();
+    void setVelocity(v8::Local<v8::Value>& newval);
+    v8::Handle<v8::Value> getOrientation();
+    void setOrientation(v8::Local<v8::Value>& newval);
+    v8::Handle<v8::Value> getAxisOfRotation();
+    void setAxisOfRotation(v8::Local<v8::Value>& newval);
+    v8::Handle<v8::Value> getAngularSpeed();
+    void setAngularSpeed(v8::Local<v8::Value>& newval);
+
 private:
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);

@@ -62,5 +62,31 @@ Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src) {
     return Number::New(src);
 }
 
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const double& src) {
+    return Number::New(src);
+}
+
+Handle<Value> CreateJSResult(Handle<Object>& orig, const float& src) {
+    return Number::New(src);
+}
+
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const float& src) {
+    return Number::New(src);
+}
+
+v8::Handle<v8::Object> ObjectCast(const v8::Handle<v8::Value>& v) {
+    return v8::Handle<v8::Object>::Cast(v);
+}
+
+v8::Handle<v8::Function> FunctionCast(const v8::Handle<v8::Value>& v) {
+    return v8::Handle<v8::Function>::Cast(v);
+}
+
+
+
+Handle<Value> GetGlobal(v8::Handle<v8::Context>& ctx, const char* obj_name) {
+    return ctx->Global()->Get(v8::String::New(obj_name));
+}
+
 } // namespace JS
 } // namespace Sirikata

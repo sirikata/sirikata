@@ -135,6 +135,8 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
+// Visual
+
 v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
     JSObjectScript* target_script = GetTargetJSObjectScript(info);
     return target_script->getVisual();
@@ -144,6 +146,93 @@ void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value,
     JSObjectScript* target_script = GetTargetJSObjectScript(info);
     target_script->setVisual(value);
 }
+
+
+// Scale
+
+v8::Handle<v8::Value> ScriptGetScale(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getVisualScale();
+}
+
+void ScriptSetScale(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setVisualScale(value);
+}
+
+
+
+// Position
+
+v8::Handle<v8::Value> ScriptGetPosition(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getPosition();
+}
+
+void ScriptSetPosition(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setPosition(value);
+}
+
+
+// Velocity
+
+v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getVelocity();
+}
+
+void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setVelocity(value);
+}
+
+
+// Orientation
+
+v8::Handle<v8::Value> ScriptGetOrientation(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getOrientation();
+}
+
+void ScriptSetOrientation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setOrientation(value);
+}
+
+
+// AxisOfRotation
+
+v8::Handle<v8::Value> ScriptGetAxisOfRotation(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getAxisOfRotation();
+}
+
+void ScriptSetAxisOfRotation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setAxisOfRotation(value);
+}
+
+
+// AngularSpeed
+
+v8::Handle<v8::Value> ScriptGetAngularSpeed(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    return target_script->getAngularSpeed();
+}
+
+void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+    JSObjectScript* target_script = GetTargetJSObjectScript(info);
+    target_script->setAngularSpeed(value);
+}
+
+
+
+
+
+
+
+
 
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
     return new JSObjectScriptManager(arguments);
@@ -165,7 +254,15 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
-    system_templ->SetAccessor(v8::String::New("visual"), ScriptGetVisual, ScriptSetVisual);
+
+    system_templ->SetAccessor(JS_STRING(visual), ScriptGetVisual, ScriptSetVisual);
+    system_templ->SetAccessor(JS_STRING(scale), ScriptGetScale, ScriptSetScale);
+
+    system_templ->SetAccessor(JS_STRING(position), ScriptGetPosition, ScriptSetPosition);
+    system_templ->SetAccessor(JS_STRING(velocity), ScriptGetVelocity, ScriptSetVelocity);
+    system_templ->SetAccessor(JS_STRING(orientation), ScriptGetOrientation, ScriptSetOrientation);
+    system_templ->SetAccessor(JS_STRING(angularAxis), ScriptGetAxisOfRotation, ScriptSetAxisOfRotation);
+    system_templ->SetAccessor(JS_STRING(angularVelocity), ScriptGetAngularSpeed, ScriptSetAngularSpeed);
 
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);
