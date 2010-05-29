@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_JS_OBJECT_SCRIPT_HPP_
 #define _SIRIKATA_JS_OBJECT_SCRIPT_HPP_
 
+
+
 #include <oh/ObjectScript.hpp>
 #include <oh/ObjectScriptManager.hpp>
 #include <oh/HostedObject.hpp>
@@ -58,7 +60,8 @@ public:
 
     /** Dummy callback for testing exposing new functionality to scripts. */
     void test() const;
-
+    void bftm_testSendMessage() const;
+    
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
@@ -80,16 +83,21 @@ public:
     v8::Handle<v8::Value> getAngularSpeed();
     void setAngularSpeed(v8::Local<v8::Value>& newval);
 
+
+    
 private:
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
 
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
+    void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
 
+    
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
 
     ODP::Port* mScriptingPort;
+    ODP::Port* mMessagingPort;
 };
 
 } // namespace JS

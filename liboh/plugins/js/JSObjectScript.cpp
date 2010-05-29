@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 #include <oh/Platform.hpp>
 
 #include "JS_Sirikata.pbj.hpp"
@@ -48,6 +49,8 @@
 
 #include <oh/ObjectHost.hpp>
 #include <network/IOService.hpp>
+
+#include <core/odp/Defs.hpp>
 
 using namespace v8;
 
@@ -76,10 +79,22 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
 
-    for(HostedObject::SpaceSet::iterator space_it = spaces.begin(); space_it != spaces.end(); space_it++) {
+    for(HostedObject::SpaceSet::iterator space_it = spaces.begin(); space_it != spaces.end(); space_it++)
+    {
         mScriptingPort = mParent->bindODPPort(*space_it, Services::SCRIPTING);
         if (mScriptingPort)
             mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
+
+        //bftm
+        //change the services to something else.;
+        mMessagingPort = mParent->bindODPPort(*space_it, Services::COMMUNICATION);
+        if (mMessagingPort)
+            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
+
+        //now have the object send a message to itself
+        
+        
+        //end
     }
 }
 
@@ -89,6 +104,7 @@ JSObjectScript::~JSObjectScript() {
 
     mContext.Dispose();
 }
+
 
 bool JSObjectScript::forwardMessagesTo(MessageService*){
     NOT_IMPLEMENTED(js);
@@ -136,6 +152,25 @@ void JSObjectScript::test() const {
 
     mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
     mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
+
+    printf("\n\n\n\n\nI GOT HERE\n\n\n");
+    //doing a simple testSendMessage
+    bftm_testSendMessage();
+    
+}
+
+
+//bftm
+void JSObjectScript::bftm_testSendMessage() const
+{
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    SpaceID spaceider = *(spaces.begin());
+    ObjectReference mRef = mParent->getObjReference(spaceider);
+    ODP::Endpoint dest(spaceider, mRef, Services::COMMUNICATION);
+    
+    mMessagingPort->send(dest, MemoryReference("aoiwejfoewjf"));
+
+    printf("\n\nRunning bftm_testSendMessage\n\n");
 }
 
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
@@ -239,6 +274,13 @@ CreateLocationAccessorHandlers(Vector3f, Velocity, Object, ObjectCast, Vec3Valid
 CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, QuaternionValidate, QuaternionExtract)
 CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
+
+//just a handler for receiving any message.  for now, not doing any dispatch.
+void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
+{
+    printf("\n\n\n\n\nI GOT A MESSAGE\n\n\n");
+}
+
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be

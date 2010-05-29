@@ -298,6 +298,10 @@ public:
     virtual Location getLocation(const SpaceID& space);
     virtual void setLocation(const SpaceID& space, const Location& loc);
 
+    //bftm Object Reference
+    ObjectReference getObjReference(const SpaceID& space);
+
+    
     // Visual (mesh)
     virtual Transfer::URI getVisual(const SpaceID& space);
     virtual void setVisual(const SpaceID& space, const Transfer::URI& vis);

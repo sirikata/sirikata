@@ -1308,6 +1308,9 @@ bool HostedObject::isLocal(const SpaceObjectReference&objref) const{
 // FIXME why in the following are we operating on a proxy of ourselves to update
 // our information?
 
+
+
+
 Location HostedObject::getLocation(const SpaceID& space) {
     ProxyObjectPtr proxy = getProxy(space);
     assert(proxy);
@@ -1321,6 +1324,15 @@ void HostedObject::setLocation(const SpaceID& space, const Location& loc) {
     if (!proxy) return;
     Time tnow = proxy->getProxyManager()->getTimeOffsetManager()->now(*proxy);
     proxy->setLocation(tnow, loc);
+}
+
+//bftm
+ObjectReference HostedObject::getObjReference(const SpaceID& space)
+{
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    ObjectReference returner = proxy->getObjectReference().object();
+    return returner;
 }
 
 Transfer::URI HostedObject::getVisual(const SpaceID& space) {
