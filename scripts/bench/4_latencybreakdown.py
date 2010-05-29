@@ -110,36 +110,53 @@ if __name__ == "__main__":
     cs.object_static = 'static'
     cs.object_query_frac = 0.0
 
-    cs.duration = '120s'
+    cs.duration = '420s'
 
     rates = sys.argv[1:]
+    nobjectlist=[250,500,750,1000,1250,1500,1750,2000];#+=
+    nobjectlist+=[2500,3000,3500,4000,4500]+range(5000,20000,1000)
+    nobjectlist.reverse()
+    #nobjectlist=[19000]
+    caches=[256]*len(nobjectlist)
+    #caches+=[250]*len(nobjectlist)
+    #caches+=[750]*len(nobjectlist)
 
-    nobjectlist=[125,250,500]+range(1000,20000,1000)
-    caches=[28]*len(nobjectlist)#[10,15,20,25,30,35,40]
+    #caches+=[75]*len(nobjectlist)#[10,15,20,25,30,35,40]
+    #nobjectlist=nobjectlist*4#run with 4 caches
     cs.oseg_cache_size=caches[0];
+    cs.oseg_cache_selector='cache_communication';
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)
     oldoptions=plan.cs.scenario_options;
-    
+    done={}
+    adder=""
     print "SCENARIO OPTIONS ",plan.cs.scenario_options
-    rate=rates[0];
-    for nobjectsindex in range(len(nobjectlist)):
-        cs.oseg_cache_size=caches[nobjectsindex];
-    
-        nobjects=nobjectlist[nobjectsindex]
-        msgfile='messagetrace.'+str(nobjects);
-        global trmsgfile
+    for rate in rates:
+        for nobjectsindex in range(len(nobjectlist)):
 
-        cs.num_sl_objects=nobjects;
-        cs.message_trace_file=msgfile;
-        trace_location=cs.pack_dir+'/'+msgfile
-        trmsgfile=trace_location
-        print 'loading file '+cs.object_sl_file+' with trace '+msgfile
-        plan.run(rate)
-        plan.analysis()
-        nam='endtoend.';
-        if len(rates)>1:
-            nam+=str(rate)+'-';
-        nam+=str(nobjects)
-        os.rename(flow_fairness.get_latency_logfile_name(rate),nam);
-    plan.graph()
+            cs.oseg_cache_size=caches[nobjectsindex];
+            
+            nobjects=nobjectlist[nobjectsindex]
+            if nobjects in done:
+                adder+='c';
+                done={}
+            msgfile='messagetrace.'+str(nobjects);
+            global trmsgfile
+
+            cs.num_sl_objects=nobjects;
+            cs.message_trace_file=msgfile;
+            trace_location=cs.pack_dir+'/'+msgfile
+            trmsgfile=trace_location
+            print 'loading file '+cs.object_sl_file+' with trace '+msgfile
+            plan.run(rate)
+            plan.analysis()
+            nam='endtoend';
+            
+            if len(rates)>1:
+                nam+='-'+str(rate);
+            nam+=adder
+            nam+='.'
+            nam+=str(nobjects)
+            os.rename(flow_fairness.get_latency_logfile_name(rate),nam);
+            done[nobjects]=True
+            plan.graph()
     
