@@ -106,3 +106,7 @@ fulldepends: update-dependencies
 
 full-depends: update-dependencies
 	$(MAKE) -C dependencies full-depends $(*)
+
+
+docs: Doxyfile
+	doxygen

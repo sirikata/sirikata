@@ -575,6 +575,7 @@ INPUT                  = doc \
                          liboh/src \
                          liboh/include/oh \
                          liboh/plugins/monoscript \
+                         liboh/plugins/js \
                          libproxyobject/include/proxyobject \
                          libproxyobject/src \
                          libproxyobject/plugins/ogre \
@@ -593,8 +594,11 @@ INPUT                  = doc \
                          subscription/src \
                          libsubscription/src \
                          libsubscription/include/subscription \
+                         libcore/include/core \
+                         libcore/include/core/odp \
                          libcore/src/util \
                          libcore/src/options \
+                         libcore/src/odp \
                          libcore/src/task \
                          libcore/src/persistence \
                          libcore/src/network \
