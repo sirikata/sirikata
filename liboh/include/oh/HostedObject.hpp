@@ -177,6 +177,15 @@ public:
         return 0;
     }
 
+    //bftm
+    ObjectHostProxyManager *bftm_getProxyManager(const SpaceID &space) const {
+        ProxyObjectPtr obj = getProxy(space);
+        if (obj) {
+            return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
+        }
+        return 0;
+    }
+
 protected:
 
     /// Checks for a public cached property named propName.

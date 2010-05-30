@@ -51,6 +51,8 @@
 #include <network/IOService.hpp>
 
 #include <core/odp/Defs.hpp>
+#include <vector>
+
 
 using namespace v8;
 
@@ -96,6 +98,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         
         //end
     }
+
+    std::cout<<"\n\n\nBFTM: Object registered\n\n";
 }
 
 JSObjectScript::~JSObjectScript() {
@@ -155,13 +159,48 @@ void JSObjectScript::test() const {
 
     printf("\n\n\n\n\nI GOT HERE\n\n\n");
     //doing a simple testSendMessage
-    bftm_testSendMessage();
-    
+    bftm_testSendMessageBroadcast("default message");
 }
 
 
 //bftm
-void JSObjectScript::bftm_testSendMessage() const
+//returns a list of persistent objects can send messages to 
+void JSObjectScript::bftm_listDestinations()const
+{
+    NOT_IMPLEMENTED(js);
+    return;
+}
+
+
+//bftm
+//this function sends a message to all functions that proxyObjectManager has an
+//ObjectReference for
+void JSObjectScript::bftm_testSendMessageBroadcast(const std::string& msgToBCast) const
+{
+    std::vector<ObjectReference>allDestRefs;
+    bftm_getAllMessageable(allDestRefs);
+
+    for (int s= 0; s < (int) allDestRefs.size(); ++s)
+        bftm_testSendMessageTo(allDestRefs[s],msgToBCast);
+
+}
+
+
+//bftm
+//FIX ME: can probably pass by reference instead.  Also, may be duplicating work
+//by getting all the space id and stuff.
+void JSObjectScript::bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const
+{
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    SpaceID spaceider = *(spaces.begin());
+    ODP::Endpoint dest (spaceider,oRefDest,Services::COMMUNICATION);
+    //mMessagingPort->send(dest,MemoryReference("Scattered message"));
+    mMessagingPort->send(dest,MemoryReference(msgToBCast));
+}
+
+//bftm
+//This function tries to send a message to myself
+void JSObjectScript::bftm_testSendMessageSelf() const
 {
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     SpaceID spaceider = *(spaces.begin());
@@ -172,6 +211,34 @@ void JSObjectScript::bftm_testSendMessage() const
 
     printf("\n\nRunning bftm_testSendMessage\n\n");
 }
+
+
+
+//bftm
+void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const
+{
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    //which space am I in now
+    SpaceID spaceider = *(spaces.begin());
+
+    //get a list of all object references through prox
+    //ProxyObjectPtr proxPtr = mParent->getProxyManager(spaceider);
+    ObjectHostProxyManager* proxManagerPtr = mParent->bftm_getProxyManager(spaceider);
+
+    //FIX ME: May need to check if get back null ptr.
+
+    proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
+
+    std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
+    
+    if (allAvailableObjectReferences.empty())
+    {
+        printf("\n\nBFTM: No object references available for sending messages");
+        return;
+    }
+}
+
+
 
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
     // FIXME using the raw pointer isn't safe
@@ -278,7 +345,18 @@ CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericVa
 //just a handler for receiving any message.  for now, not doing any dispatch.
 void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
+    //FIX ME: need to figure out why the messages are prefaced with "Z"
+    //need to announce who message is from and who message is to;
     printf("\n\n\n\n\nI GOT A MESSAGE\n\n\n");
+    char* messageRec = new char [payload.size()+1];
+    memcpy (messageRec,payload.data(),payload.size());
+    messageRec[payload.size()] = '\0';
+    std::string mMessageBody(messageRec);
+
+    std::cout<<"\n\nSubject of message\n\n";
+    std::cout<<mMessageBody;
+    std::cout<<"\n\n";
+
 }
 
 

@@ -652,6 +652,11 @@ private:
 
     /** Create a UI element for interactively scripting an object. */
     void createScriptingUIAction() {
+
+        static bool bftm_onceInitialized = false;
+        
+        
+        
         // Ask all the objects to initialize scripting
         initScriptOnSelectedObjects();
 
@@ -674,15 +679,35 @@ private:
                 ui_info.scripting->show();
             }
             else {
+
+                //bftm
+                if (bftm_onceInitialized)
+                {
+                    WebView* new_scripting_ui =
+                        WebViewManager::getSingleton().createWebView(
+                            "__scripting", 300, 300,
+                            OverlayPosition(RP_BOTTOMCENTER)
+                        );
+                    new_scripting_ui->loadFile("../scripting/prompt.html");
+
+                    ui_info.scripting = new_scripting_ui;
+                    mScriptingUIObjects[new_scripting_ui] = obj;
+                    return;
+                }
+
+                //bftm
+                //name it something else, and put it in a different place
                 WebView* new_scripting_ui =
                     WebViewManager::getSingleton().createWebView(
-                        String("__scripting") + objid.toString(), "__scripting", 300, 300,
-                        OverlayPosition(RP_BOTTOMCENTER)
+                        "__scripting2", 300, 300,
+                        OverlayPosition(RP_TOPLEFT)
                     );
                 new_scripting_ui->loadFile("../scripting/prompt.html");
-
+                
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
+                bftm_onceInitialized = true;
+                
             }
         }
     }

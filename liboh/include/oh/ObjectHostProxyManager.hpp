@@ -36,6 +36,7 @@
 
 #include <proxyobject/ProxyManager.hpp>
 #include <oh/ObjectHostTimeOffsetManager.hpp>
+#include <vector>
 
 namespace Sirikata {
 
@@ -64,13 +65,17 @@ public:
     const TimeOffsetManager* getTimeOffsetManager()const{
         return &mTimeOffsetManager;
     }
-	~ObjectHostProxyManager();
+    
+    ~ObjectHostProxyManager();
     void initialize();
     void destroy();
 
     void createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
     void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
 
+    //bftm
+    void getAllObjectReferences(std::vector<ObjectReference>& allObjReferences) const;
+    
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;

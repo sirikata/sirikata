@@ -60,7 +60,10 @@ public:
 
     /** Dummy callback for testing exposing new functionality to scripts. */
     void test() const;
-    void bftm_testSendMessage() const;
+    void bftm_testSendMessageSelf() const;
+    void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
+    void bftm_listDestinations()const;
+
     
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -91,7 +94,9 @@ private:
 
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
+    void bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const;
 
+    void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
     
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;

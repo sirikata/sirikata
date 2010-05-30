@@ -35,6 +35,8 @@
 #include "oh/ObjectHost.hpp"
 #include "oh/HostedObject.hpp"
 #include "oh/SpaceTimeOffsetManager.hpp"
+#include <vector>
+
 namespace Sirikata {
 
 void ObjectHostProxyManager::initialize() {
@@ -98,5 +100,19 @@ ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference
     }
     return ProxyObjectPtr();
 }
+
+
+
+
+//bftm
+//runs through all object references held by this particular object host proxy
+//manager and returns them in vecotr form.
+void ObjectHostProxyManager::getAllObjectReferences(std::vector<ObjectReference>& allObjReferences) const
+{
+    ProxyMap::const_iterator iter;
+    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
+        allObjReferences.push_back(iter->first);
+}
+
 
 }

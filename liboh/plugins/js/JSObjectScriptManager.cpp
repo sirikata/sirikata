@@ -92,6 +92,29 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
+
+//bftm
+v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
+{
+   if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to broadcast(<message>)")) );
+
+    v8::Handle<v8::Value> messageBody = args[0];
+
+    v8::String::Utf8Value msgBodyArgs(args[0]);
+    const char* cMsgBody = ToCString(msgBodyArgs);
+    std::string cStrMsgBody(cMsgBody);
+    
+    std::cout<<"\n\n\n";
+    std::cout<<"This is messageBody:  "<<cMsgBody;
+    std::cout<<"\n\n\n";
+    
+    JSObjectScript* target = GetTargetJSObjectScript(args);
+    target->bftm_testSendMessageBroadcast(cStrMsgBody);
+    return v8::Undefined();
+}
+
+
 /** Invokes a callback after a specified timeout.
  *  Arguments:
  *   float timeout: duration of timeout in seconds
@@ -255,6 +278,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
 
+    
+    system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
+    
     system_templ->SetAccessor(JS_STRING(visual), ScriptGetVisual, ScriptSetVisual);
     system_templ->SetAccessor(JS_STRING(scale), ScriptGetScale, ScriptSetScale);
 
