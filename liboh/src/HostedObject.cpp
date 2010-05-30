@@ -857,7 +857,10 @@ bool myisalphanum(char c) {
 }
 }
 void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
-    assert(!mObjectScript); // Don't want to kill a live script!
+    if (mObjectScript) {
+        SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
+        return;
+    }
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
     mObjectHost->registerHostedObject(getSharedPtr());

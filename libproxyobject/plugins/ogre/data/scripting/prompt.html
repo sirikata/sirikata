@@ -62,6 +62,13 @@
         if (evt.shiftKey)
           shift_down = false;
       }
+
+      function closePrompt() {
+        var arg_map = [
+          'Close'
+        ];
+        chrome.send("event", arg_map);
+      }
     </script>
   </head>
   <body onload="registerHotkeys()">
@@ -71,6 +78,7 @@
       <form>
         <textarea id="Command" name="Command" rows="5" cols="30"></textarea><br>
         <button type="button" onclick="runCommand()">Run</button>
+        <button type="button" onclick="closePrompt()">Close</button>
       </form>
     </div>
   </body>

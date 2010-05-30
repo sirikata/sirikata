@@ -654,9 +654,9 @@ private:
     void createScriptingUIAction() {
 
         static bool bftm_onceInitialized = false;
-        
-        
-        
+
+
+
         // Ask all the objects to initialize scripting
         initScriptOnSelectedObjects();
 
@@ -703,11 +703,11 @@ private:
                         OverlayPosition(RP_TOPLEFT)
                     );
                 new_scripting_ui->loadFile("../scripting/prompt.html");
-                
+
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
                 bftm_onceInitialized = true;
-                
+
             }
         }
     }
@@ -889,6 +889,24 @@ private:
             Services::SCRIPTING,
             MemoryReference(serialized_scripting_request)
         );
+    }
+
+    /** Closes a webview. */
+    void closeWebView(WebView* wv, const std::tr1::unordered_map<String, String>& args) {
+        ScriptingUIObjectMap::iterator scriptui_it = mScriptingUIObjects.find(wv);
+        if (scriptui_it != mScriptingUIObjects.end()) {
+            ProxyObjectPtr target_obj(scriptui_it->second.lock());
+
+            if (target_obj) {
+                ObjectUIMap::iterator ui_it = mObjectUIs.find(target_obj->getObjectReference());
+                if (ui_it != mObjectUIs.end())
+                    mObjectUIs.erase(ui_it);
+            }
+
+            mScriptingUIObjects.erase(scriptui_it);
+        }
+
+        WebViewManager::getSingleton().destroyWebView(wv);
     }
 
     std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
@@ -1656,6 +1674,8 @@ public:
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
         mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
 
+        mInputResponses["closeWebView"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::closeWebView, this, _1, _2));
+
         mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
@@ -1772,6 +1792,7 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
 
         mInputBinding.add(InputBindingEvent::Web("__scripting", "ExecScript"), mInputResponses["executeScript"]);
+        mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
     }
 
     ~MouseHandler() {
