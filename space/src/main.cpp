@@ -114,10 +114,12 @@ int main(int argc,const char**argv) {
         const char* name;
         bool required;
     };
-    const uint32 nSimRequests = 2;
+    const uint32 nSimRequests = 0;
     SimulationRequest simRequests[nSimRequests] = {
+/*
         {"ogregraphics", true},
         {"bulletphysics", false}
+*/
     };
     bool continue_simulation=true;
     for(uint32 ir = 0; ir < nSimRequests && continue_simulation; ir++) {
