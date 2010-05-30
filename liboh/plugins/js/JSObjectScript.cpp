@@ -349,18 +349,12 @@ CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericVa
 //just a handler for receiving any message.  for now, not doing any dispatch.
 void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
-    //FIX ME: need to figure out why the messages are prefaced with "Z"
-    //need to announce who message is from and who message is to;
-    printf("\n\n\n\n\nI GOT A MESSAGE\n\n\n");
-    char* messageRec = new char [payload.size()+1];
-    memcpy (messageRec,payload.data(),payload.size());
-    messageRec[payload.size()] = '\0';
-    std::string mMessageBody(messageRec);
+    RoutableMessageBody body;
+    body.ParseFromArray(payload.data(), payload.size());
 
-    std::cout<<"\n\nSubject of message\n\n";
-    std::cout<<mMessageBody;
-    std::cout<<"\n\n";
+    std::string mMessageBody(body.payload());
 
+    JSLOG(warn, "Got message: " << mMessageBody);
 }
 
 
