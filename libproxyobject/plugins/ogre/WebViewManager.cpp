@@ -107,7 +107,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
-        chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView = createWebView("__chrome", 430, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         FILE * testfile=NULL;
         chromeWebView->loadFile("navbar.html");
 

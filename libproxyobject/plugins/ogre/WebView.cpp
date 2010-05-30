@@ -40,6 +40,11 @@ using namespace Ogre;
 namespace Sirikata {
 namespace Graphics {
 
+#define DEFAULT_BORDER_LEFT   2
+#define DEFAULT_BORDER_RIGHT  2
+#define DEFAULT_BORDER_TOP    2
+#define DEFAULT_BORDER_BOTTOM 2
+
 WebView::WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
 {
@@ -71,10 +76,10 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
-    mBorderLeft=3;
-    mBorderRight=6;
-    mBorderTop=12;
-    mBorderBottom=2;
+    mBorderLeft = DEFAULT_BORDER_LEFT;
+    mBorderRight = DEFAULT_BORDER_RIGHT;
+    mBorderTop = DEFAULT_BORDER_TOP;
+    mBorderBottom = DEFAULT_BORDER_BOTTOM;
 	createMaterial();
 
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
@@ -89,10 +94,10 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
-    mBorderLeft=3;
-    mBorderRight=6;
-    mBorderTop=12;
-    mBorderBottom=2;
+    mBorderLeft = DEFAULT_BORDER_LEFT;
+    mBorderRight = DEFAULT_BORDER_RIGHT;
+    mBorderTop = DEFAULT_BORDER_TOP;
+    mBorderBottom = DEFAULT_BORDER_BOTTOM;
 	viewName = name;
 	viewWidth = width;
 	viewHeight = height;
@@ -796,7 +801,7 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
     pixelBufferRect.mLeft=0;
     if (dx || dy) {
         SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
-        
+
         Berkelium::Rect scrollRect = clipRect;
         scrollRect.mLeft += dx;
         scrollRect.mTop += dy;
