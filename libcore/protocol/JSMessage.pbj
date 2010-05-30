@@ -1,0 +1,26 @@
+message JSFieldValue
+{
+	optional string s_value = 1;
+	optional int32 i_value = 2;
+
+}
+
+message JSField
+{
+	// every field in the original message can have three
+	// attributes: 1. name 2. value 3. prototype( or type)
+	// name is required while other two are optional
+
+	required string name = 1;
+	optional JSFieldValue value = 2; // could be a blank value
+	optional string prototype = 3;
+
+}
+message JSObject
+{
+	repeated JSField fields = 1;
+}
+
+
+
+
