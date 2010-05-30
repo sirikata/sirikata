@@ -1,3 +1,9 @@
+
+"pbj-0.0.3"
+
+package Sirikata.JS.Protocol;
+
+
 message JSFieldValue
 {
 	optional string s_value = 1;
@@ -20,7 +26,3 @@ message JSObject
 {
 	repeated JSField fields = 1;
 }
-
-
-
-

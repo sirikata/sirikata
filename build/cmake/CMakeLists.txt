@@ -781,15 +781,18 @@ ADD_PBJ_TARGET(Sirikata Physics
   ${PROTOCOLBUFFERS_GENS}
 )
 
-ADD_PBJ_TARGET(Sirikata
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "JS"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES JS_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
+IF(V8_FOUND)
+  SET(JS_ProtocolBuffersSources Sirikata JSMessage)
+  ADD_PBJ_TARGET(${JS_ProtocolBuffersSources}
+    INPUTDIR ${ProtocolBuffersRoot}
+    PLUGINNAME "JS"
+    IMPORTS ${ProtocolBuffersRoot}
+    OUTPUTDIR ${SirikataProtocolDirectory}
+    GENERATED_CPP_FILES JS_PBJ_CPP_FILES
+    CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+    ${PROTOCOLBUFFERS_GENS}
+    )
+ENDIF(V8_FOUND)
 
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
@@ -1489,7 +1492,7 @@ IF(CHROME_FOUND)
       LINKS
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/libplugin_carbon_interpose.dylib
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
-      
+
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
       
       ${TOP_LEVEL}/cdn.txt

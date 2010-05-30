@@ -53,6 +53,7 @@
 #include <core/odp/Defs.hpp>
 #include <vector>
 
+#include "JS_JSMessage.pbj.hpp"
 
 using namespace v8;
 
@@ -94,8 +95,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
 
         //now have the object send a message to itself
-        
-        
+
+
         //end
     }
 
@@ -164,7 +165,7 @@ void JSObjectScript::test() const {
 
 
 //bftm
-//returns a list of persistent objects can send messages to 
+//returns a list of persistent objects can send messages to
 void JSObjectScript::bftm_listDestinations()const
 {
     NOT_IMPLEMENTED(js);
@@ -177,6 +178,9 @@ void JSObjectScript::bftm_listDestinations()const
 //ObjectReference for
 void JSObjectScript::bftm_testSendMessageBroadcast(const std::string& msgToBCast) const
 {
+    Sirikata::JS::Protocol::JSObject js_object_msg;
+    Sirikata::JS::Protocol::IJSField js_object_field = js_object_msg.add_fields();
+
     std::vector<ObjectReference>allDestRefs;
     bftm_getAllMessageable(allDestRefs);
 
@@ -206,7 +210,7 @@ void JSObjectScript::bftm_testSendMessageSelf() const
     SpaceID spaceider = *(spaces.begin());
     ObjectReference mRef = mParent->getObjReference(spaceider);
     ODP::Endpoint dest(spaceider, mRef, Services::COMMUNICATION);
-    
+
     mMessagingPort->send(dest, MemoryReference("aoiwejfoewjf"));
 
     printf("\n\nRunning bftm_testSendMessage\n\n");
@@ -230,7 +234,7 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference>&allAvai
     proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
 
     std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
-    
+
     if (allAvailableObjectReferences.empty())
     {
         printf("\n\nBFTM: No object references available for sending messages");
@@ -365,7 +369,7 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
     // in "Header")
     RoutableMessageBody body;
     body.ParseFromArray(payload.data(), payload.size());
-    Protocol::ScriptingMessage scripting_msg;
+    Sirikata::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromString(body.payload());
     if (!parsed) {
         JSLOG(fatal, "Parsing failed.");
@@ -377,7 +381,7 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
 
     // Handle all requests
     for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++) {
-        Protocol::ScriptingRequest req = scripting_msg.requests(ii);
+        Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
         String script_str = req.body();
 
         v8::HandleScope handle_scope;
