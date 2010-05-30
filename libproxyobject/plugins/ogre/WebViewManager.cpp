@@ -107,7 +107,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
-        chromeWebView = createWebView("__chrome", 430, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+    chromeWebView = createWebView("__chrome", "__chrome", 430, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         FILE * testfile=NULL;
         chromeWebView->loadFile("navbar.html");
 
@@ -199,7 +199,7 @@ void WebViewManager::Update()
 	}
 }
 
-WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
+WebView* WebViewManager::createWebView(const std::string &webViewName, const std::string& webViewType, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 			bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
@@ -220,7 +220,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-        WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
+        WebView* newWebView = new WebView(webViewName, webViewType, width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport);
         newWebView->createWebView(asyncRender, maxAsyncRenderRate);
 	activeWebViews[webViewName] = newWebView;
@@ -250,7 +250,7 @@ WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsi
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-        WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
+        WebView* newWebView = new WebView(webViewName, "___popup___", width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport);
         newWebView->initializeWebView(newwin);
 	activeWebViews[webViewName] = newWebView;
@@ -267,7 +267,7 @@ WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, u
 			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
-        WebView* newWebView = new WebView(webViewName, width, height, texFiltering);
+        WebView* newWebView = new WebView(webViewName, "___material___", width, height, texFiltering);
         newWebView->createWebView(asyncRender, maxAsyncRenderRate);
         activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -641,7 +641,7 @@ void WebViewManager::navigate(NavigationAction action) {
         char buffer[256];
         sprintf(buffer, "spawned_%d", unique_id++);
         String unique_name(buffer);
-        WebView* newwebview = createWebView(unique_name, 320, 240, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
+        WebView* newwebview = createWebView(unique_name, unique_name, 320, 240, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
         newwebview->loadURL("http://sirikata.com/");
 //        newwebview->setTransparent(true);
         focusedNonChromeWebView = newwebview;
@@ -765,7 +765,7 @@ void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& ar
     JSArguments event_args;
     event_args.insert(event_args.begin(), args.begin() + 1, args.end());
 
-    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview, webview->getName(), args) ));
+    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview, webview->getType(), args) ));
 #endif
 }
 

@@ -255,6 +255,11 @@ namespace Graphics {
 		std::string getName();
 
 		/**
+		* Returns the type of this WebView.
+		*/
+		std::string getType();
+
+		/**
 		* Returns the name of the Ogre::Material used internally by this WebView.
 		*/
 		std::string getViewTextureName();
@@ -340,6 +345,8 @@ namespace Graphics {
 #endif
         ///the name of the webview, so as to allocate predictable ogre names to the textures and materials
 		std::string viewName;
+            /// The type of the webview, which is used when generating events.
+            std::string viewType;
         ///the width of the overlay and observed pixel view of the web page
 		unsigned short viewWidth;
         ///the height of the overlay and observed pixel view of the web page
@@ -406,10 +413,10 @@ namespace Graphics {
 
 		friend class WebViewManager;
 
-		WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
+            WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
 
-		WebView(const std::string& name, unsigned short width, unsigned short height,
+            WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
 			Ogre::FilterOptions texFiltering);
 
 		~WebView();

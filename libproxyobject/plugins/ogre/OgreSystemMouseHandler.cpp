@@ -646,7 +646,7 @@ private:
 
     /** Create a UI element using a web view. */
     void createUIAction(const String& ui_page) {
-        WebView* ui_wv = WebViewManager::getSingleton().createWebView("__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+        WebView* ui_wv = WebViewManager::getSingleton().createWebView("__object", "__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
         ui_wv->loadFile(ui_page);
     }
 
@@ -676,7 +676,7 @@ private:
             else {
                 WebView* new_scripting_ui =
                     WebViewManager::getSingleton().createWebView(
-                        "__scripting", 300, 300,
+                        String("__scripting") + objid.toString(), "__scripting", 300, 300,
                         OverlayPosition(RP_BOTTOMCENTER)
                     );
                 new_scripting_ui->loadFile("../scripting/prompt.html");
