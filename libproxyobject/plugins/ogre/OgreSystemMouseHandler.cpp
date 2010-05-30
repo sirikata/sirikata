@@ -685,7 +685,7 @@ private:
                 {
                     WebView* new_scripting_ui =
                         WebViewManager::getSingleton().createWebView(
-                            "__scripting", 300, 300,
+                            String("__scripting") + objid.toString(), "__scripting", 300, 300,
                             OverlayPosition(RP_BOTTOMCENTER)
                         );
                     new_scripting_ui->loadFile("../scripting/prompt.html");
@@ -699,7 +699,7 @@ private:
                 //name it something else, and put it in a different place
                 WebView* new_scripting_ui =
                     WebViewManager::getSingleton().createWebView(
-                        "__scripting2", 300, 300,
+                        String("__scripting") + objid.toString(), "__scripting", 300, 300,
                         OverlayPosition(RP_TOPLEFT)
                     );
                 new_scripting_ui->loadFile("../scripting/prompt.html");
