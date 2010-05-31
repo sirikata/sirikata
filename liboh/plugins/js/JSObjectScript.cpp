@@ -78,6 +78,14 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
     system_obj->SetInternalField(0, External::New(this));
 
+    //system_obj->
+    //bftm
+//     mAddressableList = new AddressableList;
+//     system_obj->SetInternalField(1, External::New(mAddressableList));
+//     lkjs;
+
+
+
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
@@ -362,14 +370,14 @@ void JSObjectScript::registerHandler(const Pattern& pattern, v8::Persistent<v8::
 //just a handler for receiving any message.  for now, not doing any dispatch.
 void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
-		v8::HandleScope handle_scope;
+    v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
-
 
     RoutableMessageBody body;
     body.ParseFromArray(payload.data(), payload.size());
 
     std::string mMessageBody(body.payload());
+
 
     //JSLOG(warn, "Got message: " << mMessageBody);
 
@@ -421,7 +429,6 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
                 ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
             }
         }
-
 }
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {

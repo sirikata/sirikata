@@ -38,6 +38,7 @@
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
 
+
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
@@ -96,9 +97,6 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
-//bhupc
-
-
 
 //bftm
 v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
@@ -107,6 +105,7 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to broadcast(<message>)")) );
 
     v8::Handle<v8::Value> messageBody = args[0];
+
 
 		//bhupc
 
@@ -194,7 +193,6 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 //    target->bftm_testSendMessageBroadcast(cStrMsgBody);
   target->bftm_testSendMessageBroadcast(serialized_message);
-
 
 
     return v8::Undefined();
@@ -397,15 +395,22 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     // And we expose some functionality directly
     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
     // An internal field holds the JSObjectScript*
+
+    //bftm
     system_templ->SetInternalFieldCount(1);
+
+
+
     // Functions / types
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
 
+    system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
 
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
 
+    //these are mutable fields
     system_templ->SetAccessor(JS_STRING(visual), ScriptGetVisual, ScriptSetVisual);
     system_templ->SetAccessor(JS_STRING(scale), ScriptGetScale, ScriptSetScale);
 
@@ -414,6 +419,12 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->SetAccessor(JS_STRING(orientation), ScriptGetOrientation, ScriptSetOrientation);
     system_templ->SetAccessor(JS_STRING(angularAxis), ScriptGetAxisOfRotation, ScriptSetAxisOfRotation);
     system_templ->SetAccessor(JS_STRING(angularVelocity), ScriptGetAngularSpeed, ScriptSetAngularSpeed);
+
+    //bftm: create a new array for addressable objects.  make it so that the
+    v8::Handle<v8::Object> arrayObject = v8::Array::New();
+    system_templ->Set(v8::String::New("addressable"),arrayObject);
+    //
+
 
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);

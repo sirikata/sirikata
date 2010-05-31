@@ -106,6 +106,11 @@ private:
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
 
+    //bftm
+    typedef std::vector<ObjectReference> AddressableList;
+    AddressableList* mAddressableList;
+
+    
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
 
