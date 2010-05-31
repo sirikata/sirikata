@@ -68,7 +68,7 @@ public:
 
     void sendMessageTo(int numIndex, std::string msgBody) const;
     int getAddressableSize();
-    
+
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -93,7 +93,7 @@ public:
 
 
     /** Register an event pattern matcher and handler. */
-    void registerHandler(const Pattern& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+    void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
 
 private:
@@ -114,17 +114,19 @@ private:
     AddressableList* mAddressableList;
     void bftm_populateExternalAddressable();
     void bftm_populateAddressable();
-    
-    
+
+
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
 
 
     struct JSEventHandler {
-        JSEventHandler(const Pattern& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb)
+        JSEventHandler(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb)
          : pattern(_pattern), target(_target), cb(_cb) {}
 
-        Pattern pattern;
+        bool matches(v8::Handle<v8::Object> obj) const;
+
+        PatternList pattern;
         v8::Persistent<v8::Object> target;
         v8::Persistent<v8::Function> cb;
     };

@@ -68,6 +68,8 @@ private:
     v8::Persistent<v8::Value> mPrototype;
 };
 
+typedef std::vector<Pattern> PatternList;
+
 /** Create a template for a Pattern function. */
 v8::Handle<v8::FunctionTemplate> CreatePatternTemplate();
 void DestroyPatternTemplate();

@@ -60,6 +60,16 @@ using namespace v8;
 namespace Sirikata {
 namespace JS {
 
+bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj) const {
+    for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++) {
+        if (!pat_it->matches(obj))
+            return false;
+    }
+
+    return true;
+}
+
+
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template)
  : mParent(ho)
 {
@@ -411,7 +421,7 @@ CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
-void JSObjectScript::registerHandler(const Pattern& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
+void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
     JSEventHandler new_handler(pattern, target, cb);
     mEventHandlers.push_back(new_handler);
 }
@@ -473,7 +483,7 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
             handler_it != mEventHandlers.end();
             handler_it++) {
 
-            if (handler_it->pattern.matches(obj)) {
+            if (handler_it->matches(obj)) {
                 int argc = 1;
                 Handle<Value> argv[1] = { obj };
                 ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);

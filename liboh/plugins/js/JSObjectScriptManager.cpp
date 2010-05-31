@@ -401,7 +401,26 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args) {
     v8::Handle<v8::Value> cb_val = args[2];
 
     // Pattern
-    PatternCheckAndExtract(native_pattern, pattern);
+    PatternList native_patterns;
+    if (PatternValidate(pattern)) {
+        Pattern single_pattern = PatternExtract(pattern);
+        native_patterns.push_back(single_pattern);
+    }
+    else if (pattern->IsArray()) {
+        v8::Handle<v8::Array> pattern_array( v8::Handle<v8::Array>::Cast(pattern) );
+        if (pattern_array->Length() == 0)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern array must contain at least one element.")) );
+        for(uint32 pat_idx = 0; pat_idx < pattern_array->Length(); pat_idx++) {
+            Local<Value> pattern_element = pattern_array->Get(pat_idx);
+            if (!PatternValidate(pattern_element))
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Found non-pattern element in array of patterns.")) );
+            Pattern single_pattern = PatternExtract(pattern_element);
+            native_patterns.push_back(single_pattern);
+        }
+    }
+    else {
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern argument must be pattern or array of patterns.")) );
+    }
 
     // Target
     if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
@@ -417,7 +436,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args) {
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    target_script->registerHandler(native_pattern, target_persist, cb_persist);
+    target_script->registerHandler(native_patterns, target_persist, cb_persist);
 
     return v8::Undefined();
 }
