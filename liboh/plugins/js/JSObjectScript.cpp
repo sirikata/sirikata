@@ -78,13 +78,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
     system_obj->SetInternalField(0, External::New(this));
 
-    //system_obj->
-    //bftm
-//     mAddressableList = new AddressableList;
-//     system_obj->SetInternalField(1, External::New(mAddressableList));
-//     lkjs;
 
-
+    mAddressableList = new AddressableList;
+    bftm_populateAddressable();
 
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
@@ -111,12 +107,15 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     std::cout<<"\n\n\nBFTM: Object registered\n\n";
 }
 
+
+
 JSObjectScript::~JSObjectScript() {
     if (mScriptingPort)
         delete mScriptingPort;
 
     mContext.Dispose();
 }
+
 
 
 bool JSObjectScript::forwardMessagesTo(MessageService*){
@@ -172,6 +171,49 @@ void JSObjectScript::test() const {
 }
 
 
+
+
+//bftm
+//populates the internal addressable object references vector
+void JSObjectScript::bftm_populateAddressable()
+{
+    mAddressableList->clear();
+    bftm_getAllMessageable(*mAddressableList);
+}
+
+//bftm
+//populates the external addressable array from javascript held by the system object with object references
+void JSObjectScript::bftm_populateExternalAddressable()
+{
+    //FIXME: because I can't load the object, this may not work.
+
+    //copied from above
+    Local<Object> global_obj = mContext->Global();
+    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+    // The template actually generates the root objects prototype, not the root
+    // itself.
+    Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+
+    //get the system object
+    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
+
+    //get the addressable object from the array.
+    v8::Local<v8::Array> addArray = v8::Local<v8::Array>::Cast(system_obj->Get(v8::String::New("addressable")));
+
+    //lkjs
+    //for now, just loading in string values.
+    for (int s = 0; s < (int)mAddressableList->size(); ++s)
+        addArray->Set(v8::Number::New(s), v8::String::New("wakawaka"));
+
+
+}
+
+int JSObjectScript::getAddressableSize()
+{
+    return (int)mAddressableList->size();
+}
+
+
 //bftm
 //returns a list of persistent objects can send messages to
 void JSObjectScript::bftm_listDestinations()const
@@ -197,6 +239,15 @@ void JSObjectScript::bftm_testSendMessageBroadcast(const std::string& msgToBCast
 
 }
 
+//bftm
+//takes in the index into the mAddressableList (for the object reference) and
+//a string that forms the message body.
+void JSObjectScript::sendMessageTo(int numIndex, std::string msgBody) const
+{
+    bftm_testSendMessageTo((*mAddressableList)[numIndex],msgBody);
+}
+
+
 
 //bftm
 //FIX ME: can probably pass by reference instead.  Also, may be duplicating work
@@ -206,7 +257,6 @@ void JSObjectScript::bftm_testSendMessageTo(ObjectReference oRefDest, const std:
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     SpaceID spaceider = *(spaces.begin());
     ODP::Endpoint dest (spaceider,oRefDest,Services::COMMUNICATION);
-    //mMessagingPort->send(dest,MemoryReference("Scattered message"));
     mMessagingPort->send(dest,MemoryReference(msgToBCast));
 }
 

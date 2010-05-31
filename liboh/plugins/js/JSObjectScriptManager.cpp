@@ -199,6 +199,55 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 }
 
 
+//bftm
+v8::Handle<v8::Value> __ScriptAddressable(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to addressable(index)")) );
+
+    int numIndex = (int)(args[0]->Uint32Value());
+    v8::Handle<v8::Value> messageBody = args[0];
+    JSObjectScript* target = GetTargetJSObjectScript(args);
+
+    if (numIndex >= target->getAddressableSize())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Out of range: please query again with a smaller index.")));
+
+    //FIXME: need to figure out how to pass back a c++ reference to java
+    //script.  Later, javascript will pass back that reference when sending
+    //messages
+
+
+    return v8::ThrowException( v8::Exception::Error(v8::String::New("FIXME: need to figure out how to pass back a c++ reference to javascript.  Later, javascript will pass back that reference when sending messages")));
+
+}
+
+//first argument is the destination (in the internally stored vector of
+//potential destinations
+//second argument is the destination sending to
+v8::Handle<v8::Value> __SendMessageTo(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessageTo(index,msg)")) );
+
+
+    int numIndex = (int)(args[0]->Uint32Value());
+    v8::Handle<v8::Value> indexTo = args[0];
+
+
+    v8::String::Utf8Value msgBodyArgs(args[1]);
+    const char* cMsgBody = ToCString(msgBodyArgs);
+    std::string cStrMsgBody(cMsgBody);
+
+
+    JSObjectScript* target = GetTargetJSObjectScript(args);
+    target->sendMessageTo(numIndex,cStrMsgBody);
+
+    return v8::Undefined();
+}
+
+
+
+
 /** Invokes a callback after a specified timeout.
  *  Arguments:
  *   float timeout: duration of timeout in seconds
@@ -376,10 +425,6 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args) {
 
 
 
-
-
-
-
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
     return new JSObjectScriptManager(arguments);
 }
@@ -396,9 +441,8 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
     // An internal field holds the JSObjectScript*
 
-    //bftm
-    system_templ->SetInternalFieldCount(1);
 
+    system_templ->SetInternalFieldCount(1);
 
 
     // Functions / types
@@ -410,6 +454,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
 
+    system_templ->Set(v8::String::New("__addressable"),v8::FunctionTemplate::New(__ScriptAddressable));
+    system_templ->Set(v8::String::New("__sendMessageTo"),v8::FunctionTemplate::New(__SendMessageTo));
+
     //these are mutable fields
     system_templ->SetAccessor(JS_STRING(visual), ScriptGetVisual, ScriptSetVisual);
     system_templ->SetAccessor(JS_STRING(scale), ScriptGetScale, ScriptSetScale);
@@ -420,9 +467,14 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->SetAccessor(JS_STRING(angularAxis), ScriptGetAxisOfRotation, ScriptSetAxisOfRotation);
     system_templ->SetAccessor(JS_STRING(angularVelocity), ScriptGetAngularSpeed, ScriptSetAngularSpeed);
 
+
+    //FIXME: Pretty much calling any single line below causes a seg fault that I
+    //don't understand.
     //bftm: create a new array for addressable objects.  make it so that the
-    v8::Handle<v8::Object> arrayObject = v8::Array::New();
-    system_templ->Set(v8::String::New("addressable"),arrayObject);
+    //v8::Handle<v8::Array> arrayObject;
+    //v8::Handle<v8::Object> arrayObject = v8::Array::New();
+    //system_templ->Set(v8::String::New("addressable"),arrayObject);
+    //system_templ->Get(arrayObject);
     //
 
 

@@ -66,6 +66,9 @@ public:
     void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
     void bftm_listDestinations()const;
 
+    void sendMessageTo(int numIndex, std::string msgBody) const;
+    int getAddressableSize();
+    
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -109,7 +112,9 @@ private:
     //bftm
     typedef std::vector<ObjectReference> AddressableList;
     AddressableList* mAddressableList;
-
+    void bftm_populateExternalAddressable();
+    void bftm_populateAddressable();
+    
     
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
