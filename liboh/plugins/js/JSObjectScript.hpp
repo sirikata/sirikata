@@ -40,6 +40,8 @@
 #include <oh/HostedObject.hpp>
 #include <v8.h>
 
+#include "JSPattern.hpp"
+
 namespace Sirikata {
 namespace JS {
 
@@ -64,7 +66,7 @@ public:
     void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
     void bftm_listDestinations()const;
 
-    
+
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
@@ -87,7 +89,10 @@ public:
     void setAngularSpeed(v8::Local<v8::Value>& newval);
 
 
-    
+    /** Register an event pattern matcher and handler. */
+    void registerHandler(const Pattern& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+
+
 private:
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
@@ -97,12 +102,24 @@ private:
     void bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const;
 
     void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
-    
+
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
+
+
+    struct JSEventHandler {
+        JSEventHandler(const Pattern& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb)
+         : pattern(_pattern), target(_target), cb(_cb) {}
+
+        Pattern pattern;
+        v8::Persistent<v8::Object> target;
+        v8::Persistent<v8::Function> cb;
+    };
+    typedef std::vector<JSEventHandler> JSEventHandlerList;
+    JSEventHandlerList mEventHandlers;
 };
 
 } // namespace JS

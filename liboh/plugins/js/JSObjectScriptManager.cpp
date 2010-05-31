@@ -37,6 +37,9 @@
 
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
+
+#include "JSPattern.hpp"
+
 #include "JS_JSMessage.pbj.hpp"
 
 
@@ -107,17 +110,17 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 		//bhupc
 
-		
+
 		if(!messageBody->IsObject())
 		{
 			return v8::ThrowException(v8::Exception::Error(v8::String::New("MEssage shoudl be an object")) );
 		}
 
 		Local<v8::Object> v8Object = messageBody->ToObject();
-		
+
 		Local<v8::Array> properties = v8Object->GetPropertyNames();
 
-		Protocol::JSMessage jsmessage ; 
+		Protocol::JSMessage jsmessage ;
 		for( unsigned int i = 0; i < properties->Length(); i++)
 		{
 					Local<v8::Value> value1 = properties->Get(i);
@@ -126,24 +129,24 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 					Local<v8::Value> value2 =
 					v8Object->Get(properties->Get(i));
 
-					
-					// create a JSField out of this
-				
-					
 
-				
+					// create a JSField out of this
+
+
+
+
 			    v8::String::Utf8Value
 					msgBodyArgs1(value1);
-					
+
 					const char* cMsgBody1 = ToCString(msgBodyArgs1);
 					std::string cStrMsgBody1(cMsgBody1);
 
 
 					//std::cout << cStrMsgBody1 << " = ";
-					
+
 					v8::String::Utf8Value
 					msgBodyArgs2(value2);
-					
+
 					const char* cMsgBody2 = ToCString(msgBodyArgs2);
 					std::string cStrMsgBody2(cMsgBody2);
 
@@ -152,17 +155,17 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 
 					Protocol::IJSField jsf = jsmessage.add_fields();
-					
+
 					jsf.set_name(cStrMsgBody1);
 					Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
 					jsf_value.set_s_value(cStrMsgBody2);
-					
-				
-					
-				
+
+
+
+
 		}
 
-		
+
 		// serialize the jsmessage
 
 		//RoutableMessageBody body;
@@ -173,11 +176,11 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 //    v8::String::Utf8Value msgBodyArgs(args[0]);
 //    const char* cMsgBody = ToCString(msgBodyArgs);
 //    std::string cStrMsgBody(cMsgBody);
-    
+
 //    std::cout<<"\n\n\n";
 //    std::cout<<"This is messageBody:  "<<cMsgBody;
 //    std::cout<<"\n\n\n";
-    
+
   JSObjectScript* target = GetTargetJSObjectScript(args);
 	std::string serialized_message;
 	jsmessage.SerializeToString(&serialized_message);
@@ -191,9 +194,9 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 //    target->bftm_testSendMessageBroadcast(cStrMsgBody);
   target->bftm_testSendMessageBroadcast(serialized_message);
-	
-	 
-		
+
+
+
     return v8::Undefined();
 }
 
@@ -333,6 +336,45 @@ void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> 
 }
 
 
+/** Registers a handler to be invoked for events that match the
+ *  specified pattern, where the pattern is a list of individual
+ *  rules.
+ *  Arguments:
+ *   pattern[] pattterns: Array of Pattern rules to match
+ *   object target: target of callback (this pointer when invoked), or null for
+ *                  the global (root) object
+ *   function cb: callback to invoke, with event as parameter
+ */
+v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args) {
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().")) );
+
+    v8::Handle<v8::Value> pattern = args[0];
+    v8::Handle<v8::Value> target_val = args[1];
+    v8::Handle<v8::Value> cb_val = args[2];
+
+    // Pattern
+    PatternCheckAndExtract(native_pattern, pattern);
+
+    // Target
+    if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
+
+    v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
+    v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
+
+    // Function
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().")) );
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    target_script->registerHandler(native_pattern, target_persist, cb_persist);
+
+    return v8::Undefined();
+}
+
 
 
 
@@ -361,9 +403,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
 
-    
+
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
-    
+
     system_templ->SetAccessor(JS_STRING(visual), ScriptGetVisual, ScriptSetVisual);
     system_templ->SetAccessor(JS_STRING(scale), ScriptGetScale, ScriptSetScale);
 
@@ -379,6 +421,10 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
     system_templ->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
 
+    mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
+    system_templ->Set(JS_STRING(Pattern), mPatternTemplate);
+
+    system_templ->Set(JS_STRING(registerHandler), v8::FunctionTemplate::New(ScriptRegisterHandler));
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 

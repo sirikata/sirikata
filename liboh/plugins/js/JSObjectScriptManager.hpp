@@ -57,6 +57,7 @@ private:
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
     v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
+    v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 };
 
 } // namespace JS

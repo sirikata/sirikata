@@ -43,6 +43,9 @@ namespace JS {
 
 #define JS_STRING(x) (v8::String::New( #x ))
 
+bool StringValidate(const Handle<Value>& val);
+std::string StringExtract(const Handle<Value>& val);
+
 bool NumericValidate(const Handle<Value>& val);
 double NumericExtract(const Handle<Value>& val);
 Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src);
@@ -55,6 +58,11 @@ Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const float& src);
     if (!NumericValidate(value))                                        \
         return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as numeric.")) ); \
     double native = NumericExtract(value);
+
+#define StringCheckAndExtract(native, value)                            \
+    if (!StringValidate(value))                                         \
+        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as string.")) ); \
+    std::string native = StringExtract(value);
 
 
 v8::Handle<v8::Object> ObjectCast(const v8::Handle<v8::Value>& v);

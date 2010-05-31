@@ -37,6 +37,15 @@ using namespace v8;
 namespace Sirikata {
 namespace JS {
 
+bool StringValidate(const Handle<Value>& val) {
+    return (val->IsString());
+}
+
+std::string StringExtract(const Handle<Value>& val) {
+    v8::String::Utf8Value utf8val(val);
+    return std::string(*utf8val);
+}
+
 bool NumericValidate(const Handle<Value>& val) {
     return (val->IsUint32() || val->IsInt32() || val->IsNumber());
 }

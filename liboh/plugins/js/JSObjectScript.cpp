@@ -243,6 +243,29 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference>&allAvai
 }
 
 
+void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(ctx);
+
+    TryCatch try_catch;
+
+    Handle<Value> result;
+    if (target->IsNull() || target->IsUndefined())
+        result = cb->Call(ctx->Global(), argc, argv);
+    else
+        result = cb->Call(target, argc, argv);
+
+    if (result.IsEmpty()) {
+        // FIXME what should we do with this exception?
+        v8::String::Utf8Value error(try_catch.Exception());
+    }
+}
+
+void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
+    const int argc = 0;
+    Handle<Value> argv[argc] = { };
+    ProtectedJSCallback(ctx, target, cb, argc, argv);
+}
 
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
     // FIXME using the raw pointer isn't safe
@@ -258,24 +281,7 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
 }
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-    TryCatch try_catch;
-
-    const int argc = 0;
-    Handle<Value> argv[argc] = { };
-
-    Handle<Value> result;
-    if (target->IsNull() || target->IsUndefined())
-        result = cb->Call(mContext->Global(), argc, argv);
-    else
-        result = cb->Call(target, argc, argv);
-
-    if (result.IsEmpty()) {
-        // FIXME what should we do with this exception?
-        v8::String::Utf8Value error(try_catch.Exception());
-    }
+    ProtectedJSCallback(mContext, target, cb);
 }
 
 #define FIXME_GET_SPACE() \
@@ -346,6 +352,13 @@ CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, Quat
 CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
+
+void JSObjectScript::registerHandler(const Pattern& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
+    JSEventHandler new_handler(pattern, target, cb);
+    mEventHandlers.push_back(new_handler);
+}
+
+
 //just a handler for receiving any message.  for now, not doing any dispatch.
 void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
@@ -372,12 +385,12 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 	for(int i = 0; i < jsmessage.fields_size(); i++)
 	{
 		Protocol::JSField jsf = jsmessage.fields(i);
-		
+
 		//std::cout << jsf.name() << " = ";
 		//obj.Set(i, jsf.name());
 
 		Protocol::JSFieldValue jsvalue= jsf.value();
-		
+
 		const char* str = jsf.name().c_str();
 		Local<v8::String> key = v8::String::New(str, jsf.name().size());
 		if(jsvalue.has_s_value())
@@ -390,18 +403,26 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 		else if(jsvalue.has_i_value())
 		{
 			//std::cout << jsvalue.i_value() << "\n";
-			Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());	
+			Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
 			obj->Set(key, intval);
 			//obj->Set(key, jsvalue.i_value());
 		}
 
 	}
 
+        // Try to dispatch the message
+        for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin();
+            handler_it != mEventHandlers.end();
+            handler_it++) {
 
+            if (handler_it->pattern.matches(obj)) {
+                int argc = 1;
+                Handle<Value> argv[1] = { obj };
+                ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
+            }
+        }
 
-	
 }
-
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
