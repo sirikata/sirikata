@@ -37,6 +37,7 @@
 
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
+#include "JS_JSMessage.pbj.hpp"
 
 
 namespace Sirikata {
@@ -92,6 +93,9 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
+//bhupc
+
+
 
 //bftm
 v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
@@ -101,16 +105,95 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
     v8::Handle<v8::Value> messageBody = args[0];
 
-    v8::String::Utf8Value msgBodyArgs(args[0]);
-    const char* cMsgBody = ToCString(msgBodyArgs);
-    std::string cStrMsgBody(cMsgBody);
+		//bhupc
+
+		
+		if(!messageBody->IsObject())
+		{
+			return v8::ThrowException(v8::Exception::Error(v8::String::New("MEssage shoudl be an object")) );
+		}
+
+		Local<v8::Object> v8Object = messageBody->ToObject();
+		
+		Local<v8::Array> properties = v8Object->GetPropertyNames();
+
+		Protocol::JSMessage jsmessage ; 
+		for( unsigned int i = 0; i < properties->Length(); i++)
+		{
+					Local<v8::Value> value1 = properties->Get(i);
+
+
+					Local<v8::Value> value2 =
+					v8Object->Get(properties->Get(i));
+
+					
+					// create a JSField out of this
+				
+					
+
+				
+			    v8::String::Utf8Value
+					msgBodyArgs1(value1);
+					
+					const char* cMsgBody1 = ToCString(msgBodyArgs1);
+					std::string cStrMsgBody1(cMsgBody1);
+
+
+					//std::cout << cStrMsgBody1 << " = ";
+					
+					v8::String::Utf8Value
+					msgBodyArgs2(value2);
+					
+					const char* cMsgBody2 = ToCString(msgBodyArgs2);
+					std::string cStrMsgBody2(cMsgBody2);
+
+
+					//std::cout << cStrMsgBody2 << "\n";
+
+
+					Protocol::IJSField jsf = jsmessage.add_fields();
+					
+					jsf.set_name(cStrMsgBody1);
+					Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
+					jsf_value.set_s_value(cStrMsgBody2);
+					
+				
+					
+				
+		}
+
+		
+		// serialize the jsmessage
+
+		//RoutableMessageBody body;
+
+
+
+
+//    v8::String::Utf8Value msgBodyArgs(args[0]);
+//    const char* cMsgBody = ToCString(msgBodyArgs);
+//    std::string cStrMsgBody(cMsgBody);
     
-    std::cout<<"\n\n\n";
-    std::cout<<"This is messageBody:  "<<cMsgBody;
-    std::cout<<"\n\n\n";
+//    std::cout<<"\n\n\n";
+//    std::cout<<"This is messageBody:  "<<cMsgBody;
+//    std::cout<<"\n\n\n";
     
-    JSObjectScript* target = GetTargetJSObjectScript(args);
-    target->bftm_testSendMessageBroadcast(cStrMsgBody);
+  JSObjectScript* target = GetTargetJSObjectScript(args);
+	std::string serialized_message;
+	jsmessage.SerializeToString(&serialized_message);
+
+	std::cout << "Serialized message " << "\n" <<
+	serialized_message.size() << serialized_message <<
+	"\n";
+
+
+
+
+//    target->bftm_testSendMessageBroadcast(cStrMsgBody);
+  target->bftm_testSendMessageBroadcast(serialized_message);
+	
+	 
+		
     return v8::Undefined();
 }
 

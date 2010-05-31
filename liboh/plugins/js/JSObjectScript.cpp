@@ -178,7 +178,7 @@ void JSObjectScript::bftm_listDestinations()const
 //ObjectReference for
 void JSObjectScript::bftm_testSendMessageBroadcast(const std::string& msgToBCast) const
 {
-    Sirikata::JS::Protocol::JSObject js_object_msg;
+    Sirikata::JS::Protocol::JSMessage js_object_msg;
     Sirikata::JS::Protocol::IJSField js_object_field = js_object_msg.add_fields();
 
     std::vector<ObjectReference>allDestRefs;
@@ -349,12 +349,57 @@ CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericVa
 //just a handler for receiving any message.  for now, not doing any dispatch.
 void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
+		v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+
     RoutableMessageBody body;
     body.ParseFromArray(payload.data(), payload.size());
 
     std::string mMessageBody(body.payload());
 
-    JSLOG(warn, "Got message: " << mMessageBody);
+    //JSLOG(warn, "Got message: " << mMessageBody);
+
+		std::cout << "\n\n\n\n\n\nGot a Message\n\n\n\n\n" ;
+
+
+	Protocol::JSMessage jsmessage;
+	jsmessage.ParseFromString(body.payload());
+
+	Local<v8::Object> obj = v8::Object::New();
+
+
+	for(int i = 0; i < jsmessage.fields_size(); i++)
+	{
+		Protocol::JSField jsf = jsmessage.fields(i);
+		
+		//std::cout << jsf.name() << " = ";
+		//obj.Set(i, jsf.name());
+
+		Protocol::JSFieldValue jsvalue= jsf.value();
+		
+		const char* str = jsf.name().c_str();
+		Local<v8::String> key = v8::String::New(str, jsf.name().size());
+		if(jsvalue.has_s_value())
+		{
+			//std::cout << jsvalue.s_value() << "\n";
+			const char* str1 = jsvalue.s_value().c_str();
+			Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
+			obj->Set(key, val);
+		}
+		else if(jsvalue.has_i_value())
+		{
+			//std::cout << jsvalue.i_value() << "\n";
+			Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());	
+			obj->Set(key, intval);
+			//obj->Set(key, jsvalue.i_value());
+		}
+
+	}
+
+
+
+	
 }
 
 

@@ -22,7 +22,7 @@ message JSField
 	optional string prototype = 3;
 
 }
-message JSObject
+message JSMessage
 {
 	repeated JSField fields = 1;
 }
