@@ -310,6 +310,38 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference>&allAvai
     }
 }
 
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str) {
+    Context::Scope context_scope(mContext);
+
+    v8::HandleScope handle_scope;
+    TryCatch try_catch;
+
+    v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
+
+    // Compile
+    v8::Handle<v8::Script> script = v8::Script::Compile(source);
+    if (script.IsEmpty()) {
+        v8::String::Utf8Value error(try_catch.Exception());
+        std::string msg = std::string("Compile error: ") + std::string(*error);
+        JSLOG(error, msg);
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(msg.c_str())) );
+    }
+
+    // Execute
+    v8::Handle<v8::Value> result = script->Run();
+    if (result.IsEmpty()) {
+        v8::String::Utf8Value error(try_catch.Exception());
+        JSLOG(error, "Uncaught exception: " << *error);
+        return try_catch.Exception();
+    }
+
+    if (!result->IsUndefined()) {
+        v8::String::AsciiValue ascii(result);
+        JSLOG(info, "Script result: " << *ascii);
+    }
+
+    return result;
+}
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
@@ -350,6 +382,31 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
     ProtectedJSCallback(mContext, target, cb);
+}
+
+v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
+    FILE * pFile;
+    long lSize;
+    char * buffer;
+    long result;
+
+    pFile = fopen (filename.c_str(), "r" );
+    if (pFile == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't open file for import.")) );
+
+    fseek (pFile , 0 , SEEK_END);
+    lSize = ftell (pFile);
+    rewind (pFile);
+
+    std::string contents(lSize, '\0');
+
+    result = fread (&(contents[0]), 1, lSize, pFile);
+    fclose (pFile);
+
+    if (result != lSize)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
+
+    return protectedEval(contents);
 }
 
 #define FIXME_GET_SPACE() \
@@ -503,40 +560,12 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
         return;
     }
 
-    // Start scope
-    Context::Scope context_scope(mContext);
-
     // Handle all requests
     for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++) {
         Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
         String script_str = req.body();
 
-        v8::HandleScope handle_scope;
-
-        TryCatch try_catch;
-
-        v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
-
-        // Compile
-        v8::Handle<v8::Script> script = v8::Script::Compile(source);
-        if (script.IsEmpty()) {
-            v8::String::Utf8Value error(try_catch.Exception());
-            JSLOG(error, "Compile error: " << *error);
-            continue;
-        }
-
-        // Execute
-        v8::Handle<v8::Value> result = script->Run();
-        if (result.IsEmpty()) {
-            v8::String::Utf8Value error(try_catch.Exception());
-            JSLOG(error, "Uncaught exception: " << *error);
-            continue;
-        }
-
-        if (!result->IsUndefined()) {
-            v8::String::AsciiValue ascii(result);
-            JSLOG(info, "Script result: " << *ascii);
-        }
+        protectedEval(script_str);
     }
 }
 

@@ -291,6 +291,25 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
+
+/** Imports a scripts and evaluates in the object's context.
+ *  Arguments:
+ *   string scriptname: filename of the script to import
+ */
+v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args) {
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Import only takes one parameter: the name of the file to import.")) );
+
+    v8::Handle<v8::Value> filename = args[0];
+
+    StringCheckAndExtract(native_filename, filename);
+
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    target_script->import(native_filename);
+
+    return v8::Undefined();
+}
+
 // Visual
 
 v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
@@ -467,6 +486,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     // Functions / types
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
+    system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(ScriptImport));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
 
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));

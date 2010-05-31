@@ -73,6 +73,9 @@ public:
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
+    /** Import a file, executing its contents in the root object's scope. */
+    v8::Handle<v8::Value> import(const String& filename);
+
 
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);
@@ -105,6 +108,9 @@ private:
     void bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const;
 
     void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
+
+    v8::Handle<v8::Value> protectedEval(const String& script_str);
+
 
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
