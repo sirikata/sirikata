@@ -32,6 +32,7 @@
 #include "util/Standard.hh"
 #include "UUID.hpp"
 #include "boost_uuid.hpp"
+#include <boost/functional/hash.hpp>
 
 BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
 
@@ -76,11 +77,11 @@ std::string UUID::rawHexData()const{
     return retval;
 }
 size_t UUID::hash() const {
-    uint64 a;
-    uint64 b;
-    memcpy(&a,mData.begin(),sizeof(a));
-    memcpy(&b,mData.begin()+8,sizeof(b));
-    return std::tr1::hash<uint64>()(a)^std::tr1::hash<uint64>()(b);
+    uint64* dat = (uint64*)getArray().data();
+    size_t seed = 0;
+    boost::hash_combine(seed, dat[0]);
+    boost::hash_combine(seed, dat[1]);
+    return seed;
 }
 
 } // namespace Sirikata
