@@ -131,7 +131,16 @@ GET_FILENAME_COMPONENT(CDN_TOOLS_DIR ${TOOLS_DIR}/cdn ABSOLUTE)
 GET_FILENAME_COMPONENT(DEMO_DIR ${TOP_LEVEL}/demo ABSOLUTE)
 GET_FILENAME_COMPONENT(DEMO_SCENES_DIR ${DEMO_DIR}/scenes ABSOLUTE)
 
+SET(BUILD_DIR ${TOP_LEVEL}/build/cmake)
+SET(GENERATED_FILES_DIR ${BUILD_DIR}/generated)
+SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 
+SET(SirikataProtocolDirectory ${GENERATED_FILES_DIR})
+
+SET(CSHARP_SCRIPTS_ROOT ${ScriptsRoot}/csharp)
+SET(CSHARP_SCRIPTS_PROTOCOL ${ScriptsRoot}/csharp/protocol)
+SET(IRONPYTHON_SCRIPTS_ROOT ${ScriptsRoot}/ironpython)
+SET(IRONPYTHON_SCRIPTS_PROTOCOL ${ScriptsRoot}/ironpython/protocol)
 
 #add-ins
 
@@ -221,7 +230,6 @@ IF(NOT PLATFORM_LIBS)
   MESSAGE(STATUS "Could not find dependencies directory ${TOP_LEVEL}/dependencies/")
 ENDIF()
 MESSAGE(STATUS "Using PLATFORM_LIBS=${PLATFORM_LIBS}")
-SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 SET(DISABLE_M32 FALSE)
 SET(FORCE_32BIT FALSE)
 SET(DISABLE_BERKELIUM FALSE)
@@ -601,6 +609,9 @@ SET(INCLUDE_DIRECTORIES
   ${SPACE_SOURCE_DIR}
   ${PROXIMITY_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
+
+  ${SirikataProtocolDirectory}
+
   ${Boost_INCLUDE_DIRS}
   ${CURL_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
@@ -661,17 +672,15 @@ SET(ProtocolBuffersSources
 )
 
 
-SET(SirikataProtocolDirectory ${LIBCORE_SOURCE_DIR})
-
 # Based on dependencies, generate arguments for protocol buffers generation
 SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
 IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
-  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
+  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP CSHARP_OUTPUTDIR ${CSHARP_SCRIPTS_PROTOCOL})
 ENDIF()
 
 #needed for scene converter irrespective of IronPython
-SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
+SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON PYTHON_OUTPUTDIR ${IRONPYTHON_SCRIPTS_PROTOCOL})
 
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"util/Standard.hh\"\n")
 
@@ -814,7 +823,7 @@ ENDIF()
 
 SET(AdditionalProtoDepends)
 FOREACH(FILE ${ScriptingProtocolBuffersSources})
-   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
+   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${IRONPYTHON_SCRIPTS_PROTOCOL}/${FILE}_pb2.py)
 ENDFOREACH()
 ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
            DEPENDS ${AdditionalProtoDepends}
@@ -824,7 +833,7 @@ IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
   FOREACH(FILE ${ScriptingProtocolBuffersSources})
      SET(SirikataProtoScriptSources ${SirikataProtoScriptSources}
-  ${ScriptsRoot}/csharp/protocol/${FILE}.pbj.cs ${ScriptsRoot}/csharp/protocol/${FILE}.cs )
+  ${CSHARP_SCRIPTS_PROTOCOL}/${FILE}.pbj.cs ${CSHARP_SCRIPTS_PROTOCOL}/${FILE}.cs )
   ENDFOREACH()
 
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources} ${TOP_LEVEL}/externals/pbj/PBJ.cs)
@@ -850,11 +859,11 @@ IF(MONO_FOUND)
 
   # Note: Can't use GLOB here because of Python objects
   SET(SirikataScriptSources
-       ${ScriptsRoot}/csharp/HostedObject.cs
-       ${ScriptsRoot}/csharp/Time.cs
+       ${CSHARP_SCRIPTS_ROOT}/HostedObject.cs
+       ${CSHARP_SCRIPTS_ROOT}/Time.cs
      )
   IF(IRON_PYTHON_FOUND)
-    SET(SirikataScriptSources ${SirikataScriptSources} ${ScriptsRoot}/csharp/PythonObject.cs)
+    SET(SirikataScriptSources ${SirikataScriptSources} ${CSHARP_SCRIPTS_ROOT}/PythonObject.cs)
   ENDIF()
 
   SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
