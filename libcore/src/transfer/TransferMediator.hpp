@@ -34,7 +34,7 @@
 #ifndef SIRIKATA_TransferMediator_HPP__
 #define SIRIKATA_TransferMediator_HPP__
 
-#include "SimplePriorityAggregation.hpp";
+#include "SimplePriorityAggregation.hpp"
 
 
 #include <iostream>
@@ -63,8 +63,10 @@ namespace Transfer {
 
 using namespace boost::multi_index;
 //using namespace boost::lambda;
-using namespace std;
-boost::lambda::placeholder1_type& __1 = boost::lambda::free1;
+//using namespace std;
+//boost::lambda::placeholder1_type& __1 = boost::lambda::free1;
+//using std::tr1::placeholders::_1;
+using boost::lambda::_1;
 
 /*
  * Mediates requests for files
@@ -189,7 +191,7 @@ class TransferMediator {
 						//Convert the iterator to the priority one
 						AggregateListByPriority::iterator byPriority = mParent->mAggregateList.project<tagPriority>(findID);
 						AggregateListByPriority & priorityIndex = mParent->mAggregateList.get<tagPriority>();
-						priorityIndex.modify_key(byPriority, __1=newAggPriority);
+						priorityIndex.modify_key(byPriority, _1=newAggPriority);
 					}
 				} else {
 					//Make a new one and insert it
