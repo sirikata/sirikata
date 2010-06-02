@@ -1,5 +1,5 @@
 /*  Sirikata libproxyobject -- COLLADA Document Importer
- *  ColladaDocumentImporter.hpp
+ *  ColladaDocumentImporter.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -35,7 +35,7 @@
 #include <cassert>
 #include <iostream>
 #include <proxyobject/Meshdata.hpp>
-    
+
 /// FIXME: need a culling strategy for this mom
 std::map<std::string, Meshdata*> meshstore;
 long Meshdata_counter=1000;
@@ -48,10 +48,10 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
         mProxyPtr(pp)
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri << std::endl,true));
-    
+
 //    SHA256 hash = SHA256::computeDigest(uri.toString());    /// rest of system uses hash
 //    lastURIString = hash.convertToHexString();
-    
+
 //    lastURIString = uri.toString();
     meshstore[mDocument->getURI().toString()] = new Meshdata();
     meshstore[mDocument->getURI().toString()]->uri = mDocument->getURI().toString();
@@ -78,7 +78,7 @@ void ColladaDocumentImporter::postProcess ()
     assert((std::cout << "MCB: ColladaDocumentImporter::postProcess() entered" << std::endl,true));
 
 }
-        
+
 /////////////////////////////////////////////////////////////////////
 // overrides from COLLADAFW::IWriter
 
@@ -107,9 +107,9 @@ void ColladaDocumentImporter::finish ()
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
         spp->meshParsed( mDocument->getURI().toString(), meshstore[mDocument->getURI().toString()] );
     }
-    mState = FINISHED;    
+    mState = FINISHED;
 }
-    
+
 bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asset )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered" << std::endl,true));
@@ -198,7 +198,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     }
 
     bool ok = mDocument->import ( *this, *geometry );
-    
+
     if (meshstore[uri]->texture.size()==0) {
         std::cerr << "WARNING: ColladaDocumentImporter::writeGeometry: expected texture to be initialized first\n";
     }
@@ -280,7 +280,7 @@ bool ColladaDocumentImporter::writeKinematicsScene ( COLLADAFW::KinematicsScene 
     assert((std::cout << "MCB: ColladaDocumentImporter::writeKinematicsScene(" << kinematicsScene << ") entered" << std::endl,true));
     return true;
 }
-    
+
 
 } // namespace Models
 } // namespace Sirikata

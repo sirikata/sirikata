@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- Object Host
- *  SentMessage.hpp
+/*  Sirikata
+ *  QueryTracker.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.

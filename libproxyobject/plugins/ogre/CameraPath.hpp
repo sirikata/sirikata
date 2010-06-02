@@ -1,5 +1,5 @@
 /*  Sirikata Ogre Plugin
- *  CameraPath.cpp
+ *  CameraPath.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.

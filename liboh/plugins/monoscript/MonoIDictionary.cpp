@@ -1,5 +1,5 @@
 /*  Sirikata - Mono Embedding
- *  MonoIDictionary.hpp
+ *  MonoIDictionary.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.

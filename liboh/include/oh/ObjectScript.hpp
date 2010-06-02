@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  HostedObject.cpp
+ *  ObjectScript.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.

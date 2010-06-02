@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  ObjectHostTimeOffsetManager.hpp
+ *  ObjectHostTimeOffsetManager.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

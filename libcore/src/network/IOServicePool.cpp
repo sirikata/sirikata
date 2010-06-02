@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IOServiceFactory.cpp
+ *  IOServicePool.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

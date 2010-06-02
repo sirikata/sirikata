@@ -1,5 +1,5 @@
 /*  Sirikata libproxyboject -- Object Host Plugin for COLLADA
- *  ColladaPlugin.hpp
+ *  ColladaPlugin.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -44,7 +44,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
     if ( core_plugin_refcount == 0 )
         ModelsSystemFactory::getSingleton ().registerConstructor
             ( "colladamodels" , &Models::ColladaSystem::create, true );
-    
+
     ++core_plugin_refcount;
 }
 
@@ -62,7 +62,7 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
 SIRIKATA_PLUGIN_EXPORT_C void destroy ()
 {
     using namespace Sirikata;
-    
+
     if ( core_plugin_refcount > 0 )
     {
         --core_plugin_refcount;

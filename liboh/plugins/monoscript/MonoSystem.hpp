@@ -1,5 +1,5 @@
 /*  Sirikata Object Host Scripting Plugin
- *  MonoSystem.cpp
+ *  MonoSystem.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

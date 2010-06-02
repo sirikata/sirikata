@@ -1,5 +1,5 @@
 /*  Sirikata Tests -- Sirikata Test Suite
- *  ProxTest.hpp
+ *  SubscriptionTest.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

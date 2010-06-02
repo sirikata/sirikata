@@ -1,5 +1,5 @@
 /*  cbr
- *  TimerSpeedBenchmark.cpp
+ *  SSTBenchmark.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.

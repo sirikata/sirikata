@@ -1,5 +1,5 @@
 /*  Sirikata - Mono Embedding
- *  MonoAssembly.cpp
+ *  MonoAssembly.hpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.

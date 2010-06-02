@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  MonoObjectScript.cpp
+ *  MonoVWObjectScript.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
