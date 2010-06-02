@@ -1,7 +1,6 @@
-#include <oh/Platform.hpp>
-#include <util/Platform.hpp>
+#include <util/Standard.hh>
 
-#include "CDNConfig.hpp"
+#include <core/options/CDNConfig.hpp>
 
 #include <task/EventManager.hpp>
 

@@ -39,7 +39,7 @@
 
 #include <task/EventManager.hpp>
 #include <task/WorkQueue.hpp>
-#include "CDNConfig.hpp"
+#include <core/options/CDNConfig.hpp>
 
 #include <oh/ObjectHost.hpp>
 #include <proxyobject/LightInfo.hpp>

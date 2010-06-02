@@ -76,9 +76,9 @@ public:
     }
 };
 // Can be used to dump from file.
-std::ostream &operator<< (std::ostream &os, const OptionMap &om);
+SIRIKATA_EXPORT std::ostream &operator<< (std::ostream &os, const OptionMap &om);
 
-void parseConfig(
+SIRIKATA_EXPORT void parseConfig(
         const std::string &input,
         const OptionMapPtr &globalvariables, //< Identical to output
         const OptionMapPtr &options, //< output

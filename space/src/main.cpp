@@ -38,7 +38,7 @@
 #include <task/EventManager.hpp>
 #include <task/WorkQueue.hpp>
 #include <network/IOService.hpp>
-#include "CDNConfig.hpp"
+#include <core/options/CDNConfig.hpp>
 #include <proxyobject/SimulationFactory.hpp>
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/ModelsSystemFactory.hpp> // MCB:

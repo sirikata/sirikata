@@ -906,6 +906,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
         ${LIBCORE_SOURCE_DIR}/odp/DelegatePort.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
+   	${LIBCORE_SOURCE_DIR}/options/Config.cpp
+   	${LIBCORE_SOURCE_DIR}/options/CDNConfig.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
@@ -1026,11 +1028,9 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                    )
 
-SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp ${SPACE_SOURCE_DIR}/CDNConfig.cpp ${SPACE_SOURCE_DIR}/Config.cpp )
+SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp)
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
-${CPPOH_SOURCE_DIR}/Config.cpp
-${CPPOH_SOURCE_DIR}/CDNConfig.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
