@@ -33,6 +33,7 @@
 #include <cxxtest/TestRunner.h>
 #include <cxxtest/TestListener.h>
 #include <stdio.h>
+#include <string.h>
 
 namespace Sirikata {
 
@@ -45,11 +46,64 @@ public:
     virtual ~StandardTestListener() {
     }
 
-    int run() {
-        TestRunner::runAllTests( *this );
-        printf("Summary: %d failed, %d warnings.\n",
-            tracker().failedTests(), tracker().warnings());
-        return tracker().failedTests();
+    int run(const char * singleSuite) {
+
+    	bool foundTest = false;
+    	if (singleSuite != NULL) {
+			RealWorldDescription wd;
+
+			tracker().enterWorld( wd );
+			enterWorld( wd );
+			if ( wd.setUp() ) {
+				for ( SuiteDescription *sd = wd.firstSuite(); sd; sd = sd->next() )
+					if ( sd->active() && strcmp(singleSuite, sd->suiteName())==0 ) {
+
+						foundTest = true;
+						printf("\n\n========================================\n");
+						printf("RUNNING SINGLE SUITE\n%s\n", singleSuite);
+						printf("========================================");
+
+			            tracker().enterSuite( *sd );
+			            enterSuite( *sd );
+			            if ( sd->setUp() ) {
+			                for ( TestDescription *td = sd->firstTest(); td; td = td->next() )
+			                    if ( td->active() ) {
+
+			                        tracker().enterTest( *td );
+			                        enterTest( *td );
+			                        if ( td->setUp() ) {
+			                            td->run();
+			                            td->tearDown();
+			                        }
+			                        tracker().leaveTest( *td );
+			                        leaveTest( *td );
+
+			                    }
+
+			                sd->tearDown();
+			            }
+			            tracker().leaveSuite( *sd );
+
+					}
+				wd.tearDown();
+			}
+			tracker().leaveWorld( wd );
+			leaveWorld( wd );
+
+    	}
+    	if (singleSuite==NULL || !foundTest) {
+			printf("\n\n========================================\n");
+			printf("RUNNING ALL SUITES\n");
+			printf("========================================\n\n");
+
+    		TestRunner::runAllTests( *this );
+    	}
+
+		printf("\n\n========================================\n");
+		printf("SUMMARY: %d failed, %d warnings.\n",
+			tracker().failedTests(), tracker().warnings());
+		printf("========================================\n");
+		return tracker().failedTests();
     }
 
     virtual void process_commandline(int& /*argc*/, char** /*argv*/) {}
@@ -58,7 +112,8 @@ public:
     virtual void enterSuite( const SuiteDescription & desc ) {
     }
     virtual void enterTest( const TestDescription & desc ) {
-        printf("Test: %s.%s\n", desc.suiteName(), desc.testName());
+    	printf("\n\n========================================\n");
+        printf("BEGIN TEST %s.%s\n", desc.suiteName(), desc.testName());
     }
     virtual void trace( const char * /*file*/, unsigned /*line*/,
         const char * /*expression*/ ) {}
@@ -104,7 +159,10 @@ public:
     virtual void failedAssertThrowsNot( const char * /*file*/, unsigned /*line*/,
         const char * /*expression*/ ) {}
     virtual void failedAssertSameFiles( const char* , unsigned , const char* , const char*, const char* ) {}
-    virtual void leaveTest( const TestDescription & /*desc*/ ) {}
+    virtual void leaveTest( const TestDescription & desc ) {
+    	printf("END TEST %s.%s\n", desc.suiteName(), desc.testName());
+    	printf("========================================\n");
+    }
     virtual void leaveSuite( const SuiteDescription & /*desc*/ ) {}
     virtual void leaveWorld( const WorldDescription & /*desc*/ ) {}
 };
@@ -112,7 +170,11 @@ public:
 } // namespace Sirikata
 
 
-int main()
+int main(int argc, const char * argv [])
 {
-    return Sirikata::StandardTestListener().run();
+	if(argc > 1) {
+		return Sirikata::StandardTestListener().run(argv[1]);
+	} else {
+		return Sirikata::StandardTestListener().run(NULL);
+	}
 }

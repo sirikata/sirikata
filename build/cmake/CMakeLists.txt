@@ -1119,6 +1119,7 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
+libcore/test/TransferTest.hpp
 libcore/test/AnyTest.hpp
 libcore/test/AtomicTest.hpp
 #libcore/test/CacheLayerTest.hpp
@@ -1865,4 +1866,4 @@ ENDIF()
 
 ADD_CUSTOM_TARGET(test
   DEPENDS tests
-  COMMAND ${TEST_RUNABLE})
+  COMMAND ${TEST_RUNABLE} $ENV{SINGLE_SUITE})

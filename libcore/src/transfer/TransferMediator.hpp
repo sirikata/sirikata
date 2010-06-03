@@ -36,7 +36,6 @@
 
 #include "SimplePriorityAggregation.hpp"
 
-
 #include <iostream>
 #include <map>
 #include <vector>
@@ -62,11 +61,6 @@ namespace Sirikata {
 namespace Transfer {
 
 using namespace boost::multi_index;
-//using namespace boost::lambda;
-//using namespace std;
-//boost::lambda::placeholder1_type& __1 = boost::lambda::free1;
-//using std::tr1::placeholders::_1;
-using boost::lambda::_1;
 
 /*
  * Mediates requests for files
@@ -188,6 +182,7 @@ class TransferMediator {
 					//And check if it's changed, we need to update the index
 					TransferRequest::PriorityType newAggPriority = (*findID)->getPriority();
 					if(oldAggPriority != newAggPriority) {
+						using boost::lambda::_1;
 						//Convert the iterator to the priority one
 						AggregateListByPriority::iterator byPriority = mParent->mAggregateList.project<tagPriority>(findID);
 						AggregateListByPriority & priorityIndex = mParent->mAggregateList.get<tagPriority>();
