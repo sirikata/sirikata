@@ -32,10 +32,10 @@
 
 #include "proximity/Platform.hpp"
 #include "Proximity_Sirikata.pbj.hpp"
-#include "util/RoutableMessageHeader.hpp"
-#include "util/RoutableMessageBody.hpp"
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/RoutableMessageBody.hpp>
 #include "proximity/ProximitySystem.hpp"
-#include "network/Stream.hpp"
+#include <sirikata/core/network/Stream.hpp>
 //#include "proximity/ObjectSpaceBridgeProximitySystem.hpp"
 //for testing only#include "proximity/BridgeProximitySystem.hpp"
 namespace Sirikata { namespace Proximity {
@@ -49,7 +49,7 @@ void ProximitySystem::defaultProximityCallback(Network::Stream*strm, const Routa
 }
 void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::RoutableMessageBody&msg){
     assert(strm);
-    RoutableMessageHeader h(const_hdr); 
+    RoutableMessageHeader h(const_hdr);
     std::string data;
     h.clear_destination_object();
     h.clear_destination_space();
@@ -61,7 +61,7 @@ void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, co
 }
 void ProximitySystem::defaultNoDestinationAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::RoutableMessageBody&msg){
     assert(strm);
-    RoutableMessageHeader h(const_hdr); 
+    RoutableMessageHeader h(const_hdr);
     std::string data;
     h.clear_destination_object();
     h.clear_destination_space();

@@ -39,27 +39,27 @@
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <ObjectHost_Subscription.pbj.hpp>
 #include <ObjectHost_Persistence.pbj.hpp>
-#include <task/WorkQueue.hpp>
-#include "util/RoutableMessage.hpp"
-#include "util/KnownServices.hpp"
-#include "persistence/PersistenceSentMessage.hpp"
-#include "network/Stream.hpp"
-#include "util/SpaceObjectReference.hpp"
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/util/RoutableMessage.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/persistence/PersistenceSentMessage.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "oh/SpaceConnection.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/HostedObject.hpp"
-#include "util/SentMessage.hpp"
+#include <sirikata/core/util/SentMessage.hpp>
 #include "oh/ObjectHost.hpp"
 
 #include "oh/ObjectScriptManager.hpp"
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
 #include "oh/ObjectScript.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
-#include <util/KnownServices.hpp>
-#include "util/ThreadId.hpp"
-#include "util/PluginManager.hpp"
+#include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/util/ThreadId.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 
-#include <core/odp/Exceptions.hpp>
+#include <sirikata/core/odp/Exceptions.hpp>
 
 namespace Sirikata {
 

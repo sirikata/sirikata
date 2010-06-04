@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Standard.hh>
+#include <sirikata/core/util/Standard.hh>
 #include <proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "CameraEntity.hpp"
@@ -39,7 +39,7 @@
 #include "input/SDLInputManager.hpp"
 #include "DragActions.hpp"
 #include <proxyobject/TimeOffsetManager.hpp>
-#include <task/Time.hpp>
+#include <sirikata/core/task/Time.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -263,7 +263,7 @@ public:
     }
     void mouseMoved(MouseDragEventPtr ev) {
         Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
-        
+
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
         float radianX = 0;
@@ -340,7 +340,7 @@ public:
         camera = info.camera;
         mOriginalPosition.reserve(mSelectedObjects.size());
         Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
-  
+
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
             ProxyObjectPtr obj(mSelectedObjects[i].lock());
             Location currentLoc = obj->extrapolateLocation(now);

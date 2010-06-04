@@ -29,10 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "BoundingInfo.hpp"
-#include "BoundingSphere.hpp"
-#include "BoundingBox.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/BoundingInfo.hpp>
+#include <sirikata/core/util/BoundingSphere.hpp>
+#include <sirikata/core/util/BoundingBox.hpp>
+
 namespace Sirikata {
 BoundingInfo::BoundingInfo():mMin(0,0,0),mRadius(0),mMax(0,0,0) {
 

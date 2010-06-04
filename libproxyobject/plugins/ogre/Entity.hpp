@@ -33,7 +33,7 @@
 #define SIRIKATA_GRAPHICS_ENTITY_HPP__
 
 #include "OgreSystem.hpp"
-#include <util/UUID.hpp>
+#include <sirikata/core/util/UUID.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include <proxyobject/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
@@ -45,7 +45,7 @@ namespace Graphics {
 class OgreSystem;
 
 /** Base class for any ProxyObject that has a representation in Ogre. */
-class Entity 
+class Entity
   : public PositionListener,
     public ProxyObjectListener
 {

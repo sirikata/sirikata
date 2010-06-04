@@ -34,7 +34,8 @@
 #define _SIRIKATA_SPACE_HPP_
 
 #include <space/Platform.hpp>
-#include <util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+
 namespace Sirikata {
 class Loc;
 class Oseg;
@@ -49,10 +50,10 @@ class ProximitySystem;
 /**
  * The space class handles instantiating services and shifting messages around between services
  * Role as a MessageService:
- * Specifically if the object id is not availabe in active mObjectConnections, mObjectConnections will 
+ * Specifically if the object id is not availabe in active mObjectConnections, mObjectConnections will
  * forward the message back to the space so the space can try the builtin services and then eventually the
  * mRouter (to shift it to another space node which may have the connection)
- * 
+ *
  * Each space has an ID and right now the space is designed to run in a single thread and be waiting on the mIO service
  */
 namespace Space {
@@ -63,15 +64,15 @@ class Physics;
 class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     SpaceID mID;
     ObjectReference mNodeID;
-    
+
     Network::IOService*mIO;
-    ///The system keeping track of ProxyObjects  
+    ///The system keeping track of ProxyObjects
     std::tr1::shared_ptr<Physics> mPhysics;
     ///The system that has access to ProxyObjects to bootstrap TimeSteppedSimulations
     ProxyManager *mPhysicsProxyObjects;
     ///The registration service that allows objects to connect to the space and maps them to consistent ObjectReferences
     MessageService *mRegistration;
-    ///The location services system: arbiter of object locations    
+    ///The location services system: arbiter of object locations
     MessageService * mLoc;
     ///The Proximity System which answers object proximity queries
     MessageService *mGeom;
@@ -106,7 +107,7 @@ public:
     Network::IOService*getIOService(){
         return mIO;
     }
-        
+
     ///hands control off to mIO and never returns
     void run();
     const SpaceID& id()const{

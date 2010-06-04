@@ -31,9 +31,9 @@
  */
 
 #include <oh/Platform.hpp>
-#include <util/SpaceID.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
 #include "oh/SpaceConnection.hpp"
-#include <network/Stream.hpp>
+#include <sirikata/core/network/Stream.hpp>
 
 namespace Sirikata {
 SpaceConnection::SpaceConnection(

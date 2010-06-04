@@ -31,7 +31,7 @@
  */
 
 #include <cxxtest/TestSuite.h>
-#include "util/Matrix3x3.hpp"
+#include <sirikata/core/util/Matrix3x3.hpp>
 class Matrix3x3Test : public CxxTest::TestSuite
 {
     typedef Sirikata::Vector3<float> Vector3f;

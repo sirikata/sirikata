@@ -31,9 +31,8 @@
  */
 
 
-
-#include "util/Standard.hh"
-#include "StreamListenerFactory.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Network::StreamListenerFactory);
 namespace Sirikata { namespace Network {
@@ -47,4 +46,3 @@ void StreamListenerFactory::destroy(){
 }
 
 } }
-

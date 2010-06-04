@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
-#include "options/Options.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/options/Options.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <boost/program_options.hpp>

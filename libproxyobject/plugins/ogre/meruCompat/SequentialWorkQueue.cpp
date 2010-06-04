@@ -31,7 +31,7 @@
  */
 
 #include "SequentialWorkQueue.hpp"
-#include "util/Time.hpp"
+#include <sirikata/core/util/Time.hpp>
 #include "EventSource.hpp"
 namespace Meru {
 

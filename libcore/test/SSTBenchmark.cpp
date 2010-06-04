@@ -29,16 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "network/IOServiceFactory.hpp"
-#include "network/IOService.hpp"
-#include "network/StreamFactory.hpp"
-#include "network/StreamListenerFactory.hpp"
 
-#include "util/PluginManager.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+
+#include <sirikata/core/util/PluginManager.hpp>
 #include "SSTBenchmark.hpp"
-#include "options/Options.hpp"
-#include "network/IOServiceFactory.hpp"
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
 namespace Sirikata {
 
 SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&param, int argc, char**argv):

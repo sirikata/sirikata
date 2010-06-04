@@ -33,18 +33,18 @@
 #ifndef _SIRIKATA_BULLET_PHYSICS_
 #define _SIRIKATA_BULLET_PHYSICS_
 
-#include <util/Platform.hpp>
-#include <util/Time.hpp>
-#include <util/ListenerProvider.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 #include <proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include <fstream>
 #include <vector>
 #include <string>
 #include <proxyobject/ProxyMeshObject.hpp>
-#include <task/EventManager.hpp>
-#include <options/Options.hpp>
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 #include <proxyobject/Meshdata.hpp>
 

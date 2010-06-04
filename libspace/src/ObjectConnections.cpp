@@ -31,13 +31,13 @@
  */
 
 #include <space/Platform.hpp>
-#include "network/Stream.hpp"
-#include "network/StreamListener.hpp"
-#include "util/UUID.hpp"
-#include "util/ObjectReference.hpp"
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 #include "Space_Sirikata.pbj.hpp"
-#include "util/RoutableMessage.hpp"
-#include "util/KnownServices.hpp"
+#include <sirikata/core/util/RoutableMessage.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 #include "space/Registration.hpp"
 #include "space/ObjectConnections.hpp"
 #include "space/Space.hpp"

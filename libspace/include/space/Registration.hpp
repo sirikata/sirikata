@@ -34,8 +34,9 @@
 #define _SIRIKATA_REGISTRATION_HPP_
 
 #include <space/Platform.hpp>
-#include "util/Sha256.hpp"
-#include "util/ObjectReference.hpp"
+#include <sirikata/core/util/Sha256.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+
 namespace Sirikata {
 class Registration;
 class Oseg;
@@ -52,7 +53,7 @@ public:
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
     /**
-     * A sample registration service. Right now simply takes a private key, 
+     * A sample registration service. Right now simply takes a private key,
      * hashes it with the given evidence UUID and returns the hashed value
      */
     void asyncRegister(const RoutableMessageHeader&header,

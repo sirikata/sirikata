@@ -35,8 +35,8 @@
 #include "oh/HostedObject.hpp"
 #include "oh/ObjectHost.hpp"
 #include "oh/SpaceTimeOffsetManager.hpp"
-#include "network/IOServiceFactory.hpp"
-#include "network/IOService.hpp"
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
 #include "MonoDefs.hpp"
 #include "MonoDomain.hpp"
 #include "MonoContext.hpp"
@@ -45,7 +45,7 @@
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
 #include "MonoConvert.hpp"
-#include "util/SentMessage.hpp"
+#include <sirikata/core/util/SentMessage.hpp>
 
 
 using namespace Sirikata;

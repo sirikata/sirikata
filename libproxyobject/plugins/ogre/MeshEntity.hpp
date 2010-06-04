@@ -34,7 +34,7 @@
 
 #include <proxyobject/Platform.hpp>
 
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
 
@@ -125,9 +125,9 @@ public:
         virtual void onMeshParsed (String const& hash, Meshdata& md);
         virtual void onSetScale ( Vector3f const& scale );
         virtual void onSetPhysical ( PhysicalParameters const& pp );
-    
-    protected:    
-    
+
+    protected:
+
 };
 
 }

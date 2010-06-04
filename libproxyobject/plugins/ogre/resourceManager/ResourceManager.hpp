@@ -34,13 +34,13 @@
 
 #include "../meruCompat/MeruDefs.hpp"
 #include "../meruCompat/Singleton.hpp"
-#include <transfer/URI.hpp>
+#include <sirikata/core/transfer/URI.hpp>
 #include <boost/thread.hpp>
 #include <map>
 #include <vector>
 #include "../meruCompat/Factory.hpp"
 #include "../meruCompat/Event.hpp"
-//#include <transfer/TransferManager.hpp>
+//#include <sirikata/core/transfer/TransferManager.hpp>
 
 #define INSTRUMENT_RESOURCE_LOADING
 

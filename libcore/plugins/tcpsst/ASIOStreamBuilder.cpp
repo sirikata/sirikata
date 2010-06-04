@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hpp"
-#include "network/Asio.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include "TCPStream.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
@@ -138,15 +138,15 @@ void buildStream(TcpSstHeaderArray *buffer,
                 if (nameValueFieldEnd[4]!=nameValueFieldStart[4]) {
                     origin=std::string((const char*)nameValueFieldStart[4],nameValueFieldEnd[4]-nameValueFieldStart[4]);
                 }
-            
+
                 bool binaryStream=protocol.find("sst")==0;
                 bool base64Stream=!binaryStream;
                 boost::asio::ip::tcp::no_delay option(data->mNoDelay);
                 socket->set_option(option);
                 IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
-                
+
                 unsigned int numConnections=1;
-                
+
                 for (std::string::iterator i=protocol.begin(),ie=protocol.end();i!=ie;++i) {
                     if (*i>='0'&&*i<='9') {
                         char* endptr=NULL;
@@ -164,7 +164,7 @@ void buildStream(TcpSstHeaderArray *buffer,
                         break;
                     }
                 }
-                
+
                 if (where==sIncompleteStreams.end()){
                     sIncompleteStreams[context].mNumSockets=numConnections;
                     where=sIncompleteStreams.find(context);
@@ -183,11 +183,11 @@ void buildStream(TcpSstHeaderArray *buffer,
                         std::string resource_name='/'+humanReadableUUID;
                         MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol);
                         sIncompleteStreams.erase(where);
-                        
-                        
+
+
                         Stream::StreamID newID=Stream::StreamID(1);
                         TCPStream * strm=new TCPStream(shared_socket,newID);
-                        
+
                         TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
                         data->cb(strm,setCallbackFunctor);
                         if (setCallbackFunctor.mCallbacks==NULL) {

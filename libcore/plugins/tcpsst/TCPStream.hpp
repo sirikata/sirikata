@@ -32,8 +32,8 @@
 #ifndef SIRIKATA_TCPStream_HPP__
 #define SIRIKATA_TCPStream_HPP__
 
-#include "network/Stream.hpp"
-#include "util/AtomicTypes.hpp"
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include "TCPSSTDecls.hpp"
 
 namespace Sirikata {

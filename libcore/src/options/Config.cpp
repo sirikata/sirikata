@@ -29,8 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/Standard.hh>
-#include <core/options/Config.hpp>
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/options/Config.hpp>
 
 namespace Sirikata {
 

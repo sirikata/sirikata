@@ -34,9 +34,9 @@
 
 
 #include "MonoDefs.hpp"
-#include "util/UUID.hpp"
-#include "util/SpaceObjectReference.hpp"
-#include "util/BoundingInfo.hpp"
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/BoundingInfo.hpp>
 #include <mono/metadata/object.h>
 #include <vector>
 

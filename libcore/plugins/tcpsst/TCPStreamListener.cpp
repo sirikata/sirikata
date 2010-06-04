@@ -30,15 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hpp"
-#include "network/Asio.hpp"
-#include "network/IOStrand.hpp"
-#include "network/IOStrandImpl.hpp"
-#include "network/IOService.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOService.hpp>
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
 #include "ASIOStreamBuilder.hpp"
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -90,7 +90,7 @@ void TCPStreamListener::Data::startAccept(DataPtr& data) {
         boost::asio::socket_base::send_buffer_size optionS(data->mKernelSendBufferSize);
         data->socket->set_option(optionS);
     }
-    
+
     data->acceptor->async_accept(
         *(data->socket),
         data->strand->wrap(std::tr1::bind(&TCPStreamListener::Data::handleAccept, data, _1))
@@ -128,7 +128,7 @@ TCPStreamListener::TCPStreamListener(IOService& io, OptionSet*options)
     OptionValue *noDelay=options->referenceOption("no-delay");
     OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
     OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
-    
+
     assert(maxSimultSockets&&sendBufferSize);
     DataPtr data (new Data(io,
                            (unsigned char)maxSimultSockets->as<unsigned int>(),

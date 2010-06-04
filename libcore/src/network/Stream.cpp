@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "Stream.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/Stream.hpp>
 
 namespace Sirikata {
 namespace Network {

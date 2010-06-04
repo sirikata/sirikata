@@ -32,7 +32,7 @@
 #ifndef _OBJECT_STORAGE_TEST_HPP_
 #define _OBJECT_STORAGE_TEST_HPP_
 
-#include "persistence/ObjectStorage.hpp"
+#include <sirikata/core/persistence/ObjectStorage.hpp>
 
 /** Utilities for ObjectStorage tests. No tests are defined here or
  *  in ObjectStorageTest.cpp.

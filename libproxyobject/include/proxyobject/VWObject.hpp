@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 #define _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 
-#include <core/odp/Service.hpp>
+#include <sirikata/core/odp/Service.hpp>
 
 namespace Sirikata {
 class PhysicalParameters;

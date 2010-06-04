@@ -30,11 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "Address.hpp"
-#include "IOServiceFactory.hpp"
-#include "Stream.hpp"
-#include "StreamListener.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
+
 namespace Sirikata { namespace Network {
 StreamListener::StreamListener(){}
 StreamListener::~StreamListener(){}

@@ -40,7 +40,7 @@
 
 #include <proxyobject/ProxyMeshObject.hpp>
 //#include <options/Options.hpp>
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 
 // OpenCOLLADA headers
 
@@ -58,7 +58,7 @@ ColladaSystem::ColladaSystem ()
     assert((std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl,true));
 
 }
-    
+
 ColladaSystem::~ColladaSystem ()
 {
     assert((std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl,true));
@@ -75,7 +75,7 @@ void ColladaSystem::loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr
     if ( transferManager )
     {
         Transfer::TransferManager::EventListener listener ( std::tr1::bind ( &ColladaSystem::downloadFinished, this, _1, what, proxy ) );
-        
+
         transferManager->download ( what, listener, Transfer::Range ( true ) );
     }
     else
@@ -119,14 +119,14 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
     }
     return Task::EventResponse::del ();
 }
-    
+
 /////////////////////////////////////////////////////////////////////
 
 ColladaSystem* ColladaSystem::create ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
 {
     assert((std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl,true));
     ColladaSystem* system ( new ColladaSystem );
-    
+
     if ( system->initialize ( proxyManager, options ) )
         return system;
     delete system;
@@ -143,7 +143,7 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
 
     InitializeClassOptions ( "colladamodels", this, mTransferManager, mWorkQueue, mEventManager, NULL );
     OptionSet::getOptions ( "colladamodels", this )->parse ( options );
-    
+
 
     proxyManager->addListener ( this );
 
@@ -162,14 +162,14 @@ void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
     assert((std::cout << "MCB: onCreateProxy (" << proxy << ") entered for ID: " << proxy->getObjectReference () << std::endl,true));
 
     std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
-    
+
     if ( asMesh )
     {
         assert((std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl,true));
-        
+
         ColladaMeshObject* cmo = new ColladaMeshObject ( *this, std::tr1::shared_ptr<ProxyMeshObject>(asMesh) );
         ProxyMeshObject::ModelObjectPtr mesh ( cmo );
-        
+
         // try to supply the proxy with a data model
         if ( ! proxy->hasModelObject () )
         {
@@ -192,7 +192,7 @@ void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
 void ColladaSystem::onDestroyProxy ( ProxyObjectPtr proxy )
 {
     std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
-    
+
     if ( asMesh )
     {
         std::cout << "MCB: onDestroyProxy (" << asMesh << ") entered for mesh URI: " << asMesh->getMesh () << std::endl;

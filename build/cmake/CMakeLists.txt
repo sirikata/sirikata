@@ -181,7 +181,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
   SET(CXXTEST_TEST_FILES)
   SET(CXXTEST_H_FILES)
 
-  SET(CXXTEST_OPTIONS --include=util/Standard.hh)
+  SET(CXXTEST_OPTIONS --include=sirikata/core/util/Standard.hh)
   #IF(CXXTEST_OUTPUTDIR)
   #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
   #ENDIF(CXXTEST_OUTPUTDIR)
@@ -682,7 +682,7 @@ ENDIF()
 #needed for scene converter irrespective of IronPython
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON PYTHON_OUTPUTDIR ${IRONPYTHON_SCRIPTS_PROTOCOL})
 
-SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"util/Standard.hh\"\n")
+SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(MessageHeader
   INPUTDIR ${ProtocolBuffersRoot}
@@ -936,13 +936,13 @@ SET(SIRIKATA_CORE_SOURCES
 #precompiled header
 IF(NOT WIN32)
  IF(${CMAKE_COMPILER_IS_GNUCXX})
+   SET(LIBCORE_STANDARD_HH ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh)
+   SET(LIBCORE_STANDARD_HH_GCH ${LIBCORE_STANDARD_HH}.gch)
   SET(SIRIKATA_CORE_SOURCES
-     ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch ${SIRIKATA_CORE_SOURCES})
+     ${LIBCORE_STANDARD_HH_GCH} ${SIRIKATA_CORE_SOURCES})
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
-    ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch)
+    ${LIBCORE_STANDARD_HH_GCH})
 
-  SET(PCH_INPUT ${LIBCORE_SOURCE_DIR}/util/Standard.hh)
-  SET(PCH_OUTPUT ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch)
   IF(ISDEBUG)
     SET(PCH_CXX_FLAGS  ${CMAKE_CXX_FLAGS_DEBUG} )
   ELSE()
@@ -951,38 +951,38 @@ IF(NOT WIN32)
   SEPARATE_ARGUMENTS(PCH_CXX_FLAGS)
   # FINAL_COMMAND doesn't like it if a 2 part compiler command has spaces on the second one.
   STRING(REPLACE " " "" CXX_COMPILER_ARG1_WITHOUT_SPACES "${CMAKE_CXX_COMPILER_ARG1}")
-  SET(FINAL_COMMAND ${CMAKE_CXX_COMPILER} ${CXX_COMPILER_ARG1_WITHOUT_SPACES} ${PCH_CXX_FLAGS} ${INCLUDE_COMMAND} ${ADDED_DEFINITIONS} ${PCH_INPUT})
-  ADD_CUSTOM_COMMAND(OUTPUT ${PCH_OUTPUT}
+  SET(FINAL_COMMAND ${CMAKE_CXX_COMPILER} ${CXX_COMPILER_ARG1_WITHOUT_SPACES} ${PCH_CXX_FLAGS} ${INCLUDE_COMMAND} ${ADDED_DEFINITIONS} ${LIBCORE_STANDARD_HH})
+  ADD_CUSTOM_COMMAND(OUTPUT ${LIBCORE_STANDARD_HH_GCH}
                      COMMAND ${FINAL_COMMAND}
-                     DEPENDS ${PCH_INPUT}
- ${LIBCORE_SOURCE_DIR}/options/OptionValue.hpp
- ${LIBCORE_SOURCE_DIR}/util/Any.hpp
- ${LIBCORE_SOURCE_DIR}/util/Array.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingBox.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingSphere.hpp
- ${LIBCORE_SOURCE_DIR}/util/Factory.hpp
- ${LIBCORE_SOURCE_DIR}/util/Location.hpp
- ${LIBCORE_SOURCE_DIR}/util/Logging.hpp
- ${LIBCORE_SOURCE_DIR}/util/Matrix3x3.hpp
- ${LIBCORE_SOURCE_DIR}/util/Noncopyable.hpp
- ${LIBCORE_SOURCE_DIR}/util/Platform.hpp
- ${LIBCORE_SOURCE_DIR}/util/Quaternion.hpp
- ${LIBCORE_SOURCE_DIR}/util/SelfWeakPtr.hpp
- ${LIBCORE_SOURCE_DIR}/util/Singleton.hpp
- ${LIBCORE_SOURCE_DIR}/util/Standard.hh
- ${LIBCORE_SOURCE_DIR}/util/TotallyOrdered.hpp
- ${LIBCORE_SOURCE_DIR}/util/Transform.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingInfo.hpp
- ${LIBCORE_SOURCE_DIR}/util/UUID.hpp
- ${LIBCORE_SOURCE_DIR}/util/ThreadId.hpp
- ${LIBCORE_SOURCE_DIR}/util/Vector3.hpp
- ${LIBCORE_SOURCE_DIR}/util/Vector4.hpp
- ${LIBCORE_SOURCE_DIR}/util/SolidAngle.hpp
+                     DEPENDS ${LIBCORE_STANDARD_HH}
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/options/OptionValue.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Any.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Array.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingBox.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingSphere.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Factory.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Location.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Logging.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Matrix3x3.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Noncopyable.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Quaternion.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SelfWeakPtr.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Singleton.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/TotallyOrdered.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Transform.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingInfo.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/UUID.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/ThreadId.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector3.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SolidAngle.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_sha1.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_uuid.hpp
  ${LIBCORE_SOURCE_DIR}/util/valgrind.h
                      COMMENT "${FINAL_COMMAND}")
-#  ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB} ${PCH_OUTPUT})
+#  ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB} ${LIBCORE_STANDARD_HH_GCH})
  ENDIF()
 ENDIF()
 

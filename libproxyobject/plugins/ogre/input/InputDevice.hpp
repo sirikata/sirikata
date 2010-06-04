@@ -33,10 +33,10 @@
 #ifndef SIRIKATA_INPUT_InputDevice_HPP__
 #define SIRIKATA_INPUT_InputDevice_HPP__
 
-#include <util/Platform.hpp>
-#include <util/Time.hpp>
-#include <task/EventManager.hpp>
-#include <task/Event.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/Event.hpp>
 
 namespace Sirikata {
 namespace Input {

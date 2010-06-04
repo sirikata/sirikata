@@ -30,25 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Standard.hh>
+#include <sirikata/core/util/Standard.hh>
 
-#include <core/options/CDNConfig.hpp>
+#include <sirikata/core/options/CDNConfig.hpp>
 
-#include <task/EventManager.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 
-#include <transfer/EventTransferManager.hpp>
-#include <transfer/LRUPolicy.hpp>
-#include <transfer/DiskCacheLayer.hpp>
-#include <transfer/MemoryCacheLayer.hpp>
-#include <transfer/NetworkCacheLayer.hpp>
-#include <transfer/HTTPDownloadHandler.hpp>
-#include <transfer/HTTPUploadHandler.hpp>
-#include <transfer/HTTPFormUploadHandler.hpp>
-#include <transfer/FileProtocolHandler.hpp>
-#include <transfer/HashNameHandler.hpp>
-#include <transfer/CachedNameLookupManager.hpp>
-#include <transfer/CachedServiceLookup.hpp>
-#include <transfer/ServiceManager.hpp>
+#include <sirikata/core/transfer/EventTransferManager.hpp>
+#include <sirikata/core/transfer/LRUPolicy.hpp>
+#include <sirikata/core/transfer/DiskCacheLayer.hpp>
+#include <sirikata/core/transfer/MemoryCacheLayer.hpp>
+#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
+#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
+#include <sirikata/core/transfer/HTTPUploadHandler.hpp>
+#include <sirikata/core/transfer/HTTPFormUploadHandler.hpp>
+#include <sirikata/core/transfer/FileProtocolHandler.hpp>
+#include <sirikata/core/transfer/HashNameHandler.hpp>
+#include <sirikata/core/transfer/CachedNameLookupManager.hpp>
+#include <sirikata/core/transfer/CachedServiceLookup.hpp>
+#include <sirikata/core/transfer/ServiceManager.hpp>
 
 namespace Sirikata {
 

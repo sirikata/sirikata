@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include "util/ListenerProvider.hpp"
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 class ListenerTestClass {
 public:
@@ -54,7 +54,7 @@ class ListenerTest :  public CxxTest::TestSuite
         virtual void notify(int i) {
             total+=i;
         }
-        
+
     };
 public:
     ListenerTest():Sirikata::MarkovianProvider1<ListenerTestClass*,int>(10){}
@@ -75,7 +75,7 @@ public:
         virtual void listenerRemoved(T ){callCount+=16;}
         virtual void firstListenerAdded(T ){callCount+=256;}
         virtual void lastListenerRemoved(T ){callCount+=256*16;}
-        
+
         TestCallAddRemove& test(T aa, T bb, T cc, T dd) {
             T a(aa);
             T b(bb);
@@ -114,11 +114,11 @@ public:
     }
     void testSharedListenerCallAddRemove( void ) {
         std::tr1::shared_ptr<ListenerTestClass> a(new Test),b(new ListenerTestClass),c(new Test),d(new Test);
-        TestCallAddRemove<std::tr1::shared_ptr<ListenerTestClass> >().test(a,b,c,d);        
+        TestCallAddRemove<std::tr1::shared_ptr<ListenerTestClass> >().test(a,b,c,d);
     }
     void testStatelessListenerCallAddRemove( void ) {
         Test * a=(new Test),*b=(new Test),*c=(new Test),*d=(new Test);
-        
+
 
         this->addListener(a);
         this->addListener(b);

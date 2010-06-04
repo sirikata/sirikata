@@ -30,13 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <boost/thread.hpp>
-#include "network/StreamFactory.hpp"
-#include "network/StreamListenerFactory.hpp"
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
+
 static int core_plugin_refcount = 0;
 
 namespace Sirikata {

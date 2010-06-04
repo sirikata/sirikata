@@ -38,7 +38,7 @@
 #include "../meruCompat/EventSource.hpp"
 #include "ResourceTransfer.hpp"
 #include "ResourceManager.hpp"
-#include "util/UUID.hpp"
+#include <sirikata/core/util/UUID.hpp>
 
 #if OGRE_THREAD_SUPPORT==0
 

@@ -34,9 +34,9 @@
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include <oh/Platform.hpp>
-#include <util/MessageService.hpp>
-#include <util/SpaceObjectReference.hpp>
-#include <network/Address.hpp>
+#include <sirikata/core/util/MessageService.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/network/Address.hpp>
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;

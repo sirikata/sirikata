@@ -39,10 +39,10 @@
 #include "MonoSystem.hpp"
 #include "MonoClass.hpp"
 #include "MonoConvert.hpp"
-#include "util/Time.hpp"
+#include <sirikata/core/util/Time.hpp>
 #include "MonoArray.hpp"
-#include "util/SpaceObjectReference.hpp"
-#include "util/RoutableMessageHeader.hpp"
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 //#include "ResourceID.hpp"
 namespace Mono {
 

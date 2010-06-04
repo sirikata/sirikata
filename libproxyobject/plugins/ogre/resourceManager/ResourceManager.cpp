@@ -33,7 +33,7 @@
 #include "ResourceManager.hpp"
 #include "ResourceTransfer.hpp"
 #include "../meruCompat/EventSource.hpp"
-#include <util/Sha256.hpp>
+#include <sirikata/core/util/Sha256.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -51,7 +51,7 @@
 #include <boost/filesystem/exception.hpp>
 #endif
 */
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 namespace Meru {
 
 MANUAL_SINGLETON_STORAGE(ResourceManager);

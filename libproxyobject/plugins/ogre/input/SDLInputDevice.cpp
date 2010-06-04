@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Standard.hh>
-#include <task/Event.hpp>
-#include <task/EventManager.hpp>
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 #include "SDLInputManager.hpp"
 #include "SDLInputDevice.hpp"
 #include "InputEvents.hpp"

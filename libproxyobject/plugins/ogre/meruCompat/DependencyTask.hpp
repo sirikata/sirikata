@@ -33,8 +33,8 @@
 #define _DEPENDENCY_TASK_HPP_
 
 #include "MeruDefs.hpp"
-#include <task/WorkQueue.hpp>
-#include <task/DependencyTask.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/task/DependencyTask.hpp>
 
 namespace Meru
 {

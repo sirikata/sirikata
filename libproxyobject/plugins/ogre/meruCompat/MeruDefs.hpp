@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
 #ifndef _MERU_DEFS_HPP_
 #define _MERU_DEFS_HPP_
@@ -41,28 +41,28 @@
 #include <map>
 #include <queue>
 
-#include <util/Logging.hpp>
+#include <sirikata/core/util/Logging.hpp>
 
-//#include <task/Event.hpp>
-#include <util/BoundingBox.hpp>
-#include <util/BoundingInfo.hpp>
-#include <util/BoundingSphere.hpp>
-#include <util/Location.hpp>
-#include <util/ObjectReference.hpp>
-#include <util/Quaternion.hpp>
-#include <util/SelfWeakPtr.hpp>
-#include <util/Sha256.hpp>
-#include <util/SpaceObjectReference.hpp>
-#include <util/SpaceID.hpp>
-#include <util/ThreadSafeQueue.hpp>
-#include <util/Time.hpp>
-#include <util/UUID.hpp>
-#include <util/Vector3.hpp>
-#include <task/Event.hpp>
-#include <task/UniqueId.hpp>
-#include <transfer/TransferData.hpp>
-#include <transfer/URI.hpp>
-#include <options/Options.hpp>
+//#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/util/BoundingBox.hpp>
+#include <sirikata/core/util/BoundingInfo.hpp>
+#include <sirikata/core/util/BoundingSphere.hpp>
+#include <sirikata/core/util/Location.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/Quaternion.hpp>
+#include <sirikata/core/util/SelfWeakPtr.hpp>
+#include <sirikata/core/util/Sha256.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/Vector3.hpp>
+#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/task/UniqueId.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/options/Options.hpp>
 #include <proxyobject/Platform.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include <proxyobject/ProxyMeshObject.hpp>

@@ -54,8 +54,8 @@
 #undef nil
 #endif
 
-#include <task/WorkQueue.hpp>
-#include <util/Time.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 #include "SDLInputManager.hpp"
 #include "InputEvents.hpp"

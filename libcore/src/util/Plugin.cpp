@@ -29,8 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "util/Plugin.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/Plugin.hpp>
+
 #include <cassert>
 
 namespace Sirikata {

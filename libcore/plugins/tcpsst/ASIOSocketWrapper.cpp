@@ -31,11 +31,11 @@
  */
 
 
-#include "util/Platform.hpp"
-#include "network/Asio.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "VariableLength.hpp"
@@ -89,16 +89,16 @@ static uint32 conservativeBase64Size(size_t x) {
 static const uint8 _URL_SAFE_ALPHABET []= {
         (uint8)'A', (uint8)'B', (uint8)'C', (uint8)'D', (uint8)'E', (uint8)'F', (uint8)'G',
         (uint8)'H', (uint8)'I', (uint8)'J', (uint8)'K', (uint8)'L', (uint8)'M', (uint8)'N',
-        (uint8)'O', (uint8)'P', (uint8)'Q', (uint8)'R', (uint8)'S', (uint8)'T', (uint8)'U', 
+        (uint8)'O', (uint8)'P', (uint8)'Q', (uint8)'R', (uint8)'S', (uint8)'T', (uint8)'U',
         (uint8)'V', (uint8)'W', (uint8)'X', (uint8)'Y', (uint8)'Z',
         (uint8)'a', (uint8)'b', (uint8)'c', (uint8)'d', (uint8)'e', (uint8)'f', (uint8)'g',
         (uint8)'h', (uint8)'i', (uint8)'j', (uint8)'k', (uint8)'l', (uint8)'m', (uint8)'n',
-        (uint8)'o', (uint8)'p', (uint8)'q', (uint8)'r', (uint8)'s', (uint8)'t', (uint8)'u', 
+        (uint8)'o', (uint8)'p', (uint8)'q', (uint8)'r', (uint8)'s', (uint8)'t', (uint8)'u',
         (uint8)'v', (uint8)'w', (uint8)'x', (uint8)'y', (uint8)'z',
-        (uint8)'0', (uint8)'1', (uint8)'2', (uint8)'3', (uint8)'4', (uint8)'5', 
+        (uint8)'0', (uint8)'1', (uint8)'2', (uint8)'3', (uint8)'4', (uint8)'5',
         (uint8)'6', (uint8)'7', (uint8)'8', (uint8)'9', (uint8)'-', (uint8)'_'
     };
-	
+
 int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
     uint32 source0=source[0];
     uint32 source1=source[1];
@@ -120,7 +120,7 @@ int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
         destination[ 2 ] = _URL_SAFE_ALPHABET[ (inBuff >>  6) & 0x3f ];
         destination[ 3 ] = '=';
         return 4;
-        
+
       case 1:
         destination[ 2 ] = '=';
         destination[ 3 ] = '=';
@@ -129,7 +129,7 @@ int translateBase64(uint8*destination, const uint8* source, int numSigBytes) {
       default:
         return 0;
     }   // end switch
-    
+
 }
 
 Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const MemoryReference&b, const MemoryReference&c, const MemoryReference*rawBytesToPrepend) {
@@ -163,7 +163,7 @@ Chunk* ASIOSocketWrapper::toBase64ZeroDelim(const MemoryReference&a, const Memor
         if (retvalSize<=curPlace+5) {
             retval->resize(curPlace+5);
             SILOG(tcpsst,error,"conservative size estimate incorrect");
-        }        
+        }
         curPlace+=translateBase64(&*(retval->begin()+curPlace),data,datalen);
     }
     (*retval)[curPlace]=0xff;//0xff DELIMITED
@@ -207,7 +207,7 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
     unpauseSendStreams(parentMultiSocket);
 }
 
-void ASIOSocketWrapper::sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedSocket>&weakParentMultiSocket, const ErrorCode &error, std::size_t bytes_sent) { 
+void ASIOSocketWrapper::sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedSocket>&weakParentMultiSocket, const ErrorCode &error, std::size_t bytes_sent) {
     MultiplexedSocketPtr parentMultiSocket(weakParentMultiSocket.lock());
     if (parentMultiSocket) {
         std::deque<TimestampedChunk> local_toSend;
@@ -218,7 +218,7 @@ void ASIOSocketWrapper::sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedS
         } else {
             size_t total_size=0;
             for (std::deque<TimestampedChunk>::const_iterator i=local_toSend.begin(),ie=local_toSend.end();i!=ie;++i) {
-                finishedSendingChunk(*i);            
+                finishedSendingChunk(*i);
                 size_t cursize=i->size();
                 total_size+=cursize;
                 if (cursize) {
@@ -255,7 +255,7 @@ void ASIOSocketWrapper::bindFunctions(const MultiplexedSocketPtr&parent) {
                                        _2);
 }
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, std::deque<TimestampedChunk>&input_toSend){
-    
+
     std::vector<boost::asio::mutable_buffer> bufs;
     size_t total_size=0;
     for (std::deque<TimestampedChunk>::const_iterator i=input_toSend.begin(),ie=input_toSend.end();i!=ie;++i) {
@@ -435,7 +435,7 @@ size_t ASIOSocketWrapper::CheckCRLF::operator() (const ASIOSocketWrapper::ErrorC
                 (*mArray)[i-3]=='\r') {
                 return 0;
             }
-            
+
         }while (i-- >= mLastTransferred+4);
     }
     mLastTransferred=bytes_transferred;
@@ -453,7 +453,7 @@ void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thu
     std::stringstream header;
     char postfix[]={0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x4C, 0x6F, 0x63, 0x61
                     , 0x74, 0x69, 0x6F, 0x6E, 0x3A, 0x20, '\0'};
-    
+
     header << prefix<<origin<<postfix<<"ws://"<<host<<resource_name;
     char protoprefix[]={0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x50, 0x72, 0x6F, 0x74
                         , 0x6F, 0x63, 0x6F, 0x6C, 0x3A, 0x20,'\0'};
@@ -493,8 +493,8 @@ void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMult
         header << originprefix;
         header << address.getHostName();
         header << crlf;
-        char protocolprefix[]={0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 
-                               0x65,  0x74, 0x2D, 0x50, 0x72, 0x6F, 0x74, 
+        char protocolprefix[]={0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B,
+                               0x65,  0x74, 0x2D, 0x50, 0x72, 0x6F, 0x74,
                                0x6F, 0x63, 0x6F, 0x6C, 0x3A, 0x20, '\0'};
         header<< protocolprefix<<(parentMultiSocket->isZeroDelim()?"wssst":"sst")<<numConnections<<crlf;
         header << crlf;
@@ -504,7 +504,7 @@ void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMult
 /*
     }else {
         UUID return_value=(parentMultiSocket->isZeroDelim()?massageUUID(UUID::random()):UUID::random());
-        
+
         Chunk *headerData=new Chunk(TCPStream::TcpSstHeaderSize);
         copyHeader(&*headerData->begin(),parentMultiSocket->isZeroDelim()?TCPStream::WEBSOCKET_STRING_PREFIX():TCPStream::STRING_PREFIX(),value,numConnections);
         rawSend(parentMultiSocket,headerData,true);

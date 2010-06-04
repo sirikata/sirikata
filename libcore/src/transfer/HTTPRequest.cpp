@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*  Created on: Dec 31, 2008 */
-#include "util/Standard.hh"
-#include "options/Options.hpp"
-#include "HTTPRequest.hpp"
-#include "TransferData.hpp"
-#include "util/ThreadSafeQueue.hpp"
-#include "util/Thread.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/transfer/HTTPRequest.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
 #ifndef _WIN32
 #include <unistd.h>

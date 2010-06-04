@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Standard.hh>
+#include <sirikata/core/util/Standard.hh>
 #include "InputEvents.hpp"
 
 namespace Sirikata {

@@ -30,17 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <oh/Platform.hpp>
-#include <util/SpaceID.hpp>
-#include <network/Stream.hpp>
-#include <network/StreamFactory.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
 #include "oh/SpaceConnection.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/SpaceIDMap.hpp"
 #include "oh/ObjectHost.hpp"
 #include "oh/HostedObject.hpp"
 #include "ObjectHost_Time.pbj.hpp"
-#include "util/KnownServices.hpp"
-#include "network/TimeSyncImpl.hpp"
+#include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/network/TimeSyncImpl.hpp>
 #include "oh/SpaceTimeOffsetManager.hpp"
 namespace Sirikata {
 namespace {

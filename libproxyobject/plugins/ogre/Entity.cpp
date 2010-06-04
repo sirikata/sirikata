@@ -32,7 +32,7 @@
 
 #include <proxyobject/Platform.hpp>
 #include "Entity.hpp"
-#include <options/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
 namespace Graphics {

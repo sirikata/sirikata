@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MESH_OBJECT_HPP_
 #define _SIRIKATA_MESH_OBJECT_HPP_
 
-#include <oh/Platform.hpp>
+#include <proxyobject/Platform.hpp>
 
 // MCB: move to model plugin
 //#include "transfer/URI.hpp"
@@ -65,21 +65,21 @@ class SIRIKATA_PROXYOBJECT_EXPORT MeshObject
 
         virtual void setScale ( Vector3f const& rhs ) = 0;
         virtual Vector3f const& getScale () const = 0;
-        
+
         virtual void setPhysical ( PhysicalParameters const& rhs ) = 0;
         virtual PhysicalParameters const& getPhysical () const = 0;
-    
+
     protected:
         MeshObject () {}
 //        MeshObject ( MeshObject const& rhs );
 //        MeshObject& operator = ( MeshObject const& rhs );
-    
+
     private:
     // MCB: move data members from proxy to plugin, via this route
 //        URI mMeshURI;
 //        Vector3f mScale;
 //        PhysicalParameters mPhysical;
-    
+
 };
 
 } // namespace Models

@@ -31,10 +31,10 @@
  */
 /*  Created on: Jul 25, 2009 */
 
-#include <util/Standard.hh>
-#include "util/RoutableMessageHeader.hpp"
-#include "QueryTracker.hpp"
-#include "SentMessage.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/QueryTracker.hpp>
+#include <sirikata/core/util/SentMessage.hpp>
 
 namespace Sirikata {
 

@@ -31,7 +31,7 @@
  */
 
 #include <proxyobject/Platform.hpp>
-#include <util/ListenerProvider.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 #include <proxyobject/ProxyCameraObject.hpp>
 namespace Sirikata {
 ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service)

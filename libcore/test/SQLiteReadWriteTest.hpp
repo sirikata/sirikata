@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include <persistence/ObjectStorage.hpp>
-#include <util/PluginManager.hpp>
-#include <util/DynamicLibrary.hpp>
-#include <persistence/ReadWriteHandlerFactory.hpp>
+#include <sirikata/core/persistence/ObjectStorage.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/util/DynamicLibrary.hpp>
+#include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
 #include "ReadWriteHandlerTest.hpp"
 namespace ReadWriteTestNs {
 extern const char *databaseReadWriteFilename;

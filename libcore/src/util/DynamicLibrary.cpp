@@ -29,8 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "util/DynamicLibrary.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/DynamicLibrary.hpp>
+
 #include <boost/filesystem.hpp>
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS

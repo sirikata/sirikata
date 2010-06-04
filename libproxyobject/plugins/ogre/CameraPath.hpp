@@ -33,8 +33,8 @@
 #ifndef _SIRIKATA_OGRE_CAMERA_PATH_HPP_
 #define _SIRIKATA_OGRE_CAMERA_PATH_HPP_
 
-#include <util/Platform.hpp>
-#include <task/Time.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/task/Time.hpp>
 
 namespace Sirikata {
 namespace Graphics {

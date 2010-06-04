@@ -31,10 +31,10 @@
  */
 
 #include <proximity/Platform.hpp>
-#include <options/Options.hpp>
-#include <util/PluginManager.hpp>
-#include <network/IOServiceFactory.hpp>
-#include <network/IOService.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
 namespace Sirikata{ namespace Protocol {
 class IMessage;
 class IRetObj;

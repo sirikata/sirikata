@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hpp"
-#include "network/Asio.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "ASIOReadBuffer.hpp"

@@ -29,9 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "WorkQueue.hpp"
-#include "DependencyTask.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/task/DependencyTask.hpp>
+
 namespace Sirikata {
 namespace Task {
 

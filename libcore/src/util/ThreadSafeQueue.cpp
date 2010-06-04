@@ -29,9 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "ThreadSafeQueue.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
+
 #include <boost/thread.hpp>
+
 namespace Sirikata {
 namespace ThreadSafeQueueNS{
 class Lock :public boost::mutex {

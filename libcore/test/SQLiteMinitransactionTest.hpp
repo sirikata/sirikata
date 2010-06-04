@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include <persistence/ObjectStorage.hpp>
-#include <util/PluginManager.hpp>
-#include <util/DynamicLibrary.hpp>
-#include <persistence/MinitransactionHandlerFactory.hpp>
+#include <sirikata/core/persistence/ObjectStorage.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/util/DynamicLibrary.hpp>
+#include <sirikata/core/persistence/MinitransactionHandlerFactory.hpp>
 #include "MinitransactionHandlerTest.hpp"
 namespace MinitransactionTestNs {
 extern const char *databaseMinitransactionalFilename;
@@ -98,5 +98,5 @@ public:
                                             100,
                                             10);
     }
-    
+
 };

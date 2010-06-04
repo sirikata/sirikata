@@ -32,15 +32,15 @@
 #ifndef _SIRIKATA_HOSTED_OBJECT_HPP_
 #define _SIRIKATA_HOSTED_OBJECT_HPP_
 
-#include <util/SpaceObjectReference.hpp>
-#include <util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "proxyobject/ProxyObject.hpp"
-#include "util/QueryTracker.hpp"
+#include <sirikata/core/util/QueryTracker.hpp>
 #include "proxyobject/VWObject.hpp"
 
-#include <core/odp/DelegateService.hpp>
-#include <core/odp/DelegatePort.hpp>
+#include <sirikata/core/odp/DelegateService.hpp>
+#include <sirikata/core/odp/DelegatePort.hpp>
 
 namespace Sirikata {
 class ObjectHost;

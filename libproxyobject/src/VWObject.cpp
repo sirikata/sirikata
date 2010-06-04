@@ -33,11 +33,11 @@
 #include "proxyobject/Platform.hpp"
 #include "ProxyObject_Sirikata.pbj.hpp"
 #include "ProxyObject_Persistence.pbj.hpp"
-#include "util/QueryTracker.hpp"
-#include "util/RoutableMessage.hpp"
-#include "util/SentMessage.hpp"
-#include "util/KnownServices.hpp"
-#include "persistence/PersistenceSentMessage.hpp"
+#include <sirikata/core/util/QueryTracker.hpp>
+#include <sirikata/core/util/RoutableMessage.hpp>
+#include <sirikata/core/util/SentMessage.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/persistence/PersistenceSentMessage.hpp>
 #include "proxyobject/ProxyObject.hpp"
 #include "proxyobject/TimeOffsetManager.hpp"
 #include "proxyobject/ProxyLightObject.hpp"

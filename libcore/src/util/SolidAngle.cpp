@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "SolidAngle.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/SolidAngle.hpp>
 
 namespace Sirikata {
 

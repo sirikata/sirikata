@@ -29,11 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "Sha256.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/Sha256.hpp>
 #include "internal_sha2.hpp"
+
 #include <stdexcept>
 #include <iostream>
+
 namespace Sirikata {
 static unsigned char numToHex(unsigned int num) {
     if (num<10)

@@ -32,10 +32,12 @@
 
 #ifndef _SIRIKATA_SIMULATION_FACTORY_
 #define _SIRIKATA_SIMULATION_FACTORY_
+
 #include <proxyobject/Platform.hpp>
-#include <util/ListenerProvider.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 #include <proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
+
 namespace Sirikata{
 
 ///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found

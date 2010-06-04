@@ -32,14 +32,14 @@
 
 #include <oh/Platform.hpp>
 #include <proxyobject/ModelsSystemFactory.hpp> // MCB:
-#include <util/RoutableMessageHeader.hpp>
-#include <options/Options.hpp>
-#include <util/PluginManager.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 #include <proxyobject/SimulationFactory.hpp>
 
-#include <task/EventManager.hpp>
-#include <task/WorkQueue.hpp>
-#include <core/options/CDNConfig.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/options/CDNConfig.hpp>
 
 #include <oh/ObjectHost.hpp>
 #include <proxyobject/LightInfo.hpp>
@@ -48,16 +48,16 @@
 #include <oh/HostedObject.hpp>
 #include <oh/SpaceIDMap.hpp>
 #include <oh/ObjectHostTimeOffsetManager.hpp>
-#include <network/IOServiceFactory.hpp>
-#include <network/IOService.hpp>
-#include <util/KnownServices.hpp>
-#include <persistence/ObjectStorage.hpp>
-#include <persistence/ReadWriteHandlerFactory.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/persistence/ObjectStorage.hpp>
+#include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
 #include <ObjectHostBinary_Persistence.pbj.hpp>
 #include <ObjectHostBinary_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
-#include <options/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
 namespace Sirikata {
 
 using Task::GenEventManager;

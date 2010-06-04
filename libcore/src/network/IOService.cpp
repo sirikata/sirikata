@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "IOService.hpp"
-#include "../util/Time.hpp"
-#include "IOStrand.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 #include <boost/version.hpp>
 #include <boost/asio.hpp>
 

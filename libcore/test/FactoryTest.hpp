@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include "util/Factory.hpp"
+#include <sirikata/core/util/Factory.hpp>
 
 class FactoryTest :  public CxxTest::TestSuite {
 public:

@@ -31,12 +31,12 @@
  */
 /*  Created on: May 2, 2009 */
 
-#include "util/Standard.hh"
-#include "WorkQueue.hpp"
-#include "Time.hpp"
-#include "util/ThreadSafeQueue.hpp"
-#include "util/LockFreeQueue.hpp"
-#include "util/Thread.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/task/Time.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/util/LockFreeQueue.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {
 namespace Task {

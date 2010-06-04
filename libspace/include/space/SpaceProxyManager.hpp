@@ -37,7 +37,7 @@
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
 #include <proxyobject/VWObject.hpp>
-#include <core/odp/DelegateService.hpp>
+#include <sirikata/core/odp/DelegateService.hpp>
 
 namespace Sirikata {
 namespace Space {

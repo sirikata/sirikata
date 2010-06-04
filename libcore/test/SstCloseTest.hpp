@@ -30,17 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "network/Stream.hpp"
-#include "network/StreamListener.hpp"
-#include "network/StreamFactory.hpp"
-#include "network/StreamListenerFactory.hpp"
-#include "network/IOServiceFactory.hpp"
-#include "network/IOServicePool.hpp"
-#include "network/IOService.hpp"
-#include "util/AtomicTypes.hpp"
-#include "util/PluginManager.hpp"
-#include "util/DynamicLibrary.hpp"
-#include "task/Time.hpp"
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOServicePool.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/util/DynamicLibrary.hpp>
+#include <sirikata/core/task/Time.hpp>
 #include <cxxtest/TestSuite.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>

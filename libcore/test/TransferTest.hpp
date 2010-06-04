@@ -33,22 +33,22 @@
 
 #include <cxxtest/TestSuite.h>
 
-#include "util/Thread.hpp"
-#include "task/EventManager.hpp"
-#include "task/WorkQueue.hpp"
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
 
-#include "transfer/URI.hpp"
-#include "transfer/CachedServiceLookup.hpp"
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/CachedServiceLookup.hpp>
 
-#include "transfer/ServiceManager.hpp"
-#include "transfer/NameLookupManager.hpp"
-#include "transfer/HTTPDownloadHandler.hpp"
+#include <sirikata/core/transfer/ServiceManager.hpp>
+#include <sirikata/core/transfer/NameLookupManager.hpp>
+#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
 
-#include "transfer/NetworkCacheLayer.hpp"
+#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
 
-#include "transfer/TransferPool.hpp"
-#include "transfer/RemoteFileMetadata.hpp"
-#include "transfer/TransferMediator.hpp"
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
 
 using namespace Sirikata;
 

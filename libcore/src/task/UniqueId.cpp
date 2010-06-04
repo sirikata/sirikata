@@ -29,8 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "UniqueId.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/task/UniqueId.hpp>
 
 namespace Sirikata {
 namespace Task {

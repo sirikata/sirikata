@@ -31,7 +31,7 @@
  */
 
 #include "oh/Platform.hpp"
-#include "util/UUID.hpp"
+#include <sirikata/core/util/UUID.hpp>
 #include "oh/SpaceConnection.hpp"
 #include "oh/HostedObject.hpp"
 #include "MonoDomain.hpp"

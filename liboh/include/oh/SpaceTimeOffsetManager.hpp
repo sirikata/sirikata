@@ -31,7 +31,8 @@
  */
 #ifndef _SIRIKATA_SPACE_TIME_OFFSET_MANAGER_HPP_
 #define _SIRIKATA_SPACE_TIME_OFFSET_MANAGER_HPP_
-#include <util/Singleton.hpp>
+
+#include <sirikata/core/util/Singleton.hpp>
 
 namespace Sirikata {
 class SIRIKATA_OH_EXPORT SpaceTimeOffsetManager :public AutoSingleton<SpaceTimeOffsetManager>{public:
@@ -45,4 +46,3 @@ class SIRIKATA_OH_EXPORT SpaceTimeOffsetManager :public AutoSingleton<SpaceTimeO
 };
 }
 #endif
-

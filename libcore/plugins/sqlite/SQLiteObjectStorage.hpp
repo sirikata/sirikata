@@ -32,11 +32,11 @@
 #ifndef _SQLITE_OBJECT_STORAGE_HPP_
 #define _SQLITE_OBJECT_STORAGE_HPP_
 
-#include "persistence/ObjectStorage.hpp"
-#include "task/WorkQueue.hpp"
+#include <sirikata/core/persistence/ObjectStorage.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
 #include "SQLite.hpp"
-#include "util/RoutableMessageHeader.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 namespace Sirikata { namespace Persistence {
 
 /** SQLite based object storage.  This class provides both ReadWriteHandler and

@@ -35,7 +35,7 @@
 
 #include "ColladaAsset.hpp"
 
-#include <transfer/URI.hpp>
+#include <sirikata/core/transfer/URI.hpp>
 
 namespace COLLADAFW {
 
@@ -69,7 +69,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocument
         Transfer::URI const& getURI () const { return mURI; }
 
         ColladaAsset const& getAsset () const { return mAsset; }
-        
+
     protected:
 
     private:
@@ -78,8 +78,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocument
 };
 
 typedef std::tr1::shared_ptr< ColladaDocument > ColladaDocumentPtr;
-    
-    
+
+
 } // namespace Models
 } // namespace Sirikata
 

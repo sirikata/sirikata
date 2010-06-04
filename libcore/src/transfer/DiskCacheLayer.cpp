@@ -30,10 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*  Created on: Jan 15, 2009 */
-#include "util/Standard.hh"
-#include "DiskCacheLayer.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/transfer/DiskCacheLayer.hpp>
 
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 

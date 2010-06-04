@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_CONNECTIONS_HPP
 #define _SIRIKATA_OBJECT_CONNECTIONS_HPP
 #include <space/Platform.hpp>
-#include <network/Stream.hpp>
+#include <sirikata/core/network/Stream.hpp>
 namespace Sirikata {
 namespace Space {
 class Space;

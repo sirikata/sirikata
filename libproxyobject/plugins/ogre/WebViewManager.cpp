@@ -31,7 +31,7 @@
  */
 
 #include "proxyobject/Platform.hpp"
-#include "util/TemporalValue.hpp"
+#include <sirikata/core/util/TemporalValue.hpp>
 #include "WebViewManager.hpp"
 #include "WebView.hpp"
 #include "input/SDLInputManager.hpp"

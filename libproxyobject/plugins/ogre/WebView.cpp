@@ -31,7 +31,7 @@
  */
 
 #include "proxyobject/Platform.hpp"
-#include "util/TemporalValue.hpp"
+#include <sirikata/core/util/TemporalValue.hpp>
 #include "WebView.hpp"
 #include <OgreBitwise.h>
 
@@ -796,7 +796,7 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
     pixelBufferRect.mLeft=0;
     if (dx || dy) {
         SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
-        
+
         Berkelium::Rect scrollRect = clipRect;
         scrollRect.mLeft += dx;
         scrollRect.mTop += dy;

@@ -32,16 +32,17 @@
 
 #ifndef _SIRIKATA_PROXY_OBJECT_HPP_
 #define _SIRIKATA_PROXY_OBJECT_HPP_
-#include <util/Extrapolation.hpp>
-#include <util/SpaceObjectReference.hpp>
+
+#include <sirikata/core/util/Extrapolation.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "ProxyObjectListener.hpp"
 #include "ProxyObject.hpp"
-#include <util/ListenerProvider.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 #include "PositionListener.hpp"
-#include <util/QueryTracker.hpp>
+#include <sirikata/core/util/QueryTracker.hpp>
 
-#include <core/odp/Service.hpp>
-#include <core/odp/Port.hpp>
+#include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/odp/Port.hpp>
 
 namespace Sirikata {
 

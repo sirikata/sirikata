@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <proximity/Platform.hpp>
-#include "util/ObjectReference.hpp"
+#include <sirikata/core/util/ObjectReference.hpp>
 #include <Proximity_Sirikata.pbj.hpp>
 #include <proximity/ProximitySystem.hpp>
 #include "BruteForceProx.hpp"

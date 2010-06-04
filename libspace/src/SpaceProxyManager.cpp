@@ -34,9 +34,9 @@
 #include "space/Space.hpp"
 #include "proxyobject/ProxyCameraObject.hpp"
 
-#include <core/odp/DelegatePort.hpp>
-#include <core/odp/Exceptions.hpp>
-#include <util/RoutableMessageHeader.hpp>
+#include <sirikata/core/odp/DelegatePort.hpp>
+#include <sirikata/core/odp/Exceptions.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
 SpaceProxyManager::SpaceProxyManager(Space::Space*space, Network::IOService*io)

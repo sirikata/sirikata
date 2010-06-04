@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include "util/Any.hpp"
+#include <sirikata/core/util/Any.hpp>
 class AnyTest : public CxxTest::TestSuite
 {
     typedef Sirikata::Any Any;

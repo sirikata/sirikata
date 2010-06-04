@@ -35,7 +35,7 @@
 //#include "EventQueue.hpp"
 #include "MeruDefs.hpp"
 #include "Singleton.hpp"
-#include <task/EventManager.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 
 namespace Meru {
 

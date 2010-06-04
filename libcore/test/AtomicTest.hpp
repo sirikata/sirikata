@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include "util/AtomicTypes.hpp"
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 using namespace Sirikata;
 class AtomicTest : public CxxTest::TestSuite

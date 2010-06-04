@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_INPUT_EVENT_DESCRIPTOR_HPP_
 #define _SIRIKATA_INPUT_EVENT_DESCRIPTOR_HPP_
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include "InputDevice.hpp"
 
 namespace Sirikata {

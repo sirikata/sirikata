@@ -32,18 +32,18 @@
 /*  Created on: Feb 17, 2009 */
 
 #include <cxxtest/TestSuite.h>
-#include "util/Thread.hpp"
-#include "transfer/EventTransferManager.hpp"
-#include "task/EventManager.hpp"
-#include "task/WorkQueue.hpp"
-#include "transfer/CachedServiceLookup.hpp"
-#include "transfer/ServiceManager.hpp"
-#include "transfer/CachedNameLookupManager.hpp"
-#include "transfer/NetworkCacheLayer.hpp"
-#include "transfer/MemoryCacheLayer.hpp"
-#include "transfer/HTTPDownloadHandler.hpp"
-#include "transfer/URI.hpp"
-#include "transfer/LRUPolicy.hpp"
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/transfer/EventTransferManager.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/transfer/CachedServiceLookup.hpp>
+#include <sirikata/core/transfer/ServiceManager.hpp>
+#include <sirikata/core/transfer/CachedNameLookupManager.hpp>
+#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
+#include <sirikata/core/transfer/MemoryCacheLayer.hpp>
+#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/LRUPolicy.hpp>
 
 using namespace Sirikata;
 class DownloadTest : public CxxTest::TestSuite {

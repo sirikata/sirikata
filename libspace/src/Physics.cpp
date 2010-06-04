@@ -32,9 +32,9 @@
 
 #include <space/Physics.hpp>
 #include <space/Space.hpp>
-#include <util/KnownServices.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 #include "Space_Sirikata.pbj.hpp"
-#include <util/RoutableMessage.hpp>
+#include <sirikata/core/util/RoutableMessage.hpp>
 namespace Sirikata { namespace Space {
 
 Physics::Physics(Space*space, Network::IOService*io, const SpaceObjectReference&nodeId, uint32 port):SpaceProxyManager(space,io),mReplyMessageService(nodeId,port), mBounds(BoundingBox3d3f::null()),mQueryId(0) {

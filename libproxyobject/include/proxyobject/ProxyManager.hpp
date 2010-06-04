@@ -29,16 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 #include "ProxyObject.hpp"
 #include "ProxyCreationListener.hpp"
+
 namespace Sirikata {
 
 class QueryTracker;
 class TimeOffsetManager;
 /** An interface for a class that keeps track of proxy object references. */
-class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager : 
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager :
 //        public MessageService,
         public Provider<ProxyCreationListener*> {
 public:

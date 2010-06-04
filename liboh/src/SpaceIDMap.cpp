@@ -31,8 +31,8 @@
  */
 
 #include <oh/Platform.hpp>
-#include <util/SpaceID.hpp>
-#include <network/Address.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
+#include <sirikata/core/network/Address.hpp>
 #include "oh/SpaceIDMap.hpp"
 
 namespace Sirikata {

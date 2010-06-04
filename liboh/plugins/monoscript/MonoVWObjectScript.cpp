@@ -37,7 +37,7 @@
 #include "MonoAssembly.hpp"
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
-#include "util/RoutableMessageHeader.hpp"
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include "MonoContext.hpp"
 namespace Sirikata {
 

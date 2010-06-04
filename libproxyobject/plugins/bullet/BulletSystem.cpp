@@ -36,16 +36,16 @@
 #include <proxyobject/ProxyObject.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
 //#include <oh/SpaceTimeOffsetManager.hpp>
-#include <options/Options.hpp>
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 #include "btBulletCollisionCommon.h"
 #include "BulletSystem.hpp"
 #include "Bullet_Sirikata.pbj.hpp"
 #include "Bullet_Physics.pbj.hpp"
-#include "util/RoutableMessageBody.hpp"
-#include "util/RoutableMessageHeader.hpp"
-#include "util/KnownServices.hpp"
+#include <sirikata/core/util/RoutableMessageBody.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;

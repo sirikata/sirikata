@@ -31,8 +31,10 @@
  */
 #ifndef _SIRIKATA_OBJECTHOST_TIME_OFFSET_MANAGER_HPP_
 #define _SIRIKATA_OBJECTHOST_TIME_OFFSET_MANAGER_HPP_
-#include <util/Singleton.hpp>
+
+#include <sirikata/core/util/Singleton.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
+
 namespace Sirikata {
 class SIRIKATA_OH_EXPORT ObjectHostTimeOffsetManager :public TimeOffsetManager {
   public:
@@ -42,4 +44,3 @@ class SIRIKATA_OH_EXPORT ObjectHostTimeOffsetManager :public TimeOffsetManager {
 };
 }
 #endif
-

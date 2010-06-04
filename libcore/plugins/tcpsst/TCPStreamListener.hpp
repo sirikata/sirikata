@@ -33,8 +33,8 @@
 #ifndef SIRIKATA_TCPStreamListener_HPP__
 #define SIRIKATA_TCPStreamListener_HPP__
 
-#include "network/IODefs.hpp"
-#include "network/StreamListener.hpp"
+#include <sirikata/core/network/IODefs.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -80,7 +80,7 @@ public:
         bool mNoDelay;
         uint32 mSendBufferSize;
         uint32 mKernelSendBufferSize;
-        uint32 mKernelReceiveBufferSize;        
+        uint32 mKernelReceiveBufferSize;
     };
     typedef std::tr1::shared_ptr<Data> DataPtr;
     DataPtr mData;

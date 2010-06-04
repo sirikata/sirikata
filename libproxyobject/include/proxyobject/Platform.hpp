@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_PROXYOBJECT_PLATFORM_HPP_
 #define _SIRIKATA_PROXYOBJECT_PLATFORM_HPP_
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
 #ifndef SIRIKATA_PROXYOBJECT_EXPORT
 # if SIRIKATA_PLATFORM == PLATFORM_WINDOWS

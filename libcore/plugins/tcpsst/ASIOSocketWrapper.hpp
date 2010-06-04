@@ -29,10 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/UUID.hpp"
-#include "util/SizedThreadSafeQueue.hpp"
-#include <util/Time.hpp>
-#include <util/EWA.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/EWA.hpp>
 
 #define SEND_LATENCY_EWA_ALPHA .10f
 
@@ -84,7 +84,7 @@ class ASIOSocketWrapper {
 
 	};
     EWA<Duration> mAverageSendLatency;
-    
+
     std::vector<Stream::StreamID> mPausedSendStreams;
     std::deque<TimestampedChunk> mToSend;
     std::tr1::weak_ptr<MultiplexedSocket>mParent;
@@ -222,7 +222,7 @@ public:
      */
     void sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const Address& address, const UUID&value, unsigned int numConnections);
     void sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol);
-    
+
     void ioReactorThreadPauseStream(const MultiplexedSocketPtr&parentMultiSocket, Stream::StreamID sid);
     void unpauseSendStreams(const MultiplexedSocketPtr&parentMultiSocket);
     Address getRemoteEndpoint()const;
@@ -242,7 +242,7 @@ public:
     CheckCRLF(const Array<uint8,TCPStream::MaxWebSocketHeaderSize>*array) {
         mArray=array;
         mLastTransferred=0;
-        
+
     }
     size_t operator() (const ErrorCode&error, size_t bytes_transferred);
 };

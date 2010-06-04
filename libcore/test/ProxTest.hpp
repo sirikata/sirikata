@@ -30,16 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Thread.hpp"
-#include "network/Stream.hpp"
-#include "network/StreamListener.hpp"
-#include "network/StreamFactory.hpp"
-#include "network/StreamListenerFactory.hpp"
-#include "network/IOServiceFactory.hpp"
-#include "util/ObjectReference.hpp"
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 #include "Test_Sirikata.pbj.hpp"
-#include "util/PluginManager.hpp"
-#include "util/RoutableMessage.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/util/RoutableMessage.hpp>
 #include "proximity/Platform.hpp"
 #include "proximity/ProximitySystem.hpp"
 #include "proximity/ProximityConnection.hpp"

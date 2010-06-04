@@ -32,7 +32,7 @@
 
 #include <proxyobject/Platform.hpp>
 #include "CameraEntity.hpp"
-#include <options/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
 namespace Sirikata {
 namespace Graphics {
 CameraEntity::CameraEntity(OgreSystem *scene,

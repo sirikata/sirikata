@@ -41,9 +41,9 @@
 
 #include "ReplacingDataStream.hpp"
 #include "../meruCompat/EventSource.hpp"
-#include "util/Time.hpp"
-#include "transfer/URI.hpp"
-#include "util/Logging.hpp"
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/util/Logging.hpp>
 #include "../meruCompat/SequentialWorkQueue.hpp"
 
 template<> Meru::MaterialScriptManager *Ogre::Singleton<Meru::MaterialScriptManager>::ms_Singleton = 0;

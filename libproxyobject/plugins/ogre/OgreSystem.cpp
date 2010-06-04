@@ -31,13 +31,13 @@
  */
 #include <proxyobject/Platform.hpp>
 
-#include <util/Thread.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
-#include <task/Event.hpp>
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/ProxyCameraObject.hpp>

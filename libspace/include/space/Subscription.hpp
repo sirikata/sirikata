@@ -34,9 +34,9 @@
 #define _SIRIKATA_SUBSCRIPTION_HPP_
 
 #include <space/Platform.hpp>
-#include <util/ObjectReference.hpp>
-#include <util/Time.hpp>
-#include <network/IOTimer.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 namespace Sirikata {
 

@@ -34,7 +34,7 @@
 #define _SIRIKATA_LOC_HPP_
 
 #include <space/Platform.hpp>
-#include <util/ObjectReference.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 
 namespace Sirikata {
 namespace Protocol {

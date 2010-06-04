@@ -34,7 +34,7 @@
 #define _SIRIKATA_MODELS_SYSTEM_FACTORY_
 
 #include <proxyobject/Platform.hpp>
-#include <util/ListenerProvider.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 #include <proxyobject/ModelsSystem.hpp>
 
 namespace Sirikata {

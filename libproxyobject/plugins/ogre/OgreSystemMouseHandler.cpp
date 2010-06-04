@@ -49,17 +49,17 @@
 #include "WebView.hpp"
 #include "InputResponse.hpp"
 #include "InputBinding.hpp"
-#include <task/Event.hpp>
-#include <task/Time.hpp>
-#include <task/EventManager.hpp>
+#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/task/Time.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 #include <SDL_keysym.h>
 #include <set>
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
 #include "Ogre_Sirikata.pbj.hpp"
-#include <util/RoutableMessageBody.hpp>
-#include <util/KnownServices.hpp>
+#include <sirikata/core/util/RoutableMessageBody.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 
 namespace Sirikata {
 namespace Graphics {

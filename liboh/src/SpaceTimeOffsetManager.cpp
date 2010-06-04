@@ -31,9 +31,9 @@
  */
 
 #include <oh/Platform.hpp>
-#include "util/SpaceID.hpp"
+#include <sirikata/core/util/SpaceID.hpp>
 #include "oh/SpaceTimeOffsetManager.hpp"
-#include "util/Time.hpp"
+#include <sirikata/core/util/Time.hpp>
 #include <boost/thread.hpp>
 
 namespace Sirikata {

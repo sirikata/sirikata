@@ -31,9 +31,9 @@
  */
 
 #include <cxxtest/TestSuite.h>
-#include "task/WorkQueue.hpp"
-#include "task/EventManager.hpp"
-#include "task/Time.hpp"
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/Time.hpp>
 using namespace Sirikata;
 class EventSystemTestSuite : public CxxTest::TestSuite
 {

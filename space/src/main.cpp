@@ -30,15 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
-#include <options/Options.hpp>
-#include <util/SpaceObjectReference.hpp>
-#include <util/PluginManager.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 #include <space/Space.hpp>
-#include <task/EventManager.hpp>
-#include <task/WorkQueue.hpp>
-#include <network/IOService.hpp>
-#include <core/options/CDNConfig.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/options/CDNConfig.hpp>
 #include <proxyobject/SimulationFactory.hpp>
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/ModelsSystemFactory.hpp> // MCB:

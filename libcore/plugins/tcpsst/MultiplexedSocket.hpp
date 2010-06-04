@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_
 #define _SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_
 
-#include "util/SerializationCheck.hpp"
+#include <sirikata/core/util/SerializationCheck.hpp>
 #include <boost/thread.hpp>
 #include "TCPSSTDecls.hpp"
 

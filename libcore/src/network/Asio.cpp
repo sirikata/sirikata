@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "Asio.hpp"
-#include "IOService.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOService.hpp>
 
 namespace Sirikata {
 namespace Network {

@@ -32,11 +32,11 @@
 
 // These methods are just helpers and generic tests for MinitransactionHandlers.  No tests are
 // actually setup in this file.
-#include "util/Standard.hh"
+#include <sirikata/core/util/Standard.hh>
 #include <cxxtest/TestSuite.h>
 #include "MinitransactionHandlerTest.hpp"
 
-#include "util/AtomicTypes.hpp"
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include "Test_Persistence.pbj.hpp"
 using namespace Sirikata;
 using namespace Sirikata::Persistence;

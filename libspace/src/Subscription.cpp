@@ -31,8 +31,8 @@
  */
 
 #include "Space_Subscription.pbj.hpp"
-#include "util/RoutableMessageHeader.hpp"
-#include "util/KnownServices.hpp"
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 #include "space/Subscription.hpp"
 namespace Sirikata {
 
