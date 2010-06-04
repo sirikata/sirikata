@@ -29,15 +29,16 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <proximity/Platform.hpp>
+#include <sirikata/proximity/Platform.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 #include <Proximity_Sirikata.pbj.hpp>
-#include <proximity/ProximitySystem.hpp>
+#include <sirikata/proximity/ProximitySystem.hpp>
 #include "BruteForceProx.hpp"
-#include <proximity/ProximitySystemFactory.hpp>
-#include <proximity/ProximityConnectionFactory.hpp>
-#include <proximity/ProximityConnection.hpp>
-#include <proximity/SingleStreamProximityConnection.hpp>
+#include <sirikata/proximity/ProximitySystemFactory.hpp>
+#include <sirikata/proximity/ProximityConnectionFactory.hpp>
+#include <sirikata/proximity/ProximityConnection.hpp>
+#include <sirikata/proximity/SingleStreamProximityConnection.hpp>
+
 static int core_plugin_refcount = 0;
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {

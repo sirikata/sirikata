@@ -29,8 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <proximity/Platform.hpp>
-#include "proximity/ProximityConnectionFactory.hpp"
+
+#include <sirikata/proximity/Platform.hpp>
+#include <sirikata/proximity/ProximityConnectionFactory.hpp>
+
 AUTO_SINGLETON_INSTANCE(Sirikata::Proximity::ProximityConnectionFactory);
 namespace Sirikata {
 namespace Proximity {

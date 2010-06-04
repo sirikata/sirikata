@@ -43,11 +43,11 @@
 #include <Space_Sirikata.pbj.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
-#include <proximity/Platform.hpp>
-#include <proximity/ProximitySystem.hpp>
-#include <proximity/ProximityConnection.hpp>
-#include <proximity/ProximityConnectionFactory.hpp>
-#include <proximity/BridgeProximitySystem.hpp>
+#include <sirikata/proximity/Platform.hpp>
+#include <sirikata/proximity/ProximitySystem.hpp>
+#include <sirikata/proximity/ProximityConnection.hpp>
+#include <sirikata/proximity/ProximityConnectionFactory.hpp>
+#include <sirikata/proximity/BridgeProximitySystem.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/space/Loc.hpp>
 #include <sirikata/space/Registration.hpp>

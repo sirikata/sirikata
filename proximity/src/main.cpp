@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proximity/Platform.hpp>
+#include <sirikata/proximity/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
@@ -46,8 +46,8 @@ class IProxCall;
 class INewProxQuery;
 
 } }
-#include <proximity/ProximitySystem.hpp>
-#include <proximity/ProximitySystemFactory.hpp>
+#include <sirikata/proximity/ProximitySystem.hpp>
+#include <sirikata/proximity/ProximitySystemFactory.hpp>
 namespace Sirikata {
 //InitializeOptions main_options("verbose",
 

@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "proximity/Platform.hpp"
+#include <sirikata/proximity/Platform.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 #include "Prox_Sirikata.pbj.hpp"
-#include "proximity/ProximitySystem.hpp"
+#include <sirikata/proximity/ProximitySystem.hpp>
 #include "prox/QueryHandler.hpp"
 #include "prox/QueryEventListener.hpp"
 #include "prox/QueryChangeListener.hpp"

@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proximity/Platform.hpp>
+#include <sirikata/proximity/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "Proximity_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
-#include "proximity/ProximityConnection.hpp"
-#include "proximity/SingleStreamProximityConnection.hpp"
-#include "proximity/ProximitySystem.hpp"
+#include <sirikata/proximity/ProximityConnection.hpp>
+#include <sirikata/proximity/SingleStreamProximityConnection.hpp>
+#include <sirikata/proximity/ProximitySystem.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 
