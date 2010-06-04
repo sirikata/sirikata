@@ -115,5 +115,17 @@ void ObjectHostProxyManager::getAllObjectReferences(std::vector<ObjectReference>
         allObjReferences.push_back(iter->first);
 }
 
+void ObjectHostProxyManager::getAllObjectReferencesNew(std::vector<ObjectReference*>& allObjReferences) const
+{
+    ProxyMap::const_iterator iter;
+    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
+    {
+        //ObjectReference tmp = iter->first;
+        ObjectReference* toPush = new ObjectReference(iter->first);
+        //allObjReferences.push_back(iter->first);
+        allObjReferences.push_back(toPush);
+    }
+}
+
 
 }

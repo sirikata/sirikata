@@ -34,9 +34,12 @@
 #define _SIRIKATA_JS_OBJECT_SCRIPT_HPP_
 
 
+
+#include <string>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+
 #include <v8.h>
 
 #include "JSPattern.hpp"
@@ -46,7 +49,7 @@ namespace JS {
 
 class JSObjectScript : public ObjectScript {
 public:
-    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template);
+    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template, v8::Persistent<v8::ObjectTemplate>& oref_template);
     ~JSObjectScript();
 
     bool forwardMessagesTo(MessageService*);
@@ -64,8 +67,10 @@ public:
     void bftm_testSendMessageSelf() const;
     void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
     void bftm_listDestinations()const;
+    void bftm_debugPrintString(std::string cStrMsgBody) const;
 
-    void sendMessageTo(int numIndex, std::string msgBody) const;
+    void sendMessageToEntity(ObjectReference* reffer, const std::string& msgBody) const;
+    void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
     int getAddressableSize();
 
 
@@ -105,9 +110,9 @@ private:
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const;
-
+    void bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const;
+    //void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
     void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
-
     v8::Handle<v8::Value> protectedEval(const String& script_str);
 
 

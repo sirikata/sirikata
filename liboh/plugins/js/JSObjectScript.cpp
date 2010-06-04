@@ -43,6 +43,8 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
 
+
+#include <string>
 #include "JSUtil.hpp"
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
@@ -60,6 +62,7 @@ using namespace v8;
 namespace Sirikata {
 namespace JS {
 
+
 bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj) const {
     for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++) {
         if (!pat_it->matches(obj))
@@ -70,12 +73,14 @@ bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj) const {
 }
 
 
-JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template)
+
+JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template, v8::Persistent<v8::ObjectTemplate>& oref_template)
  : mParent(ho)
 {
     v8::HandleScope handle_scope;
     mContext = Context::New(NULL, global_template);
 
+    
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -89,9 +94,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     system_obj->SetInternalField(0, External::New(this));
 
 
-    mAddressableList = new AddressableList;
-    bftm_populateAddressable();
+    bftm_populateAddressable(oref_template,system_obj);
 
+    
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
@@ -117,6 +122,11 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     std::cout<<"\n\n\nBFTM: Object registered\n\n";
 }
 
+
+void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const
+{
+    std::cout<<"\n\n\n\nIs it working:  "<<cStrMsgBody<<"\n\n";
+}
 
 
 JSObjectScript::~JSObjectScript() {
@@ -185,42 +195,31 @@ void JSObjectScript::test() const {
 
 //bftm
 //populates the internal addressable object references vector
-void JSObjectScript::bftm_populateAddressable()
+void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>& oref_template,    Local<Object>& system_obj )
 {
-    mAddressableList->clear();
-    bftm_getAllMessageable(*mAddressableList);
+    //loading the vector
+    mAddressableList.clear();
+    bftm_getAllMessageable(mAddressableList);
+
+    v8::Context::Scope context_scope(mContext);
+    
+    v8::Local<v8::Array> arrayObj= v8::Array::New();
+    
+    for (int s=0;s < (int)mAddressableList.size(); ++s)
+    {
+        Local<Object> tmpObj = oref_template->NewInstance();
+        tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
+        tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
+        arrayObj->Set(v8::Number::New(s),tmpObj);
+    }
+    system_obj->Set(v8::String::New("addressable"),arrayObj);
 }
 
-//bftm
-//populates the external addressable array from javascript held by the system object with object references
-void JSObjectScript::bftm_populateExternalAddressable()
-{
-    //FIXME: because I can't load the object, this may not work.
 
-    //copied from above
-    Local<Object> global_obj = mContext->Global();
-    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
-    // The template actually generates the root objects prototype, not the root
-    // itself.
-    Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
-
-    //get the system object
-    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
-
-    //get the addressable object from the array.
-    v8::Local<v8::Array> addArray = v8::Local<v8::Array>::Cast(system_obj->Get(v8::String::New("addressable")));
-
-    //lkjs
-    //for now, just loading in string values.
-    for (int s = 0; s < (int)mAddressableList->size(); ++s)
-        addArray->Set(v8::Number::New(s), v8::String::New("wakawaka"));
-
-
-}
 
 int JSObjectScript::getAddressableSize()
 {
-    return (int)mAddressableList->size();
+    return (int)mAddressableList.size();
 }
 
 
@@ -244,17 +243,26 @@ void JSObjectScript::bftm_testSendMessageBroadcast(const std::string& msgToBCast
     std::vector<ObjectReference>allDestRefs;
     bftm_getAllMessageable(allDestRefs);
 
-    for (int s= 0; s < (int) allDestRefs.size(); ++s)
-        bftm_testSendMessageTo(allDestRefs[s],msgToBCast);
+
+    for (int s=0; s < (int)mAddressableList.size(); ++s)
+        sendMessageToEntity(mAddressableList[s],msgToBCast);
 
 }
 
 //bftm
 //takes in the index into the mAddressableList (for the object reference) and
 //a string that forms the message body.
-void JSObjectScript::sendMessageTo(int numIndex, std::string msgBody) const
+void JSObjectScript::sendMessageToEntity(int numIndex, const std::string& msgBody) const
 {
-    bftm_testSendMessageTo((*mAddressableList)[numIndex],msgBody);
+    sendMessageToEntity(mAddressableList[numIndex],msgBody);
+}
+
+void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::string& msgBody) const
+{
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    SpaceID spaceider = *(spaces.begin());
+    ODP::Endpoint dest (spaceider,*reffer,Services::COMMUNICATION);
+    mMessagingPort->send(dest,MemoryReference(msgBody));
 }
 
 
@@ -264,6 +272,8 @@ void JSObjectScript::sendMessageTo(int numIndex, std::string msgBody) const
 //by getting all the space id and stuff.
 void JSObjectScript::bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const
 {
+    std::cout<<"\n\nWARNING: THIS FUNCTION IS DEPRECATED.  QUIT USING IT.\n\n";
+    
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     SpaceID spaceider = *(spaces.begin());
     ODP::Endpoint dest (spaceider,oRefDest,Services::COMMUNICATION);
@@ -342,6 +352,36 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str) {
 
     return result;
 }
+
+//bftm
+void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const
+{
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
+    //which space am I in now
+    SpaceID spaceider = *(spaces.begin());
+
+    //get a list of all object references through prox
+    //ProxyObjectPtr proxPtr = mParent->getProxyManager(spaceider);
+    ObjectHostProxyManager* proxManagerPtr = mParent->bftm_getProxyManager(spaceider);
+
+    //FIX ME: May need to check if get back null ptr.
+
+    //proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
+    proxManagerPtr->getAllObjectReferencesNew(allAvailableObjectReferences);
+    
+    std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
+
+    if (allAvailableObjectReferences.empty())
+    {
+        printf("\n\nBFTM: No object references available for sending messages");
+        return;
+    }
+}
+
+
+
+
+
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;

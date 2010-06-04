@@ -190,8 +190,6 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 
 
-
-//    target->bftm_testSendMessageBroadcast(cStrMsgBody);
   target->bftm_testSendMessageBroadcast(serialized_message);
 
 
@@ -229,10 +227,8 @@ v8::Handle<v8::Value> __SendMessageTo(const v8::Arguments& args)
     if (args.Length() != 2)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessageTo(index,msg)")) );
 
-
     int numIndex = (int)(args[0]->Uint32Value());
     v8::Handle<v8::Value> indexTo = args[0];
-
 
     v8::String::Utf8Value msgBodyArgs(args[1]);
     const char* cMsgBody = ToCString(msgBodyArgs);
@@ -240,11 +236,76 @@ v8::Handle<v8::Value> __SendMessageTo(const v8::Arguments& args)
 
 
     JSObjectScript* target = GetTargetJSObjectScript(args);
-    target->sendMessageTo(numIndex,cStrMsgBody);
+    target->sendMessageToEntity(numIndex,cStrMsgBody);
 
     return v8::Undefined();
 }
 
+//Oref template messages
+
+
+void readORef(const v8::Arguments& args, JSObjectScript*& caller, ObjectReference*& oref)
+{
+   v8::Local<v8::Object> mRef = args.This();
+
+   //grabs the caller
+   v8::Local<v8::External> wrapJSObj;
+   if (mRef->InternalFieldCount() > 0)
+       wrapJSObj = v8::Local<v8::External>::Cast(
+           mRef->GetInternalField(OREF_JSOBJSCRIPT_FIELD)
+       );
+   else
+       wrapJSObj = v8::Local<v8::External>::Cast(
+           v8::Handle<v8::Object>::Cast(mRef->GetPrototype())->GetInternalField(OREF_JSOBJSCRIPT_FIELD)
+       );
+   void* ptr = wrapJSObj->Value();
+   caller = static_cast<JSObjectScript*>(ptr);
+
+
+   //grabs the oref
+    v8::Local<v8::External> wrapORef;
+    if (mRef->InternalFieldCount() > 0)
+        wrapORef = v8::Local<v8::External>::Cast(
+            mRef->GetInternalField(OREF_OREF_FIELD)
+        );
+    else
+        wrapORef = v8::Local<v8::External>::Cast(
+            v8::Handle<v8::Object>::Cast(mRef->GetPrototype())->GetInternalField(OREF_OREF_FIELD)
+        );
+    void* ptr2 = wrapORef->Value();
+    oref = static_cast<ObjectReference*>(ptr2);
+}
+
+
+v8::Handle<v8::Value> __orefSendMessage (const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessage(msg)")) );
+
+    //first need to extract out the sending jsobjectscript and oref
+ 
+    JSObjectScript* caller;
+    ObjectReference* oref;
+    readORef(args,caller,oref);
+
+        
+    //then need to read the message and print it
+    v8::String::Utf8Value msgBodyArgs(args[0]);
+    const char* cMsgBody = ToCString(msgBodyArgs);
+    std::string cStrMsgBody(cMsgBody);
+
+    caller->sendMessageToEntity(oref,cStrMsgBody);
+    
+    return v8::Undefined();
+}
+
+
+
+v8::Handle<v8::Value> __DebugRef(const v8::Arguments& args)
+{
+    std::cout<<"\n\n\n\nDEBUG: WAKA WAKA\n\n";
+    return v8::Undefined();
+}
 
 
 
@@ -468,6 +529,7 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 }
 
 
+
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
     v8::HandleScope handle_scope;
@@ -479,9 +541,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
     // An internal field holds the JSObjectScript*
 
-
     system_templ->SetInternalFieldCount(1);
-
 
     // Functions / types
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
@@ -491,11 +551,10 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
 
-    system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
-
-    system_templ->Set(v8::String::New("__addressable"),v8::FunctionTemplate::New(__ScriptAddressable));
+    //system_templ->Set(v8::String::New("__addressable"),v8::FunctionTemplate::New(__ScriptAddressable));
     system_templ->Set(v8::String::New("__sendMessageTo"),v8::FunctionTemplate::New(__SendMessageTo));
 
+    
     //these are mutable fields
     system_templ->SetAccessor(JS_STRING(visual), ScriptGetVisual, ScriptSetVisual);
     system_templ->SetAccessor(JS_STRING(scale), ScriptGetScale, ScriptSetScale);
@@ -507,16 +566,6 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->SetAccessor(JS_STRING(angularVelocity), ScriptGetAngularSpeed, ScriptSetAngularSpeed);
 
 
-    //FIXME: Pretty much calling any single line below causes a seg fault that I
-    //don't understand.
-    //bftm: create a new array for addressable objects.  make it so that the
-    //v8::Handle<v8::Array> arrayObject;
-    //v8::Handle<v8::Object> arrayObject = v8::Array::New();
-    //system_templ->Set(v8::String::New("addressable"),arrayObject);
-    //system_templ->Get(arrayObject);
-    //
-
-
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);
 
@@ -526,18 +575,35 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
     system_templ->Set(JS_STRING(Pattern), mPatternTemplate);
 
+    
     system_templ->Set(JS_STRING(registerHandler), v8::FunctionTemplate::New(ScriptRegisterHandler));
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 
+    //take care of oref templ
+    bftm_createObjRefTemplate();
+
 }
 
+//creating the object reference template
+void JSObjectScriptManager::bftm_createObjRefTemplate()
+{
+    v8::HandleScope handle_scope;
+    mORefTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    // An internal field holds the external address of the addressable object
+    mORefTemplate->SetInternalFieldCount(2);
+    mORefTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(__DebugRef));
+    mORefTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(__orefSendMessage));
+}
+
+
+        
 JSObjectScriptManager::~JSObjectScriptManager() {
 }
 
 ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,
                                                             const Arguments& args) {
-    JSObjectScript* new_script = new JSObjectScript(ho, args, mGlobalTemplate);
+    JSObjectScript* new_script = new JSObjectScript(ho, args, mGlobalTemplate,mORefTemplate);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;

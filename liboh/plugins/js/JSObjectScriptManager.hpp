@@ -33,7 +33,12 @@
 #ifndef _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 #define _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 
+
 #include <sirikata/oh/ObjectScriptManager.hpp>
+#define OREF_JSOBJSCRIPT_FIELD 1
+#define OREF_OREF_FIELD 0
+
+
 #include <v8.h>
 
 namespace Sirikata {
@@ -43,7 +48,6 @@ class JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
 
-
     JSObjectScriptManager(const Sirikata::String& arguments);
     virtual ~JSObjectScriptManager();
 
@@ -52,9 +56,12 @@ public:
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 private:
 
+    void bftm_createObjRefTemplate();
+    
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
+    v8::Persistent<v8::ObjectTemplate> mORefTemplate;
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
     v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
