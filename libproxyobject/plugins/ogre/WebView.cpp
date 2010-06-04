@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "proxyobject/Platform.hpp"
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/TemporalValue.hpp>
 #include "WebView.hpp"
 #include <OgreBitwise.h>

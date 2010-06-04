@@ -30,19 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
-#include <proxyobject/ProxyManager.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include <proxyobject/ProxyWebViewObject.hpp>
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <proxyobject/ProxyLightObject.hpp>
-#include <proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"

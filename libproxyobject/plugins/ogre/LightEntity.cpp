@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/LightListener.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/LightListener.hpp>
 #include "LightEntity.hpp"
-#include <proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -46,7 +46,7 @@ LightEntity::LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLigh
     getProxy().LightProvider::addListener(this);
 }
 
-LightEntity::~LightEntity() {    
+LightEntity::~LightEntity() {
     Ogre::Light *toDestroy=getOgreLight();
     init(NULL);
     mScene->getSceneManager()->destroyLight(toDestroy);
@@ -72,11 +72,11 @@ void LightEntity::notify(const LightInfo& linfo){
     Ogre::ColourValue diffuse_ambient (
         toOgreRGBA(linfo.mDiffuseColor, ambientPower));
     getOgreLight()->setDiffuseColour(diffuse_ambient);
-    
+
     Ogre::ColourValue specular_shadow (
         toOgreRGBA(linfo.mSpecularColor, shadowPower));
     getOgreLight()->setSpecularColour(specular_shadow);
-    
+
     getOgreLight()->setPowerScale(linfo.mPower);
     switch (linfo.mType) {
       case LightInfo::POINT:

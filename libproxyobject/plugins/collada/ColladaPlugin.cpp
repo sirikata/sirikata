@@ -32,7 +32,7 @@
 
 #include "ColladaPlugin.hpp"
 
-#include <proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
 
 #include "ColladaSystem.hpp"
 

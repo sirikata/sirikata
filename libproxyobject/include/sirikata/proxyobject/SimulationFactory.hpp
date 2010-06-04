@@ -33,10 +33,10 @@
 #ifndef _SIRIKATA_SIMULATION_FACTORY_
 #define _SIRIKATA_SIMULATION_FACTORY_
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <proxyobject/TimeSteppedQueryableSimulation.hpp>
-#include <proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 
 namespace Sirikata{
 

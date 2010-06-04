@@ -36,17 +36,17 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <proxyobject/TimeSteppedQueryableSimulation.hpp>
-#include <proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include <fstream>
 #include <vector>
 #include <string>
-#include <proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/task/EventManager.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
-#include <proxyobject/Meshdata.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 #define GRAVITY (-9.8f)
 

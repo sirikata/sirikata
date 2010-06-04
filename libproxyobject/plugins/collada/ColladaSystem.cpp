@@ -38,7 +38,7 @@
 
 #include "ColladaMeshObject.hpp"
 
-#include <proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 //#include <options/Options.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
 

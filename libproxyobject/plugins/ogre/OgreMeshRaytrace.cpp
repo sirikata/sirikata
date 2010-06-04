@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "OgreHeaders.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "OgreSubMesh.h"

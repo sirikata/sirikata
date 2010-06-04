@@ -33,23 +33,23 @@
 #ifndef _SIRIKATA_COLLADA_ASSET_
 #define _SIRIKATA_COLLADA_ASSET_
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 namespace COLLADAFW {
-    
+
     class FileInfo;
-    
+
 }
 
 namespace Sirikata { namespace Models {
-    
+
 /////////////////////////////////////////////////////////////////////
 
 class ColladaDocumentImporter;
 
 /**
  *  A class that represents a COLLADA asset.
- */    
+ */
 class SIRIKATA_PLUGIN_EXPORT ColladaAsset
 {
     public:
@@ -62,16 +62,16 @@ class SIRIKATA_PLUGIN_EXPORT ColladaAsset
         //        bool export ( ColladaDocumentExporter& exporter, ... );
 
     protected:
-        
+
     private:
         void computeUpAxis ( COLLADAFW::FileInfo const& asset );
-        
+
         float64 mUnitMeter;
         String mUnitName;
         Vector3< float > mUpAxis;
 };
 
-    
+
 } // namespace Models
 } // namespace Sirikata
 

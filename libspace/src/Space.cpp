@@ -54,7 +54,7 @@
 #include <sirikata/space/Router.hpp>
 #include <sirikata/space/Physics.hpp>
 #include <sirikata/space/Subscription.hpp>
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 namespace Sirikata {
 namespace Space {
 Time Space::now()const{

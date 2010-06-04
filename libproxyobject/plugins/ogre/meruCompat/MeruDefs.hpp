@@ -63,12 +63,12 @@
 #include <sirikata/core/transfer/TransferData.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <proxyobject/ProxyLightObject.hpp>
-#include <proxyobject/ProxyCameraObject.hpp>
-#include <proxyobject/LightInfo.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/ProxyCameraObject.hpp>
+#include <sirikata/proxyobject/LightInfo.hpp>
 
 /*
 #include <tr1/shared_ptr>

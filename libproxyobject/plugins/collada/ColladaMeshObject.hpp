@@ -33,11 +33,11 @@
 #ifndef _SIRIKATA_COLLADA_MESH_OBJECT_
 #define _SIRIKATA_COLLADA_MESH_OBJECT_
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/models/MeshObject.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/models/MeshObject.hpp>
 
-#include <proxyobject/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
-#include <proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 
 namespace COLLADAFW {

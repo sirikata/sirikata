@@ -36,9 +36,9 @@
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "WebViewManager.hpp"
-#include <proxyobject/ProxyObjectListener.hpp>
-#include <proxyobject/WebViewListener.hpp>
-#include <proxyobject/ProxyWebViewObject.hpp>
+#include <sirikata/proxyobject/ProxyObjectListener.hpp>
+#include <sirikata/proxyobject/WebViewListener.hpp>
+#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {

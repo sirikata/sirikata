@@ -43,18 +43,18 @@
 #include "COLLADAFWImage.h"
 #include "COLLADAFWMaterial.h"
 #include "COLLADAFWFileInfo.h"
-#include <proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 
 /////////////////////////////////////////////////////////////////////
 
-namespace Sirikata { 
+namespace Sirikata {
 
 namespace Transfer {
 
 class URI;
 
 }
-    
+
 namespace Models {
 
 /////////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ namespace Models {
 /**
  *  An implementation of the OpenCOLLADA IWriter class that is responsible for importing
  *  COLLADA documents and re-Writing (i.e. converting) the data to suit the application.
- */    
+ */
 class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     :   public COLLADAFW::IWriter
 {
@@ -81,12 +81,12 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         void postProcess ();
 
         ColladaDocumentPtr mDocument;
-        
+
         enum State { CANCELLED = -1, IDLE, STARTED, FINISHED };
         State mState;
-    
-        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr); 
-    
+
+        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
+
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
     public:
@@ -109,7 +109,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         virtual bool writeController ( COLLADAFW::Controller const* controller );
         virtual bool writeFormulas ( COLLADAFW::Formulas const* formulas );
         virtual bool writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene );
-    
+
     protected:
 
 };

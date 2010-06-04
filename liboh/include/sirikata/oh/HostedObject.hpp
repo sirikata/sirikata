@@ -35,9 +35,9 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/oh/TopLevelSpaceConnection.hpp>
-#include "proxyobject/ProxyObject.hpp"
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/util/QueryTracker.hpp>
-#include "proxyobject/VWObject.hpp"
+#include <sirikata/proxyobject/VWObject.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>

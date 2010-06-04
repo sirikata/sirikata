@@ -31,18 +31,18 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <proxyobject/ModelsSystemFactory.hpp> // MCB:
+#include <sirikata/proxyobject/ModelsSystemFactory.hpp> // MCB:
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <proxyobject/SimulationFactory.hpp>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
 
 #include <sirikata/core/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/options/CDNConfig.hpp>
 
 #include <sirikata/oh/ObjectHost.hpp>
-#include <proxyobject/LightInfo.hpp>
+#include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/oh/TopLevelSpaceConnection.hpp>
 #include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>

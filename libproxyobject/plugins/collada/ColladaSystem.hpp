@@ -35,9 +35,9 @@
 
 #include "ColladaDocument.hpp"
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/ModelsSystem.hpp>
-#include <proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 
 #include <sirikata/core/task/EventManager.hpp>

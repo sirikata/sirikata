@@ -32,7 +32,7 @@
 
 #include <sirikata/space/SpaceProxyManager.hpp>
 #include <sirikata/space/Space.hpp>
-#include "proxyobject/ProxyCameraObject.hpp"
+#include <sirikata/proxyobject/ProxyCameraObject.hpp>
 
 #include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/core/odp/Exceptions.hpp>

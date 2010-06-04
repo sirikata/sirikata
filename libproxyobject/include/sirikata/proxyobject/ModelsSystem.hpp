@@ -1,7 +1,7 @@
-/*  Sirikata Utilities -- Sirikata Listener Pattern
- *  TimeSteppedSimulation.hpp
+/*  Sirikata Object Host -- Models Creation and Destruction system
+ *  ModelsSystem.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
-#define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
-#include "proxyobject/ProxyCreationListener.hpp"
+#ifndef _SIRIKATA_MODELS_SYSTEM_
+#define _SIRIKATA_MODELS_SYSTEM_
+
+#include <sirikata/proxyobject/ProxyCreationListener.hpp>
 
 namespace Sirikata {
 
-class TimeSteppedSimulation: public ProxyCreationListener {
-public:
-    virtual Duration desiredTickRate()const=0;
-    ///returns true if simulation should continue (false quits app)
-    virtual bool tick()=0;
+/**
+ * An interface for a class that is responsible for data model objects.
+ */
+class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
+    :   public ProxyCreationListener
+{
+    public:
+
+    protected:
+        ModelsSystem () {}
+        ModelsSystem ( ModelsSystem const& rhs ); // not implemented
+        ModelsSystem& operator = ( ModelsSystem const& rhs ); // not implemented
+        virtual ~ModelsSystem () {}
+
+    // interface from ProxyCreationListener
+    public:
+        virtual void onCreateProxy ( ProxyObjectPtr object ) = 0;
+        virtual void onDestroyProxy ( ProxyObjectPtr object ) = 0;
+
+    protected:
+
 };
 
-}
+} // namespace Sirikata
 
-#endif
+#endif // _SIRIKATA_MODELS_SYSTEM_

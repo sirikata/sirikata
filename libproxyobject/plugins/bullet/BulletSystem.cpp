@@ -31,10 +31,10 @@
  */
 
 #include <fstream>
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/SimulationFactory.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include <proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 //#include <oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>

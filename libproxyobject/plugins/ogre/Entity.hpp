@@ -34,8 +34,8 @@
 
 #include "OgreSystem.hpp"
 #include <sirikata/core/util/UUID.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include <proxyobject/ProxyObjectListener.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>

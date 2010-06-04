@@ -34,7 +34,7 @@
 
 #include <cassert>
 #include <iostream>
-#include <proxyobject/Meshdata.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 /// FIXME: need a culling strategy for this mom
 std::map<std::string, Meshdata*> meshstore;

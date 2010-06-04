@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
 #include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>

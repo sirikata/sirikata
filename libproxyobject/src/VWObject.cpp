@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "proxyobject/Platform.hpp"
+#include <sirikata/proxyobject/Platform.hpp>
 #include "ProxyObject_Sirikata.pbj.hpp"
 #include "ProxyObject_Persistence.pbj.hpp"
 #include <sirikata/core/util/QueryTracker.hpp>
@@ -38,14 +38,14 @@
 #include <sirikata/core/util/SentMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/persistence/PersistenceSentMessage.hpp>
-#include "proxyobject/ProxyObject.hpp"
-#include "proxyobject/TimeOffsetManager.hpp"
-#include "proxyobject/ProxyLightObject.hpp"
-#include "proxyobject/ProxyCameraObject.hpp"
-#include "proxyobject/ProxyWebViewObject.hpp"
-#include "proxyobject/ProxyMeshObject.hpp"
-#include "proxyobject/ProxyManager.hpp"
-#include "proxyobject/VWObject.hpp"
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/ProxyCameraObject.hpp>
+#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/VWObject.hpp>
 
 namespace Sirikata {
 using Protocol::ObjLoc;

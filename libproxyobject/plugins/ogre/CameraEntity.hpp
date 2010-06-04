@@ -32,12 +32,12 @@
 #ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
 #define SIRIKATA_GRAPHICS_CAMERA_HPP__
 #include "Entity.hpp"
-#include <proxyobject/CameraListener.hpp>
+#include <sirikata/proxyobject/CameraListener.hpp>
 #include "OgreHeaders.hpp"
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreRenderTarget.h>
-#include <proxyobject/ProxyCameraObject.hpp>
+#include <sirikata/proxyobject/ProxyCameraObject.hpp>
 
 namespace Sirikata {
 namespace Graphics {

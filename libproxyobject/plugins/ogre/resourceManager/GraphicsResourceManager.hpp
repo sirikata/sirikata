@@ -34,7 +34,7 @@
 
 #include "GraphicsResource.hpp"
 #include "../meruCompat/Singleton.hpp"
-#include <proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata {
 namespace Task {

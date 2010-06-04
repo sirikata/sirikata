@@ -33,11 +33,11 @@
 #ifndef _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 #define _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 
-#include <proxyobject/models/MeshObject.hpp>
+#include <sirikata/proxyobject/models/MeshObject.hpp>
 
 #include "MeshListener.hpp"
 #include "ProxyObject.hpp"
-#include <proxyobject/Meshdata.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
 

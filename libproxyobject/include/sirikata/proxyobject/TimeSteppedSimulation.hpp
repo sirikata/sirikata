@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Models System Factory Interface
- *  ModelsSystemFactory.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  TimeSteppedSimulation.hpp
  *
- *  Copyright (c) 2009, Mark C. Barnes
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,29 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
-#define _SIRIKATA_MODELS_SYSTEM_FACTORY_
+#ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
+#define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 
-#include <proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <proxyobject/ModelsSystem.hpp>
+#include <sirikata/proxyobject/ProxyCreationListener.hpp>
 
 namespace Sirikata {
 
-/** Class to create models subsystems.
- *
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystemFactory
-    : public AutoSingleton< ModelsSystemFactory >,
-      public Factory2<  ModelsSystem*,
-                        Provider< ProxyCreationListener* > *,   // the ProxyManager
-                        String const& >                         // option string
-{
-    public:
-        static ModelsSystemFactory& getSingleton ();
-        static void destroy ();
+class TimeSteppedSimulation: public ProxyCreationListener {
+public:
+    virtual Duration desiredTickRate()const=0;
+    ///returns true if simulation should continue (false quits app)
+    virtual bool tick()=0;
 };
 
-} // namespace Sirikata
+}
 
-#endif // _SIRIKATA_MODELS_SYSTEM_FACTORY_
+#endif

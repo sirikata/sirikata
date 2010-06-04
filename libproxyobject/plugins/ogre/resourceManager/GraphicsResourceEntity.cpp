@@ -37,7 +37,7 @@
 #include "../OgreSystem.hpp"
 #include "../CameraEntity.hpp"
 #include "../MeshEntity.hpp"
-#include "proxyobject/TimeOffsetManager.hpp"
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 
 using std::set;
 

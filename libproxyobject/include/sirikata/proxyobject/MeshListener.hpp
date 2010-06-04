@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Models Creation and Destruction system
- *  ModelsSystem.hpp
+/*  Sirikata Object Host
+ *  MeshListener.hpp
  *
- *  Copyright (c) 2009, Mark C. Barnes
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,37 +29,60 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SIRIKATA_MESH_LISTENER_HPP_
+#define _SIRIKATA_MESH_LISTENER_HPP_
 
-#ifndef _SIRIKATA_MODELS_SYSTEM_
-#define _SIRIKATA_MODELS_SYSTEM_
-
-#include <proxyobject/ProxyCreationListener.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
 
-/**
- * An interface for a class that is responsible for data model objects.
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
-    :   public ProxyCreationListener
+using Transfer::URI;
+
+// FIX ME: this definition probably doesn't belong here
+class PhysicalParameters {
+public:
+    enum PhysicalMode {
+        Disabled = 0,               /// non-active, remove from physics
+        Static,                 /// collisions, no dynamic movement (bullet mass==0)
+        DynamicBox,                 /// fully physical -- collision & dynamics
+        DynamicSphere,
+        DynamicCylinder,
+        Character
+    };
+
+    std::string name;
+    PhysicalMode mode;
+    float density;
+    float friction;
+    float bounce;
+    float gravity;
+    int colMask;
+    int colMsg;
+    Vector3f hull;
+    PhysicalParameters() :
+        mode(Disabled),
+        density(0),
+        friction(0),
+        bounce(0),
+        gravity(0),
+        colMask(0),
+        colMsg(0),
+        hull() {
+    }
+};
+
+class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
 {
     public:
+        virtual ~MeshListener() {}
 
-    protected:
-        ModelsSystem () {}
-        ModelsSystem ( ModelsSystem const& rhs ); // not implemented
-        ModelsSystem& operator = ( ModelsSystem const& rhs ); // not implemented
-        virtual ~ModelsSystem () {}
-
-    // interface from ProxyCreationListener
-    public:
-        virtual void onCreateProxy ( ProxyObjectPtr object ) = 0;
-        virtual void onDestroyProxy ( ProxyObjectPtr object ) = 0;
-        
-    protected:
-
+        virtual void onSetMesh ( URI const& newMesh) = 0;
+        virtual void onMeshParsed (String const& hash, Meshdata& md) = 0;
+        virtual void onSetScale ( Vector3f const& newScale ) = 0;
+        virtual void onSetPhysical ( PhysicalParameters const& pp ) = 0;
 };
 
 } // namespace Sirikata
 
-#endif // _SIRIKATA_MODELS_SYSTEM_
+#endif

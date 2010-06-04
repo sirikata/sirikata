@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MESH_OBJECT_HPP_
 #define _SIRIKATA_MESH_OBJECT_HPP_
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 // MCB: move to model plugin
 //#include "transfer/URI.hpp"

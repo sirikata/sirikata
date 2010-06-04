@@ -32,14 +32,14 @@
 #ifndef SIRIKATA_GRAPHICS_MESHOBJECT_HPP__
 #define SIRIKATA_GRAPHICS_MESHOBJECT_HPP__
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
 
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <proxyobject/MeshListener.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
 #include "resourceManager/GraphicsResourceEntity.hpp"

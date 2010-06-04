@@ -38,7 +38,7 @@
 #ifdef nil
 #undef nil
 #endif
-#include <proxyobject/OverlayPosition.hpp>
+#include <sirikata/proxyobject/OverlayPosition.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -65,7 +65,7 @@ public:
 	Tier tier;
 	Ogre::uchar zOrder;
 
-	ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height, const OverlayPosition& pos, 
+	ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height, const OverlayPosition& pos,
 		const Ogre::String& matName, Ogre::uchar zOrder, Tier tier);
 	~ViewportOverlay();
 
@@ -74,7 +74,7 @@ public:
 	void move(int deltaX, int deltaY);
 	void setPosition(const OverlayPosition& position);
 	void resetPosition();
-	
+
 	void resize(int width, int height);
 
 	void hide();
@@ -88,7 +88,7 @@ public:
 
 	int getX();
 	int getY();
-	
+
 	int getRelativeX(int absX);
 	int getRelativeY(int absY);
 

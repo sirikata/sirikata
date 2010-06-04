@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  MeshListener.hpp
+/*  Sirikata Object Host -- Models System Factory Interface
+ *  ModelsSystemFactory.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,60 +29,30 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_MESH_LISTENER_HPP_
-#define _SIRIKATA_MESH_LISTENER_HPP_
 
-#include <sirikata/core/transfer/URI.hpp>
-#include <proxyobject/Meshdata.hpp>
+#ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
+#define _SIRIKATA_MODELS_SYSTEM_FACTORY_
+
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/proxyobject/ModelsSystem.hpp>
 
 namespace Sirikata {
 
-using Transfer::URI;
-
-// FIX ME: this definition probably doesn't belong here
-class PhysicalParameters {
-public:
-    enum PhysicalMode {
-        Disabled = 0,               /// non-active, remove from physics
-        Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        DynamicBox,                 /// fully physical -- collision & dynamics
-        DynamicSphere,
-        DynamicCylinder,
-        Character
-    };
-
-    std::string name;
-    PhysicalMode mode;
-    float density;
-    float friction;
-    float bounce;
-    float gravity;
-    int colMask;
-    int colMsg;
-    Vector3f hull;
-    PhysicalParameters() :
-        mode(Disabled),
-        density(0),
-        friction(0),
-        bounce(0),
-        gravity(0),
-        colMask(0),
-        colMsg(0),
-        hull() {
-    }
-};
-
-class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
+/** Class to create models subsystems.
+ *
+ */
+class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystemFactory
+    : public AutoSingleton< ModelsSystemFactory >,
+      public Factory2<  ModelsSystem*,
+                        Provider< ProxyCreationListener* > *,   // the ProxyManager
+                        String const& >                         // option string
 {
     public:
-        virtual ~MeshListener() {}
-
-        virtual void onSetMesh ( URI const& newMesh) = 0;
-        virtual void onMeshParsed (String const& hash, Meshdata& md) = 0;
-        virtual void onSetScale ( Vector3f const& newScale ) = 0;
-        virtual void onSetPhysical ( PhysicalParameters const& pp ) = 0;
+        static ModelsSystemFactory& getSingleton ();
+        static void destroy ();
 };
 
 } // namespace Sirikata
 
-#endif
+#endif // _SIRIKATA_MODELS_SYSTEM_FACTORY_

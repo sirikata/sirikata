@@ -35,7 +35,7 @@
 #define _WIN32_WINNT 0x0501
 #endif
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "../OgreHeaders.hpp"
 #include <OgreRenderWindow.h>
 #include <SDL.h>

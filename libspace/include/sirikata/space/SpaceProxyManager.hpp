@@ -33,10 +33,10 @@
 #define SIRIKATA_SPACE_SPACE_PROXY_MANAGER_HPP
 
 #include <sirikata/space/Platform.hpp>
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/ProxyManager.hpp>
-#include <proxyobject/TimeOffsetManager.hpp>
-#include <proxyobject/VWObject.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
 
 namespace Sirikata {

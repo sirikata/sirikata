@@ -39,9 +39,9 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/options/CDNConfig.hpp>
-#include <proxyobject/SimulationFactory.hpp>
-#include <proxyobject/ProxyManager.hpp>
-#include <proxyobject/ModelsSystemFactory.hpp> // MCB:
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/ModelsSystemFactory.hpp> // MCB:
 namespace Sirikata {
 //InitializeOptions main_options("verbose",
 void tickSim(Network::IOService*io,TimeSteppedSimulation*sim) {

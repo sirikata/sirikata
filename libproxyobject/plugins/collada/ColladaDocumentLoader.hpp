@@ -34,21 +34,21 @@
 #define _SIRIKATA_COLLADA_DOCUMENT_LOADER_
 
 #include "ColladaDocument.hpp"
-#include <proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 
 
 /////////////////////////////////////////////////////////////////////
 
 namespace COLLADAFW {
-    
+
 class Root;
-    
+
 }
 
 namespace COLLADASaxFWL {
-    
+
 class Loader;
-    
+
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -83,7 +83,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
         COLLADASaxFWL::Loader* mSaxLoader; // next
         ColladaDocumentImporter* mDocumentImporter; // next
         COLLADAFW::Root* mFramework; // last
-        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr); 
+        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
 };
 
 

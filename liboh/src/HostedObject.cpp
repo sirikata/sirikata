@@ -31,11 +31,11 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include "proxyobject/ProxyMeshObject.hpp"
-#include "proxyobject/ProxyLightObject.hpp"
-#include "proxyobject/ProxyWebViewObject.hpp"
-#include "proxyobject/ProxyCameraObject.hpp"
-#include "proxyobject/LightInfo.hpp"
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
+#include <sirikata/proxyobject/ProxyCameraObject.hpp>
+#include <sirikata/proxyobject/LightInfo.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <ObjectHost_Subscription.pbj.hpp>
 #include <ObjectHost_Persistence.pbj.hpp>

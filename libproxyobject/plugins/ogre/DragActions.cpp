@@ -31,14 +31,14 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include "DragActions.hpp"
-#include <proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include <sirikata/core/task/Time.hpp>
 
 namespace Sirikata {

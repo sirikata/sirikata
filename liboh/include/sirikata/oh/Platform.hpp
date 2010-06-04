@@ -34,7 +34,7 @@
 #define _SIRIKATA_OH_PLATFORM_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 #ifndef SIRIKATA_OH_EXPORT
 # if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
