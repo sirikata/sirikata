@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SPACE_HPP_
 #define _SIRIKATA_SPACE_HPP_
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
 namespace Sirikata {

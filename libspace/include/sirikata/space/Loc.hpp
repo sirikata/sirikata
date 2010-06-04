@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_LOC_HPP_
 #define _SIRIKATA_LOC_HPP_
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 
 namespace Sirikata {

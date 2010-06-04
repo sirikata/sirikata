@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/util/UUID.hpp>
@@ -38,9 +38,9 @@
 #include "Space_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
-#include "space/Registration.hpp"
-#include "space/ObjectConnections.hpp"
-#include "space/Space.hpp"
+#include <sirikata/space/Registration.hpp>
+#include <sirikata/space/ObjectConnections.hpp>
+#include <sirikata/space/Space.hpp>
 #include "Space_Time.pbj.hpp"
 
 namespace Sirikata {

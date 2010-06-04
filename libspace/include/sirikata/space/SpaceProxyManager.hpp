@@ -32,7 +32,7 @@
 #ifndef SIRIKATA_SPACE_SPACE_PROXY_MANAGER_HPP
 #define SIRIKATA_SPACE_SPACE_PROXY_MANAGER_HPP
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <proxyobject/Platform.hpp>
 #include <proxyobject/ProxyManager.hpp>
 #include <proxyobject/TimeOffsetManager.hpp>

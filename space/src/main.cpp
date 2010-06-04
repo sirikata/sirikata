@@ -34,7 +34,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <space/Space.hpp>
+#include <sirikata/space/Space.hpp>
 #include <sirikata/core/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/network/IOService.hpp>

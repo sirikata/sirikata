@@ -33,7 +33,8 @@
 #ifndef SIRIKATA_SPACE_SPACE_PHYSICS_HPP_
 #define SIRIKATA_SPACE_SPACE_PHYSICS_HPP_
 
-#include "space/SpaceProxyManager.hpp"
+#include <sirikata/space/SpaceProxyManager.hpp>
+
 namespace Sirikata {
 namespace Space {
 
@@ -41,14 +42,14 @@ class Space;
 
 class Physics : public SpaceProxyManager, public MessageService {
     class ReplyMessageService:public MessageService {
-        MessageService *mSpace; 
+        MessageService *mSpace;
         SpaceObjectReference mSenderId;
         uint32 mPort;
     public:
         ReplyMessageService(const SpaceObjectReference &senderId,uint32 port);
         bool forwardMessagesTo(MessageService*);
         bool endForwardingMessagesTo(MessageService*);
-        void processMessage(const RoutableMessageHeader&, MemoryReference);        
+        void processMessage(const RoutableMessageHeader&, MemoryReference);
     }mReplyMessageService;
     BoundingBox3d3f mBounds;
     uint32 mQueryId;

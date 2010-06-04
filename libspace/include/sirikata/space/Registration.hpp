@@ -1,5 +1,5 @@
-/*  Sirikata libspace
- *  Router.hpp
+/*  Sirikata libspace -- Registration Services
+ *  Registration.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,19 +30,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_ROUTER_HPP_
-#define _SIRIKATA_ROUTER_HPP_
+#ifndef _SIRIKATA_REGISTRATION_HPP_
+#define _SIRIKATA_REGISTRATION_HPP_
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
+#include <sirikata/core/util/Sha256.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+
 namespace Sirikata {
+class Registration;
+class Oseg;
+class Cseg;
 
-class SIRIKATA_SPACE_EXPORT Router : public MessageService {
+class SIRIKATA_SPACE_EXPORT Registration : public MessageService {
     std::vector<MessageService*> mServices;
+    SHA256 mPrivateKey;
 public:
-	Router(){}
-	~Router(){}
+    Registration(const SHA256&privateKey);
+    ~Registration();
+    bool forwardMessagesTo(MessageService*);
+    bool endForwardingMessagesTo(MessageService*);
     void processMessage(const RoutableMessageHeader&header,
-		                MemoryReference message_body){}
+                        MemoryReference message_body);
+    /**
+     * A sample registration service. Right now simply takes a private key,
+     * hashes it with the given evidence UUID and returns the hashed value
+     */
+    void asyncRegister(const RoutableMessageHeader&header,
+                       const RoutableMessageBody& message_body);
 }; // class Space
 
 } // namespace Sirikata

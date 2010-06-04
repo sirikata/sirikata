@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SUBSCRIPTION_HPP_
 #define _SIRIKATA_SUBSCRIPTION_HPP_
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/network/IOTimer.hpp>

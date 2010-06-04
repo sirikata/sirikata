@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Registration.hpp>
-#include <Space_Sirikata.pbj.hpp>
+#include <sirikata/space/Registration.hpp>
+#include "Space_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 namespace Sirikata {

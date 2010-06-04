@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "space/SpaceProxyManager.hpp"
-#include "space/Space.hpp"
+#include <sirikata/space/SpaceProxyManager.hpp>
+#include <sirikata/space/Space.hpp>
 #include "proxyobject/ProxyCameraObject.hpp"
 
 #include <sirikata/core/odp/DelegatePort.hpp>

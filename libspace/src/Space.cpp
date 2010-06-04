@@ -30,16 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/BoundingBox.hpp>
-#include <space/Space.hpp>
+#include <sirikata/space/Space.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
-#include <space/ObjectConnections.hpp>
+#include <sirikata/space/ObjectConnections.hpp>
 #include <Space_Sirikata.pbj.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
@@ -49,11 +49,11 @@
 #include <proximity/ProximityConnectionFactory.hpp>
 #include <proximity/BridgeProximitySystem.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <space/Loc.hpp>
-#include <space/Registration.hpp>
-#include <space/Router.hpp>
-#include <space/Physics.hpp>
-#include <space/Subscription.hpp>
+#include <sirikata/space/Loc.hpp>
+#include <sirikata/space/Registration.hpp>
+#include <sirikata/space/Router.hpp>
+#include <sirikata/space/Physics.hpp>
+#include <sirikata/space/Subscription.hpp>
 #include <proxyobject/Platform.hpp>
 namespace Sirikata {
 namespace Space {

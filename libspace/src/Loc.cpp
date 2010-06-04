@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Loc.hpp>
-#include <space/Registration.hpp>
+#include <sirikata/space/Loc.hpp>
+#include <sirikata/space/Registration.hpp>
 #include "Space_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>

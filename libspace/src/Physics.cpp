@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Physics.hpp>
-#include <space/Space.hpp>
+#include <sirikata/space/Physics.hpp>
+#include <sirikata/space/Space.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include "Space_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
