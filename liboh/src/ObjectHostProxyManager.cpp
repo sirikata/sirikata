@@ -29,12 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <oh/Platform.hpp>
+
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include "oh/ObjectHostProxyManager.hpp"
-#include "oh/ObjectHost.hpp"
-#include "oh/HostedObject.hpp"
-#include "oh/SpaceTimeOffsetManager.hpp"
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/oh/ObjectHost.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
+
 namespace Sirikata {
 
 void ObjectHostProxyManager::initialize() {

@@ -30,10 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ObjectScript.hpp>
-#include <oh/ObjectScriptManager.hpp>
-#include <oh/ObjectScriptManagerFactory.hpp>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectScript.hpp>
+#include <sirikata/oh/ObjectScriptManager.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
+
 namespace Sirikata {
 ObjectScriptManagerFactory& ObjectScriptManagerFactory::getSingleton() {
     return AutoSingleton<ObjectScriptManagerFactory>::getSingleton();

@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_HOST_HPP_
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/MessageService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>

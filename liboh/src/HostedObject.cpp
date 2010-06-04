@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include "proxyobject/ProxyMeshObject.hpp"
 #include "proxyobject/ProxyLightObject.hpp"
 #include "proxyobject/ProxyWebViewObject.hpp"
@@ -45,16 +45,16 @@
 #include <sirikata/core/persistence/PersistenceSentMessage.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include "oh/SpaceConnection.hpp"
-#include "oh/TopLevelSpaceConnection.hpp"
-#include "oh/HostedObject.hpp"
+#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/TopLevelSpaceConnection.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/util/SentMessage.hpp>
-#include "oh/ObjectHost.hpp"
+#include <sirikata/oh/ObjectHost.hpp>
 
-#include "oh/ObjectScriptManager.hpp"
+#include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include "oh/ObjectScript.hpp"
-#include "oh/ObjectScriptManagerFactory.hpp"
+#include <sirikata/oh/ObjectScript.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>

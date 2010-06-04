@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <proxyobject/ProxyObject.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
-#include "oh/SpaceTimeOffsetManager.hpp"
-#include "oh/ObjectHostTimeOffsetManager.hpp"
+#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
+#include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 namespace Sirikata {
 
 ObjectHostTimeOffsetManager::~ObjectHostTimeOffsetManager(){

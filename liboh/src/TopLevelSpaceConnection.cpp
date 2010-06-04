@@ -29,19 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
-#include "oh/SpaceConnection.hpp"
-#include "oh/TopLevelSpaceConnection.hpp"
-#include "oh/SpaceIDMap.hpp"
-#include "oh/ObjectHost.hpp"
-#include "oh/HostedObject.hpp"
+#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/TopLevelSpaceConnection.hpp>
+#include <sirikata/oh/SpaceIDMap.hpp>
+#include <sirikata/oh/ObjectHost.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 #include "ObjectHost_Time.pbj.hpp"
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/network/TimeSyncImpl.hpp>
-#include "oh/SpaceTimeOffsetManager.hpp"
+#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 namespace Sirikata {
 namespace {
 void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,Network::Stream::ConnectionStatus status,const std::string&reason){

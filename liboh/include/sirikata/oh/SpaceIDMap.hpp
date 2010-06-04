@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ObjectScriptManagerFactory.hpp
+/*  Sirikata Object Host
+ *  SpaceIDMap.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,22 +30,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#define _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
-#include <oh/Platform.hpp>
-namespace Sirikata{
+#include <sirikata/oh/Platform.hpp>
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT ObjectScriptManagerFactory
-    : public AutoSingleton<ObjectScriptManagerFactory>,
-      public Factory1<ObjectScriptManager*,
-                      const String&> //options string for the object script manager
-{
-public:
-    static ObjectScriptManagerFactory&getSingleton();
-    static void destroy();
+#ifndef _SPACEIDMAP_HPP_
+#define _SPACEIDMAP_HPP_
+namespace Sirikata {
+class SIRIKATA_OH_EXPORT SpaceIDMap {
+    typedef std::tr1::unordered_map<SpaceID,Network::Address,SpaceID::Hasher> IDAddressMap;
+    IDAddressMap mCache;
+  public:
+    SpaceIDMap() {}
+    SpaceIDMap(const String&spaceIDMapOptions);
+    void insert(const SpaceID&id, const Network::Address&addr);
+    void lookup(const SpaceID&id, const std::tr1::function<void(const Network::Address*)>&);
+    ~SpaceIDMap(){}
 };
-
 
 }
 #endif

@@ -29,9 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
 #define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
-#include "oh/ObjectScriptManager.hpp"
+
+#include <sirikata/oh/ObjectScriptManager.hpp>
+
 namespace Mono {
 class MonoSystem;
 }

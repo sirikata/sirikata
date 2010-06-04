@@ -32,7 +32,7 @@
 #ifndef _MONO_ASSEMBLY_HPP_
 #define _MONO_ASSEMBLY_HPP_
 
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 #include "MonoDefs.hpp"
 #include <mono/metadata/assembly.h>
 

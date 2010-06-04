@@ -36,7 +36,7 @@
 #include "MonoObject.hpp"
 #include "MonoDomain.hpp"
 #include "MonoMethodLookupCache.hpp"
-#include "oh/ObjectScript.hpp"
+#include <sirikata/oh/ObjectScript.hpp>
 
 namespace Sirikata {
 class HostedObject;

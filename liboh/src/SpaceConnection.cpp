@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
-#include "oh/SpaceConnection.hpp"
+#include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/core/network/Stream.hpp>
 
 namespace Sirikata {

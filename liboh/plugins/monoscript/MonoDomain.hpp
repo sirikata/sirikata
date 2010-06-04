@@ -32,7 +32,7 @@
 #ifndef _MONO_DOMAIN_HPP_
 #define _MONO_DOMAIN_HPP_
 
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "MonoDefs.hpp"

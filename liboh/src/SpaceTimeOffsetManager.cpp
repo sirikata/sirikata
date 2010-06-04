@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
-#include "oh/SpaceTimeOffsetManager.hpp"
+#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <boost/thread.hpp>
 

@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
-#include "oh/SpaceConnection.hpp"
-#include "oh/HostedObject.hpp"
+#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 #include "MonoDomain.hpp"
 #include "MonoObject.hpp"
 #include "MonoContext.hpp"

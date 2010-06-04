@@ -33,9 +33,9 @@
 #ifndef _SIRIKATA_TOP_LEVEL_SPACE_CONNECTION_HPP_
 #define _SIRIKATA_TOP_LEVEL_SPACE_CONNECTION_HPP_
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/network/Address.hpp>
-#include <oh/ObjectHostProxyManager.hpp>
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/core/network/TimeSync.hpp>
 namespace Sirikata {
 

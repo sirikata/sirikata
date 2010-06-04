@@ -33,7 +33,7 @@
 #define _SIRIKATA_SPACE_CONNECTION_HPP_
 
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 
 namespace Sirikata {
 class ObjectHost;

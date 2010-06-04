@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <proxyobject/ModelsSystemFactory.hpp> // MCB:
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -41,13 +41,13 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/options/CDNConfig.hpp>
 
-#include <oh/ObjectHost.hpp>
+#include <sirikata/oh/ObjectHost.hpp>
 #include <proxyobject/LightInfo.hpp>
-#include <oh/TopLevelSpaceConnection.hpp>
-#include <oh/SpaceConnection.hpp>
-#include <oh/HostedObject.hpp>
-#include <oh/SpaceIDMap.hpp>
-#include <oh/ObjectHostTimeOffsetManager.hpp>
+#include <sirikata/oh/TopLevelSpaceConnection.hpp>
+#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/oh/SpaceIDMap.hpp>
+#include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>

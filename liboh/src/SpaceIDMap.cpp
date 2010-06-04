@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
 #include <sirikata/core/network/Address.hpp>
-#include "oh/SpaceIDMap.hpp"
+#include <sirikata/oh/SpaceIDMap.hpp>
 
 namespace Sirikata {
 

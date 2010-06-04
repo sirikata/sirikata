@@ -35,7 +35,7 @@
 #define _SIRIKATA_ObjectHostProxyManager_HPP_
 
 #include <proxyobject/ProxyManager.hpp>
-#include <oh/ObjectHostTimeOffsetManager.hpp>
+#include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 
 namespace Sirikata {
 
