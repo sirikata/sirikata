@@ -29,11 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "oh/Platform.hpp"
+
+#include <sirikata/oh/Platform.hpp>
 #include "MonoObject.hpp"
 class MonoContextData;
-#include "oh/SpaceConnection.hpp"
-#include "oh/HostedObject.hpp"
+#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 #include "MonoDomain.hpp"
 #include "MonoDelegate.hpp"
 #include "MonoMethodLookupCache.hpp"

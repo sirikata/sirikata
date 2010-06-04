@@ -29,8 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "StreamFactory.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/StreamFactory.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Network::StreamFactory);
 namespace Sirikata { namespace Network {
@@ -44,4 +45,3 @@ void StreamFactory::destroy(){
 }
 
 } }
-

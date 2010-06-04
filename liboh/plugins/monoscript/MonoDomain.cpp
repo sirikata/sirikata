@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 
 #include "MonoDomain.hpp"
 #include "MonoObject.hpp"
@@ -39,10 +39,10 @@
 #include "MonoSystem.hpp"
 #include "MonoClass.hpp"
 #include "MonoConvert.hpp"
-#include "util/Time.hpp"
+#include <sirikata/core/util/Time.hpp>
 #include "MonoArray.hpp"
-#include "util/SpaceObjectReference.hpp"
-#include "util/RoutableMessageHeader.hpp"
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 //#include "ResourceID.hpp"
 namespace Mono {
 

@@ -29,10 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
+#include <sirikata/core/util/Standard.hh>
 #include "ObjectStorageTest.hpp"
 #include "Test_Persistence.pbj.hpp"
-#include <util/AtomicTypes.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
 /* Utilities for ObjectStorage tests.  No tests are defined here or in
@@ -48,7 +48,7 @@ static void generate_pairs() {
     static AtomicValue<int> fieldidseed(0);
     static AtomicValue<int> fieldnameseed(0);
     for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
-        
+
         String field(rand() % 15 + 1, 'a');
         for(std::size_t j = 0; j < field.size(); j++)
             field[j] = 'a' + (rand() % 25);

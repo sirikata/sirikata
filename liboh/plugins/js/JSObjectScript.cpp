@@ -31,13 +31,13 @@
  */
 
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 
 #include "JS_Sirikata.pbj.hpp"
 
-#include <util/RoutableMessageHeader.hpp>
-#include <util/RoutableMessageBody.hpp>
-#include <util/KnownServices.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/RoutableMessageBody.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 
 #include "JSObjectScript.hpp"
 #include "JSObjectScriptManager.hpp"
@@ -47,10 +47,10 @@
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
 
-#include <oh/ObjectHost.hpp>
-#include <network/IOService.hpp>
+#include <sirikata/oh/ObjectHost.hpp>
+#include <sirikata/core/network/IOService.hpp>
 
-#include <core/odp/Defs.hpp>
+#include <sirikata/core/odp/Defs.hpp>
 #include <vector>
 
 #include "JS_JSMessage.pbj.hpp"

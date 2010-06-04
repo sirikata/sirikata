@@ -29,9 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "MeshEntity.hpp"
-#include <util/AtomicTypes.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include "OgreHeaders.hpp"
 #include <OgreMeshManager.h>
 #include <OgreResourceGroupManager.h>
@@ -39,8 +39,8 @@
 #include <OgreEntity.h>
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "WebView.hpp"
-#include <util/Sha256.hpp>
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/util/Sha256.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 
 namespace Sirikata {
 namespace Graphics {

@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
 static int core_plugin_refcount = 0;
 

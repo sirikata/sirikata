@@ -1,5 +1,5 @@
 /*  Sirikata Tests -- Sirikata Test Suite
- *  ProxTest.hpp
+ *  SubscriptionTest.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,18 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Thread.hpp"
-#include "network/Stream.hpp"
-#include "network/StreamListener.hpp"
-#include "network/StreamFactory.hpp"
-#include "network/StreamListenerFactory.hpp"
-#include "network/IOServiceFactory.hpp"
-#include "network/IOService.hpp"
-#include "util/ObjectReference.hpp"
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 #include "Test_Subscription.pbj.hpp"
-#include "util/PluginManager.hpp"
-#include "util/RoutableMessageHeader.hpp"
-#include "util/AtomicTypes.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include <space/Platform.hpp>
 #include "space/Space.hpp"
 #include "space/Subscription.hpp"

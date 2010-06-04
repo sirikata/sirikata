@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 
 class ThreadSafeQueueTest : public CxxTest::TestSuite
 {

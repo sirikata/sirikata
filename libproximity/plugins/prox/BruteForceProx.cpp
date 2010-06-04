@@ -29,13 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "proximity/Platform.hpp"
-#include "util/ObjectReference.hpp"
+
+#include <sirikata/proximity/Platform.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 #include "prox/BruteForceQueryHandler.hpp"
 #include "Prox_Sirikata.pbj.hpp"
-#include "proximity/ProximitySystem.hpp"
+#include <sirikata/proximity/ProximitySystem.hpp>
 #include "ProxBridge.hpp"
 #include "BruteForceProx.hpp"
+
 namespace Sirikata { namespace Proximity {
 ProximitySystem*BruteForceProx::create(Network::IOService*io,const String&options,const ProximitySystem::Callback&callback){
     return new ProxBridge(*io,options,new Prox::BruteForceQueryHandler(),callback);

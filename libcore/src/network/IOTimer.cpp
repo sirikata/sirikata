@@ -30,11 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "IOTimer.hpp"
-#include "IOService.hpp"
-#include "util/Time.hpp"
-#include "Asio.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/IOTimer.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/network/Asio.hpp>
+
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 

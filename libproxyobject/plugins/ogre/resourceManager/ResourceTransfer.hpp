@@ -36,7 +36,7 @@
 
 //below for ResourceBuffer
 #include "ResourceManager.hpp"
-#include <transfer/TransferManager.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 
 namespace Meru {
 

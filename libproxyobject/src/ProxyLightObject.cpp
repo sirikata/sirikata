@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
-#include <util/ListenerProvider.hpp>
-#include <proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
 namespace Sirikata {
 ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service)
   : LightProvider(LightInfo()),

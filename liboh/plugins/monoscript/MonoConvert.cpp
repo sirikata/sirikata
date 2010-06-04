@@ -29,17 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 
-#include "util/UUID.hpp"
-#include "util/BoundingInfo.hpp"
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/BoundingInfo.hpp>
 #include "MonoObject.hpp"
 #include "MonoConvert.hpp"
 #include "MonoObject.hpp"
-#include "util/SpaceID.hpp"
-#include "util/ObjectReference.hpp"
-#include "util/SpaceObjectReference.hpp"
-#include "util/Time.hpp"
+#include <sirikata/core/util/SpaceID.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 
 namespace Mono {

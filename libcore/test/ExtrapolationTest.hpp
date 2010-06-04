@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include "util/Extrapolation.hpp"
-#include "util/Location.hpp"
+#include <sirikata/core/util/Extrapolation.hpp>
+#include <sirikata/core/util/Location.hpp>
 class ExtrapolationTest : public CxxTest::TestSuite
 {
     typedef Sirikata::Location Location;

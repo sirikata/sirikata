@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/RoutableMessageHeader.hpp"
-#include "util/SpaceObjectReference.hpp"
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 
 using namespace Sirikata;
 

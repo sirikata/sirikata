@@ -1,3 +1,33 @@
+#Sirikata
+#AddPBJTarget.cmake
+#
+#Copyright (c) 2009, Ewen Cheslack-Postava
+#All rights reserved.
+#
+#Redistribution and use in source and binary forms, with or without
+#modification, are permitted provided that the following conditions are met:
+#
+#    * Redistributions of source code must retain the above copyright notice,
+#      this list of conditions and the following disclaimer.
+#    * Redistributions in binary form must reproduce the above copyright notice,
+#      this list of conditions and the following disclaimer in the documentation
+#      and/or other materials provided with the distribution.
+#    * Neither the name of the Sirikata nor the names of its contributors
+#      may be used to endorse or promote products derived from this software
+#      without specific prior written permission.
+#
+#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+#ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+#ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+#(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+#LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+#ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 # AddPBJTarget.cmake
 # ADD_PBJ_TARGET - sets up targets to compile pbj -> idl -> cpp.
 # Note: Currently expects PROTOCOLBUFFERS_COMPILER to be defined.
@@ -24,7 +54,7 @@ INCLUDE(ListUtil)
 INCLUDE(ParseArguments)
 
 MACRO(ADD_PBJ_TARGET)
-  PARSE_ARGUMENTS(PBJ "DEPENDS;IMPORTS;PLUGINNAME;OUTPUTDIR;INPUTDIR;GENERATED_CPP_FILES;CPP_HEADER" "GENERATE_CPP;GENERATE_CSHARP;GENERATE_PYTHON" ${ARGN})
+  PARSE_ARGUMENTS(PBJ "DEPENDS;IMPORTS;PLUGINNAME;OUTPUTDIR;CSHARP_OUTPUTDIR;PYTHON_OUTPUTDIR;INPUTDIR;GENERATED_CPP_FILES;CPP_HEADER" "GENERATE_CPP;GENERATE_CSHARP;GENERATE_PYTHON" ${ARGN})
   SET(PBJ_FILES ${PBJ_DEFAULT_ARGS})
 
   SET(PBJ_PROTO_FILES)
@@ -81,10 +111,10 @@ MACRO(ADD_PBJ_TARGET)
 
     IF(PBJ_GENERATE_CSHARP)
       MESSAGE(STATUS "Building C# protobuf: ${FILE}")
-      SET(PBJ_PBJCS_FILE ${ScriptsRoot}/csharp/protocol/${FILE}.pbj.cs)
+      SET(PBJ_PBJCS_FILE ${PBJ_CSHARP_OUTPUTDIR}/${FILE}.pbj.cs)
       SET(PBJ_PBJCS_FILES ${PBJ_PBJCS_FILES} ${PBJ_PBJCS_FILE})
-      SET(PBJ_CS_FILE ${ScriptsRoot}/csharp/protocol/${FILE}.cs)
-      SET(PBJ_PROTOBIN_FILE ${ScriptsRoot}/csharp/protocol/${FILE}.protobin)
+      SET(PBJ_CS_FILE ${PBJ_CSHARP_OUTPUTDIR}/${FILE}.cs)
+      SET(PBJ_PROTOBIN_FILE ${PBJ_CSHARP_OUTPUTDIR}/${FILE}.protobin)
       SET(PBJ_CS_FILES ${PBJ_CS_FILES} ${PBJ_CS_FILE})
       SET(PBJ_OUTPUTS ${PBJ_CS_FILE} ${PBJ_PBJCS_FILE})
       SET(PBJ_ALL_OUTPUTS ${PBJ_ALL_OUTPUTS} ${PBJ_OUTPUTS})
@@ -107,11 +137,11 @@ MACRO(ADD_PBJ_TARGET)
 
     IF(PBJ_GENERATE_PYTHON)
       MESSAGE(STATUS "Building Python protobuf: ${FILE}")
-      SET(PBJ_PY_FILE ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
+      SET(PBJ_PY_FILE ${PBJ_PYTHON_OUTPUTDIR}/${FILE}_pb2.py)
       SET(PBJ_PY_FILES ${PBJ_PY_FILES} ${PBJ_PY_FILE})
       SET(PBJ_OUTPUTS ${PBJ_PY_FILE})
       SET(PBJ_ALL_OUTPUTS ${PBJ_ALL_OUTPUTS} ${PBJ_OUTPUTS})
-      SET(PBJ_PY_OPTIONS ${PBJ_PY_OPTIONS} --python_out=${ScriptsRoot}/ironpython/protocol/)
+      SET(PBJ_PY_OPTIONS ${PBJ_PY_OPTIONS} --python_out=${PBJ_PYTHON_OUTPUTDIR}/)
       ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_PY_FILE}
                          COMMAND ${PROTOCOLBUFFERS_COMPILER} -I${PBJ_OUTPUTDIR} ${PBJ_PY_OPTIONS}
                                  ${PBJ_PROTO_FILE}

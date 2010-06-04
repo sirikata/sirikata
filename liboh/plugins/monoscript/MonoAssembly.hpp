@@ -1,5 +1,5 @@
 /*  Sirikata - Mono Embedding
- *  MonoAssembly.cpp
+ *  MonoAssembly.hpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -32,7 +32,7 @@
 #ifndef _MONO_ASSEMBLY_HPP_
 #define _MONO_ASSEMBLY_HPP_
 
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 #include "MonoDefs.hpp"
 #include <mono/metadata/assembly.h>
 

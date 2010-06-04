@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hpp"
-#include "network/Asio.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include "TCPStream.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "ASIOReadBuffer.hpp"
 #include "TCPStream.hpp"
@@ -41,7 +41,7 @@
 #include "ASIOConnectAndHandshake.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
-void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay, 
+void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay,
                                                   unsigned int whichSocket,
                                                   Array<uint8,TCPStream::MaxWebSocketHeaderSize>* buffer,
                                                   const ErrorCode&error,
@@ -71,7 +71,7 @@ void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay,
                 if (mFinishedCheckCount==0) {
                     connection->connectedCallback();
                 }
-                
+
                 MemoryReference mb(buffer->begin()+whereHeaderEnds+1,bytes_received-(whereHeaderEnds+1));
                 MakeASIOReadBuffer(connection,whichSocket,mb);
             }else {
@@ -145,7 +145,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
 }
 
 void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& thus,
-                                            const Address&address, 
+                                            const Address&address,
                                             bool no_delay,
                                             const boost::system::error_code &error,
                                             tcp::resolver::iterator it) {
@@ -170,7 +170,7 @@ void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& th
 }
 
 void ASIOConnectAndHandshake::connect(const ASIOConnectAndHandshakePtr &thus,
-                                      const Address&address, 
+                                      const Address&address,
                                       bool no_delay){
     tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
     thus->mResolver.async_resolve(query,

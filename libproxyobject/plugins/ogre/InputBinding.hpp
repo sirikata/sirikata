@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_INPUT_BINDING_HPP_
 #define _SIRIKATA_INPUT_BINDING_HPP_
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include "input/InputEventDescriptor.hpp"
 #include "input/InputEvents.hpp"
 #include "InputBindingEvent.hpp"

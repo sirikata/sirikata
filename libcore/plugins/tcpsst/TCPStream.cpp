@@ -30,18 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hpp"
-#include "util/AtomicTypes.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 
-#include "network/Asio.hpp"
+#include <sirikata/core/network/Asio.hpp>
 #include "TCPStream.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
-#include "network/IOServiceFactory.hpp"
-#include "network/IOService.hpp"
-#include "options/Options.hpp"
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/options/Options.hpp>
 #include "VariableLength.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
@@ -166,7 +166,7 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
         //allocate a packet long enough to take both the length of the packet and the stream id as well as the packet data. totalSize = size of streamID + size of data and
         //packetHeaderLength = the length of the length component of the packet
         toBeSent.data=new Chunk(totalSize+packetHeaderLength);
-        
+
         uint8 *outputBuffer=&(*toBeSent.data)[0];
         std::memcpy(outputBuffer,packetLengthSerialized,packetHeaderLength);
         std::memcpy(outputBuffer+packetHeaderLength,serializedStreamId,streamIdLength);

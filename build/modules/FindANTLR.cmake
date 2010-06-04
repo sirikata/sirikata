@@ -11,6 +11,7 @@
 #   ANTLR_COMPILER           The ANTLR compiler
 # 
 #Copyright (c) 2008, Patrick Reiter Horn
+#FindANTLR.cmake
 #All rights reserved.
 #
 #Redistribution and use in source and binary forms, with or without

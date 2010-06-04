@@ -33,8 +33,8 @@
 #include "MeruDefs.hpp"
 #include "Singleton.hpp"
 #include "Event.hpp"
-#include <util/LockFreeQueue.hpp>
-#include <task/WorkQueue.hpp>
+#include <sirikata/core/util/LockFreeQueue.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
 
 namespace Meru {
 /**

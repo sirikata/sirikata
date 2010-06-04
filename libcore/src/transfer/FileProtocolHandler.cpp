@@ -29,12 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "ServiceLookup.hpp"
-#include "FileProtocolHandler.hpp"
-#include "util/LockFreeQueue.hpp"
-#include "util/ThreadSafeQueue.hpp"
-#include "task/WorkQueue.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/transfer/ServiceLookup.hpp>
+#include <sirikata/core/transfer/FileProtocolHandler.hpp>
+#include <sirikata/core/util/LockFreeQueue.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
 
 #include <errno.h>
 #include <sys/types.h>

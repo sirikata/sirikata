@@ -29,8 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "../options/Options.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/options/Options.hpp>
+
 extern "C" {
 void *Sirikata_Logging_OptionValue_defaultLevel;
 void *Sirikata_Logging_OptionValue_atLeastLevel;

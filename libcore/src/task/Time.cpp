@@ -29,8 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "Time.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/task/Time.hpp>
 
 #ifndef _WIN32
 #include <sys/time.h>

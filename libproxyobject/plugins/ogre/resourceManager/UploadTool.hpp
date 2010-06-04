@@ -31,9 +31,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <transfer/URI.hpp>
-#include <transfer/TransferManager.hpp>
-#include <transfer/TransferData.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
 
 namespace Meru {
 

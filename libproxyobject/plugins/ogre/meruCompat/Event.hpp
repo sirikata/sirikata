@@ -33,10 +33,10 @@
 #define _EVENT_HPP_
 
 #include "MeruDefs.hpp"
-#include <task/Time.hpp>
-#include <util/UUID.hpp>
-#include <util/ObjectReference.hpp>
-#include <util/SpaceObjectReference.hpp>
+#include <sirikata/core/task/Time.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <vector>
 
 namespace Meru {

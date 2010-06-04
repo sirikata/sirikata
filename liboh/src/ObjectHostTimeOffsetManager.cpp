@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  ObjectHostTimeOffsetManager.hpp
+ *  ObjectHostTimeOffsetManager.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include "util/SpaceID.hpp"
-#include "oh/SpaceTimeOffsetManager.hpp"
-#include "oh/ObjectHostTimeOffsetManager.hpp"
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
+#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
+#include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 namespace Sirikata {
 
 ObjectHostTimeOffsetManager::~ObjectHostTimeOffsetManager(){

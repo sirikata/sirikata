@@ -30,8 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
-#include <proxyobject/SimulationFactory.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+
 AUTO_SINGLETON_INSTANCE(Sirikata::SimulationFactory);
 namespace Sirikata {
 SimulationFactory& SimulationFactory::getSingleton() {

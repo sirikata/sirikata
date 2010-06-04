@@ -9,7 +9,8 @@
 #   PROX_INCLUDE_DIRS       The directory containing the PROX header files
 #   PROX_LIBRARIES          The libraries needed to use PROX (without the full path)
 #   PROX_COMPILER           The PROX compiler
-# 
+#
+#FindPROX.cmake 
 #Copyright (c) 2008, Patrick Reiter Horn
 #All rights reserved.
 #
@@ -35,6 +36,8 @@
 #ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 #(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 #SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 # Look for the protocol buffers headers, first in the additional location and then in default system locations
 IF(PROX_ROOT)
 FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/QueryHandler.hpp PATHS ${PROX_ROOT}/libprox/include/ ${PROX_ROOT}/include ${TOP_LEVEL}/externals/include ${TOP_LEVEL}/externals/prox/libprox/include/ ${TOP_LEVEL}/externals/include/ DOC "Location of PROX header files" NO_DEFAULT_PATH)

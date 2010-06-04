@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_JS_UTIL_HPP_
 #define _SIRIKATA_JS_UTIL_HPP_
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <v8.h>
 
 using namespace v8;

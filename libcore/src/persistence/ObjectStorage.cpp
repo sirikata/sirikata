@@ -31,8 +31,8 @@
  */
 
 
-#include "util/Standard.hh"
-#include "ObjectStorage.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/persistence/ObjectStorage.hpp>
 
 
 namespace Sirikata { namespace Persistence {

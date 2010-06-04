@@ -29,14 +29,16 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "Options.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/options/Options.hpp>
 #include <boost/thread.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <stdarg.h>
-#include "../util/ThreadSafeQueue.hpp"
-#include "../util/DynamicLibrary.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/util/DynamicLibrary.hpp>
+
 namespace Sirikata {
 class simple_string:public std::string {
 public:
@@ -292,7 +294,7 @@ public:
 };
 bool OptionSet::initializationSet(OptionValue* thus, const OptionValue&other) {
     if (thus->mParser==NULL){
-        
+
         HolderStash::getSingleton().hideUntilQuit(thus->mName,thus->mValue.newAndDoNotFree(other.mValue));
         thus->mDefaultChar=other.mDefaultChar;
         thus->mDefaultValue=other.mDefaultValue;

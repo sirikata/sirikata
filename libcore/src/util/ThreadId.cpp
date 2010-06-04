@@ -29,11 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "ThreadId.hpp"
+
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/ThreadId.hpp>
+
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/once.hpp>
+
 boost::once_flag f=BOOST_ONCE_INIT;
 
 #ifndef NDEBUG
@@ -54,7 +57,7 @@ bool ThreadId::isInThreadGroup(const ThreadIdCheck &groupId) {
     boost::thread::id this_id=boost::this_thread::get_id();
     if (threadGroupIds[groupId.mThreadId]==NULL) {
         boost::thread::id * tmp=new boost::thread::id(this_id);
-        if (threadGroupIds[groupId.mThreadId]==NULL) {            
+        if (threadGroupIds[groupId.mThreadId]==NULL) {
             threadGroupIds[groupId.mThreadId]=tmp;//should do atomic compare/swap here
         }else {
             delete tmp;
@@ -68,7 +71,7 @@ Sirikata::ThreadIdCheck ThreadId::registerThreadGroup(const char*group) {
     return ThreadIdCheck();
 #else
     boost::call_once(f,&initializeAtomicInt);
-    boost::unique_lock<boost::mutex> lok(*threadGroupMutex);    
+    boost::unique_lock<boost::mutex> lok(*threadGroupMutex);
     static int retval=0;
     if (group) {
         static std::map<std::string,int> groupMap;

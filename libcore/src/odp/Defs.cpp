@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include <core/odp/Defs.hpp>
-#include <core/odp/Exceptions.hpp>
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/odp/Defs.hpp>
+#include <sirikata/core/odp/Exceptions.hpp>
 
 namespace Sirikata {
 namespace ODP {

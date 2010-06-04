@@ -29,10 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "util/AtomicTypes.hpp"
 
-#include "Event.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/AtomicTypes.hpp>
+
+#include <sirikata/core/task/Event.hpp>
 
 namespace Sirikata {
 namespace Task {

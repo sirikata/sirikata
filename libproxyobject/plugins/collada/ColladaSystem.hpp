@@ -35,18 +35,18 @@
 
 #include "ColladaDocument.hpp"
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/ModelsSystem.hpp>
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <util/ListenerProvider.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
-#include <task/EventManager.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 
 #include <set>
 
 /////////////////////////////////////////////////////////////////////
 
-namespace Sirikata { 
+namespace Sirikata {
 
 class OptionValue;
 
@@ -64,7 +64,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
 //        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
         void loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy  );
-        
+
     protected:
 
     private:
@@ -89,7 +89,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     // interface from ModelsSystem
     public:
     protected:
-    
+
     // interface from ProxyCreationListener
     public:
         virtual void onCreateProxy ( ProxyObjectPtr object );

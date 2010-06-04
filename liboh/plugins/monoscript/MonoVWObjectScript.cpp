@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  MonoObjectScript.cpp
+ *  MonoVWObjectScript.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 #include "MonoVWObjectScriptManager.hpp"
 #include "MonoVWObjectScript.hpp"
 #include "MonoSystem.hpp"
@@ -37,7 +37,7 @@
 #include "MonoAssembly.hpp"
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
-#include "util/RoutableMessageHeader.hpp"
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include "MonoContext.hpp"
 namespace Sirikata {
 

@@ -30,22 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "proximity/Platform.hpp"
-#include "util/ObjectReference.hpp"
+#include <sirikata/proximity/Platform.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 #include "Prox_Sirikata.pbj.hpp"
-#include "proximity/ProximitySystem.hpp"
+#include <sirikata/proximity/ProximitySystem.hpp>
 #include "prox/QueryHandler.hpp"
 #include "prox/QueryEventListener.hpp"
 #include "prox/QueryChangeListener.hpp"
 #include "ProxBridge.hpp"
-#include "network/StreamListener.hpp"
-#include "network/Stream.hpp"
-#include "network/StreamListenerFactory.hpp"
-#include "network/StreamFactory.hpp"
-#include "options/Options.hpp"
-#include "network/IOServiceFactory.hpp"
-#include "network/IOService.hpp"
-#include "util/RoutableMessage.hpp"
+#include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/RoutableMessage.hpp>
 //#include "Sirikata.pbj.hpp"
 namespace Sirikata { namespace Proximity {
 

@@ -29,13 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "EventManager.hpp"
-#include "UniqueId.hpp"
-#include "Event.hpp"
 
-#include "WorkQueue.hpp"
-#include "TimerQueue.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/UniqueId.hpp>
+#include <sirikata/core/task/Event.hpp>
+
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/task/TimerQueue.hpp>
 
 #include <iostream>
 

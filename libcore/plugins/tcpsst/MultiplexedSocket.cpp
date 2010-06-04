@@ -29,12 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Platform.hpp"
-#include "network/Asio.hpp"
-#include "network/Stream.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/Stream.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "ASIOReadBuffer.hpp"
 #include "MultiplexedSocket.hpp"

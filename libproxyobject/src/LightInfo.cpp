@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
-#include "proxyobject/LightInfo.hpp"
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/LightInfo.hpp>
 #include <ProxyObject_Sirikata.pbj.hpp>
 
 namespace Sirikata {

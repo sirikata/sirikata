@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include <core/odp/DelegateService.hpp>
-#include <core/odp/DelegatePort.hpp>
-#include <util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/odp/DelegateService.hpp>
+#include <sirikata/core/odp/DelegatePort.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
 namespace ODP {

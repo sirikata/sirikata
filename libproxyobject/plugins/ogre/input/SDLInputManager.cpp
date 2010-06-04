@@ -35,7 +35,7 @@
 #define _WIN32_WINNT 0x0501
 #endif
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "../OgreHeaders.hpp"
 #include <OgreRenderWindow.h>
 #include <SDL.h>
@@ -54,8 +54,8 @@
 #undef nil
 #endif
 
-#include <task/WorkQueue.hpp>
-#include <util/Time.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 #include "SDLInputManager.hpp"
 #include "InputEvents.hpp"

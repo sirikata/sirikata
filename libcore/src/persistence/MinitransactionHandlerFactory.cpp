@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-#include "../util/Factory.hpp"
-#include "../persistence/MinitransactionHandlerFactory.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/core/persistence/MinitransactionHandlerFactory.hpp>
 
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::MinitransactionHandlerFactory);

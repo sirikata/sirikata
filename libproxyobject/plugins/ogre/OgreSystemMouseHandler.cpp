@@ -30,36 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
-#include <proxyobject/ProxyManager.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include <proxyobject/ProxyWebViewObject.hpp>
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <proxyobject/ProxyLightObject.hpp>
-#include <proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
 #include "WebView.hpp"
 #include "InputResponse.hpp"
 #include "InputBinding.hpp"
-#include <task/Event.hpp>
-#include <task/Time.hpp>
-#include <task/EventManager.hpp>
+#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/task/Time.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 #include <SDL_keysym.h>
 #include <set>
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
 #include "Ogre_Sirikata.pbj.hpp"
-#include <util/RoutableMessageBody.hpp>
-#include <util/KnownServices.hpp>
+#include <sirikata/core/util/RoutableMessageBody.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 
 namespace Sirikata {
 namespace Graphics {

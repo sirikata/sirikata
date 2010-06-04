@@ -29,8 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "oh/Platform.hpp"
-#include "util/Time.hpp"
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
 #include "MonoObject.hpp"
 #include "MonoClass.hpp"
 #include "MonoException.hpp"
@@ -41,9 +41,9 @@
 #include "MonoArray.hpp"
 #include "MonoConvert.hpp"
 #include "MonoMethodLookupCache.hpp"
-#include "util/BoundingInfo.hpp"
-#include "util/UUID.hpp"
-#include "util/SpaceObjectReference.hpp"
+#include <sirikata/core/util/BoundingInfo.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 //#include "ResourceID.hpp"
 #include <mono/metadata/appdomain.h>
 

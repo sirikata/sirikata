@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COLLADA_PLUGIN_
 #define _SIRIKATA_COLLADA_PLUGIN_
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 SIRIKATA_PLUGIN_EXPORT_C int increfcount ();
 SIRIKATA_PLUGIN_EXPORT_C int decrefcount ();

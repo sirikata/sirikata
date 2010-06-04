@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include "MonoDefs.hpp"
 #include "MonoDomain.hpp"
 #include "MonoSystem.hpp"
@@ -40,10 +40,11 @@
 #include "MonoObject.hpp"
 #include "MonoVWObjectScriptManager.hpp"
 #include "MonoArray.hpp"
-#include "oh/ObjectScriptManagerFactory.hpp"
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include "MonoException.hpp"
 #include "MonoHostedObjectExports.hpp"
 #include "MonoContext.hpp"
+
 static int core_plugin_refcount = 0;
 Mono::MonoSystem * mono_system;
 

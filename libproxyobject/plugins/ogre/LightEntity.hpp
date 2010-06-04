@@ -32,11 +32,11 @@
 #ifndef SIRIKATA_GRAPHICS_LIGHTENTITY_HPP__
 #define SIRIKATA_GRAPHICS_LIGHTENTITY_HPP__
 
-#include <proxyobject/LightListener.hpp>
+#include <sirikata/proxyobject/LightListener.hpp>
 #include "Entity.hpp"
 #include "OgreHeaders.hpp"
 #include <OgreLight.h>
-#include <proxyobject/ProxyLightObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
 namespace Sirikata {
 namespace Graphics {
 

@@ -30,14 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Loc.hpp>
-#include <space/Registration.hpp>
+#include <sirikata/space/Loc.hpp>
+#include <sirikata/space/Registration.hpp>
 #include "Space_Sirikata.pbj.hpp"
-#include "util/RoutableMessage.hpp"
-#include "util/KnownServices.hpp"
+#include <sirikata/core/util/RoutableMessage.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+
 namespace Sirikata {
 Loc::Loc(){
-    
+
 }
 
 Loc::~Loc() {
@@ -67,11 +68,11 @@ void Loc::processMessage(const ObjectReference&object_reference,const Protocol::
     destination_header.set_source_object(ObjectReference::spaceServiceID());
     destination_header.set_source_port(Services::LOC);
     destination_header.set_destination_object(object_reference);
-    
+
     for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {
         (*i)->processMessage(destination_header,MemoryReference(message_body));
     }
-   
+
 }
 void Loc::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
     RoutableMessageBody body;
@@ -96,8 +97,8 @@ void Loc::processMessage(const RoutableMessageHeader&header,MemoryReference mess
                 }else {
                     SILOG(loc,warning,"Loc:Unable to parse ObjLoc message body originating from "<<header.source_object());
                 }
-            }           
-            
+            }
+
         }
     }else {
         SILOG(loc,warning,"Loc:Unable to parse message body originating from "<<header.source_object());

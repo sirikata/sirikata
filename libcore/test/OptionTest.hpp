@@ -31,7 +31,8 @@
  */
 
 #include <cxxtest/TestSuite.h>
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
+
 class OptionTest : public CxxTest::TestSuite
 {
     typedef Sirikata::OptionSet OptionSet;

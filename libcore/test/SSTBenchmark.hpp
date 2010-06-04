@@ -1,5 +1,5 @@
 /*  cbr
- *  TimerSpeedBenchmark.hpp
+ *  SSTBenchmark.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -33,8 +33,8 @@
 #ifndef _CBR_SST_BENCHMARK_HPP_
 #define _CBR_SST_BENCHMARK_HPP_
 
-#include "network/Stream.hpp"
-#include "network/StreamListener.hpp"
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 
 namespace Sirikata {
 

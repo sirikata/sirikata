@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <boost/thread.hpp>
 #include "SQLite.hpp"
 AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::SQLite);

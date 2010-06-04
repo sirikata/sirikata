@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "oh/Platform.hpp"
+#include <sirikata/oh/Platform.hpp>
 #include "MonoIList.hpp"
 #include "MonoDomain.hpp"
 #include "MonoClass.hpp"

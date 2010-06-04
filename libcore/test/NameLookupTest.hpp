@@ -33,14 +33,14 @@
 
 
 #include <cxxtest/TestSuite.h>
-#include "transfer/NetworkCacheLayer.hpp"
-#include "transfer/HTTPRequest.hpp"
-#include "transfer/ProtocolRegistry.hpp"
-#include "transfer/HTTPDownloadHandler.hpp"
-#include "transfer/CachedServiceLookup.hpp"
-#include "transfer/ServiceManager.hpp"
-#include "transfer/NameLookupManager.hpp"
-#include "transfer/CachedNameLookupManager.hpp"
+#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
+#include <sirikata/core/transfer/HTTPRequest.hpp>
+#include <sirikata/core/transfer/ProtocolRegistry.hpp>
+#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
+#include <sirikata/core/transfer/CachedServiceLookup.hpp>
+#include <sirikata/core/transfer/ServiceManager.hpp>
+#include <sirikata/core/transfer/NameLookupManager.hpp>
+#include <sirikata/core/transfer/CachedNameLookupManager.hpp>
 
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>

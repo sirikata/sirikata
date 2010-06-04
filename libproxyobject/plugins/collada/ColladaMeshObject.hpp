@@ -33,24 +33,24 @@
 #ifndef _SIRIKATA_COLLADA_MESH_OBJECT_
 #define _SIRIKATA_COLLADA_MESH_OBJECT_
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/models/MeshObject.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/models/MeshObject.hpp>
 
-#include <proxyobject/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <transfer/URI.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp> // MCB: move PhysicalParameters out of here!
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/core/transfer/URI.hpp>
 
 namespace COLLADAFW {
-    
+
 class Geometry;
 class Mesh;
-    
+
 }
 
 namespace Sirikata { namespace Models {
 
 /////////////////////////////////////////////////////////////////////
-    
+
 class ColladaDocumentImporter;
 class ColladaSystem;
 
@@ -67,7 +67,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         bool import ( ColladaDocumentImporter& importer, COLLADAFW::Mesh const& mesh );
 
     protected:
-    
+
     private:
         ColladaSystem& mSystem;
 
@@ -75,19 +75,19 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         Vector3f mScale;
         PhysicalParameters mPhysical;
         std::tr1::shared_ptr<ProxyMeshObject> mProxyPtr;
-    
+
     public:
         virtual void setMesh ( URI const& rhs );
         virtual URI const& getMesh () const;
-        
+
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;
-        
+
         virtual void setPhysical ( PhysicalParameters const& rhs );
         virtual PhysicalParameters const& getPhysical () const;
-                
+
     protected:
-    
+
 };
 
 } // namespace Models

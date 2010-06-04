@@ -32,11 +32,11 @@
 
 #ifndef _SIRIKATA_DRAG_ACTIONS_
 #define _SIRIKATA_DRAG_ACTIONS_
-#include <util/Platform.hpp>
-#include <util/Time.hpp>
-#include <util/ListenerProvider.hpp>
-#include <proxyobject/TimeSteppedSimulation.hpp>
-#include <proxyobject/ProxyObject.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "input/InputEvents.hpp"
 
 namespace Sirikata {

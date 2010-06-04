@@ -33,22 +33,22 @@
 #ifndef _SIRIKATA_COLLADA_ERROR_HANDLER_
 #define _SIRIKATA_COLLADA_ERROR_HANDLER_
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 //#include "COLLADASaxFWLIError.h"
 #include "COLLADASaxFWLIErrorHandler.h"
 //#include "COLLADASaxFWLStableHeaders.h"
 
 namespace Sirikata { namespace Models {
-	
+
 class SIRIKATA_PLUGIN_EXPORT ColladaErrorHandler
     :   public COLLADASaxFWL::IErrorHandler
-{    
-    public: 
+{
+    public:
         ColladaErrorHandler () {}
         virtual ~ColladaErrorHandler () {}
-        
-        
+
+
     protected:
     private:
         ColladaErrorHandler ( ColladaErrorHandler const& ); // not implemented
@@ -61,9 +61,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaErrorHandler
         virtual bool handleError ( COLLADASaxFWL::IError const* error );
 
     protected:
-    
+
 };
-	
+
 } // namespace Models
 } // namespace Sirikata
 

@@ -29,20 +29,20 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
-#include <util/Thread.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
-#include "options/Options.hpp"
+#include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
-#include <task/Event.hpp>
-#include <transfer/TransferManager.hpp>
-#include <proxyobject/TimeOffsetManager.hpp>
-#include <proxyobject/ProxyManager.hpp>
-#include <proxyobject/ProxyCameraObject.hpp>
-#include <proxyobject/ProxyMeshObject.hpp>
-#include <proxyobject/ProxyLightObject.hpp>
+#include <sirikata/core/task/Event.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
+#include <sirikata/proxyobject/TimeOffsetManager.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/ProxyCameraObject.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyLightObject.hpp>
 #include "CameraEntity.hpp"
 #include "MeshEntity.hpp"
 #include "LightEntity.hpp"

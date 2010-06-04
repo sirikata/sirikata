@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <boost/thread.hpp>
-#include "network/Stream.hpp"
-#include "network/StreamListener.hpp"
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 
 namespace Sirikata { namespace Proximity {
 class QueryListener;

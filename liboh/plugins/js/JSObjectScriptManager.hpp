@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 #define _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 
-#include <oh/ObjectScriptManager.hpp>
+#include <sirikata/oh/ObjectScriptManager.hpp>
 #include <v8.h>
 
 namespace Sirikata {

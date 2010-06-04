@@ -131,7 +131,16 @@ GET_FILENAME_COMPONENT(CDN_TOOLS_DIR ${TOOLS_DIR}/cdn ABSOLUTE)
 GET_FILENAME_COMPONENT(DEMO_DIR ${TOP_LEVEL}/demo ABSOLUTE)
 GET_FILENAME_COMPONENT(DEMO_SCENES_DIR ${DEMO_DIR}/scenes ABSOLUTE)
 
+SET(BUILD_DIR ${TOP_LEVEL}/build/cmake)
+SET(GENERATED_FILES_DIR ${BUILD_DIR}/generated)
+SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 
+SET(SirikataProtocolDirectory ${GENERATED_FILES_DIR})
+
+SET(CSHARP_SCRIPTS_ROOT ${ScriptsRoot}/csharp)
+SET(CSHARP_SCRIPTS_PROTOCOL ${ScriptsRoot}/csharp/protocol)
+SET(IRONPYTHON_SCRIPTS_ROOT ${ScriptsRoot}/ironpython)
+SET(IRONPYTHON_SCRIPTS_PROTOCOL ${ScriptsRoot}/ironpython/protocol)
 
 #add-ins
 
@@ -158,6 +167,7 @@ ENDMACRO(VERIFY_VERSION)
 INCLUDE(ListUtil)
 INCLUDE(ParseArguments)
 INCLUDE(AddPBJTarget)
+INCLUDE(AddPluginTarget)
 FIND_PACKAGE(PythonInterp)
 
 
@@ -171,7 +181,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
   SET(CXXTEST_TEST_FILES)
   SET(CXXTEST_H_FILES)
 
-  SET(CXXTEST_OPTIONS --include=util/Standard.hh)
+  SET(CXXTEST_OPTIONS --include=sirikata/core/util/Standard.hh)
   #IF(CXXTEST_OUTPUTDIR)
   #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
   #ENDIF(CXXTEST_OUTPUTDIR)
@@ -220,7 +230,6 @@ IF(NOT PLATFORM_LIBS)
   MESSAGE(STATUS "Could not find dependencies directory ${TOP_LEVEL}/dependencies/")
 ENDIF()
 MESSAGE(STATUS "Using PLATFORM_LIBS=${PLATFORM_LIBS}")
-SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 SET(DISABLE_M32 FALSE)
 SET(FORCE_32BIT FALSE)
 SET(DISABLE_BERKELIUM FALSE)
@@ -559,27 +568,6 @@ ENDIF()
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
-SET(ENABLED_PLUGINS)
-# macro for adding a plugin
-MACRO(ADD_PLUGIN_TARGET)
-  PARSE_ARGUMENTS(PLUGIN "SOURCES;TARGET_CXXFLAGS;TARGET_LDFLAGS;TARGET_LIBRARIES;LIBRARIES" "" ${ARGN})
-
-  CAR(PLUGIN_NAME ${PLUGIN_DEFAULT_ARGS})
-  SET(ENABLED_PLUGINS ${PLUGIN_NAME} ${ENABLED_PLUGINS})
-  ADD_LIBRARY(${PLUGIN_NAME} SHARED ${PLUGIN_SOURCES})
-  IF(PLUGIN_TARGET_LIBRARIES)
-    ADD_DEPENDENCIES(${PLUGIN_NAME} ${PLUGIN_TARGET_LIBRARIES})
-  ENDIF()
-  TARGET_LINK_LIBRARIES(${PLUGIN_NAME} ${PLUGIN_LIBRARIES})
-  IF(PLUGIN_TARGET_LDFLAGS)
-    STRING(REGEX REPLACE ";" " " PLUGIN_TARGET_LDFLAGS  "${PLUGIN_TARGET_LDFLAGS}")  #FIXME does not deal with space-having ldflags
-    SET_TARGET_PROPERTIES(${PLUGIN_NAME} PROPERTIES LINK_FLAGS ${PLUGIN_TARGET_LDFLAGS})
-  ENDIF()
-  IF(PLUGIN_TARGET_CXXFLAGS)
-    STRING(REGEX REPLACE ";" " " PLUGIN_TARGET_CXXFLAGS  "${PLUGIN_TARGET_CXXFLAGS}")  #FIXME does not deal with space-having ldflags
-    SET_TARGET_PROPERTIES(${PLUGIN_NAME} PROPERTIES COMPILE_FLAGS ${PLUGIN_TARGET_CXXFLAGS})
-  ENDIF()
-ENDMACRO(ADD_PLUGIN_TARGET)
 
 #variable which contains list of plugin targets we want to install
 SET(PLUGIN_INSTALL_LIST)
@@ -633,6 +621,9 @@ SET(INCLUDE_DIRECTORIES
   ${SPACE_SOURCE_DIR}
   ${PROXIMITY_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
+
+  ${SirikataProtocolDirectory}
+
   ${Boost_INCLUDE_DIRS}
   ${CURL_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
@@ -696,19 +687,17 @@ SET(ProtocolBuffersSources
 )
 
 
-SET(SirikataProtocolDirectory ${LIBCORE_SOURCE_DIR})
-
 # Based on dependencies, generate arguments for protocol buffers generation
 SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
 IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
-  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
+  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP CSHARP_OUTPUTDIR ${CSHARP_SCRIPTS_PROTOCOL})
 ENDIF()
 
 #needed for scene converter irrespective of IronPython
-SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
+SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON PYTHON_OUTPUTDIR ${IRONPYTHON_SCRIPTS_PROTOCOL})
 
-SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"util/Standard.hh\"\n")
+SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(MessageHeader
   INPUTDIR ${ProtocolBuffersRoot}
@@ -862,7 +851,7 @@ ENDIF()
 
 SET(AdditionalProtoDepends)
 FOREACH(FILE ${ScriptingProtocolBuffersSources})
-   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
+   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${IRONPYTHON_SCRIPTS_PROTOCOL}/${FILE}_pb2.py)
 ENDFOREACH()
 ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
            DEPENDS ${AdditionalProtoDepends}
@@ -872,7 +861,7 @@ IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
   FOREACH(FILE ${ScriptingProtocolBuffersSources})
      SET(SirikataProtoScriptSources ${SirikataProtoScriptSources}
-  ${ScriptsRoot}/csharp/protocol/${FILE}.pbj.cs ${ScriptsRoot}/csharp/protocol/${FILE}.cs )
+  ${CSHARP_SCRIPTS_PROTOCOL}/${FILE}.pbj.cs ${CSHARP_SCRIPTS_PROTOCOL}/${FILE}.cs )
   ENDFOREACH()
 
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources} ${TOP_LEVEL}/externals/pbj/PBJ.cs)
@@ -898,11 +887,11 @@ IF(MONO_FOUND)
 
   # Note: Can't use GLOB here because of Python objects
   SET(SirikataScriptSources
-       ${ScriptsRoot}/csharp/HostedObject.cs
-       ${ScriptsRoot}/csharp/Time.cs
+       ${CSHARP_SCRIPTS_ROOT}/HostedObject.cs
+       ${CSHARP_SCRIPTS_ROOT}/Time.cs
      )
   IF(IRON_PYTHON_FOUND)
-    SET(SirikataScriptSources ${SirikataScriptSources} ${ScriptsRoot}/csharp/PythonObject.cs)
+    SET(SirikataScriptSources ${SirikataScriptSources} ${CSHARP_SCRIPTS_ROOT}/PythonObject.cs)
   ENDIF()
 
   SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -945,6 +934,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
         ${LIBCORE_SOURCE_DIR}/odp/DelegatePort.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
+   	${LIBCORE_SOURCE_DIR}/options/Config.cpp
+   	${LIBCORE_SOURCE_DIR}/options/CDNConfig.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
@@ -973,13 +964,13 @@ SET(SIRIKATA_CORE_SOURCES
 #precompiled header
 IF(NOT WIN32)
  IF(${CMAKE_COMPILER_IS_GNUCXX})
+   SET(LIBCORE_STANDARD_HH ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh)
+   SET(LIBCORE_STANDARD_HH_GCH ${LIBCORE_STANDARD_HH}.gch)
   SET(SIRIKATA_CORE_SOURCES
-     ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch ${SIRIKATA_CORE_SOURCES})
+     ${LIBCORE_STANDARD_HH_GCH} ${SIRIKATA_CORE_SOURCES})
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
-    ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch)
+    ${LIBCORE_STANDARD_HH_GCH})
 
-  SET(PCH_INPUT ${LIBCORE_SOURCE_DIR}/util/Standard.hh)
-  SET(PCH_OUTPUT ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch)
   IF(ISDEBUG)
     SET(PCH_CXX_FLAGS  ${CMAKE_CXX_FLAGS_DEBUG} )
   ELSE()
@@ -988,38 +979,38 @@ IF(NOT WIN32)
   SEPARATE_ARGUMENTS(PCH_CXX_FLAGS)
   # FINAL_COMMAND doesn't like it if a 2 part compiler command has spaces on the second one.
   STRING(REPLACE " " "" CXX_COMPILER_ARG1_WITHOUT_SPACES "${CMAKE_CXX_COMPILER_ARG1}")
-  SET(FINAL_COMMAND ${CMAKE_CXX_COMPILER} ${CXX_COMPILER_ARG1_WITHOUT_SPACES} ${PCH_CXX_FLAGS} ${INCLUDE_COMMAND} ${ADDED_DEFINITIONS} ${PCH_INPUT})
-  ADD_CUSTOM_COMMAND(OUTPUT ${PCH_OUTPUT}
+  SET(FINAL_COMMAND ${CMAKE_CXX_COMPILER} ${CXX_COMPILER_ARG1_WITHOUT_SPACES} ${PCH_CXX_FLAGS} ${INCLUDE_COMMAND} ${ADDED_DEFINITIONS} ${LIBCORE_STANDARD_HH})
+  ADD_CUSTOM_COMMAND(OUTPUT ${LIBCORE_STANDARD_HH_GCH}
                      COMMAND ${FINAL_COMMAND}
-                     DEPENDS ${PCH_INPUT}
- ${LIBCORE_SOURCE_DIR}/options/OptionValue.hpp
- ${LIBCORE_SOURCE_DIR}/util/Any.hpp
- ${LIBCORE_SOURCE_DIR}/util/Array.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingBox.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingSphere.hpp
- ${LIBCORE_SOURCE_DIR}/util/Factory.hpp
- ${LIBCORE_SOURCE_DIR}/util/Location.hpp
- ${LIBCORE_SOURCE_DIR}/util/Logging.hpp
- ${LIBCORE_SOURCE_DIR}/util/Matrix3x3.hpp
- ${LIBCORE_SOURCE_DIR}/util/Noncopyable.hpp
- ${LIBCORE_SOURCE_DIR}/util/Platform.hpp
- ${LIBCORE_SOURCE_DIR}/util/Quaternion.hpp
- ${LIBCORE_SOURCE_DIR}/util/SelfWeakPtr.hpp
- ${LIBCORE_SOURCE_DIR}/util/Singleton.hpp
- ${LIBCORE_SOURCE_DIR}/util/Standard.hh
- ${LIBCORE_SOURCE_DIR}/util/TotallyOrdered.hpp
- ${LIBCORE_SOURCE_DIR}/util/Transform.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingInfo.hpp
- ${LIBCORE_SOURCE_DIR}/util/UUID.hpp
- ${LIBCORE_SOURCE_DIR}/util/ThreadId.hpp
- ${LIBCORE_SOURCE_DIR}/util/Vector3.hpp
- ${LIBCORE_SOURCE_DIR}/util/Vector4.hpp
- ${LIBCORE_SOURCE_DIR}/util/SolidAngle.hpp
+                     DEPENDS ${LIBCORE_STANDARD_HH}
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/options/OptionValue.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Any.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Array.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingBox.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingSphere.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Factory.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Location.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Logging.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Matrix3x3.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Noncopyable.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Quaternion.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SelfWeakPtr.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Singleton.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/TotallyOrdered.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Transform.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingInfo.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/UUID.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/ThreadId.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector3.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SolidAngle.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_sha1.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_uuid.hpp
  ${LIBCORE_SOURCE_DIR}/util/valgrind.h
                      COMMENT "${FINAL_COMMAND}")
-#  ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB} ${PCH_OUTPUT})
+#  ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB} ${LIBCORE_STANDARD_HH_GCH})
  ENDIF()
 ENDIF()
 
@@ -1065,11 +1056,9 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                    )
 
-SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp ${SPACE_SOURCE_DIR}/CDNConfig.cpp ${SPACE_SOURCE_DIR}/Config.cpp )
+SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp)
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
-${CPPOH_SOURCE_DIR}/Config.cpp
-${CPPOH_SOURCE_DIR}/CDNConfig.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1167,6 +1156,7 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
+libcore/test/TransferTest.hpp
 libcore/test/AnyTest.hpp
 libcore/test/AtomicTest.hpp
 #libcore/test/CacheLayerTest.hpp
@@ -1935,4 +1925,4 @@ ENDIF()
 
 ADD_CUSTOM_TARGET(test
   DEPENDS tests
-  COMMAND ${TEST_RUNABLE})
+  COMMAND ${TEST_RUNABLE} $ENV{SINGLE_SUITE})

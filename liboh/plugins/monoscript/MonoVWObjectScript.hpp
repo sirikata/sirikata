@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  MonoObjectScript.hpp
+ *  MonoVWObjectScript.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -36,7 +36,7 @@
 #include "MonoObject.hpp"
 #include "MonoDomain.hpp"
 #include "MonoMethodLookupCache.hpp"
-#include "oh/ObjectScript.hpp"
+#include <sirikata/oh/ObjectScript.hpp>
 
 namespace Sirikata {
 class HostedObject;

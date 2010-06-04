@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include "CameraEntity.hpp"
-#include <options/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
 namespace Sirikata {
 namespace Graphics {
 CameraEntity::CameraEntity(OgreSystem *scene,

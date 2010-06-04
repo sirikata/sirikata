@@ -32,7 +32,7 @@
 
 #include "EventSource.hpp"
 #include "SequentialWorkQueue.hpp"
-#include <task/WorkQueue.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
 
 namespace Meru {
 

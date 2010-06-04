@@ -32,11 +32,11 @@
 
 #ifndef _SIRIKATA_OGRE_GRAPHICS_
 #define _SIRIKATA_OGRE_GRAPHICS_
-#include <util/Platform.hpp>
-#include <util/Time.hpp>
-#include <util/ListenerProvider.hpp>
-#include <proxyobject/TimeSteppedQueryableSimulation.hpp>
-#include <proxyobject/ProxyObject.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>

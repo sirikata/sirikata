@@ -34,10 +34,9 @@
 #define _SIRIKATA_JS_OBJECT_SCRIPT_HPP_
 
 
-
-#include <oh/ObjectScript.hpp>
-#include <oh/ObjectScriptManager.hpp>
-#include <oh/HostedObject.hpp>
+#include <sirikata/oh/ObjectScript.hpp>
+#include <sirikata/oh/ObjectScriptManager.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 
 #include "JSPattern.hpp"

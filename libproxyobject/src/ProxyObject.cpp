@@ -30,16 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/Platform.hpp>
-#include <proxyobject/ProxyObject.hpp>
-#include <util/Extrapolation.hpp>
-#include <proxyobject/PositionListener.hpp>
-#include <proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/util/Extrapolation.hpp>
+#include <sirikata/proxyobject/PositionListener.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 #include "ProxyObject_Sirikata.pbj.hpp"
 
-#include "util/RoutableMessageBody.hpp"
-#include "util/RoutableMessageHeader.hpp"
-#include "util/KnownServices.hpp"
+#include <sirikata/core/util/RoutableMessageBody.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+
 namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service)

@@ -29,12 +29,13 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <oh/Platform.hpp>
-#include <util/SpaceObjectReference.hpp>
-#include "oh/ObjectHostProxyManager.hpp"
-#include "oh/ObjectHost.hpp"
-#include "oh/HostedObject.hpp"
-#include "oh/SpaceTimeOffsetManager.hpp"
+
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/oh/ObjectHost.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <vector>
 
 namespace Sirikata {
@@ -82,7 +83,7 @@ void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj, QueryTr
     }
 }
 QueryTracker *ObjectHostProxyManager::getQueryTracker(const SpaceObjectReference &id) {
-    ProxyMap::const_iterator iter = mProxyMap.find(id.object());  
+    ProxyMap::const_iterator iter = mProxyMap.find(id.object());
     if (iter != mProxyMap.end()){
         if (!iter->second.viewers.empty()) {
             return *(iter->second.viewers.begin());

@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <space/Registration.hpp>
-#include <Space_Sirikata.pbj.hpp>
-#include <util/RoutableMessage.hpp>
-#include <util/KnownServices.hpp>
+#include <sirikata/space/Registration.hpp>
+#include "Space_Sirikata.pbj.hpp"
+#include <sirikata/core/util/RoutableMessage.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 namespace Sirikata {
 
 Registration::Registration(const SHA256&privateKey):mPrivateKey(privateKey) {
-    
+
 }
 
 Registration::~Registration() {
@@ -62,7 +62,7 @@ void Registration::processMessage(const RoutableMessageHeader&header,MemoryRefer
     if (body.ParseFromArray(message_body.data(),message_body.size())) {
         asyncRegister(header,body);
     }else{
-        SILOG(registration,warning,"Unable to parse message body from message originating from "<<header.source_object());        
+        SILOG(registration,warning,"Unable to parse message body from message originating from "<<header.source_object());
     }
 }
 void Registration::asyncRegister(const RoutableMessageHeader&header,const RoutableMessageBody& body) {
@@ -100,7 +100,7 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                     private_object_evidence.getArray()[1]==private_object_evidence.getArray()[14]&&
                     private_object_evidence.getArray()[1]==private_object_evidence.getArray()[15]&&
                     private_object_evidence.getArray()[0]!=0) {
-                    retObj.set_object_reference(private_object_evidence);                    
+                    retObj.set_object_reference(private_object_evidence);
                 }else {
                     retObj.set_object_reference(UUID(SHA256::computeDigest(evidence,sizeof(evidence)).rawData().begin(),UUID::static_size));
                 }
@@ -133,7 +133,7 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                         std::string body_string;
                         body.SerializeToString(&body_string);
                         (*i)->processMessage(destination_header,MemoryReference(body_string));
-                    }                    
+                    }
                 }
             }
         }else {

@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ObjectScriptManagerFactory.hpp>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
 

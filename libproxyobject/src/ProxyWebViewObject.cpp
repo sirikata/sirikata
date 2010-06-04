@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proxyobject/ProxyWebViewObject.hpp>
+#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 
 using namespace Sirikata;
 

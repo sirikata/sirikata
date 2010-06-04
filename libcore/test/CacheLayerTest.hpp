@@ -31,14 +31,14 @@
  */
 
 #include <cxxtest/TestSuite.h>
-#include "transfer/DiskCacheLayer.hpp"
-#include "transfer/MemoryCacheLayer.hpp"
-#include "transfer/NetworkCacheLayer.hpp"
-#include "transfer/TransferData.hpp"
-#include "transfer/LRUPolicy.hpp"
+#include <sirikata/core/transfer/DiskCacheLayer.hpp>
+#include <sirikata/core/transfer/MemoryCacheLayer.hpp>
+#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
+#include <sirikata/core/transfer/LRUPolicy.hpp>
 
-#include "transfer/ProtocolRegistry.hpp"
-#include "transfer/HTTPDownloadHandler.hpp"
+#include <sirikata/core/transfer/ProtocolRegistry.hpp>
+#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
 
 
 using namespace Sirikata;

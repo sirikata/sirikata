@@ -1,5 +1,5 @@
 /*  Sirikata -- Variable Length Serializable Integer With 0xff delimiter
- *  VInt.hpp
+ *  VariableLength.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -45,7 +45,7 @@ public:
     }
     bool operator < (const VariableLength&other)const {
         return mData<other.mData;
-    }    
+    }
     uint32 read() {
         return vuint32::read();
     }
@@ -66,7 +66,7 @@ public:
         size++;
         return retval;
     }
-    
+
     VariableLength(){
         mData=0;
         mDelimiter=0xff;

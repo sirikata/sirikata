@@ -30,22 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include "oh/SpaceConnection.hpp"
-#include <oh/HostedObject.hpp>
-#include <oh/ObjectHost.hpp>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
-#include <network/IOServiceFactory.hpp>
-#include <util/AtomicTypes.hpp>
-#include <util/RoutableMessageHeader.hpp>
-#include <util/PluginManager.hpp>
-#include <task/WorkQueue.hpp>
-#include "oh/TopLevelSpaceConnection.hpp"
-#include "oh/ObjectScriptManager.hpp"
-#include "oh/ObjectScript.hpp"
-#include "oh/ObjectScriptManagerFactory.hpp"
-#include "network/StreamFactory.hpp"
-#include "options/Options.hpp"
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/RoutableMessageHeader.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/oh/TopLevelSpaceConnection.hpp>
+#include <sirikata/oh/ObjectScriptManager.hpp>
+#include <sirikata/oh/ObjectScript.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
 

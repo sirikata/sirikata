@@ -29,7 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "oh/Platform.hpp"
+
+#include <sirikata/oh/Platform.hpp>
 #include "MonoException.hpp"
 #include "MonoClass.hpp"
 #include "MonoDomain.hpp"

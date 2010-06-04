@@ -1,5 +1,5 @@
 /*  Sirikata - Mono Embedding
- *  MonoMethodLookupCache.hpp
+ *  MonoMethodLookupCache.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -29,7 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "oh/Platform.hpp"
+
+#include <sirikata/oh/Platform.hpp>
 #include "MonoMethodLookupCache.hpp"
 
 namespace Mono {
