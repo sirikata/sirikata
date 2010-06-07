@@ -29,7 +29,7 @@ clean:
 
 DEPVC8REV=HEAD
 DEPVC9REV=6
-DEPOSXREV=23
+DEPOSXREV=24
 DEPSOURCE=17
 DEPARCHINDEP=6
 #========== Dependencies ===========
