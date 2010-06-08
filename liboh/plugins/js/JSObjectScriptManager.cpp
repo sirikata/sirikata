@@ -101,12 +101,12 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 {
     //check args to make sure they're okay.
     if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to broadcast(<message>)")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to broadcast(<object>)")) );
 
     v8::Handle<v8::Value> messageBody = args[0];
 
     if(!messageBody->IsObject())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("MEssage shoudl be an object")) );
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object")) );
 
 
     //serialize the object to send
@@ -122,27 +122,6 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 }
 
 
-//bftm
-v8::Handle<v8::Value> __ScriptAddressable(const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to addressable(index)")) );
-
-    int numIndex = (int)(args[0]->Uint32Value());
-    v8::Handle<v8::Value> messageBody = args[0];
-    JSObjectScript* target = GetTargetJSObjectScript(args);
-
-    if (numIndex >= target->getAddressableSize())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Out of range: please query again with a smaller index.")));
-
-    //FIXME: need to figure out how to pass back a c++ reference to java
-    //script.  Later, javascript will pass back that reference when sending
-    //messages
-
-
-    return v8::ThrowException( v8::Exception::Error(v8::String::New("FIXME: need to figure out how to pass back a c++ reference to javascript.  Later, javascript will pass back that reference when sending messages")));
-
-}
 
 //first argument is the destination (in the internally stored vector of
 //potential destinations
@@ -205,21 +184,26 @@ void readORef(const v8::Arguments& args, JSObjectScript*& caller, ObjectReferenc
 v8::Handle<v8::Value> __orefSendMessage (const v8::Arguments& args)
 {
     if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessage(msg)")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessage(<object>)")) );
 
     //first need to extract out the sending jsobjectscript and oref
- 
     JSObjectScript* caller;
     ObjectReference* oref;
     readORef(args,caller,oref);
 
         
-    //then need to read the message and print it
-    v8::String::Utf8Value msgBodyArgs(args[0]);
-    const char* cMsgBody = ToCString(msgBodyArgs);
-    std::string cStrMsgBody(cMsgBody);
+    //then need to read the object
+    v8::Handle<v8::Value> messageBody = args[0];
+    if(!messageBody->IsObject())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object.")) );
 
-    caller->sendMessageToEntity(oref,cStrMsgBody);
+    //serialize the object to send
+    Local<v8::Object> v8Object = messageBody->ToObject();
+    std::string serialized_message = JSSerializer::serializeObject(v8Object);
+
+
+    //actually send the message to the entity
+    caller->sendMessageToEntity(oref,serialized_message);
     
     return v8::Undefined();
 }
@@ -474,7 +458,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(ScriptImport));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
-    system_templ->Set(v8::String::New("__sendMessageTo"),v8::FunctionTemplate::New(__SendMessageTo));
+
 
     
     //these are mutable fields
@@ -502,7 +486,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 
-    //take care of oref templ
+    //take care of oref template
     bftm_createObjRefTemplate();
 
 }

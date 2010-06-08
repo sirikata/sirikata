@@ -39,9 +39,12 @@
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 
+
 #include "JSObjectScript.hpp"
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
+
+#include "JSObjectScriptSerialize.hpp"
 
 
 #include <string>
@@ -112,11 +115,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         mMessagingPort = mParent->bindODPPort(*space_it, Services::COMMUNICATION);
         if (mMessagingPort)
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
-
-        //now have the object send a message to itself
-
-
-        //end
     }
 }
 
@@ -251,8 +249,6 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
 }
 
 
-
-//bftm
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str) {
     Context::Scope context_scope(mContext);
@@ -462,55 +458,41 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
+    v8::Local<v8::Object> obj = v8::Object::New();
 
-    RoutableMessageBody body;
-    body.ParseFromArray(payload.data(), payload.size());
+    //try deserialization
+    bool deserializeWorks;
+    deserializeWorks = JSSerializer::deserializeObject( payload,obj);
 
-    std::string mMessageBody(body.payload());
+
+    /*
+      FIXME: perhaps send a message back saying that deserialization failed
+    */
+    if (! deserializeWorks)
+        return;
+
     
 
-	Protocol::JSMessage jsmessage;
-	jsmessage.ParseFromString(body.payload());
-
-        v8::Local<v8::Object> obj = v8::Object::New();
-
-
-
-	for(int i = 0; i < jsmessage.fields_size(); i++)
-	{
-		Protocol::JSField jsf = jsmessage.fields(i);
-
-		Protocol::JSFieldValue jsvalue= jsf.value();
-
-		const char* str = jsf.name().c_str();
-		Local<v8::String> key = v8::String::New(str, jsf.name().size());
-		if(jsvalue.has_s_value())
-		{
-			//std::cout << jsvalue.s_value() << "\n";
-			const char* str1 = jsvalue.s_value().c_str();
-			Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
-			obj->Set(key, val);
-		}
-		else if(jsvalue.has_i_value())
-		{
-			Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
-			obj->Set(key, intval);
-		}
-
-	}
-
-        // Try to dispatch the message
-        for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin();
-            handler_it != mEventHandlers.end();
-            handler_it++) {
-
-            if (handler_it->matches(obj))
-            {
-                int argc = 1;
-                Handle<Value> argv[1] = { obj };
-                ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
-            }
+    // Try to dispatch the message
+    bool matchesSomeHandler = false;
+    for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
+    {
+        if (handler_it->matches(obj))
+        {
+            int argc = 1;
+            Handle<Value> argv[1] = { obj };
+            ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
+            matchesSomeHandler = true;
         }
+    }
+
+
+    /*
+      FIXME: What should I do if the message that I receive does not match any handler?
+     */
+    if (!matchesSomeHandler)
+        std::cout<<"\n\nMessage did not match any files\n\n";
+    
 }
 
 void JSObjectScript::bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload)
