@@ -64,15 +64,12 @@ public:
 
     /** Dummy callback for testing exposing new functionality to scripts. */
     void test() const;
-    void bftm_testSendMessageSelf() const;
     void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
-    void bftm_listDestinations()const;
     void bftm_debugPrintString(std::string cStrMsgBody) const;
-
     void sendMessageToEntity(ObjectReference* reffer, const std::string& msgBody) const;
     void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
-    int getAddressableSize();
-
+    int  getAddressableSize();
+    
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -109,10 +106,8 @@ private:
 
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
-    void bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const;
+    void bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const;
-    //void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
-    void bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const;
     v8::Handle<v8::Value> protectedEval(const String& script_str);
 
 

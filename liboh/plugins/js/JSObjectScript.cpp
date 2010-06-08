@@ -93,7 +93,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
     system_obj->SetInternalField(0, External::New(this));
 
-
+    //takes care of the addressable array in sys.
     bftm_populateAddressable(oref_template,system_obj);
 
     
@@ -118,8 +118,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
         //end
     }
-
-    std::cout<<"\n\n\nBFTM: Object registered\n\n";
 }
 
 
@@ -192,7 +190,6 @@ void JSObjectScript::test() const {
 
 
 
-
 //bftm
 //populates the internal addressable object references vector
 void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>& oref_template,    Local<Object>& system_obj )
@@ -223,14 +220,6 @@ int JSObjectScript::getAddressableSize()
 }
 
 
-//bftm
-//returns a list of persistent objects can send messages to
-void JSObjectScript::bftm_listDestinations()const
-{
-    NOT_IMPLEMENTED(js);
-    return;
-}
-
 
 //bftm
 //this function sends a message to all functions that proxyObjectManager has an
@@ -240,14 +229,10 @@ void JSObjectScript::bftm_testSendMessageBroadcast(const std::string& msgToBCast
     Sirikata::JS::Protocol::JSMessage js_object_msg;
     Sirikata::JS::Protocol::IJSField js_object_field = js_object_msg.add_fields();
 
-    std::vector<ObjectReference>allDestRefs;
-    bftm_getAllMessageable(allDestRefs);
-
-
     for (int s=0; s < (int)mAddressableList.size(); ++s)
         sendMessageToEntity(mAddressableList[s],msgToBCast);
-
 }
+
 
 //bftm
 //takes in the index into the mAddressableList (for the object reference) and
@@ -268,57 +253,6 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
 
 
 //bftm
-//FIX ME: can probably pass by reference instead.  Also, may be duplicating work
-//by getting all the space id and stuff.
-void JSObjectScript::bftm_testSendMessageTo(ObjectReference oRefDest, const std::string& msgToBCast) const
-{
-    std::cout<<"\n\nWARNING: THIS FUNCTION IS DEPRECATED.  QUIT USING IT.\n\n";
-    
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    SpaceID spaceider = *(spaces.begin());
-    ODP::Endpoint dest (spaceider,oRefDest,Services::COMMUNICATION);
-    mMessagingPort->send(dest,MemoryReference(msgToBCast));
-}
-
-//bftm
-//This function tries to send a message to myself
-void JSObjectScript::bftm_testSendMessageSelf() const
-{
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    SpaceID spaceider = *(spaces.begin());
-    ObjectReference mRef = mParent->getObjReference(spaceider);
-    ODP::Endpoint dest(spaceider, mRef, Services::COMMUNICATION);
-
-    mMessagingPort->send(dest, MemoryReference("aoiwejfoewjf"));
-
-    printf("\n\nRunning bftm_testSendMessage\n\n");
-}
-
-
-
-//bftm
-void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference>&allAvailableObjectReferences) const
-{
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    //which space am I in now
-    SpaceID spaceider = *(spaces.begin());
-
-    //get a list of all object references through prox
-    //ProxyObjectPtr proxPtr = mParent->getProxyManager(spaceider);
-    ObjectHostProxyManager* proxManagerPtr = mParent->bftm_getProxyManager(spaceider);
-
-    //FIX ME: May need to check if get back null ptr.
-
-    proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
-
-    std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
-
-    if (allAvailableObjectReferences.empty())
-    {
-        printf("\n\nBFTM: No object references available for sending messages");
-        return;
-    }
-}
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str) {
     Context::Scope context_scope(mContext);
@@ -377,7 +311,6 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAva
         return;
     }
 }
-
 
 
 
@@ -534,11 +467,62 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     body.ParseFromArray(payload.data(), payload.size());
 
     std::string mMessageBody(body.payload());
+    
+
+	Protocol::JSMessage jsmessage;
+	jsmessage.ParseFromString(body.payload());
+
+	Local<v8::Object> obj = v8::Object::New();
+
+
+	for(int i = 0; i < jsmessage.fields_size(); i++)
+	{
+		Protocol::JSField jsf = jsmessage.fields(i);
+
+		Protocol::JSFieldValue jsvalue= jsf.value();
+
+		const char* str = jsf.name().c_str();
+		Local<v8::String> key = v8::String::New(str, jsf.name().size());
+		if(jsvalue.has_s_value())
+		{
+			//std::cout << jsvalue.s_value() << "\n";
+			const char* str1 = jsvalue.s_value().c_str();
+			Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
+			obj->Set(key, val);
+		}
+		else if(jsvalue.has_i_value())
+		{
+			Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
+			obj->Set(key, intval);
+		}
+
+	}
+
+        // Try to dispatch the message
+        for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin();
+            handler_it != mEventHandlers.end();
+            handler_it++) {
+
+            if (handler_it->pattern.matches(obj)) {
+                int argc = 1;
+                Handle<Value> argv[1] = { obj };
+                ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
+            }
+        }
+}
+
+void JSObjectScript::bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload)
+{
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    RoutableMessageBody body;
+    body.ParseFromArray(payload.data(), payload.size());
+
+    std::string mMessageBody(body.payload());
 
 
     //JSLOG(warn, "Got message: " << mMessageBody);
-
-		std::cout << "\n\n\n\n\n\nGot a Message\n\n\n\n\n" ;
 
 
 	Protocol::JSMessage jsmessage;
@@ -551,8 +535,6 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 	{
 		Protocol::JSField jsf = jsmessage.fields(i);
 
-		//std::cout << jsf.name() << " = ";
-		//obj.Set(i, jsf.name());
 
 		Protocol::JSFieldValue jsvalue= jsf.value();
 
@@ -587,6 +569,8 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
             }
         }
 }
+
+
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be

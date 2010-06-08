@@ -38,7 +38,7 @@
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
 
-
+#include "JSObjectScriptSerialize.hpp"
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
@@ -97,101 +97,26 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args) {
     return v8::Undefined();
 }
 
-
-//bftm
 v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 {
-   if (args.Length() != 1)
+    //check args to make sure they're okay.
+    if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to broadcast(<message>)")) );
 
     v8::Handle<v8::Value> messageBody = args[0];
 
-
-		//bhupc
-
-
-		if(!messageBody->IsObject())
-		{
-			return v8::ThrowException(v8::Exception::Error(v8::String::New("MEssage shoudl be an object")) );
-		}
-
-		Local<v8::Object> v8Object = messageBody->ToObject();
-
-		Local<v8::Array> properties = v8Object->GetPropertyNames();
-
-		Protocol::JSMessage jsmessage ;
-		for( unsigned int i = 0; i < properties->Length(); i++)
-		{
-					Local<v8::Value> value1 = properties->Get(i);
+    if(!messageBody->IsObject())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("MEssage shoudl be an object")) );
 
 
-					Local<v8::Value> value2 =
-					v8Object->Get(properties->Get(i));
+    //serialize the object to send
+    Local<v8::Object> v8Object = messageBody->ToObject();
+    std::string serialized_message = JSSerializer::serializeObject(v8Object);
 
-
-					// create a JSField out of this
-
-
-
-
-			    v8::String::Utf8Value
-					msgBodyArgs1(value1);
-
-					const char* cMsgBody1 = ToCString(msgBodyArgs1);
-					std::string cStrMsgBody1(cMsgBody1);
-
-
-					//std::cout << cStrMsgBody1 << " = ";
-
-					v8::String::Utf8Value
-					msgBodyArgs2(value2);
-
-					const char* cMsgBody2 = ToCString(msgBodyArgs2);
-					std::string cStrMsgBody2(cMsgBody2);
-
-
-					//std::cout << cStrMsgBody2 << "\n";
-
-
-					Protocol::IJSField jsf = jsmessage.add_fields();
-
-					jsf.set_name(cStrMsgBody1);
-					Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
-					jsf_value.set_s_value(cStrMsgBody2);
-
-
-
-
-		}
-
-
-		// serialize the jsmessage
-
-		//RoutableMessageBody body;
-
-
-
-
-//    v8::String::Utf8Value msgBodyArgs(args[0]);
-//    const char* cMsgBody = ToCString(msgBodyArgs);
-//    std::string cStrMsgBody(cMsgBody);
-
-//    std::cout<<"\n\n\n";
-//    std::cout<<"This is messageBody:  "<<cMsgBody;
-//    std::cout<<"\n\n\n";
-
-  JSObjectScript* target = GetTargetJSObjectScript(args);
-	std::string serialized_message;
-	jsmessage.SerializeToString(&serialized_message);
-
-	std::cout << "Serialized message " << "\n" <<
-	serialized_message.size() << serialized_message <<
-	"\n";
-
-
-
-  target->bftm_testSendMessageBroadcast(serialized_message);
-
+    
+    //sender
+    JSObjectScript* target = GetTargetJSObjectScript(args);
+    target->bftm_testSendMessageBroadcast(serialized_message);
 
     return v8::Undefined();
 }
@@ -548,10 +473,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(ScriptImport));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
-
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(__ScriptTestBroadcastMessage));
-
-    //system_templ->Set(v8::String::New("__addressable"),v8::FunctionTemplate::New(__ScriptAddressable));
     system_templ->Set(v8::String::New("__sendMessageTo"),v8::FunctionTemplate::New(__SendMessageTo));
 
     
