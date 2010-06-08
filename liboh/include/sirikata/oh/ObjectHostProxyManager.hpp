@@ -75,7 +75,8 @@ public:
 
     //bftm
     void getAllObjectReferences(std::vector<ObjectReference>& allObjReferences) const;
-
+    void getAllObjectReferences(std::vector<ObjectReference*>& allObjReferences) const;
+    
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;

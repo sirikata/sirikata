@@ -301,7 +301,7 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAva
     //FIX ME: May need to check if get back null ptr.
 
     //proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
-    proxManagerPtr->getAllObjectReferencesNew(allAvailableObjectReferences);
+    proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
     
     std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
 
@@ -472,7 +472,8 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 	Protocol::JSMessage jsmessage;
 	jsmessage.ParseFromString(body.payload());
 
-	Local<v8::Object> obj = v8::Object::New();
+        v8::Local<v8::Object> obj = v8::Object::New();
+
 
 
 	for(int i = 0; i < jsmessage.fields_size(); i++)
@@ -503,7 +504,8 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
             handler_it != mEventHandlers.end();
             handler_it++) {
 
-            if (handler_it->pattern.matches(obj)) {
+            if (handler_it->matches(obj))
+            {
                 int argc = 1;
                 Handle<Value> argv[1] = { obj };
                 ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);

@@ -35,7 +35,6 @@
 namespace Sirikata {
 
 class HostedObject;
-<<<<<<< HEAD:liboh/include/sirikata/oh/ObjectScriptManager.hpp
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 class ObjectScript;

@@ -62,6 +62,7 @@ public:
     String toString() const { return "[Pattern]"; }
 
     bool matches(v8::Handle<v8::Object> obj) const;
+    
 private:
     std::string mName;
     v8::Persistent<v8::Value> mValue;

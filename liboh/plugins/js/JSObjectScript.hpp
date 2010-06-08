@@ -115,11 +115,9 @@ private:
     v8::Persistent<v8::Context> mContext;
 
     //bftm
-    typedef std::vector<ObjectReference> AddressableList;
-    AddressableList* mAddressableList;
-    void bftm_populateExternalAddressable();
-    void bftm_populateAddressable();
-
+    typedef std::vector<ObjectReference*> AddressableList;
+    AddressableList mAddressableList;
+    void bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>& oref_template,    Local<Object>& system_obj );
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
