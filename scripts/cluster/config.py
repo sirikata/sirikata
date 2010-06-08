@@ -39,7 +39,7 @@ def parse_bool(opt):
 class ClusterConfig:
     def __init__(self):
         #default values
-        self.headnode="meru@meru-a.stanford.edu"
+        self.headnode="bogus@bogus"
         self.nodes = []
         self.deploy_nodes = []
         self.code_dir = "cbr"
@@ -53,11 +53,8 @@ class ClusterConfig:
         if (os.path.exists(default_path)):
             self.parse(default_path)
         else: # just setup some default nodes that make sense for us
-            self.nodes.append( ClusterNode("meru@meru00") )
-            self.nodes.append( ClusterNode("meru@meru01") )
-            self.nodes.append( ClusterNode("meru@meru02") )
-            self.nodes.append( ClusterNode("meru@meru03") )
-            self.nodes.append( ClusterNode("meru@meru04") )
+            print "Couldn't find ~/.cluster configure file."
+            assert(False)
 
     def generate_deployment(self, count, repeat = True):
         if (self.nodes == None or len(self.nodes) == 0):
@@ -96,6 +93,8 @@ class ClusterConfig:
                 continue
             [opt_name, opt_value] = line_split
             opt_name = opt_name.strip()
+            if (opt_name == "headnode"):
+                self.headnode = opt_value.strip()
             if (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "code_dir"):
