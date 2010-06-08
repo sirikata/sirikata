@@ -4,13 +4,12 @@ import sys
 import subprocess
 import time
 import socket
-import settings # CRAQ Settings
 
-def main():
-        if (not socket.gethostname() in settings.CRAQ_CHAIN_NODES):
+def main(zookeeper_addr, craq_nodes):
+        if (not socket.gethostname() in craq_nodes):
             return 0
 
-        subprocess.Popen('/home/meru/bmistree/new-craq-dist/craq-32 -d meru -p 10333 -z ' + settings.CRAQ_ZOOKEEPER_ADDR, shell=True)
+        subprocess.Popen('/home/meru/bmistree/new-craq-dist/craq-32 -d meru -p 10333 -z ' + zookeeper_addr, shell=True)
         return 0
 
 if __name__ == "__main__":

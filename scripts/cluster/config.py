@@ -48,6 +48,10 @@ class ClusterConfig:
         self.unique = None
         self.ccache = False
 
+        self.zookeeper = ""
+        self.zookeeper_addr = ""
+        self.craq_nodes = ""
+
         # parse default config or generate a default config
         default_path = os.path.expanduser("~/.cluster")
         if (os.path.exists(default_path)):
@@ -95,7 +99,7 @@ class ClusterConfig:
             opt_name = opt_name.strip()
             if (opt_name == "headnode"):
                 self.headnode = opt_value.strip()
-            if (opt_name == "node"):
+            elif (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "code_dir"):
                 self.code_dir = opt_value.strip()
@@ -110,6 +114,13 @@ class ClusterConfig:
                     print 'Warning: unique string instead of character, using first char: "' + opt_value + '=> "' + self.unique
             elif (opt_name == 'ccache'):
                 self.ccache = parse_bool(opt_value)
+            elif (opt_name == 'zookeeper'):
+                self.zookeeper = opt_value.strip()
+            elif (opt_name == 'zookeeper_addr'):
+                self.zookeeper_addr = opt_value.strip()
+            elif (opt_name == 'craq_nodes'):
+                self.craq_nodes = eval(opt_value)
+
         fp.close()
         return
 
