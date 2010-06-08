@@ -44,7 +44,7 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
 
-#include "JSObjectScriptSerialize.hpp"
+#include "JSSerializer.hpp"
 
 
 #include <string>

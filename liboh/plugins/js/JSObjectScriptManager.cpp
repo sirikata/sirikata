@@ -38,7 +38,7 @@
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
 
-#include "JSObjectScriptSerialize.hpp"
+#include "JSSerializer.hpp"
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
