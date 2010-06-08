@@ -10,8 +10,8 @@
 #include "asyncConnectionGet.hpp"
 #include "../asyncCraqUtil.hpp"
 #include "../../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
-#include <sirikata/network/Asio.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/Asio.hpp>
 
 #define CRAQ_MAX_PUSH_GET 10
 

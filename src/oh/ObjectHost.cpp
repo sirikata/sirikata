@@ -33,13 +33,13 @@
 #include "ObjectHost.hpp"
 #include "Statistics.hpp"
 #include "Object.hpp"
-#include "sirikata/network/StreamFactory.hpp"
-#include "sirikata/network/Stream.hpp"
-#include "sirikata/util/PluginManager.hpp"
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 #include "ServerIDMap.hpp"
 #include "Random.hpp"
 #include "Options.hpp"
-#include <network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
 #include "CBR_Session.pbj.hpp"
@@ -99,7 +99,7 @@ bool ObjectHost::SpaceNodeConnection::empty() {
     return receive_queue.empty();
 }
 
-Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk) {
+void ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
     parent->mHandleReadProfiler->started();
 
     // Parse
@@ -129,8 +129,7 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHost::SpaceNodeConnection::han
 
     parent->mHandleReadProfiler->finished();
 
-    // No matter what, we've "handled" the data, either for real or by dropping
-    return Sirikata::Network::Stream::AcceptedData;
+    // No matter what, we've "handled" the data, either for real or by dropping.
 }
 
 
@@ -690,7 +689,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
         ),
         std::tr1::bind(&ObjectHost::SpaceNodeConnection::handleRead,
             conn,
-            _1),
+            _1, _2),
         &Sirikata::Network::Stream::ignoreReadySendCallback
     );
 

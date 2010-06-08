@@ -34,7 +34,7 @@
 #define _CBR_ROUTER_ELEMENT_
 
 #include "Utility.hpp"
-#include <sirikata/network/IOStrand.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
 namespace CBR {
 

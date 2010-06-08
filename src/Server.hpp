@@ -8,7 +8,7 @@
 #include "ObjectHostConnectionManager.hpp"
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
-#include "sirikata/util/SizedThreadSafeQueue.hpp"
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 
 #include "CBR_Session.pbj.hpp"
 #include "CBR_Migration.pbj.hpp"

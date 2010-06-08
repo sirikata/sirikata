@@ -31,9 +31,11 @@
  */
 #ifndef _SCENARIO_FACTORY_HPP_
 #define _SCENARIO_FACTORY_HPP_
-#include "sirikata/util/Platform.hpp"
-#include "sirikata/util/Factory.hpp"
+
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Factory.hpp>
 #include "Scenario.hpp"
+
 namespace CBR {
 class ScenarioFactory: public Sirikata::Factory1<Scenario*,Sirikata::String>,public Sirikata::AutoSingleton<ScenarioFactory> {
 public:

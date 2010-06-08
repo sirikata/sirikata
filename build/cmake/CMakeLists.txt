@@ -239,7 +239,6 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Boost_INCLUDE_DIRS}
         #${GLUT_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}
-        ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Sirikata_PBJ_ROOT}
         ${GSL_INCLUDE_DIR}
         ${PROX_INCLUDE_DIRS}
@@ -407,13 +406,13 @@ ADD_PBJ_TARGET(
   INPUTDIR ${CBR_PROTOCOL_DIR}
   IMPORTS ${CBR_PROTOCOL_DIR}
   OUTPUTDIR ${CBR_PROTOCOL_DIR}
-  OUTPUTCPPFILE ${CBR_PROTOCOL_DIR}/CBR_protobuf.cc
+  GENERATED_CPP_FILES CBR_PBJ_CPP_FILES
   CPP_HEADER ${PBJ_CPP_HEADER}
   GENERATE_CPP
 )
 # generated pbj implementation source files
 SET(CBR_PROTOCOL_SOURCES
-  ${CBR_PROTOCOL_DIR}/CBR_protobuf.cc
+  ${CBR_PBJ_CPP_FILES}
 )
 
 #link flags

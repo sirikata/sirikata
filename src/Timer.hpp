@@ -34,7 +34,7 @@
 #define _CBR_TIMER_HPP_
 
 #include "Utility.hpp"
-#include <sirikata/util/AtomicTypes.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 //#include <boost/date_time.hpp>
 
 namespace CBR {

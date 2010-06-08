@@ -31,7 +31,7 @@
  */
 
 #include "BenchmarkRunner.hpp"
-#include <network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
 
 namespace CBR {
 

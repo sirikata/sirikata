@@ -2,7 +2,7 @@
 #include "craq_sets/asyncCraqSet.hpp"
 #include "asyncCraqUtil.hpp"
 #include "../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "asyncCraqScheduler.hpp"
 #include "../OSegLookupTraceToken.hpp"
 

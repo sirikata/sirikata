@@ -1,4 +1,4 @@
-#include "ObjectSegmentation.hpp"    
+#include "ObjectSegmentation.hpp"
 #include "Utility.hpp"
 #include "Statistics.hpp"
 #include "Message.hpp"
@@ -6,13 +6,13 @@
 #include "OSegLookupTraceToken.hpp"
 #include <queue>
 
-#include <sirikata/util/ThreadSafeQueueWithNotification.hpp>
-#include <sirikata/util/AtomicTypes.hpp>
+#include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include "BatchCraqQueue.hpp"
 
 namespace CBR
 {
-  
+
   BatchCraqQueue::BatchCraqQueue(IOStrand* strand, ObjectSegmentation* oseg, SpaceContext* con)
     :mOSeg(oseg),
      mStrand(strand),
@@ -20,7 +20,7 @@ namespace CBR
   {
     mQueryQueue = new QueryQueue();
   }
-  
+
 
   BatchCraqQueue::~BatchCraqQueue()
   {
@@ -59,6 +59,6 @@ namespace CBR
     mQueryQueue = new QueryQueue();
   }
 
-  
+
 
 }

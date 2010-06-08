@@ -31,7 +31,7 @@
  */
 
 #include "FairServerMessageReceiver.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
@@ -147,21 +147,21 @@ void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream
     ServerID from = strm->id();
     {
         boost::lock_guard<boost::mutex> lck(mMutex);
-        
+
         double wt = mReceiveQueues.avg_weight();
         SILOG(fairreceiver,info,"Received connection from " << from << ", setting weight to " << wt);
-        
+
         if (mReceiveQueues.hasQueue(from)) {
             SILOG(FSMR,fatal,"Duplicate network connection received for server " << from << " and propagated up to receive queue.");
             assert(false);
         }
-        
+
         mReceiveQueues.addQueue(
             new NetworkQueueWrapper(mContext, strm, Trace::SPACE_TO_SPACE_READ_FROM_NET),
             from,
             wt
             );
-        
+
         // add to the receive set
         mReceiveSet.insert(from);
     }

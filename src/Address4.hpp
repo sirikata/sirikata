@@ -2,8 +2,8 @@
 #define _CBR_ADDRESS4_HPP_
 
 #include "Utility.hpp"
-#include <sirikata/util/Platform.hpp>
-#include <sirikata/network/Address.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Address.hpp>
 
 namespace CBR {
 

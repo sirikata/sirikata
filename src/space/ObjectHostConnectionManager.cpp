@@ -33,12 +33,12 @@
 #include "ObjectHostConnectionManager.hpp"
 #include "Options.hpp"
 #include "Message.hpp"
-#include <sirikata/network/IOService.hpp>
-#include <sirikata/network/IOServiceFactory.hpp>
-#include <sirikata/network/IOStrand.hpp>
-#include <sirikata/network/IOStrandImpl.hpp>
-#include <sirikata/network/StreamListenerFactory.hpp>
-#include <sirikata/util/PluginManager.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 #include "Statistics.hpp"
 #define SPACE_LOG(level,msg) SILOG(space,level,"[SPACE] " << msg)
 
@@ -176,6 +176,7 @@ void ObjectHostConnectionManager::shutdown() {
 
 void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream* str, Sirikata::Network::Stream::SetCallbacks& set_callbacks) {
     using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
 
     // For some mysterious reason, Sirikata::Network::Stream uses this callback with a NULL stream to indicate
     // all streams from a connection are gone and the underlying connection is shutting down. Why we would care
@@ -192,7 +193,7 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
         std::tr1::bind(&ObjectHostConnectionManager::handleConnectionRead,
             this,
             conn,
-            _1), // FIXME this should be wrapped by mIOStrand, but the return value is a problem
+            _1, _2), // FIXME this should be wrapped by mIOStrand, but the return value is a problem
         &Sirikata::Network::Stream::ignoreReadySendCallback
     );
 
@@ -201,7 +202,7 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     );
 }
 
-Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk) {
+void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
 
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
@@ -212,8 +213,8 @@ Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleC
 
     mMessageReceivedCallback(conn->conn_id(), obj_msg);
 
-    // We either got it or dropped it, either way it was accepted.
-    return Sirikata::Network::Stream::AcceptedData;
+    // We either got it or dropped it, either way it was accepted.  Don't do
+    // anything with pause parameter.
 }
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
     mConnections.insert(conn);

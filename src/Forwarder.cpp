@@ -29,7 +29,7 @@
 
 #include "CBR_Forwarder.pbj.hpp"
 
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace CBR
 {

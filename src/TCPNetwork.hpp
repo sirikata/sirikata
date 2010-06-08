@@ -3,10 +3,10 @@
 
 #include "Network.hpp"
 #include "Address4.hpp"
-#include <sirikata/network/Stream.hpp>
-#include <sirikata/network/StreamListener.hpp>
-#include <sirikata/util/PluginManager.hpp>
-#include <sirikata/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 #include "CountResourceMonitor.hpp"
 
 namespace CBR {
@@ -254,7 +254,7 @@ class TCPNetwork : public Network {
     // needed (the storage for the pointer, not the TCPReceiveStream itself,
     // which is cleaned up separately.)
     typedef std::tr1::shared_ptr<TCPReceiveStream*> IndirectTCPReceiveStream;
-    Sirikata::Network::Stream::ReceivedResponse bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk& data);
+    void bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk& data, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
     void readySendCallback(RemoteStreamWPtr wstream);
 
 public:

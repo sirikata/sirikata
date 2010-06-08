@@ -33,7 +33,7 @@
 #include "SSTImpl.hpp"
 
 
-#include <sirikata/network/Address.hpp>
+#include <sirikata/core/network/Address.hpp>
 #include "Address4.hpp"
 
 
@@ -53,7 +53,7 @@ template <>  std::map<Sirikata::UUID, boost::shared_ptr< BaseDatagramLayer<Sirik
 
 template <> std::map<EndPoint<Sirikata::UUID>  , boost::shared_ptr< Connection<Sirikata::UUID> > > Connection<Sirikata::UUID>::mConnectionMap = std::map<EndPoint<Sirikata::UUID>  , boost::shared_ptr< Connection<Sirikata::UUID> > > ();
 
-    
+
 template <> std::map<EndPoint<Sirikata::UUID>  , ConnectionReturnCallbackFunction > Connection<Sirikata::UUID>::mConnectionReturnCallbackMap = std::map<EndPoint<Sirikata::UUID>  , ConnectionReturnCallbackFunction > ();
 
 template <> std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > Connection<Sirikata::UUID>::mListeningConnectionsCallbackMap = std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > ();

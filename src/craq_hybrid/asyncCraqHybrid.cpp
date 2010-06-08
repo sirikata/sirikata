@@ -3,7 +3,7 @@
 #include "asyncCraqUtil.hpp"
 #include "asyncCraqHybrid.hpp"
 #include "../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../ObjectSegmentation.hpp"
 
 namespace CBR

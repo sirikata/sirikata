@@ -20,8 +20,8 @@
 
 #include "ForwarderServiceQueue.hpp"
 
-#include <sirikata/util/SizedThreadSafeQueue.hpp>
-#include <sirikata/util/ThreadSafeQueueWithNotification.hpp>
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
 
 namespace CBR
 {

@@ -4,10 +4,10 @@
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
 #include "../../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
-#include <sirikata/network/Asio.hpp>
+#include <sirikata/core/network/Asio.hpp>
 
 
 //#define ASYNC_CONNECTION_DEBUG
@@ -17,26 +17,26 @@ namespace CBR
 
 class AsyncConnectionSet
 {
-  
+
 public:
 
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING}; //we'll probably be always processing or need new socket.  (minus the initial connection registration.
-  
-  void initialize(Sirikata::Network::TCPSocket* socket,     boost::asio::ip::tcp::resolver::iterator );  
+
+  void initialize(Sirikata::Network::TCPSocket* socket,     boost::asio::ip::tcp::resolver::iterator );
 
   AsyncConnectionSet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
   void setBound(const CraqObjectID& obj_dataToGet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
   void set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
-  
+
   ~AsyncConnectionSet();
   AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readySetChanged);
-  
+
   int numStillProcessing();
   void stop();
     ///sets the ready state to be in the processing mode, meaning work has been posted to its strand
-  void setProcessing();  
-  
+  void setProcessing();
+
 private:
   Sirikata::Network::TCPSocket* mSocket;
   struct IndividualQueryData
@@ -60,7 +60,7 @@ private:
   IOStrand*               mResultsStrand;
   AsyncCraqScheduler*   mSchedulerMaster;
   ObjectSegmentation*              mOSeg;
-  
+
   volatile ConnectionState mReady;
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
@@ -82,22 +82,22 @@ private:
 
   size_t smallestIndex(std::vector<size_t> sizeVec);
 
-  
+
   std::string mPrevReadFrag;
   bool mReceivedStopRequest;
-  std::tr1::function<void()> mReadyStateChangedCallback;  
-  void clear_all_deadline_timers();  
+  std::tr1::function<void()> mReadyStateChangedCallback;
+  void clear_all_deadline_timers();
   //***********handlers**************
   //timeout callback handler
   void queryTimedOutCallbackSet(const boost::system::error_code& e, IndividualQueryData* iqd);
-  
+
   //connect_handler
   void connect_handler(const boost::system::error_code& error);
 
   void generic_read_stored_not_found_error_handler ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
   void set_generic_stored_not_found_error_handler();
 
-  
+
   //set handler
   void read_handler_set      ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
   void write_some_handler_set( const boost::system::error_code& error, std::size_t bytes_transferred);
@@ -106,5 +106,5 @@ private:
 
 
 }//end namespace
-  
+
 #endif

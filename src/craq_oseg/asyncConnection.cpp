@@ -2,7 +2,7 @@
 #include <iostream>
 #include <boost/bind.hpp>
 #include "../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "CraqEntry.hpp"
 namespace CBR
 {
@@ -144,7 +144,7 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, 
 
 
   //generating the query to write.
-  
+
   std::string query;
   query.append(CRAQ_DATA_SET_PREFIX);
   query.append(dataToSet); //this is the re

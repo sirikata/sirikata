@@ -3,8 +3,8 @@
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
-#include "sirikata/util/Platform.hpp"
-#include "sirikata/network/Stream.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Stream.hpp>
 #include "PollingService.hpp"
 
 namespace CBR {

@@ -35,8 +35,8 @@
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
-#include <sirikata/network/Stream.hpp>
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "Statistics.hpp"
 
 namespace CBR {

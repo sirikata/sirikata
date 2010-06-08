@@ -6,9 +6,9 @@
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionSet.hpp"
 #include "../../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../asyncCraqScheduler.hpp"
-#include <sirikata/network/Asio.hpp>
+#include <sirikata/core/network/Asio.hpp>
 
 #ifndef __ASYNC_CRAQ_SET_CLASS_H__
 #define __ASYNC_CRAQ_SET_CLASS_H__

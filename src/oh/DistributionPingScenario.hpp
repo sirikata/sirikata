@@ -3,7 +3,7 @@
 
 #include "Scenario.hpp"
 #include "CountResourceMonitor.hpp"
-#include "sirikata/util/SizedThreadSafeQueue.hpp"
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 
 namespace CBR {
 class ScenarioFactory;

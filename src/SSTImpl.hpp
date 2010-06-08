@@ -48,7 +48,7 @@
 #include "Utility.hpp"
 #include <bitset>
 
-#include <sirikata/util/SerializationCheck.hpp>
+#include <sirikata/core/util/SerializationCheck.hpp>
 
 
 namespace CBR {

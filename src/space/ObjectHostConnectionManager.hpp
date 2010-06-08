@@ -38,8 +38,8 @@
 #include "Network.hpp"
 #include "Message.hpp"
 #include "Address4.hpp"
-#include <sirikata/network/IOService.hpp>
-#include <sirikata/network/StreamListener.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 
 namespace CBR {
 
@@ -115,7 +115,7 @@ private:
     /** Reading and writing handling for ObjectHostConnections. */
 
     // Handle async reading callbacks for this connection
-    Sirikata::Network::Stream::ReceivedResponse handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk);
+    void handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
 
 
     // Utility methods which we can post to the main strand to ensure they operate safely.

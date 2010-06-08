@@ -35,7 +35,7 @@
 
 #include "ODPFlowScheduler.hpp"
 #include "Queue.hpp"
-#include <sirikata/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 
 namespace CBR {
 

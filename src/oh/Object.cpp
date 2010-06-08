@@ -37,7 +37,7 @@
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include "Statistics.hpp"
-#include <network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
 #include "CBR_Prox.pbj.hpp"
@@ -209,7 +209,7 @@ void Object::connect() {
         );
 
 
-    
+
 }
 
 void Object::disconnect() {

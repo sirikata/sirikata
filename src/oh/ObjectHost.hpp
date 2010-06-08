@@ -41,7 +41,7 @@
 #include "Message.hpp"
 #include "SSTImpl.hpp"
 
-#include <sirikata/util/SerializationCheck.hpp>
+#include <sirikata/core/util/SerializationCheck.hpp>
 
 
 
@@ -235,7 +235,7 @@ private:
 
 
         // Callback for when the connection receives data
-        Sirikata::Network::Stream::ReceivedResponse handleRead(Sirikata::Network::Chunk& chunk);
+        void handleRead(Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
 
         // Main Strand
         std::vector<GotSpaceConnectionCallback> connectCallbacks;

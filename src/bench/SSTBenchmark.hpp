@@ -34,8 +34,8 @@
 #define _CBR_SST_BENCHMARK_HPP_
 
 #include "Benchmark.hpp"
-#include "sirikata/network/Stream.hpp"
-#include "sirikata/network/StreamListener.hpp"
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 
 namespace CBR {
 
@@ -62,8 +62,8 @@ class SSTBenchmark : public Benchmark {
     void pingPoller();
     void connected(Sirikata::Network::Stream::ConnectionStatus,const std::string&reason);
     void remoteConnected(Sirikata::Network::Stream*strm,Sirikata::Network::Stream::ConnectionStatus,const std::string&reason);
-    Sirikata::Network::Stream::ReceivedResponse computePingTime(Sirikata::Network::Chunk&chk);
-    Sirikata::Network::Stream::ReceivedResponse bouncePing(Sirikata::Network::Stream*, Sirikata::Network::Chunk&chk);
+    void computePingTime(Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
+    void bouncePing(Sirikata::Network::Stream*, Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
     void newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb);
 
 

@@ -7,8 +7,8 @@
 #include "asyncConnectionGet.hpp"
 
 #include "../../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
-#include <sirikata/network/Asio.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include "../../OSegLookupTraceToken.hpp"
 
 

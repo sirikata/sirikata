@@ -32,7 +32,7 @@
 
 #include "PollingService.hpp"
 #include "Context.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace CBR {
 

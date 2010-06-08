@@ -41,14 +41,14 @@
 #include "TimeProfiler.hpp"
 #include "Message.hpp"
 
-#include <sirikata/util/SerializationCheck.hpp>
+#include <sirikata/core/util/SerializationCheck.hpp>
 
 namespace CBR {
 class Scenario : public Service{
 public:
     Scenario(){}
     ~Scenario(){}
-    virtual void initialize(ObjectHostContext* context)=0;    
+    virtual void initialize(ObjectHostContext* context)=0;
 };
 }
 #endif

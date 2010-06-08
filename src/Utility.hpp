@@ -33,29 +33,29 @@
 #ifndef _CBR_UTILITY_HPP_
 #define _CBR_UTILITY_HPP_
 
-#include <sirikata/util/Platform.hpp>
-#include <sirikata/util/Vector3.hpp>
-#include <sirikata/util/Vector4.hpp>
-#include <sirikata/util/BoundingBox.hpp>
-#include <sirikata/util/BoundingSphere.hpp>
-#include <sirikata/util/SolidAngle.hpp>
-#include <sirikata/util/UUID.hpp>
-#include <sirikata/options/Options.hpp>
-#include <sirikata/util/Time.hpp>
-#include <sirikata/util/TemporalValue.hpp>
-#include <sirikata/util/Extrapolation.hpp>
-#include <sirikata/util/AtomicTypes.hpp>
-#include <sirikata/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Vector3.hpp>
+#include <sirikata/core/util/Vector4.hpp>
+#include <sirikata/core/util/BoundingBox.hpp>
+#include <sirikata/core/util/BoundingSphere.hpp>
+#include <sirikata/core/util/SolidAngle.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/TemporalValue.hpp>
+#include <sirikata/core/util/Extrapolation.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 
-#include <sirikata/network/IOService.hpp>
-#include <sirikata/network/IOServiceFactory.hpp>
-#include <sirikata/network/IOWork.hpp>
-#include <sirikata/network/IOStrand.hpp>
-#include <sirikata/network/IOTimer.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOWork.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
-#include <sirikata/util/Thread.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
-#include <sirikata/util/ListenerProvider.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace CBR {
 

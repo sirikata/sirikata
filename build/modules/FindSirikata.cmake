@@ -32,10 +32,10 @@
 
 # Look for the header, first in the user-specified location and then in the system locations
 SET(Sirikata_INCLUDE_DOC "The directory containing the header file sirikata/util/Platform.hpp")
-FIND_PATH(Sirikata_INCLUDE_DIR NAMES sirikata/util/Platform.hpp PATHS ${SIRIKATA_INSTALL_ROOT} ${SIRIKATA_INSTALL_ROOT}/include
+FIND_PATH(Sirikata_INCLUDE_DIR NAMES sirikata/core/util/Platform.hpp PATHS ${SIRIKATA_INSTALL_ROOT} ${SIRIKATA_INSTALL_ROOT}/include
           DOC ${Sirikata_INCLUDE_DOC} NO_DEFAULT_PATH)
 IF(NOT Sirikata_INCLUDE_DIR)  # now look in system locations
-  FIND_PATH(Sirikata_INCLUDE_DIR NAMES sirikata/util/Platform.hpp
+  FIND_PATH(Sirikata_INCLUDE_DIR NAMES sirikata/core/util/Platform.hpp
             DOC ${Sirikata_INCLUDE_DOC})
 ENDIF()
 

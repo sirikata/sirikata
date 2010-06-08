@@ -1,9 +1,9 @@
 #include "TCPNetwork.hpp"
-#include "sirikata/network/IOServiceFactory.hpp"
-#include "sirikata/network/IOService.hpp"
-#include "sirikata/network/StreamFactory.hpp"
-#include "sirikata/network/StreamListenerFactory.hpp"
-#include "sirikata/network/StreamListener.hpp"
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 #include "Options.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
@@ -414,7 +414,7 @@ void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream,
 
     setCallbacks(
         std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote_stream, _1, _2),
-        std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote_stream, ind_recv_stream, _1),
+        std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote_stream, ind_recv_stream, _1, _2),
         std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote_stream)
     );
 
@@ -450,13 +450,13 @@ void TCPNetwork::connectionCallback(RemoteStreamWPtr wstream, const Sirikata::Ne
     }
 }
 
-Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk&data) {
+void TCPNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk&data, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
     RemoteStreamPtr remote_stream(wstream);
 
     // If we've lost all references to the RemoteStream just ignore
     if (!remote_stream) {
         TCPNET_LOG(error,"Ignoring received data; invalid weak reference to remote stream.");
-        return Sirikata::Network::Stream::AcceptedData;
+        return;
     }
 
     // If the stream hasn't been marked as connected, this *should* be
@@ -465,7 +465,7 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(Re
         assert( *ind_recv_strm == NULL );
         // The stream might already be closing.  If so, just ignore this data.
         if (remote_stream->shutting_down)
-            return Sirikata::Network::Stream::AcceptedData;
+            return;
 
         // Remove from the list of pending connections
         TCPNET_LOG(info,"Parsing endpoint information for incomplete remote-initiated remote stream.");
@@ -499,15 +499,14 @@ Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(Re
         bool was_empty = false;
         bool pushed_success = remote_stream->push(data, &was_empty);
         if (!pushed_success) {
-            return Sirikata::Network::Stream::PauseReceive;
+            pause();
+            return;
         }
         else {
             if (was_empty)
                 mReceiveListener->networkReceivedData( recv_strm );
         }
     }
-
-    return Sirikata::Network::Stream::AcceptedData;
 }
 
 void TCPNetwork::readySendCallback(RemoteStreamWPtr wstream) {
@@ -579,7 +578,7 @@ TCPNetwork::TCPSendStream* TCPNetwork::openConnection(const ServerID& dest) {
 
     Sirikata::Network::Stream::SubstreamCallback sscb(&Sirikata::Network::Stream::ignoreSubstreamCallback);
     Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
-    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, ind_recv_stream, _1));
+    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, ind_recv_stream, _1, _2));
     Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
     remote->stream->connect(convertAddress4ToSirikata(*addr),
                             sscb,

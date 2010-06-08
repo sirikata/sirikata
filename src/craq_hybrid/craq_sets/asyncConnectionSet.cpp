@@ -4,14 +4,14 @@
 #include <map>
 #include <utility>
 #include "../../SpaceContext.hpp"
-#include <sirikata/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include "../../Timer.hpp"
 #include "../../VWTypes.hpp"
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <sirikata/network/Asio.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include <functional>
 
 namespace CBR
@@ -30,7 +30,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStran
     mReadyStateChangedCallback(readyStateChangedCb)
   {
     mReady = NEED_NEW_SOCKET; //starts in the state that it's requesting a new socket.  Presumably asyncCraq reads that we need a new socket, and directly calls "initialize" on this class
-    
+
   }
 
   int AsyncConnectionSet::numStillProcessing()

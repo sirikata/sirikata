@@ -30,16 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "sirikata/network/IOServiceFactory.hpp"
-#include "sirikata/network/IOService.hpp"
-#include "sirikata/network/StreamFactory.hpp"
-#include "sirikata/network/StreamListenerFactory.hpp"
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/StreamFactory.hpp>
+#include <sirikata/core/network/StreamListenerFactory.hpp>
 
 #include <functional>
 #include "SSTBenchmark.hpp"
 #include "Timer.hpp"
 #include "Options.hpp"
-#include "sirikata/util/PluginManager.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
 #define ITERATIONS 1000000
 
 namespace CBR {
@@ -159,7 +159,7 @@ void SSTBenchmark::remoteConnected(Sirikata::Network::Stream*strm, Sirikata::Net
 }
 
 
-Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::computePingTime(Sirikata::Network::Chunk&chk){
+void SSTBenchmark::computePingTime(Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pause){
     Time cur=Time::now(Duration::zero());
     size_t index=0;
     if (chk.size()>=8) {
@@ -189,18 +189,16 @@ Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::computePingTime(Sirika
     if (mPingRate.toSeconds()==0) {
         pingPoller();
     }
-    return Sirikata::Network::Stream::AcceptedData;
 }
-Sirikata::Network::Stream::ReceivedResponse SSTBenchmark::bouncePing(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk&chk){
+void SSTBenchmark::bouncePing(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pause){
     if (!mForceStop) {
         strm->send(chk,mOrdered?Sirikata::Network::ReliableOrdered:Sirikata::Network::ReliableUnordered);
     }
-    return Sirikata::Network::Stream::AcceptedData;
 }
 void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb) {
     if (newStream) {
       cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
-         std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,std::tr1::placeholders::_1),
+          std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
            &Sirikata::Network::Stream::ignoreReadySendCallback);
     }
 }
@@ -215,7 +213,7 @@ void SSTBenchmark::start() {
         mStream->connect(Sirikata::Network::Address(mHost,mPort),
                          &Sirikata::Network::Stream::ignoreSubstreamCallback,
                          std::tr1::bind(&SSTBenchmark::connected,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
-                         std::tr1::bind(&SSTBenchmark::computePingTime,this,std::tr1::placeholders::_1),
+            std::tr1::bind(&SSTBenchmark::computePingTime,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
                          &Sirikata::Network::Stream::ignoreReadySendCallback);
 
     }else {

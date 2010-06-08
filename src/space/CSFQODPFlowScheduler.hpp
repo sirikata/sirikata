@@ -36,7 +36,7 @@
 #include "ODPFlowScheduler.hpp"
 #include "Queue.hpp"
 #include "RateEstimator.hpp"
-#include <sirikata/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 
 //#define CSFQODP_DEBUG
 

@@ -1,10 +1,9 @@
 #ifndef _CBR_OSEG_HASHER_HPP
 #define _CBR_OSEG_HASHER_HPP
 
-//#include <sirikata/util/Standard.hh>
-#include <sirikata/util/Platform.hpp>
-#include <sirikata/util/UUID.hpp>
-#include <sirikata/util/boost_uuid.hpp>
+//#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
 #include "Server.hpp"
 
 
@@ -21,8 +20,8 @@ namespace CBR
     static uint32 hash(ServerID sID);
     static uint32 hash(const UUID& obj_id);
 
-    
+
   };
 }
-  
+
 #endif

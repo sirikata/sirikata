@@ -50,7 +50,7 @@ if [[ "x${ARCH}" == "x" ]]; then
 fi
 
 
-sirikata_commit="1166e96f6f40446435a3"
+sirikata_commit="6bc125df5415c59dab5a"
 
 
 if [ ${opt_components_sirikata} == "true" ]; then
