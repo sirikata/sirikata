@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
-        String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
+        /*String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
         LocationVisualization lea(STATS_TRACE_FILE, nservers, cseg);
 
         if (vistype == "object")
@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
         else if (vistype == "server")
             lea.displayRandomServerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
 
-        exit(0);
+        exit(0);*/
     }
     else if ( GetOption(ANALYSIS_LATENCY)->as<bool>() ) {
         LatencyAnalysis la(STATS_TRACE_FILE,nservers);

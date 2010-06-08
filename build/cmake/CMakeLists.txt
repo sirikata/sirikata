@@ -193,12 +193,12 @@ VERIFY_VERSION(Boost 1 35 0)
 
 
 #dependency: glut
-FIND_PACKAGE(GLUT)
+#FIND_PACKAGE(GLUT)
 
 FIND_PACKAGE(GSL)
-IF(NOT GLUT_FOUND)
-  MESSAGE(SEND_ERROR "Couldn't find GLUT.")
-ENDIF(NOT GLUT_FOUND)
+#IF(NOT GLUT_FOUND)
+#  MESSAGE(SEND_ERROR "Couldn't find GLUT.")
+#ENDIF(NOT GLUT_FOUND)
 
 #dependency: prox
 IF(EXISTS ${DEPENDENCIES_ROOT}/installed-prox)
@@ -237,7 +237,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${CBR_SOURCE_DIR}/analysis # FIXME Should go away, preferring to store analysis code there, or be moved to the cbr/analysis binaries specifically
         ${CBR_PROTOCOL_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
-        ${GLUT_INCLUDE_DIR}
+        #${GLUT_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Sirikata_PBJ_ROOT}
@@ -363,7 +363,7 @@ SET(ANALYSIS_SOURCES
   ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
   ${CBR_SOURCE_DIR}/analysis/MessageLatency.cpp
   ${CBR_SOURCE_DIR}/analysis/ObjectLatency.cpp
-  ${CBR_SOURCE_DIR}/Visualization.cpp
+  #${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/analysis/main.cpp
 )
 
@@ -474,7 +474,7 @@ TARGET_LINK_LIBRARIES(analysis
         ${Boost_REGEX_LIBRARY}
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
-        ${GLUT_LIBRARIES}
+        #${GLUT_LIBRARIES}
         ${GCRYPT_LIBRARIES}
         )
 
