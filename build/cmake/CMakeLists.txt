@@ -1828,12 +1828,11 @@ INSTALL(DIRECTORY
           # note: the trailing slashes avoid prepending the directory name
           # itself to the installed files
           ${LIBCORE_INCLUDE_DIR}/
-          ${LIBCORE_SOURCE_DIR}/
           ${LIBSPACE_INCLUDE_DIR}/
           ${LIBPROXIMITY_INCLUDE_DIR}/
           ${LIBOH_INCLUDE_DIR}/
           ${LIBPROXYOBJECT_INCLUDE_DIR}/
-        DESTINATION include/sirikata
+        DESTINATION include
         PATTERN "*.cpp" EXCLUDE
         PATTERN "*.cc" EXCLUDE
         PATTERN "*.hh" EXCLUDE
