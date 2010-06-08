@@ -62,9 +62,9 @@ private:
     virtual void objectHostMigratedObject(ObjectHost* oh, const UUID& objid, const ServerID& from_server, const ServerID& to_server);
     virtual void objectHostDisconnectedObject(ObjectHost* oh, const UUID& objid, const ServerID& server);
 
-    typedef std::tr1::unordered_set<UUID, UUIDHasher> ObjectIDSet;
+    typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
     typedef std::tr1::unordered_map<ServerID, ObjectIDSet> ObjectsByServerMap;
-    typedef std::tr1::unordered_map<UUID, Object*, UUIDHasher> ObjectsByID;
+    typedef std::tr1::unordered_map<UUID, Object*, UUID::Hasher> ObjectsByID;
 
     ObjectHost* mParent;
 

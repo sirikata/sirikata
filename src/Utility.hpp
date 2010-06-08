@@ -93,11 +93,6 @@ typedef Sirikata::BoundingSphere<float64> BoundingSphere3d;
 typedef Sirikata::SolidAngle SolidAngle;
 
 typedef Sirikata::UUID UUID;
-struct UUIDHasher {
-    size_t operator()(const UUID& uid) const {
-        return *(uint32*)uid.getArray().data();
-    }
-};
 
 typedef std::string String;
 

@@ -49,7 +49,7 @@ namespace CBR
   class CraqObjectSegmentation : public ObjectSegmentation
   {
   private:
-      typedef std::tr1::unordered_map<UUID, CraqEntry, UUIDHasher> ObjectSet;
+      typedef std::tr1::unordered_map<UUID, CraqEntry, UUID::Hasher> ObjectSet;
 
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
@@ -78,7 +78,7 @@ namespace CBR
     //end for logging.
 
     std::map<std::string, UUID > mapDataKeyToUUID;
-      typedef std::tr1::unordered_map<UUID,TransLookup,UUIDHasher> InTransitMap;
+      typedef std::tr1::unordered_map<UUID,TransLookup,UUID::Hasher> InTransitMap;
       InTransitMap mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
     boost::mutex inTransOrLookup_m;
 

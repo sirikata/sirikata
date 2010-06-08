@@ -70,7 +70,7 @@ class LocalForwarder {
      */
     bool tryForward(CBR::Protocol::Object::ObjectMessage* msg);
   private:
-    typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUIDHasher> ObjectConnectionMap;
+    typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUID::Hasher> ObjectConnectionMap;
 
     SpaceContext* mContext;
     ObjectConnectionMap mActiveConnections;

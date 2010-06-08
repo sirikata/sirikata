@@ -320,7 +320,7 @@ private:
         };
         typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;
-        typedef std::tr1::unordered_map<UUID, ObjectInfo, UUIDHasher> ObjectInfoMap;
+        typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
         ObjectInfoMap mObjectInfo;
     };
     ObjectConnections mObjectConnections;

@@ -32,7 +32,7 @@ namespace CBR
   private:
     Context* mContext;
 
-    typedef std::tr1::unordered_map<UUID,CraqCacheRecordLRUOriginal*,UUIDHasher> IDRecordMap;
+      typedef std::tr1::unordered_map<UUID,CraqCacheRecordLRUOriginal*,UUID::Hasher> IDRecordMap;
     IDRecordMap idRecMap;
 
     typedef std::multimap<int,CraqCacheRecordLRUOriginal*> TimeRecordMap;

@@ -80,7 +80,7 @@ private:
         OSegLookupVector::iterator end();
     };
 
-    typedef std::tr1::unordered_map<UUID, OSegLookupList, UUIDHasher> LookupMap;
+    typedef std::tr1::unordered_map<UUID, OSegLookupList, UUID::Hasher> LookupMap;
 
 
     IOStrand* mNetworkStrand;

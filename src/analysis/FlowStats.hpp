@@ -52,7 +52,7 @@ private:
         RecordedMotionPath path;
         BoundingSphere3f bounds;
     };
-    typedef std::tr1::unordered_map<UUID, ObjectInfo, UUIDHasher> ObjectMap;
+    typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectMap;
     ObjectMap mObjectMap;
 
     struct ObjectPair {

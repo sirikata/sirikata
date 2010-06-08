@@ -71,7 +71,7 @@ private:
         BoundingSphere3f bounds;
         bool local;
     };
-    typedef std::tr1::unordered_map<UUID, LocationInfo, UUIDHasher> LocationMap;
+    typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
 
     LocationMap mLocations;
 }; // class StandardLocationService

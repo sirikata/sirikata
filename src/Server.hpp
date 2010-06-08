@@ -127,7 +127,7 @@ private:
 
     ObjectHostConnectionManager* mObjectHostConnectionManager;
 
-    typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUIDHasher> ObjectConnectionMap;
+    typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUID::Hasher> ObjectConnectionMap;
 
     ObjectConnectionMap mObjects; // NOTE: only Forwarder and LocalForwarder
                                   // should actually use the connection, this is
@@ -135,7 +135,7 @@ private:
                                   // properly
     ObjectConnectionMap mObjectsAwaitingMigration;
 
-    typedef std::tr1::unordered_map<UUID, CBR::Protocol::Migration::MigrationMessage*, UUIDHasher> ObjectMigrationMap;
+    typedef std::tr1::unordered_map<UUID, CBR::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
     ObjectMigrationMap mObjectMigrations;
 
     typedef std::tr1::unordered_set<ObjectConnection*> ObjectConnectionSet;

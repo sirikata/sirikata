@@ -19,7 +19,7 @@ class LocationVisualization :public LocationErrorAnalysis {
                        // being displayed
     Duration mSamplingRate;
 
-    typedef std::tr1::unordered_map<UUID,TimedMotionVector3f,UUIDHasher> VisibilityMap;
+    typedef std::tr1::unordered_map<UUID,TimedMotionVector3f,UUID::Hasher> VisibilityMap;
     VisibilityMap mVisible;
     VisibilityMap mInvisible;
 
@@ -28,7 +28,7 @@ class LocationVisualization :public LocationErrorAnalysis {
     std::vector<SegmentationChangeEvent*> mSegmentationChangeEvents;
     std::vector<SegmentationChangeEvent*>::iterator mSegmentationChangeIterator;
 
-    typedef std::tr1::unordered_map<UUID, MotionPath*, UUIDHasher> MotionPathMap;
+    typedef std::tr1::unordered_map<UUID, MotionPath*, UUID::Hasher> MotionPathMap;
     MotionPathMap mObjectMotions;
 
     void handleObjectEvent(const UUID& obj, bool add, const TimedMotionVector3f& loc);
