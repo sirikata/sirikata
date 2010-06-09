@@ -40,7 +40,7 @@
 #define ALPHA 0.3
 
 
-namespace CBR {
+namespace Sirikata {
 
 bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
     return sli1.mLoadReading < sli2.mLoadReading;
@@ -115,7 +115,7 @@ void LoadMonitor::sendLoadReadings() {
   //send mCurrentLoadReading to other servers
   uint32 total_servers = mCoordinateSegmentation->numServers();
 
-  CBR::Protocol::CSeg::LoadMessage load_msg;
+  Sirikata::Protocol::CSeg::LoadMessage load_msg;
   load_msg.set_load(mAveragedLoadReading);
   std::string serialized_load = serializePBJMessage(load_msg);
 
@@ -137,14 +137,14 @@ void LoadMonitor::sendLoadReadings() {
 }
 
 void LoadMonitor::receiveMessage(Message* msg) {
-    CBR::Protocol::CSeg::LoadMessage load_msg;
+    Sirikata::Protocol::CSeg::LoadMessage load_msg;
     bool parsed = parsePBJMessage(&load_msg, msg->payload());
 
     if (parsed)
         loadStatusMessage(msg->source_server(), load_msg);
 }
 
-void LoadMonitor::loadStatusMessage(const ServerID source, const CBR::Protocol::CSeg::LoadMessage& load_msg){
+void LoadMonitor::loadStatusMessage(const ServerID source, const Sirikata::Protocol::CSeg::LoadMessage& load_msg){
   mRemoteLoadReadings[source] = load_msg.load();
 }
 

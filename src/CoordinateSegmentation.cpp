@@ -32,7 +32,7 @@
 
 #include "CoordinateSegmentation.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
@@ -61,4 +61,4 @@ void CoordinateSegmentation::poll() {
     mServiceStage->finished();
 }
 
-} // namespace CBR
+} // namespace Sirikata

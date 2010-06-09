@@ -15,7 +15,7 @@
 #ifndef __COMPLETE_CACHE_HPP__
 #define __COMPLETE_CACHE_HPP__
 
-namespace CBR
+namespace Sirikata
 {
 
   typedef double (*CompleteCacheScoreFunc) (const FCacheRecord* a);

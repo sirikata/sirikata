@@ -15,7 +15,7 @@
 #include "../../Utility.hpp"
 #include "../../OSegLookupTraceToken.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 //constructor
   AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>&readyStateChangedCallback)

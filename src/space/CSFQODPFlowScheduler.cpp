@@ -48,7 +48,7 @@
 
 #define CSFQLOG(level, msg) SILOG(csfqodp,level, mContext->id() << "->" << mDestServer << ": " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
 CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size, LocationService* loc)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
@@ -95,7 +95,7 @@ CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
 }
 
 // ODP push interface
-bool CSFQODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&source_entry, const CraqEntry& dest_entry) {
+bool CSFQODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&source_entry, const CraqEntry& dest_entry) {
     boost::lock_guard<boost::mutex> lck(mPushMutex); // FIXME
 
     ObjectPair op(msg->source_object(), msg->dest_object());
@@ -417,4 +417,4 @@ float CSFQODPFlowScheduler::normalizedFlowWeight(float unnorm_weight) {
     return unnorm_weight / mTotalActiveWeight;
 }
 
-} // namespace CBR
+} // namespace Sirikata

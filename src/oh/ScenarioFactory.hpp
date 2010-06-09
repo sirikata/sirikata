@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Factory.hpp>
 #include "Scenario.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class ScenarioFactory: public Sirikata::Factory1<Scenario*,Sirikata::String>,public Sirikata::AutoSingleton<ScenarioFactory> {
 public:
     ScenarioFactory();

@@ -51,7 +51,7 @@
 #include <sirikata/core/util/SerializationCheck.hpp>
 
 
-namespace CBR {
+namespace Sirikata {
 
 template <typename EndObjectType>
 class EndPoint {
@@ -160,7 +160,7 @@ public:
 
   /* This function will also have to be re-implemented to support receiving
      using other kinds of packets. For now, I'll implement only for ODP. */
-  virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg)  {
+  virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
     Connection<EndPointType>::handleReceive(mRouter,
                                   EndPoint<UUID> (msg.source_object(), msg.source_port()),
                                   EndPoint<UUID> (msg.dest_object(), msg.dest_port()),
@@ -306,7 +306,7 @@ private:
     mDatagramLayer->dispatcher()->registerObjectMessageRecipient(localEndPoint.port, this);
   }
 
-  void sendSSTChannelPacket(CBR::Protocol::SST::SSTChannelHeader& sstMsg) {
+  void sendSSTChannelPacket(Sirikata::Protocol::SST::SSTChannelHeader& sstMsg) {
     if (mState == CONNECTION_DISCONNECTED) return;
 
     std::string buffer = serializePBJMessage(sstMsg);
@@ -365,7 +365,7 @@ private:
       for (int i = 0; (!mQueuedSegments.empty()) && i < mCwnd; i++) {
 	  boost::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
 
-	  CBR::Protocol::SST::SSTChannelHeader sstMsg;
+	  Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
 	  sstMsg.set_channel_id( mRemoteChannelID );
 	  sstMsg.set_transmit_sequence_number(segment->mChannelSequenceNumber);
 	  sstMsg.set_ack_count(1);
@@ -595,8 +595,8 @@ private:
 
     assert(length <= MAX_PAYLOAD_SIZE);
 
-    CBR::Protocol::SST::SSTStreamHeader* stream_msg =
-                       new CBR::Protocol::SST::SSTStreamHeader();
+    Sirikata::Protocol::SST::SSTStreamHeader* stream_msg =
+                       new Sirikata::Protocol::SST::SSTStreamHeader();
 
     std::string str = std::string( (char*)data, length);
 
@@ -614,7 +614,7 @@ private:
       }
     }
     else {
-      CBR::Protocol::SST::SSTChannelHeader sstMsg;
+      Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
       sstMsg.set_channel_id( mRemoteChannelID );
       sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
       sstMsg.set_ack_count(1);
@@ -660,7 +660,7 @@ private:
     }
   }
 
-  virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg)  {
+  virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
     receiveMessage((void*) msg.payload().data(), msg.payload().size() );
   }
 
@@ -669,8 +669,8 @@ private:
     uint8* data = (uint8*) recv_buff;
     std::string str = std::string((char*) data, len);
 
-    CBR::Protocol::SST::SSTChannelHeader* received_msg =
-                       new CBR::Protocol::SST::SSTChannelHeader();
+    Sirikata::Protocol::SST::SSTChannelHeader* received_msg =
+                       new Sirikata::Protocol::SST::SSTChannelHeader();
     bool parsed = parsePBJMessage(received_msg, str);
 
     mLastReceivedSequenceNumber = received_msg->transmit_sequence_number();
@@ -717,12 +717,12 @@ private:
     uint8* data = (uint8*) recv_buff;
     std::string str = std::string((char*) data, len);
 
-    CBR::Protocol::SST::SSTChannelHeader* received_channel_msg =
-                       new CBR::Protocol::SST::SSTChannelHeader();
+    Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg =
+                       new Sirikata::Protocol::SST::SSTChannelHeader();
     bool parsed = parsePBJMessage(received_channel_msg, str);
 
-    CBR::Protocol::SST::SSTStreamHeader* received_stream_msg =
-                       new CBR::Protocol::SST::SSTStreamHeader();
+    Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg =
+                       new Sirikata::Protocol::SST::SSTStreamHeader();
     parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
 
 
@@ -746,7 +746,7 @@ private:
     delete received_stream_msg ;
   }
 
-  void handleInitPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleInitPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -779,7 +779,7 @@ private:
     }
   }
 
-  void handleReplyPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleReplyPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -802,7 +802,7 @@ private:
     }
   }
 
-  void handleDataPacket(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleDataPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
@@ -816,8 +816,8 @@ private:
     }
   }
 
-  void handleAckPacket(CBR::Protocol::SST::SSTChannelHeader* received_channel_msg,
-		       CBR::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  void handleAckPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+		       Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
   {
     //printf("ACK received : offset = %d\n", (int)received_channel_msg->ack_sequence_number() );
     LSID incomingLsid = received_stream_msg->lsid();
@@ -833,7 +833,7 @@ private:
     }
   }
 
-  void handleDatagram(CBR::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleDatagram(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
     uint8* payload = (uint8*) received_stream_msg->payload().data();
     uint payload_size = received_stream_msg->payload().size();
 
@@ -851,7 +851,7 @@ private:
 
     boost::lock_guard<boost::mutex> lock(mQueueMutex);
 
-    CBR::Protocol::SST::SSTChannelHeader sstMsg;
+    Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
     sstMsg.set_channel_id( mRemoteChannelID );
     sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
     sstMsg.set_ack_count(1);
@@ -958,7 +958,7 @@ public:
 	            MAX_PAYLOAD_SIZE :
            	    (length-currOffset);
 
-      CBR::Protocol::SST::SSTStreamHeader sstMsg;
+      Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
       sstMsg.set_lsid( lsid );
       sstMsg.set_type(sstMsg.DATAGRAM);
       sstMsg.set_flags(0);
@@ -1070,7 +1070,7 @@ public:
     char* data = (char*) recv_buffer;
     std::string str = std::string(data, len);
 
-    CBR::Protocol::SST::SSTChannelHeader* received_msg = new CBR::Protocol::SST::SSTChannelHeader();
+    Sirikata::Protocol::SST::SSTChannelHeader* received_msg = new Sirikata::Protocol::SST::SSTChannelHeader();
     bool parsed = parsePBJMessage(received_msg, str);
 
     uint8 channelID = received_msg->channel_id();
@@ -1671,7 +1671,7 @@ private:
     }
   }
 
-  void receiveData( CBR::Protocol::SST::SSTStreamHeader* streamMsg,
+  void receiveData( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len )
   {
     if (streamMsg->type() == streamMsg->REPLY) {
@@ -1794,7 +1794,7 @@ private:
   void sendInitPacket(void* data, uint32 len) {
     //std::cout <<  mConnection.lock()->localEndPoint().endPoint.toString()  << " sending Init packet\n";
 
-    CBR::Protocol::SST::SSTStreamHeader sstMsg;
+    Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.INIT);
     sstMsg.set_flags(0);
@@ -1813,7 +1813,7 @@ private:
   }
 
   void sendAckPacket() {
-    CBR::Protocol::SST::SSTStreamHeader sstMsg;
+    Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
     sstMsg.set_flags(0);
@@ -1828,7 +1828,7 @@ private:
   }
 
   uint64 sendDataPacket(const void* data, uint32 len, uint32 offset) {
-    CBR::Protocol::SST::SSTStreamHeader sstMsg;
+    Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.DATA);
     sstMsg.set_flags(0);
@@ -1847,7 +1847,7 @@ private:
   void sendReplyPacket(void* data, uint32 len, LSID remoteLSID) {
     //printf("Sending Reply packet\n");
 
-    CBR::Protocol::SST::SSTStreamHeader sstMsg;
+    Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.REPLY);
     sstMsg.set_flags(0);

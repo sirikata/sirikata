@@ -33,7 +33,7 @@
 #include "BenchmarkRunner.hpp"
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 BenchmarkRunner::BenchmarkRunner(BenchmarkFactory& bf, const Duration& timeout)
         : mFactory(bf),
@@ -102,4 +102,4 @@ void BenchmarkRunner::handleTimeout(Benchmark* bm) {
     // And exit of IOService will consequently call delete bm
 }
 
-} // namespace CBR
+} // namespace Sirikata

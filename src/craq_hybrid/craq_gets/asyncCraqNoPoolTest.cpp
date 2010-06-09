@@ -23,7 +23,7 @@
 #define WHICH_SERVER        "localhost"
 #define WHICH_PORT          "10499"
 
-namespace CBR
+namespace Sirikata
 {
 
 
@@ -79,7 +79,7 @@ int main (int argc, char** argv)
 }
 
 
-namespace CBR
+namespace Sirikata
 {
 
 void runLoad()

@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_ANALYSIS_HPP_
-#define _CBR_ANALYSIS_HPP_
+#ifndef _SIRIKATA_ANALYSIS_HPP_
+#define _SIRIKATA_ANALYSIS_HPP_
 
 #include "Utility.hpp"
 #include "MotionVector.hpp"
@@ -39,7 +39,7 @@
 #include "OSegLookupTraceToken.hpp"
 
 
-namespace CBR {
+namespace Sirikata {
 
 struct Event;
 struct ObjectEvent;
@@ -470,6 +470,6 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers);
  */
 void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const String& outfilename);
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_ANALYSIS_HPP_
+#endif //_SIRIKATA_ANALYSIS_HPP_

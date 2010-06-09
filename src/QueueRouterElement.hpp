@@ -30,15 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_QUEUE_ROUTER_ELEMENT_
-#define _CBR_QUEUE_ROUTER_ELEMENT_
+#ifndef _SIRIKATA_QUEUE_ROUTER_ELEMENT_
+#define _SIRIKATA_QUEUE_ROUTER_ELEMENT_
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** A queue router element which buffers packets. The size of the queue and
  *  a method for determining the size of a packet is provided.  If the maximum
@@ -147,6 +147,6 @@ private:
     bool mWentNonEmpty;
 }; // class QueueRouterElement
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_QUEUE_ROUTER_ELEMENT_
+#endif //_SIRIKATA_QUEUE_ROUTER_ELEMENT_

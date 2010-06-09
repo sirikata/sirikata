@@ -4,7 +4,7 @@
 #include "CraqEntry.hpp"
 #include "Base64.hpp"
 
-namespace CBR {
+namespace Sirikata {
 void CraqEntry::deserialize(unsigned char xinput[CRAQ_SERVER_SIZE]) {
     unsigned char input[12]={0};
     input[11]='=';

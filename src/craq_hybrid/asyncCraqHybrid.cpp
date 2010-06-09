@@ -6,7 +6,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../ObjectSegmentation.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 
   AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg)

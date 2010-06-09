@@ -33,7 +33,7 @@
 #include "RegionODPFlowScheduler.hpp"
 #include "ServerWeightCalculator.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 RegionODPFlowScheduler::RegionODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
@@ -49,7 +49,7 @@ RegionODPFlowScheduler::~RegionODPFlowScheduler() {
 }
 
 // ODP push interface
-bool RegionODPFlowScheduler::push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&,const CraqEntry&) {
+bool RegionODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&,const CraqEntry&) {
     Message* serv_msg = createMessageFromODP(msg, mDestServer);
     if (!mQueue.push(serv_msg, false)) {
         delete serv_msg;
@@ -131,4 +131,4 @@ float RegionODPFlowScheduler::totalReceiverUsedWeight() {
     return mWeightCalculator->weight(mContext->id(), mDestServer);
 }
 
-} // namespace CBR
+} // namespace Sirikata

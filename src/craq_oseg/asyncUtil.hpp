@@ -4,7 +4,7 @@
 #include <string>
 #include "../OSegLookupTraceToken.hpp"
 #include "CraqEntry.hpp"
-namespace CBR
+namespace Sirikata
 {
 
 const int CRAQ_DATA_RESPONSE_SIZE = 70;

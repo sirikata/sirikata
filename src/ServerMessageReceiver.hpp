@@ -30,17 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_MESSAGE_RECEIVER_HPP_
-#define _CBR_SERVER_MESSAGE_RECEIVER_HPP_
+#ifndef _SIRIKATA_SERVER_MESSAGE_RECEIVER_HPP_
+#define _SIRIKATA_SERVER_MESSAGE_RECEIVER_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "TimeProfiler.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "RateEstimator.hpp"
 
-namespace CBR{
+namespace Sirikata{
 
 class SpaceContext;
 class Message;
@@ -51,7 +51,7 @@ class Message;
  *  are received from the network it pushes them up to a listener which can
  *  handle them -- no queueing is performed internally.
  */
-class ServerMessageReceiver : public Network::ReceiveListener, CoordinateSegmentation::Listener {
+class ServerMessageReceiver : public SpaceNetwork::ReceiveListener, CoordinateSegmentation::Listener {
 public:
     class Listener {
       public:
@@ -62,7 +62,7 @@ public:
         virtual void serverMessageReceived(Message* msg) = 0;
     };
 
-    ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener);
+    ServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener);
     virtual ~ServerMessageReceiver();
 
     // Invoked by Forwarder when it needs to update the weight for a given
@@ -79,9 +79,9 @@ public:
         return mBlocked;
     }
 protected:
-    // Network::ReceiveListener Interface
-    virtual void networkReceivedConnection(Network::ReceiveStream* strm) = 0;
-    virtual void networkReceivedData(Network::ReceiveStream* strm) = 0;
+    // SpaceNetwork::ReceiveListener Interface
+    virtual void networkReceivedConnection(SpaceNetwork::ReceiveStream* strm) = 0;
+    virtual void networkReceivedData(SpaceNetwork::ReceiveStream* strm) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
     // ServerMessageReceiver Protected (Implementation) Interface
@@ -89,7 +89,7 @@ protected:
 
     SpaceContext* mContext;
     IOStrand* mReceiverStrand;
-    Network* mNetwork;
+    SpaceNetwork* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Listener* mListener;
 
@@ -105,6 +105,6 @@ protected:
     double mCapacityOverestimate;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_SERVER_MESSAGE_RECEIVER_HPP_
+#endif //_SIRIKATA_SERVER_MESSAGE_RECEIVER_HPP_

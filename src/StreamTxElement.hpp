@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_STREAM_TX_ELEMENT_HPP_
-#define _CBR_STREAM_TX_ELEMENT_HPP_
+#ifndef _SIRIKATA_STREAM_TX_ELEMENT_HPP_
+#define _SIRIKATA_STREAM_TX_ELEMENT_HPP_
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
@@ -39,7 +39,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** A Sirikata Network Stream transmit element.  This element pulls
  *  packets from upstream and ships them over a user provided network
@@ -250,6 +250,6 @@ private:
     ImplPtr mImpl;
 }; // class StreamTxElement
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_STREAM_TX_ELEMENT_HPP_
+#endif //_SIRIKATA_STREAM_TX_ELEMENT_HPP_

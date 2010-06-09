@@ -40,7 +40,7 @@
 #include "DistributedCoordinateSegmentation.hpp"
 
 int main(int argc, char** argv) {
-    using namespace CBR;
+    using namespace Sirikata;
 
     InitOptions();
     Trace::InitOptions();

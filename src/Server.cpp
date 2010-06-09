@@ -1,4 +1,4 @@
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include "CoordinateSegmentation.hpp"
@@ -21,7 +21,7 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR
+namespace Sirikata
 {
 
 Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
@@ -113,7 +113,7 @@ bool Server::isObjectConnected(const UUID& object_id) const {
     return (mObjects.find(object_id) != mObjects.end());
 }
 
-void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, CBR::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
+void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
     if (!sent) {
         mContext->mainStrand->post(
@@ -123,7 +123,7 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::Conn
     }
 }
 
-bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
     static UUID spaceID = UUID::null();
 
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
@@ -258,18 +258,18 @@ bool Server::handleSingleObjectHostMessageRouting() {
 }
 
 // Handle Session messages from an object
-void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
-    CBR::Protocol::Session::Container session_msg;
+void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
+    Sirikata::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
     assert(parse_success);
 
     // Connect or migrate messages
     if (session_msg.has_connect()) {
-        if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Fresh)
+        if (session_msg.connect().type() == Sirikata::Protocol::Session::Connect::Fresh)
         {
             handleConnect(oh_conn_id, *msg, session_msg.connect());
         }
-        else if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Migration)
+        else if (session_msg.connect().type() == Sirikata::Protocol::Session::Connect::Migration)
         {
             handleMigrate(oh_conn_id, *msg, session_msg.connect());
         }
@@ -290,7 +290,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     delete msg;
 }
 
-void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* obj_response) {
+void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
     if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
         mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
     }else {
@@ -298,7 +298,7 @@ void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID&
     }
 }
 // Handle Connect message from object
-void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg) {
+void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
     assert( !isObjectConnected(obj_id) );
 
@@ -314,11 +314,11 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         // (i.e. things were probably clamped invalidly)
 
         // Create and send redirect reply
-        CBR::Protocol::Session::Container response_container;
-        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-        response.set_response( CBR::Protocol::Session::ConnectResponse::Error );
+        Sirikata::Protocol::Session::Container response_container;
+        Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+        response.set_response( Sirikata::Protocol::Session::ConnectResponse::Error );
 
-        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+        Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
             mContext->id(),
             UUID::null(), OBJECT_PORT_SESSION,
             obj_id, OBJECT_PORT_SESSION,
@@ -337,12 +337,12 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         // to the wrong server => redirect
 
         // Create and send redirect reply
-        CBR::Protocol::Session::Container response_container;
-        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-        response.set_response( CBR::Protocol::Session::ConnectResponse::Redirect );
+        Sirikata::Protocol::Session::Container response_container;
+        Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+        response.set_response( Sirikata::Protocol::Session::ConnectResponse::Redirect );
         response.set_redirect(loc_server);
 
-        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+        Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
             mContext->id(),
             UUID::null(), OBJECT_PORT_SESSION,
             obj_id, OBJECT_PORT_SESSION,
@@ -398,11 +398,11 @@ void Server::finishAddObject(const UUID& obj_id)
     mForwarder->addObjectConnection(obj_id, conn);
 
     // Send reply back indicating that the connection was successful
-    CBR::Protocol::Session::Container response_container;
-    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
+    Sirikata::Protocol::Session::Container response_container;
+    Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
 
-    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+    Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),
         UUID::null(), OBJECT_PORT_SESSION,
         obj_id, OBJECT_PORT_SESSION,
@@ -421,7 +421,7 @@ void Server::finishAddObject(const UUID& obj_id)
 
 // Handle Migrate message from object
 //this is called by the receiving server.
-void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& migrate_msg)
+void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg)
 {
     UUID obj_id = container.source_object();
 
@@ -444,7 +444,7 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
 
 }
 
-void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container) {
+void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container) {
     UUID obj_id = container.source_object();
 
     // Allow the forwarder to send to ship messages to this connection
@@ -470,7 +470,7 @@ void Server::osegMigrationAcknowledged(const UUID& id) {
 void Server::receiveMessage(Message* msg)
 {
     if (msg->dest_port() == SERVER_PORT_MIGRATION) {
-        CBR::Protocol::Migration::MigrationMessage* mig_msg = new CBR::Protocol::Migration::MigrationMessage();
+        Sirikata::Protocol::Migration::MigrationMessage* mig_msg = new Sirikata::Protocol::Migration::MigrationMessage();
         bool parsed = parsePBJMessage(mig_msg, msg->payload());
 
         if (!parsed) {
@@ -487,7 +487,7 @@ void Server::receiveMessage(Message* msg)
 }
 
 
-void Server::retryObjectMessage(const UUID& obj_id, CBR::Protocol::Object::ObjectMessage* obj_response){
+void Server::retryObjectMessage(const UUID& obj_id, Sirikata::Protocol::Object::ObjectMessage* obj_response){
     ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
     if (obj_map_it == mObjectsAwaitingMigration.end())
     {
@@ -531,7 +531,7 @@ void Server::handleMigration(const UUID& obj_id)
 
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;
-    CBR::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
+    Sirikata::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
 
 
     // Extract the migration message data
@@ -557,7 +557,7 @@ void Server::handleMigration(const UUID& obj_id)
 
     // Handle any data packed into the migration message for space components
     for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
-        CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
+        Sirikata::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
         std::string tag = client_data.key();
         // FIXME these should live in a map, how do we deal with ordering constraints?
         if (tag == "prox") {
@@ -579,11 +579,11 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Send reply back indicating that the migration was successful
-    CBR::Protocol::Session::Container response_container;
-    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
+    Sirikata::Protocol::Session::Container response_container;
+    Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
 
-    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+    Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),
         UUID::null(), OBJECT_PORT_SESSION,
         obj_id, OBJECT_PORT_SESSION,
@@ -624,10 +624,10 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
         // but I'm getting inconsistencies, so we have to just trust CSeg to have the final say
         if (new_server_id != mContext->id()) {
 
-            CBR::Protocol::Session::Container session_msg;
-            CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
+            Sirikata::Protocol::Session::Container session_msg;
+            Sirikata::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
             init_migration_msg.set_new_server( (uint64)new_server_id );
-            CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = createObjectMessage(
+            Sirikata::Protocol::Object::ObjectMessage* init_migr_obj_msg = createObjectMessage(
                 mContext->id(),
                 UUID::null(), OBJECT_PORT_SESSION,
                 obj_id, OBJECT_PORT_SESSION,
@@ -639,10 +639,10 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             mOSeg->migrateObject(obj_id,CraqEntry(new_server_id,obj_bounds.radius()));
 
             // Send out the migrate message
-            CBR::Protocol::Migration::MigrationMessage migrate_msg;
+            Sirikata::Protocol::Migration::MigrationMessage migrate_msg;
             migrate_msg.set_source_server(mContext->id());
             migrate_msg.set_object(obj_id);
-            CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
+            Sirikata::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
             TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
             migrate_loc.set_t( obj_loc.updateTime() );
             migrate_loc.set_position( obj_loc.position() );
@@ -653,7 +653,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             // FIXME we should generate these from some map instead of directly
             std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id(), new_server_id);
             if (!prox_data.empty()) {
-                CBR::Protocol::Migration::IMigrationClientData client_data = migrate_msg.add_client_data();
+                Sirikata::Protocol::Migration::IMigrationClientData client_data = migrate_msg.add_client_data();
                 client_data.set_key( mProximity->migrationClientTag() );
                 client_data.set_data( prox_data );
             }
@@ -758,7 +758,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;
-    CBR::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
+    Sirikata::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
 
 
     // Extract the migration message data
@@ -787,7 +787,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
     // Handle any data packed into the migration message for space components
     for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
-        CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
+        Sirikata::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
         std::string tag = client_data.key();
         // FIXME these should live in a map, how do we deal with ordering constraints?
         if (tag == "prox") {
@@ -816,11 +816,11 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Send reply back indicating that the migration was successful
-    CBR::Protocol::Session::Container response_container;
-    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
+    Sirikata::Protocol::Session::Container response_container;
+    Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
 
-    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+    Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),
         UUID::null(), OBJECT_PORT_SESSION,
         obj_id, OBJECT_PORT_SESSION,
@@ -874,4 +874,4 @@ void Server::killObjectConnection(const UUID& obj_id)
 
 
 
-} // namespace CBR
+} // namespace Sirikata

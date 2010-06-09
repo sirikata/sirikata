@@ -13,7 +13,7 @@
 #define __ASYNC_CRAQ_CLASS_H__
 
 
-namespace CBR
+namespace Sirikata
 {
 
 

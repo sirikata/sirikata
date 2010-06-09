@@ -36,7 +36,7 @@
 #include "TimerJitterBenchmark.hpp"
 #include "TimerMonotonicityBenchmark.hpp"
 #include "SSTBenchmark.hpp"
-using namespace CBR;
+using namespace Sirikata;
 
 typedef std::list<String> BenchmarkList;
 

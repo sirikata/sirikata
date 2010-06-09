@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIMER_JITTER_BENCHMARK_HPP_
-#define _CBR_TIMER_JITTER_BENCHMARK_HPP_
+#ifndef _SIRIKATA_TIMER_JITTER_BENCHMARK_HPP_
+#define _SIRIKATA_TIMER_JITTER_BENCHMARK_HPP_
 
 #include "Benchmark.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** TimerJitterBenchmark tests the jitter of timer results, i.e. variance of
  *   returned timer values based on expected rate of calls.
@@ -59,6 +59,6 @@ class TimerJitterBenchmark : public Benchmark {
     bool mForceStop;
 }; // class TimerJitterBenchmark
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TIMER_JITTER_BENCHMARK_HPP_
+#endif //_SIRIKATA_TIMER_JITTER_BENCHMARK_HPP_

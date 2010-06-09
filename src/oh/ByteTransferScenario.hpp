@@ -2,7 +2,7 @@
 #define _BYTE_TRANSFER_SCENARIO_HPP_
 
 #include "Scenario.hpp"
-namespace CBR {
+namespace Sirikata {
 class ScenarioFactory;
 class ConnectedObjectTracker;
 class Object;
@@ -40,7 +40,7 @@ class ByteTransferScenario : public Scenario {
     std::vector<TransferTimeData > mOutstandingPackets;
     TimeProfiler::Stage* mPingProfiler;
     void generatePings();
-    void pingReturn(const CBR::Protocol::Object::ObjectMessage&);
+    void pingReturn(const Sirikata::Protocol::Object::ObjectMessage&);
     static ByteTransferScenario*create(const String&options);
 public:
     ByteTransferScenario(const String &options);

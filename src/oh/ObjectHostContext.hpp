@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_HOST_CONTEXT_HPP_
-#define _CBR_OBJECT_HOST_CONTEXT_HPP_
+#ifndef _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
+#define _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 
 #include "Utility.hpp"
 #include "Context.hpp"
 #include "PollingService.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ObjectHost;
 
@@ -49,7 +49,7 @@ public:
     ObjectHost* objectHost;
 }; // class ObjectHostContext
 
-} // namespace CBR
+} // namespace Sirikata
 
 
-#endif //_CBR_OBJECT_HOST_CONTEXT_HPP_
+#endif //_SIRIKATA_OBJECT_HOST_CONTEXT_HPP_

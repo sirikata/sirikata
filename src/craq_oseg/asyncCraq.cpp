@@ -9,7 +9,7 @@
 #include "../Timer.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
 
 

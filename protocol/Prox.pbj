@@ -32,7 +32,7 @@
 
 "pbj-0.0.3"
 
-package CBR.Protocol.Prox;
+package Sirikata.Protocol.Prox;
 
 
 message TimedMotionVector {

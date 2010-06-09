@@ -15,7 +15,7 @@
 #ifndef __ASYNC_CRAQ_GET_CLASS_H__
 #define __ASYNC_CRAQ_GET_CLASS_H__
 
-namespace CBR
+namespace Sirikata
 {
 
 

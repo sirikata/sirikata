@@ -30,18 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_HOST_CONNECTION_MANAGER_HPP_
-#define _CBR_OBJECT_HOST_CONNECTION_MANAGER_HPP_
+#ifndef _SIRIKATA_OBJECT_HOST_CONNECTION_MANAGER_HPP_
+#define _SIRIKATA_OBJECT_HOST_CONNECTION_MANAGER_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Message.hpp"
 #include "Address4.hpp"
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** ObjectHostConnectionManager handles the networking aspects of interacting
  *  with object hosts.  It listens for connections, maintains per object
@@ -70,14 +70,14 @@ public:
     /** Callback generated when an object message is received over a connection.  This callback can be generated
      *  from any strand -- use strand->wrap to ensure its handled in your strand.
      */
-    typedef std::tr1::function<bool(ConnectionID, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
+    typedef std::tr1::function<bool(ConnectionID, Sirikata::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
 
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
 
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
     WARN_UNUSED
-    bool send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    bool send(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
 
     void shutdown();
 
@@ -123,6 +123,6 @@ private:
     void closeAllConnections();
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_OBJECT_HOST_CONNECTION_MANAGER_HPP_
+#endif //_SIRIKATA_OBJECT_HOST_CONNECTION_MANAGER_HPP_

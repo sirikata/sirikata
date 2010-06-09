@@ -1,10 +1,10 @@
-#ifndef _CBR_FORWARDER_HPP_
-#define _CBR_FORWARDER_HPP_
+#ifndef _SIRIKATA_FORWARDER_HPP_
+#define _SIRIKATA_FORWARDER_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "Message.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 
 #include "Queue.hpp"
 #include "FairQueue.hpp"
@@ -23,12 +23,12 @@
 #include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 #include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
 
-namespace CBR
+namespace Sirikata
 {
   class Object;
   class ObjectSegmentation;
   class CoordinateSegmentation;
-  class Network;
+  class SpaceNetwork;
   class Trace;
   class ObjectConnection;
   class OSegLookupQueue;
@@ -104,7 +104,7 @@ private:
     void stop();
   protected:
 
-    virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
+    virtual void dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
 
   private:
     // Init method: adds an odp routing service to the ForwarderServiceQueue and
@@ -128,10 +128,10 @@ private:
     // quickly (avoiding going through OSeg Lookup Queue) by checking OSeg
     // cache.
     WARN_UNUSED
-    bool tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg);
+    bool tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     WARN_UNUSED
-    bool route(CBR::Protocol::Object::ObjectMessage* msg);
+    bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     // -- Real routing interface + implementation
 
@@ -140,7 +140,7 @@ private:
   public:
     // Received from OH networking, needs forwarding decision.  Forwards or
     // drops -- ownership is given to Forwarder either way
-    void routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
+    void routeObjectHostMessage(Sirikata::Protocol::Object::ObjectMessage* obj_msg);
   private:
     // Received from other space server, needs forwarding decision
     void receiveMessage(Message* msg);
@@ -156,15 +156,15 @@ private:
      *  OSeg lookup if necessary.
      */
     WARN_UNUSED
-    bool forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom = NullServerID);
+    bool forward(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom = NullServerID);
 
     // This version is provided if you already know which server the message should be sent to
     WARN_UNUSED
-    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+    bool routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
 
     // Handles the case where OSeg told us we have the object. Post this to the
     // main strand.
-    void handleObjectMessageLoop(CBR::Protocol::Object::ObjectMessage* msg) const;
+    void handleObjectMessageLoop(Sirikata::Protocol::Object::ObjectMessage* msg) const;
 
     // ServerMessageQueue::Sender Interface
     virtual Message* serverMessagePull(ServerID dest);
@@ -191,7 +191,7 @@ private:
     ObjectConnection* getObjectConnection(const UUID& dest_obj, uint64& uniqueconnid );
 }; // class Forwarder
 
-} //end namespace CBR
+} //end namespace Sirikata
 
 
-#endif //_CBR_FORWARDER_HPP_
+#endif //_SIRIKATA_FORWARDER_HPP_

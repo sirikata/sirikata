@@ -13,7 +13,7 @@
 #define DEFAULT_FIND_SCALING_HIGH                        100
 
 
-namespace CBR
+namespace Sirikata
 {
 
   //doing my own absolute value function.

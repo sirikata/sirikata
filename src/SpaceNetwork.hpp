@@ -1,5 +1,5 @@
-#ifndef _CBR_NETWORK_HPP_
-#define _CBR_NETWORK_HPP_
+#ifndef _SIRIKATA_SPACE_NETWORK_HPP_
+#define _SIRIKATA_SPACE_NETWORK_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
@@ -7,11 +7,11 @@
 #include <sirikata/core/network/Stream.hpp>
 #include "PollingService.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ServerIDMap;
 
-class Network : public Service {
+class SpaceNetwork : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
@@ -77,7 +77,7 @@ public:
     };
 
 
-    virtual ~Network();
+    virtual ~SpaceNetwork();
 
     virtual void setSendListener(SendListener* sl) = 0;
 
@@ -90,7 +90,7 @@ public:
     void setServerIDMap(ServerIDMap* sidmap);
 
 protected:
-    Network(SpaceContext* ctx);
+    SpaceNetwork(SpaceContext* ctx);
 
     // Service Interface
     virtual void start();
@@ -99,5 +99,7 @@ protected:
     SpaceContext* mContext;
     ServerIDMap* mServerIDMap;
 };
-}
-#endif //_CBR_NETWORK_HPP_
+
+} // namespace Sirikata
+
+#endif //_SIRIKATA_SPACE_NETWORK_HPP_

@@ -35,7 +35,7 @@
 #include "Options.hpp"
 #include "ServerWeightCalculator.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers) {
     ServerWeightCalculator* swc = WeightCalculatorFactory(NULL);
@@ -125,4 +125,4 @@ FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers
     delete swc;
 }
 
-} // namespace CBR
+} // namespace Sirikata

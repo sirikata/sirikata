@@ -38,7 +38,7 @@
 #include "ConnectedObjectTracker.hpp"
 
 #include "ServerWeightCalculator.hpp"
-namespace CBR {
+namespace Sirikata {
 void DPSInitOptions(LoadPacketTrace *thus) {
 
     Sirikata::InitializeClassOptions ico("LoadPacketTrace",thus,
@@ -223,7 +223,7 @@ bool LoadPacketTrace::generateOnePing(const Time& t, PingInfo* result) {
     generatePairs();
     result->objA=mPacketTrace[mPacketTraceIndex%mPacketTrace.size()].first;
     result->objB=mPacketTrace[mPacketTraceIndex++%mPacketTrace.size()].second;
-    result->ping = new CBR::Protocol::Object::Ping();
+    result->ping = new Sirikata::Protocol::Object::Ping();
     result->dist=(double)mPacketTraceIndex;
     mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
     return true;

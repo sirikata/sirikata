@@ -38,7 +38,7 @@
 
 #include "CBR_Loc.pbj.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** A LocationUpdatePolicy which always sends a location
  *  update message to all subscribers on any position update.
@@ -69,8 +69,8 @@ public:
     virtual void service();
 
 private:
-    bool trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu);
-    bool trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu);
+    bool trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
+    bool trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
 
     struct UpdateInfo {
         TimedMotionVector3f location;
@@ -226,14 +226,14 @@ private:
                 SubscriberType sid = server_it->first;
                 SubscriberInfo* sub_info = server_it->second;
 
-                CBR::Protocol::Loc::BulkLocationUpdate bulk_update;
+                Sirikata::Protocol::Loc::BulkLocationUpdate bulk_update;
 
                 bool send_failed = false;
                 std::map<UUID, UpdateInfo>::iterator last_shipped = sub_info->outstandingUpdates.begin();
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
-                    CBR::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
+                    Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
                     update.set_object(up_it->first);
-                    CBR::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
+                    Sirikata::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
                     location.set_velocity(up_it->second.location.velocity());
@@ -247,7 +247,7 @@ private:
                             break;
                         }
                         else {
-                            bulk_update = CBR::Protocol::Loc::BulkLocationUpdate(); // clear it out
+                            bulk_update = Sirikata::Protocol::Loc::BulkLocationUpdate(); // clear it out
                             last_shipped = up_it;
                         }
                     }
@@ -282,6 +282,6 @@ private:
     ObjectSubscriberIndex mObjectSubscriptions;
 }; // class AlwaysLocationUpdatePolicy
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_ALWAYS_LOCATION_UPDATE_POLICY_HPP_

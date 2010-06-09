@@ -9,7 +9,7 @@
 #ifndef __CACHE_HPP__
 #define __CACHE_HPP__
 
-namespace CBR
+namespace Sirikata
 {
 
   

@@ -34,7 +34,7 @@
 #include "ObjectSegmentation.hpp"
 #include "Options.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 // OSegLookupList Implementation
 
@@ -81,7 +81,7 @@ CraqEntry OSegLookupQueue::cacheLookup(const UUID& destid) const {
     return mOSeg->cacheLookup(destid);
 }
 
-bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)
+bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb)
 {
   UUID dest_obj = msg->dest_object();
   size_t cursize = msg->ByteSize();
@@ -151,4 +151,4 @@ void OSegLookupQueue::handleLookupCompleted(const UUID& id, const CraqEntry& des
     mLookups.erase(iterQueueMap);
 }
 
-} // namespace CBR
+} // namespace Sirikata

@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_UNIFORM_COORDINATE_SEGMENTATION_HPP_
-#define _CBR_UNIFORM_COORDINATE_SEGMENTATION_HPP_
+#ifndef _SIRIKATA_UNIFORM_COORDINATE_SEGMENTATION_HPP_
+#define _SIRIKATA_UNIFORM_COORDINATE_SEGMENTATION_HPP_
 
 #include "CoordinateSegmentation.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 struct LayoutChangeEntry {
   uint64 time;
@@ -68,6 +68,6 @@ private:
 
 }; // class CoordinateSegmentation
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif

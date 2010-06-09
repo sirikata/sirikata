@@ -40,7 +40,7 @@
 #include "OSegLookupTraceToken.hpp"
 #include <algorithm>
 
-namespace CBR {
+namespace Sirikata {
 
 bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_out) {
     uint32 record_size;
@@ -3092,4 +3092,4 @@ void OSegProcessCraqReturnAnalysis::sortAllEvents()
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

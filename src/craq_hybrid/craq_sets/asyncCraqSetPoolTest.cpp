@@ -16,7 +16,7 @@
 //#define WHICH_PORT        "4999"
 
 
-namespace CBR
+namespace Sirikata
 {
   void basicWait(AsyncCraqSet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
   void iteratedWait(int numWaits,AsyncCraqSet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
@@ -42,7 +42,7 @@ int main (int argc, char** argv)
   return 0;
 }
 
-namespace CBR
+namespace Sirikata
 {
   
   void runLoad()

@@ -49,7 +49,7 @@
 using namespace Sirikata;
 using namespace Sirikata::Network;
 
-namespace CBR {
+namespace Sirikata {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
  : mContext(ctx),
@@ -370,8 +370,8 @@ void ObjectHost::disconnect(Object* obj) {
 
     // Construct and send disconnect message.  This has to happen first so we still have
     // connection information so we know where to send the disconnect
-    CBR::Protocol::Session::Container session_msg;
-    CBR::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
+    Sirikata::Protocol::Session::Container session_msg;
+    Sirikata::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
     disconnect_msg.set_object(objid);
     disconnect_msg.set_reason("Quit");
 
@@ -423,11 +423,11 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
     ConnectingInfo ci = mObjectConnections.connectingTo(uuid, conn->server);
 
-    CBR::Protocol::Session::Container session_msg;
-    CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
-    connect_msg.set_type(CBR::Protocol::Session::Connect::Fresh);
+    Sirikata::Protocol::Session::Container session_msg;
+    Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(uuid);
-    CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
+    Sirikata::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
     loc.set_t( ci.loc.updateTime() );
     loc.set_position( ci.loc.position() );
     loc.set_velocity( ci.loc.velocity() );
@@ -478,9 +478,9 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
         return;
     }
 
-    CBR::Protocol::Session::Container session_msg;
-    CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
-    connect_msg.set_type(CBR::Protocol::Session::Connect::Migration);
+    Sirikata::Protocol::Session::Container session_msg;
+    Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    connect_msg.set_type(Sirikata::Protocol::Session::Connect::Migration);
     connect_msg.set_object(obj_id);
     if (!send(
             obj_id, OBJECT_PORT_SESSION,
@@ -568,7 +568,7 @@ void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, con
     }
 }
 
-void ObjectHost::fillPing(double distance, uint32 payload_size, CBR::Protocol::Object::Ping* result) {
+void ObjectHost::fillPing(double distance, uint32 payload_size, Sirikata::Protocol::Object::Ping* result) {
     if (distance>=0)
         result->set_distance(distance);
     result->set_id(mPingId++);
@@ -578,7 +578,7 @@ void ObjectHost::fillPing(double distance, uint32 payload_size, CBR::Protocol::O
     }
 }
 
-bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, CBR::Protocol::Object::Ping* ping_msg) {
+bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, Sirikata::Protocol::Object::Ping* ping_msg) {
     ServerID destServer = mObjectConnections.getConnectedServer(src);
     if (destServer == NullServerID)
         return true; // We mark this as sent because this probably
@@ -606,7 +606,7 @@ bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, CBR:
 bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    CBR::Protocol::Object::Ping ping_msg;
+    Sirikata::Protocol::Object::Ping ping_msg;
     fillPing(distance, payload_size, &ping_msg);
 
     return sendPing(t, src, dest, &ping_msg);
@@ -761,7 +761,7 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
 
     // Possibly tag as ping non-destructively
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
-        CBR::Protocol::Object::Ping ping_msg;
+        Sirikata::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
         CONTEXT_TRACE_NO_TIME(ping,
             ping_msg.ping(),
@@ -795,30 +795,30 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
     TIMESTAMP_END(tstamp, Trace::DESTROYED);
 }
 
-void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {
+void ObjectHost::handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
 
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    CBR::Protocol::Session::Container session_msg;
+    Sirikata::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
     assert(parse_success);
 
     assert(!session_msg.has_connect());
 
     if (session_msg.has_connect_response()) {
-        CBR::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
+        Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
 
         UUID obj = msg->dest_object();
 
-        if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Success) {
+        if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success) {
 	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj);
 
 	    // Send an ack so the server (our first conn or after migrating) can start sending data to us
-	    CBR::Protocol::Session::Container ack_msg;
-	    CBR::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
+	    Sirikata::Protocol::Session::Container ack_msg;
+	    Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
 	    sendRetryingMessage(
 				obj, OBJECT_PORT_SESSION,
 				UUID::null(), OBJECT_PORT_SESSION,
@@ -837,7 +837,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
                                 );
             */
         }
-        else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Redirect) {
+        else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
             OH_LOG(debug,"Object connection for " << obj.toString() << " redirected to " << redirected);
             // Get a connection to request
@@ -846,7 +846,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
                 std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj, std::tr1::placeholders::_1)
             );
         }
-        else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Error) {
+        else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Error) {
             OH_LOG(error,"Error connecting " << obj.toString() << " to space");
             mObjectConnections.handleConnectError(obj);
         }
@@ -856,7 +856,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
     }
 
     if (session_msg.has_init_migration()) {
-        CBR::Protocol::Session::InitiateMigration init_migr = session_msg.init_migration();
+        Sirikata::Protocol::Session::InitiateMigration init_migr = session_msg.init_migration();
         OH_LOG(insane,"Received migration request for " << msg->dest_object().toString() << " to " << init_migr.new_server());
         migrate(msg->dest_object(), init_migr.new_server());
     }
@@ -912,4 +912,4 @@ void ObjectHost::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> >
   mObjectConnections.handleConnectStream(obj);
 }
 
-} // namespace CBR
+} // namespace Sirikata

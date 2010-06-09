@@ -5,7 +5,7 @@
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
-namespace CBR{
+namespace Sirikata{
 void BTSInitOptions(ByteTransferScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("DistributedPingScenario",thus,
@@ -87,7 +87,7 @@ void ByteTransferScenario::stop() {
         }
     }
 }
-void ByteTransferScenario::pingReturn(const CBR::Protocol::Object::ObjectMessage&msg){
+void ByteTransferScenario::pingReturn(const Sirikata::Protocol::Object::ObjectMessage&msg){
     mReturned=true;
     static Time start=mContext->simTime();
     if (msg.payload().size()>=8){

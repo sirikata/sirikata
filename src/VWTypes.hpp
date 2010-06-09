@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_VW_TYPES_HPP_
-#define _CBR_VW_TYPES_HPP_
+#ifndef _SIRIKATA_VW_TYPES_HPP_
+#define _SIRIKATA_VW_TYPES_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 typedef uint32 ServerID;
 #define NullServerID 0
@@ -60,6 +60,6 @@ std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs);
 std::istream& operator>>(std::istream& is, ObjectHostID& rhs);
 
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_VW_TYPES_HPP_
+#endif //_SIRIKATA_VW_TYPES_HPP_

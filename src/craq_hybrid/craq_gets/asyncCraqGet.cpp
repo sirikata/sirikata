@@ -15,7 +15,7 @@
 
 #define CRAQ_MAX_PUSH_GET 10
 
-namespace CBR
+namespace Sirikata
 {
 
   void AsyncCraqGet::stop()

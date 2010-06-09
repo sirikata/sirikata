@@ -9,7 +9,7 @@
 #include "Timer.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
   bool compareIDAge(const IDAge& a, const IDAge& b)
   {

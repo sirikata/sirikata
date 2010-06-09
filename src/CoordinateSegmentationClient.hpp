@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_COORDINATE_SEGMENTATION_CLIENT_HPP_
-#define _CBR_COORDINATE_SEGMENTATION_CLIENT_HPP_
+#ifndef _SIRIKATA_COORDINATE_SEGMENTATION_CLIENT_HPP_
+#define _SIRIKATA_COORDINATE_SEGMENTATION_CLIENT_HPP_
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
@@ -44,8 +44,9 @@
 
 typedef boost::asio::ip::tcp tcp;
 
-namespace CBR {
+namespace Sirikata {
 
+class ServerIDMap;
 
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
 class CoordinateSegmentationClient : public CoordinateSegmentation {
@@ -68,7 +69,7 @@ private:
     virtual void service();
 
     BoundingBox3f mRegion;
-    void csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg);
+    void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void downloadUpdatedBSPTree();
 
@@ -94,6 +95,6 @@ private:
 
 }; // class CoordinateSegmentation
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif

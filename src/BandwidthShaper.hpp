@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_BANDWIDTH_SHAPER_
-#define _CBR_BANDWIDTH_SHAPER_
+#ifndef _SIRIKATA_BANDWIDTH_SHAPER_
+#define _SIRIKATA_BANDWIDTH_SHAPER_
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** A bandwidth shaper router element which limits packet flow to a specified
  *  maximum bandwidth.
@@ -100,6 +100,6 @@ private:
     Time mLastEndTime; // packet send end time
 }; // class BandwidthShaper
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_BANDWIDTH_SHAPER_
+#endif //_SIRIKATA_BANDWIDTH_SHAPER_

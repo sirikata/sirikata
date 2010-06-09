@@ -4,7 +4,7 @@
 #include "../craq_oseg/asyncUtil.hpp"
 #include <string>
 
-namespace CBR
+namespace Sirikata
 {
   const int  STREAM_CRAQ_DATA_KEY_QUERY_SIZE       = CRAQ_DATA_KEY_SIZE + CRAQ_DATA_PREFIX_SIZE + CRAQ_DATA_SUFFIX_SIZE + 1;//have to add +1 for Z suffix
   typedef char StreamCraqDataKeyQuery[STREAM_CRAQ_DATA_KEY_QUERY_SIZE];  //this is what actually goes out to the router.

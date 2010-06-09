@@ -1,4 +1,4 @@
-namespace CBR {
+namespace Sirikata {
 namespace decodabet {
 typedef unsigned char uint8;
 static const uint8 _URL_SAFE_ALPHABET []= {

@@ -30,15 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_COORDINATE_SEGMENTATION_HPP_
-#define _CBR_COORDINATE_SEGMENTATION_HPP_
+#ifndef _SIRIKATA_COORDINATE_SEGMENTATION_HPP_
+#define _SIRIKATA_COORDINATE_SEGMENTATION_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "LoadMonitor.hpp"
 #include "PollingService.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 typedef std::vector<BoundingBox3f> BoundingBoxList;
 
@@ -93,6 +93,6 @@ private:
     std::set<Listener*> mListeners;
 }; // class CoordinateSegmentation
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif

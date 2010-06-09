@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_MOTION_PATH_HPP_
-#define _CBR_MOTION_PATH_HPP_
+#ifndef _SIRIKATA_MOTION_PATH_HPP_
+#define _SIRIKATA_MOTION_PATH_HPP_
 
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Base class for MotionPaths. All motion paths must implement one method
  *  that allows random access into the update list, given the next update
@@ -56,6 +56,6 @@ public:
     virtual const TimedMotionVector3f at(const Time& t) const = 0;
 }; // class MotionPath
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_MOTION_PATH_HPP_
+#endif //_SIRIKATA_MOTION_PATH_HPP_

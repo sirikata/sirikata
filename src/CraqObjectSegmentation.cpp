@@ -29,7 +29,7 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR
+namespace Sirikata
 {
 
   /*
@@ -307,9 +307,9 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
   }
 
 
-CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id, float radius)
+Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id, float radius)
   {
-    CBR::Protocol::OSeg::AddedObjectMessage* oadd = new CBR::Protocol::OSeg::AddedObjectMessage();
+    Sirikata::Protocol::OSeg::AddedObjectMessage* oadd = new Sirikata::Protocol::OSeg::AddedObjectMessage();
     oadd->set_m_objid(obj_id);
     oadd->set_m_objradius(radius);
     return oadd;
@@ -468,9 +468,9 @@ CBR::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMe
   /*
     This creates an acknowledge message to be sent out through forwarder.  Acknowledge message says that this oseg now knows that it's in charge of the object obj, acknowledge message recipient is sID_to.
   */
-  CBR::Protocol::OSeg::MigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,float radius, ServerID sID_to)
+  Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,float radius, ServerID sID_to)
   {
-    CBR::Protocol::OSeg::MigrateMessageAcknowledge* oseg_ack_msg = new CBR::Protocol::OSeg::MigrateMessageAcknowledge();
+    Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* oseg_ack_msg = new Sirikata::Protocol::OSeg::MigrateMessageAcknowledge();
     oseg_ack_msg->set_m_servid_from(mContext->id());
     oseg_ack_msg->set_m_servid_to(sID_to);
     oseg_ack_msg->set_m_message_destination(sID_to);
@@ -613,7 +613,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     }
 
       if (msg->dest_port() == SERVER_PORT_OSEG_MIGRATE_MOVE) {
-          CBR::Protocol::OSeg::MigrateMessageMove oseg_move_msg;
+          Sirikata::Protocol::OSeg::MigrateMessageMove oseg_move_msg;
           bool parsed = parsePBJMessage(&oseg_move_msg, msg->payload());
           if (parsed)
           {
@@ -622,13 +622,13 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
           }
       }
       else if (msg->dest_port() == SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE) {
-          CBR::Protocol::OSeg::MigrateMessageAcknowledge oseg_ack_msg;
+          Sirikata::Protocol::OSeg::MigrateMessageAcknowledge oseg_ack_msg;
           bool parsed = parsePBJMessage(&oseg_ack_msg, msg->payload());
           if (parsed)
             mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processMigrateMessageAcknowledge, this,oseg_ack_msg));
       }
       else if (msg->dest_port() == SERVER_PORT_OSEG_UPDATE) {
-          CBR::Protocol::OSeg::UpdateOSegMessage update_oseg_msg;
+          Sirikata::Protocol::OSeg::UpdateOSegMessage update_oseg_msg;
           bool parsed = parsePBJMessage(&update_oseg_msg, msg->payload());
           if (parsed)
             mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processUpdateOSegMessage,this,update_oseg_msg));
@@ -643,7 +643,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
 
 
   //called from within o_strand
-  void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg)
+  void CraqObjectSegmentation::processUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg)
   {
     if (mReceivedStopRequest)
       return;
@@ -652,7 +652,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
   }
 
   //called from within o_strand
-  void CraqObjectSegmentation::processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg)
+  void CraqObjectSegmentation::processMigrateMessageAcknowledge(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg)
   {
     if (mReceivedStopRequest)
       return;
@@ -970,4 +970,4 @@ void CraqObjectSegmentation::trySendMigAcks() {
   }
 
 
-}//namespace CBR
+}//namespace Sirikata

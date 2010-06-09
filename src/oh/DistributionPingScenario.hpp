@@ -5,7 +5,7 @@
 #include "CountResourceMonitor.hpp"
 #include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 
-namespace CBR {
+namespace Sirikata {
 class ScenarioFactory;
 class ConnectedObjectTracker;
 

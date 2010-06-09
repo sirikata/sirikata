@@ -34,7 +34,7 @@
 #include "ObjectHost.hpp"
 #include "Object.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 ConnectedObjectTracker::ConnectedObjectTracker(ObjectHost* parent)
  : mParent(parent),
@@ -227,4 +227,4 @@ void ConnectedObjectTracker::objectHostDisconnectedObject(ObjectHost* oh, const 
     mObjectsByID.erase(objid);
 }
 
-} // namespace CBR
+} // namespace Sirikata

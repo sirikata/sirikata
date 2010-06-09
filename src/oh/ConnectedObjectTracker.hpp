@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OH_CONNECTED_OBJECT_TRACKER_HPP_
-#define _CBR_OH_CONNECTED_OBJECT_TRACKER_HPP_
+#ifndef _SIRIKATA_OH_CONNECTED_OBJECT_TRACKER_HPP_
+#define _SIRIKATA_OH_CONNECTED_OBJECT_TRACKER_HPP_
 
 #include "ObjectHostListener.hpp"
 #include <boost/thread/shared_mutex.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** Thread-safe container for tracking active objects. */
 class ConnectedObjectTracker : public ObjectHostListener {
@@ -77,6 +77,6 @@ private:
     UUID mLastRRObject;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_OH_CONNECTED_OBJECT_TRACKER_HPP_
+#endif //_SIRIKATA_OH_CONNECTED_OBJECT_TRACKER_HPP_

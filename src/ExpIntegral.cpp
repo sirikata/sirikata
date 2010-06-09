@@ -41,7 +41,7 @@ static double integralExpFunction(double k, double xmin, double xmax, double ymi
             + (exp(-k*square(m - r)) - exp(-k*square(m - s)))/(sqrt(k)*sqrt(pi)*sqrtloge)
             + (-exp(-k*square(n - r)) + exp(-k*square(n - s)))/(sqrt(k)*sqrt(pi)*sqrtloge));
 }
-namespace CBR {
+namespace Sirikata {
 double integralExpFunction(double k, const Vector3d& xymin, const Vector3d& xymax, const Vector3d& uvmin, const Vector3d& uvmax){
     return ::integralExpFunction(k,xymin.x,xymax.x,xymin.y,xymax.y,uvmin.x,uvmax.x,uvmin.y,uvmax.y);
 }

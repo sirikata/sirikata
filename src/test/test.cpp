@@ -35,7 +35,7 @@
 #include "FairQueueTest.hpp"
 
 int main(int argc, char** argv) {
-    using namespace CBR;
+    using namespace Sirikata;
 
     // Setup
     typedef std::tr1::unordered_map< std::string, Test* > TestMap;

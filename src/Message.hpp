@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_MESSAGE_HPP_
-#define _CBR_MESSAGE_HPP_
+#ifndef _SIRIKATA_MESSAGE_HPP_
+#define _SIRIKATA_MESSAGE_HPP_
 
 #include "Utility.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "MotionVector.hpp"
 
 #include "CBR_ServerMessage.pbj.hpp"
@@ -42,7 +42,7 @@
 #include "CBR_SSTHeader.pbj.hpp"
 
 
-namespace CBR {
+namespace Sirikata {
 
 typedef uint16 ServerMessagePort;
 
@@ -138,7 +138,7 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 
 }
 
-CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
@@ -148,7 +148,7 @@ public:
     Message(const ServerID& origin);
     Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port);
     Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl);
-    Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const CBR::Protocol::Object::ObjectMessage* pl);
+    Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const Sirikata::Protocol::Object::ObjectMessage* pl);
 
     ServerID source_server() const { return mImpl.source_server(); }
     void set_source_server(const ServerID sid);
@@ -199,7 +199,7 @@ private:
     void fillMessage(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port);
     void fillMessage(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl);
 
-    CBR::Protocol::Server::ServerMessage mImpl;
+    Sirikata::Protocol::Server::ServerMessage mImpl;
     mutable uint32 mCachedSize;
 }; // class Message
 
@@ -217,7 +217,7 @@ public:
 
 // Wrapper class for Protocol::Object::Message which provides it some missing methods
 // that are useful, e.g. size().
-class ObjectMessage : public CBR::Protocol::Object::ObjectMessage {
+class ObjectMessage : public Sirikata::Protocol::Object::ObjectMessage {
 public:
     uint32 size() {
         return this->ByteSize();
@@ -242,7 +242,7 @@ class ObjectMessageRecipient {
 public:
     virtual ~ObjectMessageRecipient() {}
 
-    virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) = 0;
+    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
 };
 
 /** Base class for a message dispatcher. */
@@ -270,7 +270,7 @@ public:
     void unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
 protected:
 
-    virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
+    virtual void dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
 
 private:
 
@@ -299,10 +299,10 @@ public:
     virtual ~ObjectMessageRouter() {}
 
     WARN_UNUSED
-    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg) = 0;
+    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg) = 0;
 };
 
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_MESSAGE_HPP_
+#endif //_SIRIKATA_MESSAGE_HPP_

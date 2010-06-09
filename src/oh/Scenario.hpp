@@ -43,7 +43,7 @@
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 
-namespace CBR {
+namespace Sirikata {
 class Scenario : public Service{
 public:
     Scenario(){}

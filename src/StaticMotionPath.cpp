@@ -32,7 +32,7 @@
 
 #include "StaticMotionPath.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 StaticMotionPath::StaticMotionPath(const Time& start, const Vector3f& startpos) {
     mMotion = TimedMotionVector3f(start, MotionVector3f(startpos, Vector3f(0,0,0)));
@@ -51,4 +51,4 @@ const TimedMotionVector3f StaticMotionPath::at(const Time& t) const {
     return mMotion;
 }
 
-} // namespace CBR
+} // namespace Sirikata

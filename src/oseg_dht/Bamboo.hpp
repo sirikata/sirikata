@@ -2,8 +2,8 @@
 
 
 
-#ifndef _CBR_BAMBOO_HPP
-#define _CBR_BAMBOO_HPP
+#ifndef _SIRIKATA_BAMBOO_HPP
+#define _SIRIKATA_BAMBOO_HPP
 
 
 #include <string.h>

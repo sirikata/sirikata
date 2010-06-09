@@ -34,7 +34,7 @@
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class MotionPath;
 class Object;
 class Trace;
@@ -98,4 +98,4 @@ private:
     ObjectMap mObjects;
 }; // class ObjectFactory
 
-} // namespace CBR
+} // namespace Sirikata

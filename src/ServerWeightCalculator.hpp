@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_WEIGHT_CALCULATOR_HPP_
-#define _CBR_SERVER_WEIGHT_CALCULATOR_HPP_
+#ifndef _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_
+#define _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_
 
 #include "Utility.hpp"
 
 #define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
 
-namespace CBR {
+namespace Sirikata {
 
 class CoordinateSegmentation;
 
@@ -68,6 +68,6 @@ private:
 // type of falloff function, are currently extracted from options.
 ServerWeightCalculator* WeightCalculatorFactory(CoordinateSegmentation* cseg);
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif // _CBR_SERVER_WEIGHT_CALCULATOR_HPP_
+#endif // _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_

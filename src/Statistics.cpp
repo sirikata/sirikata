@@ -39,7 +39,7 @@
 #include <boost/thread/locks.hpp>
 
 
-namespace CBR {
+namespace Sirikata {
 
 BatchedBuffer::BatchedBuffer()
  : filling(NULL)
@@ -636,4 +636,4 @@ CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSegCumulative, const Time &t, OSeg
 //   }
   
 
-} // namespace CBR
+} // namespace Sirikata

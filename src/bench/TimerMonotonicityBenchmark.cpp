@@ -35,7 +35,7 @@
 
 #define ITERATIONS 10000000
 
-namespace CBR {
+namespace Sirikata {
 
 TimerMonotonicityBenchmark::TimerMonotonicityBenchmark(const FinishedCallback& finished_cb)
         : Benchmark(finished_cb),
@@ -88,4 +88,4 @@ void TimerMonotonicityBenchmark::stop() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

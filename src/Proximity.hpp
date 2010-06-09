@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_PROXIMITY_HPP_
-#define _CBR_PROXIMITY_HPP_
+#ifndef _SIRIKATA_PROXIMITY_HPP_
+#define _SIRIKATA_PROXIMITY_HPP_
 
 #include "ProxSimulationTraits.hpp"
 #include "CBRLocationServiceCache.hpp"
@@ -43,7 +43,7 @@
 
 #include "SSTImpl.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class LocationService;
 class ProximityInputEvent;
@@ -164,7 +164,7 @@ private:
     std::set<ServerID> mNeedServerQueryUpdate;
 
     std::deque<Message*> mServerResultsToSend; // server query results waiting to be sent
-    std::deque<CBR::Protocol::Object::ObjectMessage*> mObjectResultsToSend; // object query results waiting to be sent
+    std::deque<Sirikata::Protocol::Object::ObjectMessage*> mObjectResultsToSend; // object query results waiting to be sent
 
 
     // PROX Thread - Should only be accessed in methods used by the main thread
@@ -191,10 +191,10 @@ private:
 
     // Threads: Thread-safe data used for exchange between threads
     Sirikata::ThreadSafeQueue<Message*> mServerResults; // server query results that need to be sent
-    Sirikata::ThreadSafeQueue<CBR::Protocol::Object::ObjectMessage*> mObjectResults; // object query results that need to be sent
+    Sirikata::ThreadSafeQueue<Sirikata::Protocol::Object::ObjectMessage*> mObjectResults; // object query results that need to be sent
 
 }; //class Proximity
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_PROXIMITY_HPP_
+#endif //_SIRIKATA_PROXIMITY_HPP_

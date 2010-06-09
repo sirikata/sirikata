@@ -35,7 +35,7 @@
 #include "Options.hpp"
 #include <boost/tokenizer.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 
 BoundingBox3f intersect(const BoundingBox3f& b1, const BoundingBox3f& b2) {

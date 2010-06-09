@@ -1,7 +1,7 @@
 #include "Address4.hpp"
 
 #include <netdb.h>
-namespace CBR{
+namespace Sirikata{
 
 Address4 Address4::Null = Address4(0,0);
 

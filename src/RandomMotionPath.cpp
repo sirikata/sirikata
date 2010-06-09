@@ -39,7 +39,7 @@
 #define PI 3.14159f
 #endif
 
-namespace CBR {
+namespace Sirikata {
 
 static Vector3f UniformSampleSphere(float u1, float u2) {
     float32 z = 1.f - 2.f * u1;
@@ -90,4 +90,4 @@ const TimedMotionVector3f RandomMotionPath::at(const Time& t) const {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

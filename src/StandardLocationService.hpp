@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_STANDARD_LOCATION_SERVICE_HPP_
-#define _CBR_STANDARD_LOCATION_SERVICE_HPP_
+#ifndef _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
+#define _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
 
 #include "LocationService.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Standard location service, which functions entirely based on location
  *  updates from objects and other spaces servers.
@@ -61,7 +61,7 @@ public:
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
-    virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg);
 
     virtual void locationUpdate(UUID source, void* buffer, uint length);
 
@@ -76,6 +76,6 @@ private:
     LocationMap mLocations;
 }; // class StandardLocationService
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_STANDARD_LOCATION_SERVICE_HPP_
+#endif //_SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_

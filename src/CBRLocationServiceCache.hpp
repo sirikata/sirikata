@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_CBR_LOCATION_SERVICE_CACHE_HPP_
-#define _CBR_CBR_LOCATION_SERVICE_CACHE_HPP_
+#ifndef _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
+#define _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 
 #include "ProxSimulationTraits.hpp"
 #include "LocationService.hpp"
 #include <prox/LocationServiceCache.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /* Implementation of LocationServiceCache which serves Prox libraries;
  * works by listening for updates from our LocationService.  Note that
@@ -115,6 +115,6 @@ private:
     bool mWithReplicas;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_CBR_LOCATION_SERVICE_CACHE_HPP_
+#endif //_SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_

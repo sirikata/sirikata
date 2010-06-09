@@ -1,5 +1,5 @@
-#ifndef ___CBR_CRAQ_CACHE_GOOD_HPP___
-#define ___CBR_CRAQ_CACHE_GOOD_HPP___
+#ifndef ___SIRIKATA_CRAQ_CACHE_GOOD_HPP___
+#define ___SIRIKATA_CRAQ_CACHE_GOOD_HPP___
 
 
 
@@ -16,7 +16,7 @@
 #include "../Context.hpp"
 #include "CraqCache.hpp"
 
-namespace CBR
+namespace Sirikata
 {
   struct CraqCacheRecordLRUOriginal
   {

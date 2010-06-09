@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TRACE_PACKET_ELEMENT_HPP_
-#define _CBR_TRACE_PACKET_ELEMENT_HPP_
+#ifndef _SIRIKATA_TRACE_PACKET_ELEMENT_HPP_
+#define _SIRIKATA_TRACE_PACKET_ELEMENT_HPP_
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Records packet information as it passes through the element. The user specifies
  *  what tag to record it with on success and failure (for pull elements, only success
@@ -82,6 +82,6 @@ private:
     Trace::MessagePath mFailureTag;
 }; // class TracePacketElement
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TRACE_PACKET_ELEMENT_HPP_
+#endif //_SIRIKATA_TRACE_PACKET_ELEMENT_HPP_

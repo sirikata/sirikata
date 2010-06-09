@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_CONNECTION_HPP_
-#define _CBR_OBJECT_CONNECTION_HPP_
+#ifndef _SIRIKATA_OBJECT_CONNECTION_HPP_
+#define _SIRIKATA_OBJECT_CONNECTION_HPP_
 
 #include "Utility.hpp"
 #include "Message.hpp"
 #include "ObjectHostConnectionManager.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class Trace;
 class Server;
@@ -54,7 +54,7 @@ public:
     UUID id() const;
 
     WARN_UNUSED
-    bool send(CBR::Protocol::Object::ObjectMessage* msg);
+    bool send(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     void enable();
 
@@ -70,6 +70,6 @@ private:
     bool mEnabled;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_OBJECT_CONNECTION_HPP_
+#endif //_SIRIKATA_OBJECT_CONNECTION_HPP_

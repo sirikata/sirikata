@@ -36,7 +36,7 @@
 #define STDIN 0
 #define STDOUT 1
 
-namespace CBR {
+namespace Sirikata {
 
 #define HEARTBEAT 'h'
 #define KILLSYNC  'k'
@@ -142,4 +142,4 @@ void TimeSync::stop() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

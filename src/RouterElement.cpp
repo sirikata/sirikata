@@ -32,7 +32,7 @@
 
 #include "RouterElement.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 SchedulableRouterElement::SchedulableRouterElement(Sirikata::Network::IOStrand& strand)
  : mStrand(strand),
@@ -58,4 +58,4 @@ void SchedulableRouterElement::handleRun() {
     run();
 }
 
-} // namespace CBR
+} // namespace Sirikata

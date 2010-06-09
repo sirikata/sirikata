@@ -1,5 +1,5 @@
-#ifndef _CBR_OSEG_HASHER_HPP
-#define _CBR_OSEG_HASHER_HPP
+#ifndef _SIRIKATA_OSEG_HASHER_HPP
+#define _SIRIKATA_OSEG_HASHER_HPP
 
 //#include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/util/Platform.hpp>
@@ -7,7 +7,7 @@
 #include "Server.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
 
   class OSegHasher

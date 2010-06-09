@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_BENCHMARK_HPP_
-#define _CBR_BENCHMARK_HPP_
+#ifndef _SIRIKATA_BENCHMARK_HPP_
+#define _SIRIKATA_BENCHMARK_HPP_
 
 #include "Utility.hpp"
 #include "PollingService.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Benchmark is a service which performs a single micro-benchmark. Each
  *  benchmark is a service -- it should start its test when start() is called
@@ -80,6 +80,6 @@ class Benchmark : public Service {
     FinishedCallback mFinishedCallback;
 }; // class Benchmark
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_BENCHMARK_HPP_
+#endif //_SIRIKATA_BENCHMARK_HPP_

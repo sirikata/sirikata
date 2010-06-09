@@ -1,7 +1,7 @@
 #include "asyncCraqUtil.hpp"
 #include <string.h>
 
-namespace CBR
+namespace Sirikata
 {
 
   

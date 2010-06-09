@@ -32,11 +32,11 @@
 
 #include "ServerMessageReceiver.hpp"
 #include "SpaceContext.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Options.hpp"
-namespace CBR {
+namespace Sirikata {
 
-ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
+ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener)
         : mContext(ctx),
           mReceiverStrand(ctx->ioService->createStrand()),
           mNetwork(net),
@@ -90,4 +90,4 @@ void ServerMessageReceiver::updatedSegmentation(CoordinateSegmentation* cseg, co
     NOT_IMPLEMENTED();
 }
 
-} // namespace CBR
+} // namespace Sirikata

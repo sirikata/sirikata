@@ -44,7 +44,7 @@
 #define FLT_MIN -1e30f
 #define FLT_MAX 1e30f
 
-namespace CBR {
+namespace Sirikata {
 
 std::map<const char*, uint32> QuakeMotionPath::mObjectsInFile;
 
@@ -243,4 +243,4 @@ uint32 QuakeMotionPath::countObjectsInFile(const char* inputFileName) {
     return id_map.size();
 }
 
-} // namespace CBR
+} // namespace Sirikata

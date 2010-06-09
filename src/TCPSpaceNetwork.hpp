@@ -1,7 +1,7 @@
-#ifndef _CBR_TCP_NETWORK_HPP_
-#define _CBR_TCP_NETWORK_HPP_
+#ifndef _SIRIKATA_TCP_SPACE_NETWORK_HPP_
+#define _SIRIKATA_TCP_SPACE_NETWORK_HPP_
 
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Address4.hpp"
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
@@ -9,9 +9,9 @@
 #include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 #include "CountResourceMonitor.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
-class TCPNetwork : public Network {
+class TCPSpaceNetwork : public SpaceNetwork {
     // Data associated with a stream.  Note that this stream is
     // usually, but not always, unique to the endpoint pair.  Due to
     // the possibility of both sides initiating a connection at the
@@ -25,7 +25,7 @@ class TCPNetwork : public Network {
 
         // parent is used to set the buffer size, stream is the
         // underlying stream
-        RemoteStream(TCPNetwork* parent, Sirikata::Network::Stream*strm, ServerID remote_id, Address4 remote_net, Initiator init);
+        RemoteStream(TCPSpaceNetwork* parent, Sirikata::Network::Stream*strm, ServerID remote_id, Address4 remote_net, Initiator init);
 
         ~RemoteStream();
 
@@ -100,7 +100,7 @@ class TCPNetwork : public Network {
     typedef std::tr1::shared_ptr<RemoteSession> RemoteSessionPtr;
     typedef std::tr1::weak_ptr<RemoteSession> RemoteSessionWPtr;
 
-    class TCPSendStream : public Network::SendStream {
+    class TCPSendStream : public SpaceNetwork::SendStream {
     public:
         TCPSendStream(ServerID sid, RemoteSessionPtr s);
         ~TCPSendStream();
@@ -114,7 +114,7 @@ class TCPNetwork : public Network {
     };
     typedef std::tr1::unordered_map<ServerID, TCPSendStream*> SendStreamMap;
 
-    class TCPReceiveStream : public Network::ReceiveStream {
+    class TCPReceiveStream : public SpaceNetwork::ReceiveStream {
     public:
         TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios);
         ~TCPReceiveStream();
@@ -258,8 +258,8 @@ class TCPNetwork : public Network {
     void readySendCallback(RemoteStreamWPtr wstream);
 
 public:
-    TCPNetwork(SpaceContext* ctx);
-    virtual ~TCPNetwork();
+    TCPSpaceNetwork(SpaceContext* ctx);
+    virtual ~TCPSpaceNetwork();
 
     virtual void setSendListener(SendListener* sl);
 
@@ -267,7 +267,7 @@ public:
     virtual SendStream* connect(const ServerID& addr);
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
 
-#endif //_CBR_TCP_NETWORK_HPP_
+#endif //_SIRIKATA_TCP_SPACE_NETWORK_HPP_

@@ -47,7 +47,7 @@
 //Assume we have a send(void* data, int len) function and a handleRead(void*) function
 //
 
-namespace CBR {
+namespace Sirikata {
 
 template <>  std::map<Sirikata::UUID, boost::shared_ptr< BaseDatagramLayer<Sirikata::UUID> > > BaseDatagramLayer<Sirikata::UUID>::mDatagramLayerMap = std::map<Sirikata::UUID, boost::shared_ptr< BaseDatagramLayer<Sirikata::UUID> > > ();
 

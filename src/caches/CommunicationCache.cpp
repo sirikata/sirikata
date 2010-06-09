@@ -5,7 +5,7 @@
 #include "Proximity.hpp"
 #include "../SpaceContext.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 
   //lookupWeight

@@ -37,7 +37,7 @@
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
-namespace CBR {
+namespace Sirikata {
 void PDSInitOptions(PingDelugeScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("PingDelugeScenario",thus,
@@ -181,7 +181,7 @@ bool PingDelugeScenario::generateOnePing(const Time& t, PingInfo* result) {
     result->objA = objA->uuid();
     result->objB = objB->uuid();
     result->dist = (objA->location().position(t) - objB->location().position(t)).length();
-    result->ping = new CBR::Protocol::Object::Ping();
+    result->ping = new Sirikata::Protocol::Object::Ping();
     mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
     return true;
 }

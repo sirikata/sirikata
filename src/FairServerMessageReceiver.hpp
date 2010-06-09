@@ -30,32 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
-#define _CBR_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
+#ifndef _SIRIKATA_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
+#define _SIRIKATA_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
 
 #include "ServerMessageReceiver.hpp"
 #include "FairQueue.hpp"
 #include "NetworkQueueWrapper.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** FairServerMessageReceiver implements the ServerMessageReceiver interface
- *  using a FairQueue (without internal storage, using the Network layer as the
+ *  using a FairQueue (without internal storage, using the SpaceNetwork layer as the
  *  queue storage) to fairly distribute receive bandwidth based on the specified
  *  weights.
  */
 class FairServerMessageReceiver : public ServerMessageReceiver {
 public:
-    FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener);
+    FairServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener);
     virtual ~FairServerMessageReceiver();
 
 private:
     // ServerMessageReceiver Protected (Implementation) Interface
     virtual void handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight);
 
-    // Network::ReceiveListener Interface
-    virtual void networkReceivedConnection(Network::ReceiveStream* strm);
-    virtual void networkReceivedData(Network::ReceiveStream* strm);
+    // SpaceNetwork::ReceiveListener Interface
+    virtual void networkReceivedConnection(SpaceNetwork::ReceiveStream* strm);
+    virtual void networkReceivedData(SpaceNetwork::ReceiveStream* strm);
 
     void scheduleServicing();
     // Internal service call -- generated either by a networkReceivedData event
@@ -86,6 +86,6 @@ private:
     boost::mutex mServiceMutex;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
+#endif //_SIRIKATA_FAIR_SERVER_MESSAGE_RECEIVER_HPP_

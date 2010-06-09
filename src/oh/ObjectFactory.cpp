@@ -47,7 +47,7 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 static UUID randomUUID() {
     uint8 raw_uuid[UUID::static_size];
@@ -436,4 +436,4 @@ void ObjectFactory::notifyDestroyed(const UUID& id) {
     mObjects.erase(id);
 }
 
-} // namespace CBR
+} // namespace Sirikata

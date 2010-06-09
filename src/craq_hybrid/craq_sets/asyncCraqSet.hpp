@@ -14,7 +14,7 @@
 #define __ASYNC_CRAQ_SET_CLASS_H__
 
 
-namespace CBR
+namespace Sirikata
 {
 
 class AsyncCraqSet : public AsyncCraqScheduler

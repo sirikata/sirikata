@@ -35,7 +35,7 @@
 
 #include "Queue.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Fair Queue with one input queue of Messages per Key, backed by a TQueue. Each
  *  input queue can be assigned a weight and selection happens according to FairQueuing.
@@ -500,6 +500,6 @@ protected:
     QueueInfo* mFrontQueue; // Queue holding the front item
 }; // class FairQueue
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_FAIR_MESSAGE_QUEUE_HPP_

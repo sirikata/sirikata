@@ -40,7 +40,7 @@
 
 //#define CSFQODP_DEBUG
 
-namespace CBR {
+namespace Sirikata {
 
 class ServerWeightCalculator;
 class LocationService;
@@ -61,7 +61,7 @@ public:
     virtual uint32 size() const { return mQueue.getResourceMonitor().filledSize(); }
 
     // ODP push interface
-    virtual bool push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&, const CraqEntry&);
+    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&, const CraqEntry&);
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight();
     // Get the total used weight of active queues.  If all flows are saturating,
@@ -189,6 +189,6 @@ private:
     double mTotalUsedWeight[NUM_DOWNSTREAM];
 }; // class CSFQODPFlowScheduler
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_CSFQ_ODP_FLOW_SCHEDULER_HPP_

@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_MOTION_VECTOR_HPP_
-#define _CBR_MOTION_VECTOR_HPP_
+#ifndef _SIRIKATA_MOTION_VECTOR_HPP_
+#define _SIRIKATA_MOTION_VECTOR_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 template<typename CoordType>
 class MotionVector {
@@ -74,17 +74,17 @@ typedef MotionVector<Vector3f> MotionVector3f;
 typedef MotionVector<Vector3d> MotionVector3d;
 
 template<typename MotionVectorType>
-class TimedMotionVector : public TemporalValue<MotionVectorType> {
+class TimedMotionVector : public TemporalValueWithDefault<MotionVectorType> {
 public:
-    typedef TemporalValue<MotionVectorType> Base;
+    typedef TemporalValueWithDefault<MotionVectorType> Base;
     typedef typename MotionVectorType::PositionType PositionType;
     typedef typename MotionVectorType::VelocityType VelocityType;
 
     TimedMotionVector()
-     : TemporalValue<MotionVectorType>()
+     : TemporalValueWithDefault<MotionVectorType>()
     {}
     TimedMotionVector(const Time& when, const MotionVectorType& l)
-     : TemporalValue<MotionVectorType>(when, l)
+     : TemporalValueWithDefault<MotionVectorType>(when, l)
     {}
 
     Time updateTime() const {
@@ -119,6 +119,6 @@ public:
 typedef TimedMotionVector<MotionVector3f> TimedMotionVector3f;
 typedef TimedMotionVector<MotionVector3d> TimedMotionVector3d;
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_MOTION_VECTOR_HPP_
+#endif //_SIRIKATA_MOTION_VECTOR_HPP_

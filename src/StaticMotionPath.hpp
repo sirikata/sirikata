@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_STATIC_MOTION_PATH_HPP_
-#define _CBR_STATIC_MOTION_PATH_HPP_
+#ifndef _SIRIKATA_STATIC_MOTION_PATH_HPP_
+#define _SIRIKATA_STATIC_MOTION_PATH_HPP_
 
 #include "Utility.hpp"
 #include "MotionPath.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Static motion path, i.e. not a motion path at all.  Just has a single initial
  *  update which has 0 velocityy.
@@ -52,6 +52,6 @@ private:
     TimedMotionVector3f mMotion;
 }; // class StaticMotionPath
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_STATIC_MOTION_PATH_HPP_
+#endif //_SIRIKATA_STATIC_MOTION_PATH_HPP_

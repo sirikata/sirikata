@@ -12,7 +12,7 @@
 #include "../../Utility.hpp"
 #include "../../OSegLookupTraceToken.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 
 static const int MAX_TIME_BETWEEN_RESULTS = 50000;

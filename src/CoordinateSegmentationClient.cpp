@@ -36,14 +36,14 @@
 #include <boost/tokenizer.hpp>
 #include <boost/bind.hpp>
 #include "Options.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
 #include <boost/bind.hpp>
 
 #include <gcrypt.h>
 
-namespace CBR {
+namespace Sirikata {
 
 typedef boost::asio::ip::tcp tcp;
 
@@ -590,7 +590,7 @@ void CoordinateSegmentationClient::service() {
 void CoordinateSegmentationClient::receiveMessage(Message* msg) {
 }
 
-void CoordinateSegmentationClient::csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg) {
+void CoordinateSegmentationClient::csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg) {
 
 }
 
@@ -601,4 +601,4 @@ void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

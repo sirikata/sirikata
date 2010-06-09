@@ -35,7 +35,7 @@
 
 #define PROFILER_LOG(level,msg) SILOG(profiler,level,"[PROFILER] " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
 TimeProfiler::Stage::Stage(const String& name)
  : mName(name),
@@ -138,4 +138,4 @@ void TimeProfiler::report() const {
     }
 }
 
-} // namespace CBR
+} // namespace Sirikata

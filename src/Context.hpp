@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_CONTEXT_HPP_
-#define _CBR_CONTEXT_HPP_
+#ifndef _SIRIKATA_CONTEXT_HPP_
+#define _SIRIKATA_CONTEXT_HPP_
 
 #include "Utility.hpp"
 #include "Timer.hpp"
@@ -40,7 +40,7 @@
 
 #define FORCE_MONOTONIC_CLOCK 1
 
-namespace CBR {
+namespace Sirikata {
 
 class Trace;
 
@@ -159,7 +159,7 @@ protected:
     IOTimerPtr mKillTimer;
 }; // class ObjectHostContext
 
-} // namespace CBR
+} // namespace Sirikata
 
 
-#endif //_CBR_CONTEXT_HPP_
+#endif //_SIRIKATA_CONTEXT_HPP_

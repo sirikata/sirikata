@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_ROUTER_ELEMENT_
-#define _CBR_ROUTER_ELEMENT_
+#ifndef _SIRIKATA_ROUTER_ELEMENT_
+#define _SIRIKATA_ROUTER_ELEMENT_
 
 #include "Utility.hpp"
 #include <sirikata/core/network/IOStrand.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** Interface for schedulable routing elements.  These elements can request to
  *  be scheduled for events and have a single method which is called when their
@@ -295,6 +295,6 @@ protected:
 }; // class RouterElement
 
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_ROUTER_ELEMENT_
+#endif //_SIRIKATA_ROUTER_ELEMENT_

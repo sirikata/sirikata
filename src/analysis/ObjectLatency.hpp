@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_LATENCY_ANALYSIS_HPP_
-#define _CBR_OBJECT_LATENCY_ANALYSIS_HPP_
+#ifndef _SIRIKATA_OBJECT_LATENCY_ANALYSIS_HPP_
+#define _SIRIKATA_OBJECT_LATENCY_ANALYSIS_HPP_
 
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ObjectLatencyAnalysis {
     typedef std::multimap<double, Duration> PingMap;
@@ -69,6 +69,6 @@ public:
     void printTotalAverage(std::ostream&out);
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_OBJECT_LATENCY_ANALYSIS_HPP_
+#endif //_SIRIKATA_OBJECT_LATENCY_ANALYSIS_HPP_

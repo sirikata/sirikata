@@ -17,7 +17,7 @@
 #include "../craq_oseg/CraqEntry.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
 
   Complete_Cache::Complete_Cache(double avgPopPar,std::string complete_name, CompleteCacheScoreFunc ccScorer,CompleteCacheScoreFuncPrint ccScorerPrint,SpaceContext* spctx, float insideRadiusInsert)

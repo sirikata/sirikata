@@ -3,7 +3,7 @@
 #include "../SpaceContext.hpp"
 #include "Utility.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 
   //fcache

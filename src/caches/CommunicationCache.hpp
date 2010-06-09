@@ -8,7 +8,7 @@
 #ifndef __COMMUNICATION_CACHE_HPP__
 #define __COMMUNICATION_CACHE_HPP__
 
-namespace CBR
+namespace Sirikata
 {
 
   double commCacheScoreFunction(const FCacheRecord* a);

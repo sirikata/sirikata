@@ -1,5 +1,5 @@
-#ifndef _CBR_OBJECT_SEGMENTATION_HPP_
-#define _CBR_OBJECT_SEGMENTATION_HPP_
+#ifndef _SIRIKATA_OBJECT_SEGMENTATION_HPP_
+#define _SIRIKATA_OBJECT_SEGMENTATION_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
@@ -11,7 +11,7 @@
 #include <queue>
 //object segmenter h file
 
-namespace CBR
+namespace Sirikata
 {
 
 /* Listener interface for OSeg events.

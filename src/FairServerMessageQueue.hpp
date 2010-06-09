@@ -1,10 +1,10 @@
-#ifndef _CBR_FAIRSENDQUEUE_HPP
-#define _CBR_FAIRSENDQUEUE_HPP
+#ifndef _SIRIKATA_FAIRSENDQUEUE_HPP
+#define _SIRIKATA_FAIRSENDQUEUE_HPP
 
 #include "FairQueue.hpp"
 #include "ServerMessageQueue.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class FairServerMessageQueue:public ServerMessageQueue {
 protected:
     struct SenderAdapterQueue {
@@ -31,7 +31,7 @@ protected:
     mutable boost::recursive_mutex mMutex;
     typedef boost::lock_guard<boost::recursive_mutex> MutexLock;
   public:
-    FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender);
+    FairServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sender* sender);
     ~FairServerMessageQueue();
 
   protected:
@@ -39,7 +39,7 @@ protected:
 
     // Public ServerMessageQueue interface
     virtual void messageReady(ServerID sid);
-    // Network::SendListener Interface
+    // SpaceNetwork::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from);
 
     // Should always be happening inside ServerMessageQueue thread

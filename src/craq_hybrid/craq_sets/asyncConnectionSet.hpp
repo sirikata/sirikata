@@ -12,7 +12,7 @@
 
 //#define ASYNC_CONNECTION_DEBUG
 
-namespace CBR
+namespace Sirikata
 {
 
 class AsyncConnectionSet

@@ -5,7 +5,7 @@
 #include "Options.hpp"
 #include <GL/glut.h>
 
-namespace CBR {
+namespace Sirikata {
 
 void LocationVisualization::handleObjectEvent(const UUID& obj, bool add, const TimedMotionVector3f& loc) {
     VisibilityMap::iterator where;

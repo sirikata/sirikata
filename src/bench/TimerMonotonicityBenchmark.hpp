@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIMER_MONOTONICITY_BENCHMARK_HPP_
-#define _CBR_TIMER_MONOTONICITY_BENCHMARK_HPP_
+#ifndef _SIRIKATA_TIMER_MONOTONICITY_BENCHMARK_HPP_
+#define _SIRIKATA_TIMER_MONOTONICITY_BENCHMARK_HPP_
 
 #include "Benchmark.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** TimerMonotonicityBenchmark tests the monotonicity of timer values, i.e. how
  *   often and by how much the monotonicity of time is violated.
@@ -59,6 +59,6 @@ class TimerMonotonicityBenchmark : public Benchmark {
     bool mForceStop;
 }; // class TimerMonotonicityBenchmark
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TIMER_MONOTONICITY_BENCHMARK_HPP_
+#endif //_SIRIKATA_TIMER_MONOTONICITY_BENCHMARK_HPP_

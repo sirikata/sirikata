@@ -1,7 +1,7 @@
 #include "asyncUtil.hpp"
 #include <string.h>
 
-namespace CBR
+namespace Sirikata
 {
   CraqOperationResult::CraqOperationResult(const CraqEntry& sID,const CraqDataKey& obj_id, const int& tm, const bool& suc, const GetOrSet& gos,const  bool& track_or_not):servID(sID)
   {

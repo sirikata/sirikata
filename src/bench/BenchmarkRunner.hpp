@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_BENCHMARK_RUNNER_HPP_
-#define _CBR_BENCHMARK_RUNNER_HPP_
+#ifndef _SIRIKATA_BENCHMARK_RUNNER_HPP_
+#define _SIRIKATA_BENCHMARK_RUNNER_HPP_
 
 #include "Benchmark.hpp"
 #include "BenchmarkFactory.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** BenchmarkRunner handles running benchmarks with a specified timeout. */
 class BenchmarkRunner {
@@ -80,6 +80,6 @@ class BenchmarkRunner {
     bool mForcefulStop;
 }; // class BenchmarkRunner
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_BENCHMARK_RUNNER_HPP_
+#endif //_SIRIKATA_BENCHMARK_RUNNER_HPP_

@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SST_BENCHMARK_HPP_
-#define _CBR_SST_BENCHMARK_HPP_
+#ifndef _SIRIKATA_SST_BENCHMARK_HPP_
+#define _SIRIKATA_SST_BENCHMARK_HPP_
 
 #include "Benchmark.hpp"
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** TimerSpeedBenchmark tests the cost of Timer calls, i.e. how many we can call
  *   per second.
@@ -102,6 +102,6 @@ class SSTBenchmark : public Benchmark {
     std::vector<Duration> mPingResponses;
 }; // class TimerSpeedBenchmark
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_SST_BENCHMARK_HPP_
+#endif //_SIRIKATA_SST_BENCHMARK_HPP_

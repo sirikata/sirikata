@@ -1,6 +1,6 @@
 #ifndef _CRAQ_ENTRY_HPP_
 #define _CRAQ_ENTRY_HPP_
-namespace CBR {
+namespace Sirikata {
 enum {
     CRAQ_SERVER_SIZE             =    10
 };

@@ -7,7 +7,7 @@
 #include <cmath>
 
 
-namespace CBR {
+namespace Sirikata {
 
 
 OSegTestMotionPath::OSegTestMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor, Vector3f driftDir)
@@ -66,4 +66,4 @@ const TimedMotionVector3f OSegTestMotionPath::at(const Time& t) const {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

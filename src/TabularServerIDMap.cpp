@@ -1,7 +1,7 @@
-#include "Network.hpp"
+#include "Address4.hpp"
 #include "TabularServerIDMap.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 
 TabularServerIDMap::TabularServerIDMap(std::istream&filestream) {

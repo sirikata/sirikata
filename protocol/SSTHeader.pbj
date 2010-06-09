@@ -34,7 +34,7 @@
 
 
 
-package CBR.Protocol.SST;
+package Sirikata.Protocol.SST;
 
 message SSTChannelHeader {
 	required uint8 channel_id = 1;

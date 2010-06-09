@@ -33,7 +33,7 @@
 #include "AlwaysLocationUpdatePolicy.hpp"
 #include "Message.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(LocationService* locservice)
  : LocationUpdatePolicy(locservice),
@@ -110,7 +110,7 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu)
+bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
   std::string bluMsg = serializePBJMessage(blu);
   boost::shared_ptr<Stream<UUID> > locServiceStream = mLocService->getObjectStream(dest);
@@ -124,7 +124,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
   return sent;
 }
 
-bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
+bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu) {
     Message* msg = new Message(
         mLocService->context()->id(),
         SERVER_PORT_LOCATION,
@@ -135,4 +135,4 @@ bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protoc
     return mLocMessageRouter->route(msg);
 }
 
-} // namespace CBR
+} // namespace Sirikata

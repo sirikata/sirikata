@@ -1,7 +1,7 @@
 
 "pbj-0.0.3"
 
-package CBR.Protocol.Forwarder;
+package Sirikata.Protocol.Forwarder;
 
 message WeightUpdate {
     // These flow from the sender to the receiver:

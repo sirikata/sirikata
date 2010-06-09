@@ -33,7 +33,7 @@
 
 #include "Timer.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 Timer::Timer() {
 }
@@ -73,4 +73,4 @@ Duration Timer::elapsed() const{
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

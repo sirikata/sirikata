@@ -1,5 +1,5 @@
-#ifndef ___CBR_CRAQ_CACHE_HPP___
-#define ___CBR_CRAQ_CACHE_HPP___
+#ifndef ___SIRIKATA_CRAQ_CACHE_HPP___
+#define ___SIRIKATA_CRAQ_CACHE_HPP___
 
 
 
@@ -12,7 +12,7 @@
 #include "Utility.hpp"
 #include "Timer.hpp"
 
-namespace CBR
+namespace Sirikata
 {
   static const int LARGEST_CRAQ_CACHE_SIZE =  100; //what is the most number of objects that we can have in the craq cache before we start deleting them
   static const int NUM_CRAQ_CACHE_REMOVE   =   10; //how many should delete at a time when we get to our limit.

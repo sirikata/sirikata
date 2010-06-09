@@ -1,10 +1,10 @@
 
-#ifndef __CBR_ANALYSIS_EVENTS_HPP__
-#define __CBR_ANALYSIS_EVENTS_HPP__
+#ifndef __SIRIKATA_ANALYSIS_EVENTS_HPP__
+#define __SIRIKATA_ANALYSIS_EVENTS_HPP__
 #include "Statistics.hpp"
 #include "OSegLookupTraceToken.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Read a single trace record, storing the type hint in type_hint_out and the result in payload_out.*/
 bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_out);

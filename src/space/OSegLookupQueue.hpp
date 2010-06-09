@@ -37,7 +37,7 @@
 #include "Message.hpp"
 #include "ObjectSegmentation.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** OSegLookupQueue manages outstanding OSeg lookups.  Lookups are submitted
  *  and either accepted and we commit to finishing them or rejected immediately.
@@ -56,11 +56,11 @@ public:
      *  ServerID the OSeg returned, and an enum indicating how the lookup was resolved.
      *  If you need additional information it must be curried via bind().
      */
-    typedef std::tr1::function<void(CBR::Protocol::Object::ObjectMessage*, CraqEntry, ResolvedFrom)> LookupCallback;
+    typedef std::tr1::function<void(Sirikata::Protocol::Object::ObjectMessage*, CraqEntry, ResolvedFrom)> LookupCallback;
 
 private:
     struct OSegLookup {
-        CBR::Protocol::Object::ObjectMessage* msg;
+        Sirikata::Protocol::Object::ObjectMessage* msg;
         LookupCallback cb;
         uint32 size;
     };
@@ -117,9 +117,9 @@ public:
      *  \param cb the callback to invoke when the lookup is complete
      *  \returns true if the lookup was accepted, false if it was rejected (due to the push predicate).
      */
-    bool lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb);
+    bool lookup(Sirikata::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb);
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_OSEG_LOOKUP_QUEUE_HPP_

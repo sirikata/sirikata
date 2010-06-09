@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 
-namespace CBR
+namespace Sirikata
 {
 
   OSegLookupTraceToken::OSegLookupTraceToken()

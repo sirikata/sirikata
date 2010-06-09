@@ -32,7 +32,7 @@
 
 #include "CBRLocationServiceCache.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 CBRLocationServiceCache::CBRLocationServiceCache(IOStrand* strand, LocationService* locservice, bool replicas)
  : Prox::LocationServiceCache<ProxSimulationTraits>(),
@@ -223,4 +223,4 @@ void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const Bound
         (*it)->locationBoundsUpdated(uuid, oldval, newval);
 }
 
-} // namespace CBR
+} // namespace Sirikata

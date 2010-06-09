@@ -46,7 +46,7 @@
 
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
 float64 MaxDistUpdatePredicate::maxDist = 3.0;
 
@@ -114,9 +114,9 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
         mLocationExtrapolator.updateValue(curLoc.time(), curLoc.value());
 
         // Generate and send an update to Loc
-        CBR::Protocol::Loc::Container container;
-        CBR::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
-        CBR::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
+        Sirikata::Protocol::Loc::Container container;
+        Sirikata::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
+        Sirikata::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
         requested_loc.set_t(curLoc.updateTime());
         requested_loc.set_position(curLoc.position());
         requested_loc.set_velocity(curLoc.velocity());
@@ -147,7 +147,7 @@ bool Object::send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, st
   return val;
 }
 
-bool Object::route(CBR::Protocol::Object::ObjectMessage* msg) {
+bool Object::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
   mContext->mainStrand->post(std::tr1::bind(
 			     &Object::send, this,
 			     msg->source_port(), msg->source_object(),
@@ -268,7 +268,7 @@ bool Object::connected() {
     return (mConnectedTo != NullServerID);
 }
 
-void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
+void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
     switch( msg->dest_port() ) {
@@ -285,14 +285,14 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
 }
 
 void Object::locationMessage(uint8* buffer, int len) {
-    CBR::Protocol::Loc::BulkLocationUpdate contents;
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
     bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
-        CBR::Protocol::Loc::LocationUpdate update = contents.update(idx);
+        Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-        CBR::Protocol::Loc::TimedMotionVector update_loc = update.location();
+        Sirikata::Protocol::Loc::TimedMotionVector update_loc = update.location();
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
         CONTEXT_TRACE(objectLoc,
@@ -307,12 +307,12 @@ void Object::locationMessage(uint8* buffer, int len) {
 
 void Object::proximityMessage(uint8* buffer, int len) {
     //assert(msg.source_object() == UUID::null()); // Should originate at space server
-    CBR::Protocol::Prox::ProximityResults contents;
+    Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
     for(int32 idx = 0; idx < contents.addition_size(); idx++) {
-        CBR::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
+        Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
@@ -325,7 +325,7 @@ void Object::proximityMessage(uint8* buffer, int len) {
     }
 
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
-        CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
+        Sirikata::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 
         CONTEXT_TRACE(prox,
             mID,
@@ -336,4 +336,4 @@ void Object::proximityMessage(uint8* buffer, int len) {
     }
 }
 
-} // namespace CBR
+} // namespace Sirikata

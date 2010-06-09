@@ -33,7 +33,7 @@
 #include "LocationService.hpp"
 #include "AlwaysLocationUpdatePolicy.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 LocationServiceListener::~LocationServiceListener() {
 }
@@ -151,4 +151,4 @@ void LocationService::notifyReplicaBoundsUpdated(const UUID& uuid, const Boundin
         (*it)->replicaBoundsUpdated(uuid, newval);
 }
 
-} // namespace CBR
+} // namespace Sirikata

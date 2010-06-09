@@ -34,7 +34,7 @@
 #include "Context.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 Poller::Poller(IOStrand* str, const IOCallback& cb, const Duration& max_rate)
  : mStrand(str),
@@ -96,4 +96,4 @@ void PollingService::stop() {
     Poller::stop();
 }
 
-} // namespace CBR
+} // namespace Sirikata

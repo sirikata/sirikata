@@ -1,5 +1,5 @@
-#ifndef __CBR_BATCH_CRAQ_QUEUE_HPP__
-#define __CBR_BATCH_CRAQ_QUEUE_HPP__
+#ifndef __SIRIKATA_BATCH_CRAQ_QUEUE_HPP__
+#define __SIRIKATA_BATCH_CRAQ_QUEUE_HPP__
 
 #include "ObjectSegmentation.hpp"
 #include "Utility.hpp"
@@ -13,7 +13,7 @@
 #include <sirikata/core/util/AtomicTypes.hpp>
 
 
-namespace CBR
+namespace Sirikata
 {
   class BatchCraqQueue
   {

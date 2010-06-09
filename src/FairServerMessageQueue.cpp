@@ -1,10 +1,10 @@
 #include "FairServerMessageQueue.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
 #include "Statistics.hpp"
 
-namespace CBR{
+namespace Sirikata{
 
 
 FairServerMessageQueue::SenderAdapterQueue::SenderAdapterQueue(Sender* sender, ServerID sid)
@@ -34,7 +34,7 @@ bool FairServerMessageQueue::SenderAdapterQueue::empty() {
     return front() == NULL;
 }
 
-FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender)
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sender* sender)
         : ServerMessageQueue(ctx, net, sender),
           mServerQueues(),
           mServiceScheduled(false),

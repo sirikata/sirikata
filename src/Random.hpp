@@ -32,7 +32,7 @@
 
 #include <cstdlib>
 
-namespace CBR {
+namespace Sirikata {
 
 inline float32 randFloat() {
     return (float)rand() / (float)RAND_MAX;
@@ -49,4 +49,4 @@ inline inttype randInt(inttype minval, inttype maxval) {
     return retval;
 }
 
-} // namespace CBR
+} // namespace Sirikata

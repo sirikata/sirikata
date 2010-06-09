@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_HOST_HPP_
-#define _CBR_OBJECT_HOST_HPP_
+#ifndef _SIRIKATA_OBJECT_HOST_HPP_
+#define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include "ObjectHostContext.hpp"
 #include "ObjectHostListener.hpp"
@@ -45,7 +45,7 @@
 
 
 
-namespace CBR {
+namespace Sirikata {
 
 class Object;
 class ServerIDMap;
@@ -62,7 +62,7 @@ public:
     typedef SessionCallback MigratedCallback;
     typedef std::tr1::function<void()> StreamCreatedCallback;
 
-    typedef std::tr1::function<void(const CBR::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
+    typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
     ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap);
@@ -87,10 +87,10 @@ public:
 
     /* Ping Utility Methods. */
     // Fill the basic parameters in a ping message.  This is reentrant.
-    void fillPing(double distance, uint32 payload_size, CBR::Protocol::Object::Ping* result);
+    void fillPing(double distance, uint32 payload_size, Sirikata::Protocol::Object::Ping* result);
     // Given a ping message constructed with fillPing(), finish constructing and
     // send it. Must be called from main strand.
-    bool sendPing(const Time& t, const UUID& src, const UUID& dest, CBR::Protocol::Object::Ping* pmsg);
+    bool sendPing(const Time& t, const UUID& src, const UUID& dest, Sirikata::Protocol::Object::Ping* pmsg);
     // Construct and send a ping.  May be expensive since it needs to be
     // performed in main strand.
     bool ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size);
@@ -145,7 +145,7 @@ private:
     void handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* conn);
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
-    void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
+    void handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
     void retryOpenConnection(const UUID&uuid,ServerID sid);
 
 
@@ -335,7 +335,7 @@ private:
 
 }; // class ObjectHost
 
-} // namespace CBR
+} // namespace Sirikata
 
 
-#endif //_CBR_OBJECT_HOST_HPP_
+#endif //_SIRIKATA_OBJECT_HOST_HPP_

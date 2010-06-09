@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_PROX_SIMULATION_TRAITS_HPP_
-#define _CBR_PROX_SIMULATION_TRAITS_HPP_
+#ifndef _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
+#define _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
 
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ProxSimulationTraits {
 public:
@@ -57,6 +57,6 @@ public:
     const static realType InfiniteRadius; // Storate in Proximity.cpp
 }; // class ProxSimulationTraits
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_PROX_SIMULATION_TRAITS_HPP_
+#endif //_SIRIKATA_PROX_SIMULATION_TRAITS_HPP_

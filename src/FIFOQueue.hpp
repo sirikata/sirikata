@@ -35,7 +35,7 @@
 
 #include "Queue.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 template <class MessageType, class Key>
 class FIFOQueue {
@@ -168,6 +168,6 @@ protected:
     SizeMap mDestSizes;
 }; // class FIFOQueue
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_FIFO_QUEUE_HPP_

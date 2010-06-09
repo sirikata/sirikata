@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
-#define _CBR_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
+#ifndef _SIRIKATA_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
+#define _SIRIKATA_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
@@ -43,7 +43,9 @@
 
 typedef boost::asio::ip::tcp tcp;
 
-namespace CBR {
+namespace Sirikata {
+
+class ServerIDMap;
 
 typedef struct ServerAvailability  {
   ServerID mServer;
@@ -79,7 +81,7 @@ public:
 
 private:
 
-    void csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg);
+    void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void notifySpaceServersOfChange(const std::vector<Listener::SegmentationInfo> segInfoVector);
 
@@ -157,6 +159,6 @@ private:
     std::map<ServerID, BoundingBoxList > mLowerTreeServerRegionMap;
 }; // class CoordinateSegmentation
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif

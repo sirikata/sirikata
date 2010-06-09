@@ -1,6 +1,6 @@
 
-#ifndef _CBR_SERVER_HPP_
-#define _CBR_SERVER_HPP_
+#ifndef _SIRIKATA_SERVER_HPP_
+#define _SIRIKATA_SERVER_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
@@ -15,7 +15,7 @@
 
 #include "ObjectSegmentation.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 class Forwarder;
 class LocalForwarder;
@@ -63,7 +63,7 @@ private:
 
     // Send a session message directly to the object via the OH connection manager, bypassing any restrictions on
     // the current state of the connection.  Keeps retrying until the message gets through.
-    void sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, CBR::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate);
+    void sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate);
 
 
     // Checks if an object is connected to this server
@@ -73,7 +73,7 @@ private:
     // before using the forwarder to do routing.  Operates in the
     // network strand to allow for fast forwarding, see
     // handleObjectHostMessageRouting for continuation in main strand
-    bool handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    bool handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
     // Schedule main thread to handle oh message routing
     void scheduleObjectHostMessageRouting();
     void handleObjectHostMessageRouting();
@@ -83,17 +83,17 @@ private:
     bool handleSingleObjectHostMessageRouting();
 
     // Handle Session messages from an object
-    void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
     // Handle Connect message from object
-    void retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, CBR::Protocol::Object::ObjectMessage* );
-    void retryObjectMessage(const UUID& obj_id, CBR::Protocol::Object::ObjectMessage* );
-    void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
+    void retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* );
+    void retryObjectMessage(const UUID& obj_id, Sirikata::Protocol::Object::ObjectMessage* );
+    void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg);
 
     // Handle connection ack message from object
-    void handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container);
+    void handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container);
 
     // Handle Migrate message from object
-    void handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& migrate_msg);
+    void handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg);
 
     // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);
@@ -135,7 +135,7 @@ private:
                                   // properly
     ObjectConnectionMap mObjectsAwaitingMigration;
 
-    typedef std::tr1::unordered_map<UUID, CBR::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
+    typedef std::tr1::unordered_map<UUID, Sirikata::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
     ObjectMigrationMap mObjectMigrations;
 
     typedef std::tr1::unordered_set<ObjectConnection*> ObjectConnectionSet;
@@ -165,15 +165,15 @@ private:
     struct StoredConnection
     {
       ObjectHostConnectionManager::ConnectionID    conn_id;
-      CBR::Protocol::Session::Connect             conn_msg;
+      Sirikata::Protocol::Session::Connect             conn_msg;
     };
 
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;
     StoredConnectionMap  mStoredConnectionData;
     struct ConnectionIDObjectMessagePair{
         ObjectHostConnectionManager::ConnectionID conn_id;
-        CBR::Protocol::Object::ObjectMessage* obj_msg;
-        ConnectionIDObjectMessagePair(ObjectHostConnectionManager::ConnectionID conn_id, CBR::Protocol::Object::ObjectMessage*msg) {
+        Sirikata::Protocol::Object::ObjectMessage* obj_msg;
+        ConnectionIDObjectMessagePair(ObjectHostConnectionManager::ConnectionID conn_id, Sirikata::Protocol::Object::ObjectMessage*msg) {
             this->conn_id=conn_id;
             this->obj_msg=msg;
         }
@@ -188,6 +188,6 @@ private:
     Sirikata::SizedThreadSafeQueue<ConnectionIDObjectMessagePair>mRouteObjectMessage;
 }; // class Server
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_SERVER_HPP_
+#endif //_SIRIKATA_SERVER_HPP_

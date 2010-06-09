@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_RANDOM_MOTION_PATH_HPP_
-#define _CBR_RANDOM_MOTION_PATH_HPP_
+#ifndef _SIRIKATA_RANDOM_MOTION_PATH_HPP_
+#define _SIRIKATA_RANDOM_MOTION_PATH_HPP_
 
 #include "Utility.hpp"
 #include "MotionPath.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Random motion path.  Initialize with a starting position, speed, and
  *  change frequency.  It will then generate a random path based on these
@@ -55,6 +55,6 @@ private:
     std::vector<TimedMotionVector3f> mUpdates;
 }; // class RandomMotionPath
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_RANDOM_MOTION_PATH_HPP_
+#endif //_SIRIKATA_RANDOM_MOTION_PATH_HPP_

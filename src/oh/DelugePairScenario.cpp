@@ -38,7 +38,7 @@
 #include "ConnectedObjectTracker.hpp"
 
 #include "ServerWeightCalculator.hpp"
-namespace CBR {
+namespace Sirikata {
 void DPSInitOptions(DelugePairScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("DelugePairScenario",thus,
@@ -241,7 +241,7 @@ bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
         result->objA = where->source;
         result->objB = where->dest;
         result->dist = where->dist;
-        result->ping = new CBR::Protocol::Object::Ping();
+        result->ping = new Sirikata::Protocol::Object::Ping();
         mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
         return true;
     }

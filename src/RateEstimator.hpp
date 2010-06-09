@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_RATE_ESTIMATOR_HPP_
-#define _CBR_RATE_ESTIMATOR_HPP_
+#ifndef _SIRIKATA_RATE_ESTIMATOR_HPP_
+#define _SIRIKATA_RATE_ESTIMATOR_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Exponential weighted average rate estimator. */
 class RateEstimator {
@@ -110,6 +110,6 @@ private:
     double _K;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_RATE_ESTIMATOR_HPP_
+#endif //_SIRIKATA_RATE_ESTIMATOR_HPP_

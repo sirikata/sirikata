@@ -33,9 +33,9 @@
 #include "FairServerMessageReceiver.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
-FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, Network* net, Listener* listener)
+FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener)
         : ServerMessageReceiver(ctx, net, listener),
           mServiceTimer(
               IOTimer::create(
@@ -143,7 +143,7 @@ void FairServerMessageReceiver::handleUpdateSenderStats(ServerID sid, double tot
     mReceiveQueues.setQueueWeight(sid, used_weight);
 }
 
-void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream* strm) {
+void FairServerMessageReceiver::networkReceivedConnection(SpaceNetwork::ReceiveStream* strm) {
     ServerID from = strm->id();
     {
         boost::lock_guard<boost::mutex> lck(mMutex);
@@ -169,7 +169,7 @@ void FairServerMessageReceiver::networkReceivedConnection(Network::ReceiveStream
     mListener->serverConnectionReceived(from);
 }
 
-void FairServerMessageReceiver::networkReceivedData(Network::ReceiveStream* strm) {
+void FairServerMessageReceiver::networkReceivedData(SpaceNetwork::ReceiveStream* strm) {
     // FIXME This should only be triggered when the underlying network queue
     // went empty -> non-empty, so hopefully lock contention shouldn't be an issue.
 
@@ -186,4 +186,4 @@ void FairServerMessageReceiver::networkReceivedData(Network::ReceiveStream* strm
     scheduleServicing();
 }
 
-} // namespace CBR
+} // namespace Sirikata

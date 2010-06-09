@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OPTIONS_HPP_
-#define _CBR_OPTIONS_HPP_
+#ifndef _SIRIKATA_CBR_OPTIONS_HPP_
+#define _SIRIKATA_CBR_OPTIONS_HPP_
 
 #include "Utility.hpp"
 
@@ -121,7 +121,7 @@
 #define PROX_MAX_PER_RESULT        "prox.max-per-result"
 
 
-namespace CBR {
+namespace Sirikata {
 
 void InitOptions();
 void ParseOptions(int argc, char** argv);
@@ -133,7 +133,7 @@ String GetPerServerString(const String& orig, const ServerID& sid);
 String GetPerServerFile(const char* opt_name, const ServerID& sid);
 String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
 
-} // namespace CBR
+} // namespace Sirikata
 
 
-#endif //_CBR_OPTIONS_HPP_
+#endif //_SIRIKATA_CBR_OPTIONS_HPP_

@@ -35,7 +35,7 @@
 
 #include "CBR_Loc.pbj.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 StandardLocationService::StandardLocationService(SpaceContext* ctx)
  : LocationService(ctx)
@@ -192,12 +192,12 @@ void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uui
 
 void StandardLocationService::receiveMessage(Message* msg) {
     assert(msg->dest_port() == SERVER_PORT_LOCATION);
-    CBR::Protocol::Loc::BulkLocationUpdate contents;
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
     bool parsed = parsePBJMessage(&contents, msg->payload());
 
     if (parsed) {
         for(int32 idx = 0; idx < contents.update_size(); idx++) {
-            CBR::Protocol::Loc::LocationUpdate update = contents.update(idx);
+            Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
             // Its possible we'll get an out of date update. We only use this update
             // if (a) we have this object marked as a replica object and (b) we don't
@@ -230,16 +230,16 @@ void StandardLocationService::receiveMessage(Message* msg) {
     delete msg;
 }
 
-void StandardLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
+void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) {
     assert(msg.dest_object() == UUID::null());
     assert(msg.dest_port() == OBJECT_PORT_LOCATION);
 
-    CBR::Protocol::Loc::Container loc_container;
+    Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString(msg.payload());
     assert(parse_success);
 
     if (loc_container.has_update_request()) {
-        CBR::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
+        Sirikata::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
 
         TrackingType obj_type = type(msg.source_object());
         if (obj_type == Local) {
@@ -270,12 +270,12 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
 }
 
 void StandardLocationService::locationUpdate(UUID source, void* buffer, uint length) {
-    CBR::Protocol::Loc::Container loc_container;
+    Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     assert(parse_success);
 
     if (loc_container.has_update_request()) {
-        CBR::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
+        Sirikata::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
 
         TrackingType obj_type = type(source);
         if (obj_type == Local) {
@@ -307,4 +307,4 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint len
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

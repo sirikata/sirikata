@@ -1,5 +1,5 @@
 
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Server.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
@@ -31,7 +31,7 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR
+namespace Sirikata
 {
 
 class ForwarderServerMessageRouter : public Router<Message*> {
@@ -125,12 +125,12 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
     mServerMessageReceiver = smr;
   }
 
-void Forwarder::handleObjectMessageLoop(CBR::Protocol::Object::ObjectMessage* obj_msg) const {
+void Forwarder::handleObjectMessageLoop(Sirikata::Protocol::Object::ObjectMessage* obj_msg) const {
     dispatchMessage(*obj_msg);
     delete obj_msg;
 }
 
-void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
+void Forwarder::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage&msg) const {
     ObjectMessageDispatcher::dispatchMessage(msg);
 }
 
@@ -249,7 +249,7 @@ void Forwarder::updateServerWeights() {
 
         // Update remote server, i.e. the receive scheduler, with
         // stats from the ODP server.
-        CBR::Protocol::Forwarder::WeightUpdate weight_update;
+        Sirikata::Protocol::Forwarder::WeightUpdate weight_update;
 
         // Note that the naming here is a bit confusing.
         weight_update.set_server_pair_total_weight( odp_total_weight );
@@ -308,7 +308,7 @@ void Forwarder::forwarderServiceMessageReady(ServerID dest_server) {
 // -- messages.  Sources include object hosts and other space servers.
 
 // --- From object hosts
-void Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
+void Forwarder::routeObjectHostMessage(Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
     // Messages destined for the space skip the object message queue and just get dispatched
     if (obj_msg->dest_object() == UUID::null()) {
         dispatchMessage(*obj_msg);
@@ -325,7 +325,7 @@ void Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 }
 
 // --- From local space server services
-bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg) {
+bool Forwarder::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
     msg->set_unique(GenerateUniqueID(mContext->id()));
     return forward(msg, NullServerID);
 }
@@ -345,7 +345,7 @@ void Forwarder::receiveMessage(Message* msg) {
 }
 
 void Forwarder::receiveObjectRoutingMessage(Message* msg) {
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
     bool parsed = parsePBJMessage(obj_msg, msg->payload());
     assert(parsed);
 
@@ -376,7 +376,7 @@ void Forwarder::receiveObjectRoutingMessage(Message* msg) {
 void Forwarder::receiveWeightUpdateMessage(Message* msg) {
     ServerID source = msg->source_server();
 
-    CBR::Protocol::Forwarder::WeightUpdate weight_update;
+    Sirikata::Protocol::Forwarder::WeightUpdate weight_update;
     bool parsed = parsePBJMessage(&weight_update, msg->payload());
     assert(parsed);
 
@@ -421,7 +421,7 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
 // -- Real Routing - Given an object message, from any source, decide where it
 // -- needs to go and send it out in that direction.
 
-bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom)
+bool Forwarder::forward(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom)
 {
     TIMESTAMP_START(tstamp, msg);
     TIMESTAMP_END(tstamp, Trace::FORWARDING_STARTED);
@@ -443,7 +443,7 @@ bool Forwarder::forward(CBR::Protocol::Object::ObjectMessage* msg, ServerID forw
 }
 
 WARN_UNUSED
-bool Forwarder::tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg) {
+bool Forwarder::tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg) {
     TIMESTAMP_START(tstamp, msg);
 
     TIMESTAMP_END(tstamp, Trace::OSEG_CACHE_CHECK_STARTED);
@@ -461,7 +461,7 @@ bool Forwarder::tryCacheForward(CBR::Protocol::Object::ObjectMessage* msg) {
 }
 
 
-bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
+bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
 {
     Trace::MessagePath mp = (resolved_from == OSegLookupQueue::ResolvedFromCache)
         ? Trace::OSEG_CACHE_LOOKUP_FINISHED
@@ -530,7 +530,7 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
 #endif
 
-      CBR::Protocol::OSeg::UpdateOSegMessage contents;
+      Sirikata::Protocol::OSeg::UpdateOSegMessage contents;
       contents.set_servid_sending_update(mContext->id());
       contents.set_servid_obj_on(dest_serv.server());
       contents.set_m_objid(obj_id);
@@ -581,7 +581,7 @@ void Forwarder::serverMessageReceived(Message* msg) {
 
     // Routing, check if we can route immediately.
     if (msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
-        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
         bool parsed = parsePBJMessage(obj_msg, msg->payload());
         assert(parsed);
 

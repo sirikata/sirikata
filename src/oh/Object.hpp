@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_HPP_
-#define _CBR_OBJECT_HPP_
+#ifndef _SIRIKATA_OBJECT_HPP_
+#define _SIRIKATA_OBJECT_HPP_
 
 #include "Utility.hpp"
 #include "Message.hpp"
@@ -41,7 +41,7 @@
 
 #include <boost/thread/shared_mutex.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** A property shared between multiple threads. Guarantees thread safety
  *  with a multi-reader, single writer lock.
@@ -108,7 +108,7 @@ public:
     const TimedMotionVector3f location() const;
     const BoundingSphere3f bounds() const;
 
-    void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
+    void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg);
 
     virtual void start();
     virtual void stop();
@@ -135,7 +135,7 @@ private:
     void handleSpaceMigration(ServerID sid);
     void handleSpaceStreamCreated(); 
     
-    bool route(CBR::Protocol::Object::ObjectMessage* msg);
+    bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     bool send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
     
@@ -166,6 +166,6 @@ private:
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 }; // class Object
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_OBJECT_HPP_
+#endif //_SIRIKATA_OBJECT_HPP_

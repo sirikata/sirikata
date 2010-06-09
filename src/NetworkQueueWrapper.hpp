@@ -1,14 +1,14 @@
 #ifndef _NETWORK_QUEUE_WRAPPER
 #define _NETWORK_QUEUE_WRAPPER
 
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Message.hpp"
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class NetworkQueueWrapper {
     Context* mContext;
-    Network::ReceiveStream* mReceiveStream;
+    SpaceNetwork::ReceiveStream* mReceiveStream;
     Message* mFront;
     Trace::MessagePath mPathTag;
     typedef Network::Chunk Chunk;
@@ -36,7 +36,7 @@ class NetworkQueueWrapper {
 public:
     typedef Message* ElementType;
 
-    NetworkQueueWrapper(Context* ctx, Network::ReceiveStream* rstrm, Trace::MessagePath tag)
+    NetworkQueueWrapper(Context* ctx, SpaceNetwork::ReceiveStream* rstrm, Trace::MessagePath tag)
      : mContext(ctx),
        mReceiveStream(rstrm),
        mFront(NULL),

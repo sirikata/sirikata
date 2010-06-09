@@ -1,5 +1,5 @@
-#ifndef _CBR_DHT_OBJECT_SEGMENTATION_HPP_
-#define _CBR_DHT_OBJECT_SEGMENTATION_HPP_
+#ifndef _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
+#define _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 
 #include "Utility.hpp"
 #include "Statistics.hpp"
@@ -32,7 +32,7 @@
 #define CRAQ_CACHE
 
 
-namespace CBR
+namespace Sirikata
 {
 
   struct TransLookup
@@ -85,7 +85,7 @@ namespace CBR
 
     struct TrackedSetResultsData
     {
-      CBR::Protocol::OSeg::MigrateMessageAcknowledge* migAckMsg;
+      Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* migAckMsg;
       Duration dur;
     };
 
@@ -136,12 +136,12 @@ namespace CBR
     //for message addition. when add an object, send a message to the server that you can now finish adding it to forwarder, loc services, etc.
     struct TrackedSetResultsDataAdded
     {
-      CBR::Protocol::OSeg::AddedObjectMessage* msgAdded;
+      Sirikata::Protocol::OSeg::AddedObjectMessage* msgAdded;
       Duration dur;
     };
       typedef std::tr1::unordered_map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
     TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
-    CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id, float radius);
+    Sirikata::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id, float radius);
     //end message addition.
 
 
@@ -183,10 +183,10 @@ namespace CBR
 
 
 
-    CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
-    void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
-    void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);
-    void processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
+    Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
+    void processMigrateMessageAcknowledge(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
+    void processMigrateMessageMove(const Sirikata::Protocol::OSeg::MigrateMessageMove& msg);
+    void processUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
 
   };
 }

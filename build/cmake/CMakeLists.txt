@@ -313,12 +313,12 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
-  ${CBR_SOURCE_DIR}/Network.cpp
+  ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
   ${CBR_SOURCE_DIR}/SSTImpl.cpp
-  ${CBR_SOURCE_DIR}/TCPNetwork.cpp
+  ${CBR_SOURCE_DIR}/TCPSpaceNetwork.cpp
 #  ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp

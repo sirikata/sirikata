@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TABULARSERVERID_MAP_HPP_
-#define _CBR_TABULARSERVERID_MAP_HPP_
+#ifndef _SIRIKATA_TABULARSERVERID_MAP_HPP_
+#define _SIRIKATA_TABULARSERVERID_MAP_HPP_
 
 #include "Server.hpp"
 #include "ServerIDMap.hpp"
 #include <fstream>
-namespace CBR {
+namespace Sirikata {
 
 /* Represents the physical network addresses of servers
  */
@@ -57,6 +57,6 @@ public:
     virtual Address4* lookupExternal(const ServerID& obj_id);
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_SERVER_MAP_HPP_
+#endif //_SIRIKATA_SERVER_MAP_HPP_

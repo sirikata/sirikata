@@ -9,7 +9,7 @@
 #ifndef  __ASYNC_CRAQ_HYBRID_HPP__
 #define  __ASYNC_CRAQ_HYBRID_HPP__
 
-namespace CBR
+namespace Sirikata
 {
 
   class AsyncCraqHybrid

@@ -30,18 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_MESSAGE_QUEUE_HPP_
-#define _CBR_SERVER_MESSAGE_QUEUE_HPP_
+#ifndef _SIRIKATA_SERVER_MESSAGE_QUEUE_HPP_
+#define _SIRIKATA_SERVER_MESSAGE_QUEUE_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "RateEstimator.hpp"
 
-namespace CBR{
+namespace Sirikata{
 
-class ServerMessageQueue : public Network::SendListener, CoordinateSegmentation::Listener {
+class ServerMessageQueue : public SpaceNetwork::SendListener, CoordinateSegmentation::Listener {
 public:
     /** Implement the Sender interface to set a class up to feed messages into
      *  the ServerMessageQueue.
@@ -59,7 +59,7 @@ public:
         virtual bool serverMessageEmpty(ServerID dest) = 0;
     };
 
-    ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender);
+    ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sender* sender);
     virtual ~ServerMessageQueue();
 
     /** Indicate that a new message is available upstream, destined for the
@@ -84,7 +84,7 @@ public:
   protected:
     //actually initiate a connection, must be called from the mSenderStrand
     void connect(const ServerID&dest);
-    // Network::SendListener Interface
+    // SpaceNetwork::SendListener Interface
     virtual void networkReadyToSend(const ServerID& from) = 0;
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
@@ -92,17 +92,17 @@ public:
     // ServerMessageReceiver Protected (Implementation) Interface
     virtual void handleUpdateReceiverStats(ServerID sid, double total_weight, double used_weight) = 0;
 
-    // Tries to send the Message to the Network, and tags it for analysis if
+    // Tries to send the Message to the SpaceNetwork, and tags it for analysis if
     // successful. Helper method for implementations.
     // If sent, returns the size of the serialized packet.  Otherwise, returns 0.
     uint32 trySend(const ServerID& addr, const Message* msg);
     double mCapacityOverestimate;
     SpaceContext* mContext;
     IOStrand* mSenderStrand;
-    Network* mNetwork;
+    SpaceNetwork* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;
-    typedef std::tr1::unordered_map<ServerID, Network::SendStream*> SendStreamMap;
+    typedef std::tr1::unordered_map<ServerID, SpaceNetwork::SendStream*> SendStreamMap;
     SendStreamMap mSendStreams;
 
     // Total weights are handled by the main strand since that's the only place
@@ -119,4 +119,4 @@ public:
 };
 }
 
-#endif //_CBR_SERVER_MESSAGE_QUEUE_HPP
+#endif //_SIRIKATA_SERVER_MESSAGE_QUEUE_HPP

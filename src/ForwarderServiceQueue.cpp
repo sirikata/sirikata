@@ -34,7 +34,7 @@
 #include "ForwarderServiceQueue.hpp"
 #include <boost/thread/locks.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 ForwarderServiceQueue::ForwarderServiceQueue(ServerID this_server, uint32 size, Listener* listener)
         : mThisServer(this_server),
@@ -140,4 +140,4 @@ ForwarderServiceQueue::OutgoingFairQueue* ForwarderServiceQueue::checkServiceQue
     return ofq;
 }
 
-} // namespace CBR
+} // namespace Sirikata

@@ -5,7 +5,7 @@
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
-namespace CBR{
+namespace Sirikata{
 void DPSInitOptions(DistributionPingScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("DistributedPingScenario",thus,

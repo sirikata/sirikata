@@ -32,7 +32,7 @@
 
 #include "VWTypes.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 
 std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs) {
@@ -46,4 +46,4 @@ std::istream& operator>>(std::istream& is, ObjectHostID& rhs) {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

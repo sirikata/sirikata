@@ -32,7 +32,7 @@
 
 #include "Options.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 void InitOptions() {
     InitializeOptions::module(CBR_MODULE)
@@ -212,4 +212,4 @@ String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid) {
     return (GetPerServerFile(opt_name, (ServerID)ohid.id)); // FIXME relies on fact that ServerID and ObjectHostID are both uint64
 }
 
-} // namespace CBR
+} // namespace Sirikata

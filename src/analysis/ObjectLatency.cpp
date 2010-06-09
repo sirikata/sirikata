@@ -34,7 +34,7 @@
 #include "ObjectLatency.hpp"
 #include "Options.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 nservers) {
     mNumberOfServers = nservers;
@@ -130,4 +130,4 @@ void ObjectLatencyAnalysis::printTotalAverage(std::ostream&out) {
     out << (total_lat / (float)mLatency.size()) << "  (" <<  mLatency.size() << " samples)\n";
 }
 
-} // namespace CBR
+} // namespace Sirikata

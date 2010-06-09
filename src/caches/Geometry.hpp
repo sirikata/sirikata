@@ -6,7 +6,7 @@
 #ifndef __CACHE_GEOMETRY_HPP__
 #define __CACHE_GEOMETRY_HPP__
 
-namespace CBR
+namespace Sirikata
 {
 
   struct Point

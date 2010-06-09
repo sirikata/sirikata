@@ -36,7 +36,7 @@
 #include "TimeSync.hpp"
 #include "TimeProfiler.hpp"
 
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 
 #include "Forwarder.hpp"
 
@@ -48,7 +48,7 @@
 #include "Options.hpp"
 #include "Statistics.hpp"
 #include "StandardLocationService.hpp"
-#include "TCPNetwork.hpp"
+#include "TCPSpaceNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
@@ -62,7 +62,7 @@
 
 int main(int argc, char** argv) {
 
-    using namespace CBR;
+    using namespace Sirikata;
 
     InitOptions();
     Trace::InitOptions();
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    CBR::Trace* gTrace = new Trace(trace_file);
+    Sirikata::Trace* gTrace = new Trace(trace_file);
 
     // Compute the starting date/time
     String start_time_str = GetOption("wait-until")->as<String>();
@@ -93,10 +93,10 @@ int main(int argc, char** argv) {
 
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
 
-    CBR::Network* gNetwork = NULL;
+    Sirikata::SpaceNetwork* gNetwork = NULL;
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "tcp")
-      gNetwork = new TCPNetwork(space_context);
+      gNetwork = new TCPSpaceNetwork(space_context);
 
     /*
     String test_mode = GetOption("test")->as<String>();

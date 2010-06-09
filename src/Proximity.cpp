@@ -44,7 +44,7 @@
 
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
 const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_MAX;
 
@@ -148,10 +148,10 @@ void Proximity::sendQueryRequests() {
     sub_servers.swap(mNeedServerQueryUpdate);
     for(std::set<ServerID>::iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
-        CBR::Protocol::Prox::Container container;
-        CBR::Protocol::Prox::IServerQuery msg = container.mutable_query();
-        msg.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
-        CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg.mutable_location();
+        Sirikata::Protocol::Prox::Container container;
+        Sirikata::Protocol::Prox::IServerQuery msg = container.mutable_query();
+        msg.set_action(Sirikata::Protocol::Prox::ServerQuery::AddOrUpdate);
+        Sirikata::Protocol::Prox::ITimedMotionVector msg_loc = msg.mutable_location();
         msg_loc.set_t(loc.updateTime());
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
@@ -176,7 +176,7 @@ void Proximity::sendQueryRequests() {
 void Proximity::receiveMessage(Message* msg) {
     assert(msg->dest_port() == SERVER_PORT_PROX);
 
-    CBR::Protocol::Prox::Container prox_container;
+    Sirikata::Protocol::Prox::Container prox_container;
     bool parsed = parsePBJMessage(&prox_container, msg->payload());
     if (!parsed) {
         PROXLOG(warn,"Couldn't parse message, ID=" << msg->id());
@@ -185,24 +185,24 @@ void Proximity::receiveMessage(Message* msg) {
     }
 
     if (prox_container.has_query()) {
-        CBR::Protocol::Prox::ServerQuery prox_query_msg = prox_container.query();
+        Sirikata::Protocol::Prox::ServerQuery prox_query_msg = prox_container.query();
 
         ServerID source_server = msg->source_server();
 
-        if (prox_query_msg.action() == CBR::Protocol::Prox::ServerQuery::AddOrUpdate) {
+        if (prox_query_msg.action() == Sirikata::Protocol::Prox::ServerQuery::AddOrUpdate) {
             assert(
                 prox_query_msg.has_location() &&
                 prox_query_msg.has_bounds() &&
                 prox_query_msg.has_min_angle()
             );
 
-            CBR::Protocol::Prox::TimedMotionVector msg_loc = prox_query_msg.location();
+            Sirikata::Protocol::Prox::TimedMotionVector msg_loc = prox_query_msg.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             SolidAngle minangle(prox_query_msg.min_angle());
 
             updateQuery(source_server, qloc, prox_query_msg.bounds(), minangle);
         }
-        else if (prox_query_msg.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
+        else if (prox_query_msg.action() == Sirikata::Protocol::Prox::ServerQuery::Remove) {
             removeQuery(source_server);
         }
         else {
@@ -211,14 +211,14 @@ void Proximity::receiveMessage(Message* msg) {
     }
 
     if (prox_container.has_result()) {
-        CBR::Protocol::Prox::ProximityResults prox_result_msg = prox_container.result();
+        Sirikata::Protocol::Prox::ProximityResults prox_result_msg = prox_container.result();
 
         assert( prox_result_msg.has_t() );
         Time t = prox_result_msg.t();
 
         if (prox_result_msg.addition_size() > 0) {
             for(int32 idx = 0; idx < prox_result_msg.addition_size(); idx++) {
-                CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
+                Sirikata::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -230,7 +230,7 @@ void Proximity::receiveMessage(Message* msg) {
 
         if (prox_result_msg.removal_size() > 0) {
             for(int32 idx = 0; idx < prox_result_msg.removal_size(); idx++) {
-                CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
+                Sirikata::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
         }
@@ -253,14 +253,14 @@ std::string Proximity::generateMigrationData(const UUID& obj, ServerID source_se
         SolidAngle query_angle = it->second;
         removeQuery(obj);
 
-        CBR::Protocol::Prox::ObjectMigrationData migr_data;
+        Sirikata::Protocol::Prox::ObjectMigrationData migr_data;
         migr_data.set_min_angle( query_angle.asFloat() );
         return serializePBJMessage(migr_data);
     }
 }
 
 void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) {
-    CBR::Protocol::Prox::ObjectMigrationData migr_data;
+    Sirikata::Protocol::Prox::ObjectMigrationData migr_data;
     bool parse_success = migr_data.ParseFromString(data);
     assert(parse_success);
 
@@ -350,13 +350,13 @@ void Proximity::poll() {
     }
 
     // Get and ship object results
-    std::deque<CBR::Protocol::Object::ObjectMessage*> object_results_copy;
+    std::deque<Sirikata::Protocol::Object::ObjectMessage*> object_results_copy;
     mObjectResults.swap(object_results_copy);
     mObjectResultsToSend.insert(mObjectResultsToSend.end(), object_results_copy.begin(), object_results_copy.end());
 
     bool object_sent = true;
     while(object_sent && !mObjectResultsToSend.empty()) {
-        CBR::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
+        Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
         boost::shared_ptr<Stream<UUID> > proxStream = mContext->getObjectStream(msg_front->dest_object());
         std::string proxMsg = msg_front->payload();
 
@@ -463,8 +463,8 @@ void Proximity::generateServerQueryEvents() {
         query->popEvents(evts);
 
         while(!evts.empty()) {
-            CBR::Protocol::Prox::Container container;
-            CBR::Protocol::Prox::IProximityResults contents = container.mutable_result();
+            Sirikata::Protocol::Prox::Container container;
+            Sirikata::Protocol::Prox::IProximityResults contents = container.mutable_result();
             contents.set_t(t);
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
@@ -477,11 +477,11 @@ void Proximity::generateServerQueryEvents() {
                             std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, evt.id())
                         );
 
-                        CBR::Protocol::Prox::IObjectAddition addition = contents.add_addition();
+                        Sirikata::Protocol::Prox::IObjectAddition addition = contents.add_addition();
                         addition.set_object( evt.id() );
 
                         TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
-                        CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                        Sirikata::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
                         msg_loc.set_t(loc.updateTime());
                         msg_loc.set_position(loc.position());
                         msg_loc.set_velocity(loc.velocity());
@@ -494,7 +494,7 @@ void Proximity::generateServerQueryEvents() {
                     mContext->mainStrand->post(
                         std::tr1::bind(&Proximity::handleRemoveServerLocSubscription, this, sid, evt.id())
                     );
-                    CBR::Protocol::Prox::IObjectRemoval removal = contents.add_removal();
+                    Sirikata::Protocol::Prox::IObjectRemoval removal = contents.add_removal();
                     removal.set_object( evt.id() );
                 }
 
@@ -528,7 +528,7 @@ void Proximity::generateObjectQueryEvents() {
         query->popEvents(evts);
 
         while(!evts.empty()) {
-            CBR::Protocol::Prox::ProximityResults prox_results;
+            Sirikata::Protocol::Prox::ProximityResults prox_results;
             prox_results.set_t(mContext->simTime());
 
             uint32 count = 0;
@@ -542,10 +542,10 @@ void Proximity::generateObjectQueryEvents() {
                             std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, evt.id())
                         );
 
-                        CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
+                        Sirikata::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
                         addition.set_object( evt.id() );
 
-                        CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                        Sirikata::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
                         TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
                         motion.set_t(loc.updateTime());
                         motion.set_position(loc.position());
@@ -560,14 +560,14 @@ void Proximity::generateObjectQueryEvents() {
                         std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, evt.id())
                     );
 
-                    CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
+                    Sirikata::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
                     removal.set_object( evt.id() );
                 }
 
                 evts.pop_front();
             }
 
-            CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
+            Sirikata::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
                 mContext->id(),
                 UUID::null(), OBJECT_PORT_PROXIMITY,
                 query_id, OBJECT_PORT_PROXIMITY,
@@ -648,4 +648,4 @@ void Proximity::handleRemoveObjectQuery(const UUID& object) {
     );
 }
 
-} // namespace CBR
+} // namespace Sirikata

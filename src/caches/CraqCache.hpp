@@ -5,7 +5,7 @@
 #include "../Context.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
 
   class CraqCache

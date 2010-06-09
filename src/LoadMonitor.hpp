@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_LOAD_MONITOR_HPP_
-#define _CBR_LOAD_MONITOR_HPP_
+#ifndef _SIRIKATA_LOAD_MONITOR_HPP_
+#define _SIRIKATA_LOAD_MONITOR_HPP_
 
 
 #include "Message.hpp"
@@ -39,7 +39,7 @@
 
 #include "CBR_CSeg.pbj.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ServerMessageQueue;
 class CoordinateSegmentation;
@@ -78,7 +78,7 @@ public:
 private:
     virtual void poll();
 
-    void loadStatusMessage(const ServerID source, const CBR::Protocol::CSeg::LoadMessage& load_status_msg);
+    void loadStatusMessage(const ServerID source, const Sirikata::Protocol::CSeg::LoadMessage& load_status_msg);
 
   enum {
     SEND_TO_NEIGHBORS,

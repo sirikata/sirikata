@@ -32,7 +32,7 @@
 
 #include "Message.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 
 void Message::fillMessage(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port) {
@@ -71,7 +71,7 @@ Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port,
     fillMessage(src, src_port, dest, dest_port, pl);
 }
 
-Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const CBR::Protocol::Object::ObjectMessage* pl)
+Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const Sirikata::Protocol::Object::ObjectMessage* pl)
  : mCachedSize(0)
 {
     fillMessage(src, src_port, dest, dest_port, serializePBJMessage(*pl));
@@ -191,7 +191,7 @@ void ServerMessageDispatcher::dispatchMessage(Message* msg) const {
     recipient->receiveMessage(msg);
 }
 
-void ObjectMessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const {
+void ObjectMessageDispatcher::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const {
     // This is on the space server, so we should only be calling this if the dest is the space
     //assert(msg.dest_object() == UUID::null());
     ObjectMessageRecipientMap::const_iterator it = mObjectMessageRecipients.find(msg.dest_port());
@@ -218,8 +218,8 @@ void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16
     result->set_payload(payload);
 }
 
-CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
-    CBR::Protocol::Object::ObjectMessage* result = new CBR::Protocol::Object::ObjectMessage();
+Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
+    Sirikata::Protocol::Object::ObjectMessage* result = new Sirikata::Protocol::Object::ObjectMessage();
 
     result->set_source_object(src);
     result->set_source_port(src_port);
@@ -231,4 +231,4 @@ CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server
     return result;
 }
 
-} // namespace CBR
+} // namespace Sirikata

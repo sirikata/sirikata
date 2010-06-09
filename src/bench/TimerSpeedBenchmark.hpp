@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIMER_SPEED_BENCHMARK_HPP_
-#define _CBR_TIMER_SPEED_BENCHMARK_HPP_
+#ifndef _SIRIKATA_TIMER_SPEED_BENCHMARK_HPP_
+#define _SIRIKATA_TIMER_SPEED_BENCHMARK_HPP_
 
 #include "Benchmark.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** TimerSpeedBenchmark tests the cost of Timer calls, i.e. how many we can call
  *   per second.
@@ -59,6 +59,6 @@ class TimerSpeedBenchmark : public Benchmark {
     bool mForceStop;
 }; // class TimerSpeedBenchmark
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TIMER_SPEED_BENCHMARK_HPP_
+#endif //_SIRIKATA_TIMER_SPEED_BENCHMARK_HPP_

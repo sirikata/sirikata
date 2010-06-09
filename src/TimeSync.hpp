@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_SYNC_HPP_
-#define _CBR_TIME_SYNC_HPP_
+#ifndef _SIRIKATA_TIME_SYNC_HPP_
+#define _SIRIKATA_TIME_SYNC_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Handles synchronization with a central server. */
 class TimeSync {
@@ -53,6 +53,6 @@ private:
     Thread* mSyncThread;
 }; // class TimeSync
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TIME_SYNC_HPP_
+#endif //_SIRIKATA_TIME_SYNC_HPP_

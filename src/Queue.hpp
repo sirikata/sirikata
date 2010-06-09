@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_QUEUE_HPP_
-#define _CBR_QUEUE_HPP_
+#ifndef _SIRIKATA_QUEUE_HPP_
+#define _SIRIKATA_QUEUE_HPP_
 
 #include "Utility.hpp"
 #include "AbstractQueue.hpp"
-namespace CBR {
+namespace Sirikata {
 
 
 /** Functor to retrieve the size of an object via a size() method. */
@@ -117,6 +117,6 @@ public:
 
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_QUEUE_HPP_
+#endif //_SIRIKATA_QUEUE_HPP_

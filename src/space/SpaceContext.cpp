@@ -35,7 +35,7 @@
 
 #include "SSTImpl.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
  : Context("Space", ios, strand, _trace, epoch, duration),
@@ -62,4 +62,4 @@ void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
   mObjectStreams[sourceObject] = s;
 }
 
-} // namespace CBR
+} // namespace Sirikata

@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_FORWARDER_SERVICE_QUEUE_HPP_
-#define _CBR_FORWARDER_SERVICE_QUEUE_HPP_
+#ifndef _SIRIKATA_FORWARDER_SERVICE_QUEUE_HPP_
+#define _SIRIKATA_FORWARDER_SERVICE_QUEUE_HPP_
 
 #include "Utility.hpp"
 #include "FairQueue.hpp"
 #include "Message.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Fairly distributes inter-space node bandwidth between services, e.g. object
  *  message routing, PINTO, Loc, etc.  Messages are broken down by destination
@@ -105,6 +105,6 @@ class ForwarderServiceQueue {
     OutgoingFairQueue* checkServiceQueue(OutgoingFairQueue* ofq, ServiceID svc_id);
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_FORWARDER_SERVICE_QUEUE_HPP_
+#endif //_SIRIKATA_FORWARDER_SERVICE_QUEUE_HPP_

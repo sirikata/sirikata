@@ -30,18 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_STATISTICS_HPP_
-#define _CBR_STATISTICS_HPP_
+#ifndef _SIRIKATA_STATISTICS_HPP_
+#define _SIRIKATA_STATISTICS_HPP_
 
 #include "Utility.hpp"
 #include "MotionVector.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Message.hpp"
 #include "OSegLookupTraceToken.hpp"
 
 #include <boost/thread/recursive_mutex.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 template<typename T>
 struct Batch {
@@ -94,7 +94,7 @@ private:
     ByteBatch* filling;
     std::deque<ByteBatch*> batches;
 };
-#define TRACE_DROP(nam) ((mContext->trace()->drops.n[::CBR::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::CBR::Trace::Drops::nam]))
+#define TRACE_DROP(nam) ((mContext->trace()->drops.n[::Sirikata::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::Sirikata::Trace::Drops::nam]))
 
 class Trace {
 public:
@@ -310,7 +310,7 @@ private:
 #define CONTEXT_TRACE_NO_TIME(___name, ...)             \
     TRACE( mContext->trace(), ___name, __VA_ARGS__)
 
-} // namespace CBR
+} // namespace Sirikata
 
 
 
@@ -358,4 +358,4 @@ private:
 #define TIMESTAMP_CREATED(packet, path)
 #endif //CBR_TIMESTAMP_PACKETS
 
-#endif //_CBR_STATISTICS_HPP_
+#endif //_SIRIKATA_STATISTICS_HPP_

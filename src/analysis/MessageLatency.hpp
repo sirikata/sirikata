@@ -35,7 +35,7 @@
 
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class MessageLatencyFilters {
   public:
@@ -50,7 +50,7 @@ class MessageLatencyFilters {
 
 void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, MessageLatencyFilters f, const String& stage_dump_file = "");
 
-} // namespace CBR
+} // namespace Sirikata
 
 
 #endif //_ANALYSIS_MESSAGE_LATENCY_HPP_

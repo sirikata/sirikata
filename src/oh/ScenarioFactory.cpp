@@ -36,8 +36,8 @@
 #include "PingDelugeScenario.hpp"
 #include "ByteTransferScenario.hpp"
 #include "LoadPacketTrace.hpp"
-AUTO_SINGLETON_INSTANCE(CBR::ScenarioFactory);
-namespace CBR {
+AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
+namespace Sirikata {
 ScenarioFactory::ScenarioFactory(){
     DistributionPingScenario::addConstructorToFactory(this);
     DelugePairScenario::addConstructorToFactory(this);

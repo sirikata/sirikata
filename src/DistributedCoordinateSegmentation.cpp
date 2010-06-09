@@ -39,12 +39,12 @@
 #include <gcrypt.h>
 
 #include "Options.hpp"
-#include "Network.hpp"
+#include "SpaceNetwork.hpp"
 #include "Message.hpp"
 #include "WorldPopulationBSPTree.hpp"
 #include "ServerIDMap.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 template<typename T>
 T clamp(T val, T minval, T maxval) {
@@ -566,7 +566,7 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
   printf("Notified all space servers of change\n");
 }
 
-void DistributedCoordinateSegmentation::csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg) {
+void DistributedCoordinateSegmentation::csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg) {
 }
 
 void DistributedCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {
@@ -1139,4 +1139,4 @@ bool DistributedCoordinateSegmentation::fullMessageReceived(uint8* dataReceived,
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

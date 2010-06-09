@@ -33,9 +33,9 @@
 #include "ServerMessageQueue.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
-namespace CBR {
+namespace Sirikata {
 
-ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, Network* net, Sender* sender)
+ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sender* sender)
         : mContext(ctx),
           mSenderStrand(ctx->ioService->createStrand()),
           mNetwork(net),
@@ -57,8 +57,8 @@ void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const
 }
 
 void ServerMessageQueue::connect(const ServerID& dest) {
-   
-    Network::SendStream** where=&mSendStreams[dest];
+
+    SpaceNetwork::SendStream** where=&mSendStreams[dest];
     if (*where==NULL) {
         *where= mNetwork->connect(dest);
     }
@@ -72,7 +72,7 @@ uint32 ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
         return 0;
     }
 
-    Network::SendStream* strm_out = it->second;
+    SpaceNetwork::SendStream* strm_out = it->second;
     if (strm_out==NULL) {
         return 0;
     }
@@ -119,4 +119,4 @@ void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, 
     );
 }
 
-} // namespace CBR
+} // namespace Sirikata

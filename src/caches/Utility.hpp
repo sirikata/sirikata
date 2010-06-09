@@ -10,7 +10,7 @@
 
 #define DEGREES_TO_RADIANS  PI/180.0
 
-namespace CBR
+namespace Sirikata
 {
 
 

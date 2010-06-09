@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OH_OBJECT_HOST_LISTENER_HPP_
-#define _CBR_OH_OBJECT_HOST_LISTENER_HPP_
+#ifndef _SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
+#define _SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ObjectHost;
 class Object;
@@ -49,6 +49,6 @@ public:
     virtual void objectHostDisconnectedObject(ObjectHost* oh, const UUID& objid, const ServerID& server) {}
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_OH_OBJECT_HOST_LISTENER_HPP_
+#endif //_SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_

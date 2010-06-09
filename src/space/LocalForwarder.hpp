@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_LOCAL_FORWARDER_HPP_
-#define _CBR_LOCAL_FORWARDER_HPP_
+#ifndef _SIRIKATA_LOCAL_FORWARDER_HPP_
+#define _SIRIKATA_LOCAL_FORWARDER_HPP_
 
 #include "Utility.hpp"
 #include "ObjectConnection.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** LocalForwarder maintains a map of objects that are directly connected to
  *  this space server. It operates in the same strand as the networking to
@@ -68,7 +68,7 @@ class LocalForwarder {
      *  \param msg the message to try to forward
      *  \returns true if the message was forwarded, false otherwise
      */
-    bool tryForward(CBR::Protocol::Object::ObjectMessage* msg);
+    bool tryForward(Sirikata::Protocol::Object::ObjectMessage* msg);
   private:
     typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUID::Hasher> ObjectConnectionMap;
 
@@ -77,6 +77,6 @@ class LocalForwarder {
     boost::mutex mMutex;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_LOCAL_FORWARDER_HPP_
+#endif //_SIRIKATA_LOCAL_FORWARDER_HPP_

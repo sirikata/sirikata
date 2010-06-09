@@ -1,9 +1,9 @@
 #include "Test.hpp"
-#include "TCPNetwork.hpp"
+#include "TCPSpaceNetwork.hpp"
 #include "TabularServerIDMap.hpp"
 #include "Statistics.hpp"
 #include <arpa/inet.h>
-namespace CBR {
+namespace Sirikata {
 
 void testAny(const char * listenport, const char* hostname, const char* port, bool server) {
     std::stringstream strst( std::string(hostname) + ":" + std::string(listenport) + std::string("\n") );

@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SPACE_CONTEXT_HPP_
-#define _CBR_SPACE_CONTEXT_HPP_
+#ifndef _SIRIKATA_SPACE_CONTEXT_HPP_
+#define _SIRIKATA_SPACE_CONTEXT_HPP_
 
 #include "Utility.hpp"
 #include "Context.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class ServerMessageRouter;
 class ObjectMessageRouter;
@@ -111,6 +111,6 @@ private:
     std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
 }; // class SpaceContext
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_SPACE_CONTEXT_HPP_
+#endif //_SIRIKATA_SPACE_CONTEXT_HPP_

@@ -34,7 +34,7 @@
 #include "Message.hpp"
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
  : mID(_id),
@@ -48,7 +48,7 @@ UUID ObjectConnection::id() const {
     return mID;
 }
 
-bool ObjectConnection::send(CBR::Protocol::Object::ObjectMessage* msg) {
+bool ObjectConnection::send(Sirikata::Protocol::Object::ObjectMessage* msg) {
     if (!mEnabled)
         return false;
 
@@ -63,4 +63,4 @@ bool ObjectConnection::enabled() {
     return mEnabled;
 }
 
-} // namespace CBR
+} // namespace Sirikata

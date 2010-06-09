@@ -48,12 +48,12 @@
 #include "Message.hpp"
 
 namespace {
-CBR::Trace* gTrace = NULL;
-CBR::SpaceContext* gSpaceContext = NULL;
+Sirikata::Trace* gTrace = NULL;
+Sirikata::SpaceContext* gSpaceContext = NULL;
 }
 
 
-namespace CBR {
+namespace Sirikata {
 /** Mock Router<Message*> class, needed to satisfy CoordinateSegmentation. */
 class MockServerMessageRouter : public Router<Message*> {
   public:
@@ -63,12 +63,12 @@ class MockServerMessageRouter : public Router<Message*> {
     }
 };
 /** Mock forwarder class, neeeded because CoordinateSegmentation uses it via SpaceContext. */
-  class MockForwarder : public CBR::ServerMessageDispatcher,
-			public CBR::ServerMessageRouter,
-			public CBR::ObjectMessageRouter,
-			public CBR::ObjectMessageDispatcher {
+  class MockForwarder : public ServerMessageDispatcher,
+			public ServerMessageRouter,
+			public ObjectMessageRouter,
+			public ObjectMessageDispatcher {
 public:
-    MockForwarder(CBR::SpaceContext* ctx) {
+    MockForwarder(SpaceContext* ctx) {
         ctx->mObjectRouter = this;
 	ctx->mServerRouter = this;
         ctx->mServerDispatcher = this;
@@ -79,16 +79,16 @@ public:
           return new MockServerMessageRouter();
       }
 
-    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg) {
+    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg) {
         return true;
     }
 };
-} // namespace CBR
+} // namespace Sirikata
 
 void *main_loop(void *);
 
 bool is_analysis() {
-    using namespace CBR;
+    using namespace Sirikata;
 
     if (GetOption(ANALYSIS_LOC)->as<bool>() ||
         GetOption(ANALYSIS_LOCVIS)->as<String>() != "none" ||
@@ -108,7 +108,7 @@ bool is_analysis() {
 }
 
 int main(int argc, char** argv) {
-    using namespace CBR;
+    using namespace Sirikata;
 
     InitOptions();
     Trace::InitOptions();
@@ -368,8 +368,8 @@ int main(int argc, char** argv) {
 
         oseg_craq_process_stream_csv.flush();
         oseg_craq_process_stream_csv.close();
-        
-        
+
+
 
         //completed round trip migrate times
         String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";

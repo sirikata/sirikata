@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_POLLING_SERVICE_HPP_
-#define _CBR_POLLING_SERVICE_HPP_
+#ifndef _SIRIKATA_POLLING_SERVICE_HPP_
+#define _SIRIKATA_POLLING_SERVICE_HPP_
 
 #include "Utility.hpp"
 #include "TimeProfiler.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class Context;
 
@@ -101,6 +101,6 @@ private:
     TimeProfiler::Stage* mProfiler;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_POLLING_SERVICE_HPP_
+#endif //_SIRIKATA_POLLING_SERVICE_HPP_

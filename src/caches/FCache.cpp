@@ -23,7 +23,7 @@
 //#define FCACHE_LOG_REMOVALS
 
 
-namespace CBR
+namespace Sirikata
 {
 
   FCache::~FCache()

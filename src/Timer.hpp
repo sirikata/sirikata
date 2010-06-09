@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIMER_HPP_
-#define _CBR_TIMER_HPP_
+#ifndef _SIRIKATA_TIMER_HPP_
+#define _SIRIKATA_TIMER_HPP_
 
 #include "Utility.hpp"
 #include <sirikata/core/util/AtomicTypes.hpp>
 //#include <boost/date_time.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 class Timer {
     static Sirikata::AtomicValue<Duration> sOffset;
@@ -58,6 +58,6 @@ private:
     boost::posix_time::ptime mStart;
 }; // class Timer
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TIMER_HPP_
+#endif //_SIRIKATA_TIMER_HPP_

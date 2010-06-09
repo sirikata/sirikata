@@ -4,7 +4,7 @@
 
 #include "Utility.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 
 

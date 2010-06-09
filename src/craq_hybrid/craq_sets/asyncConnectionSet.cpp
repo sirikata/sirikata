@@ -14,7 +14,7 @@
 #include <sirikata/core/network/Asio.hpp>
 #include <functional>
 
-namespace CBR
+namespace Sirikata
 {
 
   //constructor

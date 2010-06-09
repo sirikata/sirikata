@@ -5,7 +5,7 @@
 #include "asyncCraqUtil.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
 
   class AsyncCraqScheduler

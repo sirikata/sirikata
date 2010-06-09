@@ -38,7 +38,7 @@
 
 
 
-namespace CBR {
+namespace Sirikata {
 
 template<typename T>
 T clamp(T val, T minval, T maxval) {
@@ -201,4 +201,4 @@ void UniformCoordinateSegmentation::receiveMessage(Message* msg) {
     delete msg;
 }
 
-} // namespace CBR
+} // namespace Sirikata

@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_BENCHMARK_FACTORY_HPP_
-#define _CBR_BENCHMARK_FACTORY_HPP_
+#ifndef _SIRIKATA_BENCHMARK_FACTORY_HPP_
+#define _SIRIKATA_BENCHMARK_FACTORY_HPP_
 
 #include "Benchmark.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** BenchmarkFactory handles registration of Benchmark types and instantiates
  *  individual Benchmarks.
@@ -43,6 +43,6 @@ namespace CBR {
 class BenchmarkFactory : public Sirikata::Factory2<Benchmark*,Benchmark::FinishedCallback,String> {
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_BENCHMARK_FACTORY_HPP_
+#endif //_SIRIKATA_BENCHMARK_FACTORY_HPP_

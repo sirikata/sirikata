@@ -5,7 +5,7 @@
 #ifndef __CACHE_RECORDS_HPP__
 #define __CACHE_RECORDS_HPP__
 
-namespace CBR
+namespace Sirikata
 {
 
   const static int CACHE_RECORDS_NULL_VEC_INDEX = -1;

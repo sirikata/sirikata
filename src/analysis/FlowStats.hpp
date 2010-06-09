@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_FLOW_STATS_ANALYSIS_HPP_
-#define _CBR_FLOW_STATS_ANALYSIS_HPP_
+#ifndef _SIRIKATA_FLOW_STATS_ANALYSIS_HPP_
+#define _SIRIKATA_FLOW_STATS_ANALYSIS_HPP_
 
 #include "Statistics.hpp"
 #include "RecordedMotionPath.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** Generates summary statistics on a per flow basis.  A flow is data between an
  *  ordered pair of objects (source, dest).  Summary information includes
@@ -95,6 +95,6 @@ private:
     FlowMap mFlowMap;
 }; // class FlowStatsAnalysis
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_FLOW_STATS_ANALYSIS_HPP_
+#endif //_SIRIKATA_FLOW_STATS_ANALYSIS_HPP_

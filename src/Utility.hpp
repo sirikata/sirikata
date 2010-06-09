@@ -1,4 +1,4 @@
-/*  cbr
+/*  Sirikata
  *  main.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_UTILITY_HPP_
-#define _CBR_UTILITY_HPP_
+#ifndef _SIRIKATA_UTILITY_HPP_
+#define _SIRIKATA_UTILITY_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Vector3.hpp>
@@ -57,7 +57,7 @@
 
 #include <sirikata/core/util/ListenerProvider.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 typedef Sirikata::int8 int8;
 typedef Sirikata::uint8 uint8;
@@ -114,31 +114,20 @@ typedef Sirikata::Network::IOCallback IOCallback;
 
 typedef Sirikata::Thread Thread;
 
-/* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */
-
+/* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and
+ * Duration classes.
+ * FIXME We should fix TemporalValue and get rid of this.
+ */
 template <typename Value>
-class TemporalValue : public Sirikata::TemporalValueBase<Value, Time> {
+class TemporalValueWithDefault : public Sirikata::TemporalValueBase<Value, Time> {
 public:
-    TemporalValue()
+    TemporalValueWithDefault()
      : Sirikata::TemporalValueBase<Value, Time>( Time(Time::null()), Value() )
     {}
-    TemporalValue(const Time& when, const Value& l)
+    TemporalValueWithDefault(const Time& when, const Value& l)
      : Sirikata::TemporalValueBase<Value, Time>(when, l)
     {}
-}; // class TemporalValue
-
-
-template<typename Value>
-class Extrapolator : public virtual Sirikata::ExtrapolatorBase<Value, Time> {
-}; // class Extrapolator
-
-template <typename Value, typename UpdatePredicate>
-class TimedWeightedExtrapolator : public Sirikata::TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>, public Extrapolator<Value> {
-public:
-    TimedWeightedExtrapolator(const Duration&fadeTime, const Time&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
-     : Sirikata::TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(fadeTime, t, actualValue, needsUpdate)
-    {}
-}; // class TimedWeightedExtrapolator
+}; // class TemporalValueWithDefault
 
 
 /** SimpleExtrapolator classes, which always give the most accurate information available, at the cost of possibly being discontinuous. */
@@ -216,7 +205,7 @@ public:
     {}
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
 // We need to define some additional operators to get these working with Options
 namespace Sirikata {
@@ -243,4 +232,4 @@ inline std::istream& operator >>(std::istream& is, BoundingBox<scalar> &rhs) {
 // Types that are useful throughout the system but are defined by our project
 #include "VWTypes.hpp"
 
-#endif //_CBR_UTILITY_HPP_
+#endif //_SIRIKATA_UTILITY_HPP_

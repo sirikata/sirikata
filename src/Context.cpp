@@ -33,7 +33,7 @@
 #include "Context.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 Context::Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
  : ioService(ios),
@@ -114,4 +114,4 @@ void Context::startForceQuitTimer() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

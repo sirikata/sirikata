@@ -37,7 +37,7 @@
 #define INFO_LOG(msg) SILOG(message_latency_analysis,insane,"[MSG_LAT_ANLS] " << msg)
 #define ERROR_LOG(msg) SILOG(message_latency_analysis,error,"[MSG_LAT_ANLS] " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
 namespace {
 
@@ -1011,4 +1011,4 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
                                            );
 }
 
-} // namespace CBR
+} // namespace Sirikata

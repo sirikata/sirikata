@@ -33,7 +33,7 @@
 #include "LocalForwarder.hpp"
 #include "Statistics.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 
 LocalForwarder::LocalForwarder(SpaceContext* ctx)
@@ -59,7 +59,7 @@ void LocalForwarder::removeActiveConnection(const UUID& objid) {
     mActiveConnections.erase(it);
 }
 
-bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
+bool LocalForwarder::tryForward(Sirikata::Protocol::Object::ObjectMessage* msg) {
     ObjectConnection* conn = NULL;
     {
         boost::lock_guard<boost::mutex> lock(mMutex);
@@ -99,4 +99,4 @@ bool LocalForwarder::tryForward(CBR::Protocol::Object::ObjectMessage* msg) {
     return true;
 }
 
-} // namespace CBR
+} // namespace Sirikata

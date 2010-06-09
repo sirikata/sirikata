@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_LOCATION_SERVICE_HPP_
-#define _CBR_LOCATION_SERVICE_HPP_
+#ifndef _SIRIKATA_LOCATION_SERVICE_HPP_
+#define _SIRIKATA_LOCATION_SERVICE_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
@@ -41,7 +41,7 @@
 
 #include "SSTImpl.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class LocationServiceListener;
 class LocationUpdatePolicy;
@@ -171,7 +171,7 @@ public:
     /** MessageRecipient Interface. */
     virtual void receiveMessage(Message* msg) = 0;
     /** ObjectMessageRecipient Interface. */
-    virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) = 0;
+    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
 
     virtual void locationUpdate(UUID source, void* buffer, uint length) = 0;
 
@@ -204,6 +204,6 @@ protected:
     LocationUpdatePolicy* mUpdatePolicy;
 }; // class LocationService
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_LOCATION_SERVICE_HPP_
+#endif //_SIRIKATA_LOCATION_SERVICE_HPP_

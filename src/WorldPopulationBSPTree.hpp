@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_WORLD_POPULATION_BSPTREE_HPP_
-#define _CBR_WORLD_POPULATION_BSPTREE_HPP_
+#ifndef _SIRIKATA_WORLD_POPULATION_BSPTREE_HPP_
+#define _SIRIKATA_WORLD_POPULATION_BSPTREE_HPP_
 
 #include "Utility.hpp"
 
@@ -39,7 +39,7 @@
 #define WORLD_SURFACE_AREA 510072000.0
 #define MIN_REGION_DENSITY_CUTOFF 1
 
-namespace CBR {
+namespace Sirikata {
 
 typedef struct WorldRegion {
   BoundingBox3f mBoundingBox;

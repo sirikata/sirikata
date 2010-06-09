@@ -33,7 +33,7 @@
 #include "MigrationMonitor.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, MigrationCallback cb)
  : mContext(ctx),
@@ -296,4 +296,4 @@ void MigrationMonitor::handleUpdatedSegmentation(CoordinateSegmentation* cseg, c
     waitForNextEvent();
 }
 
-} // namespace CBR
+} // namespace Sirikata

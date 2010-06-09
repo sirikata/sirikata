@@ -17,7 +17,7 @@
 
 #define CRAQ_MAX_PUSH_SET 5
 
-namespace CBR
+namespace Sirikata
 {
 
 

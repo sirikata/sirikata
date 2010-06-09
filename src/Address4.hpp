@@ -1,11 +1,11 @@
-#ifndef _CBR_ADDRESS4_HPP_
-#define _CBR_ADDRESS4_HPP_
+#ifndef _SIRIKATA_ADDRESS4_HPP_
+#define _SIRIKATA_ADDRESS4_HPP_
 
 #include "Utility.hpp"
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Address.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 class Address4 {
 public:
@@ -46,4 +46,4 @@ inline size_t hash_value(const Address4&addy) {
 }
 
 }
-#endif //_CBR_ADDRESS4_HPP_
+#endif //_SIRIKATA_ADDRESS4_HPP_

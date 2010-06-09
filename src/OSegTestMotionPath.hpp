@@ -1,13 +1,13 @@
 
-#ifndef _CBR_OSEG_TEST_MOTION_PATH_HPP_
-#define _CBR_OSEG_TEST_MOTION_PATH_HPP_
+#ifndef _SIRIKATA_OSEG_TEST_MOTION_PATH_HPP_
+#define _SIRIKATA_OSEG_TEST_MOTION_PATH_HPP_
 
 
 #include "Utility.hpp"
 #include "MotionPath.hpp"
 
 
-namespace CBR
+namespace Sirikata
 {
 
 /** Static motion path, i.e. not a motion path at all.  Just has a single initial
@@ -29,9 +29,9 @@ namespace CBR
 
   }; // class StaticMotionPath
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_STATIC_MOTION_PATH_HPP_
+#endif //_SIRIKATA_STATIC_MOTION_PATH_HPP_
 
 
 

@@ -37,7 +37,7 @@
 #include "CountResourceMonitor.hpp"
 #include <sirikata/core/util/SizedThreadSafeQueue.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 class ScenarioFactory;
 class ConnectedObjectTracker;
@@ -56,7 +56,7 @@ class DelugePairScenario : public Scenario {
         UUID objA;
         UUID objB;
         float dist;
-        CBR::Protocol::Object::Ping* ping;
+        Sirikata::Protocol::Object::Ping* ping;
     };
     Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>* mPings;
     int64 mNumGeneratedPings;
@@ -107,6 +107,6 @@ public:
     static void addConstructorToFactory(ScenarioFactory*);
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_PING_DELUGE_SCENARIO_HPP_

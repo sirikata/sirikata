@@ -4,7 +4,7 @@
 #include "../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "CraqEntry.hpp"
-namespace CBR
+namespace Sirikata
 {
 
 AsyncConnection::AsyncConnection():currentlySettingTo(NullServerID,0)

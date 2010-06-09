@@ -35,7 +35,7 @@
 
 #define ITERATIONS 1000000
 
-namespace CBR {
+namespace Sirikata {
 
 TimerJitterBenchmark::TimerJitterBenchmark(const FinishedCallback& finished_cb)
         : Benchmark(finished_cb),
@@ -93,4 +93,4 @@ void TimerJitterBenchmark::stop() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

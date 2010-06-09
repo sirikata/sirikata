@@ -46,7 +46,7 @@
 
 void *main_loop(void *);
 int main(int argc, char** argv) {
-    using namespace CBR;
+    using namespace Sirikata;
 
     InitOptions();
     Trace::InitOptions();

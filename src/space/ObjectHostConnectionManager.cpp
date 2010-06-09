@@ -42,7 +42,7 @@
 #include "Statistics.hpp"
 #define SPACE_LOG(level,msg) SILOG(space,level,"[SPACE] " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
 ObjectHostConnectionManager::ConnectionID::ConnectionID()
         : conn(NULL)
@@ -107,7 +107,7 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
 }
 
 
-bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
+bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
     ObjectHostConnection* conn = conn_id.conn;
 
     if (conn == NULL) {
@@ -205,7 +205,7 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
 void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
 
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
 
@@ -229,4 +229,4 @@ void ObjectHostConnectionManager::closeAllConnections() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

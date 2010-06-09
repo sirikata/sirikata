@@ -32,7 +32,7 @@
 
 #include "RecordedMotionPath.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 TimedMotionVector3f RecordedMotionPath::DummyUpdate;
 
@@ -90,4 +90,4 @@ void RecordedMotionPath::addUpdate(const TimedMotionVector3f& up) {
     mUpdates[up.time()] = up;
 }
 
-} // namespace CBR
+} // namespace Sirikata

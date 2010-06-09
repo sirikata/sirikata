@@ -1,6 +1,6 @@
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class SqrIntegral {
     enum {MAX_CACHE=2};
     double cachedCutoff[MAX_CACHE];

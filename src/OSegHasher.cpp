@@ -2,7 +2,7 @@
 
 
 
-namespace CBR
+namespace Sirikata
 {
 
   OSegHasher::OSegHasher()

@@ -36,7 +36,7 @@ double bandwidth_bound(double *x, size_t dim, void *v_params) {
 }
 #define gsl_monte_plain_integratePRINT(F0, xl, xu, dim, NCALLS, r, s, res1, err1) (gsl_monte_plain_integrate(F0, xl, xu, dim, NCALLS, r, s, res1, err1)),printf ("Integrating (%.0f %.0f)->(%.0f %.0f) to (%.0f %.0f)->(%.0f %.0f)=%lf -+ %lf\n",xl[0],xl[1],xu[0],xu[1],xl[2],xl[3],xu[2],xu[3],*res1,*err1);                
 
-namespace CBR {
+namespace Sirikata {
 SqrIntegral::SqrIntegral(bool normalize) {
     this->normalize=normalize;
 	gsl_monte_plain_state *s = gsl_monte_plain_alloc(4);

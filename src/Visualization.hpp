@@ -4,7 +4,7 @@
 #include "AnalysisEvents.hpp"
 #include "CoordinateSegmentation.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class MotionPath;
 class CoordinateSegmentation;
 

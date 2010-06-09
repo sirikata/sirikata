@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_COUNT_RESOURCE_MONITOR_HPP_
-#define _CBR_COUNT_RESOURCE_MONITOR_HPP_
+#ifndef _SIRIKATA_COUNT_RESOURCE_MONITOR_HPP_
+#define _SIRIKATA_COUNT_RESOURCE_MONITOR_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class CountResourceMonitor {
     Sirikata::AtomicValue<int32> mSize;
@@ -102,6 +102,6 @@ public:
     }
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_COUNT_RESOURCE_MONITOR_HPP_
+#endif //_SIRIKATA_COUNT_RESOURCE_MONITOR_HPP_

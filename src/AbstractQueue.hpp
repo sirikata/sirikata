@@ -1,7 +1,7 @@
-#ifndef _CBR_ABSTRACTQUEUE_HPP_
-#define _CBR_ABSTRACTQUEUE_HPP_
+#ifndef _SIRIKATA_ABSTRACTQUEUE_HPP_
+#define _SIRIKATA_ABSTRACTQUEUE_HPP_
 
-namespace CBR {
+namespace Sirikata {
 
 namespace QueueEnum {
     enum PushResult {

@@ -30,14 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_FAIR_QUEUE_TEST_HPP_
-#define _CBR_FAIR_QUEUE_TEST_HPP_
+#ifndef _SIRIKATA_FAIR_QUEUE_TEST_HPP_
+#define _SIRIKATA_FAIR_QUEUE_TEST_HPP_
 
 #include "Utility.hpp"
 #include "Test.hpp"
 #include "FairQueue.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 class FairQueueTest : public Test {
 public:
@@ -143,6 +143,6 @@ public:
     }
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_FAIR_QUEUE_TEST_HPP_
+#endif //_SIRIKATA_FAIR_QUEUE_TEST_HPP_

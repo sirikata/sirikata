@@ -12,7 +12,7 @@
 
 
 
-namespace CBR
+namespace Sirikata
 {
 
   CacheLRUOriginal::CacheLRUOriginal(Context* ctx, uint32 maxSize,uint32 cleanGroupSize,Duration entryLifetime)

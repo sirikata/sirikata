@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_MIGRATION_DATA_CLIENT_HPP_
-#define _CBR_MIGRATION_DATA_CLIENT_HPP_
+#ifndef _SIRIKATA_MIGRATION_DATA_CLIENT_HPP_
+#define _SIRIKATA_MIGRATION_DATA_CLIENT_HPP_
 
 #include "Utility.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** MigrationDataClients produce and accept chunks of data during migration.
  *  MigrationDataClient is a generic interface to allow any component of the
@@ -59,6 +59,6 @@ public:
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) = 0;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_MIGRATION_DATA_CLIENT_HPP_
+#endif //_SIRIKATA_MIGRATION_DATA_CLIENT_HPP_

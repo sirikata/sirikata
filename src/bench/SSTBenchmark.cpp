@@ -42,7 +42,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #define ITERATIONS 1000000
 
-namespace CBR {
+namespace Sirikata {
 
 using std::tr1::placeholders::_1;
 using std::tr1::placeholders::_2;
@@ -244,4 +244,4 @@ void SSTBenchmark::stop() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

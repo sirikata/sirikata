@@ -37,7 +37,7 @@
 #include "AbstractQueue.hpp"
 #include "ForwarderServiceQueue.hpp"
 
-namespace CBR {
+namespace Sirikata {
 class CraqEntry;
 /** An ODPFlowScheduler acts as a filter and queue for ODP messages for a single
  *  server. It has 2 primary roles. First, it acts as an ODP input queue for
@@ -82,7 +82,7 @@ public:
     virtual uint32 size() const = 0;
 
     // ODP push interface. Note: Must be thread safe!
-    virtual bool push(CBR::Protocol::Object::ObjectMessage* msg, const CraqEntry&sourceObjectData, const CraqEntry&dstObjectData) = 0;
+    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&sourceObjectData, const CraqEntry&dstObjectData) = 0;
 
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight() = 0;
@@ -117,7 +117,7 @@ protected:
         mParent->notifyPushFront(mDestServer, mServiceID);
     }
 
-    Message* createMessageFromODP(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv) {
+    Message* createMessageFromODP(Sirikata::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv) {
         Message* svr_obj_msg = new Message(
             mContext->id(),
             SERVER_PORT_OBJECT_MESSAGE_ROUTING,
@@ -140,6 +140,6 @@ protected:
     double mReceiverCapacity; // Capacity of receiver
 }; // class ODPFlowScheduler
 
-} // namespace CBR
+} // namespace Sirikata
 
 #endif //_ODP_FLOW_SCHEDULER_HPP_

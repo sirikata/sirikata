@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_MIGRATION_MONITOR_HPP_
-#define _CBR_MIGRATION_MONITOR_HPP_
+#ifndef _SIRIKATA_MIGRATION_MONITOR_HPP_
+#define _SIRIKATA_MIGRATION_MONITOR_HPP_
 
 #include "Utility.hpp"
 #include "LocationService.hpp"
@@ -41,7 +41,7 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
-namespace CBR {
+namespace Sirikata {
 
 /** MigrationMonitor keeps track of objects that are currently on
  *  this server and determines when they have left the server, or
@@ -140,6 +140,6 @@ private:
     MigrationCallback mCB;
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_MIGRATION_MONITOR_HPP_
+#endif //_SIRIKATA_MIGRATION_MONITOR_HPP_

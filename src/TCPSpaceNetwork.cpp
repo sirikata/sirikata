@@ -1,4 +1,4 @@
-#include "TCPNetwork.hpp"
+#include "TCPSpaceNetwork.hpp"
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
@@ -13,9 +13,9 @@ using namespace Sirikata;
 
 #define TCPNET_LOG(level,msg) SILOG(tcpnetwork,level,"[TCPNET] " << msg)
 
-namespace CBR {
+namespace Sirikata {
 
-TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::Stream*strm, ServerID remote_id, Address4 remote_net, Initiator init)
+TCPSpaceNetwork::RemoteStream::RemoteStream(TCPSpaceNetwork* parent, Sirikata::Network::Stream*strm, ServerID remote_id, Address4 remote_net, Initiator init)
         : stream(strm),
           network_endpoint(remote_net),
           logical_endpoint(remote_id),
@@ -27,11 +27,11 @@ TCPNetwork::RemoteStream::RemoteStream(TCPNetwork* parent, Sirikata::Network::St
 {
 }
 
-TCPNetwork::RemoteStream::~RemoteStream() {
+TCPSpaceNetwork::RemoteStream::~RemoteStream() {
     delete stream;
 }
 
-bool TCPNetwork::RemoteStream::push(Chunk& data, bool* was_empty) {
+bool TCPSpaceNetwork::RemoteStream::push(Chunk& data, bool* was_empty) {
     boost::lock_guard<boost::mutex> lck(mPushPopMutex);
 
     Chunk* tmp = new Chunk;
@@ -54,7 +54,7 @@ bool TCPNetwork::RemoteStream::push(Chunk& data, bool* was_empty) {
     }
 }
 
-Chunk* TCPNetwork::RemoteStream::pop(IOService* ios) {
+Chunk* TCPSpaceNetwork::RemoteStream::pop(IOService* ios) {
     boost::lock_guard<boost::mutex> lck(mPushPopMutex);
     // NOTE: the ordering in this method is very important since calls to push()
     // and pop() are possibly concurrent.
@@ -90,12 +90,12 @@ Chunk* TCPNetwork::RemoteStream::pop(IOService* ios) {
 }
 
 
-TCPNetwork::RemoteSession::RemoteSession(ServerID sid)
+TCPSpaceNetwork::RemoteSession::RemoteSession(ServerID sid)
  : logical_endpoint(sid)
 {
 }
 
-TCPNetwork::RemoteSession::~RemoteSession() {
+TCPSpaceNetwork::RemoteSession::~RemoteSession() {
     remote_stream.reset();
     closing_stream.reset();
     pending_out.reset();
@@ -103,21 +103,21 @@ TCPNetwork::RemoteSession::~RemoteSession() {
 
 
 
-TCPNetwork::TCPSendStream::TCPSendStream(ServerID sid, RemoteSessionPtr s)
+TCPSpaceNetwork::TCPSendStream::TCPSendStream(ServerID sid, RemoteSessionPtr s)
  : logical_endpoint(sid),
    session(s)
 {
 }
 
-TCPNetwork::TCPSendStream::~TCPSendStream() {
+TCPSpaceNetwork::TCPSendStream::~TCPSendStream() {
     session.reset();
 }
 
-ServerID TCPNetwork::TCPSendStream::id() const {
+ServerID TCPSpaceNetwork::TCPSendStream::id() const {
     return logical_endpoint;
 }
 
-bool TCPNetwork::TCPSendStream::send(const Chunk& data) {
+bool TCPSpaceNetwork::TCPSendStream::send(const Chunk& data) {
     if (!session)
         return false;
 
@@ -137,7 +137,7 @@ bool TCPNetwork::TCPSendStream::send(const Chunk& data) {
 }
 
 
-TCPNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios)
+TCPSpaceNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios)
  : logical_endpoint(sid),
    session(s),
    front_stream(),
@@ -146,17 +146,17 @@ TCPNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s,
 {
 }
 
-TCPNetwork::TCPReceiveStream::~TCPReceiveStream()
+TCPSpaceNetwork::TCPReceiveStream::~TCPReceiveStream()
 {
     session.reset();
     front_stream.reset();
 }
 
-ServerID TCPNetwork::TCPReceiveStream::id() const {
+ServerID TCPSpaceNetwork::TCPReceiveStream::id() const {
     return logical_endpoint;
 }
 
-Chunk* TCPNetwork::TCPReceiveStream::front() {
+Chunk* TCPSpaceNetwork::TCPReceiveStream::front() {
     if (!session)
         return NULL;
 
@@ -173,7 +173,7 @@ Chunk* TCPNetwork::TCPReceiveStream::front() {
     return result;
 }
 
-Chunk* TCPNetwork::TCPReceiveStream::pop() {
+Chunk* TCPSpaceNetwork::TCPReceiveStream::pop() {
     // Use front() to get the next one.
     Chunk* result = front();
 
@@ -192,7 +192,7 @@ Chunk* TCPNetwork::TCPReceiveStream::pop() {
     return result;
 }
 
-bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr& strm) {
+bool TCPSpaceNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr& strm) {
     return (
         strm &&
         (strm->connected || strm->shutting_down) &&
@@ -200,7 +200,7 @@ bool TCPNetwork::TCPReceiveStream::canReadFrom(RemoteStreamPtr& strm) {
     );
 }
 
-void TCPNetwork::TCPReceiveStream::getCurrentRemoteStream() {
+void TCPSpaceNetwork::TCPReceiveStream::getCurrentRemoteStream() {
     // Consider
     //  1) an already marked front stream
     //  2) closing streams
@@ -229,8 +229,8 @@ void TCPNetwork::TCPReceiveStream::getCurrentRemoteStream() {
 
 
 
-TCPNetwork::TCPNetwork(SpaceContext* ctx)
- : Network(ctx),
+TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
+ : SpaceNetwork(ctx),
    mSendListener(NULL),
    mReceiveListener(NULL)
 {
@@ -241,13 +241,13 @@ TCPNetwork::TCPNetwork(SpaceContext* ctx)
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
 
     mIOService = IOServiceFactory::makeIOService();
-    mIOWork = new IOWork(mIOService, "TCPNetwork Work");
+    mIOWork = new IOWork(mIOService, "TCPSpaceNetwork Work");
     mThread = new Thread(std::tr1::bind(&IOService::run,mIOService));
 
     mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
 }
 
-TCPNetwork::~TCPNetwork() {
+TCPSpaceNetwork::~TCPSpaceNetwork() {
     delete mListener;
 
     // Cancel close timers
@@ -274,7 +274,7 @@ TCPNetwork::~TCPNetwork() {
 }
 
 
-TCPNetwork::RemoteData* TCPNetwork::getRemoteData(ServerID sid) {
+TCPSpaceNetwork::RemoteData* TCPSpaceNetwork::getRemoteData(ServerID sid) {
     boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
 
     RemoteDataMap::iterator it = mRemoteData.find(sid);
@@ -287,19 +287,19 @@ TCPNetwork::RemoteData* TCPNetwork::getRemoteData(ServerID sid) {
     return result;
 }
 
-TCPNetwork::RemoteSessionPtr TCPNetwork::getRemoteSession(ServerID sid) {
+TCPSpaceNetwork::RemoteSessionPtr TCPSpaceNetwork::getRemoteSession(ServerID sid) {
     boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
-    TCPNetwork::RemoteData* data = getRemoteData(sid);
+    TCPSpaceNetwork::RemoteData* data = getRemoteData(sid);
     return data->session;
 }
 
-TCPNetwork::TCPSendStream* TCPNetwork::getNewSendStream(ServerID sid) {
+TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::getNewSendStream(ServerID sid) {
     TCPSendStream* result = NULL;
     bool notify = false;
     {
         boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
 
-        TCPNetwork::RemoteData* data = getRemoteData(sid);
+        TCPSpaceNetwork::RemoteData* data = getRemoteData(sid);
         if (data->send == NULL) {
             notify = true;
             data->send = new TCPSendStream(sid, data->session);
@@ -316,13 +316,13 @@ TCPNetwork::TCPSendStream* TCPNetwork::getNewSendStream(ServerID sid) {
     return result;
 }
 
-TCPNetwork::TCPReceiveStream* TCPNetwork::getNewReceiveStream(ServerID sid) {
+TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::getNewReceiveStream(ServerID sid) {
     TCPReceiveStream* result = NULL;
     bool notify = false;
     {
         boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
 
-        TCPNetwork::RemoteData* data = getRemoteData(sid);
+        TCPSpaceNetwork::RemoteData* data = getRemoteData(sid);
         if (data->receive == NULL) {
             notify = true;
             data->receive = new TCPReceiveStream(sid, data->session, mIOService);
@@ -337,7 +337,7 @@ TCPNetwork::TCPReceiveStream* TCPNetwork::getNewReceiveStream(ServerID sid) {
     return result;
 }
 
-TCPNetwork::RemoteStreamPtr TCPNetwork::getNewOutgoingStream(ServerID sid, Address4 remote_net, RemoteStream::Initiator init) {
+TCPSpaceNetwork::RemoteStreamPtr TCPSpaceNetwork::getNewOutgoingStream(ServerID sid, Address4 remote_net, RemoteStream::Initiator init) {
     boost::lock_guard<boost::recursive_mutex> lck(mRemoteDataMutex);
 
     RemoteSessionPtr session = getRemoteSession(sid);
@@ -360,7 +360,7 @@ TCPNetwork::RemoteStreamPtr TCPNetwork::getNewOutgoingStream(ServerID sid, Addre
     return pending;
 }
 
-TCPNetwork::RemoteStreamPtr TCPNetwork::getNewIncomingStream(Address4 remote_net, RemoteStream::Initiator init, Sirikata::Network::Stream* strm) {
+TCPSpaceNetwork::RemoteStreamPtr TCPSpaceNetwork::getNewIncomingStream(Address4 remote_net, RemoteStream::Initiator init, Sirikata::Network::Stream* strm) {
     assert(strm != NULL);
 
     RemoteStreamPtr pending(
@@ -380,7 +380,7 @@ TCPNetwork::RemoteStreamPtr TCPNetwork::getNewIncomingStream(Address4 remote_net
 
 // IO Thread Methods
 
-void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream,
+void TCPSpaceNetwork::newStreamCallback(Sirikata::Network::Stream* newStream,
 				   Sirikata::Network::Stream::SetCallbacks& setCallbacks)
 {
     using std::tr1::placeholders::_1;
@@ -413,15 +413,15 @@ void TCPNetwork::newStreamCallback(Sirikata::Network::Stream* newStream,
     IndirectTCPReceiveStream ind_recv_stream( new TCPReceiveStream*(NULL) );
 
     setCallbacks(
-        std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote_stream, _1, _2),
-        std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote_stream, ind_recv_stream, _1, _2),
-        std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote_stream)
+        std::tr1::bind(&TCPSpaceNetwork::connectionCallback, this, weak_remote_stream, _1, _2),
+        std::tr1::bind(&TCPSpaceNetwork::bytesReceivedCallback, this, weak_remote_stream, ind_recv_stream, _1, _2),
+        std::tr1::bind(&TCPSpaceNetwork::readySendCallback, this, weak_remote_stream)
     );
 
     mPendingStreams[source_address] = remote_stream;
 }
 
-void TCPNetwork::connectionCallback(RemoteStreamWPtr wstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
+void TCPSpaceNetwork::connectionCallback(RemoteStreamWPtr wstream, const Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
     RemoteStreamPtr remote_stream(wstream);
 
     if (!remote_stream)
@@ -450,7 +450,7 @@ void TCPNetwork::connectionCallback(RemoteStreamWPtr wstream, const Sirikata::Ne
     }
 }
 
-void TCPNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk&data, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
+void TCPSpaceNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPReceiveStream ind_recv_strm, Chunk&data, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
     RemoteStreamPtr remote_stream(wstream);
 
     // If we've lost all references to the RemoteStream just ignore
@@ -479,7 +479,7 @@ void TCPNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPRece
         }
 
         // Parse the header indicating the remote ID
-        CBR::Protocol::Server::ServerIntro intro;
+        Sirikata::Protocol::Server::ServerIntro intro;
         bool parsed = parsePBJMessage(&intro, data);
         assert(parsed);
 
@@ -509,7 +509,7 @@ void TCPNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTCPRece
     }
 }
 
-void TCPNetwork::readySendCallback(RemoteStreamWPtr wstream) {
+void TCPSpaceNetwork::readySendCallback(RemoteStreamWPtr wstream) {
     RemoteStreamPtr remote_stream(wstream);
     if (!remote_stream)
         return;
@@ -540,8 +540,8 @@ void hexPrint(const char *name, const Chunk&data) {
 
 } // namespace
 
-void TCPNetwork::sendServerIntro(const RemoteStreamPtr& out_stream) {
-    CBR::Protocol::Server::ServerIntro intro;
+void TCPSpaceNetwork::sendServerIntro(const RemoteStreamPtr& out_stream) {
+    Sirikata::Protocol::Server::ServerIntro intro;
     intro.set_id(mContext->id());
     std::string serializedIntro;
     serializePBJMessage(&serializedIntro, intro);
@@ -555,7 +555,7 @@ void TCPNetwork::sendServerIntro(const RemoteStreamPtr& out_stream) {
 
 // Connection Strand
 
-TCPNetwork::TCPSendStream* TCPNetwork::openConnection(const ServerID& dest) {
+TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& dest) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -577,9 +577,9 @@ TCPNetwork::TCPSendStream* TCPNetwork::openConnection(const ServerID& dest) {
     IndirectTCPReceiveStream ind_recv_stream( new TCPReceiveStream*(recv_strm) );
 
     Sirikata::Network::Stream::SubstreamCallback sscb(&Sirikata::Network::Stream::ignoreSubstreamCallback);
-    Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPNetwork::connectionCallback, this, weak_remote, _1, _2));
-    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPNetwork::bytesReceivedCallback, this, weak_remote, ind_recv_stream, _1, _2));
-    Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback, this, weak_remote));
+    Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPSpaceNetwork::connectionCallback, this, weak_remote, _1, _2));
+    Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPSpaceNetwork::bytesReceivedCallback, this, weak_remote, ind_recv_stream, _1, _2));
+    Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPSpaceNetwork::readySendCallback, this, weak_remote));
     remote->stream->connect(convertAddress4ToSirikata(*addr),
                             sscb,
                             connCallback,
@@ -591,7 +591,7 @@ TCPNetwork::TCPSendStream* TCPNetwork::openConnection(const ServerID& dest) {
     return send_stream;
 }
 
-TCPNetwork::TCPReceiveStream* TCPNetwork::handleConnectedStream(RemoteStreamPtr remote_stream) {
+TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::handleConnectedStream(RemoteStreamPtr remote_stream) {
     ServerID remote_id = remote_stream->logical_endpoint;
     RemoteSessionPtr session = getRemoteSession(remote_id);
 
@@ -643,7 +643,7 @@ TCPNetwork::TCPReceiveStream* TCPNetwork::handleConnectedStream(RemoteStreamPtr 
         Sirikata::Network::IOTimerPtr timer = Sirikata::Network::IOTimer::create(mIOService);
         timer->wait(
             Duration::seconds(5),
-            std::tr1::bind(&TCPNetwork::handleClosingStreamTimeout, this, timer, stream_to_close)
+            std::tr1::bind(&TCPSpaceNetwork::handleClosingStreamTimeout, this, timer, stream_to_close)
                    );
 
         mClosingStreamTimers.insert(timer);
@@ -661,7 +661,7 @@ TCPNetwork::TCPReceiveStream* TCPNetwork::handleConnectedStream(RemoteStreamPtr 
     return receive_stream;
 }
 
-void TCPNetwork::handleDisconnectedStream(const RemoteStreamPtr& closed_stream) {
+void TCPSpaceNetwork::handleDisconnectedStream(const RemoteStreamPtr& closed_stream) {
     // When we get a disconnection signal, there's nothing we can even do
     // anymore -- the other side has closed the connection for some reason and
     // isn't going to accept any more data.  The connection has already been
@@ -681,7 +681,7 @@ void TCPNetwork::handleDisconnectedStream(const RemoteStreamPtr& closed_stream) 
         session->closing_stream.reset();
 }
 
-void TCPNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, RemoteStreamPtr& stream) {
+void TCPSpaceNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer, RemoteStreamPtr& stream) {
     mClosingStreamTimers.erase(timer);
 
     if (!stream) {
@@ -697,11 +697,11 @@ void TCPNetwork::handleClosingStreamTimeout(Sirikata::Network::IOTimerPtr timer,
 
 
 
-void TCPNetwork::setSendListener(SendListener* sl) {
+void TCPSpaceNetwork::setSendListener(SendListener* sl) {
     mSendListener = sl;
 }
 
-void TCPNetwork::listen(const ServerID& as_server, ReceiveListener* receive_listener) {
+void TCPSpaceNetwork::listen(const ServerID& as_server, ReceiveListener* receive_listener) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -716,11 +716,11 @@ void TCPNetwork::listen(const ServerID& as_server, ReceiveListener* receive_list
     Address listenAddress(convertAddress4ToSirikata(mListenAddress));
     mListener->listen(
         Address(listenAddress.getHostName(),listenAddress.getService()),
-        std::tr1::bind(&TCPNetwork::newStreamCallback,this,_1,_2)
+        std::tr1::bind(&TCPSpaceNetwork::newStreamCallback,this,_1,_2)
                       );
 }
 
-Network::SendStream* TCPNetwork::connect(const ServerID& addr) {
+SpaceNetwork::SendStream* TCPSpaceNetwork::connect(const ServerID& addr) {
     return openConnection(addr);
 }
 

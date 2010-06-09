@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_RECORDED_MOTION_PATH_HPP_
-#define _CBR_RECORDED_MOTION_PATH_HPP_
+#ifndef _SIRIKATA_RECORDED_MOTION_PATH_HPP_
+#define _SIRIKATA_RECORDED_MOTION_PATH_HPP_
 
 #include "MotionPath.hpp"
 #include "AnalysisEvents.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** MotionPath generated from recorded data, e.g. from trace data. */
 class RecordedMotionPath : public MotionPath {
@@ -68,6 +68,6 @@ private:
     UpdateMap mUpdates;
 }; // class MotionPath
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_RECORDED_MOTION_PATH_HPP_
+#endif //_SIRIKATA_RECORDED_MOTION_PATH_HPP_

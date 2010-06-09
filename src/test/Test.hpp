@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TEST_HPP_
-#define _CBR_TEST_HPP_
+#ifndef _SIRIKATA_TEST_HPP_
+#define _SIRIKATA_TEST_HPP_
 
-namespace CBR {
+namespace Sirikata {
 
 class Test {
 public:
@@ -41,6 +41,6 @@ public:
     virtual void run() {}
 };
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TEST_HPP_
+#endif //_SIRIKATA_TEST_HPP_

@@ -35,7 +35,7 @@
 
 #define ITERATIONS 1000000
 
-namespace CBR {
+namespace Sirikata {
 
 TimerSpeedBenchmark::TimerSpeedBenchmark(const FinishedCallback& finished_cb)
         : Benchmark(finished_cb),
@@ -76,4 +76,4 @@ void TimerSpeedBenchmark::stop() {
 }
 
 
-} // namespace CBR
+} // namespace Sirikata

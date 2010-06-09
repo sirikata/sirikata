@@ -30,13 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_PROFILER_HPP_
-#define _CBR_TIME_PROFILER_HPP_
+#ifndef _SIRIKATA_TIME_PROFILER_HPP_
+#define _SIRIKATA_TIME_PROFILER_HPP_
 
 #include "Utility.hpp"
 #include "Timer.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 /** A simple class which helps to time profiling to determine
  *  what fraction of time each component of a loop is taking.
@@ -86,6 +86,6 @@ private:
     StageList mFreeStages;
 }; // class TimeProfiler
 
-} // namespace CBR
+} // namespace Sirikata
 
-#endif //_CBR_TIME_PROFILER_HPP_
+#endif //_SIRIKATA_TIME_PROFILER_HPP_

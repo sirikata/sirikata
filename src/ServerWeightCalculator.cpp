@@ -36,7 +36,7 @@
 #include "SqrIntegral.hpp"
 #include "Options.hpp"
 
-namespace CBR {
+namespace Sirikata {
 
 ServerWeightCalculator::ServerWeightCalculator(CoordinateSegmentation* cseg, const WeightFunction& weightFunc)
  : mCSeg(cseg),
@@ -119,4 +119,4 @@ ServerWeightCalculator* WeightCalculatorFactory(CoordinateSegmentation* cseg) {
     return result;
 }
 
-} // namespace CBR
+} // namespace Sirikata

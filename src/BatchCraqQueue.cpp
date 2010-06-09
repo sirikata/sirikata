@@ -10,7 +10,7 @@
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include "BatchCraqQueue.hpp"
 
-namespace CBR
+namespace Sirikata
 {
 
   BatchCraqQueue::BatchCraqQueue(IOStrand* strand, ObjectSegmentation* oseg, SpaceContext* con)
