@@ -37,6 +37,7 @@
 
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
+#include "JSObjects/JSSystem.hpp"
 
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
@@ -56,6 +57,10 @@ static const char* ToCString(const v8::String::Utf8Value& value) {
 // function is called.  Prints its arguments on stdout separated by
 // spaces and ending with a newline.
 static v8::Handle<v8::Value> Print(const v8::Arguments& args) {
+
+    std::cout<<"\n\n\nDEBUG PRINT\n\n";
+
+    
   bool first = true;
   for (int i = 0; i < args.Length(); i++) {
     v8::HandleScope handle_scope;
@@ -156,7 +161,7 @@ v8::Handle<v8::Value> __SendMessageTo(const v8::Arguments& args)
  *                  the global (root) object
  *   function cb: callback to invoke, with no parameters
  */
-v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args) {
+v8::Handle<v8::Value> ScriptTimeout_old(const v8::Arguments& args) {
     if (args.Length() != 3)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
 
@@ -384,7 +389,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     system_templ->SetInternalFieldCount(1);
 
     // Functions / types
-    system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(ScriptTimeout));
+    system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(ScriptImport));
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(__ScriptGetTest));
