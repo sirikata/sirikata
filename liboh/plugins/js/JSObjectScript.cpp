@@ -66,8 +66,10 @@ namespace Sirikata {
 namespace JS {
 
 
-bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj) const {
-    for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++) {
+bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj) const
+{
+    for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
+    {
         if (!pat_it->matches(obj))
             return false;
     }

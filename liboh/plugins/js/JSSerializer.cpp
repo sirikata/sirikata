@@ -78,8 +78,6 @@ bool JSSerializer::deserializeObject( std::string strDecode,v8::Local<v8::Object
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
 
         const char* str = jsf.name().c_str();
-
-        std::cout<<"\n\nDEBUGGING: "<<str<<"\n\n";
         
         v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
         if(jsvalue.has_s_value())
