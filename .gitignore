@@ -5,6 +5,9 @@ build/cmake/CMakeFiles
 build/cmake/Makefile
 build/cmake/cmake_install.cmake
 
+# generated files
+build/cmake/generated/*
+
 # build products
 build/cmake/libcbr-core.a
 build/cmake/cbr

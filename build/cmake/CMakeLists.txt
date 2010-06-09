@@ -122,6 +122,11 @@ IF(NOT CMAKE_MODULE_PATH)
 ENDIF()
 GET_FILENAME_COMPONENT(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ABSOLUTE)
 
+IF(NOT BUILD_DIR)
+  SET(BUILD_DIR ${TOP_LEVEL}/build/cmake)
+ENDIF()
+GET_FILENAME_COMPONENT(BUILD_DIR ${BUILD_DIR} ABSOLUTE)
+
 MACRO(VERIFY_VERSION package_name major minor subminor)
   IF (${package_name}_MAJOR_VERSION LESS ${major})
     MESSAGE(FATAL_ERROR "${package_name} out of date: ${major}.${minor}.${subminor}")
@@ -229,13 +234,15 @@ ENDIF()
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
 #protocol file location
 SET(CBR_PROTOCOL_DIR ${TOP_LEVEL}/protocol)
+#generated source files
+SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
 
 #cxx flags
 INCLUDE_DIRECTORIES(BEFORE
         ${CBR_SOURCE_DIR}
         ${CBR_SOURCE_DIR}/space # FIXME Should go away, preferring to store space code there, or be moved to the cbr/space binaries specifically
         ${CBR_SOURCE_DIR}/analysis # FIXME Should go away, preferring to store analysis code there, or be moved to the cbr/analysis binaries specifically
-        ${CBR_PROTOCOL_DIR} # For generated protocol code
+        ${CBR_GENERATED_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
         #${GLUT_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}
@@ -405,7 +412,7 @@ ADD_PBJ_TARGET(
   PLUGINNAME "CBR"
   INPUTDIR ${CBR_PROTOCOL_DIR}
   IMPORTS ${CBR_PROTOCOL_DIR}
-  OUTPUTDIR ${CBR_PROTOCOL_DIR}
+  OUTPUTDIR ${CBR_GENERATED_DIR}
   GENERATED_CPP_FILES CBR_PBJ_CPP_FILES
   CPP_HEADER ${PBJ_CPP_HEADER}
   GENERATE_CPP
