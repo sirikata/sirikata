@@ -1,5 +1,5 @@
-/*  cbr
- *  SegmentedRegion.cpp
+/*  Sirikata
+ *  SegmentedRegion.hpp
  *
  *  Copyright (c) 2009, Tahir Azim
  *  All rights reserved.
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of cbr nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -54,13 +54,13 @@ namespace Sirikata {
 #define MAX_SERVER_REGIONS_CHANGED 2
 
 typedef struct SerializedVector{
-  float32 x, y, z;  
+  float32 x, y, z;
 
   void serialize(const Vector3f& vect) {
     x = vect.x;
     y = vect.y;
     z = vect.z;
-  }  
+  }
 
   void deserialize(Vector3f& vect) {
     vect = Vector3f(x,y,z);
@@ -84,8 +84,8 @@ typedef struct SerializedBBox{
 
     maxX = bbox.max().x;
     maxY = bbox.max().y;
-    maxZ = bbox.max().z;    
-  }  
+    maxZ = bbox.max().z;
+  }
 
   void deserialize(BoundingBox3f& bbox) {
     bbox = BoundingBox3f(Vector3f(minX,minY,minZ),
@@ -125,7 +125,7 @@ typedef struct LookupResponseMessage {
 }__attribute__((__packed__)) LookupResponseMessage ;
 
 typedef struct NumServersRequestMessage {
-  uint8 type;  
+  uint8 type;
 
   NumServersRequestMessage() {
     type = NUM_SERVERS_REQUEST;
@@ -152,19 +152,19 @@ typedef struct ServerRegionRequestMessage {
 
 typedef struct ServerRegionResponseMessage {
   uint8 type;
-  
+
   uint32 listLength;
   SerializedBBox bboxList[MAX_BBOX_LIST_SIZE];
 
   ServerRegionResponseMessage() {
     type = SERVER_REGION_RESPONSE;
-    
+
     listLength = 0;
   }
 }__attribute__((__packed__)) ServerRegionResponseMessage;
 
 typedef struct RegionRequestMessage {
-  uint8 type;  
+  uint8 type;
 
   RegionRequestMessage() {
     type = REGION_REQUEST;
@@ -191,13 +191,13 @@ typedef struct SegmentationChangeMessage {
   }
 
   uint32 serialize(uint8** buff) {
-    
+
     int bufSize = sizeof(uint8_t) + sizeof(uint8_t);
 
     for (int i=0; i<numEntries; i++) {
       bufSize += sizeof(ServerID) + sizeof(uint32);
       bufSize += changedSegments[i].listLength * sizeof(SerializedBBox);
-    }    
+    }
 
     *buff = new uint8[bufSize];
 
@@ -205,7 +205,7 @@ typedef struct SegmentationChangeMessage {
 
     memcpy((*buff)+offset, &type, sizeof(uint8_t));
     offset+=sizeof(uint8_t);
-    
+
     memcpy((*buff)+offset, &numEntries, sizeof(uint8_t));
     offset+=sizeof(uint8_t);
 
@@ -216,7 +216,7 @@ typedef struct SegmentationChangeMessage {
       memcpy((*buff)+offset, &changedSegments[i].listLength, sizeof(uint32));
       offset += sizeof(uint32);
 
-      memcpy((*buff)+offset, &changedSegments[i].bboxList, 
+      memcpy((*buff)+offset, &changedSegments[i].bboxList,
 	     changedSegments[i].listLength * sizeof(SerializedBBox));
       offset += changedSegments[i].listLength * sizeof(SerializedBBox);
     }
@@ -228,10 +228,10 @@ typedef struct SegmentationChangeMessage {
 
 typedef struct SegmentationListenMessage {
   uint8_t type;
-  
+
   char host[128];
   uint16 port;
-  
+
   SegmentationListenMessage() {
     type = SEGMENTATION_LISTEN;
   }
@@ -248,10 +248,10 @@ typedef struct SegmentedRegion {
   void destroy() {
     if (mLeftChild != NULL) {
       mLeftChild->destroy();
- 
+
       SegmentedRegion* prevLeftChild = mLeftChild;
       mLeftChild = NULL;
-     
+
       delete prevLeftChild;
     }
     if (mRightChild != NULL) {
@@ -259,7 +259,7 @@ typedef struct SegmentedRegion {
 
       SegmentedRegion* prevRightChild = mRightChild;
       mRightChild = NULL;
-      
+
       delete prevRightChild;
     }
   }
@@ -268,7 +268,7 @@ typedef struct SegmentedRegion {
     if (mRightChild == NULL && mLeftChild == NULL) {
       return this;
     }
- 
+
     int random = rand() % 2;
     if (random == 0)
       return mLeftChild->getRandomLeaf();
@@ -277,7 +277,7 @@ typedef struct SegmentedRegion {
   }
 
   SegmentedRegion* getSibling(SegmentedRegion* region) {
-    assert(region->mLeftChild == NULL && region->mRightChild == NULL);    
+    assert(region->mLeftChild == NULL && region->mRightChild == NULL);
 
     if (mRightChild == NULL && mLeftChild == NULL) return NULL;
 
@@ -295,7 +295,7 @@ typedef struct SegmentedRegion {
     return NULL;
   }
 
-  SegmentedRegion* getParent(SegmentedRegion* region) {    
+  SegmentedRegion* getParent(SegmentedRegion* region) {
     if (mRightChild == NULL && mLeftChild == NULL) return NULL;
 
     if (mRightChild == region) return this;
@@ -369,26 +369,26 @@ typedef struct SegmentedRegion {
 	return this;
       }
     }
-    
+
     const SegmentedRegion* region = NULL;
     /*if (mLeftChild != NULL) {
       std::cout << "Left child: boundingbox = " << mLeftChild->mBoundingBox<<"\n";
     }*/
 
     if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {
-      //std::cout << "Contained in left child "  << mLeftChild->mBoundingBox << "\n";      
+      //std::cout << "Contained in left child "  << mLeftChild->mBoundingBox << "\n";
       region = mLeftChild->lookup(pos);
     }
-    
+
     /*if (mRightChild != NULL) {
       std::cout << "Right child: boundingbox = " << mRightChild->mBoundingBox<<"\n";
     }*/
 
     if (mRightChild!=NULL && region == NULL && mRightChild->mBoundingBox.contains(pos)){
       //std::cout << "Contained in right child " << mRightChild->mBoundingBox << "\n";
-      region= mRightChild->lookup(pos); 
+      region= mRightChild->lookup(pos);
     }
-      
+
     return region;
   }
 
@@ -410,7 +410,7 @@ typedef struct SegmentedRegion {
 
     return;
   }
-  
+
   ServerID  mServer;
   SegmentedRegion* mLeftChild;
   SegmentedRegion* mRightChild;
@@ -430,7 +430,7 @@ typedef struct SerializedSegmentedRegion {
     mLeftChildIdx = 0;
     mRightChildIdx = 0;
   }
-      
+
 }__attribute__((__packed__)) SerializedSegmentedRegion;
 
 
@@ -439,7 +439,7 @@ typedef struct SerializedBSPTree {
   uint32 mNodeCount;
   SerializedSegmentedRegion* mSegmentedRegions;  //allocate dynamically based on
                                                  //size of region.
-  
+
   SerializedBSPTree(int numNodes) {
     mNodeCount = numNodes;
     mSegmentedRegions = new SerializedSegmentedRegion[numNodes];
@@ -449,20 +449,20 @@ typedef struct SerializedBSPTree {
     delete mSegmentedRegions;
   }
 
-  void deserializeBSPTree(SegmentedRegion* region, uint32 idx, 
+  void deserializeBSPTree(SegmentedRegion* region, uint32 idx,
 			  SerializedBSPTree* serializedTree)
   {
     assert(idx<serializedTree->mNodeCount);
 
     region->mServer = serializedTree->mSegmentedRegions[idx].mServerID;
-    
+
     region->mLeafCount = serializedTree->mSegmentedRegions[idx].mLeafCount;
 
     serializedTree->mSegmentedRegions[idx].mBoundingBox.deserialize(region->mBoundingBox);
 
-    if (serializedTree->mSegmentedRegions[idx].mLeftChildIdx == 0 && 
+    if (serializedTree->mSegmentedRegions[idx].mLeftChildIdx == 0 &&
        serializedTree->mSegmentedRegions[idx].mRightChildIdx == 0)
-    {    
+    {
       //std::cout << region->mServer << " : " <<region->mLeafCount << "\n";
       //std::cout << region->mBoundingBox << "\n";
     }

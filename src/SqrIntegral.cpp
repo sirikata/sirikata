@@ -1,3 +1,35 @@
+/*  Sirikata
+ *  SqrIntegral.cpp
+ *
+ *  Copyright (c) 2010, Daniel Reiter Horn
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "SqrIntegral.hpp"
 
 extern "C" {
@@ -16,7 +48,7 @@ double inverse_polynomial(double r, double r2) {
     return 1./(r2*logr*logr);
 }
 double bandwidth_bound_no_cutoff(double r, double r2, size_t dim, void *v_params) {
-    struct sqrParams*params=(struct sqrParams*)v_params;    
+    struct sqrParams*params=(struct sqrParams*)v_params;
     double flatness=params->flatness;
     //r*=100;
     r+=flatness;
@@ -25,7 +57,7 @@ double bandwidth_bound_no_cutoff(double r, double r2, size_t dim, void *v_params
 }
 double bandwidth_bound(double *x, size_t dim, void *v_params) {
     struct sqrParams*params=(struct sqrParams*)v_params;
-    
+
     double p =params->constant_extent_rho;
     double k = params->constant_inner_speed_k;
     double r2=(x[2]-x[0])*(x[2]-x[0])+(x[3]-x[1])*(x[3]-x[1]);
@@ -34,7 +66,7 @@ double bandwidth_bound(double *x, size_t dim, void *v_params) {
     return bandwidth_bound_no_cutoff(r,r2,dim,params);
 }
 }
-#define gsl_monte_plain_integratePRINT(F0, xl, xu, dim, NCALLS, r, s, res1, err1) (gsl_monte_plain_integrate(F0, xl, xu, dim, NCALLS, r, s, res1, err1)),printf ("Integrating (%.0f %.0f)->(%.0f %.0f) to (%.0f %.0f)->(%.0f %.0f)=%lf -+ %lf\n",xl[0],xl[1],xu[0],xu[1],xl[2],xl[3],xu[2],xu[3],*res1,*err1);                
+#define gsl_monte_plain_integratePRINT(F0, xl, xu, dim, NCALLS, r, s, res1, err1) (gsl_monte_plain_integrate(F0, xl, xu, dim, NCALLS, r, s, res1, err1)),printf ("Integrating (%.0f %.0f)->(%.0f %.0f) to (%.0f %.0f)->(%.0f %.0f)=%lf -+ %lf\n",xl[0],xl[1],xu[0],xu[1],xl[2],xl[3],xu[2],xu[3],*res1,*err1);
 
 namespace Sirikata {
 SqrIntegral::SqrIntegral(bool normalize) {
@@ -71,8 +103,8 @@ double SqrIntegral::integrate(double cutoff, double flatness,const Vector3d&xymi
     double xl[4]={xymin.x,xymin.y,uvmin.x,uvmin.y};
     double xu[4]={xymax.x,xymax.y,uvmax.x,uvmax.y};
     double res1=0;
-    gsl_monte_function F0 = { &bandwidth_bound, 4, &params};        
-	gsl_monte_plain_integrate(&F0, xl, xu, 4, NCALLS, (gsl_rng*)gsl_rng_r, (gsl_monte_plain_state*)gsl_monte_plane_state_s, &res1, error);    
+    gsl_monte_function F0 = { &bandwidth_bound, 4, &params};
+	gsl_monte_plain_integrate(&F0, xl, xu, 4, NCALLS, (gsl_rng*)gsl_rng_r, (gsl_monte_plain_state*)gsl_monte_plane_state_s, &res1, error);
     //printf ("%lf, %lf\n",res1,*error);
     return res1;
 }
@@ -99,7 +131,7 @@ double SqrIntegral::computeInfiniteIntegral(int whichCutoff) {
         }
         double error =0.0;
         sum+=integrate(cachedCutoff[whichCutoff],cachedFlatness[whichCutoff],Vector3d(0,0,0),Vector3d(xmul,ymul,1),Vector3d(i*xmul,0,0),Vector3d(i*2*xmul,ymul,1),&error);
-        err_sum+=error;       
+        err_sum+=error;
    }
    if ((err_sum*err_sum)/(sum*sum)>.01) {
        fprintf(stderr,"Error is %f on absolute of %f\n",err_sum,sum);
@@ -108,4 +140,3 @@ double SqrIntegral::computeInfiniteIntegral(int whichCutoff) {
 }
 
 }
-

@@ -1,19 +1,51 @@
+/*  Sirikata
+ *  Base64.cpp
+ *
+ *  Copyright (c) 2010, Behram Mistree
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 namespace Sirikata {
 namespace decodabet {
 typedef unsigned char uint8;
 static const uint8 _URL_SAFE_ALPHABET []= {
         (uint8)'A', (uint8)'B', (uint8)'C', (uint8)'D', (uint8)'E', (uint8)'F', (uint8)'G',
         (uint8)'H', (uint8)'I', (uint8)'J', (uint8)'K', (uint8)'L', (uint8)'M', (uint8)'N',
-        (uint8)'O', (uint8)'P', (uint8)'Q', (uint8)'R', (uint8)'S', (uint8)'T', (uint8)'U', 
+        (uint8)'O', (uint8)'P', (uint8)'Q', (uint8)'R', (uint8)'S', (uint8)'T', (uint8)'U',
         (uint8)'V', (uint8)'W', (uint8)'X', (uint8)':', (uint8)';',
         (uint8)'a', (uint8)'b', (uint8)'c', (uint8)'d', (uint8)'e', (uint8)'f', (uint8)'g',
         (uint8)'h', (uint8)'i', (uint8)'j', (uint8)'k', (uint8)'l', (uint8)'m', (uint8)'n',
-        (uint8)'o', (uint8)'p', (uint8)'q', (uint8)'r', (uint8)'s', (uint8)'t', (uint8)'u', 
+        (uint8)'o', (uint8)'p', (uint8)'q', (uint8)'r', (uint8)'s', (uint8)'t', (uint8)'u',
         (uint8)'v', (uint8)'w', (uint8)'x', (uint8)'y', (uint8)'z',
-        (uint8)'0', (uint8)'1', (uint8)'2', (uint8)'3', (uint8)'4', (uint8)'5', 
+        (uint8)'0', (uint8)'1', (uint8)'2', (uint8)'3', (uint8)'4', (uint8)'5',
         (uint8)'6', (uint8)'7', (uint8)'8', (uint8)'9', (uint8)'-', (uint8)'_'
     };
-	
+
 static signed char WHITE_SPACE_ENC = -5; // Indicates white space in encoding
 static signed char EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
@@ -53,18 +85,18 @@ static int decode4to3(const unsigned char xsource[4],unsigned char destination[4
         return 1;
     }
     outBuf|=(source[2]<<6);
-    destination[destOffset+1]=(unsigned char)((outBuf/256)&255);                
+    destination[destOffset+1]=(unsigned char)((outBuf/256)&255);
     if (source[3]==decodabet::EQUALS_SIGN_ENC) {
             return 2;
     }
     outBuf|=source[3];
-    destination[destOffset+2]=(unsigned char)(outBuf&255);                        
+    destination[destOffset+2]=(unsigned char)(outBuf&255);
     return 3;
 }
 
 void decode12Base64(unsigned char output[9], unsigned char input[12]) {
-    decode4to3(input,output,0);    
-    decode4to3(input+4,output+3,0);    
+    decode4to3(input,output,0);
+    decode4to3(input+4,output+3,0);
     decode4to3(input+8,output+6,0);
 }
 int translateBase64(unsigned char*destination, const unsigned char* source, int numSigBytes) {
@@ -89,7 +121,7 @@ int translateBase64(unsigned char*destination, const unsigned char* source, int 
         destination[ 2 ] = decodabet::_URL_SAFE_ALPHABET[ (inBuff >>  6) & 0x3f ];
         destination[ 3 ] = '=';
         return 4;
-        
+
       case 1:
         destination[ 2 ] = '=';
         destination[ 3 ] = '=';
@@ -98,10 +130,10 @@ int translateBase64(unsigned char*destination, const unsigned char* source, int 
       default:
         return 0;
     }   // end switch
-    
+
 }
 void encode9Base64(unsigned char input[9], unsigned char result[12]) {
-    
+
     int offset1=translateBase64(result,input,3);
     translateBase64(result+offset1+translateBase64(result+offset1,input+3,3),input+6,3);
 }

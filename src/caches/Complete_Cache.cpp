@@ -1,3 +1,35 @@
+/*  Sirikata
+ *  Complete_Cache.cpp
+ *
+ *  Copyright (c) 2010, Behram Mistree
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include <algorithm>
 #include <map>
 #include <list>
@@ -52,7 +84,7 @@ namespace Sirikata
       return;
 
     mPrevTime = (ctx->simTime() - Time::null()).toMilliseconds();
-  
+
     //delete the entries in the entire time rec structure
     TimeRecordMap::iterator timeRecMapIter;
     for (timeRecMapIter = timeRecMap.begin(); timeRecMapIter != timeRecMap.end(); ++timeRecMapIter)
@@ -69,10 +101,10 @@ namespace Sirikata
 
       idrecmapit->second->popAvg = idrecmapit->second->popAvg*(1-ewmaPopPar) + idrecmapit->second->reqsSinceEvict*ewmaPopPar;
       idrecmapit->second->reqsSinceEvict = 0;
-    
+
       //refill the time rec structure
       FCacheRecord* rcdTimeRecMap = new FCacheRecord(idrecmapit->second);
-    
+
       timeRecMap.insert(std::pair<double,FCacheRecord*>((*mScoreFunc)(rcdTimeRecMap),rcdTimeRecMap));
     }
   }
@@ -93,7 +125,7 @@ namespace Sirikata
   }
 
 
-  //runs through and removes all the 
+  //runs through and removes all the
   void Complete_Cache::remove(const UUID& oid)
   {
     IDRecordMap::iterator idrecmapit = idRecMap.find(oid);
@@ -102,14 +134,14 @@ namespace Sirikata
 
     //  std::pair<TimeRecordMap::iterator, TimeRecordMap::iterator> eqRange = timeRecMap.equal_range(idrecmapit->second->age);
     std::pair<TimeRecordMap::iterator, TimeRecordMap::iterator> eqRange = timeRecMap.equal_range((*mScoreFunc)(idrecmapit->second));
-  
-    TimeRecordMap::iterator timeRecMapIter=eqRange.first;  
-  
+
+    TimeRecordMap::iterator timeRecMapIter=eqRange.first;
+
     for(timeRecMapIter = eqRange.first; timeRecMapIter != eqRange.second; ++timeRecMapIter)
-    {    
+    {
       //run through looking for the corresponding
       if(timeRecMapIter->second->objid == oid)
-      {            
+      {
         //delete its entry and remove the iterator from timeRecMap
         delete timeRecMapIter->second;
         timeRecMap.erase(timeRecMapIter);
@@ -117,7 +149,7 @@ namespace Sirikata
         //delete the entry and remove the iterator from idRecMap
         delete idrecmapit->second;
         idRecMap.erase(idrecmapit);
-      
+
         return;
       }
     }
@@ -130,7 +162,7 @@ namespace Sirikata
     if ((int)idRecMap.size() > mMaxSize)
     {
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
- 
+
       for (int s=0; (s < 1) && (tMapIter != timeRecMap.end()); ++s)
       {
         //remove the object from the map
@@ -158,10 +190,10 @@ namespace Sirikata
   {
     if (distance > mInsideRadiusInsert)
       return;
-  
+
     IDRecordMap::iterator idRecMapIter = idRecMap.find(toInsert);
 
-    if (idRecMapIter != idRecMap.end()) 
+    if (idRecMapIter != idRecMap.end())
     {
       std::cout<<"\n\nRemoved the functionality for inserting the same record multiple times\n\n";
       assert(false);
@@ -174,10 +206,10 @@ namespace Sirikata
       FCacheRecord* rcdTimeRecMap = new FCacheRecord(toInsert,bid,0,0,0,weight,distance,radius,lookupWeight,scaler,ctx,vMag);
 
 
-      
+
       timeRecMap.insert(std::pair<double,FCacheRecord*>((*mScoreFunc)(rcdTimeRecMap),rcdTimeRecMap));
 
-    
+
       //insert into id-record map
       FCacheRecord* rcdIDRecMap = new FCacheRecord(toInsert,bid,0,0,0,weight,distance,radius,lookupWeight,scaler,ctx,vMag);
       idRecMap.insert(std::pair<UUID,FCacheRecord*>(toInsert,rcdIDRecMap));
@@ -211,7 +243,7 @@ namespace Sirikata
   {
     //note: will not work with popularities now.
     checkUpdate();
-  
+
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
 
     if (idRecMapIter != idRecMap.end())
@@ -233,7 +265,7 @@ namespace Sirikata
       //re-insert
       timeRecMap.insert(std::pair<double,FCacheRecord*>((*mScoreFunc)(toInsertA),toInsertA));
       idRecMap.insert(std::pair<UUID,FCacheRecord*>(uuid,toInsertB));
-      
+
       return toReturn;
     }
 

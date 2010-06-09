@@ -1,4 +1,4 @@
-/*  cbr
+/*  Sirikata
  *  CBRLocationServiceCache.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava

@@ -1,5 +1,5 @@
 /*  Sirikata Network Services - Scenario factory
- *  ScenarioFactory.cpp
+ *  ScenarioFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
