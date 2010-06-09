@@ -33,7 +33,7 @@ if [ -z "${APPDIR}" ] ; then
 fi
 
 usage () {
-  echo "$APPNAME [cbr|oh|cseg|analysis|bench] [-h|--help] [-g|--debug] [options]"
+  echo "$APPNAME [cbr|simoh|cseg|analysis|bench] [-h|--help] [-g|--debug] [options]"
   echo
   echo "        -g or --debug           Start within $GDB"
   echo "        -h or --help            This help screen"
@@ -51,7 +51,7 @@ want_interactive=0
 want_oprofile=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    cbr | oh | cseg | analysis | bench)
+    cbr | simoh | cseg | analysis | bench)
       APPNAME="$1"
       shift;;
     -h | --help | -help )

@@ -348,7 +348,7 @@ class ClusterSim:
 
 
     # instance_types: [] of tuples (type, count) - types of nodes, e.g.
-    #                 'space', 'oh', 'cseg' and how many of each should
+    #                 'space', 'simoh', 'cseg' and how many of each should
     #                 be deployed
     # local: bool indicating whether this should all be run locally or remotely
     def run_instances(self, instance_types, local):
@@ -372,8 +372,8 @@ class ClusterSim:
                 # FIXME should just map directly to binaries
                 if (node_type == 'space'):
                     node_params['binary'].append('cbr')
-                elif (node_type == 'oh'):
-                    node_params['binary'].append('oh')
+                elif (node_type == 'simoh'):
+                    node_params['binary'].append('simoh')
                 elif (node_type == 'vis'):
                     node_params['binary'].append('analysis')
                 elif (node_type == 'cseg'):
@@ -469,7 +469,7 @@ class ClusterSim:
         instances = [
             ('space', self.settings.space_server_pool),
             ('cseg', self.settings.num_cseg_servers),
-            ('oh', self.settings.num_oh)
+            ('simoh', self.settings.num_oh)
             ]
         self.run_instances(instances, False)
 

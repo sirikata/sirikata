@@ -296,13 +296,13 @@ if __name__ == "__main__":
             retval = cluster_build.revert_patchset()
         elif cmd == 'profile':
             profile_binary = 'cbr'
-            if (cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['cbr', 'oh', 'cseg', 'analysis']):
+            if (cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['cbr', 'simoh', 'cseg', 'analysis']):
                 profile_binary = filtered_args[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.profile(profile_binary)
         elif cmd == 'oprofile':
             profile_binary = 'cbr'
-            if (cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['cbr', 'oh', 'cseg', 'analysis']):
+            if (cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['cbr', 'simoh', 'cseg', 'analysis']):
                 profile_binary = filtered_args[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.oprofile(profile_binary)
