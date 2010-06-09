@@ -31,7 +31,7 @@
  */
 
 #include "JSQuaternion.hpp"
-#include "JSUtil.hpp"
+#include "../JSUtil.hpp"
 #include "JSVec3.hpp"
 
 using namespace v8;

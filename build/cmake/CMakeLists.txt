@@ -1424,10 +1424,12 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectScriptManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectScript.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSUtil.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSVec3.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSQuaternion.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVec3.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp
+#  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
   )
 IF(V8_FOUND)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)

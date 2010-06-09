@@ -1,5 +1,5 @@
 /*  Sirikata
- *  JSVec3.hpp
+ *  JSQuaternion.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,51 +30,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_JS_VEC3_HPP_
-#define _SIRIKATA_JS_VEC3_HPP_
+#ifndef _SIRIKATA_JS_QUATERNION_HPP_
+#define _SIRIKATA_JS_QUATERNION_HPP_
 
-#include "JSUtil.hpp"
+#include "../JSUtil.hpp"
 #include <v8.h>
 
 namespace Sirikata {
 namespace JS {
 
-/** Create a template for a Vec3 function. */
-v8::Handle<v8::FunctionTemplate> CreateVec3Template();
-void DestroyVec3Template();
+/** Create a template for a Quaternion function. */
+v8::Handle<v8::FunctionTemplate> CreateQuaternionTemplate();
+void DestroyQuaternionTemplate();
 
+void QuaternionFill(Handle<Object>& dest, const Quaternion& src);
+Handle<Value> CreateJSResult(Handle<Object>& orig, const Quaternion& src);
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Quaternion& src);
+bool QuaternionValidate(Handle<Object>& src);
+Quaternion QuaternionExtract(Handle<Object>& src);
 
-
-template<typename VecType>
-void Vec3Fill(Handle<Object>& dest, const VecType& src) {
-    dest->Set(JS_STRING(x), Number::New(src.x));
-    dest->Set(JS_STRING(y), Number::New(src.y));
-    dest->Set(JS_STRING(z), Number::New(src.z));
-}
-
-template<typename VecType>
-Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src) {
-    Handle<Object> result = orig->Clone();
-    Vec3Fill(result, src);
-    return result;
-}
-
-Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
-template<typename VecType>
-Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const VecType& src) {
-    return CreateJSResult_Vec3Impl(ctx, Vector3d(src));
-}
-
-bool Vec3Validate(Handle<Object>& src);
-Vector3d Vec3Extract(Handle<Object>& src);
-
-#define Vec3CheckAndExtract(native, value)                              \
-    if (!Vec3Validate(value))                                           \
-        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as Vec3.")) ); \
-    Vector3d native = Vec3Extract(value);
-
+#define QuaternionCheckAndExtract(native, value)                              \
+    if (!QuaternionValidate(value))                                           \
+        return v8::ThrowException( v8::Exception::TypeError(v8::String::New("Value couldn't be interpreted as Quaternion.")) ); \
+    Quaternion native = QuaternionExtract(value);
 
 } // namespace JS
 } // namespace Sirikata
 
-#endif //_SIRIKATA_JS_VEC3_HPP_
+#endif //_SIRIKATA_JS_QUATERNION_HPP_

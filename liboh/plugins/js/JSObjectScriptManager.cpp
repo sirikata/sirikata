@@ -35,14 +35,15 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSObjectScript.hpp"
 
-#include "JSVec3.hpp"
-#include "JSQuaternion.hpp"
+#include "JSObjects/JSVec3.hpp"
+#include "JSObjects/JSQuaternion.hpp"
 
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
 
+#include "JSObjects/Addressable.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -145,76 +146,6 @@ v8::Handle<v8::Value> __SendMessageTo(const v8::Arguments& args)
     return v8::Undefined();
 }
 
-//Oref template messages
-
-
-void readORef(const v8::Arguments& args, JSObjectScript*& caller, ObjectReference*& oref)
-{
-   v8::Local<v8::Object> mRef = args.This();
-
-   //grabs the caller
-   v8::Local<v8::External> wrapJSObj;
-   if (mRef->InternalFieldCount() > 0)
-       wrapJSObj = v8::Local<v8::External>::Cast(
-           mRef->GetInternalField(OREF_JSOBJSCRIPT_FIELD)
-       );
-   else
-       wrapJSObj = v8::Local<v8::External>::Cast(
-           v8::Handle<v8::Object>::Cast(mRef->GetPrototype())->GetInternalField(OREF_JSOBJSCRIPT_FIELD)
-       );
-   void* ptr = wrapJSObj->Value();
-   caller = static_cast<JSObjectScript*>(ptr);
-
-
-   //grabs the oref
-    v8::Local<v8::External> wrapORef;
-    if (mRef->InternalFieldCount() > 0)
-        wrapORef = v8::Local<v8::External>::Cast(
-            mRef->GetInternalField(OREF_OREF_FIELD)
-        );
-    else
-        wrapORef = v8::Local<v8::External>::Cast(
-            v8::Handle<v8::Object>::Cast(mRef->GetPrototype())->GetInternalField(OREF_OREF_FIELD)
-        );
-    void* ptr2 = wrapORef->Value();
-    oref = static_cast<ObjectReference*>(ptr2);
-}
-
-
-v8::Handle<v8::Value> __orefSendMessage (const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessage(<object>)")) );
-
-    //first need to extract out the sending jsobjectscript and oref
-    JSObjectScript* caller;
-    ObjectReference* oref;
-    readORef(args,caller,oref);
-
-        
-    //then need to read the object
-    v8::Handle<v8::Value> messageBody = args[0];
-    if(!messageBody->IsObject())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object.")) );
-
-    //serialize the object to send
-    Local<v8::Object> v8Object = messageBody->ToObject();
-    std::string serialized_message = JSSerializer::serializeObject(v8Object);
-
-
-    //actually send the message to the entity
-    caller->sendMessageToEntity(oref,serialized_message);
-    
-    return v8::Undefined();
-}
-
-
-
-v8::Handle<v8::Value> __DebugRef(const v8::Arguments& args)
-{
-    std::cout<<"\n\n\n\nDEBUG: WAKA WAKA\n\n";
-    return v8::Undefined();
-}
 
 
 
@@ -487,19 +418,28 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 
     //take care of oref template
-    bftm_createObjRefTemplate();
+    bftm_createAddressableTemplate();
+}
 
+void JSObjectScriptManager::createSystemTemplate()
+{
+    std::cout<<"\n\n\n\n";
+    std::cout<<"DEBUG fix here";
+    std::cout<<"\n\n\n\n";
+    return;
 }
 
 //creating the object reference template
-void JSObjectScriptManager::bftm_createObjRefTemplate()
+void JSObjectScriptManager::bftm_createAddressableTemplate()
 {
     v8::HandleScope handle_scope;
-    mORefTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mAddressableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     // An internal field holds the external address of the addressable object
-    mORefTemplate->SetInternalFieldCount(2);
-    mORefTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(__DebugRef));
-    mORefTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(__orefSendMessage));
+    mAddressableTemplate->SetInternalFieldCount(2);
+
+    //these function calls are defined in JSObjects/Addressable.hpp
+    mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
+    mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
 }
 
 
@@ -509,7 +449,7 @@ JSObjectScriptManager::~JSObjectScriptManager() {
 
 ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,
                                                             const Arguments& args) {
-    JSObjectScript* new_script = new JSObjectScript(ho, args, mGlobalTemplate,mORefTemplate);
+    JSObjectScript* new_script = new JSObjectScript(ho, args, mGlobalTemplate,mAddressableTemplate);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;

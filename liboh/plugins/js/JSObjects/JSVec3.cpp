@@ -31,7 +31,7 @@
  */
 
 #include "JSVec3.hpp"
-#include "JSUtil.hpp"
+#include "../JSUtil.hpp"
 
 using namespace v8;
 

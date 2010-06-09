@@ -49,8 +49,8 @@
 
 #include <string>
 #include "JSUtil.hpp"
-#include "JSVec3.hpp"
-#include "JSQuaternion.hpp"
+#include "JSObjects/JSVec3.hpp"
+#include "JSObjects/JSQuaternion.hpp"
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/core/network/IOService.hpp>
