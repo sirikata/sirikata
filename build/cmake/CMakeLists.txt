@@ -1692,6 +1692,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
   )
 IF(V8_FOUND)

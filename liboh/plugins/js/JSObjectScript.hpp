@@ -43,6 +43,7 @@
 #include <v8.h>
 
 #include "JSPattern.hpp"
+#include "JSEventHandler.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -127,20 +128,7 @@ private:
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
 
-	v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader&);
-
-    struct JSEventHandler {
-        JSEventHandler(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
-         : pattern(_pattern), target(_target), cb(_cb), sender(_sender) {}
-
-        bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const;
-
-        PatternList pattern;
-        v8::Persistent<v8::Object> target;
-        v8::Persistent<v8::Function> cb;
-		v8::Persistent<v8::Object> sender;
-    };
-    typedef std::vector<JSEventHandler> JSEventHandlerList;
+    typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 	
 	

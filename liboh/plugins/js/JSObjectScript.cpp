@@ -46,7 +46,7 @@
 
 #include "JSSerializer.hpp"
 
-
+#include "JSEventHandler.hpp"
 #include <string>
 #include "JSUtil.hpp"
 #include "JSObjects/JSVec3.hpp"
@@ -64,60 +64,6 @@ using namespace v8;
 
 namespace Sirikata {
 namespace JS {
-
-
-bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
-{
-    v8::Local<v8::External> wrap;
-    if(sender->InternalFieldCount() > 0)
-	{
-	  wrap = v8::Local<v8::External>::Cast(
-            sender->GetInternalField(0));
-
-	}
-    void* ptr =  wrap->Value();
-	ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
-
-   // std::cout << "Trying to match a message from "  << objRef->getAsUUID().toString();
-
-    if(!this->sender->IsNull())
-	{
-       if(this->sender->InternalFieldCount() > 0)
-	   {
-	     wrap = v8::Local<v8::External>::Cast(
-         this->sender->GetInternalField(0));
-
-	   }
-
-       ptr =  wrap->Value();
-       ObjectReference* objRef2 = static_cast<ObjectReference*>(ptr);
-
-   
-       if(! (objRef1->getAsUUID() == objRef2->getAsUUID()))
-       {
-	     return false;
-	   }
-	   else
-	   {
-	     std::cout << "The senders match \n";
-	   }
-    }
-
-
-    for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
-    {
-        if (!pat_it->matches(obj))
-		    {
-			  std::cout << "pattern did not match \n";
-              return false;
-			} 
-    }
-
-    return true;
-}
-
-
-
 
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template, v8::Persistent<v8::ObjectTemplate>& oref_template)
@@ -151,18 +97,21 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
 	for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
-		SpaceID space_id=*space_it;
+
+        SpaceID space_id=*space_it;
         mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
         if (mScriptingPort)
             mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
 
         //bftm
         //change the services to something else.;
+        //register port for messaging
         mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
+
         if (mMessagingPort)
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
 
-		space_it=spaces.find(space_id);//in case the space_set was munged in the process
+        space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
 }
 
@@ -197,10 +146,16 @@ void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const
 }
 
 
-JSObjectScript::~JSObjectScript() {
+JSObjectScript::~JSObjectScript()
+{
     if (mScriptingPort)
         delete mScriptingPort;
 
+    for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
+        delete *handler_it;
+
+    mEventHandlers.clear();
+    
     mContext.Dispose();
 }
 
@@ -542,8 +497,10 @@ CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
-void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender) {
-    JSEventHandler new_handler(pattern, target, cb, sender);
+
+void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+{
+    JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb);
     mEventHandlers.push_back(new_handler);
 }
 
@@ -587,17 +544,18 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 
 
 
-    // Try to dispatch the message
+    // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
     for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
     {
-        if (handler_it->matches(obj, msgSender))
+        if ((*handler_it)->matches(obj, msgSender))
         {
             // Adding support for the knowing the message properties too
             int argc = 2;
 
             Handle<Value> argv[2] = { obj, msgSender };
-            ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
+            ProtectedJSCallback(mContext, (*handler_it)->target, (*handler_it)->cb, argc, argv);
+
             matchesSomeHandler = true;
         }
     }
@@ -611,68 +569,11 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 
 }
 
-void JSObjectScript::bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload)
+
+
+
+void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-    RoutableMessageBody body;
-    body.ParseFromArray(payload.data(), payload.size());
-
-    std::string mMessageBody(body.payload());
-
-
-    //JSLOG(warn, "Got message: " << mMessageBody);
-
-
-	Protocol::JSMessage jsmessage;
-	jsmessage.ParseFromString(body.payload());
-
-	Local<v8::Object> obj = v8::Object::New();
-
-
-	for(int i = 0; i < jsmessage.fields_size(); i++)
-	{
-		Protocol::JSField jsf = jsmessage.fields(i);
-
-
-		Protocol::JSFieldValue jsvalue= jsf.value();
-
-		const char* str = jsf.name().c_str();
-		Local<v8::String> key = v8::String::New(str, jsf.name().size());
-		if(jsvalue.has_s_value())
-		{
-			//std::cout << jsvalue.s_value() << "\n";
-			const char* str1 = jsvalue.s_value().c_str();
-			Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
-			obj->Set(key, val);
-		}
-		else if(jsvalue.has_i_value())
-		{
-			//std::cout << jsvalue.i_value() << "\n";
-			Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
-			obj->Set(key, intval);
-			//obj->Set(key, jsvalue.i_value());
-		}
-
-	}
-
-        // Try to dispatch the message
-        for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin();
-            handler_it != mEventHandlers.end();
-            handler_it++) {
-            // invoking with fake sender
-            if (handler_it->matches(obj, v8::Object::New())) {
-                int argc = 1;
-                Handle<Value> argv[1] = { obj };
-                ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
-            }
-        }
-}
-
-
-
-void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload) {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
     // in "Header")
     RoutableMessageBody body;

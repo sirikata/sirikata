@@ -58,12 +58,15 @@ private:
 
     void bftm_createAddressableTemplate();
     void createSystemTemplate();
-
+    void createHandlerTemplate();
     
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
+    
+    v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
+    
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
     v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;

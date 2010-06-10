@@ -106,8 +106,13 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
     system_templ->Set(JS_STRING(Pattern), mPatternTemplate);
-    
+
     system_templ->Set(JS_STRING(registerHandler), v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
+
+    
+    /**
+       FIXME: need to add way to remove a handler.
+     **/
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 }
 
@@ -128,13 +133,31 @@ void JSObjectScriptManager::bftm_createAddressableTemplate()
 }
 
 
+//a handler is returned whenever you register a handler in system.
+//should be able to print data of handler (pattern + cb),
+//should be able to cancel handler    -----> canceling handler kills this
+//object.  remove this pattern from being checked for.
+//should be able to renew handler     -----> Re-register handler.
+// void JSObjectScriptManager::createHandlerTemplate()
+// {
+//     v8::HandleScope handle_scope;
+//     mHandlerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+//     // one field is the JSObjectScript associated with it
+//     // the other field is a pointer to the associated JSEventHandler.
+//     mHandlerTemplate->SetInternalFieldCount(2);
+
+//     mHandlerTemplate->Set(v8::String::New("printContents"), v8::FunctionTemplate::New(JSHandlerTemplate::__printContents));
+// }
+
+
         
 JSObjectScriptManager::~JSObjectScriptManager()
 {
 }
 
-ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,
-                                                            const Arguments& args) {
+ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,const Arguments& args)
+{
     JSObjectScript* new_script = new JSObjectScript(ho, args, mGlobalTemplate,mAddressableTemplate);
     if (!new_script->valid()) {
         delete new_script;
