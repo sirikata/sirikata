@@ -231,17 +231,23 @@ IF(CBR_TIMESTAMP_PACKETS)
 ENDIF()
 
 #source file location
-SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
+SET(LIBCBRCORE_DIR ${TOP_LEVEL}/libcbrcore)
+SET(LIBCBRCORE_INCLUDE_DIR ${TOP_LEVEL}/libcbrcore/include)
+SET(LIBCBRCORE_SOURCE_DIR ${TOP_LEVEL}/libcbrcore/src)
+SET(SIMOH_SOURCE_DIR ${TOP_LEVEL}/simoh/src)
+SET(CBR_SOURCE_DIR ${TOP_LEVEL}/cbr/src)
+SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
+SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
+SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
+SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
 #protocol file location
-SET(CBR_PROTOCOL_DIR ${TOP_LEVEL}/protocol)
+SET(CBR_PROTOCOL_DIR ${LIBCBRCORE_DIR}/protocol)
 #generated source files
 SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
 
 #cxx flags
 INCLUDE_DIRECTORIES(BEFORE
-        ${CBR_SOURCE_DIR}
-        ${CBR_SOURCE_DIR}/space # FIXME Should go away, preferring to store space code there, or be moved to the cbr/space binaries specifically
-        ${CBR_SOURCE_DIR}/analysis # FIXME Should go away, preferring to store analysis code there, or be moved to the cbr/analysis binaries specifically
+        ${LIBCBRCORE_INCLUDE_DIR}
         ${CBR_GENERATED_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
         #${GLUT_INCLUDE_DIR}
@@ -254,42 +260,42 @@ INCLUDE_DIRECTORIES(BEFORE
         )
 
 #source files
-SET(CBR_CORE_SOURCES
-  ${CBR_SOURCE_DIR}/Address4.cpp
-  ${CBR_SOURCE_DIR}/Context.cpp
-  ${CBR_SOURCE_DIR}/Message.cpp
-  ${CBR_SOURCE_DIR}/Options.cpp
-  ${CBR_SOURCE_DIR}/RouterElement.cpp
-  ${CBR_SOURCE_DIR}/PollingService.cpp
-  ${CBR_SOURCE_DIR}/OSegTestMotionPath.cpp
-  ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
-  ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
-  ${CBR_SOURCE_DIR}/space/SpaceContext.cpp
-  ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
-  ${CBR_SOURCE_DIR}/Statistics.cpp
-  ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${CBR_SOURCE_DIR}/TimeProfiler.cpp
-  ${CBR_SOURCE_DIR}/Timer.cpp
-  ${CBR_SOURCE_DIR}/TimeSync.cpp
-  ${CBR_SOURCE_DIR}/VWTypes.cpp
-  ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
-  ${CBR_SOURCE_DIR}/ExpIntegral.cpp
-  ${CBR_SOURCE_DIR}/SqrIntegral.cpp
+SET(LIBCBRCORE_SOURCES
+  ${LIBCBRCORE_SOURCE_DIR}/Address4.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Context.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/PollingService.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/SpaceContext.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/TimeProfiler.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Timer.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/ServerWeightCalculator.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/ExpIntegral.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/SqrIntegral.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/LoadMonitor.cpp
 )
 
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
-#  ${CBR_SOURCE_DIR}/BatchCraqQueue.cpp
-#  ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
   ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
   ${CBR_SOURCE_DIR}/caches/CacheRecords.cpp
   ${CBR_SOURCE_DIR}/caches/FCache.cpp
   ${CBR_SOURCE_DIR}/caches/CommunicationCache.cpp
-#  ${CBR_SOURCE_DIR}/caches/CraqCache.cpp
   ${CBR_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
@@ -297,55 +303,49 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
   ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
-  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/Base64.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
-  ${CBR_SOURCE_DIR}/space/RegionODPFlowScheduler.cpp
-  ${CBR_SOURCE_DIR}/space/CSFQODPFlowScheduler.cpp
+  ${CBR_SOURCE_DIR}/RegionODPFlowScheduler.cpp
+  ${CBR_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
   ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
   ${CBR_SOURCE_DIR}/ServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
-  ${CBR_SOURCE_DIR}/space/LocalForwarder.cpp
-  ${CBR_SOURCE_DIR}/LoadMonitor.cpp
+  ${CBR_SOURCE_DIR}/LocalForwarder.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
-  ${CBR_SOURCE_DIR}/space/MigrationMonitor.cpp
-  ${CBR_SOURCE_DIR}/space/ObjectConnection.cpp
-  ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
+  ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
+  ${CBR_SOURCE_DIR}/ObjectConnection.cpp
+  ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
-  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
   ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
-  ${CBR_SOURCE_DIR}/SSTImpl.cpp
   ${CBR_SOURCE_DIR}/TCPSpaceNetwork.cpp
 #  ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
 
 SET(SIMOH_SOURCES
-  ${CBR_SOURCE_DIR}/oh/ObjectHostContext.cpp
-  ${CBR_SOURCE_DIR}/oh/Object.cpp
-  ${CBR_SOURCE_DIR}/oh/ObjectFactory.cpp
-  ${CBR_SOURCE_DIR}/oh/ScenarioFactory.cpp
-  ${CBR_SOURCE_DIR}/oh/ConnectedObjectTracker.cpp
-  ${CBR_SOURCE_DIR}/oh/DistributionPingScenario.cpp
-  ${CBR_SOURCE_DIR}/oh/PingDelugeScenario.cpp
-  ${CBR_SOURCE_DIR}/oh/LoadPacketTrace.cpp
-  ${CBR_SOURCE_DIR}/oh/DelugePairScenario.cpp
-  ${CBR_SOURCE_DIR}/oh/ByteTransferScenario.cpp
-  ${CBR_SOURCE_DIR}/oh/ObjectHost.cpp
-  ${CBR_SOURCE_DIR}/SSTImpl.cpp
-  ${CBR_SOURCE_DIR}/oh/main.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
+  ${SIMOH_SOURCE_DIR}/Object.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/ScenarioFactory.cpp
+  ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
+  ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
+  ${SIMOH_SOURCE_DIR}/PingDelugeScenario.cpp
+  ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
+  ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
+  ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/main.cpp
 )
 
 
@@ -353,33 +353,26 @@ SET(SIMOH_SOURCES
 
 #bftm changed because has trouble compiling
 SET(CSEG_SOURCES
-  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
-  ${CBR_SOURCE_DIR}/cseg/main.cpp
+  ${CSEG_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CSEG_SOURCE_DIR}/WorldPopulationBSPTree.cpp
+  ${CSEG_SOURCE_DIR}/main.cpp
 )
 
 SET(ANALYSIS_SOURCES
-  ${CBR_SOURCE_DIR}/Analysis.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
-  ${CBR_SOURCE_DIR}/analysis/FlowStats.cpp
-  ${CBR_SOURCE_DIR}/analysis/RecordedMotionPath.cpp
-  ${CBR_SOURCE_DIR}/analysis/MessageLatency.cpp
-  ${CBR_SOURCE_DIR}/analysis/ObjectLatency.cpp
-  #${CBR_SOURCE_DIR}/Visualization.cpp
-  ${CBR_SOURCE_DIR}/analysis/main.cpp
+  ${ANALYSIS_SOURCE_DIR}/Analysis.cpp
+  ${ANALYSIS_SOURCE_DIR}/FlowStats.cpp
+  ${ANALYSIS_SOURCE_DIR}/RecordedMotionPath.cpp
+  ${ANALYSIS_SOURCE_DIR}/MessageLatency.cpp
+  ${ANALYSIS_SOURCE_DIR}/ObjectLatency.cpp
+  #${ANALYSIS_SOURCE_DIR}/Visualization.cpp
+  ${ANALYSIS_SOURCE_DIR}/main.cpp
 )
 
 
-SET(TEST_SOURCE_DIR ${CBR_SOURCE_DIR}/test)
 SET(TEST_SOURCES
   ${TEST_SOURCE_DIR}/test.cpp
 )
 
-SET(BENCH_SOURCE_DIR ${CBR_SOURCE_DIR}/bench)
 SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
   ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
@@ -429,12 +422,12 @@ LINK_DIRECTORIES(
 )
 
 #libs
-ADD_LIBRARY(cbr-core STATIC ${CBR_CORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_LIBRARY(cbrcore STATIC ${LIBCBRCORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
 
 #binaries
 ADD_EXECUTABLE(cbr ${CBR_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
-  cbr-core
+  cbrcore
         ${GSL_CONFIG_LIBS}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
@@ -447,7 +440,7 @@ TARGET_LINK_LIBRARIES(cbr
 
 ADD_EXECUTABLE(simoh ${SIMOH_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(simoh
-  cbr-core
+  cbrcore
         ${GSL_CONFIG_LIBS}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
@@ -460,7 +453,7 @@ TARGET_LINK_LIBRARIES(simoh
 
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(cseg
-  cbr-core
+  cbrcore
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -472,7 +465,7 @@ TARGET_LINK_LIBRARIES(cseg
 
 ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(analysis
-  cbr-core
+  cbrcore
         ${GSL_CONFIG_LIBS}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
@@ -484,9 +477,9 @@ TARGET_LINK_LIBRARIES(analysis
         ${GCRYPT_LIBRARIES}
         )
 
-ADD_EXECUTABLE(test ${TEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
-TARGET_LINK_LIBRARIES(test
-  cbr-core
+ADD_EXECUTABLE(cbrtest ${TEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(cbrtest
+  cbrcore
   ${Boost_THREAD_LIBRARY}
   ${Boost_DATE_TIME_LIBRARY}
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -497,7 +490,7 @@ TARGET_LINK_LIBRARIES(test
 
 ADD_EXECUTABLE(bench ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(bench
-  cbr-core
+  cbrcore
   ${Boost_THREAD_LIBRARY}
   ${Boost_DATE_TIME_LIBRARY}
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
