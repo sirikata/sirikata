@@ -18,10 +18,13 @@ namespace JS {
 
 class JSSerializer
 {
+private:
+	static std::string serializeFunction(v8::Local<v8::Function> v8Func);
 public:
-    static std::string serializeObject(v8::Local<v8::Object> v8Obj);;
+    static std::string serializeObject(v8::Local<v8::Value> v8Val);;
     static bool deserializeObject( std::string strDecode,v8::Local<v8::Object>& deserializeTo);
     static bool deserializeObject( MemoryReference payload,v8::Local<v8::Object>& deserializeTo);
+	
 };
 
 }}//end namespaces

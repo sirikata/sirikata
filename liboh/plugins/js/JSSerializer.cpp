@@ -22,8 +22,54 @@ static const char* ToCString(const v8::String::Utf8Value& value) {
 }
 
 
-std::string JSSerializer::serializeObject(v8::Local<v8::Object> v8Obj)
+std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
 {
+  Sirikata::JS::Protocol::JSMessage jsmessage ;
+  Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
+  
+  v8::HandleScope handle_scope;
+
+  v8::Handle<v8::Value> name = v8Func->GetName();
+  v8::String::Utf8Value msgBodyArgs1(name);
+  const char* cMsgBody1 = ToCString(msgBodyArgs1);
+  std::string cStrMsgBody1(cMsgBody1);
+
+  jsf.set_name(cStrMsgBody1);
+
+  v8::Local<v8::Value> value = v8Func->ToString();
+  v8::String::Utf8Value msgBodyArgs2(value);
+  const char* cMsgBody2 = ToCString(msgBodyArgs2);
+  std::string cStrMsgBody2(cMsgBody2);
+
+  Sirikata::JS::Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
+  jsf_value.set_s_value(cStrMsgBody2);
+
+  v8::Local<v8::String> proto = v8Func->ObjectProtoToString();
+  v8::String::Utf8Value msgBodyArgs3(proto);
+  const char* cMsgBody3 = ToCString(msgBodyArgs3);
+  std::string cStrMsgBody3(cMsgBody3);
+
+  jsf.set_prototype(cStrMsgBody3);
+
+  std::string serialized_message;
+  jsmessage.SerializeToString(&serialized_message);
+
+
+  	
+  return serialized_message;
+
+}
+
+std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
+{
+	if( v8Val->IsFunction())
+	{
+      return serializeFunction( v8::Local<v8::Function>::Cast(v8Val));
+	}
+
+	v8::HandleScope handle_scope;
+	//otherwise assuming it is a v8 object for now
+	v8::Local<v8::Object> v8Obj = v8Val->ToObject();
     v8::Local<v8::Array> properties = v8Obj->GetPropertyNames();
 
     Sirikata::JS::Protocol::JSMessage jsmessage ;
