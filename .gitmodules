@@ -7,3 +7,6 @@
 [submodule "externals/berkelium"]
 	path = externals/berkelium
 	url = git://github.com/sirikata/berkelium.git
+[submodule "externals/prox"]
+	path = externals/prox
+	url = git://github.com/ewencp/libprox.git
