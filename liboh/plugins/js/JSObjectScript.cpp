@@ -202,12 +202,28 @@ void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>
     
     v8::Local<v8::Array> arrayObj= v8::Array::New();
     
+
+
+	const HostedObject::SpaceSet& spaces = mParent->spaces();
+    SpaceID spaceider = *(spaces.begin());
+
+	UUID myUUID = mParent->getObjReference(spaceider).getAsUUID();;
+	
+
+
     for (int s=0;s < (int)mAddressableList.size(); ++s)
     {
         Local<Object> tmpObj = oref_template->NewInstance();
         tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
         tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
         arrayObj->Set(v8::Number::New(s),tmpObj);
+		
+		if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
+		{
+			system_obj->Set(v8::String::New("Self"), tmpObj);
+
+		}
+		
     }
     system_obj->Set(v8::String::New("addressable"),arrayObj);
 }

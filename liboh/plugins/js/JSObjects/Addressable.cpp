@@ -19,6 +19,11 @@ namespace JSAddressable {
 v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 {
     std::cout<<"\n\n\n\nDEBUG: WAKA WAKA\n\n";
+	JSObjectScript* caller;
+    ObjectReference* oref;
+    readORef(args,caller,oref);
+
+	std::cout << "Printing Object Reference :" << oref->toString() << "\n";
     return v8::Undefined();
 }
 

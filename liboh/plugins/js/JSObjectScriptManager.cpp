@@ -85,6 +85,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
 
     //these are mutable fields
+	
     system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
     system_templ->SetAccessor(JS_STRING(scale), JSSystem::ScriptGetScale, JSSystem::ScriptSetScale);
 
@@ -107,6 +108,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(JS_STRING(registerHandler), v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
     mGlobalTemplate->Set(v8::String::New("system"), system_templ);
 }
+
 
 
 //creating the addressable template.  addressable is an array within system that 
