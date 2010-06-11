@@ -47,10 +47,10 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     if (core_plugin_refcount==0) {
         ProximitySystemFactory::getSingleton().registerConstructor("bruteforceprox",
                                                             &BruteForceProx::create,
-                                                            true);
+                                                            false);
         ProximityConnectionFactory::getSingleton().registerConstructor("bruteforceprox",
                                                                        &SingleStreamProximityConnection::create,
-                                                                       true);
+                                                                       false);
     }
     core_plugin_refcount++;
 }

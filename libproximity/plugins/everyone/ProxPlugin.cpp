@@ -1,7 +1,7 @@
-/*  Sirikata Proximity
- *  main.cpp
+/*  Sirikata
+ *  ProxPlugin.cpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -31,38 +31,55 @@
  */
 
 #include <sirikata/proximity/Platform.hpp>
-#include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
-#include <sirikata/core/network/IOService.hpp>
-namespace Sirikata{ namespace Protocol {
-class IMessage;
-class IRetObj;
-class IDelObj;
-class IDelProxQuery;
-class INewObj;
-class IObjLoc;
-class IProxCall;
-class INewProxQuery;
-
-} }
+#include <sirikata/core/util/ObjectReference.hpp>
+#include "ProxEveryone_Sirikata.pbj.hpp"
 #include <sirikata/proximity/ProximitySystem.hpp>
+#include "EveryoneProximitySystem.hpp"
 #include <sirikata/proximity/ProximitySystemFactory.hpp>
-namespace Sirikata {
-//InitializeOptions main_options("verbose",
+#include <sirikata/proximity/ProximityConnectionFactory.hpp>
+#include <sirikata/proximity/ProximityConnection.hpp>
+#include <sirikata/proximity/SingleStreamProximityConnection.hpp>
 
+static int core_plugin_refcount = 0;
+
+SIRIKATA_PLUGIN_EXPORT_C void init() {
+    using namespace Sirikata;
+    using namespace Sirikata::Proximity;
+    if (core_plugin_refcount==0) {
+        ProximitySystemFactory::getSingleton().registerConstructor("everyone",
+            &EveryoneProximitySystem::create,
+            true);
+        ProximityConnectionFactory::getSingleton().registerConstructor("everyone",
+            &SingleStreamProximityConnection::create,
+            true);
+    }
+    core_plugin_refcount++;
 }
 
-int main(int argc,const char**argv) {
-    using namespace Sirikata;
-    OptionSet::getOptions("")->parse(argc,argv);
-    PluginManager plugins;
-    plugins.load( DynamicLibrary::filename("tcpsst") );
-    plugins.load( DynamicLibrary::filename("prox") );
-    plugins.load( DynamicLibrary::filename("prox-everyone") );
+SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
+    return ++core_plugin_refcount;
+}
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
+    assert(core_plugin_refcount>0);
+    return --core_plugin_refcount;
+}
 
-    Network::IOService*io=Network::IOServiceFactory::makeIOService();
-    Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,"",&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);
-    io->run();
-    return 0;
+SIRIKATA_PLUGIN_EXPORT_C void destroy() {
+    using namespace Sirikata;
+    using namespace Sirikata::Proximity;
+    if (core_plugin_refcount>0) {
+        core_plugin_refcount--;
+        assert(core_plugin_refcount==0);
+        if (core_plugin_refcount==0) {
+            ProximitySystemFactory::getSingleton().unregisterConstructor("everyone");
+            ProximityConnectionFactory::getSingleton().unregisterConstructor("everyone");
+        }
+    }
+}
+
+SIRIKATA_PLUGIN_EXPORT_C const char* name() {
+    return "ogregraphics";
+}
+SIRIKATA_PLUGIN_EXPORT_C int refcount() {
+    return core_plugin_refcount;
 }
