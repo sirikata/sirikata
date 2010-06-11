@@ -16,7 +16,7 @@ def FindRoot(start):
     search_dirs.extend(sys.path)
     for sdir in search_dirs:
         for soffset in search_offsets:
-            test_file = os.path.join(sdir, soffset, 'install-deps.sh')
+            test_file = os.path.join(sdir, soffset, 'LICENSE')
             if (os.path.isfile(test_file)):
                 return os.path.join(sdir, soffset)
     return None
