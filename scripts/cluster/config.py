@@ -43,6 +43,7 @@ class ClusterConfig:
         self.nodes = []
         self.deploy_nodes = []
         self.repository = 'git://github.com/sirikata/sirikata.git'
+        self.branch = "master"
         self.code_dir = "cbr"
         self.oseg_code_dir = "oseg.git"
         self.port_base = 6666
@@ -104,6 +105,8 @@ class ClusterConfig:
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "repository"):
                 self.repository = opt_value.strip()
+            elif (opt_name == "branch"):
+                self.branch = opt_value.strip()
             elif (opt_name == "code_dir"):
                 self.code_dir = opt_value.strip()
             elif (opt_name == "oseg_code_dir"):
