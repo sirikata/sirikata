@@ -56,10 +56,10 @@
 #  define SIRIKATA_PLATFORM PLATFORM_LINUX
 #endif
 
-#ifdef NDEBUG
-#define SIRIKATA_DEBUG 0
-#else
+#ifdef SIRIKATA_DEBUG_BUILD
 #define SIRIKATA_DEBUG 1
+#else
+#define SIRIKATA_DEBUG 0
 #endif
 
 #ifndef SIRIKATA_EXPORT

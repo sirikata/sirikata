@@ -624,6 +624,11 @@ FIND_PACKAGE(GCrypt REQUIRED)
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
+# Debug compile flags
+IF(ISDEBUG)
+  ADD_DEFINITIONS(-DSIRIKATA_DEBUG_BUILD)
+ENDIF()
+
 # -- User defined variables that control behavior at compile time
 SET(CBR_TIMESTAMP_PACKETS TRUE
   CACHE BOOL "If enabled, detailed timestamps are recorded for each packet, enabling high granularity latency breakdowns."
