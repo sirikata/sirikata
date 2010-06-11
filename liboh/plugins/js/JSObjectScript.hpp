@@ -44,13 +44,17 @@
 
 #include "JSPattern.hpp"
 #include "JSEventHandler.hpp"
+#include "JSObjectScriptManager.hpp"
 
 namespace Sirikata {
 namespace JS {
 
 class JSObjectScript : public ObjectScript {
 public:
-    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template, v8::Persistent<v8::ObjectTemplate>& oref_template);
+    //JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments&
+    //args, v8::Persistent<v8::ObjectTemplate>& global_template,
+    //v8::Persistent<v8::ObjectTemplate>& oref_template);
+    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan);
     ~JSObjectScript();
 
     bool forwardMessagesTo(MessageService*);
@@ -100,9 +104,10 @@ public:
 
 
     /** Register an event pattern matcher and handler. */
-    void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender);
-
-
+    //void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+    JSEventHandler* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
+    v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
+    
 private:
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
@@ -123,15 +128,18 @@ private:
     //bftm
     typedef std::vector<ObjectReference*> AddressableList;
     AddressableList mAddressableList;
-    void bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>& oref_template,    Local<Object>& system_obj );
-    
+
+    void bftm_populateAddressable(Local<Object>& system_obj );
+
+
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
 
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
-	
-	
+
+    JSObjectScriptManager* mManager;
+
 };
 
 } // namespace JS

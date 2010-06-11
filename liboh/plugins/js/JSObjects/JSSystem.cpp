@@ -3,6 +3,8 @@
 #include "../JSObjectScript.hpp"
 #include "../JSSerializer.hpp"
 #include "JSObjectsUtils.hpp"
+#include "JSHandler.hpp"
+
 
 namespace Sirikata{
 namespace JS{
@@ -281,10 +283,12 @@ void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> 
  *                  the global (root) object
  *   function cb: callback to invoke, with event as parameter
  */
+//v8::Handle<v8::Object> ScriptRegisterHandler(const v8::Arguments& args)
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 {
     if (args.Length() != 4)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().")) );
+    
 
     v8::Handle<v8::Value> pattern = args[0];
     v8::Handle<v8::Value> target_val = args[1];
@@ -293,15 +297,18 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 
     // Pattern
     PatternList native_patterns;
-    if (PatternValidate(pattern)) {
+    if (PatternValidate(pattern))
+    {
         Pattern single_pattern = PatternExtract(pattern);
         native_patterns.push_back(single_pattern);
     }
-    else if (pattern->IsArray()) {
+    else if (pattern->IsArray())
+    {
         v8::Handle<v8::Array> pattern_array( v8::Handle<v8::Array>::Cast(pattern) );
         if (pattern_array->Length() == 0)
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern array must contain at least one element.")) );
-        for(uint32 pat_idx = 0; pat_idx < pattern_array->Length(); pat_idx++) {
+        for(uint32 pat_idx = 0; pat_idx < pattern_array->Length(); pat_idx++)
+        {
             Local<Value> pattern_element = pattern_array->Get(pat_idx);
             if (!PatternValidate(pattern_element))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Found non-pattern element in array of patterns.")) );
@@ -309,18 +316,18 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
             native_patterns.push_back(single_pattern);
         }
     }
-    else {
+    else
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern argument must be pattern or array of patterns.")) );
-    }
 
+    
     // Target
     if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
 
+    
    // Sender
     if (!sender_val->IsObject() && !sender_val->IsNull() && !sender_val->IsUndefined())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Sender is not object or null.")) );
-
 
 
     v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
@@ -335,15 +342,25 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     // Function
     if (!cb_val->IsFunction())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Must contain callback function.")) );
+
+    
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
 
-    return v8::Undefined();
+    JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
+
+
+    /*
+      FIXME: Target script is causing a bug here.
+     */
+    
+    //target_script->makeEventHandlerObject(evHand);
+    return target_script->makeEventHandlerObject(evHand);
+    //    return v8::Undefined();
+
 }
-
 
 
 

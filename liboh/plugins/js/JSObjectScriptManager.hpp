@@ -35,8 +35,6 @@
 
 
 #include <sirikata/oh/ObjectScriptManager.hpp>
-#define OREF_JSOBJSCRIPT_FIELD 1
-#define OREF_OREF_FIELD 0
 
 
 #include <v8.h>
@@ -54,6 +52,13 @@ public:
     virtual ObjectScript* createObjectScript(HostedObjectPtr ho,
         const Arguments &args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
+
+    v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
+    v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
+    v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
+
+
+    
 private:
 
     void bftm_createAddressableTemplate();
@@ -62,11 +67,6 @@ private:
     
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
-    v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
-    v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
-    
-    v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
-    
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
     v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;

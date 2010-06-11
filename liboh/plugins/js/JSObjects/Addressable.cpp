@@ -8,7 +8,7 @@
 #include "../JSSerializer.hpp"
 #include "../JSPattern.hpp"
 
-
+#include "JSFields.hpp"
 
 
 namespace Sirikata {

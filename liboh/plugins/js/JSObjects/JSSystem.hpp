@@ -34,7 +34,10 @@ v8::Handle<v8::Value> ScriptGetAxisOfRotation(v8::Local<v8::String> property, co
 void ScriptSetAxisOfRotation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 v8::Handle<v8::Value> ScriptGetAngularSpeed(v8::Local<v8::String> property, const v8::AccessorInfo &info);
 void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
+
+//v8::Handle<v8::Object> ScriptRegisterHandler(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args);
+
 
 }}}
 

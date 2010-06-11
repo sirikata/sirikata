@@ -2,6 +2,8 @@
 #include "../JSUtil.hpp"
 #include "../JSObjectScript.hpp"
 #include "JSHandler.hpp"
+#include "../JSEventHandler.hpp"
+#include "JSFields.hpp"
 #include <v8.h>
 
 namespace Sirikata {
@@ -11,11 +13,12 @@ namespace JSHandler{
 v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
 {
     //get the target object whose context owns it.
+    //and the pattern and the callback associated with this
+    JSObjectScript* caller;
+    JSEventHandler* handler;
+    readHandler(args,caller,handler);
 
-
-    //get the pattern and the callback associated with this
-
-
+    std::cout<<"\n\n\nPRINTING BOTH\n\n\n";
     //print both
     /*
       FIXME: Do we want to have both print functions within the pattern and
@@ -59,10 +62,8 @@ void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHand
            v8::Handle<v8::Object>::Cast(mHand->GetPrototype())->GetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD)
        );
    void* ptr2 = wrapEventHand->Value();
-   hand = static_cast<JSObjectScript*>(ptr);
+   hand = static_cast<JSEventHandler*>(ptr);
 }
-
-
 
 
 

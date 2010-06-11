@@ -58,6 +58,7 @@
 #include <sirikata/core/odp/Defs.hpp>
 #include <vector>
 
+#include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
 
 using namespace v8;
@@ -66,11 +67,12 @@ namespace Sirikata {
 namespace JS {
 
 
-JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, v8::Persistent<v8::ObjectTemplate>& global_template, v8::Persistent<v8::ObjectTemplate>& oref_template)
- : mParent(ho)
+JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan)
+ : mParent(ho),
+   mManager(jMan)
 {
     v8::HandleScope handle_scope;
-    mContext = Context::New(NULL, global_template);
+    mContext = Context::New(NULL, mManager->mGlobalTemplate);
 
     mOrefTemplate = oref_template;
     mGlobalTemplate = global_template;
@@ -88,7 +90,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     system_obj->SetInternalField(0, External::New(this));
 
     //takes care of the addressable array in sys.
-    bftm_populateAddressable(oref_template,system_obj);
+    bftm_populateAddressable(system_obj);
 
 
     const HostedObject::SpaceSet& spaces = mParent->spaces();
@@ -113,7 +115,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
         space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
+    
 }
+
 
 
 
@@ -138,7 +142,6 @@ void JSObjectScript::reboot()
   
 
 }
-
 
 void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const
 {
@@ -217,7 +220,7 @@ void JSObjectScript::test() const {
 
 //bftm
 //populates the internal addressable object references vector
-void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>& oref_template,    Local<Object>& system_obj )
+void JSObjectScript::bftm_populateAddressable(Local<Object>& system_obj )
 {
     //loading the vector
     mAddressableList.clear();
@@ -238,7 +241,7 @@ void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
     {
-        Local<Object> tmpObj = oref_template->NewInstance();
+        Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
         tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
         tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
 
@@ -253,6 +256,7 @@ void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>
     }
     system_obj->Set(v8::String::New("addressable"),arrayObj);
 }
+
 
 
 
@@ -497,11 +501,11 @@ CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
-
-void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
-    JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb);
+    JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
     mEventHandlers.push_back(new_handler);
+    return new_handler;
 }
 
 
@@ -593,6 +597,22 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
         protectedEval(script_str);
     }
 }
+
+
+v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* evHand)
+{
+    v8::Handle<v8::Object> returner = mManager->mHandlerTemplate->NewInstance();
+    //returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
+    //returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
+
+    /*
+      FIXME: uncomment the set internal fields lines.
+     */
+    
+    return returner;
+}
+
+
 
 } // namespace JS
 } // namespace Sirikata
