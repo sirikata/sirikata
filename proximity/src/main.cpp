@@ -58,7 +58,6 @@ int main(int argc,const char**argv) {
     OptionSet::getOptions("")->parse(argc,argv);
     PluginManager plugins;
     plugins.load( DynamicLibrary::filename("tcpsst") );
-    plugins.load( DynamicLibrary::filename("prox") );
     plugins.load( DynamicLibrary::filename("prox-everyone") );
 
     Network::IOService*io=Network::IOServiceFactory::makeIOService();
