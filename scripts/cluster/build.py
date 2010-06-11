@@ -29,7 +29,7 @@ class ClusterBuild:
         return ClusterRunSummaryCode(retcodes)
 
     def checkout(self):
-        checkout_cmd = "git clone git@ahoy.stanford.edu:cbr.git " + self.config.code_dir
+        checkout_cmd = "git clone " + self.config.reposirty + " " + self.config.code_dir
         retcodes = ClusterRun(self.config, checkout_cmd)
         return ClusterRunSummaryCode(retcodes)
 
