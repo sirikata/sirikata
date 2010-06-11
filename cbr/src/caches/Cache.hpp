@@ -56,6 +56,7 @@ namespace Sirikata
 
 
   public:
+      virtual ~Cache() {}
 
     virtual void insert(const UUID& toInsert, ServerID bid, CacheTimeMS tms, double vMag, double weight, double distance, double radius,double lookupWeight,double unitsScaling) = 0;
     virtual const CraqEntry& lookup(const UUID& lookingFor)                     = 0;

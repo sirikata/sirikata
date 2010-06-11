@@ -1168,7 +1168,7 @@ public:
 
 
 
-  ~Stream() {
+  virtual ~Stream() {
     close(true);
 
     delete [] mInitialData;

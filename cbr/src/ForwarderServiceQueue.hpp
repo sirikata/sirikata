@@ -56,6 +56,7 @@ class ForwarderServiceQueue {
 
     class Listener {
       public:
+        virtual ~Listener() {}
         virtual void forwarderServiceMessageReady(ServerID dest_server) = 0;
     };
 

@@ -43,6 +43,8 @@ namespace Sirikata
   class CraqCache
   {
     public:
+      virtual ~CraqCache() {}
+
       virtual void insert(const UUID& uuid, const CraqEntry& sID) = 0;
       virtual const CraqEntry& get(const UUID& uuid)              = 0;
       virtual void remove(const UUID& uuid)                       = 0;

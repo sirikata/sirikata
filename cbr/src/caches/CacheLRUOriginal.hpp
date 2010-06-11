@@ -89,7 +89,7 @@ namespace Sirikata
 
   public:
     CacheLRUOriginal(Context* ctx, uint32 maxSize,uint32 cleanGroupSize,Duration entryLifetime);
-    ~CacheLRUOriginal();
+    virtual ~CacheLRUOriginal();
 
     virtual void insert(const UUID& uuid, const CraqEntry& sID);
     virtual const CraqEntry& get(const UUID& uuid);

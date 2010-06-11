@@ -88,6 +88,8 @@ class DownstreamElementBase {
 public:
     typedef UpstreamElementBase<PacketType> InputElement;
 
+    virtual ~DownstreamElementBase() {}
+
     /** Connect the specified input port of this element to another router element,
      *  on the specified output port.
      *  \param inport the input port to connect to the other element
@@ -188,6 +190,8 @@ template<typename PacketType>
 class UpstreamElementBase {
 public:
     typedef DownstreamElementBase<PacketType> OutputElement;
+
+    virtual ~UpstreamElementBase() {}
 
     /** Connect the specified output port of this element to another router element,
      *  on the specified input port.

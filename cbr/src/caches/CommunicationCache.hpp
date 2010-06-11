@@ -62,6 +62,7 @@ namespace Sirikata
 
   public:
     CommunicationCache(SpaceContext* spctx, float scalingUnits, CoordinateSegmentation* cseg,uint32 cacheSize);
+      virtual ~CommunicationCache() {}
 
     virtual void insert(const UUID& uuid, const CraqEntry& sID);
     virtual const CraqEntry& get(const UUID& uuid);

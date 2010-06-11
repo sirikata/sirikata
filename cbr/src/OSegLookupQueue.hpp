@@ -104,6 +104,8 @@ public:
      */
     OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg);
 
+    virtual ~OSegLookupQueue() {}
+
     /** Perform an OSeg cache lookup, returning the ServerID or NullServerID if
      *  the cache doesn't contain an entry for the object.
      */

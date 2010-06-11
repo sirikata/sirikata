@@ -53,6 +53,8 @@ namespace Sirikata
  */
 class OSegLookupListener {
 public:
+    virtual ~OSegLookupListener() {}
+
     virtual void osegLookupCompleted(const UUID& id, const CraqEntry& dest) = 0;
 }; // class OSegLookupListener
 
@@ -60,6 +62,8 @@ public:
 /** Listener interface for OSeg write events. */
 class OSegWriteListener {
 public:
+    virtual ~OSegWriteListener() {}
+
     virtual void osegWriteFinished(const UUID& id) = 0;
     virtual void osegMigrationAcknowledged(const UUID& id) = 0;
 }; // class OSegMembershipListener

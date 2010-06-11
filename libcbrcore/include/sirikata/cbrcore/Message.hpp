@@ -246,6 +246,8 @@ public:
 /** Base class for a message dispatcher. */
 class ServerMessageDispatcher {
 public:
+    virtual ~ServerMessageDispatcher() {}
+
     void registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
     void unregisterMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
 
@@ -262,6 +264,7 @@ private:
 
 class ObjectMessageDispatcher {
 public:
+    virtual ~ObjectMessageDispatcher() {}
 
     // Registration and unregistration for object messages destined for the space
     void registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
@@ -279,6 +282,7 @@ private:
 template<typename MessageType>
 class Router {
   public:
+    virtual ~Router() {}
     WARN_UNUSED
     virtual bool route(MessageType msg) = 0;
 }; // class Router

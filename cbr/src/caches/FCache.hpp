@@ -146,7 +146,7 @@ namespace Sirikata
 
 
 
-    ~FCache();
+    virtual ~FCache();
 
     virtual void    insert(const UUID& toInsert, ServerID bid, CacheTimeMS tms, double vMag, double weight, double distance, double radius,double lookupWeight,double unitsScaling);
 

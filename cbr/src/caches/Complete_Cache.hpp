@@ -85,7 +85,7 @@ namespace Sirikata
     Complete_Cache(double avgPopPar,std::string complete_name, CompleteCacheScoreFunc ccScorer,CompleteCacheScoreFuncPrint ccScorerPrint, SpaceContext* spctx, float insideRadiusInsert= FLT_MAX);
     Complete_Cache(double avgPopPar,std::string complete_name,CompleteCacheScoreFunc ccScorer,CompleteCacheScoreFuncPrint ccScorerPrint,SpaceContext* spctx,int complete_size, float insideRadiusInsert = FLT_MAX);
 
-    ~Complete_Cache();
+    virtual ~Complete_Cache();
 
     //    void insert(UUID toInsert, ServerID bid, CacheTimeMS tms, double vMag);
     virtual void insert(const UUID& toInsert, ServerID bid, CacheTimeMS tms, double vMag, double weight, double distance, double radius,double lookupWeight,double scaler);
