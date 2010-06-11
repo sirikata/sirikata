@@ -73,22 +73,10 @@ class ClusterBuild:
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, clean_garbage_cmd, clean_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
-    def dependencies(self, which = None):
+    def dependencies(self):
         cd_cmd = self.cd_to_code()
-        build_cmd = "./install-deps.sh"
-        if which != None:
-            for dep in which:
-                build_cmd += " " + dep
+        build_cmd = "make minimal-depends"
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, build_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def update_dependencies(self, which = None):
-        cd_cmd = self.cd_to_code()
-        update_cmd = "./install-deps.sh update"
-        if which != None:
-            for dep in which:
-                update_cmd += " " + dep
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, update_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
     def ccache_args(self):
@@ -214,7 +202,8 @@ if __name__ == "__main__":
     # Some commands are simple shorthands for others and can just be
     # expanded into their long forms
     filter_rules = {
-        'deploy' : ['patchset_create', 'patchset_apply', 'clean', 'build']
+        'deploy' : ['patchset_create', 'patchset_apply', 'clean', 'build'],
+        'update_dependencies' : ['dependencies']
         }
     filtered_args = []
     for arg in sys.argv:
@@ -236,16 +225,7 @@ if __name__ == "__main__":
             retval = cluster_build.update()
         elif cmd == 'dependencies':
             deps = []
-            while cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['sirikata', 'prox']:
-                deps.append(filtered_args[cur_arg_idx])
-                cur_arg_idx += 1
-            retval = cluster_build.dependencies(deps)
-        elif cmd == 'update_dependencies':
-            deps = []
-            while cur_arg_idx < len(filtered_args) and filtered_args[cur_arg_idx] in ['sirikata', 'prox']:
-                deps.append(filtered_args[cur_arg_idx])
-                cur_arg_idx += 1
-            retval = cluster_build.update_dependencies(deps)
+            retval = cluster_build.dependencies()
         elif cmd == 'build':
             build_type = 'Debug'
             with_timestamp = True
@@ -284,8 +264,6 @@ if __name__ == "__main__":
                 retval = cluster_build.update()
             if (retval == 0):
                 retval = cluster_build.dependencies()
-            if (retval == 0):
-                retval = cluster_build.update_dependencies()
             if (retval == 0):
                 retval = cluster_build.build()
         elif cmd == 'patchset_create':
