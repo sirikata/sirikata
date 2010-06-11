@@ -29,8 +29,11 @@ class ClusterBuild:
         return ClusterRunSummaryCode(retcodes)
 
     def checkout(self):
-        checkout_cmd = "git clone " + self.config.reposirty + " " + self.config.code_dir
-        retcodes = ClusterRun(self.config, checkout_cmd)
+        checkout_cmd = "git clone " + self.config.repository + " " + self.config.code_dir
+        cd_cmd = self.cd_to_code()
+        branch_cmd = "git branch " + self.config.branch + " origin/"  + self.config.branch
+        checkout_branch_cmd = "git checkout " + self.config.branch
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([checkout_cmd, cd_cmd, branch_cmd, checkout_branch_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
     def update(self):
@@ -61,7 +64,7 @@ class ClusterBuild:
 
     def reset_to_origin_head(self):
         cd_cmd = self.cd_to_code()
-        reset_cmd = "git reset --hard origin/HEAD"
+        reset_cmd = "git reset --hard origin/" + self.config.branch
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
@@ -112,7 +115,7 @@ class ClusterBuild:
     def create_patchset(self):
         # first generate a patchmail
         commits_patch_file = open(self.patchmail_file, 'w')
-        formatpatch_ret = subprocess.call(['git', 'format-patch', '--stdout', 'origin/master'], 0, None, None, commits_patch_file)
+        formatpatch_ret = subprocess.call(['git', 'format-patch', '--stdout', 'origin/' + self.config.branch], 0, None, None, commits_patch_file)
         commits_patch_file.close()
         if (formatpatch_ret != 0):
             return formatpatch_ret
