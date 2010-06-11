@@ -21,6 +21,8 @@ from graph.windowed_bandwidth import GraphWindowedBandwidth
 from graph.windowed_jfi import GraphWindowedJFI
 from graph.windowed_queues import GraphWindowedQueues
 
+import socket
+
 CBR_WRAPPER = "util/cbr_wrapper.sh"
 
 # User parameters
@@ -398,6 +400,7 @@ class ClusterSim:
         cmd_seq.extend( [
                 "--id=%(node)d",
                 "--net=tcp",
+                "--time-server=" + socket.getfqdn(),
                 "--layout=" + self.settings.layout(),
                 "--num-oh=" + str(self.settings.num_oh),
                 "--region=" + self.settings.region(),

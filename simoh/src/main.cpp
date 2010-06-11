@@ -53,7 +53,8 @@ int main(int argc, char** argv) {
 
     std::string time_server=GetOption("time-server")->as<String>();
     TimeSync sync;
-    sync.start(time_server);
+    if (time_server.size() > 0)
+        sync.start(time_server);
 
 
     ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
