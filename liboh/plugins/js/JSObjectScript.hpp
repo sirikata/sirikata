@@ -113,15 +113,18 @@ private:
 
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
+	
+	v8::Persistent<v8::ObjectTemplate> mOrefTemplate;
 
     //bftm
     typedef std::vector<ObjectReference*> AddressableList;
     AddressableList mAddressableList;
     void bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>& oref_template,    Local<Object>& system_obj );
-
+    
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
 
+	v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader&);
 
     struct JSEventHandler {
         JSEventHandler(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb)
@@ -135,6 +138,8 @@ private:
     };
     typedef std::vector<JSEventHandler> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
+	
+	
 };
 
 } // namespace JS

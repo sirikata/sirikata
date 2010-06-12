@@ -85,6 +85,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     v8::HandleScope handle_scope;
     mContext = Context::New(NULL, global_template);
 
+    mOrefTemplate = oref_template;
     
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
@@ -471,6 +472,24 @@ void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<
 }
 
 
+/*
+ * Populates the message properties
+ */
+
+
+v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHeader& msgHeader)
+{
+  ObjectReference* orp = new ObjectReference(msgHeader.source_object());
+
+  Local<Object> tmpObj = mOrefTemplate->NewInstance();
+  tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(orp));
+  tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
+
+
+  return tmpObj;
+       	
+}
+
 //just a handler for receiving any message.  for now, not doing any dispatch.
 void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
@@ -478,7 +497,8 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
 
-    //try deserialization
+    v8::Local<v8::Object> msgSender = getMessageSender(hdr);
+	//try deserialization
     bool deserializeWorks;
     deserializeWorks = JSSerializer::deserializeObject( payload,obj);
 
@@ -497,8 +517,10 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     {
         if (handler_it->matches(obj))
         {
-            int argc = 1;
-            Handle<Value> argv[1] = { obj };
+            // Adding support for the knowing the message properties too
+            int argc = 2;
+
+            Handle<Value> argv[2] = { obj, msgSender };
             ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);
             matchesSomeHandler = true;
         }
