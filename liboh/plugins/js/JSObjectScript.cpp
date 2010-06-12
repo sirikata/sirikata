@@ -96,20 +96,21 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
 
-    for(HostedObject::SpaceSet::iterator space_it = spaces.begin(); space_it != spaces.end(); space_it++)
+	for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
-        mScriptingPort = mParent->bindODPPort(*space_it, Services::SCRIPTING);
+		SpaceID space_id=*space_it;
+        mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
         if (mScriptingPort)
             mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
 
         //bftm
         //change the services to something else.;
-        mMessagingPort = mParent->bindODPPort(*space_it, Services::COMMUNICATION);
+        mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
         if (mMessagingPort)
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
 
         //now have the object send a message to itself
-
+		space_it=spaces.find(space_id);//in case the space_set was munged in the process
 
         //end
     }
@@ -362,7 +363,13 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 }
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
-    const int argc = 0;
+    const int argc = 
+#ifdef _WIN32
+		1
+#else
+		0
+#endif
+		;
     Handle<Value> argv[argc] = { };
     ProtectedJSCallback(ctx, target, cb, argc, argv);
 }

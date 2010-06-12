@@ -294,6 +294,7 @@ ENDIF(MONO_FOUND)
 # V8 for JS plugin
 IF(NOT V8_ROOT)
   IF(WIN32)
+    SET(V8_ROOT ${PLATFORM_LIBS}/v8)
     # TODO: Add path to some prebuilt version of V8 for Win32
   ELSEIF(APPLE)
     SET(V8_ROOT ${PLATFORM_LIBS}/installed-v8)
