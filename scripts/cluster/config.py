@@ -40,6 +40,7 @@ class ClusterConfig:
     def __init__(self):
         #default values
         self.headnode="bogus@bogus"
+        self.timeserver = None
         self.nodes = []
         self.deploy_nodes = []
         self.repository = 'git://github.com/sirikata/sirikata.git'
@@ -101,6 +102,8 @@ class ClusterConfig:
             opt_name = opt_name.strip()
             if (opt_name == "headnode"):
                 self.headnode = opt_value.strip()
+            elif (opt_name == "timeserver"):
+                self.timeserver = opt_value.strip()
             elif (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "repository"):

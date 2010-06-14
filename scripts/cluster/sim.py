@@ -397,10 +397,13 @@ class ClusterSim:
             "%(binary)s",
             ] )
         cmd_seq.extend(debug_params)
+        ts_string = ""
+        if self.config.timeserver:
+            ts_string = "--time-server=" + self.config.timeserver
         cmd_seq.extend( [
                 "--id=%(node)d",
                 "--net=tcp",
-                "--time-server=" + socket.getfqdn(),
+                ts_string,
                 "--layout=" + self.settings.layout(),
                 "--num-oh=" + str(self.settings.num_oh),
                 "--region=" + self.settings.region(),
