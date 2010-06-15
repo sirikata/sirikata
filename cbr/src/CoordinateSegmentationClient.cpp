@@ -42,8 +42,6 @@
 
 #include <boost/bind.hpp>
 
-#include <gcrypt.h>
-
 namespace Sirikata {
 
 typedef boost::asio::ip::tcp tcp;
@@ -62,29 +60,6 @@ void memdump1(uint8* buffer, int len) {
   }
   printf("\n");
   fflush(stdout);
-}
-
-String sha_1(void* data, size_t len) {
-  static int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
-  /* output sha1 hash - this will be binary data */
-  unsigned char hash[ hash_len ];
-  gcry_md_hash_buffer( GCRY_MD_SHA1, hash, data, len);
-
-  char *out = (char *) malloc( sizeof(char) * ((hash_len*2)+1) );
-  char *p = out;
-
-  /* Convert each byte to its 2 digit ascii
-   * hex representation and place in out */
-
-  for ( int i = 0; i < hash_len; i++, p += 2 ) {
-    snprintf ( p, 3, "%02x", hash[i] );
-  }
-
-
-  String retval = out;
-  free(out);
-
-  return retval;
 }
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
