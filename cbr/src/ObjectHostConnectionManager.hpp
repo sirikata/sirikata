@@ -60,6 +60,7 @@ public:
         ConnectionID& operator=(const ConnectionID& rhs);
       private:
         friend class ObjectHostConnectionManager;
+        friend class ObjectHostConnection;
 
         ConnectionID(ObjectHostConnection* _conn);
 
