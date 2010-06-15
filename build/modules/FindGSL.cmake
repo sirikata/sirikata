@@ -63,8 +63,20 @@ IF(WIN32)
 
 
 ELSE(WIN32)
-  
-  IF(UNIX) 
+  IF(APPLE)
+  IF(GSL_ROOT)
+    SET(GSL_LIBRARY_DIRS ${GSL_ROOT}/lib)
+    SET(GSL_LINK_DIRECTORIES ${GSL_ROOT}/lib)
+    SET(GSL_LIBRARIES gsl gslcblas)
+    SET(GSL_LDFLAGS)
+    SET(GSL_INCLUDE_DIR ${GSL_ROOT}/include)
+    SET(GSL_CFLAGS)
+    SET(GSL_CONFIG_LIBS gsl gslcblas)
+    SET(GSL_FOUND TRUE)
+  ENDIF(GSL_ROOT)
+    
+  ELSE(APPLE)
+#IF(UNIX) 
     SET(GSL_CONFIG_PREFER_PATH 
       "$ENV{GSL_DIR}/bin"
       "$ENV{GSL_DIR}"
@@ -127,7 +139,7 @@ ELSE(WIN32)
       MESSAGE("FindGSL.cmake: gsl-config not found. Please set it manually. GSL_CONFIG=${GSL_CONFIG}")
     ENDIF(GSL_CONFIG)
 
-  ENDIF(UNIX)
+  ENDIF(APPLE)
 ENDIF(WIN32)
 
 
@@ -135,7 +147,10 @@ IF(GSL_LIBRARIES)
   IF(GSL_INCLUDE_DIR OR GSL_CXX_FLAGS)
 
     SET(GSL_FOUND 1)
-    
+  ELSE(GSL_INCLUDE_DIR OR GSL_CXX_FLAGS)
+      MESSAGE("FindGSL.cmake: gsl not found. Please set it manually. GSL_ROOT=${GSL_ROOT}")
   ENDIF(GSL_INCLUDE_DIR OR GSL_CXX_FLAGS)
+ELSE(GSL_LIBRARIES)
+      MESSAGE("FindGSL.cmake: gsl libs not found. Please set it manually. GSL_ROOT=${GSL_ROOT}")
 ENDIF(GSL_LIBRARIES)
 
