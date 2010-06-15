@@ -26,8 +26,8 @@
 IF(WIN32)
   # JW tested with gsl-1.8, Windows XP, MSVS 7.1
   SET(GSL_POSSIBLE_ROOT_DIRS
-    ${GSL_ROOT_DIR}
-    $ENV{GSL_ROOT_DIR}
+    ${GSL_ROOT}
+    $ENV{GSL_ROOT}
     ${GSL_DIR}
     ${GSL_HOME}    
     $ENV{GSL_DIR}
@@ -41,15 +41,15 @@ IF(WIN32)
     PATH_SUFFIXES include
     DOC "GSL header include dir"
     )
-  
+
   FIND_LIBRARY(GSL_GSL_LIBRARY
-    NAMES gsl libgsl
+    NAMES gsl libgsl "libgsl-0"
     PATHS  ${GSL_POSSIBLE_ROOT_DIRS}
     PATH_SUFFIXES lib
     DOC "GSL library dir" )  
   
   FIND_LIBRARY(GSL_GSLCBLAS_LIBRARY
-    NAMES gslcblas libgslcblas
+    NAMES gslcblas libgslcblas "libgslcblas-0"
     PATHS  ${GSL_POSSIBLE_ROOT_DIRS}
     PATH_SUFFIXES lib
     DOC "GSL cblas library dir" )
