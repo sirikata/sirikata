@@ -221,7 +221,7 @@ class ClusterSim:
             ])
         class_params = {
             'packoffset' : {
-                'oh' : lambda index : ['--object.pack-offset=' + str(index*self.oh_objects_per_server())]
+                'simoh' : lambda index : ['--object.pack-offset=' + str(index*self.oh_objects_per_server())]
                 }
             }
         return (params, class_params)
