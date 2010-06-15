@@ -36,10 +36,10 @@
 #include <boost/tokenizer.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
-#include <gcrypt.h>
 
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/util/Hash.hpp>
 #include "WorldPopulationBSPTree.hpp"
 #include <sirikata/cbrcore/ServerIDMap.hpp>
 
@@ -71,10 +71,10 @@ bool isPowerOfTwo(double n) {
 
 
 String sha1(void* data, size_t len) {
-  static int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
-  /* output sha1 hash - this will be binary data */
-  unsigned char hash[ hash_len ];
-  gcry_md_hash_buffer( GCRY_MD_SHA1, hash, data, len);
+    uint32 hash_len_quad = 5;
+    uint32 hash_len = hash_len_quad * 4;
+    unsigned int digest[5];
+    Sirikata::Sha1(data, len, digest);
 
   char *out = (char *) malloc( sizeof(char) * ((hash_len*2)+1) );
   char *p = out;
@@ -82,7 +82,7 @@ String sha1(void* data, size_t len) {
   /* Convert each byte to its 2 digit ascii
    * hex representation and place in out */
   for ( int i = 0; i < hash_len; i++, p += 2 ) {
-    snprintf ( p, 3, "%02x", hash[i] );
+    snprintf ( p, 3, "%02x", digest[i] );
   }
 
   String retval = out;

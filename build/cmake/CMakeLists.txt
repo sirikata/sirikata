@@ -1071,6 +1071,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
         ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
 )
 
 #precompiled header
