@@ -246,7 +246,11 @@ int main(int argc, char** argv) {
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
             printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+            Sleep( sleep_time.toMilliseconds() );
+#else
             usleep( sleep_time.toMicroseconds() );
+#endif
         }
     }
 

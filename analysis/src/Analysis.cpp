@@ -63,18 +63,14 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
     Event* evt = NULL;
 
-    switch(type_hint) {
-      case Trace::SegmentationChangeTag:
-          {
+    if (type_hint == Trace::SegmentationChangeTag) {
   	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
 	      record_is.read( (char*)&sevt->time, sizeof(sevt->time) );
 	      record_is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
 	      record_is.read( (char*)&sevt->server, sizeof(sevt->server) );
 	      evt = sevt;
-          }
-	  break;
-      case Trace::ProximityTag:
-          {
+    }
+    else if (type_hint == Trace::ProximityTag) {
               ProximityEvent* pevt = new ProximityEvent;
               record_is.read( (char*)&pevt->time, sizeof(pevt->time) );
               record_is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
@@ -82,30 +78,24 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
               record_is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
               evt = pevt;
-          }
-          break;
-      case Trace::ObjectConnectedTag:
-          {
+              }
+    else if (type_hint == Trace::ObjectConnectedTag) {
               ObjectConnectedEvent* levt = new ObjectConnectedEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
               levt->receiver = UUID::null();
               record_is.read( (char*)&levt->server, sizeof(levt->server) );
               evt = levt;
-          }
-          break;
-      case Trace::ObjectLocationTag:
-          {
+    }
+    else if (type_hint == Trace::ObjectLocationTag) {
               LocationEvent* levt = new LocationEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               record_is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
-          }
-          break;
-      case Trace::ObjectGeneratedLocationTag:
-          {
+    }
+    else if (type_hint == Trace::ObjectGeneratedLocationTag) {
               GeneratedLocationEvent* levt = new GeneratedLocationEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               levt->receiver = UUID::null();
@@ -113,10 +103,8 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               record_is.read( (char*)&levt->bounds, sizeof(levt->bounds) );
               evt = levt;
-          }
-          break;
-      case Trace::ObjectPingCreatedTag:
-          {
+    }
+    else if (type_hint == Trace::ObjectPingCreatedTag) {
               PingCreatedEvent *pevt = new PingCreatedEvent;
               record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
               record_is.read((char*)&pevt->source, sizeof(pevt->source));
@@ -127,9 +115,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->size,sizeof(pevt->size));
               evt=pevt;
           }
-        break;
-      case Trace::ObjectPingTag:
-          {
+    else if (type_hint == Trace::ObjectPingTag) {
               PingEvent *pevt = new PingEvent;
               record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
               record_is.read((char*)&pevt->source, sizeof(pevt->source));
@@ -141,9 +127,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->size,sizeof(pevt->size));
               evt=pevt;
           }
-        break;
-      case Trace::MessageCreationTimestampTag:
-          {
+    else if (type_hint == Trace::MessageCreationTimestampTag) {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
               record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
@@ -152,18 +136,14 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
               evt=pevt;
           }
-        break;
-        case Trace::MessageTimestampTag:
-            {
+    else if (type_hint == Trace::MessageTimestampTag) {
               MessageTimestampEvent *pevt = new MessageTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
               record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
               record_is.read((char*)&pevt->path, sizeof(pevt->path));
               evt=pevt;
           }
-        break;
-      case Trace::ServerDatagramQueuedTag:
-          {
+    else if (type_hint == Trace::ServerDatagramQueuedTag) {
               ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
               record_is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
               pqevt->source = trace_server_id;
@@ -172,18 +152,13 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
               evt = pqevt;
           }
-          break;
-
-      case Trace::OSegCumulativeTraceAnalysisTag:
-        {
+    else if (type_hint == Trace::OSegCumulativeTraceAnalysisTag) {
           OSegCumulativeEvent* cumevt = new OSegCumulativeEvent;
           record_is.read((char*)&cumevt->time, sizeof(cumevt->time));
           record_is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
           evt = cumevt;
         }
-        break;
-      case Trace::OSegCraqProcessTag:
-        {
+    else if (type_hint == Trace::OSegCraqProcessTag) {
           OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
           record_is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
           record_is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
@@ -191,9 +166,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           record_is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
           evt = craqProcEvt;
         }
-        break;
-      case Trace::ServerDatagramSentTag:
-          {
+    else if (type_hint == Trace::ServerDatagramSentTag) {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
               record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
               psevt->source = trace_server_id;
@@ -205,9 +178,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
               evt = psevt;
           }
-          break;
-      case Trace::ServerDatagramReceivedTag:
-          {
+    else if (type_hint == Trace::ServerDatagramReceivedTag) {
               ServerDatagramReceivedEvent* prevt = new ServerDatagramReceivedEvent;
               record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
               record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
@@ -218,9 +189,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
               evt = prevt;
           }
-          break;
-      case Trace::ObjectBeginMigrateTag:
-        {
+    else if (type_hint == Trace::ObjectBeginMigrateTag) {
           ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
           record_is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
           record_is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
@@ -229,11 +198,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
           evt = objBegMig_evt;
         }
-        break;
-
-
-      case Trace::ObjectAcknowledgeMigrateTag:
-        {
+    else if (type_hint == Trace::ObjectAcknowledgeMigrateTag) {
           ObjectAcknowledgeMigrateEvent* objAckMig_evt = new ObjectAcknowledgeMigrateEvent;
           record_is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
 
@@ -244,10 +209,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
           evt = objAckMig_evt;
         }
-        break;
-
-      case Trace::RoundTripMigrationTimeAnalysisTag:
-        {
+    else if (type_hint == Trace::RoundTripMigrationTimeAnalysisTag) {
           ObjectMigrationRoundTripEvent* rdTripMig_evt = new ObjectMigrationRoundTripEvent;
           record_is.read((char*)&rdTripMig_evt->time,sizeof(rdTripMig_evt->time));
           record_is.read((char*)&rdTripMig_evt->obj_id,sizeof(rdTripMig_evt->obj_id));
@@ -257,10 +219,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
           evt = rdTripMig_evt;
         }
-        break;
-
-      case Trace::OSegTrackedSetResultAnalysisTag:
-        {
+    else if (type_hint == Trace::OSegTrackedSetResultAnalysisTag) {
           OSegTrackedSetResultsEvent* trackedSetResults_evt = new OSegTrackedSetResultsEvent;
           record_is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
           record_is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
@@ -269,21 +228,14 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
           evt = trackedSetResults_evt;
         }
-
-        break;
-
-      case Trace::OSegCacheResponseTag:
-        {
+    else if (type_hint == Trace::OSegCacheResponseTag) {
           OSegCacheResponseEvent* cachedResponse_evt = new OSegCacheResponseEvent;
           record_is.read((char*)&cachedResponse_evt->time,sizeof(cachedResponse_evt->time));
           record_is.read((char*)&cachedResponse_evt->cacheResponseID, sizeof(cachedResponse_evt->cacheResponseID));
           record_is.read((char*)&cachedResponse_evt->obj_id, sizeof(cachedResponse_evt->obj_id));
           evt = cachedResponse_evt;
         }
-        break;
-
-      case Trace::OSegShutdownEventTag:
-        {
+    else if (type_hint == Trace::OSegShutdownEventTag) {
           OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
           record_is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
           record_is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
@@ -297,10 +249,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           evt = shutdown_evt;
 
         }
-        break;
-
-      case Trace::ServerLocationTag:
-          {
+    else if (type_hint == Trace::ServerLocationTag) {
               ServerLocationEvent* levt = new ServerLocationEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
@@ -309,9 +258,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
-          break;
-      case Trace::ServerObjectEventTag:
-          {
+    else if (type_hint == Trace::ServerObjectEventTag) {
               ServerObjectEventEvent* levt = new ServerObjectEventEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
@@ -323,10 +270,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
-          break;
-
-      case Trace::ObjectSegmentationCraqLookupRequestAnalysisTag:
-        {
+    else if (type_hint == Trace::ObjectSegmentationCraqLookupRequestAnalysisTag) {
           ObjectCraqLookupEvent* obj_lookupReq_evt = new ObjectCraqLookupEvent;
           record_is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
           record_is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
@@ -334,10 +278,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
           evt = obj_lookupReq_evt;
         }
-        break;
-
-      case Trace::OSegLookupNotOnServerAnalysisTag:
-        {
+    else if (type_hint == Trace::OSegLookupNotOnServerAnalysisTag) {
           ObjectLookupNotOnServerEvent* obj_lookup_not_on_server_evt = new ObjectLookupNotOnServerEvent;
           record_is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
           record_is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
@@ -345,10 +286,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
           evt = obj_lookup_not_on_server_evt;
         }
-        break;
-
-      case Trace::ObjectSegmentationProcessedRequestAnalysisTag:
-        {
+    else if (type_hint == Trace::ObjectSegmentationProcessedRequestAnalysisTag) {
           ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
           record_is.read( (char* )&obj_lookupProc_evt->time, sizeof(obj_lookupProc_evt->time)  );
           record_is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
@@ -358,14 +296,9 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           record_is.read( (char* )&obj_lookupProc_evt->stillInQueue, sizeof(obj_lookupProc_evt->stillInQueue) );
           evt = obj_lookupProc_evt;
         }
-        break;
-
-
-      default:
-
+      else {
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)type_hint<<"\n";
-        break;
-    }
+      }
 
     return evt;
 }

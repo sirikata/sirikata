@@ -82,7 +82,7 @@ void TimerJitterBenchmark::start() {
 
     SILOG(benchmark,info,
           ITERATIONS << " timer invokations, " << dur << ": "
-          << "stddev " << sqrt(diff_var) << " ns"
+          << "stddev " << sqrt((double)diff_var) << " ns"
           );
 
     notifyFinished();

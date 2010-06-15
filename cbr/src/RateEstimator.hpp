@@ -63,7 +63,7 @@ public:
             return _value;
         }
         double blend = exp(-dt/K);
-        uint32_t new_bytes = _backlog;
+        uint32 new_bytes = _backlog;
         return _value*blend+(1-blend)*new_bytes/dt;
     }
 
@@ -75,7 +75,7 @@ public:
             return _value;
         }
         double blend = exp(-dt/K);
-        uint32_t new_bytes = len + _backlog;
+        uint32 new_bytes = len + _backlog;
         _value=_value*blend+(1-blend)*new_bytes/dt;
         _t = t;
         _backlog = 0;
@@ -84,7 +84,7 @@ public:
 private:
     double _value;
     Time _t;
-    uint32_t _backlog;
+    uint32 _backlog;
 };
 
 /** RateEstimator that holds its falloff parameter with it.  This should only be

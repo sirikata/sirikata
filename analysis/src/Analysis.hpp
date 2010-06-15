@@ -131,7 +131,7 @@ private:
 
     ServerDatagramQueueInfoEventListMap mDatagramQueueInfoEventLists;
 
-    uint32_t mNumberOfServers;
+    uint32 mNumberOfServers;
 }; // class BandwidthAnalysis
 
 
@@ -160,7 +160,7 @@ public:
     ~LatencyAnalysis();
 
 private:
-    uint32_t mNumberOfServers;
+    uint32 mNumberOfServers;
 }; // class BandwidthAnalysis
 
 

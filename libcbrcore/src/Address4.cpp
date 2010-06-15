@@ -32,7 +32,11 @@
 
 #include <sirikata/cbrcore/Address4.hpp>
 
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#include <winsock2.h>
+#else
 #include <netdb.h>
+#endif
 namespace Sirikata{
 
 Address4 Address4::Null = Address4(0,0);

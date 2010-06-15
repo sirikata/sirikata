@@ -173,7 +173,7 @@ public:
     /** ObjectMessageRecipient Interface. */
     virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
 
-    virtual void locationUpdate(UUID source, void* buffer, uint length) = 0;
+    virtual void locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
     boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
       return mContext->getObjectStream(uuid);

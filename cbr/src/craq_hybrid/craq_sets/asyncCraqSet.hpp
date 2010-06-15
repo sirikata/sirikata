@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include <boost/asio.hpp>
 #include <map>
 #include <vector>
@@ -40,7 +41,6 @@
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../asyncCraqScheduler.hpp"
-#include <sirikata/core/network/Asio.hpp>
 
 #ifndef __ASYNC_CRAQ_SET_CLASS_H__
 #define __ASYNC_CRAQ_SET_CLASS_H__

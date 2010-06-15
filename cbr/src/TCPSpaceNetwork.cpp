@@ -274,7 +274,7 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
 
     mIOService = IOServiceFactory::makeIOService();
     mIOWork = new IOWork(mIOService, "TCPSpaceNetwork Work");
-    mThread = new Thread(std::tr1::bind(&IOService::run,mIOService));
+    mThread = new Thread(std::tr1::bind(&IOService::runNoReturn,mIOService));
 
     mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
 }

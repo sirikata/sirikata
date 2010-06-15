@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/core/util/Platform.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
 
 #include <algorithm>
@@ -82,7 +83,7 @@ String sha1(void* data, size_t len) {
   /* Convert each byte to its 2 digit ascii
    * hex representation and place in out */
   for ( int i = 0; i < hash_len; i++, p += 2 ) {
-    snprintf ( p, 3, "%02x", digest[i] );
+    sprintf ( p, "%02x", digest[i] );
   }
 
   String retval = out;
@@ -686,7 +687,7 @@ void DistributedCoordinateSegmentation::accept_handler()
       BoundingBoxList bboxList = serverRegion(message->serverID);
 
       ServerRegionResponseMessage* responseMessage = new ServerRegionResponseMessage();
-      uint i=0;
+      uint32 i=0;
       for (i=0; i<MAX_BBOX_LIST_SIZE && i < bboxList.size() ; i++) {
 	BoundingBox3f bbox = bboxList[i];
 	responseMessage->bboxList[i].serialize(bbox);

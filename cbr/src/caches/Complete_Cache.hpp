@@ -37,7 +37,6 @@
 #include "Cache.hpp"
 #include "Utility.hpp"
 #include <string>
-#include <stdint.h>
 #include "CacheRecords.hpp"
 #include <float.h>
 #include <sirikata/cbrcore/SpaceContext.hpp>

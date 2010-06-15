@@ -108,7 +108,7 @@ void Context::startForceQuitTimer() {
     );
     mKillThread = std::tr1::shared_ptr<Thread>(
         new Thread(
-            std::tr1::bind(&IOService::run, mKillService)
+            std::tr1::bind(&IOService::runNoReturn, mKillService)
         )
     );
 }

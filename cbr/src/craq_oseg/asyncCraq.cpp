@@ -40,6 +40,8 @@
 #include "asyncConnection.hpp"
 #include <sirikata/cbrcore/Timer.hpp>
 
+using Sirikata::Network::TCPSocket;
+using Sirikata::Network::TCPResolver;
 
 namespace Sirikata
 {
@@ -48,7 +50,7 @@ namespace Sirikata
 //nothing to destroy
 AsyncCraq::~AsyncCraq()
 {
-  io_service.reset();
+    IOServiceFactory::destroyIOService(io_service);
   //  delete mSocket;
 }
 
@@ -56,6 +58,8 @@ AsyncCraq::~AsyncCraq()
 //nothing to initialize
 AsyncCraq::AsyncCraq(SpaceContext* spx, IOStrand* str)
 {
+  io_service = IOServiceFactory::makeIOService();
+
   mContext = spx;
   mStrand  = str;
   mTimer.start();
@@ -67,7 +71,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   mIpAddPort = ipAddPort;
 
-  boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
+  TCPResolver resolver(*io_service);   //a resolver can resolve a query into a series of endpoints.
 
   mCurrentTrackNum = 10;
 
@@ -77,16 +81,16 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     mConnections.push_back(tmpConn);
   }
 
-  boost::asio::ip::tcp::socket* passSocket;
+  TCPSocket* passSocket;
 
   if (((int)ipAddPort.size()) >= CRAQ_NUM_CONNECTIONS)
   {
     //just assign each connection a separate router (in order that they were provided).
     for (int s = 0; s < CRAQ_NUM_CONNECTIONS; ++s)
     {
-      boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
-      boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-      passSocket   =  new boost::asio::ip::tcp::socket(io_service);
+      TCPResolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
+      TCPResolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
+      passSocket   =  new TCPSocket(*io_service);
       mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
     }
   }
@@ -96,7 +100,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
     int whichRouterServing;
     double percentageConnectionsServed;
 
-    boost::asio::ip::tcp::resolver::iterator iterator;
+    TCPResolver::iterator iterator;
 
     for (int s=0; s < CRAQ_NUM_CONNECTIONS; ++s)
     {
@@ -108,12 +112,12 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
       if (whichRouterServing  != whichRouterServingPrevious)
       {
-        boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
+        TCPResolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
 
         iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         whichRouterServingPrevious = whichRouterServing;
       }
-      passSocket   =  new boost::asio::ip::tcp::socket(io_service);
+      passSocket   =  new TCPSocket(*io_service);
       mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
     }
   }
@@ -184,11 +188,11 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
 {
   Duration tickBeginDur = mTimer.elapsed();
 
-  int numHandled = io_service.poll();
+  int numHandled = io_service->poll();
 
   if (numHandled == 0)
   {
-    io_service.reset();
+    io_service->reset();
   }
 
 
@@ -324,31 +328,31 @@ void AsyncCraq::reInitializeNode(int s)
   if (s >= (int)mConnections.size())
     return;
 
-  boost::asio::ip::tcp::socket* passSocket;
+  TCPSocket* passSocket;
 
-  boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
+  TCPResolver resolver(*io_service);   //a resolver can resolve a query into a series of endpoints.
 
   if ( ((int)mIpAddPort.size()) >= CRAQ_NUM_CONNECTIONS)
   {
-    boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
-    boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-    passSocket   =  new boost::asio::ip::tcp::socket(io_service);
+    TCPResolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
+    TCPResolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
+    passSocket   =  new TCPSocket(*io_service);
     mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
   }
   else
   {
 
-    boost::asio::ip::tcp::resolver::iterator iterator;
+    TCPResolver::iterator iterator;
 
     double percentageConnectionsServed = ((double)s)/((double) CRAQ_NUM_CONNECTIONS);
     int whichRouterServing = (int)(percentageConnectionsServed*((double)mIpAddPort.size()));
 
     //    whichRouterServing = 0; //bftm debug
 
-    boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[whichRouterServing].ipAdd.c_str(), mIpAddPort[whichRouterServing].port.c_str());
+    TCPResolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[whichRouterServing].ipAdd.c_str(), mIpAddPort[whichRouterServing].port.c_str());
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
 
-    passSocket   =  new boost::asio::ip::tcp::socket(io_service);
+    passSocket   =  new TCPSocket(*io_service);
     mConnections[s]->initialize(passSocket,iterator,ctx,mStrand); //note maybe can pass this by reference?
   }
 }

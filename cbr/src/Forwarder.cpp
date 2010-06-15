@@ -468,7 +468,7 @@ bool Forwarder::forward(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID
 
     bool accepted = mOSegLookups->lookup(
         msg,
-        std::tr1::bind(&Forwarder::routeObjectMessageToServer, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, forwardFrom)
+        std::tr1::bind(&Forwarder::routeObjectMessageToServerNoReturn, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, forwardFrom)
     );
 
     return accepted;
@@ -492,6 +492,9 @@ bool Forwarder::tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
     return true; // If we got here, the cache was successful, we just dropped it.
 }
 
+void Forwarder::routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom) {
+    routeObjectMessageToServer(obj_msg, dest_serv, resolved_from, forwardFrom);
+}
 
 bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
 {

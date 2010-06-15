@@ -38,11 +38,9 @@
 #include <iomanip>
 #include "Complete_Cache.hpp"
 #include "Cache.hpp"
-#include <sys/time.h>
 #include <stdio.h>
 #include <cassert>
 #include <string>
-#include <stdint.h>
 #include "CacheRecords.hpp"
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/cbrcore/Timer.hpp>

@@ -269,7 +269,7 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
     }
 }
 
-void StandardLocationService::locationUpdate(UUID source, void* buffer, uint length) {
+void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 length) {
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     assert(parse_success);

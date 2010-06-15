@@ -138,6 +138,7 @@ private:
     bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     bool send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
+    void sendNoReturn( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
 
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)

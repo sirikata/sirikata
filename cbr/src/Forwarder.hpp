@@ -191,6 +191,7 @@ private:
     bool forward(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom = NullServerID);
 
     // This version is provided if you already know which server the message should be sent to
+    void routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
     WARN_UNUSED
     bool routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
 

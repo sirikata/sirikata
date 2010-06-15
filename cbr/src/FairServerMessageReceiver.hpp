@@ -61,7 +61,7 @@ private:
     // Internal service call -- generated either by a networkReceivedData event
     // or by a timer as we wait for enough bandwidth to be available to service
     // the next packet.
-    bool service();
+    void service();
 
     IOTimerPtr mServiceTimer; // Timer used to generate another service callback
                               // when waiting for enough bytes to service next

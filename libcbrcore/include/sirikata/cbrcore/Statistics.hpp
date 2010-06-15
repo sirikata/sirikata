@@ -121,32 +121,32 @@ public:
 
 
     ~Trace();
-    static const uint8 ProximityTag = 0;
-    static const uint8 ObjectLocationTag = 1;
-    static const uint8 ServerDatagramQueuedTag = 4;
-    static const uint8 ServerDatagramSentTag = 5;
-    static const uint8 ServerDatagramReceivedTag = 6;
-    static const uint8 SegmentationChangeTag = 10;
-    static const uint8 ObjectBeginMigrateTag = 11;
-    static const uint8 ObjectAcknowledgeMigrateTag = 12;
-    static const uint8 ServerLocationTag = 13;
-    static const uint8 ServerObjectEventTag = 14;
-    static const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag = 15;
-    static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
-    static const uint8 ObjectPingTag = 17;
-    static const uint8 ObjectPingCreatedTag = 32;
-    static const uint8 RoundTripMigrationTimeAnalysisTag = 18;
-    static const uint8 OSegTrackedSetResultAnalysisTag   = 19;
-    static const uint8 OSegShutdownEventTag              = 20;
-    static const uint8 ObjectGeneratedLocationTag = 22;
-    static const uint8 OSegCacheResponseTag = 23;
-    static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
-    static const uint8 OSegCumulativeTraceAnalysisTag   = 25;
-    static const uint8 OSegCraqProcessTag                 = 26;
-    static const uint8 MessageTimestampTag = 30;
-    static const uint8 MessageCreationTimestampTag = 31;
+    static const uint8 ProximityTag;
+    static const uint8 ObjectLocationTag;
+    static const uint8 ServerDatagramQueuedTag;
+    static const uint8 ServerDatagramSentTag;
+    static const uint8 ServerDatagramReceivedTag;
+    static const uint8 SegmentationChangeTag;
+    static const uint8 ObjectBeginMigrateTag;
+    static const uint8 ObjectAcknowledgeMigrateTag;
+    static const uint8 ServerLocationTag;
+    static const uint8 ServerObjectEventTag;
+    static const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag;
+    static const uint8 ObjectSegmentationProcessedRequestAnalysisTag;
+    static const uint8 ObjectPingTag;
+    static const uint8 ObjectPingCreatedTag;
+    static const uint8 RoundTripMigrationTimeAnalysisTag;
+    static const uint8 OSegTrackedSetResultAnalysisTag;
+    static const uint8 OSegShutdownEventTag;
+    static const uint8 ObjectGeneratedLocationTag;
+    static const uint8 OSegCacheResponseTag;
+    static const uint8 OSegLookupNotOnServerAnalysisTag;
+    static const uint8 OSegCumulativeTraceAnalysisTag;
+    static const uint8 OSegCraqProcessTag;
+    static const uint8 MessageTimestampTag;
+    static const uint8 MessageCreationTimestampTag;
 
-    static const uint8 ObjectConnectedTag = 33;
+    static const uint8 ObjectConnectedTag;
 
     enum MessagePath {
         NONE, // Used when tag is needed but we don't have a name for it

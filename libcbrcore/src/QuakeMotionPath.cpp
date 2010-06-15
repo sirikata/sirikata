@@ -104,7 +104,7 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
 	    maxRatio = (maxZ - minZ) / (region.max().z - region.min().z);
 
 	if (maxRatio > 1.f) {
-	    for (uint32_t i = 0; i < mUpdates.size(); i++) {
+	    for (uint32 i = 0; i < mUpdates.size(); i++) {
 	      mUpdates[i] = TimedMotionVector3f(mUpdates[i].time(),
                                                 MotionVector3f(
                                                 region.clamp(mUpdates[i].value().position()/maxRatio),

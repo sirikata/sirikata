@@ -53,6 +53,13 @@ namespace Sirikata {
 #define MAX_BBOX_LIST_SIZE 50000
 #define MAX_SERVER_REGIONS_CHANGED 2
 
+#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+// FIXME #93
+#define PACKED_STRUCT __attribute__((__packed__))
+#else
+#define PACKED_STRUCT
+#endif
+
 typedef struct SerializedVector{
   float32 x, y, z;
 
@@ -66,7 +73,7 @@ typedef struct SerializedVector{
     vect = Vector3f(x,y,z);
   }
 
-}__attribute__((__packed__)) SerializedVector ;
+} PACKED_STRUCT SerializedVector;
 
 typedef struct SerializedBBox{
   float32 minX;
@@ -92,14 +99,14 @@ typedef struct SerializedBBox{
 			 Vector3f(maxX, maxY, maxZ));
   }
 
-}__attribute__((__packed__)) SerializedBBox ;
+} PACKED_STRUCT SerializedBBox ;
 
 typedef struct SerializedSegmentChange{
   ServerID serverID;
   uint32 listLength;
   SerializedBBox bboxList[MAX_BBOX_LIST_SIZE];
 
-}__attribute__((__packed__)) SerializedSegmentChange ;
+} PACKED_STRUCT SerializedSegmentChange ;
 
 typedef struct GenericMessage {
   uint8 type;
@@ -112,7 +119,7 @@ typedef struct LookupRequestMessage {
   LookupRequestMessage() {
     type = LOOKUP_REQUEST;
   }
-}__attribute__((__packed__)) LookupRequestMessage ;
+} PACKED_STRUCT LookupRequestMessage ;
 
 
 typedef struct LookupResponseMessage {
@@ -122,7 +129,7 @@ typedef struct LookupResponseMessage {
   LookupResponseMessage() {
     type = LOOKUP_RESPONSE;
   }
-}__attribute__((__packed__)) LookupResponseMessage ;
+} PACKED_STRUCT LookupResponseMessage ;
 
 typedef struct NumServersRequestMessage {
   uint8 type;
@@ -130,7 +137,7 @@ typedef struct NumServersRequestMessage {
   NumServersRequestMessage() {
     type = NUM_SERVERS_REQUEST;
   }
-}__attribute__((__packed__)) NumServersRequestMessage;
+} PACKED_STRUCT NumServersRequestMessage;
 
 typedef struct NumServersResponseMessage {
   uint8 type;
@@ -139,7 +146,7 @@ typedef struct NumServersResponseMessage {
   NumServersResponseMessage() {
     type = NUM_SERVERS_RESPONSE;
   }
-}__attribute__((__packed__)) NumServersResponseMessage;
+} PACKED_STRUCT NumServersResponseMessage;
 
 typedef struct ServerRegionRequestMessage {
   uint8 type;
@@ -148,7 +155,7 @@ typedef struct ServerRegionRequestMessage {
   ServerRegionRequestMessage() {
     type = SERVER_REGION_REQUEST;
   }
-}__attribute__((__packed__)) ServerRegionRequestMessage;
+} PACKED_STRUCT ServerRegionRequestMessage;
 
 typedef struct ServerRegionResponseMessage {
   uint8 type;
@@ -161,7 +168,7 @@ typedef struct ServerRegionResponseMessage {
 
     listLength = 0;
   }
-}__attribute__((__packed__)) ServerRegionResponseMessage;
+} PACKED_STRUCT ServerRegionResponseMessage;
 
 typedef struct RegionRequestMessage {
   uint8 type;
@@ -169,7 +176,7 @@ typedef struct RegionRequestMessage {
   RegionRequestMessage() {
     type = REGION_REQUEST;
   }
-}__attribute__((__packed__)) RegionRequestMessage;
+} PACKED_STRUCT RegionRequestMessage;
 
 typedef struct RegionResponseMessage {
   uint8 type;
@@ -178,10 +185,10 @@ typedef struct RegionResponseMessage {
   RegionResponseMessage() {
     type = REGION_RESPONSE;
   }
-}__attribute__((__packed__)) RegionResponseMessage;
+} PACKED_STRUCT RegionResponseMessage;
 
 typedef struct SegmentationChangeMessage {
-  uint8_t type;
+  uint8 type;
   uint8 numEntries;
   SerializedSegmentChange changedSegments[MAX_SERVER_REGIONS_CHANGED];
 
@@ -192,7 +199,7 @@ typedef struct SegmentationChangeMessage {
 
   uint32 serialize(uint8** buff) {
 
-    int bufSize = sizeof(uint8_t) + sizeof(uint8_t);
+    int bufSize = sizeof(uint8) + sizeof(uint8);
 
     for (int i=0; i<numEntries; i++) {
       bufSize += sizeof(ServerID) + sizeof(uint32);
@@ -203,11 +210,11 @@ typedef struct SegmentationChangeMessage {
 
     uint8 offset = 0;
 
-    memcpy((*buff)+offset, &type, sizeof(uint8_t));
-    offset+=sizeof(uint8_t);
+    memcpy((*buff)+offset, &type, sizeof(uint8));
+    offset+=sizeof(uint8);
 
-    memcpy((*buff)+offset, &numEntries, sizeof(uint8_t));
-    offset+=sizeof(uint8_t);
+    memcpy((*buff)+offset, &numEntries, sizeof(uint8));
+    offset+=sizeof(uint8);
 
     for (int i=0; i<numEntries; i++) {
       memcpy((*buff)+offset, &changedSegments[i].serverID, sizeof(ServerID));
@@ -224,10 +231,10 @@ typedef struct SegmentationChangeMessage {
     return bufSize;
   }
 
-}__attribute__((__packed__)) SegmentationChangeMessage;
+} PACKED_STRUCT SegmentationChangeMessage;
 
 typedef struct SegmentationListenMessage {
-  uint8_t type;
+  uint8 type;
 
   char host[128];
   uint16 port;
@@ -235,7 +242,7 @@ typedef struct SegmentationListenMessage {
   SegmentationListenMessage() {
     type = SEGMENTATION_LISTEN;
   }
-}__attribute__((__packed__)) SegmentationListenMessage;
+} PACKED_STRUCT SegmentationListenMessage;
 
 typedef struct SegmentedRegion {
 
@@ -431,7 +438,7 @@ typedef struct SerializedSegmentedRegion {
     mRightChildIdx = 0;
   }
 
-}__attribute__((__packed__)) SerializedSegmentedRegion;
+} PACKED_STRUCT SerializedSegmentedRegion;
 
 
 
@@ -486,7 +493,7 @@ private:
     mNodeCount = 0;
   }
 
-}__attribute__((__packed__)) SerializedBSPTree;
+} PACKED_STRUCT SerializedBSPTree;
 
 
 }

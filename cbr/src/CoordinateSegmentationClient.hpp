@@ -33,16 +33,12 @@
 #ifndef _SIRIKATA_COORDINATE_SEGMENTATION_CLIENT_HPP_
 #define _SIRIKATA_COORDINATE_SEGMENTATION_CLIENT_HPP_
 
-#include <boost/shared_ptr.hpp>
-#include <boost/asio.hpp>
-
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-
 #include <sirikata/cbrcore/SegmentedRegion.hpp>
 
 #include "CBR_CSeg.pbj.hpp"
-
-typedef boost::asio::ip::tcp tcp;
 
 namespace Sirikata {
 
@@ -82,9 +78,9 @@ private:
 
     uint16 mAvailableServersCount;
 
-    boost::asio::io_service mIOService;  //creates an io service
-    boost::shared_ptr<tcp::acceptor> mAcceptor;
-    boost::shared_ptr<tcp::socket> mSocket;
+    IOService* mIOService;  //creates an io service
+    boost::shared_ptr<Network::TCPListener> mAcceptor;
+    boost::shared_ptr<Network::TCPSocket> mSocket;
 
     ServerIDMap *  mSidMap;
 

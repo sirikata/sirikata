@@ -41,14 +41,12 @@
 #include <algorithm>
 #include <time.h>
 #include <stdio.h>
-#include <sys/time.h>
 #include <vector>
 #include <map>
 #include <cassert>
 #include <string>
 #include <cmath>
 #include "CacheRecords.hpp"
-#include <stdint.h>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 

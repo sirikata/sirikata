@@ -146,10 +146,12 @@ bool Object::send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, st
 
   return val;
 }
-
+void Object::sendNoReturn( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
+    send(src_port, src, dest_port, dest, payload);
+}
 bool Object::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
   mContext->mainStrand->post(std::tr1::bind(
-			     &Object::send, this,
+			     &Object::sendNoReturn, this,
 			     msg->source_port(), msg->source_object(),
 			     msg->dest_port(), msg->dest_object(),
 			     msg->payload())

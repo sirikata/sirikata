@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/core/util/Platform.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
 #include "WorldPopulationBSPTree.hpp"
 #include <sirikata/cbrcore/Options.hpp>

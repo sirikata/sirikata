@@ -30,10 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/core/util/Platform.hpp>
 #include <iostream>
 #include <iomanip>
 #include <string>
+#if SIRIKATA_PLATFORM != PLATFORM_WINDOWS
 #include <stdint.h>
+#endif
 
 #ifndef __UTILITY_HPP__
 #define __UTILITY_HPP__
@@ -46,9 +49,9 @@ namespace Sirikata
 {
 
 
-  typedef int64_t ObjID;
+  typedef int64 ObjID;
   typedef int BlockID;
-  typedef int64_t CacheTimeMS;
+  typedef int64 CacheTimeMS;
 
 
   const static int     NullVecIndex   = -1;
@@ -77,7 +80,10 @@ namespace Sirikata
 
 }
 
-
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#define PTR_AS_INT(X) ((uint64)X)
+#else
 #define PTR_AS_INT(X) ((uintptr_t)X)
+#endif
 
 #endif

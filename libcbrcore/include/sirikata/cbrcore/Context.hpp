@@ -102,7 +102,7 @@ public:
         // Start workers
         for(uint32 i = 1; i < nthreads; i++) {
             workerThreads.push_back(
-                new Thread( std::tr1::bind(&IOService::run, ioService) )
+                new Thread( std::tr1::bind(&IOService::runNoReturn, ioService) )
             );
         }
 

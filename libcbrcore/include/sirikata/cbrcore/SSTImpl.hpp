@@ -34,7 +34,8 @@
 #ifndef SST_IMPL_HPP
 #define SST_IMPL_HPP
 
-#include <execinfo.h>
+#include <sirikata/core/util/Platform.hpp>
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -328,7 +329,7 @@ private:
      available channel. */
   static int getAvailableChannel() {
     //TODO: faster implementation.
-    for (uint i=1; i<mAvailableChannels.size(); i++) {
+    for (uint32 i=1; i<mAvailableChannels.size(); i++) {
       if (!mAvailableChannels.test(i)) {
 	mAvailableChannels.set(i, 1);
 	return i;
@@ -405,7 +406,7 @@ private:
 
       bool all_sent_packets_acked = true;
       bool no_packets_acked = true;
-      for (uint i=0; i < mOutstandingSegments.size(); i++) {
+      for (uint32 i=0; i < mOutstandingSegments.size(); i++) {
 	boost::shared_ptr<ChannelSegment> segment = mOutstandingSegments[i];
 
 	if (mOutstandingSegments[i]->mAckTime == Time::null()) {
@@ -655,7 +656,7 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
-    for (uint i = 0; i < mOutstandingSegments.size(); i++) {
+    for (uint32 i = 0; i < mOutstandingSegments.size(); i++) {
       if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
 	mOutstandingSegments[i]->mAckTime = Timer::now();
       }
@@ -837,7 +838,7 @@ private:
 
   void handleDatagram(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
     uint8* payload = (uint8*) received_stream_msg->payload().data();
-    uint payload_size = received_stream_msg->payload().size();
+    uint32 payload_size = received_stream_msg->payload().size();
 
     uint16 dest_port = received_stream_msg->dest_port();
 
@@ -847,7 +848,7 @@ private:
       datagramCallbacks = mReadDatagramCallbacks[dest_port];
     }
 
-    for (uint i=0 ; i < datagramCallbacks.size(); i++) {
+    for (uint32 i=0 ; i < datagramCallbacks.size(); i++) {
       datagramCallbacks[i](payload, payload_size);
     }
 
@@ -1279,6 +1280,7 @@ public:
     return -1;
   }
 
+#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
   /* Gathers data from the buffers described in 'vec',
      which is taken to be 'count' structures long, and
      writes them to the stream. As each buffer is
@@ -1310,6 +1312,7 @@ public:
 
     return totalBytesWritten;
   }
+#endif
 
   /*
     Register a callback which will be called when there are bytes to be
@@ -1647,7 +1650,7 @@ private:
   void sendToApp(uint64 skipLength) {
     uint32 readyBufferSize = skipLength;
 
-    for (uint i=skipLength; i < MAX_RECEIVE_WINDOW; i++) {
+    for (uint32 i=skipLength; i < MAX_RECEIVE_WINDOW; i++) {
       if (mReceiveBitmap[i] == 1) {
 	readyBufferSize++;
       }
@@ -1690,9 +1693,9 @@ private:
 
 	updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
 
-	if ( (int) (pow(2, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
-	  assert( pow(2, streamMsg->window()) - mNumOutstandingBytes > 0);
-	  mTransmitWindowSize = pow(2, streamMsg->window()) - mNumOutstandingBytes;
+	if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
+	  assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
+	  mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
 	}
 	else {
 	  mTransmitWindowSize = 0;
@@ -1711,7 +1714,7 @@ private:
 	  }
 	}
 
-	for (uint i=0; i< channelOffsets.size(); i++) {
+	for (uint32 i=0; i< channelOffsets.size(); i++) {
 	  mChannelToBufferMap.erase(channelOffsets[i]);
 	}
       }
@@ -1719,8 +1722,8 @@ private:
     else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
       boost::mutex::scoped_lock lock(mReceiveBufferMutex);
 
-      assert ( pow(2, streamMsg->window()) - mNumOutstandingBytes > 0);
-      mTransmitWindowSize = pow(2, streamMsg->window()) - mNumOutstandingBytes;
+      assert ( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
+      mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
 
       //printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected);
 
@@ -1800,7 +1803,7 @@ private:
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.INIT);
     sstMsg.set_flags(0);
-    sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
+    sstMsg.set_window( log((double)mReceiveWindowSize)/log(2.0)  );
     sstMsg.set_src_port(mLocalPort);
     sstMsg.set_dest_port(mRemotePort);
 
@@ -1819,7 +1822,7 @@ private:
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
     sstMsg.set_flags(0);
-    sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
+    sstMsg.set_window( log((double)mReceiveWindowSize)/log(2.0)  );
     sstMsg.set_src_port(mLocalPort);
     sstMsg.set_dest_port(mRemotePort);
 
@@ -1834,7 +1837,7 @@ private:
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.DATA);
     sstMsg.set_flags(0);
-    sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
+    sstMsg.set_window( log((double)mReceiveWindowSize)/log(2.0)  );
     sstMsg.set_src_port(mLocalPort);
     sstMsg.set_dest_port(mRemotePort);
 
@@ -1853,7 +1856,7 @@ private:
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.REPLY);
     sstMsg.set_flags(0);
-    sstMsg.set_window( log(mReceiveWindowSize)/log(2)  );
+    sstMsg.set_window( log((double)mReceiveWindowSize)/log(2.0)  );
     sstMsg.set_src_port(mLocalPort);
     sstMsg.set_dest_port(mRemotePort);
 

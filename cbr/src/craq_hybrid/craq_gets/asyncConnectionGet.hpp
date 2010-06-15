@@ -33,6 +33,7 @@
 #ifndef __CRAQ_ASYNC_CONNECTION_GET_HPP__
 #define __CRAQ_ASYNC_CONNECTION_GET_HPP__
 
+#include <sirikata/core/util/Platform.hpp>
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
 #include <sirikata/cbrcore/SpaceContext.hpp>

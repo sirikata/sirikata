@@ -30,8 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arpa/inet.h>
 #include <sirikata/cbrcore/Utility.hpp>
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 #include "asyncUtil.hpp"
 #include "CraqEntry.hpp"
 #include "Base64.hpp"
@@ -44,11 +48,11 @@ void CraqEntry::deserialize(unsigned char xinput[CRAQ_SERVER_SIZE]) {
     memcpy(input,xinput,CRAQ_SERVER_SIZE);
     unsigned char base256osegData[10]={0};
     decode12Base64(base256osegData+1,input);
-    uint32_t radiusbe=0;
-    uint32_t serverbe=0;
+    uint32 radiusbe=0;
+    uint32 serverbe=0;
     memcpy(&serverbe,base256osegData,4);
     memcpy(&radiusbe,base256osegData+4,4);
-    uint32_t radiusle=ntohl(radiusbe);
+    uint32 radiusle=ntohl(radiusbe);
     mServer=ntohl(serverbe);
     char radiusArray[sizeof(float)];
     memcpy(radiusArray,&radiusle,sizeof(float));
@@ -57,8 +61,8 @@ void CraqEntry::deserialize(unsigned char xinput[CRAQ_SERVER_SIZE]) {
 void CraqEntry::serialize(unsigned char output[CRAQ_SERVER_SIZE]) const{
   char radiusle[sizeof(float)];
   memcpy(radiusle,&mRadius,sizeof(float));
-  uint32_t radiusbe;
-  memcpy(&radiusbe,radiusle,sizeof(uint32_t));
+  uint32 radiusbe;
+  memcpy(&radiusbe,radiusle,sizeof(uint32));
   radiusbe=htonl(radiusbe);
   unsigned int inputDatabe=htonl(mServer);
   unsigned char base256osegData[10]={0};

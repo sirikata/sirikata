@@ -33,7 +33,6 @@
 #include "SpaceNetwork.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
-#include <netdb.h>
 namespace Sirikata{
 
 SpaceNetwork::SpaceNetwork(SpaceContext* ctx)

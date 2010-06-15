@@ -394,7 +394,7 @@ class PacketStageGraph {
         typedef std::stack<Trace::MessagePath> StageStack;
         StageStack next;
 
-        for(StageSet::iterator it = starting_stages.begin(); it != starting_stages.end(); it++)
+        for(StageSet::const_iterator it = starting_stages.begin(); it != starting_stages.end(); it++)
             next.push(*it);
 
         while(!next.empty()) {

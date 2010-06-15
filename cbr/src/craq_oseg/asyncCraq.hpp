@@ -30,11 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#include <boost/asio.hpp>
-#include <map>
-#include <vector>
-#include <queue>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include "asyncUtil.hpp"
 #include "asyncConnection.hpp"
 #include <sirikata/cbrcore/Timer.hpp>
@@ -59,7 +56,7 @@ public:
 
   void initialize(std::vector<CraqInitializeArgs>);
 
-  boost::asio::io_service io_service;  //creates an io service
+  Network::IOService* io_service;
 
   int set(const CraqDataSetGet& cdSet);
   int get(const CraqDataSetGet& cdGet);

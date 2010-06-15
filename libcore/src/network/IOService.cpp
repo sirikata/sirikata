@@ -102,6 +102,10 @@ uint32 IOService::run() {
     return (uint32) mImpl->run();
 }
 
+void IOService::runNoReturn() {
+    mImpl->run();
+}
+
 void IOService::stop() {
     mImpl->stop();
 }

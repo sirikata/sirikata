@@ -321,7 +321,7 @@ const ObjectHostContext* ObjectHost::context() const {
 void ObjectHost::start() {
 
     mIOWork = new IOWork( mIOService, "ObjectHost Work" );
-    mIOThread = new Thread( std::tr1::bind(&IOService::run, mIOService) );
+    mIOThread = new Thread( std::tr1::bind(&IOService::runNoReturn, mIOService) );
 }
 
 void ObjectHost::stop() {
@@ -737,7 +737,7 @@ void ObjectHost::handleServerMessages(SpaceNodeConnection* conn) {
 #define MAX_HANDLE_SERVER_MESSAGES 20
     mHandleMessageProfiler->started();
 
-    for(uint ii = 0; ii < MAX_HANDLE_SERVER_MESSAGES; ii++) {
+    for(uint32 ii = 0; ii < MAX_HANDLE_SERVER_MESSAGES; ii++) {
         // Pull it off the queue
         ObjectMessage* msg = conn->pull();
         if (msg == NULL) {

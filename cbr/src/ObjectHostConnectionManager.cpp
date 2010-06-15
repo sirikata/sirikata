@@ -91,7 +91,7 @@ ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, cons
    mMessageReceivedCallback(cb)
 {
     mIOWork = new IOWork( mIOService, "ObjectHostConnectionManager Work" );
-    mIOThread = new Thread( std::tr1::bind(&IOService::run, mIOService) );
+    mIOThread = new Thread( std::tr1::bind(&IOService::runNoReturn, mIOService) );
 
     listen(listen_addr);
 }

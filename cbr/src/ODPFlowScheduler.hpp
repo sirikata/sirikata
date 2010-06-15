@@ -75,7 +75,7 @@ public:
     virtual ~ODPFlowScheduler() {}
 
     // Interface: AbstractQueue<Message*>
-    virtual QueueEnum::PushResult push(const Type& msg) { assert(false); }
+	virtual QueueEnum::PushResult push(const Type& msg) { assert(false); return QueueEnum::PushExceededMaximumSize; }
     virtual const Type& front() const = 0;
     virtual Type& front() = 0;
     virtual Type pop() = 0;

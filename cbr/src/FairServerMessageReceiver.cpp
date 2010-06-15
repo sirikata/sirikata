@@ -78,11 +78,11 @@ void FairServerMessageReceiver::scheduleServicing() {
     }
 }
 
-bool FairServerMessageReceiver::service() {
+void FairServerMessageReceiver::service() {
 #define MAX_MESSAGES_PER_ROUND 100
 
     boost::mutex::scoped_try_lock lock(mServiceMutex);
-    if (!lock.owns_lock()) return false;
+    if (!lock.owns_lock()) return;
 
     mProfiler->started();
 
@@ -133,7 +133,7 @@ bool FairServerMessageReceiver::service() {
     }
     mProfiler->finished();
 
-    return true;
+    return;
 }
 
 void FairServerMessageReceiver::handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight) {

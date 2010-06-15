@@ -101,37 +101,33 @@ void BatchedBuffer::store(FILE* os) {
 }
 
 
-const uint8 Trace::MessageTimestampTag;
-const uint8 Trace::MessageCreationTimestampTag;
+const uint8 Trace::ProximityTag = 0;
+const uint8 Trace::ObjectLocationTag = 1;
+const uint8 Trace::ServerDatagramQueuedTag = 4;
+const uint8 Trace::ServerDatagramSentTag = 5;
+const uint8 Trace::ServerDatagramReceivedTag = 6;
+const uint8 Trace::SegmentationChangeTag = 10;
+const uint8 Trace::ObjectBeginMigrateTag = 11;
+const uint8 Trace::ObjectAcknowledgeMigrateTag = 12;
+const uint8 Trace::ServerLocationTag = 13;
+const uint8 Trace::ServerObjectEventTag = 14;
+const uint8 Trace::ObjectSegmentationCraqLookupRequestAnalysisTag = 15;
+const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag = 16;
+const uint8 Trace::ObjectPingTag = 17;
+const uint8 Trace::ObjectPingCreatedTag = 32;
+const uint8 Trace::RoundTripMigrationTimeAnalysisTag = 18;
+const uint8 Trace::OSegTrackedSetResultAnalysisTag   = 19;
+const uint8 Trace::OSegShutdownEventTag              = 20;
+const uint8 Trace::ObjectGeneratedLocationTag = 22;
+const uint8 Trace::OSegCacheResponseTag = 23;
+const uint8 Trace::OSegLookupNotOnServerAnalysisTag = 24;
+const uint8 Trace::OSegCumulativeTraceAnalysisTag   = 25;
+const uint8 Trace::OSegCraqProcessTag                 = 26;
+const uint8 Trace::MessageTimestampTag = 30;
+const uint8 Trace::MessageCreationTimestampTag = 31;
 
-const uint8 Trace::ObjectPingTag;
-const uint8 Trace::ObjectPingCreatedTag;
-const uint8 Trace::ProximityTag;
-const uint8 Trace::ObjectLocationTag;
-const uint8 Trace::ServerDatagramQueuedTag;
-const uint8 Trace::ServerDatagramSentTag;
-const uint8 Trace::ServerDatagramReceivedTag;
-const uint8 Trace::SegmentationChangeTag;
-const uint8 Trace::ObjectBeginMigrateTag;
-const uint8 Trace::ObjectAcknowledgeMigrateTag;
-
-const uint8 Trace::ServerLocationTag;
-const uint8 Trace::ServerObjectEventTag;
-
-const uint8 Trace::ObjectSegmentationCraqLookupRequestAnalysisTag;
-const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
-
-const uint8 Trace::RoundTripMigrationTimeAnalysisTag;
-const uint8 Trace::OSegTrackedSetResultAnalysisTag;
-const uint8 Trace::OSegShutdownEventTag;
-const uint8 Trace::ObjectGeneratedLocationTag;
-const uint8 Trace::OSegCacheResponseTag;
-const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
-const uint8 Trace::OSegCumulativeTraceAnalysisTag;
-const uint8 Trace::OSegCraqProcessTag;
-
-const uint8 Trace::ObjectConnectedTag;
-
+const uint8 Trace::ObjectConnectedTag = 33;
+	
 OptionValue* Trace::mLogObject;
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogOSeg;
@@ -207,12 +203,19 @@ void Trace::storageThread(const String& filename) {
         data.store(of);
         fflush(of);
 
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+        Sleep( Duration::seconds(1).toMilliseconds() );
+#else
         usleep( Duration::seconds(1).toMicroseconds() );
+#endif
     }
     data.store(of);
     fflush(of);
 
+// FIXME #91
+#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
     fsync(fileno(of));
+#endif
     fclose(of);
 }
 
