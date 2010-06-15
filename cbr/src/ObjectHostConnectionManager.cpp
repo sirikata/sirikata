@@ -206,7 +206,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
 
     Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
-    bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
+    bool parse_success = obj_msg->ParseFromArray(&(*chunk.begin()),chunk.size());
     assert(parse_success == true);
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);

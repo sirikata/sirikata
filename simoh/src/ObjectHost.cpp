@@ -104,7 +104,7 @@ void ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::N
 
     // Parse
     ObjectMessage* msg = new ObjectMessage();
-    bool parse_success = msg->ParseFromArray(chunk.data(), chunk.size());
+    bool parse_success = msg->ParseFromArray(&(*chunk.begin()), chunk.size());
     assert(parse_success == true);
 
     TIMESTAMP_START(tstamp, msg);
