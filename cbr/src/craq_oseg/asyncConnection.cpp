@@ -106,7 +106,7 @@ void AsyncConnection::initialize(boost::asio::ip::tcp::socket* socket, boost::as
   mStrand =       strand;
 
   //need to run connection routine.
-  mSocket->async_connect(*it, boost::bind(&AsyncConnection::connect_handler,this,_1));  //using that tcp socket for an asynchronous connection.
+  mSocket->async_connect(*it, std::tr1::bind(&AsyncConnection::connect_handler,this,std::tr1::placeholders::_1));  //using that tcp socket for an asynchronous connection.
 }
 
 
@@ -165,14 +165,14 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, 
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 boost::regex("\r\n"),
-                                mStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
-                                //                                ctx->osegStrand->wrap(boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
+                                mStrand->wrap(std::tr1::bind(&AsyncConnection::read_handler_set,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2,sBuff)));
+                                //                                ctx->osegStrand->wrap(std::tr1::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff)));
 
   //
   //  boost::asio::async_read_until((*mSocket),
   //                                (*sBuff),
   //                                boost::regex("\r\n"),
-  //                                boost::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff));
+  //                                std::tr1::bind(&AsyncConnection::read_handler_set,this,_1,_2,sBuff));
 
 
   //generating the query to write.
@@ -199,11 +199,11 @@ bool AsyncConnection::set(CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, 
 
   async_write((*mSocket),
               boost::asio::buffer(query),
-              boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
+              std::tr1::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
 
 
   //  mSocket->async_write_some(boost::asio::buffer(dsQuery,CRAQ_DATA_SET_SIZE -2),
-  //                            boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
+  //                            std::tr1::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
 
 
   return true;
@@ -246,7 +246,7 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
     is >> tmpLine;
   }
 
-  //  ctx->osegStrand->wrap(boost::bind(&AsyncConnection::finish_read_handler_set,this,line,sBuff));
+  //  ctx->osegStrand->wrap(std::tr1::bind(&AsyncConnection::finish_read_handler_set,this,line,sBuff));
   //  ctx->osegStrand->wrap(std::tr1::bind(&AsyncConnection::finish_read_handler_set,this,line,sBuff));
   //  ctx->osegStrand->wrap(std::tr1::bind(&AsyncConnection::finish_read_handler_set,this));
 
@@ -319,13 +319,13 @@ bool AsyncConnection::get(CraqDataKey& dataToGet)
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
-                                mStrand->wrap(boost::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff)));
+                                mStrand->wrap(std::tr1::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff)));
 
 
   //  boost::asio::async_read_until((*mSocket),
   //                                (*sBuff),
   //                                reg,
-  //                                boost::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff));
+  //                                std::tr1::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff));
 
   //crafts query
   std::string query;
@@ -343,10 +343,10 @@ bool AsyncConnection::get(CraqDataKey& dataToGet)
   //sets write handler
   async_write((*mSocket),
               boost::asio::buffer(query),
-              boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
+              std::tr1::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
 
   //  mSocket->async_write_some(boost::asio::buffer(dkQuery,CRAQ_DATA_KEY_QUERY_SIZE-1),
-  //                            boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
+  //                            std::tr1::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
 
 
   return true;

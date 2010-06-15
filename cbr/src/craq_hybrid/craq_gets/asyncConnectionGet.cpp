@@ -33,7 +33,6 @@
 
 #include "asyncConnectionGet.hpp"
 #include <iostream>
-#include <boost/bind.hpp>
 #include <map>
 #include <utility>
 #include <boost/asio.hpp>
@@ -177,7 +176,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
+      mPostErrorsStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
 
 
       //      std::cout<<"\n\nSending error\n\n";
@@ -265,7 +264,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGetPrint(const boost::system::erro
     mReady = PROCESSING;   //need to run connection routine.  so until we receive an ack that conn has finished, we stay in processing state.
 
     mHandlerState = false;
-    mSocket->async_connect(*it,mStrand->wrap(boost::bind(&AsyncConnectionGet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
+    mSocket->async_connect(*it,mStrand->wrap(std::tr1::bind(&AsyncConnectionGet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
 
     mPrevReadFrag = "";
 
@@ -398,7 +397,7 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
 
 
 
-    mPostErrorsStrand->post(boost::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
+    mPostErrorsStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
     return;
   }
 ************************************/
@@ -420,7 +419,7 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
   iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
   iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS));
   std::string bind_this_currently_searching_for(iqd->currentlySearchingFor);
-  iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, bind_this_currently_searching_for)));
+  iqd->deadline_timer->async_wait(mStrand->wrap(std::tr1::bind(&AsyncConnectionGet::queryTimedOutCallbackGet, this, _1, bind_this_currently_searching_for)));
 
   iqd->traceToken = traceToken;
 
@@ -460,7 +459,7 @@ bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
   //sets write handler
   async_write((*mSocket),
               boost::asio::buffer(query),
-              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+              std::tr1::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
 
   return true;
 }
@@ -747,7 +746,7 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mResultStrand->post(boost::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
+      mResultStrand->post(std::tr1::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
 
 
       if (outQueriesIter->second->deadline_timer != NULL)
@@ -895,7 +894,7 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry&
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
 
-      mResultStrand->post(boost::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
+      mResultStrand->post(std::tr1::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
 
 
 
@@ -988,7 +987,7 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mResultStrand->post(boost::bind(&ObjectSegmentation::craqSetResult, mOSeg, cor));
+      mResultStrand->post(std::tr1::bind(&ObjectSegmentation::craqSetResult, mOSeg, cor));
 
 
       if (outQueriesIter->second->deadline_timer != NULL)
@@ -1050,7 +1049,7 @@ void AsyncConnectionGet::set_generic_stored_not_found_error_handler()
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
-                                mStrand->wrap(boost::bind(&AsyncConnectionGet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
+                                mStrand->wrap(std::tr1::bind(&AsyncConnectionGet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
 
 }
 

@@ -32,7 +32,6 @@
 
 #include "asyncConnectionSet.hpp"
 #include <iostream>
-#include <boost/bind.hpp>
 #include <map>
 #include <utility>
 #include <sirikata/cbrcore/SpaceContext.hpp>
@@ -132,7 +131,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStran
     mSocket = socket;
     mReady = PROCESSING;   //need to run connection routine.  so until we receive an ack that conn has finished, we stay in processing state.
 
-    mSocket->async_connect(*it, mStrand->wrap(boost::bind(&AsyncConnectionSet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
+    mSocket->async_connect(*it, mStrand->wrap(std::tr1::bind(&AsyncConnectionSet::connect_handler,this,_1)));  //using that tcp socket for an asynchronous connection.
 
     mPrevReadFrag = "";
   }
@@ -223,7 +222,7 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
 
     iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
     iqd->deadline_timer->expires_from_now(boost::posix_time::milliseconds(STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS));
-    iqd->deadline_timer->async_wait(mStrand->wrap(boost::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
+    iqd->deadline_timer->async_wait(mStrand->wrap(std::tr1::bind(&AsyncConnectionSet::queryTimedOutCallbackSet, this, _1, iqd)));
 
 
 
@@ -245,7 +244,7 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
     //sets write handler
     async_write((*mSocket),
                 boost::asio::buffer(query),
-                boost::bind(&AsyncConnectionSet::write_some_handler_set,this,_1,_2));
+                std::tr1::bind(&AsyncConnectionSet::write_some_handler_set,this,_1,_2));
 
   }
 
@@ -423,7 +422,7 @@ void AsyncConnectionSet::set_generic_stored_not_found_error_handler()
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
                                 reg,
-                                mStrand->wrap(boost::bind(&AsyncConnectionSet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
+                                mStrand->wrap(std::tr1::bind(&AsyncConnectionSet::generic_read_stored_not_found_error_handler,this,_1,_2,sBuff)));
 
 }
 
@@ -629,7 +628,7 @@ void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_cod
                                                           outQueriesIter->second->is_tracking);
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mErrorStrand->post(boost::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
+      mErrorStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
 
 #ifdef ASYNC_CONNECTION_DEBUG
       std::cout<<"\n\nSending error from set\n\n";
