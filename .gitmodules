@@ -1,12 +1,12 @@
-[submodule "externals/pbj"]
-	path = externals/pbj
-	url = git://github.com/danielrh/pbj.git
-[submodule "externals/cxxtest"]
-	path = externals/cxxtest
-	url = git://github.com/danielrh/cxxtest.git
 [submodule "externals/berkelium"]
 	path = externals/berkelium
 	url = git://github.com/sirikata/berkelium.git
+[submodule "externals/pbj"]
+	path = externals/pbj
+	url = git://github.com/sirikata/pbj.git
+[submodule "externals/cxxtest"]
+	path = externals/cxxtest
+	url = git://github.com/sirikata/cxxtest.git
 [submodule "externals/prox"]
 	path = externals/prox
-	url = git://github.com/ewencp/libprox.git
+	url = git://github.com/sirikata/prox.git
