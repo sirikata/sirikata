@@ -76,7 +76,7 @@ class BenchmarkRunner {
     BenchmarkFactory& mFactory;
     Duration mTimeout;
 
-    IOService* mIOService;
+    Network::IOService* mIOService;
     bool mForcefulStop;
 }; // class BenchmarkRunner
 

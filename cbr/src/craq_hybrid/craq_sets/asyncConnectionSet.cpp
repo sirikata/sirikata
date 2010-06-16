@@ -49,7 +49,7 @@ namespace Sirikata
 {
 
   //constructor
-AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readyStateChangedCb)
+AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readyStateChangedCb)
   : mSocket(NULL),
     ctx(con),
     mStrand(str),

@@ -49,7 +49,7 @@ namespace Sirikata
 class AsyncCraq
 {
 public:
-  AsyncCraq(SpaceContext* spc, IOStrand* );
+  AsyncCraq(SpaceContext* spc, Network::IOStrand* );
   ~AsyncCraq();
 
   enum AsyncCraqReqStatus{REQUEST_PROCESSED, REQUEST_NOT_PROCESSED};
@@ -93,7 +93,7 @@ private:
 
   Timer mTimer;
   SpaceContext* mContext;
-  IOStrand* mStrand;
+  Network::IOStrand* mStrand;
 
 
 };

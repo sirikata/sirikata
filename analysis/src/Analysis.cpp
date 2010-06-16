@@ -35,7 +35,6 @@
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
-#include <sirikata/cbrcore/Utility.hpp>
 #include "RecordedMotionPath.hpp"
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 #include <algorithm>

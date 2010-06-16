@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_STATIC_MOTION_PATH_HPP_
 #define _SIRIKATA_STATIC_MOTION_PATH_HPP_
 
-#include "Utility.hpp"
 #include "MotionPath.hpp"
 
 namespace Sirikata {

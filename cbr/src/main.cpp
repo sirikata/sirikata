@@ -36,6 +36,8 @@
 #include <sirikata/cbrcore/TimeSync.hpp>
 #include <sirikata/cbrcore/TimeProfiler.hpp>
 
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
 #include "SpaceNetwork.hpp"
 
 #include "Forwarder.hpp"
@@ -85,8 +87,8 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOption("duration")->as<Duration>();
 
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
 
 
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
@@ -191,7 +193,7 @@ int main(int argc, char** argv) {
 
     //Create OSeg
     std::string oseg_type=GetOption(OSEG)->as<String>();
-    IOStrand* osegStrand = space_context->ioService->createStrand();
+    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
     ObjectSegmentation* oseg = NULL;
     if (oseg_type == OSEG_OPTION_CRAQ)
     {
@@ -304,7 +306,7 @@ int main(int argc, char** argv) {
     delete mainStrand;
     delete osegStrand;
 
-    IOServiceFactory::destroyIOService(ios);
+    Network::IOServiceFactory::destroyIOService(ios);
 
 
     sync.stop();

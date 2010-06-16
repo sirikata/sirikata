@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COORDINATE_SEGMENTATION_HPP_
 #define _SIRIKATA_COORDINATE_SEGMENTATION_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
 #include "SpaceContext.hpp"
 #include "LoadMonitor.hpp"
 #include "Message.hpp"

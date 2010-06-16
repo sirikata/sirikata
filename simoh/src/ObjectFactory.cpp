@@ -139,7 +139,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
         inputs->connectAt = Duration::seconds(0.f);
 
-        inputs->startTimer = IOTimer::create(mContext->ioService);
+        inputs->startTimer = Network::IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -220,7 +220,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
         inputs->queryAngle = SolidAngle::Max;
         inputs->connectAt = Duration::seconds(0.f);
 
-        inputs->startTimer = IOTimer::create(mContext->ioService);
+        inputs->startTimer = Network::IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -312,7 +312,7 @@ void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, cons
         inputs->queryAngle = SolidAngle::Max;
         inputs->connectAt = Duration::seconds(0.f);
 
-        inputs->startTimer = IOTimer::create(mContext->ioService);
+        inputs->startTimer = Network::IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(first.uuid);
         mInputs[first.uuid] = inputs;

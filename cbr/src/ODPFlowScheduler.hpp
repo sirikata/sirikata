@@ -33,7 +33,6 @@
 #ifndef _ODP_FLOW_SCHEDULER_HPP_
 #define _ODP_FLOW_SCHEDULER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/cbrcore/AbstractQueue.hpp>
 #include "ForwarderServiceQueue.hpp"

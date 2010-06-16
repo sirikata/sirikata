@@ -32,19 +32,20 @@
 
 #include "BenchmarkRunner.hpp"
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {
 
 BenchmarkRunner::BenchmarkRunner(BenchmarkFactory& bf, const Duration& timeout)
         : mFactory(bf),
           mTimeout(timeout),
-          mIOService( IOServiceFactory::makeIOService() ),
+          mIOService( Network::IOServiceFactory::makeIOService() ),
           mForcefulStop(false)
 {
 }
 
 BenchmarkRunner::~BenchmarkRunner() {
-    IOServiceFactory::destroyIOService(mIOService);
+    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 void BenchmarkRunner::run(const String& _name) {
@@ -64,7 +65,7 @@ void BenchmarkRunner::run(const String& _name, const String& _param) {
         std::tr1::bind(&BenchmarkRunner::benchmarkThread, this, bm)
                      );
 
-    IOTimerPtr timer = IOTimer::create(mIOService);
+    Network::IOTimerPtr timer = Network::IOTimer::create(mIOService);
     timer->wait(
         mTimeout,
         std::tr1::bind(&BenchmarkRunner::handleTimeout, this, bm)

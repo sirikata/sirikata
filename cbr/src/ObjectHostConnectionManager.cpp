@@ -83,15 +83,15 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHos
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
-   mIOService( IOServiceFactory::makeIOService() ),
+   mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
    mIOThread(NULL),
    mAcceptor(NULL),
    mMessageReceivedCallback(cb)
 {
-    mIOWork = new IOWork( mIOService, "ObjectHostConnectionManager Work" );
-    mIOThread = new Thread( std::tr1::bind(&IOService::runNoReturn, mIOService) );
+    mIOWork = new Network::IOWork( mIOService, "ObjectHostConnectionManager Work" );
+    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
 
     listen(listen_addr);
 }
@@ -103,7 +103,7 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
         delete mIOWork;
 
     delete mIOStrand;
-    IOServiceFactory::destroyIOService(mIOService);
+    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 

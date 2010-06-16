@@ -33,8 +33,9 @@
 #ifndef _SIRIKATA_SPACE_CONTEXT_HPP_
 #define _SIRIKATA_SPACE_CONTEXT_HPP_
 
-#include "Utility.hpp"
 #include "Context.hpp"
+#include "VWTypes.hpp"
+#include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata {
 
@@ -58,7 +59,7 @@ class CoordinateSegmentation;
  */
 class SpaceContext : public Context {
 public:
-    SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, Trace* _trace, const Duration& duration);
+    SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace* _trace, const Duration& duration);
     ~SpaceContext();
 
     ServerID id() const {

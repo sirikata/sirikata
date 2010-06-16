@@ -33,7 +33,7 @@
 #ifndef _OSEG_LOOKUP_QUEUE_HPP_
 #define _OSEG_LOOKUP_QUEUE_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include "ObjectSegmentation.hpp"
 
@@ -83,7 +83,7 @@ private:
     typedef std::tr1::unordered_map<UUID, OSegLookupList, UUID::Hasher> LookupMap;
 
 
-    IOStrand* mNetworkStrand;
+    Network::IOStrand* mNetworkStrand;
     ObjectSegmentation* mOSeg; // The OSeg that does the heavy lifting
 
     LookupMap mLookups; // Map of object id being queried -> msgs destined for that object
@@ -102,7 +102,7 @@ public:
      *                    results
      *  \param oseg the ObjectSegmentation which resolves queries
      */
-    OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg);
+    OSegLookupQueue(Network::IOStrand* net_strand, ObjectSegmentation* oseg);
 
     virtual ~OSegLookupQueue() {}
 

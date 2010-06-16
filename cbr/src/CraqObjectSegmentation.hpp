@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 #define _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/cbrcore/Timer.hpp>
@@ -151,8 +150,8 @@ namespace Sirikata
     boost::mutex atomic_track_id_m;
     int getUniqueTrackID();
 
-    IOStrand* postingStrand;
-    IOStrand* mStrand;
+    Network::IOStrand* postingStrand;
+    Network::IOStrand* mStrand;
 
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
@@ -195,7 +194,7 @@ namespace Sirikata
     bool mReceivedStopRequest;
 
   public:
-    CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
+    CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, Network::IOStrand* o_strand, Network::IOStrand* strand_to_post_to);
 
 
     virtual ~CraqObjectSegmentation();

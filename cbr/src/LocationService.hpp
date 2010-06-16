@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_LOCATION_SERVICE_HPP_
 #define _SIRIKATA_LOCATION_SERVICE_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/cbrcore/MotionVector.hpp>
 #include <sirikata/cbrcore/Message.hpp>

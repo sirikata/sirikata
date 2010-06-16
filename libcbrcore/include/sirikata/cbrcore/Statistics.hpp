@@ -33,7 +33,9 @@
 #ifndef _SIRIKATA_STATISTICS_HPP_
 #define _SIRIKATA_STATISTICS_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include "MotionVector.hpp"
 #include "Message.hpp"
 #include "OSegLookupTraceToken.hpp"

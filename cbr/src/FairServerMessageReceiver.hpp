@@ -63,7 +63,7 @@ private:
     // the next packet.
     void service();
 
-    IOTimerPtr mServiceTimer; // Timer used to generate another service callback
+    Network::IOTimerPtr mServiceTimer; // Timer used to generate another service callback
                               // when waiting for enough bytes to service next
                               // packet
 

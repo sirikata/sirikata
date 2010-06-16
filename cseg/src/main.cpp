@@ -39,6 +39,8 @@
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
 
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
@@ -57,8 +59,8 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOption("duration")->as<Duration>() + GetOption("additional-cseg-duration")->as<Duration>();
 
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
 
 
     CSegContext* cseg_context = new CSegContext(server_id, ios, mainStrand, trace, start_time, duration);
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
     cseg_context = NULL;
 
     delete mainStrand;
-    IOServiceFactory::destroyIOService(ios);
+    Network::IOServiceFactory::destroyIOService(ios);
 
     return 0;
 }

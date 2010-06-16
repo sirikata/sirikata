@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_RATE_ESTIMATOR_HPP_
 #define _SIRIKATA_RATE_ESTIMATOR_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata {
 

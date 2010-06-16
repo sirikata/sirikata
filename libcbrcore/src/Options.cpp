@@ -31,11 +31,13 @@
  */
 
 #include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
 
 void InitOptions() {
-    InitializeOptions::module(CBR_MODULE)
+    InitializeClassOptions::module(CBR_MODULE)
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )

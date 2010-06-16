@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_CONNECTION_HPP_
 #define _SIRIKATA_OBJECT_CONNECTION_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include "ObjectHostConnectionManager.hpp"
 

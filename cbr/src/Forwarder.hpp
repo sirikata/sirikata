@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_FORWARDER_HPP_
 #define _SIRIKATA_FORWARDER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include "SpaceNetwork.hpp"

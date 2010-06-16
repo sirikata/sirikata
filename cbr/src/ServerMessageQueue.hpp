@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SERVER_MESSAGE_QUEUE_HPP_
 #define _SIRIKATA_SERVER_MESSAGE_QUEUE_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include "SpaceNetwork.hpp"
 #include <sirikata/cbrcore/CoordinateSegmentation.hpp>
@@ -98,7 +98,7 @@ public:
     uint32 trySend(const ServerID& addr, const Message* msg);
     double mCapacityOverestimate;
     SpaceContext* mContext;
-    IOStrand* mSenderStrand;
+    Network::IOStrand* mSenderStrand;
     SpaceNetwork* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Sender* mSender;

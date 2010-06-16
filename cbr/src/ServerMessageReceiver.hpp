@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SERVER_MESSAGE_RECEIVER_HPP_
 #define _SIRIKATA_SERVER_MESSAGE_RECEIVER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/cbrcore/TimeProfiler.hpp>
 #include "SpaceNetwork.hpp"
@@ -88,7 +88,7 @@ protected:
     virtual void handleUpdateSenderStats(ServerID sid, double total_weight, double used_weight) = 0;
 
     SpaceContext* mContext;
-    IOStrand* mReceiverStrand;
+    Network::IOStrand* mReceiverStrand;
     SpaceNetwork* mNetwork;
     TimeProfiler::Stage* mProfiler;
     Listener* mListener;

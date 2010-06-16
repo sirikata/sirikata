@@ -41,7 +41,7 @@ MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservic
    mCSeg(cseg),
    mStrand(ctx->mainStrand), // NOTE: All uses of Loc, CSeg, and mBoundingRegions need to be thread safe before this is its own strand
    mTimer(
-       IOTimer::create(
+       Network::IOTimer::create(
            ctx->ioService,
            mStrand->wrap(std::tr1::bind(&MigrationMonitor::service, this))
        )

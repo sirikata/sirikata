@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_FAIR_QUEUE_TEST_HPP_
 #define _SIRIKATA_FAIR_QUEUE_TEST_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include "Test.hpp"
 #include <sirikata/cbrcore/FairQueue.hpp>
 

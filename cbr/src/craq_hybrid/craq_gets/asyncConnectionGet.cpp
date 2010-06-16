@@ -43,13 +43,12 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <sirikata/cbrcore/Utility.hpp>
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 
 namespace Sirikata
 {
 //constructor
-  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>&readyStateChangedCallback)
+  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>&readyStateChangedCallback)
   : ctx(con),
     mStrand(str),
     mPostErrorsStrand(error_strand),

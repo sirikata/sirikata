@@ -33,7 +33,9 @@
 #ifndef _SIRIKATA_MOTION_VECTOR_HPP_
 #define _SIRIKATA_MOTION_VECTOR_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/TemporalValue.hpp>
 
 namespace Sirikata {
 
@@ -74,17 +76,17 @@ typedef MotionVector<Vector3f> MotionVector3f;
 typedef MotionVector<Vector3d> MotionVector3d;
 
 template<typename MotionVectorType>
-class TimedMotionVector : public TemporalValueWithDefault<MotionVectorType> {
+class TimedMotionVector : public TemporalValue<MotionVectorType> {
 public:
-    typedef TemporalValueWithDefault<MotionVectorType> Base;
+    typedef TemporalValue<MotionVectorType> Base;
     typedef typename MotionVectorType::PositionType PositionType;
     typedef typename MotionVectorType::VelocityType VelocityType;
 
     TimedMotionVector()
-     : TemporalValueWithDefault<MotionVectorType>()
+     : TemporalValue<MotionVectorType>()
     {}
     TimedMotionVector(const Time& when, const MotionVectorType& l)
-     : TemporalValueWithDefault<MotionVectorType>(when, l)
+     : TemporalValue<MotionVectorType>(when, l)
     {}
 
     Time updateTime() const {

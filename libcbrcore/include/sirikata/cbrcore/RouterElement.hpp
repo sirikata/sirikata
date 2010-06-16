@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_ROUTER_ELEMENT_
 #define _SIRIKATA_ROUTER_ELEMENT_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 
 namespace Sirikata {

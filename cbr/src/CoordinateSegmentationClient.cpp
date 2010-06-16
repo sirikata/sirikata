@@ -67,7 +67,7 @@ using Sirikata::Network::TCPListener;
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
 							   ServerIDMap* sidmap)
-                               : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false), mAvailableServersCount(0), mIOService(IOServiceFactory::makeIOService()), mSidMap(sidmap)
+                               : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false), mAvailableServersCount(0), mIOService(Network::IOServiceFactory::makeIOService()), mSidMap(sidmap)
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 
@@ -171,7 +171,7 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
   ip_addr.s_addr = addy->ip;
   char* addr = inet_ntoa(ip_addr);
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
@@ -200,7 +200,7 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
 
   socket.close();
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 }
 
 
@@ -210,7 +210,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   lookupMessage.y = pos.y;
   lookupMessage.z = pos.z;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
@@ -276,7 +276,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
     free(dataReceived);
   }
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   return retval;
 }
@@ -295,7 +295,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
@@ -384,7 +384,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 
   mServerRegionCache[server] = boundingBoxList;
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   return boundingBoxList;
 }
@@ -400,7 +400,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   RegionRequestMessage requestMessage;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
@@ -481,7 +481,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   mTopLevelRegion.mBoundingBox = bbox;
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   return bbox;
 }
@@ -496,7 +496,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
 
   NumServersRequestMessage requestMessage;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
@@ -566,7 +566,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
     free(dataReceived);
   }
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   //std::cout << "numServers returned " <<  retval << "\n";
   return retval;

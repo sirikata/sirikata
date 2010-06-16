@@ -33,9 +33,9 @@
 #ifndef _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 #define _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
 #include <sirikata/cbrcore/Context.hpp>
 #include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/cbrcore/VWTypes.hpp>
 
 namespace Sirikata {
 
@@ -43,7 +43,7 @@ class ObjectHost;
 
 class ObjectHostContext : public Context {
 public:
-    ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
+    ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
 
     ObjectHostID id;
     ObjectHost* objectHost;

@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MIGRATION_MONITOR_HPP_
 #define _SIRIKATA_MIGRATION_MONITOR_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include "LocationService.hpp"
 #include <sirikata/cbrcore/CoordinateSegmentation.hpp>
 
@@ -132,8 +132,8 @@ private:
 
     ObjectInfoSet mObjectInfo;
 
-    IOStrand* mStrand;
-    IOTimerPtr mTimer;
+    Network::IOStrand* mStrand;
+    Network::IOTimerPtr mTimer;
 
     Time mMinEventTime;
 

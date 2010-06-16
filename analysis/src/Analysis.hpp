@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_ANALYSIS_HPP_
 #define _SIRIKATA_ANALYSIS_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/MotionVector.hpp>
 #include "AnalysisEvents.hpp"
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>

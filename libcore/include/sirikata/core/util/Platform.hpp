@@ -284,6 +284,7 @@ class OptionSet;
 #include "Vector4.hpp"
 #include "Matrix3x3.hpp"
 #include "Quaternion.hpp"
+#include "SolidAngle.hpp"
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"
@@ -319,14 +320,25 @@ class DeltaTime;
 }
 class Time;
 typedef Task::DeltaTime Duration;
+
 typedef Vector2<float32> Vector2f;
 typedef Vector2<float64> Vector2d;
+typedef Vector2<uint32> Vector2ui32;
+typedef Vector2<int32> Vector2i32;
+
 typedef Vector3<float32> Vector3f;
 typedef Vector3<float64> Vector3d;
+typedef Vector3<uint32> Vector3ui32;
+typedef Vector3<int32> Vector3i32;
+
 typedef Vector4<float32> Vector4f;
 typedef Vector4<float64> Vector4d;
+typedef Vector4<uint32> Vector4ui32;
+typedef Vector4<int32> Vector4i32;
+
 typedef VInt<uint32> vuint32;
 typedef VInt<uint64> vuint64;
+
 using std::tr1::placeholders::_1;
 using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;
@@ -342,6 +354,8 @@ using std::tr1::placeholders::_9;
 namespace Sirikata {
 typedef BoundingBox<float32> BoundingBox3f3f;
 typedef BoundingBox<float64> BoundingBox3d3f;
+typedef BoundingBox<float32> BoundingBox3f;
+typedef BoundingBox<float64> BoundingBox3d;
 typedef BoundingSphere<float32> BoundingSphere3f;
 typedef BoundingSphere<float64> BoundingSphere3d;
 }

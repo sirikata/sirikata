@@ -33,6 +33,7 @@
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
 #include "CBR_Header.pbj.hpp"
 
 #include <iostream>
@@ -127,7 +128,7 @@ const uint8 Trace::MessageTimestampTag = 30;
 const uint8 Trace::MessageCreationTimestampTag = 31;
 
 const uint8 Trace::ObjectConnectedTag = 33;
-	
+
 OptionValue* Trace::mLogObject;
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogOSeg;
@@ -162,7 +163,7 @@ void Trace::InitOptions() {
     mLogPing = new OptionValue(TRACE_PING_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
-    InitializeOptions::module(CBR_MODULE)
+    InitializeClassOptions::module(CBR_MODULE)
         .addOption(mLogObject)
         .addOption(mLogLocProx)
         .addOption(mLogOSeg)

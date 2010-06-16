@@ -40,6 +40,8 @@
 
 #include "CBR_Prox.pbj.hpp"
 
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
 #include <float.h>
 
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
@@ -68,7 +70,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 {
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
-    mProxService = IOServiceFactory::makeIOService();
+    mProxService = Network::IOServiceFactory::makeIOService();
     mProxStrand = mProxService->createStrand();
 
     // Server Queries
@@ -103,7 +105,7 @@ Proximity::~Proximity() {
     delete mLocalLocCache;
 
     delete mProxStrand;
-    IOServiceFactory::destroyIOService(mProxService);
+    Network::IOServiceFactory::destroyIOService(mProxService);
     mProxService = NULL;
 }
 

@@ -34,7 +34,9 @@
 #ifndef __OSEG_LOOKUP_TRACE_TOKEN__
 #define __OSEG_LOOKUP_TRACE_TOKEN__
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include "VWTypes.hpp"
 
 namespace Sirikata
 {

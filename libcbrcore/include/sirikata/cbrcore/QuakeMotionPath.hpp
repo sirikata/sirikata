@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_QUAKE_MOTION_PATH_HPP_
 #define _SIRIKATA_QUAKE_MOTION_PATH_HPP_
 
-#include "Utility.hpp"
 #include "MotionPath.hpp"
 
 namespace Sirikata {

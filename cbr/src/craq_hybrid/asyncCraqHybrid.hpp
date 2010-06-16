@@ -47,7 +47,7 @@ namespace Sirikata
   class AsyncCraqHybrid
 {
 public:
-  AsyncCraqHybrid(SpaceContext* con, IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg);
+  AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg);
   ~AsyncCraqHybrid();
 
   void initialize(std::vector<CraqInitializeArgs>);
@@ -64,8 +64,8 @@ private:
 
   SpaceContext*  ctx;
 
-  IOStrand* mGetStrand;
-  IOStrand* mSetStrand;
+  Network::IOStrand* mGetStrand;
+  Network::IOStrand* mSetStrand;
 
   AsyncCraqGet aCraqGet;
   AsyncCraqSet aCraqSet;

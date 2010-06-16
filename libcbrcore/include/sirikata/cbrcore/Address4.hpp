@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_ADDRESS4_HPP_
 #define _SIRIKATA_ADDRESS4_HPP_
 
-#include "Utility.hpp"
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Address.hpp>
 

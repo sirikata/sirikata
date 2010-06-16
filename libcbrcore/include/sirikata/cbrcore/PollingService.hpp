@@ -33,7 +33,9 @@
 #ifndef _SIRIKATA_POLLING_SERVICE_HPP_
 #define _SIRIKATA_POLLING_SERVICE_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 #include "TimeProfiler.hpp"
 
 namespace Sirikata {
@@ -59,7 +61,7 @@ public:
  */
 class Poller : public Service {
 public:
-    Poller(IOStrand* str, const IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
+    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
 
     /** Start polling this service on this strand at the given maximum rate. */
     virtual void start();
@@ -73,12 +75,12 @@ public:
 private:
     void handleExec();
 
-    IOStrand* mStrand;
-    IOTimerPtr mTimer;
+    Network::IOStrand* mStrand;
+    Network::IOTimerPtr mTimer;
     Duration mMaxRate;
     bool mUnschedule;
-    IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
-    IOCallback mUserCB; // The user's callback
+    Network::IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
+    Network::IOCallback mUserCB; // The user's callback
 }; // class Poller
 
 /** A service which needs to be polled periodically.  This class handles
@@ -86,7 +88,7 @@ private:
  */
 class PollingService : public Poller {
 public:
-    PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "");
+    PollingService(Network::IOStrand* str, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "");
     ~PollingService();
 
     virtual void stop();

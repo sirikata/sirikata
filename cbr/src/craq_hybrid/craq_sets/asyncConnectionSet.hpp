@@ -63,7 +63,7 @@ public:
   void set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
 
   ~AsyncConnectionSet();
-  AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readySetChanged);
+  AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readySetChanged);
 
   int numStillProcessing();
   void stop();
@@ -88,9 +88,9 @@ private:
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
 
   SpaceContext*                      ctx;
-  IOStrand*                      mStrand;
-  IOStrand*                 mErrorStrand;
-  IOStrand*               mResultsStrand;
+  Network::IOStrand*                      mStrand;
+  Network::IOStrand*                 mErrorStrand;
+  Network::IOStrand*               mResultsStrand;
   AsyncCraqScheduler*   mSchedulerMaster;
   ObjectSegmentation*              mOSeg;
 

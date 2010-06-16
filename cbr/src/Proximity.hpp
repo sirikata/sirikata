@@ -42,6 +42,7 @@
 #include <sirikata/cbrcore/PollingService.hpp>
 
 #include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/util/ThreadSafeQueue.hpp>
 
 namespace Sirikata {
 
@@ -173,8 +174,8 @@ private:
     void tickQueryHandler(ProxQueryHandler* qh);
 
     Thread* mProxThread;
-    IOService* mProxService;
-    IOStrand* mProxStrand;
+    Network::IOService* mProxService;
+    Network::IOStrand* mProxStrand;
     Sirikata::AtomicValue<bool> mShutdownProxThread;
 
     // These track local objects and answer queries from other

@@ -33,7 +33,10 @@
 #ifndef _SIRIKATA_CONTEXT_HPP_
 #define _SIRIKATA_CONTEXT_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
+#include <sirikata/core/util/Thread.hpp>
 #include "Timer.hpp"
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
@@ -50,7 +53,7 @@ class Trace;
 class Context : public Service {
 public:
 
-    Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
+    Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
     ~Context();
 
     Time epoch() const {
@@ -102,7 +105,7 @@ public:
         // Start workers
         for(uint32 i = 1; i < nthreads; i++) {
             workerThreads.push_back(
-                new Thread( std::tr1::bind(&IOService::runNoReturn, ioService) )
+                new Thread( std::tr1::bind(&Network::IOService::runNoReturn, ioService) )
             );
         }
 
@@ -124,8 +127,8 @@ public:
         return mTrace;
     }
 
-    IOService* ioService;
-    IOStrand* mainStrand;
+    Network::IOService* ioService;
+    Network::IOStrand* mainStrand;
     TimeProfiler* profiler;
 protected:
 
@@ -133,7 +136,7 @@ protected:
     virtual void start();
     void stopSimulation();
     virtual void stop();
-    IOTimerPtr mFinishedTimer;
+    Network::IOTimerPtr mFinishedTimer;
 
 
     // Forced Quit Management
@@ -155,8 +158,8 @@ protected:
     std::vector<Service*> mServices;
 
     std::tr1::shared_ptr<Thread> mKillThread;
-    IOService* mKillService;
-    IOTimerPtr mKillTimer;
+    Network::IOService* mKillService;
+    Network::IOTimerPtr mKillTimer;
 }; // class ObjectHostContext
 
 } // namespace Sirikata

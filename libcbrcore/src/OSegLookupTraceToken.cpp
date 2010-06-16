@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
-#include <sirikata/cbrcore/Utility.hpp>
 
 #include <iostream>
 #include <iomanip>

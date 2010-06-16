@@ -33,11 +33,13 @@
 #ifndef _SIRIKATA_TIMER_HPP_
 #define _SIRIKATA_TIMER_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
-//#include <boost/date_time.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
+
+struct TimerImpl;
 
 class Timer {
     static Sirikata::AtomicValue<Duration> sOffset;
@@ -55,7 +57,7 @@ public:
     Duration elapsed()const;
 
 private:
-    boost::posix_time::ptime mStart;
+    TimerImpl* mStart;
 }; // class Timer
 
 } // namespace Sirikata

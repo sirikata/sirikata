@@ -42,6 +42,7 @@
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 
+#include <sirikata/core/network/IOServiceFactory.hpp>
 
 void *main_loop(void *);
 int main(int argc, char** argv) {
@@ -82,8 +83,8 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
 
     ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, gTrace, start_time, duration);
 
@@ -137,7 +138,7 @@ int main(int argc, char** argv) {
     gTrace = NULL;
 
     delete mainStrand;
-    IOServiceFactory::destroyIOService(ios);
+    Network::IOServiceFactory::destroyIOService(ios);
 
     sync.stop();
 

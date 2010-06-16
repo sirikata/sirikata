@@ -33,7 +33,8 @@
 #ifndef _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_
 #define _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include "VWTypes.hpp"
 
 #define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
 

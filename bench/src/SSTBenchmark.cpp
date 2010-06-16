@@ -35,6 +35,8 @@
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 
+#include <sirikata/core/options/Options.hpp>
+
 #include <functional>
 #include "SSTBenchmark.hpp"
 #include <sirikata/cbrcore/Timer.hpp>
@@ -236,7 +238,7 @@ void SSTBenchmark::stop() {
     if(mStream)
         mStream->close();
     if (mIOService)
-        IOServiceFactory::destroyIOService(mIOService);
+        Network::IOServiceFactory::destroyIOService(mIOService);
     mIOService=NULL;
     mStream=NULL;
     mListener=NULL;

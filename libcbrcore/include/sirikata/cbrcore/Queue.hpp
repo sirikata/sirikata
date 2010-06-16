@@ -33,8 +33,9 @@
 #ifndef _SIRIKATA_QUEUE_HPP_
 #define _SIRIKATA_QUEUE_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
 #include "AbstractQueue.hpp"
+
 namespace Sirikata {
 
 

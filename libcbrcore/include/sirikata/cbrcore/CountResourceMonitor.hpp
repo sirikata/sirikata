@@ -33,7 +33,8 @@
 #ifndef _SIRIKATA_COUNT_RESOURCE_MONITOR_HPP_
 #define _SIRIKATA_COUNT_RESOURCE_MONITOR_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 namespace Sirikata {
 

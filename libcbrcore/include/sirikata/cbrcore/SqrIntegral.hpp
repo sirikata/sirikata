@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata {
 class SqrIntegral {

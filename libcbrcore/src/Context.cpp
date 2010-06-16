@@ -31,15 +31,16 @@
  */
 
 #include <sirikata/cbrcore/Context.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace Sirikata {
 
-Context::Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
+Context::Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
  : ioService(ios),
    mainStrand(strand),
    profiler( new TimeProfiler(name) ),
-   mFinishedTimer( IOTimer::create(ios) ),
+   mFinishedTimer( Network::IOTimer::create(ios) ),
    mTrace(_trace),
    mEpoch(epoch),
    mLastSimTime(Time::null()),
@@ -79,7 +80,7 @@ void Context::stop() {
 
 
 void Context::cleanup() {
-    IOTimerPtr timer = mKillTimer;
+    Network::IOTimerPtr timer = mKillTimer;
 
     if (timer) {
         timer->cancel();
@@ -90,7 +91,7 @@ void Context::cleanup() {
 
         mKillThread->join();
 
-        IOServiceFactory::destroyIOService(mKillService);
+        Network::IOServiceFactory::destroyIOService(mKillService);
         mKillService = NULL;
         mKillThread.reset();
     }
@@ -100,15 +101,15 @@ void Context::startForceQuitTimer() {
     // Note that we need to do this on another thread, with another IOService.
     // This is necessary to ensure that *this* doesn't keep things from
     // exiting.
-    mKillService = IOServiceFactory::makeIOService();
-    mKillTimer = IOTimer::create(mKillService);
+    mKillService = Network::IOServiceFactory::makeIOService();
+    mKillTimer = Network::IOTimer::create(mKillService);
     mKillTimer->wait(
         Duration::seconds(15),
         std::tr1::bind(&Context::forceQuit, this)
     );
     mKillThread = std::tr1::shared_ptr<Thread>(
         new Thread(
-            std::tr1::bind(&IOService::runNoReturn, mKillService)
+            std::tr1::bind(&Network::IOService::runNoReturn, mKillService)
         )
     );
 }

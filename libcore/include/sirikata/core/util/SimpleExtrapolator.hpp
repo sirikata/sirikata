@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Utility.hpp
+ *  SimpleExtrapolator.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,105 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_UTILITY_HPP_
-#define _SIRIKATA_UTILITY_HPP_
+#ifndef _SIRIKATA_SIMPLE_EXTRAPOLATOR_HPP_
+#define _SIRIKATA_SIMPLE_EXTRAPOLATOR_HPP_
 
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/Vector3.hpp>
-#include <sirikata/core/util/Vector4.hpp>
-#include <sirikata/core/util/BoundingBox.hpp>
-#include <sirikata/core/util/BoundingSphere.hpp>
-#include <sirikata/core/util/SolidAngle.hpp>
-#include <sirikata/core/util/UUID.hpp>
-#include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/util/Time.hpp>
-#include <sirikata/core/util/TemporalValue.hpp>
-#include <sirikata/core/util/Extrapolation.hpp>
-#include <sirikata/core/util/AtomicTypes.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
-
-#include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
-#include <sirikata/core/network/IOWork.hpp>
-#include <sirikata/core/network/IOStrand.hpp>
-#include <sirikata/core/network/IOTimer.hpp>
-
-#include <sirikata/core/util/Thread.hpp>
-
-#include <sirikata/core/util/ListenerProvider.hpp>
+#include "Extrapolation.hpp"
 
 namespace Sirikata {
-
-typedef Sirikata::int8 int8;
-typedef Sirikata::uint8 uint8;
-typedef Sirikata::int16 int16;
-typedef Sirikata::uint16 uint16;
-typedef Sirikata::int32 int32;
-typedef Sirikata::uint32 uint32;
-typedef Sirikata::int64 int64;
-typedef Sirikata::uint64 uint64;
-
-typedef Sirikata::float32 float32;
-typedef Sirikata::float64 float64;
-
-typedef Sirikata::Vector3f Vector3f;
-typedef Sirikata::Vector3d Vector3d;
-
-typedef Sirikata::Vector3<uint32> Vector3ui32;
-typedef Sirikata::Vector3<int32> Vector3i32;
-
-typedef Sirikata::Vector4f Vector4f;
-typedef Sirikata::Vector4d Vector4d;
-
-typedef Sirikata::Vector4<uint32> Vector4ui32;
-typedef Sirikata::Vector4<int32> Vector4i32;
-
-typedef Sirikata::Quaternion Quaternion;
-
-typedef Sirikata::BoundingBox<float32> BoundingBox3f;
-typedef Sirikata::BoundingBox<float64> BoundingBox3d;
-typedef Sirikata::BoundingSphere<float32> BoundingSphere3f;
-typedef Sirikata::BoundingSphere<float64> BoundingSphere3d;
-
-typedef Sirikata::SolidAngle SolidAngle;
-
-typedef Sirikata::UUID UUID;
-
-typedef std::string String;
-
-typedef Sirikata::OptionSet OptionSet;
-typedef Sirikata::OptionValue OptionValue;
-typedef Sirikata::InitializeClassOptions InitializeOptions;
-
-typedef Sirikata::Time Time;
-typedef Sirikata::Task::DeltaTime Duration;
-
-typedef Sirikata::Network::IOService IOService;
-typedef Sirikata::Network::IOServiceFactory IOServiceFactory;
-typedef Sirikata::Network::IOWork IOWork;
-typedef Sirikata::Network::IOStrand IOStrand;
-typedef Sirikata::Network::IOTimer IOTimer;
-typedef Sirikata::Network::IOTimerPtr IOTimerPtr;
-typedef Sirikata::Network::IOCallback IOCallback;
-
-
-typedef Sirikata::Thread Thread;
-
-/* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and
- * Duration classes.
- * FIXME We should fix TemporalValue and get rid of this.
- */
-template <typename Value>
-class TemporalValueWithDefault : public Sirikata::TemporalValueBase<Value, Time> {
-public:
-    TemporalValueWithDefault()
-     : Sirikata::TemporalValueBase<Value, Time>( Time(Time::null()), Value() )
-    {}
-    TemporalValueWithDefault(const Time& when, const Value& l)
-     : Sirikata::TemporalValueBase<Value, Time>(when, l)
-    {}
-}; // class TemporalValueWithDefault
-
 
 /** SimpleExtrapolator classes, which always give the most accurate information available, at the cost of possibly being discontinuous. */
 template <typename Value, typename UpdatePredicate, typename TimeType, typename DurationType>
@@ -205,31 +112,6 @@ public:
     {}
 };
 
-} // namespace Sirikata
-
-// We need to define some additional operators to get these working with Options
-namespace Sirikata {
-
-template<typename scalar>
-inline std::ostream& operator <<(std::ostream& os, const BoundingBox<scalar> &rhs) {
-  os << '<' << rhs.min() << ',' << rhs.max() << '>';
-  return os;
 }
 
-template<typename scalar>
-inline std::istream& operator >>(std::istream& is, BoundingBox<scalar> &rhs) {
-  // FIXME this should be more robust.  It currently relies on the exact format provided by operator <<
-  char dummy;
-  Vector3<scalar> minval, maxval;
-  is >> dummy >> minval >> dummy >> maxval >> dummy;
-  rhs = BoundingBox<scalar>(minval, maxval);
-  return is;
-}
-
-} // namespace Sirikata
-
-
-// Types that are useful throughout the system but are defined by our project
-#include "VWTypes.hpp"
-
-#endif //_SIRIKATA_UTILITY_HPP_
+#endif //_SIRIKATA_SIMPLE_EXTRAPOLATOR_HPP_

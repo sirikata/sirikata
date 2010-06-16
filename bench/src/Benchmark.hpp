@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_BENCHMARK_HPP_
 #define _SIRIKATA_BENCHMARK_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
 #include <sirikata/cbrcore/PollingService.hpp>
 
 namespace Sirikata {

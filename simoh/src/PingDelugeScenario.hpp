@@ -49,7 +49,7 @@ class PingDelugeScenario : public Scenario {
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
 
-    IOStrand* mGeneratePingsStrand;
+    Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
 
     struct PingInfo {

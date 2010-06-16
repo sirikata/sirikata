@@ -38,7 +38,7 @@ namespace Sirikata {
 FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener)
         : ServerMessageReceiver(ctx, net, listener),
           mServiceTimer(
-              IOTimer::create(
+              Network::IOTimer::create(
                   ctx->ioService,
                   mReceiverStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
                               )

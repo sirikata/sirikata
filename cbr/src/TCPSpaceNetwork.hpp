@@ -62,7 +62,7 @@ class TCPSpaceNetwork : public SpaceNetwork {
         ~RemoteStream();
 
         bool push(Chunk& data, bool* was_empty);
-        Chunk* pop(IOService* ios);
+        Chunk* pop(Network::IOService* ios);
 
         Sirikata::Network::Stream* stream;
 
@@ -148,7 +148,7 @@ class TCPSpaceNetwork : public SpaceNetwork {
 
     class TCPReceiveStream : public SpaceNetwork::ReceiveStream {
     public:
-        TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios);
+        TCPReceiveStream(ServerID sid, RemoteSessionPtr s, Network::IOService* _ios);
         ~TCPReceiveStream();
         virtual ServerID id() const;
         virtual Chunk* front();
@@ -175,7 +175,7 @@ class TCPSpaceNetwork : public SpaceNetwork {
         Chunk* front_elem; // The front item, left out here to make it
                            // accessible since the RemoteStream doesn't give
                            // easy access
-        IOService* ios;
+        Network::IOService* ios;
     };
     typedef std::tr1::unordered_map<ServerID, TCPReceiveStream*> ReceiveStreamMap;
 
@@ -228,8 +228,8 @@ class TCPSpaceNetwork : public SpaceNetwork {
     Sirikata::OptionSet* mListenOptions;
     Sirikata::OptionSet* mSendOptions;
 
-    IOService *mIOService;
-    IOWork* mIOWork;
+    Network::IOService *mIOService;
+    Network::IOWork* mIOWork;
     Thread* mThread;
 
     RemoteStreamMap mClosingStreams;

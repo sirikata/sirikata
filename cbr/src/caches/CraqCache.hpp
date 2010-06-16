@@ -35,7 +35,7 @@
 
 #include "../craq_oseg/CraqEntry.hpp"
 #include <sirikata/cbrcore/Context.hpp>
-
+#include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata
 {

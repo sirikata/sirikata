@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
 #include <sirikata/cbrcore/Timer.hpp>
 #include <sirikata/cbrcore/TimeSync.hpp>
 #include <sirikata/cbrcore/TimeProfiler.hpp>
@@ -128,8 +131,8 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOption("duration")->as<Duration>();
 
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
 
 
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
@@ -473,7 +476,7 @@ int main(int argc, char** argv) {
     space_context = NULL;
 
     delete mainStrand;
-    IOServiceFactory::destroyIOService(ios);
+    Network::IOServiceFactory::destroyIOService(ios);
 
     return 0;
 }

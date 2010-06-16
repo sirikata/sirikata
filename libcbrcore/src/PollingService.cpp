@@ -36,9 +36,9 @@
 
 namespace Sirikata {
 
-Poller::Poller(IOStrand* str, const IOCallback& cb, const Duration& max_rate)
+Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate)
  : mStrand(str),
-   mTimer( IOTimer::create(str->service()) ),
+   mTimer( Network::IOTimer::create(str->service()) ),
    mMaxRate(max_rate),
    mUnschedule(false),
    mCB( mStrand->wrap(std::tr1::bind(&Poller::handleExec, this)) ),
@@ -69,7 +69,7 @@ void Poller::handleExec() {
 
 
 
-PollingService::PollingService(IOStrand* str, const Duration& max_rate, Context* ctx, const String& name)
+PollingService::PollingService(Network::IOStrand* str, const Duration& max_rate, Context* ctx, const String& name)
  : Poller(str, std::tr1::bind(&PollingService::indirectPoll, this), max_rate),
    mProfiler(NULL)
 {

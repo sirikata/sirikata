@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_VW_TYPES_HPP_
 #define _SIRIKATA_VW_TYPES_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata {
 

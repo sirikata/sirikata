@@ -36,10 +36,16 @@
 
 namespace Sirikata {
 
+struct TimerImpl {
+    boost::posix_time::ptime val;
+};
+
 Timer::Timer() {
+    mStart = new TimerImpl();
 }
 
 Timer::~Timer() {
+    delete mStart;
 }
 static boost::posix_time::ptime gEpoch(boost::posix_time::time_from_string(std::string("2009-03-12 23:59:59.000")));
 Time Timer::getSpecifiedDate(const std::string&dat) {
@@ -47,10 +53,10 @@ Time Timer::getSpecifiedDate(const std::string&dat) {
     return Time::null() + Duration::microseconds(since_epoch.total_microseconds());
 }
 void Timer::start() {
-    mStart = boost::posix_time::microsec_clock::local_time();
+    mStart->val = boost::posix_time::microsec_clock::local_time();
 }
 Time Timer::getTimerStarted() const{
-    boost::posix_time::time_duration since_start =mStart-gEpoch;
+    boost::posix_time::time_duration since_start =mStart->val-gEpoch;
     return Time::null() + Duration::microseconds(since_start.total_microseconds());
 }
 
@@ -69,7 +75,7 @@ Time Timer::now() {
 }
 
 Duration Timer::elapsed() const{
-    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart;
+    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart->val;
     return Duration::microseconds( since_start.total_microseconds() );
 }
 

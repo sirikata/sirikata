@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
 #include <sirikata/cbrcore/PollingService.hpp>
 #include <sirikata/cbrcore/TimeProfiler.hpp>
 
@@ -55,7 +56,7 @@ class ObjectFactory : public Service {
         SolidAngle queryAngle;
         Duration connectAt;
 
-        IOTimerPtr startTimer;
+        Network::IOTimerPtr startTimer;
     };
     typedef std::tr1::unordered_map<UUID, ObjectInputs*,UUID::Hasher> ObjectInputsMap;
     typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;

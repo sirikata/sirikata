@@ -39,6 +39,8 @@
 #include <sirikata/cbrcore/ServerIDMap.hpp>
 #include <sirikata/cbrcore/Random.hpp>
 #include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
@@ -51,7 +53,7 @@ using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
  : mContext(ctx),
    parent(ctx->objectHost),
    server(sid),
@@ -278,7 +280,7 @@ ServerID ObjectHost::ObjectConnections::getConnectedServer(const UUID& obj_id, b
 ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap)
  : Service(),
    mContext( ctx ),
-   mIOService( IOServiceFactory::makeIOService() ),
+   mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
    mIOThread(NULL),
@@ -311,7 +313,7 @@ ObjectHost::~ObjectHost() {
     delete mHandleMessageProfiler;
 
     delete mIOStrand;
-    IOServiceFactory::destroyIOService(mIOService);
+    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 const ObjectHostContext* ObjectHost::context() const {
@@ -320,8 +322,8 @@ const ObjectHostContext* ObjectHost::context() const {
 
 void ObjectHost::start() {
 
-    mIOWork = new IOWork( mIOService, "ObjectHost Work" );
-    mIOThread = new Thread( std::tr1::bind(&IOService::runNoReturn, mIOService) );
+    mIOWork = new Network::IOWork( mIOService, "ObjectHost Work" );
+    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
 }
 
 void ObjectHost::stop() {
@@ -548,7 +550,7 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     return conn->push(obj_msg);
 }
 
-void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, IOStrand* strand, const Duration& rate) {
+void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
     bool sent = send(
         src, src_port,
         dest, dest_port,

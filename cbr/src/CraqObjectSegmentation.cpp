@@ -57,7 +57,6 @@
 #include <algorithm>
 #include <boost/thread/mutex.hpp>
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
-#include <sirikata/cbrcore/Utility.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
@@ -67,7 +66,7 @@ namespace Sirikata
   /*
     Basic constructor
   */
-  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to)
+  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, Network::IOStrand* o_strand, Network::IOStrand* strand_to_post_to)
  : ObjectSegmentation(con, o_strand),
    mCSeg (cseg),
    craqDhtGet(con, o_strand, this),

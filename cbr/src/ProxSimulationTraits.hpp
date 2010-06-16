@@ -33,7 +33,8 @@
 #ifndef _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
 #define _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
 #include <sirikata/cbrcore/MotionVector.hpp>
 
 namespace Sirikata {

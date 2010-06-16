@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_CBR_OPTIONS_HPP_
 #define _SIRIKATA_CBR_OPTIONS_HPP_
 
-#include "Utility.hpp"
+#include "VWTypes.hpp"
 
 #define CBR_MODULE "cbr"
 

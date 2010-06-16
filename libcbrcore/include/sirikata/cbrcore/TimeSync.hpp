@@ -33,7 +33,9 @@
 #ifndef _SIRIKATA_TIME_SYNC_HPP_
 #define _SIRIKATA_TIME_SYNC_HPP_
 
-#include "Utility.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {
 

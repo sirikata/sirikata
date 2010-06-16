@@ -67,7 +67,7 @@ OSegLookupQueue::OSegLookupList::iterator OSegLookupQueue::OSegLookupList::end()
 // OSegLookupQueue Implementation
 
 
-OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg)
+OSegLookupQueue::OSegLookupQueue(Network::IOStrand* net_strand, ObjectSegmentation* oseg)
  : mNetworkStrand(net_strand),
    mOSeg(oseg),
    mTotalSize(0)

@@ -34,6 +34,7 @@
 #define _FAIR_MESSAGE_QUEUE_HPP_
 
 #include "Queue.hpp"
+#include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
 

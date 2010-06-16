@@ -35,7 +35,6 @@
 #define _SIRIKATA_OSEG_TEST_MOTION_PATH_HPP_
 
 
-#include "Utility.hpp"
 #include "MotionPath.hpp"
 
 

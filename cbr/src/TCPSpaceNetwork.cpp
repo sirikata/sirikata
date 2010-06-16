@@ -33,6 +33,7 @@
 #include "TCPSpaceNetwork.hpp"
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
@@ -86,7 +87,7 @@ bool TCPSpaceNetwork::RemoteStream::push(Chunk& data, bool* was_empty) {
     }
 }
 
-Chunk* TCPSpaceNetwork::RemoteStream::pop(IOService* ios) {
+Chunk* TCPSpaceNetwork::RemoteStream::pop(Network::IOService* ios) {
     boost::lock_guard<boost::mutex> lck(mPushPopMutex);
     // NOTE: the ordering in this method is very important since calls to push()
     // and pop() are possibly concurrent.
@@ -169,7 +170,7 @@ bool TCPSpaceNetwork::TCPSendStream::send(const Chunk& data) {
 }
 
 
-TCPSpaceNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, IOService* _ios)
+TCPSpaceNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, Network::IOService* _ios)
  : logical_endpoint(sid),
    session(s),
    front_stream(),
@@ -272,9 +273,9 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
     mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
 
-    mIOService = IOServiceFactory::makeIOService();
-    mIOWork = new IOWork(mIOService, "TCPSpaceNetwork Work");
-    mThread = new Thread(std::tr1::bind(&IOService::runNoReturn,mIOService));
+    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOWork = new Network::IOWork(mIOService, "TCPSpaceNetwork Work");
+    mThread = new Thread(std::tr1::bind(&Network::IOService::runNoReturn,mIOService));
 
     mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
 }
@@ -301,7 +302,7 @@ TCPSpaceNetwork::~TCPSpaceNetwork() {
     mThread->join();
     delete mThread;
 
-    IOServiceFactory::destroyIOService(mIOService);
+    Network::IOServiceFactory::destroyIOService(mIOService);
     mIOService = NULL;
 }
 

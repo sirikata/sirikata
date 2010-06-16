@@ -78,7 +78,7 @@ private:
 
     uint16 mAvailableServersCount;
 
-    IOService* mIOService;  //creates an io service
+    Network::IOService* mIOService;  //creates an io service
     boost::shared_ptr<Network::TCPListener> mAcceptor;
     boost::shared_ptr<Network::TCPSocket> mSocket;
 

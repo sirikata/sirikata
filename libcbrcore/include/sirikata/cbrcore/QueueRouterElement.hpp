@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_QUEUE_ROUTER_ELEMENT_
 #define _SIRIKATA_QUEUE_ROUTER_ELEMENT_
 
-#include "Utility.hpp"
 #include "RouterElement.hpp"
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
