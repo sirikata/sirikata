@@ -86,7 +86,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     mContext = Context::New(NULL, global_template);
 
     mOrefTemplate = oref_template;
-    
+
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -102,22 +102,25 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     //takes care of the addressable array in sys.
     bftm_populateAddressable(oref_template,system_obj);
 
-    
+
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
 
-    for(HostedObject::SpaceSet::iterator space_it = spaces.begin(); space_it != spaces.end(); space_it++)
+	for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
-        mScriptingPort = mParent->bindODPPort(*space_it, Services::SCRIPTING);
+		SpaceID space_id=*space_it;
+        mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
         if (mScriptingPort)
             mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
 
         //bftm
         //change the services to something else.;
-        mMessagingPort = mParent->bindODPPort(*space_it, Services::COMMUNICATION);
+        mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
         if (mMessagingPort)
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
+
+		space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
 }
 
@@ -200,16 +203,16 @@ void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>
     bftm_getAllMessageable(mAddressableList);
 
     v8::Context::Scope context_scope(mContext);
-    
+
     v8::Local<v8::Array> arrayObj= v8::Array::New();
-    
+
 
 
 	const HostedObject::SpaceSet& spaces = mParent->spaces();
     SpaceID spaceider = *(spaces.begin());
 
 	UUID myUUID = mParent->getObjReference(spaceider).getAsUUID();;
-	
+
 
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
@@ -218,13 +221,13 @@ void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>
         tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
         tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
         arrayObj->Set(v8::Number::New(s),tmpObj);
-		
+
 		if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
 		{
 			system_obj->Set(v8::String::New("Self"), tmpObj);
 
 		}
-		
+
     }
     system_obj->Set(v8::String::New("addressable"),arrayObj);
 }
@@ -317,7 +320,7 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAva
 
     //proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
     proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
-    
+
     std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
 
     if (allAvailableObjectReferences.empty())
@@ -350,7 +353,13 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 }
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
-    const int argc = 0;
+    const int argc =
+#ifdef _WIN32
+		1
+#else
+		0
+#endif
+		;
     Handle<Value> argv[argc] = { };
     ProtectedJSCallback(ctx, target, cb, argc, argv);
 }
@@ -487,7 +496,7 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHead
 
 
   return tmpObj;
-       	
+
 }
 
 //just a handler for receiving any message.  for now, not doing any dispatch.
@@ -509,7 +518,7 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     if (! deserializeWorks)
         return;
 
-    
+
 
     // Try to dispatch the message
     bool matchesSomeHandler = false;
@@ -532,7 +541,7 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
      */
     if (!matchesSomeHandler)
         std::cout<<"\n\nMessage did not match any files\n\n";
-    
+
 }
 
 void JSObjectScript::bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload)

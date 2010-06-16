@@ -115,7 +115,7 @@ int main(int argc,const char**argv) {
         bool required;
     };
     const uint32 nSimRequests = 0;
-    SimulationRequest simRequests[nSimRequests] = {
+	SimulationRequest simRequests[nSimRequests>0?nSimRequests:1] = {
 /*
         {"ogregraphics", true},
         {"bulletphysics", false}
