@@ -37,7 +37,7 @@
 
 namespace Sirikata {
 
-SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
+SpaceContext::SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, Trace* _trace, const Duration& duration)
  : Context("Space", ios, strand, _trace, epoch, duration),
    mID(_id),
    mServerRouter(NULL),

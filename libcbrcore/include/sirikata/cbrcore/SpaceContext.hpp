@@ -58,7 +58,7 @@ class CoordinateSegmentation;
  */
 class SpaceContext : public Context {
 public:
-    SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration);
+    SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, Trace* _trace, const Duration& duration);
     ~SpaceContext();
 
     ServerID id() const {

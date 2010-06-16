@@ -89,9 +89,7 @@ int main(int argc, char** argv) {
     IOStrand* mainStrand = ios->createStrand();
 
 
-    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
 
     Sirikata::SpaceNetwork* gNetwork = NULL;
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
