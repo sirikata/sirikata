@@ -61,7 +61,7 @@ int main(int argc,const char**argv) {
     OptionSet::getOptions("")->parse(argc,argv);
     PluginManager plugins;
 
-    const char* pluginNames[] = { "tcpsst", "prox", "colladamodels", "ogregraphics", "bulletphysics", NULL};
+    const char* pluginNames[] = { "tcpsst", "prox-everyone", "colladamodels", "ogregraphics", "bulletphysics", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++) {
         if (strcmp(*plugin_name,"ogregraphics")!=0||loadGraphics->as<bool>())
             if (strcmp(*plugin_name,"bulletphysics")!=0||loadPhysics->as<bool>())

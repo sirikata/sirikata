@@ -72,7 +72,7 @@ protected:
 class MetadataRequest : public TransferRequest {
 
 protected:
-	const URI &mURI;
+	const URI mURI;
 	const std::string mUniqueID;
 
 public:
@@ -96,9 +96,9 @@ public:
 class ChunkRequest : public MetadataRequest {
 
 protected:
-	const RemoteFileMetadata &mMetadata;
-	const std::string &mUniqueID;
-	const Fingerprint &mChunkID;
+	const RemoteFileMetadata mMetadata;
+	const std::string mUniqueID;
+	const Fingerprint mChunkID;
 
 public:
 	ChunkRequest(const URI &uri, const RemoteFileMetadata &metadata, const Fingerprint &chunkID, PriorityType priority)

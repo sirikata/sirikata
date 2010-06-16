@@ -121,6 +121,13 @@ public:
      */
     uint32 run();
 
+    /** Run as many handlers as are available, blocking as
+     *  appropriate.  This will not return unless no more work is
+     *  available.  Don't return a value. Useful with std::tr1::bind
+	 *  where the return value is discared.
+     */
+    void runNoReturn();
+
     /** Stop event processing, cancelling events as necessary. */
     void stop();
     /** Reset the event processing, discarding events as necessary and

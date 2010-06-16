@@ -29,10 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <sirikata/core/util/MessageService.hpp>
+
 #ifndef _PROXIMITY_PROXIMITYSYSTEM_HPP_
 #define _PROXIMITY_PROXIMITYSYSTEM_HPP_
+
+#include <sirikata/core/util/MessageService.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
+
 namespace Sirikata { namespace Proximity {
+
 class SIRIKATA_PROXIMITY_EXPORT ProximitySystem :public MessageService{
 public:
     static void defaultProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::RoutableMessageBody&);

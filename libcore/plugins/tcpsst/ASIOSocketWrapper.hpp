@@ -84,7 +84,7 @@ class ASIOSocketWrapper {
 
 	};
     EWA<Duration> mAverageSendLatency;
-
+    
     std::vector<Stream::StreamID> mPausedSendStreams;
     std::deque<TimestampedChunk> mToSend;
     std::tr1::weak_ptr<MultiplexedSocket>mParent;

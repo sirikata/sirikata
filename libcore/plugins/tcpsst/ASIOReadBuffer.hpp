@@ -85,6 +85,10 @@ private:
     ///The shared structure responsible for holding state about the associated TCPStream that this class reads and interprets data from
     std::tr1::weak_ptr<MultiplexedSocket> mParentSocket;
     typedef boost::system::error_code ErrorCode;
+    std::tr1::function<void(const ErrorCode&,std::size_t)> mAsioReadIntoFixedBuffer;
+    std::tr1::function<void(const ErrorCode&,std::size_t)> mAsioReadIntoChunk;
+    std::tr1::function<void(const ErrorCode&,std::size_t)> mAsioReadIntoZeroDelimChunk;
+    void bindFunctions();
     /**
      * This forwards the error message to the MultiplexedSocket so the appropriate action may be taken
      * (including,possibly, disconnecting and shutting down the socket connections and all associated streams
@@ -185,6 +189,8 @@ private:
     void asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read);
 
     ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket);
+    ///unimplemented: will fail due to bound function
+    ASIOReadBuffer(const ASIOReadBuffer&);
 public:
     /**
      *  If read was paused by a user that could not proocess a packet
