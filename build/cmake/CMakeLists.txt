@@ -2,6 +2,7 @@
 #CMakeLists.txt
 #
 #Copyright (c) 2008, Patrick Reiter Horn
+#Copyright (c) 2009, Ewen Cheslack-Postava
 #All rights reserved.
 #
 #Redistribution and use in source and binary forms, with or without
@@ -79,6 +80,7 @@ IF(NOT CMAKE_BUILD_TYPE)
       "Build types include: Default Debug Release None RelWithDebInfo." FORCE
       )
 ENDIF()
+
 STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
 STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
 
@@ -99,6 +101,7 @@ SET( CMAKE_C_FLAGS_DEFAULT "-g -Wall -Wno-unused-function -Wno-unused-variable -
     "Built cflags with default settings."
     FORCE )
 ENDIF()
+
 SET( CMAKE_EXE_LINKER_FLAGS_DEFAULT
     "" CACHE STRING
     "Linking binaries with default settings."
@@ -113,9 +116,51 @@ MARK_AS_ADVANCED(
     CMAKE_EXE_LINKER_FLAGS_DEFAULT
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
 
+# Profile build target
+SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+    "Built cxxflags with default settings."
+    FORCE )
+SET( CMAKE_C_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+SET( CMAKE_EXE_LINKER_FLAGS_PROFILE
+    "-pg" CACHE STRING
+    "Linking binaries with default settings."
+    FORCE )
+SET( CMAKE_SHARED_LINKER_FLAGS_PROFILE
+    "-pg" CACHE STRING
+    "Building shared libraries with default settings."
+    FORCE )
+MARK_AS_ADVANCED(
+    CMAKE_CXX_FLAGS_PROFILE
+    CMAKE_C_FLAGS_PROFILE
+    CMAKE_EXE_LINKER_FLAGS_PROFILE
+    CMAKE_SHARED_LINKER_FLAGS_PROFILE )
+
+# Coverage build target
+SET(CMAKE_CXX_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+    "Built cxxflags with default settings."
+    FORCE )
+SET( CMAKE_C_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+SET( CMAKE_EXE_LINKER_FLAGS_COVERAGE
+    "-fprofile-arcs -ftest-coverage" CACHE STRING
+    "Linking binaries with default settings."
+    FORCE )
+SET( CMAKE_SHARED_LINKER_FLAGS_COVERAGE
+    "-fprofile-arcs -ftest-coverage" CACHE STRING
+    "Building shared libraries with default settings."
+    FORCE )
+MARK_AS_ADVANCED(
+    CMAKE_CXX_FLAGS_COVERAGE
+    CMAKE_C_FLAGS_COVERAGE
+    CMAKE_EXE_LINKER_FLAGS_COVERAGE
+    CMAKE_SHARED_LINKER_FLAGS_COVERAGE )
+
 #project global flags
 
-PROJECT(Sirikata CXX)
+PROJECT(Sirikata C CXX)
 ENABLE_LANGUAGE(C)
 
 IF(NOT TOP_LEVEL)
@@ -124,6 +169,14 @@ ENDIF()
 GET_FILENAME_COMPONENT(TOP_LEVEL ${TOP_LEVEL} ABSOLUTE)
 
 # a bunch of location definitions
+IF(NOT DEPENDENCIES_ROOT)
+  SET(DEPENDENCIES_ROOT ${TOP_LEVEL}/dependencies)
+ENDIF()
+#dependencies FIXME duplicated
+IF(NOT PLATFORM_LIBS)
+  SET(PLATFORM_LIBS ${TOP_LEVEL}/dependencies/)
+ENDIF()
+
 GET_FILENAME_COMPONENT(TOOLS_DIR ${TOP_LEVEL}/tools ABSOLUTE)
 GET_FILENAME_COMPONENT(OH_TOOLS_DIR ${TOOLS_DIR}/oh ABSOLUTE)
 GET_FILENAME_COMPONENT(CDN_TOOLS_DIR ${TOOLS_DIR}/cdn ABSOLUTE)
@@ -149,6 +202,11 @@ IF(NOT CMAKE_MODULE_PATH)
 ENDIF()
 GET_FILENAME_COMPONENT(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ABSOLUTE)
 
+IF(NOT BUILD_DIR)
+  SET(BUILD_DIR ${TOP_LEVEL}/build/cmake)
+ENDIF()
+GET_FILENAME_COMPONENT(BUILD_DIR ${BUILD_DIR} ABSOLUTE)
+
 MACRO(VERIFY_VERSION package_name major minor subminor)
   IF (${package_name}_MAJOR_VERSION LESS ${major})
     MESSAGE(FATAL_ERROR "${package_name} out of date: ${major}.${minor}.${subminor}")
@@ -170,22 +228,18 @@ INCLUDE(AddPBJTarget)
 INCLUDE(AddPluginTarget)
 FIND_PACKAGE(PythonInterp)
 
-
 MACRO(ADD_CXXTEST_CPP_TARGET)
   PARSE_ARGUMENTS(CXXTEST "DEPENDS;OUTPUTDIR;LIBRARYDIR" "" ${ARGN})
   CAR(CXXTEST_NAME ${CXXTEST_DEFAULT_ARGS})
   CDR(CXXTEST_FILES ${CXXTEST_DEFAULT_ARGS})
 
   SET(CXXTEST_EXEC_TARGET ${CXXTEST_NAME})
-
   SET(CXXTEST_TEST_FILES)
   SET(CXXTEST_H_FILES)
-
   SET(CXXTEST_OPTIONS --include=sirikata/core/util/Standard.hh)
   #IF(CXXTEST_OUTPUTDIR)
   #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
   #ENDIF(CXXTEST_OUTPUTDIR)
-
   SET(CXXTEST_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/test.cc)
 
   IF(PYTHON_EXECUTABLE)
@@ -221,10 +275,6 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
 
 ENDMACRO(ADD_CXXTEST_CPP_TARGET)
 
-#dependencies
-IF(NOT PLATFORM_LIBS)
-  SET(PLATFORM_LIBS ${TOP_LEVEL}/dependencies/)
-ENDIF()
 GET_FILENAME_COMPONENT(PLATFORM_LIBS ${PLATFORM_LIBS} ABSOLUTE)
 IF(NOT PLATFORM_LIBS)
   MESSAGE(STATUS "Could not find dependencies directory ${TOP_LEVEL}/dependencies/")
@@ -331,7 +381,6 @@ IF(NOT ANTLR_FOUND)
   MESSAGE(FATAL_ERROR "Cannot find antlr")
 ENDIF()
 
-
 #dependency: boost > 1.35
 IF(NOT BOOST_ROOT)
   # IF(WIN32)
@@ -347,7 +396,7 @@ IF(NOT BOOST_ROOT)
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem)
+  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex)
 ELSE(WIN32)
   FIND_PACKAGE(Boost COMPONENTS system)
 
@@ -366,9 +415,21 @@ ELSE(WIN32)
   STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
+
+  STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
+  STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
-SET(Boost_LIBRARIES debug ${Boost_SYSTEM_LIBRARY_DEBUG} optimized ${Boost_SYSTEM_LIBRARY_RELEASE} debug ${Boost_PROGRAM_OPTIONS_LIBRARY_DEBUG} optimized ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE} debug ${Boost_THREAD_LIBRARY_DEBUG} optimized ${Boost_THREAD_LIBRARY_RELEASE} debug ${Boost_FILESYSTEM_LIBRARY_DEBUG} optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE})
+SET(Boost_LIBRARIES
+  debug ${Boost_SYSTEM_LIBRARY_DEBUG} optimized ${Boost_SYSTEM_LIBRARY_RELEASE}
+  debug ${Boost_PROGRAM_OPTIONS_LIBRARY_DEBUG} optimized ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE}
+  debug ${Boost_THREAD_LIBRARY_DEBUG} optimized ${Boost_THREAD_LIBRARY_RELEASE}
+  debug ${Boost_FILESYSTEM_LIBRARY_DEBUG} optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+  debug ${Boost_DATE_TIME_LIBRARY_DEBUG} optimized ${Boost_DATE_TIME_LIBRARY_RELEASE}
+  debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
+  )
+
 #dependency: curl
 IF(NOT CURL_ROOT)
   IF(EXISTS ${PLATFORM_LIBS}/installed-curl)
@@ -464,6 +525,7 @@ ENDIF()
 SET(OpenCOLLADA_MINIMUM_VERSION 1.1.0)
 FIND_PACKAGE(OpenCOLLADA)
 
+# optional dependency: sdl
 SET(sdl_MINIMUM_VERSION 1.3.0)
 IF(NOT sdl_ROOT)
   IF(EXISTS ${PLATFORM_LIBS}/installed-sdl)
@@ -482,19 +544,25 @@ IF(NOT sdl_ROOT)
     SET(sdl_ROOT ${PLATFORM_LIBS})
   ENDIF()
 ENDIF()
-
+VERIFY_VERSION(Boost 1 35 0)
 FIND_PACKAGE(SDL)
 
 #optional dependency: prox
 FIND_PACKAGE(PROX)
 IF(NOT PROX_INCLUDE_DIRS)
   MESSAGE(FATAL_ERROR "PROX submodule not found, go to top level and run:
-
 git submodule init
 git submodule update
 ")
 ENDIF()
 
+#dependency: glut
+#FIND_PACKAGE(GLUT)
+#IF(NOT GLUT_FOUND)
+#  MESSAGE(SEND_ERROR "Couldn't find GLUT.")
+#ENDIF(NOT GLUT_FOUND)
+SET(GSL_ROOT ${PLATFORM_LIBS}/installed-gsl)
+FIND_PACKAGE(GSL)
 
 IF(WIN32)
 #dependency: berkelium
@@ -550,12 +618,21 @@ ELSE()
   ENDIF()
 ENDIF()
 
-
-
-
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
+# Debug compile flags
+IF(ISDEBUG)
+  ADD_DEFINITIONS(-DSIRIKATA_DEBUG_BUILD)
+ENDIF()
+
+# -- User defined variables that control behavior at compile time
+SET(CBR_TIMESTAMP_PACKETS TRUE
+  CACHE BOOL "If enabled, detailed timestamps are recorded for each packet, enabling high granularity latency breakdowns."
+)
+IF(CBR_TIMESTAMP_PACKETS)
+  ADD_DEFINITIONS(-DCBR_TIMESTAMP_PACKETS)
+ENDIF()
 
 #variable which contains list of plugin targets we want to install
 SET(PLUGIN_INSTALL_LIST)
@@ -586,6 +663,16 @@ SET(LIBPROXYOBJECT_SOURCE_DIR ${LIBPROXYOBJECT_DIR}/src)
 SET(SPACE_SOURCE_DIR ${SPACE_DIR}/src)
 SET(PROXIMITY_SOURCE_DIR ${PROXIMITY_DIR}/src)
 SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
+#source file location (cbr)
+SET(LIBCBRCORE_DIR ${TOP_LEVEL}/libcbrcore)
+SET(LIBCBRCORE_INCLUDE_DIR ${TOP_LEVEL}/libcbrcore/include)
+SET(LIBCBRCORE_SOURCE_DIR ${TOP_LEVEL}/libcbrcore/src)
+SET(SIMOH_SOURCE_DIR ${TOP_LEVEL}/simoh/src)
+SET(CBR_SOURCE_DIR ${TOP_LEVEL}/cbr/src)
+SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
+SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
+SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
+SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
 
 #plugins locations
 SET(LIBCORE_PLUGIN_DIR ${LIBCORE_DIR}/plugins)
@@ -593,11 +680,14 @@ SET(LIBPROXIMITY_PLUGIN_DIR ${LIBPROXIMITY_DIR}/plugins)
 SET(LIBPROXYOBJECT_PLUGIN_DIR ${LIBPROXYOBJECT_DIR}/plugins)
 SET(LIBOH_PLUGIN_DIR ${LIBOH_DIR}/plugins)
 
+#protocol file location
+SET(CBR_PROTOCOL_DIR ${LIBCBRCORE_DIR}/protocol)
+#generated source files
+SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
+
 #cxx flags
+
 # FIXME these include directories should be project specific
-
-
-
 SET(INCLUDE_DIRECTORIES
   ${LIBCORE_INCLUDE_DIR}
   ${LIBCORE_SOURCE_DIR} #FIXME
@@ -610,6 +700,8 @@ SET(INCLUDE_DIRECTORIES
   ${PROXIMITY_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
 
+  ${LIBCBRCORE_INCLUDE_DIR}
+
   ${SirikataProtocolDirectory}
 
   ${Boost_INCLUDE_DIRS}
@@ -619,7 +711,10 @@ SET(INCLUDE_DIRECTORIES
   ${PROX_INCLUDE_DIRS}
   ${CXXTESTRoot}
   ${CMAKE_CURRENT_SOURCE_DIR} #generated files
+  ${CBR_GENERATED_DIR} # For generated protocol code
   ${SQLite3_INCLUDE_DIRS}
+  #${GLUT_INCLUDE_DIR}
+  ${GSL_INCLUDE_DIR}
   )
 
 IF(OGRE_FOUND AND sdl_FOUND)
@@ -669,7 +764,7 @@ ENDFOREACH()
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
   Persistence Sirikata Time Subscription Test
-)
+  )
 
 
 # Based on dependencies, generate arguments for protocol buffers generation
@@ -700,6 +795,16 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   GENERATED_CPP_FILES Prox_PBJ_CPP_FILES
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  ${PROTOCOLBUFFERS_GENS}
+)
+
+ADD_PBJ_TARGET(${ProtocolBuffersSources}
+  INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "ProxEveryone"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES ProxEveryone_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
@@ -753,7 +858,7 @@ ADD_PBJ_TARGET(Sirikata Physics
   GENERATED_CPP_FILES Bullet_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
-)
+  )
 
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
@@ -763,7 +868,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   GENERATED_CPP_FILES ObjectHostBinary_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
-)
+  )
 
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
@@ -803,6 +908,40 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   GENERATED_CPP_FILES Proximity_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
+)
+
+# protocol files
+# FIXME we should jsut change ADD_PBJ_TARGET to take full paths
+SET(CBR_PROTOCOLS
+  ObjectMessage.pbj
+  Header.pbj
+  ServerMessage.pbj
+  Loc.pbj
+  Prox.pbj
+  Migration.pbj
+  CSeg.pbj
+  Session.pbj
+  OSeg.pbj
+  SSTHeader.pbj
+  Forwarder.pbj
+)
+
+SET(PBJ_CPP_HEADER "\n")
+# protocol targets
+ADD_PBJ_TARGET(
+  ${CBR_PROTOCOLS}
+  PLUGINNAME "CBR"
+  INPUTDIR ${CBR_PROTOCOL_DIR}
+  IMPORTS ${CBR_PROTOCOL_DIR}
+  OUTPUTDIR ${CBR_GENERATED_DIR}
+  GENERATED_CPP_FILES CBR_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  GENERATE_CPP
+)
+
+# generated pbj implementation source files
+SET(CBR_PROTOCOL_SOURCES
+  ${CBR_PBJ_CPP_FILES}
 )
 
 #binary files to be linked into sirikata
@@ -886,6 +1025,7 @@ IF(MONO_FOUND)
 
 ENDIF()
 
+
 SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
         ${MessageHeader_PBJ_CPP_FILES}
@@ -931,6 +1071,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
         ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
 )
 
 #precompiled header
@@ -1036,13 +1177,12 @@ SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
 
 # plugins sources
 
-SET(LIBPROXIMITY_PLUGIN_PROX_DIR ${LIBPROXIMITY_PLUGIN_DIR}/prox)
-SET(LIBPROXIMITY_PLUGIN_PROX_SOURCES
-  ${Prox_PBJ_CPP_FILES}
-  ${LIBPROXIMITY_PLUGIN_PROX_DIR}/ProxPlugin.cpp
-  ${LIBPROXIMITY_PLUGIN_PROX_DIR}/ProxBridge.cpp
-  ${LIBPROXIMITY_PLUGIN_PROX_DIR}/BruteForceProx.cpp
-  ${PROX_SOURCE_FILES})
+SET(LIBPROXIMITY_PLUGIN_EVERYONE_DIR ${LIBPROXIMITY_PLUGIN_DIR}/everyone)
+SET(LIBPROXIMITY_PLUGIN_EVERYONE_SOURCES
+  ${ProxEveryone_PBJ_CPP_FILES}
+  ${LIBPROXIMITY_PLUGIN_EVERYONE_DIR}/ProxPlugin.cpp
+  ${LIBPROXIMITY_PLUGIN_EVERYONE_DIR}/EveryoneProximitySystem.cpp
+  )
 
 
 SET(LIBCORE_PLUGIN_SKELETON_DIR ${LIBCORE_PLUGIN_DIR}/skeleton)
@@ -1126,6 +1266,124 @@ ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp
         )
 
+#source files
+SET(LIBCBRCORE_SOURCES
+  ${LIBCBRCORE_SOURCE_DIR}/Address4.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Context.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/PollingService.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/SpaceContext.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/TimeProfiler.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/Timer.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/ServerWeightCalculator.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/ExpIntegral.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/SqrIntegral.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${LIBCBRCORE_SOURCE_DIR}/LoadMonitor.cpp
+)
+
+SET(CBR_SOURCES
+  ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
+  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
+  ${CBR_SOURCE_DIR}/caches/CacheRecords.cpp
+  ${CBR_SOURCE_DIR}/caches/FCache.cpp
+  ${CBR_SOURCE_DIR}/caches/CommunicationCache.cpp
+  ${CBR_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/Base64.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
+  ${CBR_SOURCE_DIR}/RegionODPFlowScheduler.cpp
+  ${CBR_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
+  ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
+  ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
+  ${CBR_SOURCE_DIR}/ServerMessageQueue.cpp
+  ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
+  ${CBR_SOURCE_DIR}/Forwarder.cpp
+  ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
+  ${CBR_SOURCE_DIR}/LocalForwarder.cpp
+  ${CBR_SOURCE_DIR}/LocationService.cpp
+  ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
+  ${CBR_SOURCE_DIR}/ObjectConnection.cpp
+  ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
+  ${CBR_SOURCE_DIR}/OSegHasher.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
+  ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
+  ${CBR_SOURCE_DIR}/Proximity.cpp
+  ${CBR_SOURCE_DIR}/Server.cpp
+  ${CBR_SOURCE_DIR}/StandardLocationService.cpp
+  ${CBR_SOURCE_DIR}/TCPSpaceNetwork.cpp
+#  ${CBR_SOURCE_DIR}/Test.cpp
+  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/main.cpp
+)
+
+SET(SIMOH_SOURCES
+  ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
+  ${SIMOH_SOURCE_DIR}/Object.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/ScenarioFactory.cpp
+  ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
+  ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
+  ${SIMOH_SOURCE_DIR}/PingDelugeScenario.cpp
+  ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
+  ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
+  ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/main.cpp
+  )
+
+SET(CSEG_SOURCES
+  ${CSEG_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CSEG_SOURCE_DIR}/WorldPopulationBSPTree.cpp
+  ${CSEG_SOURCE_DIR}/main.cpp
+  )
+
+SET(ANALYSIS_SOURCES
+  ${ANALYSIS_SOURCE_DIR}/Analysis.cpp
+  ${ANALYSIS_SOURCE_DIR}/FlowStats.cpp
+  ${ANALYSIS_SOURCE_DIR}/RecordedMotionPath.cpp
+  ${ANALYSIS_SOURCE_DIR}/MessageLatency.cpp
+  ${ANALYSIS_SOURCE_DIR}/ObjectLatency.cpp
+  #${ANALYSIS_SOURCE_DIR}/Visualization.cpp
+  ${ANALYSIS_SOURCE_DIR}/main.cpp
+)
+
+SET(CBRTEST_SOURCES
+  ${TEST_SOURCE_DIR}/test.cpp
+)
+
+SET(BENCH_SOURCES
+  ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
+  ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/main.cpp
+)
+
 #test source files
 SET(CXXTESTSources
 libcore/test/TransferTest.hpp
@@ -1197,7 +1455,12 @@ ELSE()
   SET(BERKELIUM_CFLAGS "")
 ENDIF()
 
-SET(FINAL_LINK_DIRS ${ANTLR_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+SET(FINAL_LINK_DIRS
+  ${ANTLR_LIBRARY_DIRS}
+  ${Boost_LIBRARY_DIRS}
+  ${GSL_LINK_DIRECTORIES}
+)
+
 IF(OGRE_FOUND AND sdl_FOUND)
 SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${OGRE_LIBRARY_DIRS} ${sdl_LIBRARY_DIRS} ${BERKELIUM_LIBRARY_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/chrome)
 ENDIF()
@@ -1329,15 +1592,13 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} ogregraphics)
 ENDIF(OGRE_FOUND AND sdl_FOUND)
 
 
-IF(PROX_FOUND)
-ADD_PLUGIN_TARGET(prox
-                    SOURCES ${LIBPROXIMITY_PLUGIN_PROX_SOURCES}
-                    TARGET_CXXFLAGS ${PROX_CFLAGS}
-                    TARGET_LDFLAGS ${PROX_LDFLAGS} ${sirikata_LDFLAGS}
+ADD_PLUGIN_TARGET(prox-everyone
+                    SOURCES ${LIBPROXIMITY_PLUGIN_EVERYONE_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROX_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
-SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox)
-ENDIF(PROX_FOUND)
+                    LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_LIBRARIES})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox-everyone)
+
 
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/bullet)
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_SOURCES
@@ -1411,13 +1672,65 @@ IF(OpenCOLLADA_FOUND)
   SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} colladamodels)
 ENDIF(OpenCOLLADA_FOUND)
 
+#libs
+ADD_LIBRARY(cbrcore STATIC ${LIBCBRCORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
+
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL
-ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/SSTBenchmark.cpp)
 ADD_EXECUTABLE(${SPACE_BINARY} ${SPACE_SOURCES})
 ADD_EXECUTABLE(${PROXIMITY_BINARY} ${PROXIMITY_SOURCES})
 
 ADD_EXECUTABLE(${CPPOH_BINARY} ${CPPOH_SOURCES})
+
+ADD_EXECUTABLE(cbr ${CBR_SOURCES})
+TARGET_LINK_LIBRARIES(cbr
+  cbrcore
+        ${GSL_LIBRARIES}
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+ADD_EXECUTABLE(simoh ${SIMOH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(simoh
+  cbrcore
+        ${GSL_LIBRARIES}
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(cseg
+  cbrcore
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(analysis
+  cbrcore
+        ${GSL_LIBRARIES}
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        #${GLUT_LIBRARIES}
+        )
+ADD_EXECUTABLE(cbrtest ${CBRTEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(cbrtest
+  cbrcore
+  ${Boost_LIBRARIES}
+  ${SIRIKATA_CORE_LIB}
+  ${PROTOCOLBUFFERS_LIBRARIES}
+  )
+ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(${BENCH_BINARY}
+  cbrcore
+  ${Boost_LIBRARIES}
+  ${SIRIKATA_CORE_LIB}
+  ${PROTOCOLBUFFERS_LIBRARIES}
+  )
+# Fixme incorporate old benchmark
+#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/SSTBenchmark.cpp)
+
 IF(CHROME_FOUND)
   IF(APPLE)
     # FIXME GET_TARGET_PROPERTY doesn't seem to have anything that gives us this without a full path
@@ -1456,9 +1769,6 @@ IF(CHROME_FOUND)
     ADD_CHROME_SYMLINK_TARGET(TARGETNAME chrome_symlinks_for_sirikata DEPENDS libberkelium)
   ENDIF()
 ENDIF()
-
-ADD_DEPENDENCIES(${BENCH_BINARY} ${SIRIKATA_CORE_LIB})
-TARGET_LINK_LIBRARIES(${BENCH_BINARY} ${SIRIKATA_CORE_LIB})
 
 ADD_DEPENDENCIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB})
 ADD_DEPENDENCIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
@@ -1847,6 +2157,7 @@ INSTALL(DIRECTORY
         PATTERN "*.cs" EXCLUDE
         PATTERN "*.pyc" EXCLUDE)
 
+
 # get the name of the binaries for running tests
 IF(WIN32)
   GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
@@ -1858,8 +2169,6 @@ ELSE()
     GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
   ENDIF()
 ENDIF()
-
-
 
 INSTALL(FILES ${TOP_LEVEL}/cdn.txt
         DESTINATION bin/)
