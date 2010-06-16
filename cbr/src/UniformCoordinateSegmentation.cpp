@@ -179,10 +179,10 @@ void UniformCoordinateSegmentation::service() {
 
       uint32 countServers = numServers();
 
-      std::vector<Listener::SegmentationInfo> segInfoVector;
+      std::vector<SegmentationInfo> segInfoVector;
 
       for (uint32 j = 1; j <= countServers; j++) {
-        Listener::SegmentationInfo segInfo;
+        SegmentationInfo segInfo;
         segInfo.server = j;
         segInfo.region = serverRegion(j);
         segInfoVector.push_back( segInfo );

@@ -123,10 +123,10 @@ void CoordinateSegmentationClient::accept_handler() {
     mServerRegionCache.clear();
 
     int offset = 2;
-    std::vector<Listener::SegmentationInfo> segInfoVector;
+    std::vector<SegmentationInfo> segInfoVector;
     for (int i=0; i<segChangeMessage->numEntries; i++) {
       BoundingBoxList bbList;
-      Listener::SegmentationInfo segInfo;
+      SegmentationInfo segInfo;
       SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);
 
       for (unsigned int j=0; j < segChange->listLength; j++) {

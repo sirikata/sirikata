@@ -38,10 +38,9 @@
 #include "LoadMonitor.hpp"
 #include "Message.hpp"
 #include "PollingService.hpp"
+#include "VWTypes.hpp"
 
 namespace Sirikata {
-
-typedef std::vector<BoundingBox3f> BoundingBoxList;
 
 /** Handles the segmentation of the space into regions handled by servers.
  *  Answers queries of the type
@@ -55,10 +54,6 @@ public:
     public:
         virtual ~Listener() {}
 
-        struct SegmentationInfo {
-            ServerID server;
-            BoundingBoxList region;
-        };
         virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) = 0;
     }; // class Listener
 
@@ -84,7 +79,7 @@ public:
 protected:
     virtual void poll();
 
-    void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);
+    void notifyListeners(const std::vector<SegmentationInfo>& new_segmentation);
 
     SpaceContext* mContext;
 private:

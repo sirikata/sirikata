@@ -40,7 +40,12 @@ namespace Sirikata {
 typedef uint32 ServerID;
 #define NullServerID 0
 
-
+// Space Server Regions
+typedef std::vector<BoundingBox3f> BoundingBoxList;
+struct SegmentationInfo {
+    ServerID server;
+    BoundingBoxList region;
+};
 
 struct ObjectHostID {
     ObjectHostID()

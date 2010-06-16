@@ -162,8 +162,9 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
 
 }
 
-DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
- : CoordinateSegmentation(ctx),
+DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
+   mContext(ctx),
    mLastUpdateTime(Time::null()),
    mSidMap(sidmap)
 {
@@ -400,6 +401,10 @@ void DistributedCoordinateSegmentation::stop() {
   mLLIOService.stop();
 }
 
+void DistributedCoordinateSegmentation::poll() {
+    service();
+}
+
 void DistributedCoordinateSegmentation::service() {
   static bool random_splits_merges = GetOption("random-splits-merges")->as<bool>();
 
@@ -437,7 +442,7 @@ void DistributedCoordinateSegmentation::service() {
       }
     }
 
-    std::vector<Listener::SegmentationInfo> segInfoVector;
+    std::vector<SegmentationInfo> segInfoVector;
     if (okToMerge && rand() % 2 == 0 && false) {
       if (parent == NULL) {
 	return;
@@ -461,7 +466,7 @@ void DistributedCoordinateSegmentation::service() {
       mWholeTreeServerRegionMap.erase(parent->mServer);
       mLowerTreeServerRegionMap.erase(rightChild->mServer);
 
-      Listener::SegmentationInfo segInfo, segInfo2;
+      SegmentationInfo segInfo, segInfo2;
       segInfo.server = parent->mServer;
       segInfo.region = serverRegion(parent->mServer);
       segInfoVector.push_back( segInfo );
@@ -500,7 +505,7 @@ void DistributedCoordinateSegmentation::service() {
       mWholeTreeServerRegionMap.erase(randomLeaf->mServer);
       mLowerTreeServerRegionMap.erase(availableServer);
 
-      Listener::SegmentationInfo segInfo, segInfo2;
+      SegmentationInfo segInfo, segInfo2;
       segInfo.server = randomLeaf->mServer;
       segInfo.region = serverRegion(randomLeaf->mServer);
       segInfoVector.push_back( segInfo );
@@ -517,7 +522,7 @@ void DistributedCoordinateSegmentation::service() {
 void DistributedCoordinateSegmentation::receiveMessage(Message* msg) {
 }
 
-void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<Listener::SegmentationInfo> segInfoVector)
+void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector)
 {
   if (segInfoVector.size() == 0) {
     return;

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  CoordinateSegmentation.cpp
+ *  CSegContext.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,35 +30,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#ifndef _SIRIKATA_CSEG_CONTEXT_HPP_
+#define _SIRIKATA_CSEG_CONTEXT_HPP_
+
+#include <sirikata/cbrcore/Context.hpp>
+#include <sirikata/cbrcore/VWTypes.hpp>
 
 namespace Sirikata {
 
-CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
- : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
-   mContext(ctx)
-{
-    mServiceStage = mContext->profiler->addStage("CSeg");
-}
+class CSegContext : public Context {
+public:
 
-void CoordinateSegmentation::addListener(Listener* listener) {
-    assert (mListeners.find(listener) == mListeners.end());
-    mListeners.insert(listener);
-}
+    CSegContext(const ServerID& _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
+     : Context("CSeg", ios, strand, _trace, epoch, simlen),
+       mID(_id)
+    {}
+    virtual ~CSegContext() {}
 
-void CoordinateSegmentation::removeListener(Listener* listener) {
-    mListeners.erase(listener);
-}
+    ServerID id() const { return mID; }
 
-void CoordinateSegmentation::notifyListeners(const std::vector<SegmentationInfo>& new_segmentation) {
-    for( std::set<Listener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->updatedSegmentation(this, new_segmentation);
-}
-
-void CoordinateSegmentation::poll() {
-    mServiceStage->started();
-    this->service();
-    mServiceStage->finished();
-}
+protected:
+    ServerID mID;
+}; // class CSegContext
 
 } // namespace Sirikata
+
+
+#endif //_SIRIKATA_CSEG_CONTEXT_HPP_

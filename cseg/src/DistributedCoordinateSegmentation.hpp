@@ -36,8 +36,11 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include <sirikata/cbrcore/VWTypes.hpp>
 #include <sirikata/cbrcore/SegmentedRegion.hpp>
+#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/cbrcore/LoadMonitor.hpp>
+#include "CSegContext.hpp"
 
 #include "CBR_CSeg.pbj.hpp"
 
@@ -61,9 +64,9 @@ typedef struct SegmentationChangeListener {
 } SegmentationChangeListener;
 
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
-class DistributedCoordinateSegmentation : public CoordinateSegmentation {
+class DistributedCoordinateSegmentation : public PollingService {
 public:
-    DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int, ServerIDMap * );
+    DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int, ServerIDMap * );
     virtual ~DistributedCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) ;
@@ -71,7 +74,7 @@ public:
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
 
-    virtual void service();
+    virtual void poll();
     virtual void stop();
 
     // From MessageRecipient
@@ -80,10 +83,11 @@ public:
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
+    void service();
 
     void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
 
-    void notifySpaceServersOfChange(const std::vector<Listener::SegmentationInfo> segInfoVector);
+    void notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector);
 
     void serializeBSPTree(SerializedBSPTree* serializedBSPTree);
 
@@ -95,6 +99,7 @@ private:
 
     void startAcceptingLLRequests();
 
+    CSegContext* mContext;
     //ServerID mCSEGServerID;
 
     SegmentedRegion mTopLevelRegion;

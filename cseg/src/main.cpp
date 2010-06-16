@@ -61,8 +61,7 @@ int main(int argc, char** argv) {
     IOStrand* mainStrand = ios->createStrand();
 
 
-    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, trace, duration);
+    CSegContext* cseg_context = new CSegContext(server_id, ios, mainStrand, trace, start_time, duration);
 
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
@@ -78,21 +77,21 @@ int main(int argc, char** argv) {
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
 
     String cseg_type = GetOption(CSEG)->as<String>();
-    CoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers, server_id_map);
+    DistributedCoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(cseg_context, region, layout, max_space_servers, server_id_map);
 
     ///////////Go go go!! start of simulation/////////////////////
 
     srand(time(NULL));
 
-    space_context->add(space_context);
-    space_context->add(cseg);
+    cseg_context->add(cseg_context);
+    cseg_context->add(cseg);
 
-    space_context->run(1);
+    cseg_context->run(1);
 
-    space_context->cleanup();
+    cseg_context->cleanup();
 
     if (GetOption(PROFILE)->as<bool>()) {
-        space_context->profiler->report();
+        cseg_context->profiler->report();
     }
 
     trace->prepareShutdown();
@@ -103,8 +102,8 @@ int main(int argc, char** argv) {
     delete trace;
     trace = NULL;
 
-    delete space_context;
-    space_context = NULL;
+    delete cseg_context;
+    cseg_context = NULL;
 
     delete mainStrand;
     IOServiceFactory::destroyIOService(ios);
