@@ -34,7 +34,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/transfer/HTTPRequest.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
 
 #ifndef _WIN32

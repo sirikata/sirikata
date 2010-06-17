@@ -54,7 +54,7 @@
 
 #include "CBR_OSeg.pbj.hpp"
 
-#include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE

@@ -40,7 +40,7 @@
 #include "ObjectHostConnectionManager.hpp"
 #include <sirikata/cbrcore/TimeProfiler.hpp>
 #include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 #include <sirikata/cbrcore/MotionVector.hpp>
 

@@ -34,7 +34,7 @@
 #define _SIRIKATA_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
 
 #include "ServerMessageReceiver.hpp"
-#include <sirikata/cbrcore/FairQueue.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
 #include "NetworkQueueWrapper.hpp"
 
 namespace Sirikata {

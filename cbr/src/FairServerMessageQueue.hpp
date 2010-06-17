@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_FAIRSENDQUEUE_HPP
 #define _SIRIKATA_FAIRSENDQUEUE_HPP
 
-#include <sirikata/cbrcore/FairQueue.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
 #include "ServerMessageQueue.hpp"
 
 namespace Sirikata {

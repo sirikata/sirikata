@@ -39,7 +39,7 @@
 
 #include <sirikata/core/transfer/CacheLayer.hpp>
 #include <sirikata/core/transfer/CacheMap.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {

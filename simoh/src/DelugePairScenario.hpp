@@ -34,8 +34,8 @@
 #define _DELUGE_PAIR_SCENARIO_HPP_
 
 #include "Scenario.hpp"
-#include <sirikata/cbrcore/CountResourceMonitor.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/CountResourceMonitor.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 namespace Sirikata {
 

@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include "Test.hpp"
-#include <sirikata/cbrcore/FairQueue.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
 
 namespace Sirikata {
 

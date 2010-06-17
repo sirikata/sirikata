@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
 #include <boost/thread.hpp>
 

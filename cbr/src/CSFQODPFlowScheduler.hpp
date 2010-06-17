@@ -34,9 +34,9 @@
 #define _CSFQ_ODP_FLOW_SCHEDULER_HPP_
 
 #include "ODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/Queue.hpp>
+#include <sirikata/core/queue/Queue.hpp>
 #include "RateEstimator.hpp"
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 //#define CSFQODP_DEBUG
 

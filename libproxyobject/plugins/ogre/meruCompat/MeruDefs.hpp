@@ -54,7 +54,7 @@
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/core/util/Vector3.hpp>

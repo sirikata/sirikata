@@ -38,8 +38,8 @@
 #include <sirikata/cbrcore/Message.hpp>
 #include "SpaceNetwork.hpp"
 
-#include <sirikata/cbrcore/Queue.hpp>
-#include <sirikata/cbrcore/FairQueue.hpp>
+#include <sirikata/core/queue/Queue.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
 
 #include <sirikata/cbrcore/TimeProfiler.hpp>
 
@@ -52,8 +52,8 @@
 
 #include "ForwarderServiceQueue.hpp"
 
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
-#include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 namespace Sirikata
 {

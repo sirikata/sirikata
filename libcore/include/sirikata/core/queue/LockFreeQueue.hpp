@@ -34,7 +34,7 @@
 #ifndef _SIRIKATA_LOCK_FREE_QUEUE_HPP_
 #define _SIRIKATA_LOCK_FREE_QUEUE_HPP_
 
-#include "AtomicTypes.hpp"
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 /// LockFreeQueue.hpp
 namespace Sirikata {
@@ -246,7 +246,7 @@ public:
     }
     void swap(std::deque<T>&swapWith){
         if (!swapWith.empty())
-            throw std::runtime_error(std::string("Trying to swap with a nonempty queue"));            
+            throw std::runtime_error(std::string("Trying to swap with a nonempty queue"));
         popAll(&swapWith);
     }
     void popAll(std::deque<T>*toPop) {

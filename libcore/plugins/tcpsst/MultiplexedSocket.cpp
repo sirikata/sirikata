@@ -34,7 +34,7 @@
 #include <sirikata/core/network/Stream.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "ASIOReadBuffer.hpp"
 #include "MultiplexedSocket.hpp"

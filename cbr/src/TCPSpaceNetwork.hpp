@@ -38,8 +38,8 @@
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
-#include <sirikata/cbrcore/CountResourceMonitor.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/CountResourceMonitor.hpp>
 
 namespace Sirikata {
 

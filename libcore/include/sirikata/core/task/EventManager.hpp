@@ -33,8 +33,8 @@
 #ifndef SIRIKATA_EventManager_HPP__
 #define SIRIKATA_EventManager_HPP__
 
-#include <sirikata/core/util/LockFreeQueue.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/LockFreeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/task/UniqueId.hpp>

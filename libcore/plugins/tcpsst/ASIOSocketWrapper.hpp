@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sirikata/core/util/UUID.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/EWA.hpp>
 
@@ -84,7 +84,7 @@ class ASIOSocketWrapper {
 
 	};
     EWA<Duration> mAverageSendLatency;
-    
+
     std::vector<Stream::StreamID> mPausedSendStreams;
     std::deque<TimestampedChunk> mToSend;
     std::tr1::weak_ptr<MultiplexedSocket>mParent;

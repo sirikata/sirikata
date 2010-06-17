@@ -42,7 +42,7 @@
 #include <sirikata/cbrcore/PollingService.hpp>
 
 #include <sirikata/cbrcore/SSTImpl.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
 namespace Sirikata {
 

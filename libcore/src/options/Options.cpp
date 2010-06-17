@@ -36,7 +36,7 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <stdarg.h>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/DynamicLibrary.hpp>
 
 namespace Sirikata {

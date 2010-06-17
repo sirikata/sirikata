@@ -34,8 +34,8 @@
 #define _REGION_ODP_FLOW_SCHEDULER_HPP_
 
 #include "ODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/Queue.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/Queue.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 namespace Sirikata {
 

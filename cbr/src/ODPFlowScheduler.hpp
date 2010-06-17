@@ -34,7 +34,7 @@
 #define _ODP_FLOW_SCHEDULER_HPP_
 
 #include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/cbrcore/AbstractQueue.hpp>
+#include <sirikata/core/queue/AbstractQueue.hpp>
 #include "ForwarderServiceQueue.hpp"
 
 namespace Sirikata {
