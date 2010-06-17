@@ -1366,10 +1366,6 @@ SET(ANALYSIS_SOURCES
   ${ANALYSIS_SOURCE_DIR}/main.cpp
 )
 
-SET(CBRTEST_SOURCES
-  ${TEST_SOURCE_DIR}/test.cpp
-)
-
 SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
   ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
@@ -1389,6 +1385,7 @@ libcore/test/DownloadTest.hpp
 libcore/test/EventTest.hpp
 libcore/test/ExtrapolationTest.hpp
 libcore/test/FactoryTest.hpp
+libcore/test/FairQueueTest.hpp
 libcore/test/ListenerTest.hpp
 libcore/test/Matrix3Test.hpp
 libcore/test/MinitransactionHandlerTest.hpp
@@ -1738,15 +1735,6 @@ TARGET_LINK_LIBRARIES(analysis
         ${PROTOCOLBUFFERS_LIBRARIES}
         #${GLUT_LIBRARIES}
         )
-
-ADD_EXECUTABLE(cbrtest ${CBRTEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
-SET_TARGET_PROPERTIES(cbrtest PROPERTIES ${COMPILE_DEFS_OPT})
-TARGET_LINK_LIBRARIES(cbrtest
-  cbrcore
-  ${Boost_LIBRARIES}
-  ${SIRIKATA_CORE_LIB}
-  ${PROTOCOLBUFFERS_LIBRARIES}
-  )
 
 ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
 SET_TARGET_PROPERTIES(${BENCH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
