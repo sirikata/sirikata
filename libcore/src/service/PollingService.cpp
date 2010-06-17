@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Benchmark.hpp
+ *  PollingService.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,55 +30,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_BENCHMARK_HPP_
-#define _SIRIKATA_BENCHMARK_HPP_
-
+#include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
 
 namespace Sirikata {
 
-/** Benchmark is a service which performs a single micro-benchmark. Each
- *  benchmark is a service -- it should start its test when start() is called
- *  and should try its best to respect the call to stop().  If even that
- *  fails, the benchmark will be forcibly destroyed.
- *
- *  The benchmark is passed a callback which it should invoke when the
- *  benchmark has shutdown cleanly. This allows the benchmark to finish at
- *  its own pace and clean up gracefully, unless the benchmark takes too
- *  long
- */
-class Benchmark : public Service {
-  public:
-    typedef std::tr1::function<void()> FinishedCallback;
+PollingService::PollingService(Network::IOStrand* str, const Duration& max_rate, Context* ctx, const String& name)
+ : Poller(str, std::tr1::bind(&PollingService::indirectPoll, this), max_rate),
+   mProfiler(NULL)
+{
+    if (ctx != NULL && !name.empty())
+        mProfiler = ctx->profiler->addStage(name);
+}
 
-    /** Construct a benchmark which will invoke the specified callback when it
-     *  has completed.
-     */
-    Benchmark(const FinishedCallback& finished_cb)
-            : mFinishedCallback(finished_cb)
-    {}
+PollingService::~PollingService() {
+    delete mProfiler;
+}
 
-    virtual ~Benchmark() {}
+void PollingService::indirectPoll() {
+    if (mProfiler != NULL)
+        mProfiler->started();
 
-    /** Get the name of this benchmark, used for reporting. */
-    virtual String name() = 0;
+    poll();
 
-    virtual void start() = 0;
-    virtual void stop() = 0;
+    if (mProfiler != NULL)
+        mProfiler->finished();
+}
 
-  protected:
-    /** Notify the parent of this benchmark that the run has finished.  This
-     *  should be used by benchmark implementations to indicate when they have
-     *  finished and cleaned up without issues.
-     */
-    void notifyFinished() const {
-        mFinishedCallback();
-    }
-
-  private:
-    FinishedCallback mFinishedCallback;
-}; // class Benchmark
+void PollingService::stop() {
+    shutdown();
+    Poller::stop();
+}
 
 } // namespace Sirikata
-
-#endif //_SIRIKATA_BENCHMARK_HPP_

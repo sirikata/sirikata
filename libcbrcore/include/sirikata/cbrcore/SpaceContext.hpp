@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SPACE_CONTEXT_HPP_
 #define _SIRIKATA_SPACE_CONTEXT_HPP_
 
-#include "Context.hpp"
+#include <sirikata/core/service/Context.hpp>
 #include "VWTypes.hpp"
 #include <sirikata/core/util/UUID.hpp>
 

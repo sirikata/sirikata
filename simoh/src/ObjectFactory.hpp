@@ -32,8 +32,9 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/service/TimeProfiler.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 namespace Sirikata {
 class MotionPath;

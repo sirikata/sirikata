@@ -41,8 +41,6 @@
 #include <sirikata/core/queue/Queue.hpp>
 #include <sirikata/core/queue/FairQueue.hpp>
 
-#include <sirikata/cbrcore/TimeProfiler.hpp>
-
 #include "OSegLookupQueue.hpp"
 
 #include "ServerMessageQueue.hpp"

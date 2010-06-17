@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Benchmark.hpp
+ *  TimeProfiler.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,55 +30,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_BENCHMARK_HPP_
-#define _SIRIKATA_BENCHMARK_HPP_
+#ifndef _SIRIKATA_TIME_PROFILER_HPP_
+#define _SIRIKATA_TIME_PROFILER_HPP_
 
-#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 
-/** Benchmark is a service which performs a single micro-benchmark. Each
- *  benchmark is a service -- it should start its test when start() is called
- *  and should try its best to respect the call to stop().  If even that
- *  fails, the benchmark will be forcibly destroyed.
- *
- *  The benchmark is passed a callback which it should invoke when the
- *  benchmark has shutdown cleanly. This allows the benchmark to finish at
- *  its own pace and clean up gracefully, unless the benchmark takes too
- *  long
+/** A simple class which helps to time profiling to determine
+ *  what fraction of time each component of a loop is taking.
+ *  It assumes each step is performed every time.  Events with
+ *  human-friendly names are added to the list and then the main
+ *  loop simply indicates when each stage completes.  When complete,
+ *  call the report method to get a simple analysis.
  */
-class Benchmark : public Service {
-  public:
-    typedef std::tr1::function<void()> FinishedCallback;
+class SIRIKATA_EXPORT TimeProfiler {
+public:
+    struct Stage {
+        Stage(const String& name);
 
-    /** Construct a benchmark which will invoke the specified callback when it
-     *  has completed.
-     */
-    Benchmark(const FinishedCallback& finished_cb)
-            : mFinishedCallback(finished_cb)
-    {}
+        void started();
+        void finished();
 
-    virtual ~Benchmark() {}
+        String name() const;
+        Duration avg() const;
+        Duration minimum() const;
+        Duration maximum() const;
+        uint64 its() const;
 
-    /** Get the name of this benchmark, used for reporting. */
-    virtual String name() = 0;
+        void report(const String& indent) const;
+    private:
+        String mName;
 
-    virtual void start() = 0;
-    virtual void stop() = 0;
+        Time mStartTime;
 
-  protected:
-    /** Notify the parent of this benchmark that the run has finished.  This
-     *  should be used by benchmark implementations to indicate when they have
-     *  finished and cleaned up without issues.
-     */
-    void notifyFinished() const {
-        mFinishedCallback();
-    }
+        Duration mMinimum;
+        Duration mMaximum;
+        Duration mSum;
+        uint64 mIts;
+    };
 
-  private:
-    FinishedCallback mFinishedCallback;
-}; // class Benchmark
+    TimeProfiler(const String& name);
+    ~TimeProfiler();
+
+    Stage* addStage(const String& name);
+    Stage* addStage(const String& group_name, const String& name);
+
+    void report() const;
+private:
+    String mName;
+    typedef std::vector<Stage*> StageList;
+    typedef std::map<String, StageList> GroupMap;
+    GroupMap mGroups;
+    StageList mFreeStages;
+}; // class TimeProfiler
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_BENCHMARK_HPP_
+#endif //_SIRIKATA_TIME_PROFILER_HPP_

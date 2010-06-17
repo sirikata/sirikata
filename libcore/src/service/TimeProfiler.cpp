@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/service/TimeProfiler.hpp>
 
 #define PROFILER_LOG(level,msg) SILOG(profiler,level,"[PROFILER] " << msg)
 

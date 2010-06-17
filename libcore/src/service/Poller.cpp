@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Benchmark.hpp
+ *  Poller.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,55 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_BENCHMARK_HPP_
-#define _SIRIKATA_BENCHMARK_HPP_
-
-#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/service/Poller.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace Sirikata {
 
-/** Benchmark is a service which performs a single micro-benchmark. Each
- *  benchmark is a service -- it should start its test when start() is called
- *  and should try its best to respect the call to stop().  If even that
- *  fails, the benchmark will be forcibly destroyed.
- *
- *  The benchmark is passed a callback which it should invoke when the
- *  benchmark has shutdown cleanly. This allows the benchmark to finish at
- *  its own pace and clean up gracefully, unless the benchmark takes too
- *  long
- */
-class Benchmark : public Service {
-  public:
-    typedef std::tr1::function<void()> FinishedCallback;
+Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate)
+ : mStrand(str),
+   mTimer( Network::IOTimer::create(str->service()) ),
+   mMaxRate(max_rate),
+   mUnschedule(false),
+   mCB( mStrand->wrap(std::tr1::bind(&Poller::handleExec, this)) ),
+   mUserCB(cb)
+{
+    mTimer->setCallback(mCB);
+}
 
-    /** Construct a benchmark which will invoke the specified callback when it
-     *  has completed.
-     */
-    Benchmark(const FinishedCallback& finished_cb)
-            : mFinishedCallback(finished_cb)
-    {}
-
-    virtual ~Benchmark() {}
-
-    /** Get the name of this benchmark, used for reporting. */
-    virtual String name() = 0;
-
-    virtual void start() = 0;
-    virtual void stop() = 0;
-
-  protected:
-    /** Notify the parent of this benchmark that the run has finished.  This
-     *  should be used by benchmark implementations to indicate when they have
-     *  finished and cleaned up without issues.
-     */
-    void notifyFinished() const {
-        mFinishedCallback();
+void Poller::start() {
+    if (mMaxRate != Duration::microseconds(0)) {
+        mTimer->wait(mMaxRate);
     }
+    else {
+        mStrand->post( mCB );
+    }
+}
 
-  private:
-    FinishedCallback mFinishedCallback;
-}; // class Benchmark
+void Poller::stop() {
+    mUnschedule = true;
+}
+
+void Poller::handleExec() {
+    mUserCB();
+
+    if (!mUnschedule)
+        start();
+}
 
 } // namespace Sirikata
-
-#endif //_SIRIKATA_BENCHMARK_HPP_

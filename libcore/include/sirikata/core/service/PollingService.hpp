@@ -33,60 +33,17 @@
 #ifndef _SIRIKATA_POLLING_SERVICE_HPP_
 #define _SIRIKATA_POLLING_SERVICE_HPP_
 
-#include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOStrand.hpp>
-#include <sirikata/core/network/IOTimer.hpp>
+#include "Poller.hpp"
 #include "TimeProfiler.hpp"
 
 namespace Sirikata {
 
 class Context;
 
-/** A Service is simply something that runs during the main loop.
- *  It must implement methods which allow it to start and indicate
- *  when it must start shutting down.
- */
-class Service {
-public:
-    virtual ~Service() {}
-
-    virtual void start() = 0;
-    virtual void stop() = 0;
-};
-
-/** Poller allows you to generate a callback periodically without having
- *  to inherit from the PollingService class.  It serves the same function
- *  but requires a new object for every callback instead of using an existing
- *  service.
- */
-class Poller : public Service {
-public:
-    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
-
-    /** Start polling this service on this strand at the given maximum rate. */
-    virtual void start();
-
-    /** Stop scheduling this service. Note that this does not immediately
-     *  stop the service, it simply guarantees the service will not
-     *  be scheduled again.  This allows outstanding events to be handled
-     *  properly.
-     */
-    virtual void stop();
-private:
-    void handleExec();
-
-    Network::IOStrand* mStrand;
-    Network::IOTimerPtr mTimer;
-    Duration mMaxRate;
-    bool mUnschedule;
-    Network::IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
-    Network::IOCallback mUserCB; // The user's callback
-}; // class Poller
-
 /** A service which needs to be polled periodically.  This class handles
  *  scheduling and polling the service.
  */
-class PollingService : public Poller {
+class SIRIKATA_EXPORT PollingService : public Poller {
 public:
     PollingService(Network::IOStrand* str, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "");
     ~PollingService();

@@ -37,7 +37,7 @@
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Stream.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/Service.hpp>
 
 namespace Sirikata {
 

@@ -33,8 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 #define _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 
-#include <sirikata/cbrcore/Context.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include <sirikata/cbrcore/VWTypes.hpp>
 
 namespace Sirikata {

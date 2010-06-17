@@ -36,6 +36,7 @@
 #include "Scenario.hpp"
 #include <sirikata/core/queue/CountResourceMonitor.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/service/Poller.hpp>
 
 namespace Sirikata {
 

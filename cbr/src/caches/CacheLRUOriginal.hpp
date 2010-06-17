@@ -44,7 +44,7 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <boost/thread/mutex.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
-#include <sirikata/cbrcore/Context.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include "CraqCache.hpp"
 #include <sirikata/core/util/UUID.hpp>
 

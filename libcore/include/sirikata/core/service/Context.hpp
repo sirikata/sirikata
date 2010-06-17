@@ -39,7 +39,7 @@
 #include <sirikata/core/util/Thread.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include "TimeProfiler.hpp"
-#include "PollingService.hpp"
+#include "Service.hpp"
 
 #define FORCE_MONOTONIC_CLOCK 1
 
@@ -50,7 +50,7 @@ class Trace;
 /** Base class for Contexts, provides basic infrastructure such as IOServices,
  *  IOStrands, Trace, and timing information.
  */
-class Context : public Service {
+class SIRIKATA_EXPORT Context : public Service {
 public:
 
     Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);

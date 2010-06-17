@@ -1053,6 +1053,10 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/StreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
+        ${LIBCORE_SOURCE_DIR}/service/Context.cpp
+        ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
+        ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
+        ${LIBCORE_SOURCE_DIR}/service/TimeProfiler.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
@@ -1265,11 +1269,9 @@ ${GFX}/WebViewManager.cpp
 #source files
 SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Address4.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Context.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/PollingService.cpp
   ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
@@ -1277,7 +1279,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TimeProfiler.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
   ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/ServerWeightCalculator.cpp

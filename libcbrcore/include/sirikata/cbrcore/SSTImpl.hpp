@@ -45,8 +45,8 @@
 
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/cbrcore/Context.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
 
 #include <bitset>
 

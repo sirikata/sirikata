@@ -1,5 +1,5 @@
 /*  Sirikata
- *  PollingService.cpp
+ *  Service.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,70 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/cbrcore/Context.hpp>
-#include <sirikata/core/network/IOStrandImpl.hpp>
+#ifndef _SIRIKATA_SERVICE_HPP_
+#define _SIRIKATA_SERVICE_HPP_
+
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata {
 
-Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate)
- : mStrand(str),
-   mTimer( Network::IOTimer::create(str->service()) ),
-   mMaxRate(max_rate),
-   mUnschedule(false),
-   mCB( mStrand->wrap(std::tr1::bind(&Poller::handleExec, this)) ),
-   mUserCB(cb)
-{
-    mTimer->setCallback(mCB);
-}
+/** A Service is simply something that runs during the main loop.
+ *  It must implement methods which allow it to start and indicate
+ *  when it must start shutting down.
+ */
+class SIRIKATA_EXPORT Service {
+public:
+    virtual ~Service() {}
 
-void Poller::start() {
-    if (mMaxRate != Duration::microseconds(0)) {
-        mTimer->wait(mMaxRate);
-    }
-    else {
-        mStrand->post( mCB );
-    }
-}
-
-void Poller::stop() {
-    mUnschedule = true;
-}
-
-void Poller::handleExec() {
-    mUserCB();
-
-    if (!mUnschedule)
-        start();
-}
-
-
-
-PollingService::PollingService(Network::IOStrand* str, const Duration& max_rate, Context* ctx, const String& name)
- : Poller(str, std::tr1::bind(&PollingService::indirectPoll, this), max_rate),
-   mProfiler(NULL)
-{
-    if (ctx != NULL && !name.empty())
-        mProfiler = ctx->profiler->addStage(name);
-}
-
-PollingService::~PollingService() {
-    delete mProfiler;
-}
-
-void PollingService::indirectPoll() {
-    if (mProfiler != NULL)
-        mProfiler->started();
-
-    poll();
-
-    if (mProfiler != NULL)
-        mProfiler->finished();
-}
-
-void PollingService::stop() {
-    shutdown();
-    Poller::stop();
-}
+    virtual void start() = 0;
+    virtual void stop() = 0;
+};
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_SERVICE_HPP_

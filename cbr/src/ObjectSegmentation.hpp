@@ -35,7 +35,7 @@
 
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/Service.hpp>
 #include <iostream>
 #include <iomanip>
 #include "craq_oseg/asyncUtil.hpp"

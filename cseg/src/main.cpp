@@ -32,7 +32,6 @@
 
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/TimeSync.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
 
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>

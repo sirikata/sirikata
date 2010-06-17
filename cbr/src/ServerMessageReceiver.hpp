@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/service/TimeProfiler.hpp>
 #include "SpaceNetwork.hpp"
 #include <sirikata/cbrcore/CoordinateSegmentation.hpp>
 #include "RateEstimator.hpp"

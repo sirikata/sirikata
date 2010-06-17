@@ -37,7 +37,7 @@
 #include "SpaceContext.hpp"
 #include "LoadMonitor.hpp"
 #include "Message.hpp"
-#include "PollingService.hpp"
+#include <sirikata/core/service/PollingService.hpp>
 #include "VWTypes.hpp"
 
 namespace Sirikata {

@@ -34,8 +34,7 @@
 #define _SCENARIO_HPP_
 #include "ObjectHostContext.hpp"
 #include <sirikata/cbrcore/QueueRouterElement.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/service/Service.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>

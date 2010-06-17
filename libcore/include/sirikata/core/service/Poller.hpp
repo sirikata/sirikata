@@ -1,5 +1,5 @@
 /*  Sirikata
- *  TimeProfiler.hpp
+ *  Poller.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,61 +30,48 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_TIME_PROFILER_HPP_
-#define _SIRIKATA_TIME_PROFILER_HPP_
+#ifndef _SIRIKATA_POLLER_HPP_
+#define _SIRIKATA_POLLER_HPP_
 
-#include <sirikata/core/util/Timer.hpp>
+#include "Service.hpp"
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
 
-/** A simple class which helps to time profiling to determine
- *  what fraction of time each component of a loop is taking.
- *  It assumes each step is performed every time.  Events with
- *  human-friendly names are added to the list and then the main
- *  loop simply indicates when each stage completes.  When complete,
- *  call the report method to get a simple analysis.
+class Context;
+
+/** Poller allows you to generate a callback periodically without having
+ *  to inherit from the PollingService class.  It serves the same function
+ *  but requires a new object for every callback instead of using an existing
+ *  service.
  */
-class TimeProfiler {
+class SIRIKATA_EXPORT Poller : public Service {
 public:
-    struct Stage {
-        Stage(const String& name);
+    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
 
-        void started();
-        void finished();
+    /** Start polling this service on this strand at the given maximum rate. */
+    virtual void start();
 
-        String name() const;
-        Duration avg() const;
-        Duration minimum() const;
-        Duration maximum() const;
-        uint64 its() const;
-
-        void report(const String& indent) const;
-    private:
-        String mName;
-
-        Time mStartTime;
-
-        Duration mMinimum;
-        Duration mMaximum;
-        Duration mSum;
-        uint64 mIts;
-    };
-
-    TimeProfiler(const String& name);
-    ~TimeProfiler();
-
-    Stage* addStage(const String& name);
-    Stage* addStage(const String& group_name, const String& name);
-
-    void report() const;
+    /** Stop scheduling this service. Note that this does not immediately
+     *  stop the service, it simply guarantees the service will not
+     *  be scheduled again.  This allows outstanding events to be handled
+     *  properly.
+     */
+    virtual void stop();
 private:
-    String mName;
-    typedef std::vector<Stage*> StageList;
-    typedef std::map<String, StageList> GroupMap;
-    GroupMap mGroups;
-    StageList mFreeStages;
-}; // class TimeProfiler
+    void handleExec();
+
+    Network::IOStrand* mStrand;
+    Network::IOTimerPtr mTimer;
+    Duration mMaxRate;
+    bool mUnschedule;
+    Network::IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
+    Network::IOCallback mUserCB; // The user's callback
+}; // class Poller
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_TIME_PROFILER_HPP_
+#endif //_SIRIKATA_POLLER_HPP_

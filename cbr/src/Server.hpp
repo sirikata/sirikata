@@ -38,8 +38,7 @@
 #include <sirikata/cbrcore/SpaceContext.hpp>
 
 #include "ObjectHostConnectionManager.hpp"
-#include <sirikata/cbrcore/TimeProfiler.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 #include <sirikata/cbrcore/MotionVector.hpp>

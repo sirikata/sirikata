@@ -35,7 +35,7 @@
 
 
 #include "Message.hpp"
-#include "PollingService.hpp"
+#include <sirikata/core/service/PollingService.hpp>
 
 #include "CBR_CSeg.pbj.hpp"
 

@@ -39,7 +39,7 @@
 #include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/PollingService.hpp>
 
 #include <sirikata/cbrcore/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
