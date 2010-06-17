@@ -32,6 +32,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/TimeSync.hpp>
@@ -44,50 +46,13 @@
 #include "ObjectLatency.hpp"
 #include "FlowStats.hpp"
 //#include "Visualization.hpp"
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
-//#include "UniformCoordinateSegmentation.hpp"
-//#include "CoordinateSegmentationClient.hpp"
 
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 
 namespace {
 Sirikata::Trace* gTrace = NULL;
-Sirikata::SpaceContext* gSpaceContext = NULL;
 }
 
-
-namespace Sirikata {
-/** Mock Router<Message*> class, needed to satisfy CoordinateSegmentation. */
-class MockServerMessageRouter : public Router<Message*> {
-  public:
-    WARN_UNUSED
-    virtual bool route(Message* msg) {
-        return true;
-    }
-};
-/** Mock forwarder class, neeeded because CoordinateSegmentation uses it via SpaceContext. */
-  class MockForwarder : public ServerMessageDispatcher,
-			public ServerMessageRouter,
-			public ObjectMessageRouter,
-			public ObjectMessageDispatcher {
-public:
-    MockForwarder(SpaceContext* ctx) {
-        ctx->mObjectRouter = this;
-	ctx->mServerRouter = this;
-        ctx->mServerDispatcher = this;
-	ctx->mObjectDispatcher = this;
-    }
-
-      virtual Router<Message*>* createServerMessageService(const String&) {
-          return new MockServerMessageRouter();
-      }
-
-    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-        return true;
-    }
-};
-} // namespace Sirikata
 
 void *main_loop(void *);
 
@@ -135,9 +100,6 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
 
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
-    MockForwarder* forwarder = new MockForwarder(space_context);
-
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
 
@@ -153,22 +115,6 @@ int main(int argc, char** argv) {
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-
-
-/*
-    String cseg_type = GetOption(CSEG)->as<String>();
-    CoordinateSegmentation* cseg = NULL;
-    if (cseg_type == "uniform")
-        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
-    else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
-    }
-    else {
-        assert(false);
-        exit(-1);
-    }
-*/
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
@@ -176,15 +122,7 @@ int main(int argc, char** argv) {
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
-        /*String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, cseg);
-
-        if (vistype == "object")
-            lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
-        else if (vistype == "server")
-            lea.displayRandomServerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
-
-        exit(0);*/
+        assert(false);
     }
     else if ( GetOption(ANALYSIS_LATENCY)->as<bool>() ) {
         LatencyAnalysis la(STATS_TRACE_FILE,nservers);
@@ -462,18 +400,9 @@ int main(int argc, char** argv) {
 
     gTrace->prepareShutdown();
 
-    delete server_id_map;
-/*
-    delete cseg;
-*/
-    delete forwarder;
-
     gTrace->shutdown();
     delete gTrace;
     gTrace = NULL;
-
-    delete space_context;
-    space_context = NULL;
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);
