@@ -44,7 +44,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/PollingService.hpp>
 #include <sirikata/cbrcore/Context.hpp>
 

@@ -31,7 +31,7 @@
  */
 
 #include "TimerSpeedBenchmark.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 #define ITERATIONS 1000000
 

@@ -41,7 +41,7 @@
 #include <vector>
 #include <list>
 #include <boost/bind.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <boost/thread/mutex.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 #include <sirikata/cbrcore/Context.hpp>

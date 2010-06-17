@@ -37,7 +37,7 @@
 #include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/util/Thread.hpp>
-#include "Timer.hpp"
+#include <sirikata/core/util/Timer.hpp>
 #include "TimeProfiler.hpp"
 #include "PollingService.hpp"
 

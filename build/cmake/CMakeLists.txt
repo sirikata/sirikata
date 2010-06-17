@@ -1067,6 +1067,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
         ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
 )
 
 #precompiled header
@@ -1277,7 +1278,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TimeProfiler.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Timer.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
   ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/ServerWeightCalculator.cpp

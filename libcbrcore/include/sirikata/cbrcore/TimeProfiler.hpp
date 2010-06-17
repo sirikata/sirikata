@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_TIME_PROFILER_HPP_
 #define _SIRIKATA_TIME_PROFILER_HPP_
 
-#include "Timer.hpp"
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 

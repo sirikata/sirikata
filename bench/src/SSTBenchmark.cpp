@@ -39,7 +39,7 @@
 
 #include <functional>
 #include "SSTBenchmark.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #define ITERATIONS 1000000

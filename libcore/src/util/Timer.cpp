@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Timer.hpp
+ *  Timer.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,36 +30,54 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_TIMER_HPP_
-#define _SIRIKATA_TIMER_HPP_
-
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/AtomicTypes.hpp>
-#include <sirikata/core/util/Time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 
-struct TimerImpl;
+struct TimerImpl {
+    boost::posix_time::ptime val;
+};
 
-class Timer {
-    static Sirikata::AtomicValue<Duration> sOffset;
+Timer::Timer() {
+    mStart = new TimerImpl();
+}
 
-public:
-    static void setSystemClockOffset(const Duration &skew);
-    static Duration getSystemClockOffset();
-    static Time getSpecifiedDate(const std::string&datestring);
-    Timer();
-    ~Timer();
+Timer::~Timer() {
+    delete mStart;
+}
+static boost::posix_time::ptime gEpoch(boost::posix_time::time_from_string(std::string("2009-03-12 23:59:59.000")));
+Time Timer::getSpecifiedDate(const std::string&dat) {
+    boost::posix_time::time_duration since_epoch=boost::posix_time::time_from_string(dat)-gEpoch;
+    return Time::null() + Duration::microseconds(since_epoch.total_microseconds());
+}
+void Timer::start() {
+    mStart->val = boost::posix_time::microsec_clock::local_time();
+}
+Time Timer::getTimerStarted() const{
+    boost::posix_time::time_duration since_start =mStart->val-gEpoch;
+    return Time::null() + Duration::microseconds(since_start.total_microseconds());
+}
 
-    void start();
-    Time getTimerStarted()const;
-    static Time now();
-    Duration elapsed()const;
+Sirikata::AtomicValue<Duration> Timer::sOffset(Duration::seconds(0.0));
 
-private:
-    TimerImpl* mStart;
-}; // class Timer
+void Timer::setSystemClockOffset(const Duration&skew) {
+    sOffset=skew;
+}
+Duration Timer::getSystemClockOffset(){
+    return sOffset;
+}
+
+Time Timer::now() {
+    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time()-gEpoch;
+    return Time::null() + Duration::microseconds( since_start.total_microseconds() ) + sOffset.read();
+}
+
+Duration Timer::elapsed() const{
+    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart->val;
+    return Duration::microseconds( since_start.total_microseconds() );
+}
+
 
 } // namespace Sirikata
-
-#endif //_SIRIKATA_TIMER_HPP_

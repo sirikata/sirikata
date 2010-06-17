@@ -39,7 +39,7 @@
 #include "../../ObjectSegmentation.hpp"
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/VWTypes.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sirikata/core/network/Asio.hpp>

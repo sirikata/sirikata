@@ -34,7 +34,7 @@
 #include <sirikata/core/network/Asio.hpp>
 #include "asyncUtil.hpp"
 #include "asyncConnection.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/SpaceContext.hpp>
 
 

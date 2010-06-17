@@ -38,7 +38,6 @@
 #include <map>
 #include <vector>
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
 #include "CraqObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
@@ -125,7 +124,6 @@ namespace Sirikata
     numAlreadyLookingUp         = 0;
     numServices                 = 0;
     numLookingUpDebug           = 0;
-    mServiceTimer.start();
 
     checkOwnTimeDur   = 0;
     checkOwnTimeCount = 0;

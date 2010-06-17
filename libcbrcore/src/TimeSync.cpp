@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/cbrcore/TimeSync.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 #define STDIN 0
 #define STDOUT 1

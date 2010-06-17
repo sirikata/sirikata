@@ -38,7 +38,6 @@
 #include <boost/regex.hpp>
 #include <boost/asio.hpp>
 #include "asyncConnection.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
 using Sirikata::Network::TCPSocket;

@@ -35,7 +35,6 @@
 
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
 #include "ObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
@@ -102,7 +101,6 @@ namespace Sirikata
     int numAlreadyLookingUp;
     int numServices;
     int numLookingUpDebug;
-    Timer mServiceTimer;
     Duration lastTimerDur;
     //end for logging.
 

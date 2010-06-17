@@ -39,7 +39,6 @@
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
