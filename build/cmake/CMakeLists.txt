@@ -1494,6 +1494,16 @@ SET(BENCH_BINARY bench)
 # only on the debug build because ISDEBUG isn't picked up since there is not build type on
 # Windows, all are generated.  Instead we just set up a variable to apply to all targets.
 SET(COMPILE_DEFS_OPT COMPILE_DEFINITIONS_DEBUG SIRIKATA_DEBUG_BUILD)
+# Unfortunately, CMake 2.4 doesn't handle the above flag
+# properly. This should only be an issue on Mac and Linux, and on
+# those platforms ISDEBUG should work fine.
+IF (${CMAKE_MAJOR_VERSION} LESS 3)
+  IF(${CMAKE_MINOR_VERSION} LESS 6)
+    IF(ISDEBUG)
+      ADD_DEFINITIONS(-DSIRIKATA_DEBUG_BUILD)
+    ENDIF()
+  ENDIF()
+ENDIF()
 
 #libraries
 ADD_LIBRARY(${SIRIKATA_CORE_LIB} SHARED ${SIRIKATA_CORE_SOURCES})
