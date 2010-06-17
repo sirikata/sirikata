@@ -31,8 +31,8 @@ class ClusterBuild:
     def checkout(self):
         checkout_cmd = "git clone " + self.config.repository + " " + self.config.code_dir
         cd_cmd = self.cd_to_code()
-        branch_cmd = "git branch " + self.config.branch + " origin/"  + self.config.branch
-        checkout_branch_cmd = "git checkout " + self.config.branch
+        branch_cmd = "git branch _cluster origin/"  + self.config.branch
+        checkout_branch_cmd = "git checkout _cluster"
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([checkout_cmd, cd_cmd, branch_cmd, checkout_branch_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
