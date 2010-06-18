@@ -40,8 +40,9 @@ namespace JS {
 
 bool Pattern::matches(v8::Handle<v8::Object> obj) const {
     if (!obj->Has(v8::String::New(mName.c_str())))
-        return false;
-
+	{
+	 return false;
+    }
     if (hasValue()) {
         Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
         if (!field->Equals(mValue))
@@ -52,7 +53,7 @@ bool Pattern::matches(v8::Handle<v8::Object> obj) const {
         // FIXME check prototype
     }
 
-    return true;
+	    return true;
 }
 
 static Persistent<FunctionTemplate> PatternConstructorTemplate;

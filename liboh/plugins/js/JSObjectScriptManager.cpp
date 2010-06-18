@@ -84,6 +84,8 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(JSSystem::__ScriptGetTest));
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
 
+    system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
+
     //these are mutable fields
 	
     system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
@@ -117,11 +119,12 @@ void JSObjectScriptManager::bftm_createAddressableTemplate()
     v8::HandleScope handle_scope;
     mAddressableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     // An internal field holds the external address of the addressable object
-    mAddressableTemplate->SetInternalFieldCount(2);
+    mAddressableTemplate->SetInternalFieldCount(3);
 
     //these function calls are defined in JSObjects/Addressable.hpp
     mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
     mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
+    mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
 }
 
 

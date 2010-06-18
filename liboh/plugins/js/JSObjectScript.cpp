@@ -66,16 +66,57 @@ namespace Sirikata {
 namespace JS {
 
 
-bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj) const
+bool JSObjectScript::JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
 {
+    v8::Local<v8::External> wrap;
+    if(sender->InternalFieldCount() > 0)
+	{
+	  wrap = v8::Local<v8::External>::Cast(
+            sender->GetInternalField(0));
+
+	}
+    void* ptr =  wrap->Value();
+	ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
+
+   // std::cout << "Trying to match a message from "  << objRef->getAsUUID().toString();
+
+    if(!this->sender->IsNull())
+	{
+       if(this->sender->InternalFieldCount() > 0)
+	   {
+	     wrap = v8::Local<v8::External>::Cast(
+         this->sender->GetInternalField(0));
+
+	   }
+
+       ptr =  wrap->Value();
+       ObjectReference* objRef2 = static_cast<ObjectReference*>(ptr);
+
+   
+       if(! (objRef1->getAsUUID() == objRef2->getAsUUID()))
+       {
+	     return false;
+	   }
+	   else
+	   {
+	     std::cout << "The senders match \n";
+	   }
+    }
+
+
     for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
     {
         if (!pat_it->matches(obj))
-            return false;
+		    {
+			  std::cout << "pattern did not match \n";
+              return false;
+			} 
     }
 
     return true;
 }
+
+
 
 
 
@@ -86,6 +127,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     mContext = Context::New(NULL, global_template);
 
     mOrefTemplate = oref_template;
+    mGlobalTemplate = global_template;
 
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
@@ -122,6 +164,30 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
 		space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
+}
+
+
+
+void JSObjectScript::reboot()
+{
+  
+  // Need to delete the existing context? v8 garbage collects?
+
+
+  v8::HandleScope handle_scope;
+  mContext = Context::New(NULL, mGlobalTemplate);
+  Local<Object> global_obj = mContext->Global();
+  Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+  global_proto->SetInternalField(0, External::New(this));
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
+  system_obj->SetInternalField(0, External::New(this));
+  bftm_populateAddressable(mOrefTemplate,system_obj);
+
+  mEventHandlers.clear();
+
+
+  
+
 }
 
 
@@ -220,6 +286,7 @@ void JSObjectScript::bftm_populateAddressable(v8::Persistent<v8::ObjectTemplate>
         Local<Object> tmpObj = oref_template->NewInstance();
         tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
         tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
+
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
 		if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
@@ -475,8 +542,8 @@ CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
-void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
-    JSEventHandler new_handler(pattern, target, cb);
+void JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender) {
+    JSEventHandler new_handler(pattern, target, cb, sender);
     mEventHandlers.push_back(new_handler);
 }
 
@@ -524,7 +591,7 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     bool matchesSomeHandler = false;
     for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
     {
-        if (handler_it->matches(obj))
+        if (handler_it->matches(obj, msgSender))
         {
             // Adding support for the knowing the message properties too
             int argc = 2;
@@ -594,8 +661,8 @@ void JSObjectScript::bftm_handleCommunicationMessage_old(const RoutableMessageHe
         for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin();
             handler_it != mEventHandlers.end();
             handler_it++) {
-
-            if (handler_it->matches(obj)) {
+            // invoking with fake sender
+            if (handler_it->matches(obj, v8::Object::New())) {
                 int argc = 1;
                 Handle<Value> argv[1] = { obj };
                 ProtectedJSCallback(mContext, handler_it->target, handler_it->cb, argc, argv);

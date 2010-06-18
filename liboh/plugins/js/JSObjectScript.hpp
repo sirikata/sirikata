@@ -76,7 +76,9 @@ public:
 
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
-
+    
+	/** reboot the state of the script, basically reset the state */
+	void reboot();
 
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);
@@ -97,13 +99,13 @@ public:
 
 
     /** Register an event pattern matcher and handler. */
-    void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+    void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender);
 
 
 private:
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
-
+    
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload);
@@ -115,6 +117,7 @@ private:
     v8::Persistent<v8::Context> mContext;
 	
 	v8::Persistent<v8::ObjectTemplate> mOrefTemplate;
+	v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
 
     //bftm
     typedef std::vector<ObjectReference*> AddressableList;
@@ -127,14 +130,15 @@ private:
 	v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader&);
 
     struct JSEventHandler {
-        JSEventHandler(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb)
-         : pattern(_pattern), target(_target), cb(_cb) {}
+        JSEventHandler(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
+         : pattern(_pattern), target(_target), cb(_cb), sender(_sender) {}
 
-        bool matches(v8::Handle<v8::Object> obj) const;
+        bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const;
 
         PatternList pattern;
         v8::Persistent<v8::Object> target;
         v8::Persistent<v8::Function> cb;
+		v8::Persistent<v8::Object> sender;
     };
     typedef std::vector<JSEventHandler> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;

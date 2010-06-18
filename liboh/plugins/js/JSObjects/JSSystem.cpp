@@ -9,6 +9,22 @@ namespace JS{
 namespace JSSystem{
 
 
+
+
+v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args)
+{
+  if(args.Length() != 0)
+  {
+     return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to reboot()")) );
+  }
+   // get the c++ object out from the js object
+   JSObjectScript* target_script = GetTargetJSObjectScript(args);
+   // invoke the reboot in the script
+   target_script->reboot();
+
+   return v8::Undefined();
+}
+
 v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
 {
     if (args.Length() != 3)
@@ -85,7 +101,10 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
 v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 {
+
     JSObjectScript* target = GetTargetJSObjectScript(args);
+    
+
     target->test();
     return v8::Undefined();
 }
@@ -97,7 +116,7 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
-    std::cout<<"\n\n\nDEBUG PRINT\n\n";
+    //std::cout<<"\n\n\nDEBUG PRINT\n\n";
     
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {
@@ -264,12 +283,13 @@ void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> 
  */
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 {
-    if (args.Length() != 3)
+    if (args.Length() != 4)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().")) );
 
     v8::Handle<v8::Value> pattern = args[0];
     v8::Handle<v8::Value> target_val = args[1];
     v8::Handle<v8::Value> cb_val = args[2];
+	v8::Handle<v8::Value> sender_val = args[3];
 
     // Pattern
     PatternList native_patterns;
@@ -297,8 +317,20 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
 
+   // Sender
+    if (!sender_val->IsObject() && !sender_val->IsNull() && !sender_val->IsUndefined())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Sender is not object or null.")) );
+
+
+
     v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
     v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
+
+    v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
+    v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
+
+
+
 
     // Function
     if (!cb_val->IsFunction())
@@ -307,7 +339,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    target_script->registerHandler(native_patterns, target_persist, cb_persist);
+    target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
 
     return v8::Undefined();
 }

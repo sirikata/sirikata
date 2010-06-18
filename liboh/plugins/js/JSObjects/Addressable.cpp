@@ -16,9 +16,23 @@ namespace JS {
 namespace JSAddressable {
 
 
+
+v8::Handle<v8::Value> toString(const v8::Arguments& args)
+{
+  JSObjectScript* caller;
+  ObjectReference* oref;
+  readORef(args,caller,oref);
+  
+  std::string s = oref->toString();
+  v8::Local<v8::String> ret = v8::String::New(s.c_str(), s.length());
+  v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret); 
+
+  return pret;
+}
+
+
 v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 {
-    //std::cout<<"\n\n\n\nDEBUG: WAKA WAKA\n\n";
 	JSObjectScript* caller;
     ObjectReference* oref;
     readORef(args,caller,oref);

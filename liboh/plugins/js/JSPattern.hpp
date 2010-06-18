@@ -48,7 +48,7 @@ public:
     Pattern(const std::string& _name,
         v8::Handle<v8::Value> _value = v8::Handle<v8::Value>(),
         v8::Handle<v8::Value> _proto = v8::Handle<v8::Value>())
-     : mName(_name), mValue(_value), mPrototype(_proto)
+		:mName(_name), mValue(_value), mPrototype(_proto)
     {}
 
     std::string name() const { return mName; }
@@ -59,7 +59,7 @@ public:
     bool hasPrototype() const { return !mPrototype.IsEmpty(); }
     v8::Handle<v8::Value> prototype() const { assert(hasPrototype()); return mPrototype; }
 
-    String toString() const { return "[Pattern]"; }
+	String toString() const { return "[Pattern]"; }
 
     bool matches(v8::Handle<v8::Object> obj) const;
     
