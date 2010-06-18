@@ -30,27 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CBR_OPTIONS_HPP_
-#define _SIRIKATA_CBR_OPTIONS_HPP_
+#ifndef _SIRIKATA_ANALYSIS_OPTIONS_HPP_
+#define _SIRIKATA_ANALYSIS_OPTIONS_HPP_
 
-#include "VWTypes.hpp"
+#define ANALYSIS_LOC         "analysis.loc"
+#define ANALYSIS_LOCVIS         "analysis.locvis"
+#define ANALYSIS_LOCVIS_SEED         "analysis.locvis.seed"
+#define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
+#define ANALYSIS_LATENCY   "analysis.latency"
+#define ANALYSIS_OBJECT_LATENCY   "analysis.object.latency"
+#define ANALYSIS_MESSAGE_LATENCY   "analysis.message.latency"
+#define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
+#define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
+#define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
+#define ANALYSIS_OSEG        "analysis.oseg"
+#define ANALYSIS_LOC_LATENCY "analysis.loc.latency"
+#define ANALYSIS_PROX_DUMP "analysis.prox.dump"
+#define ANALYSIS_FLOW_STATS "analysis.flow.stats"
 
-#define STATS_TRACE_FILE     "stats.trace-filename"
-#define PROFILE                    "profile"
+#define OSEG_ANALYZE_AFTER         "oseg_analyze_after"
+
 
 namespace Sirikata {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
-
-
-String GetPerServerString(const String& orig, const ServerID& sid);
-/** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
-String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
+void InitAnalysisOptions();
 
 } // namespace Sirikata
 
 
-#endif //_SIRIKATA_CBR_OPTIONS_HPP_
+#endif //_SIRIKATA_ANALYSIS_OPTIONS_HPP_

@@ -30,27 +30,48 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CBR_OPTIONS_HPP_
-#define _SIRIKATA_CBR_OPTIONS_HPP_
+#ifndef _SIRIKATA_SPACE_OPTIONS_HPP_
+#define _SIRIKATA_SPACE_OPTIONS_HPP_
 
-#include "VWTypes.hpp"
+#define SERVER_QUEUE         "server.queue"
+#define SERVER_QUEUE_LENGTH  "server.queue.length"
+#define SERVER_RECEIVER      "server.receiver"
+#define SERVER_ODP_FLOW_SCHEDULER   "server.odp.flowsched"
 
-#define STATS_TRACE_FILE     "stats.trace-filename"
-#define PROFILE                    "profile"
+#define NETWORK_TYPE         "net"
+
+#define CSEG                "cseg"
+
+#define LOC                        "loc"
+#define LOC_MAX_PER_RESULT         "loc.max-per-result"
+
+#define OSEG                       "oseg"
+#define OSEG_OPTION_CRAQ           "oseg_craq"
+#define OSEG_UNIQUE_CRAQ_PREFIX    "oseg_unique_craq_prefix"
+#define OSEG_CACHE_SIZE              "oseg-cache-size"
+#define OSEG_CACHE_CLEAN_GROUP_SIZE  "oseg-cache-clean-group-size"
+#define OSEG_CACHE_ENTRY_LIFETIME    "oseg-cache-entry-lifetime"
+
+#define CACHE_SELECTOR              "oseg-cache-selector"
+#define CACHE_TYPE_COMMUNICATION    "cache_communication"
+#define CACHE_TYPE_ORIGINAL_LRU     "cache_originallru"
+
+
+#define CACHE_COMM_SCALING          "oseg-cache-scaling"
+
+#define FORWARDER_SEND_QUEUE_SIZE "forwarder.send-queue-size"
+#define FORWARDER_RECEIVE_QUEUE_SIZE "forwarder.receive-queue-size"
+
+#define OSEG_LOOKUP_QUEUE_SIZE     "oseg_lookup_queue_size"
+
+#define PROX_MAX_PER_RESULT        "prox.max-per-result"
+
 
 namespace Sirikata {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
-
-
-String GetPerServerString(const String& orig, const ServerID& sid);
-/** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
-String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
+void InitSpaceOptions();
 
 } // namespace Sirikata
 
 
-#endif //_SIRIKATA_CBR_OPTIONS_HPP_
+#endif //_SIRIKATA_SPACE_OPTIONS_HPP_

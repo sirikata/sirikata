@@ -38,6 +38,7 @@
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
 #include "Forwarder.hpp"

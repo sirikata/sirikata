@@ -386,6 +386,9 @@ OptionSet* OptionSet::getOptions(const std::string&s, const void * context){
 OptionSet*OptionSet::getOptions(const std::string&s){
     return getOptions(s,NULL);
 }
+OptionSet*OptionSet::getOptions(){
+    return getOptions("",NULL);
+}
 OptionValue* OptionSet::referenceOption(const std::string&module, const std::string&option,OptionValue**pointer) {
     boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
     return getOptionsNoLock(module,NULL)->referenceOptionNoLock(option,pointer);

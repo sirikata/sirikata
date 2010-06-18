@@ -47,6 +47,7 @@
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
 
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
 #include <sirikata/cbrcore/CoordinateSegmentation.hpp>

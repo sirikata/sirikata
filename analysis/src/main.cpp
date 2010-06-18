@@ -38,6 +38,7 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/cbrcore/TimeSync.hpp>
 
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include "Analysis.hpp"
@@ -47,11 +48,6 @@
 //#include "Visualization.hpp"
 
 #include <sirikata/cbrcore/Message.hpp>
-
-namespace {
-Sirikata::Trace* gTrace = NULL;
-}
-
 
 void *main_loop(void *);
 
@@ -80,13 +76,12 @@ int main(int argc, char** argv) {
 
     InitOptions();
     Trace::InitOptions();
+    InitAnalysisOptions();
     ParseOptions(argc, argv);
 
     assert(is_analysis());
 
-    ServerID server_id = GetOption("id")->as<ServerID>();
     String trace_file = "analysis.trace";
-    gTrace = new Trace(trace_file);
 
     // Compute the starting date/time
     String start_time_str = GetOption("wait-until")->as<String>();
@@ -161,7 +156,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        ba.computeJFI(server_id);
+        ba.computeJFI(1);
         exit(0);
     }
     else if ( !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ) {
@@ -396,12 +391,6 @@ int main(int argc, char** argv) {
         FlowStatsAnalysis(STATS_TRACE_FILE, nservers);
         exit(0);
     }
-
-    gTrace->prepareShutdown();
-
-    gTrace->shutdown();
-    delete gTrace;
-    gTrace = NULL;
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);

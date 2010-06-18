@@ -31,6 +31,7 @@
  */
 
 #include "Proximity.hpp"
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
 #include <algorithm>

@@ -34,6 +34,7 @@
 #define _ALWAYS_LOCATION_UPDATE_POLICY_HPP_
 
 #include "LocationService.hpp"
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
 #include "CBR_Loc.pbj.hpp"

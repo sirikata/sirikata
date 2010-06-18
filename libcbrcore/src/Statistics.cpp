@@ -163,7 +163,7 @@ void Trace::InitOptions() {
     mLogPing = new OptionValue(TRACE_PING_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
-    InitializeClassOptions::module(CBR_MODULE)
+    InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(mLogObject)
         .addOption(mLogLocProx)
         .addOption(mLogOSeg)

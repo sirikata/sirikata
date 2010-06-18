@@ -30,25 +30,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CBR_OPTIONS_HPP_
-#define _SIRIKATA_CBR_OPTIONS_HPP_
+#ifndef _SIRIKATA_SIMOH_OPTIONS_HPP_
+#define _SIRIKATA_SIMOH_OPTIONS_HPP_
 
-#include "VWTypes.hpp"
+#define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
 
-#define STATS_TRACE_FILE     "stats.trace-filename"
-#define PROFILE                    "profile"
+#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
+#define STATS_SAMPLE_RATE    "stats.sample-rate"
+
+#define OBJECT_NUM_RANDOM    "object.num.random"
+#define OBJECT_CONNECT_PHASE "object.connect"
+#define OBJECT_STATIC        "object.static"
+#define OBJECT_SIMPLE        "object.simple"
+#define OBJECT_2D            "object.2d"
+#define OBJECT_QUERY_FRAC    "object.query-frac"
+#define OBJECT_PACK_DIR      "object.pack-dir"
+#define OBJECT_PACK          "object.pack"
+#define OBJECT_PACK_OFFSET   "object.pack-offset"
+#define OBJECT_PACK_NUM      "object.pack-num"
+#define OBJECT_PACK_DUMP     "object.pack-dump"
+
+#define OBJECT_SL_FILE       "object.sl-file"
+#define OBJECT_SL_NUM        "object.sl-num"
+#define OBJECT_SL_CENTER     "object.sl-center"
+
+#define OBJECT_DRIFT_X             "object_drift_x"
+#define OBJECT_DRIFT_Y             "object_drift_y"
+#define OBJECT_DRIFT_Z             "object_drift_z"
+#define OSEG_LOOKUP_QUEUE_SIZE     "oseg_lookup_queue_size"
 
 namespace Sirikata {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
-
-
-String GetPerServerString(const String& orig, const ServerID& sid);
-/** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
-String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
+void InitSimOHOptions();
 
 } // namespace Sirikata
 

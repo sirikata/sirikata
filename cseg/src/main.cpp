@@ -34,6 +34,7 @@
 #include <sirikata/cbrcore/TimeSync.hpp>
 
 #include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
@@ -45,6 +46,7 @@ int main(int argc, char** argv) {
 
     InitOptions();
     Trace::InitOptions();
+    InitCSegOptions();
     ParseOptions(argc, argv);
 
     ServerID server_id = GetOption("cseg-id")->as<ServerID>();
@@ -77,7 +79,6 @@ int main(int argc, char** argv) {
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
 
-    String cseg_type = GetOption(CSEG)->as<String>();
     DistributedCoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(cseg_context, region, layout, max_space_servers, server_id_map);
 
     ///////////Go go go!! start of simulation/////////////////////

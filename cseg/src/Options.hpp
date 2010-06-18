@@ -30,25 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CBR_OPTIONS_HPP_
-#define _SIRIKATA_CBR_OPTIONS_HPP_
-
-#include "VWTypes.hpp"
-
-#define STATS_TRACE_FILE     "stats.trace-filename"
-#define PROFILE                    "profile"
+#ifndef _SIRIKATA_CSEG_OPTIONS_HPP_
+#define _SIRIKATA_CSEG_OPTIONS_HPP_
 
 namespace Sirikata {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
-
-
-String GetPerServerString(const String& orig, const ServerID& sid);
-/** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
-String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
+void InitCSegOptions();
 
 } // namespace Sirikata
 

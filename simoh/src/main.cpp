@@ -39,6 +39,7 @@
 #include "ScenarioFactory.hpp"
 
 #include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 
@@ -50,6 +51,7 @@ int main(int argc, char** argv) {
 
     InitOptions();
     Trace::InitOptions();
+    InitSimOHOptions();
     ParseOptions(argc, argv);
 
     std::string time_server=GetOption("time-server")->as<String>();

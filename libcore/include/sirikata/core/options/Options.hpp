@@ -32,7 +32,14 @@
 
 #ifndef _SIRIKATA_OPTIONS_HPP_
 #define _SIRIKATA_OPTIONS_HPP_
+
+#include <sirikata/core/util/Platform.hpp>
+
 namespace Sirikata {
+
+#define GLOBAL_OPTIONS_MODULE ""
+#define SIRIKATA_OPTIONS_MODULE "sirikata"
+
 /**
  * A dummy class to statically initialize a bunch of option classes that could add to a module
  */
@@ -111,6 +118,7 @@ public:
     }
     static OptionSet*getOptions(const std::string&s, const void *context);
     static OptionSet*getOptions(const std::string&s);
+    static OptionSet*getOptions();
 };
 }
 

@@ -3,6 +3,7 @@
 import sys
 import math
 import datetime
+import types
 
 # FIXME It would be nice to have a better way of making this script able to find
 # other modules in sibling packages
@@ -34,8 +35,6 @@ class ClusterSimSettings:
         self.layout_x = layout[0]
         self.layout_y = layout[1]
         self.duration = '120s'
-        self.tx_bandwidth = 1000000
-        self.rx_bandwidth = 1000000
         self.falloff = 'sqr'
         self.flatness = 8
         self.server_queue = 'fair'
@@ -184,70 +183,83 @@ class ClusterSim:
         # nothing added after this will be processed by the wrapper script.
         if (self.settings.profile):
             params.append("--profile=true")
-        class_params = {}
+        return params
+
+    def cbr_parameters(self):
+        class_params = {
+            'ssid' : '--id=%(node)d',
+            'net' : '--net=tcp',
+            'server.queue' : "--server.queue=" + self.settings.server_queue,
+            'server.queue.length' : "--server.queue.length=" + str(self.settings.server_queue_length),
+            'server.odp.flowsched' : "--server.odp.flowsched=" + self.settings.odp_flow_scheduler,
+            'loc' : "--loc=" + self.settings.loc,
+            'cseg' : "--cseg=" + self.settings.cseg,
+            'cseg-service-host' : "--cseg-service-host=" + self.settings.cseg_service_host,
+            'cseg-service-tcp-port' : "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
+            'oseg' : "--oseg=" + self.settings.oseg,
+            'oseg_unique_craq_prefix' : "--oseg_unique_craq_prefix=" + self.settings.unique(),
+            'oseg-cache-selector' : "--oseg-cache-selector=" + self.settings.oseg_cache_selector,
+            'oseg-cache-scaling' : "--oseg-cache-scaling=" + self.settings.oseg_cache_comm_scaling,
+            'oseg_lookup_queue_size' : "--oseg_lookup_queue_size=" + str(self.settings.oseg_lookup_queue_size),
+            'oseg-cache-size' : "--oseg-cache-size=" + str(self.settings.oseg_cache_size),
+            'oseg-cache-clean-group-size' : "--oseg-cache-clean-group-size=" + str(self.settings.oseg_cache_clean_group),
+            'oseg-cache-entry-lifetime' : "--oseg-cache-entry-lifetime=" + str(self.settings.oseg_cache_entry_lifetime),
+            }
+        params = ['%(' + x + ')s' for x in class_params.keys()]
         return (params, class_params)
+
 
     def oh_objects_per_server(self):
         return self.settings.num_random_objects + self.settings.num_pack_objects
 
     def oh_parameters(self):
-        params = [
-            '--ohid=%(node)d ',
-            '--object.connect=' + self.settings.object_connect_phase,
-            '--object.num.random=' + str(self.settings.num_random_objects),
-            '--object.static=' + self.settings.object_static,
-            '--object.simple=' + self.settings.object_simple,
-            '--object.2d=' + self.settings.object_2d,
-            '--object.query-frac=' + str(self.settings.object_query_frac),
-            '--object.pack-dir=' + self.settings.pack_dir
-            ]
+        class_params = {
+            'oh.id' : '--ohid=%(node)d ',
+            'oh.connect' : '--object.connect=' + self.settings.object_connect_phase,
+            'oh.num-random' : '--object.num.random=' + str(self.settings.num_random_objects),
+            'oh.static' : '--object.static=' + self.settings.object_static,
+            'oh.simple' : '--object.simple=' + self.settings.object_simple,
+            'oh.2d' : '--object.2d=' + self.settings.object_2d,
+            'oh.query-frac' : '--object.query-frac=' + str(self.settings.object_query_frac),
+            'oh.pack-dir' : '--object.pack-dir=' + self.settings.pack_dir,
+            'object.pack-offset': lambda index : '--object.pack-offset=' + str(index*self.oh_objects_per_server()),
+            'object-drift-x' : "--object_drift_x=" + self.settings.object_drift_x,
+            'object-drift-y' : "--object_drift_y=" + self.settings.object_drift_y,
+            'object-drift-z' : "--object_drift_z=" + self.settings.object_drift_z,
+            }
         if (len(self.settings.object_pack)):
-            params.append('--object.pack=' + self.settings.object_pack)
+            class_params['object.pack'] = '--object.pack=' + self.settings.object_pack
         if (len(self.settings.pack_dump)):
-            params.append('--object.pack-dump=' + self.settings.pack_dump)
+            class_params['object.pack-dump'] = '--object.pack-dump=' + self.settings.pack_dump
 
         if (len(self.settings.object_sl_file)):
-            params.append('--object.sl-file=' + self.settings.object_sl_file)
+            class_params['object.sl-file'] = '--object.sl-file=' + self.settings.object_sl_file
         if (self.settings.num_sl_objects):
-            params.append('--object.sl-num=' + str(self.settings.num_sl_objects))
-        params.append('--object.sl-center=' + ('<%f,%f,%f>' % self.settings.object_sl_center))
-        print "EXTENDING"
-        params.extend(
-            [
-            '%(packoffset)s',
-            '--object.pack-num=' + str(self.settings.num_pack_objects),
-            '--scenario=' + self.settings.scenario,
-            '--scenario-options=' + self.settings.scenario_options,
-            ])
-        class_params = {
-            'packoffset' : {
-                'simoh' : lambda index : ['--object.pack-offset=' + str(index*self.oh_objects_per_server())]
-                }
-            }
+            class_params['object.sl-num'] = '--object.sl-num=' + str(self.settings.num_sl_objects)
+        class_params['object.sl-center'] = '--object.sl-center=' + ('<%f,%f,%f>' % self.settings.object_sl_center)
+        class_params['object.pack-num'] = '--object.pack-num=' + str(self.settings.num_pack_objects)
+        class_params['object.scenario'] = '--scenario=' + self.settings.scenario
+        class_params['object.scenario-options'] = '--scenario-options=' + self.settings.scenario_options
+
+        params = ['%(' + x + ')s' for x in class_params.keys()]
         return (params, class_params)
 
     def cseg_parameters(self):
-        params = [
-            '--max-servers=' + str(self.settings.space_server_pool),
-            '--num-cseg-servers=' + str(self.settings.num_cseg_servers),
-            '--cseg-serverips=' + self.settings.cseg_ip_file,
-            '%(csegid)s',
-            ]
         class_params = {
-            'csegid' : {
-                'cseg' : lambda index : ['--cseg-id=' + str(index)]
-                }
+            'cseg-id' : lambda index : '--cseg-id=' + str(index),
+            'num-cseg-servers' : '--num-cseg-servers=' + str(self.settings.num_cseg_servers),
+            'cseg-serverips' : '--cseg-serverips=' + self.settings.cseg_ip_file,
+            'max-servers' : '--max-servers=' + str(self.settings.space_server_pool),
             }
+        params = ['%(' + x + ')s' for x in class_params.keys()]
         return (params, class_params)
 
 
     def vis_parameters(self):
-        params = ['%(vis)s']
         class_params = {
-            'vis' : {
-                'vis' : lambda index : ['--analysis.locvis=' + self.settings.vis_mode, '--analysis.locvis.seed=' + str(self.settings.vis_seed)]
-                }
+            'vis' : lambda index : ['--analysis.locvis=' + self.settings.vis_mode, '--analysis.locvis.seed=' + str(self.settings.vis_seed)]
             }
+        params = ['%(' + x + ')s' for x in class_params.keys()]
         return (params, class_params)
 
     def run_pre(self):
@@ -339,14 +351,17 @@ class ClusterSim:
             ClusterSCP(self.config, [self.settings.message_trace_file, self.pack_filename(self.settings.message_trace_file)], io=self.io)
 
 
-    def fill_parameters(self, node_params, param_dict, node_class, idx):
-        for parm,parm_map in param_dict.items():
-            if (not parm in node_params):
+    def fill_parameters(self, node_params, param_list, node_class_matches, idx):
+        for parm,parm_val in param_list.items():
+            if parm not in node_params:
                 node_params[parm] = []
-            if not node_class in parm_map:
+            if not node_class_matches:
                 node_params[parm].append('')
             else:
-                node_params[parm].extend(parm_map[node_class](idx))
+                if type(parm_val) == types.FunctionType:
+                    node_params[parm].append(parm_val(idx))
+                else:
+                    node_params[parm].append(parm_val)
 
 
     # instance_types: [] of tuples (type, count) - types of nodes, e.g.
@@ -355,7 +370,8 @@ class ClusterSim:
     # local: bool indicating whether this should all be run locally or remotely
     def run_instances(self, instance_types, local):
         # get various types of parameters, along with node-specific dict-functors
-        debug_params, debug_param_functor_dict = self.debug_parameters()
+        debug_params = self.debug_parameters()
+        cbr_params, cbr_param_functor_dict = self.cbr_parameters()
         oh_params, oh_param_functor_dict = self.oh_parameters()
         vis_params, vis_param_functor_dict = self.vis_parameters()
         cseg_params, cseg_param_functor_dict = self.cseg_parameters()
@@ -383,10 +399,10 @@ class ClusterSim:
                     num_cseg_instances += 1
                 else:
                     node_params['binary'].append('')
-                self.fill_parameters(node_params, debug_param_functor_dict, node_type, x)
-                self.fill_parameters(node_params, oh_param_functor_dict, node_type, x)
-                self.fill_parameters(node_params, vis_param_functor_dict, node_type, x)
-                self.fill_parameters(node_params, cseg_param_functor_dict, node_type, num_cseg_instances)
+                self.fill_parameters(node_params, vis_param_functor_dict, node_type == 'analysis', x)
+                self.fill_parameters(node_params, cseg_param_functor_dict, node_type == 'cseg', num_cseg_instances)
+                self.fill_parameters(node_params, oh_param_functor_dict, node_type == 'simoh', x)
+                self.fill_parameters(node_params, cbr_param_functor_dict, node_type == 'space', x)
 
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
 
@@ -401,45 +417,21 @@ class ClusterSim:
         if self.config.timeserver:
             ts_string = "--time-server=" + self.config.timeserver
         cmd_seq.extend( [
-                "--id=%(node)d",
-                "--net=tcp",
                 ts_string,
                 "--layout=" + self.settings.layout(),
-                "--num-oh=" + str(self.settings.num_oh),
                 "--region=" + self.settings.region(),
                 "--serverips=" + self.ip_file(),
                 "--duration=" + self.settings.duration,
-                "--send-bandwidth=" + str(self.settings.tx_bandwidth),
-                "--receive-bandwidth=" + str(self.settings.rx_bandwidth),
                 "--wait-until=" + wait_until_time,
                 "--wait-additional=10s",
                 '--falloff=' + str(self.settings.falloff),
                 "--flatness=" + str(self.settings.flatness),
                 "--capexcessbandwidth=false",
-                "--server.queue=" + self.settings.server_queue,
-                "--server.queue.length=" + str(self.settings.server_queue_length),
-                "--server.odp.flowsched=" + self.settings.odp_flow_scheduler,
-                "--loc=" + self.settings.loc,
-                "--cseg=" + self.settings.cseg,
-                "--cseg-service-host=" + self.settings.cseg_service_host,
-                "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
-                "--oseg=" + self.settings.oseg,
-                "--oseg_unique_craq_prefix=" + self.settings.unique(),
-                "--oseg-cache-selector=" + self.settings.oseg_cache_selector,
-                "--oseg-cache-scaling=" + self.settings.oseg_cache_comm_scaling,
-                "--object_drift_x=" + self.settings.object_drift_x,
-                "--object_drift_y=" + self.settings.object_drift_y,
-                "--object_drift_z=" + self.settings.object_drift_z,
-                "--oseg_analyze_after=" + self.settings.oseg_analyze_after,
-                "--oseg_lookup_queue_size=" + str(self.settings.oseg_lookup_queue_size),
-                "--oseg-cache-size=" + str(self.settings.oseg_cache_size),
-                "--oseg-cache-clean-group-size=" + str(self.settings.oseg_cache_clean_group),
-                "--oseg-cache-entry-lifetime=" + str(self.settings.oseg_cache_entry_lifetime),
                 ])
+        cmd_seq.extend(cbr_params)
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
         cmd_seq.extend(cseg_params)
-        print "COMMAND AS FOLLOWS ",cmd_seq
         for tracetype in self.settings.traces:
             cmd_seq.append( '--trace-%s=true' % (tracetype) )
 
@@ -498,7 +490,7 @@ class ClusterSim:
             ClusterSCP(self.config, [self.pack_filename(self.settings.pack_dump), "."], io=self.io)
 
     def bandwidth_analysis(self):
-        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ], io=self.io)
+        RunCBR(['analysis', '--debug', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ], io=self.io)
 
         GraphWindowedBandwidth('windowed_bandwidth_datagram_send.dat')
         GraphWindowedBandwidth('windowed_bandwidth_datagram_receive.dat')
@@ -511,17 +503,17 @@ class ClusterSim:
 
 
     def latency_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
+        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
 
     def object_latency_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
+        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
 
     def message_latency_analysis(self, filename=None):
         stdout_fp = None
         if filename != None:
             stdout_fp = open(filename, 'w')
 
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
+        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
                io=self.io,
                stdout=stdout_fp,
                stderr=stdout_fp)
@@ -529,21 +521,21 @@ class ClusterSim:
             stdout_fp.close()
 
     def oseg_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ], self.io)
+        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true', "--oseg_analyze_after=" + self.settings.oseg_analyze_after ], self.io)
 
     def loc_latency_analysis(self):
-        RunCBR(['analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ], self.io)
+        RunCBR(['analysis', '--debug', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
 
     def prox_dump_analysis(self):
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ], self.io)
+        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ], self.io)
 
     def flow_stats_analysis(self, filename=None):
         stdout_fp = None
         if filename != None:
             stdout_fp = open(filename, 'w')
 
-        RunCBR(['analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.flow.stats=true', '--max-servers=' + str(self.max_space_servers()),
+        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.flow.stats=true', '--max-servers=' + str(self.max_space_servers()),
                 '--falloff=' + str(self.settings.falloff),
                 "--flatness=" + str(self.settings.flatness)
                 ],

@@ -71,11 +71,11 @@ def ClusterSubstitute(command, host, user, index=0, user_params=None):
         for key,value in user_params.items():
             subs[key] = value[index-1]
 
-    # Perform substituion
+    # Perform substition. We do this twice because some user_params items might have host, user and node in them
     if (isinstance(command, str)):
-        return command % subs
+        return (command % subs) % subs
     elif (isinstance(command, list)):
-        return [(x % subs) for x in command]
+        return [((x % subs) % subs) for x in command]
     return None
 
 

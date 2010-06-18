@@ -46,6 +46,7 @@
 #include "Proximity.hpp"
 #include "Server.hpp"
 
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include "StandardLocationService.hpp"
@@ -67,6 +68,7 @@ int main(int argc, char** argv) {
 
     InitOptions();
     Trace::InitOptions();
+    InitSpaceOptions();
     ParseOptions(argc, argv);
 
     std::string time_server=GetOption("time-server")->as<String>();
@@ -115,14 +117,6 @@ int main(int argc, char** argv) {
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
 
 
-    uint32 max_space_servers = GetOption("max-servers")->as<uint32>();
-    if (max_space_servers == 0)
-      max_space_servers = layout.x * layout.y * layout.z;
-    uint32 num_oh_servers = GetOption("num-oh")->as<uint32>();
-    uint32 nservers = max_space_servers + num_oh_servers;
-
-
-
     srand( GetOption("rand-seed")->as<uint32>() );
 
 
@@ -164,12 +158,6 @@ int main(int argc, char** argv) {
             space_context, gNetwork,
             (ServerMessageQueue::Sender*)forwarder);
     }
-    /*
-    else if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(space_context, gNetwork, server_id_map,
-        (ServerMessageQueue::Listener*)forwarder,
-        GetOption(SEND_BANDWIDTH)->as<uint32>());
-    */
     else {
         assert(false);
         exit(-1);

@@ -32,6 +32,7 @@
 
 #include "OSegLookupQueue.hpp"
 #include "ObjectSegmentation.hpp"
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
 namespace Sirikata {

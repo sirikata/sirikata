@@ -41,6 +41,7 @@
 #include <sirikata/cbrcore/StaticMotionPath.hpp>
 #include <sirikata/cbrcore/OSegTestMotionPath.hpp>
 
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 

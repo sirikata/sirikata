@@ -1324,6 +1324,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
+  ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
   ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
@@ -1348,11 +1349,13 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 
 SET(CSEG_SOURCES
   ${CSEG_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CSEG_SOURCE_DIR}/Options.cpp
   ${CSEG_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CSEG_SOURCE_DIR}/main.cpp
   )
@@ -1363,6 +1366,7 @@ SET(ANALYSIS_SOURCES
   ${ANALYSIS_SOURCE_DIR}/RecordedMotionPath.cpp
   ${ANALYSIS_SOURCE_DIR}/MessageLatency.cpp
   ${ANALYSIS_SOURCE_DIR}/ObjectLatency.cpp
+  ${ANALYSIS_SOURCE_DIR}/Options.cpp
   #${ANALYSIS_SOURCE_DIR}/Visualization.cpp
   ${ANALYSIS_SOURCE_DIR}/main.cpp
 )

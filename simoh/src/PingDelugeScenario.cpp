@@ -36,6 +36,7 @@
 #include "Object.hpp"
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
 namespace Sirikata {
