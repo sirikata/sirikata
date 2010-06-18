@@ -46,7 +46,7 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT TimeProfiler {
 public:
-    struct Stage {
+    struct SIRIKATA_EXPORT Stage {
         Stage(const String& name);
 
         void started();
