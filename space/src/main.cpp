@@ -65,7 +65,7 @@ int main(int argc,const char**argv) {
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++) {
         if (strcmp(*plugin_name,"ogregraphics")!=0||loadGraphics->as<bool>())
             if (strcmp(*plugin_name,"bulletphysics")!=0||loadPhysics->as<bool>())
-                plugins.load( DynamicLibrary::filename(*plugin_name) );
+                plugins.load( *plugin_name );
     }
 
     Space::Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())),spaceOption->as<String>());

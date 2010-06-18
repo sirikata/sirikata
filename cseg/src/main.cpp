@@ -35,6 +35,7 @@
 
 #include <sirikata/cbrcore/Options.hpp>
 #include "Options.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
@@ -48,6 +49,10 @@ int main(int argc, char** argv) {
     Trace::InitOptions();
     InitCSegOptions();
     ParseOptions(argc, argv);
+
+    PluginManager plugins;
+    plugins.loadList( GetOption(OPT_PLUGINS)->as<String>() );
+    plugins.loadList( GetOption(OPT_CSEG_PLUGINS)->as<String>() );
 
     ServerID server_id = GetOption("cseg-id")->as<ServerID>();
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
@@ -109,6 +114,8 @@ int main(int argc, char** argv) {
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);
+
+    plugins.gc();
 
     return 0;
 }

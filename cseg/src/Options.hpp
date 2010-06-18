@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_CSEG_OPTIONS_HPP_
 #define _SIRIKATA_CSEG_OPTIONS_HPP_
 
+#define OPT_CSEG_PLUGINS           "cseg.plugins"
+
 namespace Sirikata {
 
 void InitCSegOptions();

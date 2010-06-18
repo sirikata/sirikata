@@ -42,7 +42,6 @@
 
 namespace Sirikata {
 
-class ServerWeightCalculator;
 class LocationService;
 
 /** CSFQODPFlowScheduler tracks all active flows and uses a CSFQ-style
@@ -163,7 +162,6 @@ private:
     mutable QueuedMessage mQueueBuffer;
     mutable Sirikata::SizedThreadSafeQueue<QueuedMessage> mQueue;
     mutable Sirikata::AtomicValue<bool> mNeedsNotification;
-    ServerWeightCalculator* mWeightCalculator;
     // Used to collect information for weight computation
     LocationService* mLoc;
 

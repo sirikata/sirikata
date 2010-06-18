@@ -57,8 +57,8 @@ int main(int argc,const char**argv) {
     using namespace Sirikata;
     OptionSet::getOptions("")->parse(argc,argv);
     PluginManager plugins;
-    plugins.load( DynamicLibrary::filename("tcpsst") );
-    plugins.load( DynamicLibrary::filename("prox-everyone") );
+    plugins.load( "tcpsst" );
+    plugins.load( "prox-everyone" );
 
     Network::IOService*io=Network::IOServiceFactory::makeIOService();
     Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,"",&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);

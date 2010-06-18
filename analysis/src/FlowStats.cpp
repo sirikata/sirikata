@@ -33,12 +33,14 @@
 #include "AnalysisEvents.hpp"
 #include "FlowStats.hpp"
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
 
 namespace Sirikata {
 
 FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers) {
-    ServerWeightCalculator* swc = WeightCalculatorFactory(NULL);
+    RegionWeightCalculator* swc =
+        RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOption(OPT_REGION_WEIGHT)->as<String>())(GetOption(OPT_REGION_WEIGHT_ARGS)->as<String>())
+;
 
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);

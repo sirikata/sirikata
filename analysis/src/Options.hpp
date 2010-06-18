@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_ANALYSIS_OPTIONS_HPP_
 #define _SIRIKATA_ANALYSIS_OPTIONS_HPP_
 
+#define OPT_ANALYSIS_PLUGINS           "analysis.plugins"
+
 #define ANALYSIS_LOC         "analysis.loc"
 #define ANALYSIS_LOCVIS         "analysis.locvis"
 #define ANALYSIS_LOCVIS_SEED         "analysis.locvis.seed"

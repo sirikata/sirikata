@@ -216,7 +216,7 @@ void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Netw
 void noop(){}
 void SSTBenchmark::start() {
     static Sirikata::PluginManager pluginManager;
-    pluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
+    pluginManager.load(mStreamPlugin);
     mForceStop = false;
     if (!mHost.empty()) {
         using std::tr1::placeholders::_1;

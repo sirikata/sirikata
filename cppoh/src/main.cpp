@@ -180,7 +180,7 @@ int main ( int argc,const char**argv ) {
 #endif
                                   "colladamodels", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
-        plugins.load( DynamicLibrary::filename(*plugin_name) );
+        plugins.load( *plugin_name );
 
     OptionSet::getOptions ( "" )->parse ( myargc,myargv );
 

@@ -80,13 +80,13 @@ class ProxTest : public CxxTest::TestSuite         , MessageService
 public:
     ProxTest():mIO(IOServiceFactory::makeIOService()),mSend(0),mAbortTest(false),mReadyToConnect(false){
         Sirikata::PluginManager plugins;
-        plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
+        plugins.load( "tcpsst" );
         for (int i=0;i<NUM_OBJECTS;++i) {
             mObjectId[i]=UUID::random();
             mDeliver[i]=0;
         }
 
-        plugins.load(DynamicLibrary::filename("prox"));
+        plugins.load("prox");
 
         mProxThread= new Thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}

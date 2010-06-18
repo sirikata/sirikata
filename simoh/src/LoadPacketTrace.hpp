@@ -42,7 +42,6 @@ namespace Sirikata {
 
 class ScenarioFactory;
 class ConnectedObjectTracker;
-class ServerWeightCalculator;
 class LoadPacketTrace : public Scenario {
     double mNumPingsPerSecond;
 
@@ -95,7 +94,6 @@ class LoadPacketTrace : public Scenario {
     void generatePings();
 
     void sendPings();
-    ServerWeightCalculator* mWeightCalculator;
     static LoadPacketTrace*create(const String&options);
     void generatePairs();
     std::vector<std::pair<UUID,UUID> >mPacketTrace;

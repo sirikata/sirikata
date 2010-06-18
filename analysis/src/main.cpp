@@ -40,6 +40,7 @@
 
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include "Analysis.hpp"
 #include "MessageLatency.hpp"
@@ -78,6 +79,10 @@ int main(int argc, char** argv) {
     Trace::InitOptions();
     InitAnalysisOptions();
     ParseOptions(argc, argv);
+
+    PluginManager plugins;
+    plugins.loadList( GetOption(OPT_PLUGINS)->as<String>() );
+    plugins.loadList( GetOption(OPT_ANALYSIS_PLUGINS)->as<String>() );
 
     assert(is_analysis());
 
@@ -394,6 +399,8 @@ int main(int argc, char** argv) {
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);
+
+    plugins.gc();
 
     return 0;
 }

@@ -63,7 +63,7 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Net
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
+    static int tcpSstLoaded=(sPluginManager.load(GetOption("ohstreamlib")->as<String>()),0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -290,7 +290,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap
 {
     mPingId=0;
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
+    static int tcpSstLoaded=(sPluginManager.load(GetOption("ohstreamlib")->as<String>()),0);
 
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
 

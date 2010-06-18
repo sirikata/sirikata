@@ -54,7 +54,7 @@ public:
     Sirikata::Persistence::MinitransactionHandler*mDatabase;
     SQLiteMinitransactionTest() {
         Sirikata::PluginManager plugins;
-        plugins.load(Sirikata::DynamicLibrary::filename("sqlite"));
+        plugins.load("sqlite");
         mDatabase=createMinitransactionalHandlerFunction("");
     }
     ~SQLiteMinitransactionTest(){

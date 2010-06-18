@@ -208,7 +208,7 @@ void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Netw
 void noop(){}
 void SSTBenchmark::start() {
     static Sirikata::PluginManager pluginManager;
-    pluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
+    pluginManager.load(mStreamPlugin);
     mForceStop = false;
     if (!mHost.empty()) {
         mStream=Sirikata::Network::StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mStreamOptions));

@@ -39,7 +39,6 @@
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
 namespace Sirikata {
 void DPSInitOptions(LoadPacketTrace *thus) {
 
@@ -129,7 +128,6 @@ LoadPacketTrace::LoadPacketTrace(const String &options)
         new Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>(
             CountResourceMonitor(std::max((uint32)(mNumPingsPerSecond / 4), (uint32)2))
         );
-    mWeightCalculator=WeightCalculatorFactory(NULL);
     mPingPoller = NULL;
     // NOTE: We have this limit because we can get in lock-step with the
     // generator, causing this to run for excessively long when we fall behind

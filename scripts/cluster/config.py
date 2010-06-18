@@ -51,6 +51,12 @@ class ClusterConfig:
         self.unique = None
         self.ccache = False
 
+        self.plugins = 'tcpsst'
+        self.space_plugins = 'weight-exp,weight-sqr'
+        self.cseg_plugins = ''
+        self.simoh_plugins = 'weight-exp,weight-sqr'
+        self.analysis_plugins = 'weight-exp,weight-sqr'
+
         self.zookeeper = ""
         self.zookeeper_addr = ""
         self.craq_nodes = ""
@@ -129,6 +135,17 @@ class ClusterConfig:
                 self.zookeeper_addr = opt_value.strip()
             elif (opt_name == 'craq_nodes'):
                 self.craq_nodes = eval(opt_value)
+
+            elif (opt_name == 'plugins'):
+                self.plugins = opt_value.strip()
+            elif (opt_name == 'space_plugins'):
+                self.space_plugins = opt_value.strip()
+            elif (opt_name == 'cseg_plugins'):
+                self.cseg_plugins = opt_value.strip()
+            elif (opt_name == 'simoh_plugins'):
+                self.simoh_plugins = opt_value.strip()
+            elif (opt_name == 'analysis_plugins'):
+                self.analysis_plugins = opt_value.strip()
 
         fp.close()
         return

@@ -43,12 +43,13 @@ void InitOptions() {
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )
 
+        .addOption(new OptionValue(OPT_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+
         .addOption(new OptionValue("ohstreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
 
-        .addOption(new OptionValue("falloff", "sqr", Sirikata::OptionValueType<String>(), "Type of communication falloff function to use.  Valid values are sqr and guassian. Default is sqr."))
-        .addOption(new OptionValue("flatness", "8", Sirikata::OptionValueType<double>(), "k where e^-kx is the bandwidth function and x is the distance between 2 server points"))
-        .addOption(new OptionValue("const-cutoff", "64", Sirikata::OptionValueType<double>(), "cutoff below with a constant bandwidth is used"))
+        .addOption(new OptionValue(OPT_REGION_WEIGHT, "sqr", Sirikata::OptionValueType<String>(), "Type of region weight calculator to use, which affects communication falloff."))
+        .addOption(new OptionValue(OPT_REGION_WEIGHT_ARGS, "--flatness=8 --const-cutoff=64", Sirikata::OptionValueType<String>(), "Arguments to region weight calculator."))
 
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
         .addOption(new OptionValue("layout", "<2,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))

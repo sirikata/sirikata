@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/SqrIntegral.hpp>
+#include "SqrIntegral.hpp"
 
 extern "C" {
 #include <gsl/gsl_math.h>

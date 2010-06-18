@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_SPACE_OPTIONS_HPP_
 #define _SIRIKATA_SPACE_OPTIONS_HPP_
 
+#define OPT_SPACE_PLUGINS           "space.plugins"
+
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"
 #define SERVER_RECEIVER      "server.receiver"

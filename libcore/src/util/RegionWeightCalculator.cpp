@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ServerWeightCalculator.hpp
+ *  ServerWeightCalculator.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,45 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_
-#define _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
 
-#include <sirikata/core/util/Platform.hpp>
-#include "VWTypes.hpp"
-
-#define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
+AUTO_SINGLETON_INSTANCE(Sirikata::RegionWeightCalculatorFactory);
 
 namespace Sirikata {
 
-class CoordinateSegmentation;
+RegionWeightCalculatorFactory& RegionWeightCalculatorFactory::getSingleton() {
+    return AutoSingleton<RegionWeightCalculatorFactory>::getSingleton();
+}
 
-class ServerWeightCalculator {
-public:
-    enum Normalization{
-        NORMALIZE_BY_SEND_RATE,
-        NORMALIZE_BY_RECEIVE_RATE,
-        NORMALIZE_BY_MIN_SEND_AND_RECEIVE_RATE,
-        DO_NOT_NORMALIZE
-    };
-
-    typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> WeightFunction;
-
-    ServerWeightCalculator(CoordinateSegmentation* cseg, const WeightFunction& weightFunc);
-    ~ServerWeightCalculator();
-
-    float64 weight(const BoundingBox3f& source_bbox, BoundingBox3f& dest_bbox);
-    float64 weight(ServerID source, ServerID dest, Normalization norm = NORMALIZE_MODE);
-private:
-    ServerID mServerID;
-    CoordinateSegmentation* mCSeg;
-    WeightFunction mWeightFunc;
-}; // class ServerWeightCalculator
+void RegionWeightCalculatorFactory::destroy() {
+    AutoSingleton<RegionWeightCalculatorFactory>::destroy();
+}
 
 
-// Generates a ServerWeightCalculator. Note that all parameters, including the
-// type of falloff function, are currently extracted from options.
-ServerWeightCalculator* WeightCalculatorFactory(CoordinateSegmentation* cseg);
+RegionWeightCalculator::RegionWeightCalculator(const WeightFunction& weightFunc)
+ : mWeightFunc(weightFunc)
+{
+}
+
+RegionWeightCalculator::~RegionWeightCalculator() {
+}
+
+float64 RegionWeightCalculator::weight(const BoundingBox3f& source_bbox, BoundingBox3f& dest_bbox) {
+    return mWeightFunc(Vector3d(source_bbox.min()),Vector3d(source_bbox.max()),Vector3d(dest_bbox.min()),Vector3d(dest_bbox.max()));
+}
 
 } // namespace Sirikata
-
-#endif // _SIRIKATA_SERVER_WEIGHT_CALCULATOR_HPP_

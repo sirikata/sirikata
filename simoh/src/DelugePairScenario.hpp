@@ -42,7 +42,7 @@ namespace Sirikata {
 
 class ScenarioFactory;
 class ConnectedObjectTracker;
-class ServerWeightCalculator;
+class RegionWeightCalculator;
 class DelugePairScenario : public Scenario {
     double mNumPingsPerSecond;
 
@@ -96,7 +96,7 @@ class DelugePairScenario : public Scenario {
     void generatePings();
 
     void sendPings();
-    ServerWeightCalculator* mWeightCalculator;
+    RegionWeightCalculator* mWeightCalculator;
     static DelugePairScenario*create(const String&options);
     void generatePairs();
 public:

@@ -39,6 +39,8 @@ namespace Sirikata {
 
 void InitSimOHOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
 
         .addOption(new OptionValue(STATS_OH_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))

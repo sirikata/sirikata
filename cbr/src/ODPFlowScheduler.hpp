@@ -36,6 +36,8 @@
 #include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/queue/AbstractQueue.hpp>
 #include "ForwarderServiceQueue.hpp"
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
+#include <sirikata/cbrcore/Options.hpp>
 
 namespace Sirikata {
 class CraqEntry;
@@ -69,9 +71,15 @@ public:
        mSenderCapacity(0.0),
        mReceiverTotalWeight(0.0),
        mReceiverCapacity(0.0)
-    {}
+    {
+        mWeightCalculator =
+            RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOption(OPT_REGION_WEIGHT)->as<String>())(GetOption(OPT_REGION_WEIGHT_ARGS)->as<String>())
+            ;
+    }
 
-    virtual ~ODPFlowScheduler() {}
+    virtual ~ODPFlowScheduler() {
+        delete mWeightCalculator;
+    }
 
     // Interface: AbstractQueue<Message*>
 	virtual QueueEnum::PushResult push(const Type& msg) { assert(false); return QueueEnum::PushExceededMaximumSize; }
@@ -138,6 +146,8 @@ protected:
     double mSenderCapacity; // Capacity of sender
     double mReceiverTotalWeight; // Total input weight to receiver (sum of used weights)
     double mReceiverCapacity; // Capacity of receiver
+
+    RegionWeightCalculator* mWeightCalculator;
 }; // class ODPFlowScheduler
 
 } // namespace Sirikata

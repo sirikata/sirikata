@@ -38,6 +38,8 @@ namespace Sirikata {
 
 void InitAnalysisOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
+        .addOption(new OptionValue(OPT_ANALYSIS_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+
         .addOption(new OptionValue("num-oh", "1", Sirikata::OptionValueType<uint32>(), "Number of object hosts."))
 
         .addOption(new OptionValue(ANALYSIS_LOC, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))

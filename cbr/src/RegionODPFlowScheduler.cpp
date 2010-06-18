@@ -31,7 +31,7 @@
  */
 
 #include "RegionODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
+#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
 
 namespace Sirikata {
 
@@ -41,11 +41,9 @@ RegionODPFlowScheduler::RegionODPFlowScheduler(SpaceContext* ctx, ForwarderServi
    mQueue(Sirikata::SizedResourceMonitor(max_size)),
    mNeedsNotification(true)
 {
-    mWeightCalculator = WeightCalculatorFactory(mContext->cseg());
 }
 
 RegionODPFlowScheduler::~RegionODPFlowScheduler() {
-    delete mWeightCalculator;
 }
 
 // ODP push interface
@@ -114,21 +112,27 @@ RegionODPFlowScheduler::Type RegionODPFlowScheduler::pop() {
 
 // Get the sum of the weights of active queues.
 float RegionODPFlowScheduler::totalActiveWeight() {
-    return mWeightCalculator->weight(mContext->id(), mDestServer);
+    BoundingBox3f source_bbox = mContext->cseg()->serverRegion(mContext->id())[0];
+    BoundingBox3f dest_bbox = mContext->cseg()->serverRegion(mDestServer)[0];
+    return mWeightCalculator->weight(source_bbox, dest_bbox);
 }
 
 // Get the total used weight of active queues.  If all flows are saturating,
 // this should equal totalActiveWeights, otherwise it will be smaller.
 float RegionODPFlowScheduler::totalSenderUsedWeight() {
     // No flow tracking, so we just give the entire server weight
-    return mWeightCalculator->weight(mContext->id(), mDestServer);
+    BoundingBox3f source_bbox = mContext->cseg()->serverRegion(mContext->id())[0];
+    BoundingBox3f dest_bbox = mContext->cseg()->serverRegion(mDestServer)[0];
+    return mWeightCalculator->weight(source_bbox, dest_bbox);
 }
 
 // Get the total used weight of active queues.  If all flows are saturating,
 // this should equal totalActiveWeights, otherwise it will be smaller.
 float RegionODPFlowScheduler::totalReceiverUsedWeight() {
     // No flow tracking, so we just give the entire server weight
-    return mWeightCalculator->weight(mContext->id(), mDestServer);
+    BoundingBox3f source_bbox = mContext->cseg()->serverRegion(mContext->id())[0];
+    BoundingBox3f dest_bbox = mContext->cseg()->serverRegion(mDestServer)[0];
+    return mWeightCalculator->weight(source_bbox, dest_bbox);
 }
 
 } // namespace Sirikata

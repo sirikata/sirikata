@@ -48,6 +48,7 @@
 
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include "StandardLocationService.hpp"
 #include "TCPSpaceNetwork.hpp"
@@ -70,6 +71,10 @@ int main(int argc, char** argv) {
     Trace::InitOptions();
     InitSpaceOptions();
     ParseOptions(argc, argv);
+
+    PluginManager plugins;
+    plugins.loadList( GetOption(OPT_PLUGINS)->as<String>() );
+    plugins.loadList( GetOption(OPT_SPACE_PLUGINS)->as<String>() );
 
     std::string time_server=GetOption("time-server")->as<String>();
     TimeSync sync;
@@ -297,6 +302,8 @@ int main(int argc, char** argv) {
 
 
     sync.stop();
+
+    plugins.gc();
 
     return 0;
 }

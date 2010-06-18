@@ -31,10 +31,11 @@
  */
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/ExpIntegral.hpp>
+#include "ExpIntegral.hpp"
 #include <boost/math/special_functions/erf.hpp>
 #include <iostream>
 #include <string.h>
+
 static double square(double x) {
     return x*x;
 }

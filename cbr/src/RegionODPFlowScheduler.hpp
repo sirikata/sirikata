@@ -39,8 +39,6 @@
 
 namespace Sirikata {
 
-class ServerWeightCalculator;
-
 /** RegionODPFlowScheduler doesn't collect any real statistics about ODP flows.
  *  Instead, it uses a simple FIFO queue for packets and just reports
  *  region-to-region weights.
@@ -74,7 +72,6 @@ private:
     mutable Message* mQueueBuffer;
     mutable Sirikata::SizedThreadSafeQueue<Message*> mQueue;
     mutable Sirikata::AtomicValue<bool> mNeedsNotification;
-    ServerWeightCalculator* mWeightCalculator;
 }; // class RegionODPFlowScheduler
 
 } // namespace Sirikata

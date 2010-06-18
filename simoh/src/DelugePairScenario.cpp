@@ -38,8 +38,7 @@
 #include <sirikata/cbrcore/Options.hpp>
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
-
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
 
 namespace Sirikata {
 void DPSInitOptions(DelugePairScenario *thus) {
@@ -80,7 +79,9 @@ DelugePairScenario::DelugePairScenario(const String &options)
         new Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>(
             CountResourceMonitor(std::max((uint32)(mNumPingsPerSecond / 4), (uint32)2))
         );
-    mWeightCalculator=WeightCalculatorFactory(NULL);
+    mWeightCalculator =
+        RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOption(OPT_REGION_WEIGHT)->as<String>())(GetOption(OPT_REGION_WEIGHT_ARGS)->as<String>())
+        ;
     mPingPoller = NULL;
     // NOTE: We have this limit because we can get in lock-step with the
     // generator, causing this to run for excessively long when we fall behind

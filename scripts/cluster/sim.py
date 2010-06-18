@@ -35,8 +35,10 @@ class ClusterSimSettings:
         self.layout_x = layout[0]
         self.layout_y = layout[1]
         self.duration = '120s'
-        self.falloff = 'sqr'
-        self.flatness = 8
+
+        self.region_weight = 'sqr'
+        self.region_weight_options = '--flatness=8'
+
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.odp_flow_scheduler = 'region'
@@ -185,8 +187,15 @@ class ClusterSim:
             params.append("--profile=true")
         return params
 
+    def common_parameters(self):
+        params = [
+            '--plugins=' + self.config.plugins
+            ]
+        return params
+
     def cbr_parameters(self):
         class_params = {
+            'space.plugins' : '--space.plugins=' + self.config.space_plugins,
             'ssid' : '--id=%(node)d',
             'net' : '--net=tcp',
             'server.queue' : "--server.queue=" + self.settings.server_queue,
@@ -214,6 +223,7 @@ class ClusterSim:
 
     def oh_parameters(self):
         class_params = {
+            'oh.plugins' : '--oh.plugins=' + self.config.simoh_plugins,
             'oh.id' : '--ohid=%(node)d ',
             'oh.connect' : '--object.connect=' + self.settings.object_connect_phase,
             'oh.num-random' : '--object.num.random=' + str(self.settings.num_random_objects),
@@ -246,6 +256,7 @@ class ClusterSim:
 
     def cseg_parameters(self):
         class_params = {
+            'cseg.plugins' : '--cseg.plugins=' + self.config.cseg_plugins,
             'cseg-id' : lambda index : '--cseg-id=' + str(index),
             'num-cseg-servers' : '--num-cseg-servers=' + str(self.settings.num_cseg_servers),
             'cseg-serverips' : '--cseg-serverips=' + self.settings.cseg_ip_file,
@@ -254,6 +265,19 @@ class ClusterSim:
         params = ['%(' + x + ')s' for x in class_params.keys()]
         return (params, class_params)
 
+
+    def analysis_parameters(self):
+        params = [
+            '--analysis.plugins=' + self.config.analysis_plugins,
+            "--layout=" + self.settings.layout(),
+            "--num-oh=" + str(self.settings.num_oh),
+            "--serverips=" + self.ip_file(),
+            "--duration=" + self.settings.duration,
+            '--max-servers=' + str(self.max_space_servers()),
+            '--region-weight=' + str(self.settings.region_weight),
+            '--region-weight-args=' + str(self.settings.region_weight_options),
+            ]
+        return params
 
     def vis_parameters(self):
         class_params = {
@@ -371,6 +395,7 @@ class ClusterSim:
     def run_instances(self, instance_types, local):
         # get various types of parameters, along with node-specific dict-functors
         debug_params = self.debug_parameters()
+        common_params = self.common_parameters()
         cbr_params, cbr_param_functor_dict = self.cbr_parameters()
         oh_params, oh_param_functor_dict = self.oh_parameters()
         vis_params, vis_param_functor_dict = self.vis_parameters()
@@ -413,6 +438,7 @@ class ClusterSim:
             "%(binary)s",
             ] )
         cmd_seq.extend(debug_params)
+        cmd_seq.extend(common_params)
         ts_string = ""
         if self.config.timeserver:
             ts_string = "--time-server=" + self.config.timeserver
@@ -424,8 +450,8 @@ class ClusterSim:
                 "--duration=" + self.settings.duration,
                 "--wait-until=" + wait_until_time,
                 "--wait-additional=10s",
-                '--falloff=' + str(self.settings.falloff),
-                "--flatness=" + str(self.settings.flatness),
+                '--region-weight=' + str(self.settings.region_weight),
+                '--region-weight-args=' + str(self.settings.region_weight_options),
                 "--capexcessbandwidth=false",
                 ])
         cmd_seq.extend(cbr_params)
@@ -489,8 +515,20 @@ class ClusterSim:
         if (len(self.settings.pack_dump)):
             ClusterSCP(self.config, [self.pack_filename(self.settings.pack_dump), "."], io=self.io)
 
+    def construct_analysis_cmd(self, user_args):
+        cmd = ['analysis']
+        analysis_params = self.analysis_parameters()
+        cmd.extend(analysis_params)
+        cmd.extend(user_args)
+        return cmd
+
     def bandwidth_analysis(self):
-        RunCBR(['analysis', '--debug', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ], io=self.io)
+        RunCBR(
+            self.construct_analysis_cmd([
+                        '--analysis.windowed-bandwidth=datagram',
+                        '--analysis.windowed-bandwidth.rate=100ms'
+                        ]),
+            io=self.io)
 
         GraphWindowedBandwidth('windowed_bandwidth_datagram_send.dat')
         GraphWindowedBandwidth('windowed_bandwidth_datagram_receive.dat')
@@ -503,17 +541,25 @@ class ClusterSim:
 
 
     def latency_analysis(self):
-        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.latency=true'
+                    ]),
+               io=self.io)
 
     def object_latency_analysis(self):
-        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())], io=self.io)
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.object.latency=true'
+                    ]),
+               io=self.io)
 
     def message_latency_analysis(self, filename=None):
         stdout_fp = None
         if filename != None:
             stdout_fp = open(filename, 'w')
 
-        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())],
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.message.latency=true'
+                    ]),
                io=self.io,
                stdout=stdout_fp,
                stderr=stdout_fp)
@@ -521,24 +567,32 @@ class ClusterSim:
             stdout_fp.close()
 
     def oseg_analysis(self):
-        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true', "--oseg_analyze_after=" + self.settings.oseg_analyze_after ], self.io)
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.oseg=true',
+                    "--oseg_analyze_after=" + self.settings.oseg_analyze_after
+                    ]),
+               io=self.io)
 
     def loc_latency_analysis(self):
-        RunCBR(['analysis', '--debug', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ], self.io)
-
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.loc.latency=true'
+                    ]),
+               io=self.io)
 
     def prox_dump_analysis(self):
-        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ], self.io)
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.prox.dump=prox.log'
+                    ]),
+               io=self.io)
 
     def flow_stats_analysis(self, filename=None):
         stdout_fp = None
         if filename != None:
             stdout_fp = open(filename, 'w')
 
-        RunCBR(['analysis', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.flow.stats=true', '--max-servers=' + str(self.max_space_servers()),
-                '--falloff=' + str(self.settings.falloff),
-                "--flatness=" + str(self.settings.flatness)
-                ],
+        RunCBR(self.construct_analysis_cmd([
+                    '--analysis.flow.stats=true'
+                    ]),
                io=self.io,
                stdout=stdout_fp,
                stderr=stdout_fp)

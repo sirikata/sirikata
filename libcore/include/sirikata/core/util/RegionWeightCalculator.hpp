@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Options.hpp
+ *  RegionWeightCalculator.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SIMOH_OPTIONS_HPP_
-#define _SIRIKATA_SIMOH_OPTIONS_HPP_
+#ifndef _SIRIKATA_REGION_WEIGHT_CALCULATOR_HPP_
+#define _SIRIKATA_REGION_WEIGHT_CALCULATOR_HPP_
 
-#define OPT_OH_PLUGINS           "oh.plugins"
-
-#define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
-
-#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
-#define STATS_SAMPLE_RATE    "stats.sample-rate"
-
-#define OBJECT_NUM_RANDOM    "object.num.random"
-#define OBJECT_CONNECT_PHASE "object.connect"
-#define OBJECT_STATIC        "object.static"
-#define OBJECT_SIMPLE        "object.simple"
-#define OBJECT_2D            "object.2d"
-#define OBJECT_QUERY_FRAC    "object.query-frac"
-#define OBJECT_PACK_DIR      "object.pack-dir"
-#define OBJECT_PACK          "object.pack"
-#define OBJECT_PACK_OFFSET   "object.pack-offset"
-#define OBJECT_PACK_NUM      "object.pack-num"
-#define OBJECT_PACK_DUMP     "object.pack-dump"
-
-#define OBJECT_SL_FILE       "object.sl-file"
-#define OBJECT_SL_NUM        "object.sl-num"
-#define OBJECT_SL_CENTER     "object.sl-center"
-
-#define OBJECT_DRIFT_X             "object_drift_x"
-#define OBJECT_DRIFT_Y             "object_drift_y"
-#define OBJECT_DRIFT_Z             "object_drift_z"
-#define OSEG_LOOKUP_QUEUE_SIZE     "oseg_lookup_queue_size"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Factory.hpp>
 
 namespace Sirikata {
 
-void InitSimOHOptions();
+class SIRIKATA_EXPORT RegionWeightCalculator {
+public:
+    typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> WeightFunction;
+
+    RegionWeightCalculator(const WeightFunction& weightFunc);
+    ~RegionWeightCalculator();
+
+    float64 weight(const BoundingBox3f& source_bbox, BoundingBox3f& dest_bbox);
+private:
+    WeightFunction mWeightFunc;
+}; // class RegionWeightCalculator
+
+class SIRIKATA_EXPORT RegionWeightCalculatorFactory
+    : public AutoSingleton<RegionWeightCalculatorFactory>,
+      public Factory1<RegionWeightCalculator*, const String &>
+{
+  public:
+    static RegionWeightCalculatorFactory& getSingleton();
+    static void destroy();
+}; // class RegionWeightCalculatorFactory
 
 } // namespace Sirikata
 
-
-#endif //_SIRIKATA_CBR_OPTIONS_HPP_
+#endif // _SIRIKATA_REGION_WEIGHT_CALCULATOR_HPP_

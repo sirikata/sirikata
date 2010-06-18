@@ -854,7 +854,7 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
             }
         }
         if (passed) {
-            mObjectHost->getScriptPluginManager()->load(DynamicLibrary::filename(script));
+            mObjectHost->getScriptPluginManager()->load(script);
         }
     }
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");

@@ -268,7 +268,7 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
    mReceiveListener(NULL)
 {
     mStreamPlugin = GetOption("spacestreamlib")->as<String>();
-    mPluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
+    mPluginManager.load(mStreamPlugin);
 
     mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());

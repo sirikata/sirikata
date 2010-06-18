@@ -35,8 +35,13 @@
 
 #include "VWTypes.hpp"
 
+#define OPT_PLUGINS               "plugins"
+
 #define STATS_TRACE_FILE     "stats.trace-filename"
 #define PROFILE                    "profile"
+
+#define OPT_REGION_WEIGHT        "region-weight"
+#define OPT_REGION_WEIGHT_ARGS   "region-weight-args"
 
 namespace Sirikata {
 

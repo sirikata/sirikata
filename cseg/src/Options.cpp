@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/Time.hpp>
@@ -38,6 +39,8 @@ namespace Sirikata {
 
 void InitCSegOptions() {
     InitializeClassOptions::module(GLOBAL_OPTIONS_MODULE)
+        .addOption(new OptionValue(OPT_CSEG_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+
         .addOption(new OptionValue("random-splits-merges", "false", Sirikata::OptionValueType<bool>(), "Whether to enable random splits and merges in DistributedCoordinateSegmentation."))
         .addOption(new OptionValue("cseg-server-ll-port", "3234", Sirikata::OptionValueType<uint16>(), "Port where CSEG servers can be contacted for lower-tree requests."))
         .addOption(new OptionValue("num-cseg-servers", "1", Sirikata::OptionValueType<uint16>(), "Number of CSEG servers for the distributed implementation."))

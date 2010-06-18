@@ -40,6 +40,7 @@
 
 #include <sirikata/cbrcore/Options.hpp>
 #include "Options.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 
@@ -53,6 +54,10 @@ int main(int argc, char** argv) {
     Trace::InitOptions();
     InitSimOHOptions();
     ParseOptions(argc, argv);
+
+    PluginManager plugins;
+    plugins.loadList( GetOption(OPT_PLUGINS)->as<String>() );
+    plugins.loadList( GetOption(OPT_OH_PLUGINS)->as<String>() );
 
     std::string time_server=GetOption("time-server")->as<String>();
     TimeSync sync;
