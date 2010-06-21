@@ -83,6 +83,10 @@ class TransferMediator {
 
 	public:
 
+		std::tr1::shared_ptr<TransferRequest> getTransferRequest() const {
+			return mTransferRequest;
+		}
+
 		void setClientPriority(std::string clientID, TransferRequest::PriorityType priority) {
 			std::map<std::string, TransferRequest::PriorityType>::iterator findClient = mClients.find(clientID);
 			if(findClient == mClients.end()) {
@@ -200,8 +204,6 @@ class TransferMediator {
 		}
 	};
 
-	CacheLayer *mCacheLayer;
-	NameLookupManager *mNameLookup;
 	Task::GenEventManager *mEventSystem;
 
 	typedef Task::GenEventManager::EventListener EventListener;
@@ -217,8 +219,8 @@ public:
 	/*
 	 * Initializes the transfer mediator with the components it needs to fulfill requests
 	 */
-	TransferMediator(CacheLayer *download, NameLookupManager *nameLookup, Task::GenEventManager *eventSystem)
-		: mCacheLayer(download), mNameLookup(nameLookup), mEventSystem(eventSystem), mCleanup(false) {
+	TransferMediator(Task::GenEventManager *eventSystem)
+		: mEventSystem(eventSystem), mCleanup(false) {
 	}
 
 	/*
@@ -226,8 +228,8 @@ public:
 	 * @param clientID	Should be a string that uniquely identifies the client
 	 * @param listener	An EventListener to receive a TransferEventPtr with the retrieved data.
 	 */
-	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID, const EventListener &listener) {
-		std::tr1::shared_ptr<TransferPool> ret(new TransferPool(clientID, listener));
+	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID) {
+		std::tr1::shared_ptr<TransferPool> ret(new TransferPool(clientID));
 
 		//Lock exclusive to access map
 		boost::upgrade_lock<boost::shared_mutex> lock(mPoolMutex);
@@ -261,6 +263,9 @@ public:
 			AggregateListByPriority::iterator findTop = priorityIndex.begin();
 			if(findTop != priorityIndex.end()) {
 				SILOG(transfer, debug, priorityIndex.size() << " length agg list, top priority " << (*findTop)->getPriority() << " id " << (*findTop)->getIdentifier());
+
+				std::tr1::shared_ptr<TransferRequest> tr = (*findTop)->getTransferRequest();
+
 			} else {
 				SILOG(transfer, debug, priorityIndex.size() << " length agg list");
 			}

@@ -1027,6 +1027,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp

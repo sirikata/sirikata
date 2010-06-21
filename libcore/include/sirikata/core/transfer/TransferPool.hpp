@@ -35,6 +35,7 @@
 #define SIRIKATA_TransferPool_HPP__
 
 #include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include "RemoteFileMetadata.hpp"
 #include "URI.hpp"
 
@@ -88,6 +89,13 @@ public:
 	inline const URI& getURI() {
 		return mURI;
 	}
+
+    inline bool operator==(const MetadataRequest& other) const {
+        return mUniqueID==other.mUniqueID;
+    }
+    inline bool operator<(const MetadataRequest& other) const{
+        return mUniqueID<other.mUniqueID;
+    }
 };
 
 /*
@@ -138,26 +146,18 @@ public:
  */
 class TransferPool {
 
-	typedef Task::GenEventManager::EventListener EventListener;
-
 	const std::string mClientID;
-	const EventListener &mEventListener;
 	ThreadSafeQueue<std::tr1::shared_ptr<TransferRequest> > mDeltaQueue;
 
 public:
-	TransferPool(const std::string &clientID, const EventListener &listener)
-		: mClientID(clientID), mEventListener(listener) {
+	TransferPool(const std::string &clientID)
+		: mClientID(clientID) {
 
 	}
 
 	//Returns client identifier
-	inline const std::string getClientID() const {
+	inline const std::string& getClientID() const {
 		return mClientID;
-	}
-
-	//Returns the listener that should be called when a request is fulfilled
-	inline const EventListener getListener() const {
-		return mEventListener;
 	}
 
 	//Puts a request into the pool

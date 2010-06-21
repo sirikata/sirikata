@@ -75,8 +75,8 @@ public:
 		using std::tr1::placeholders::_1;
 
 		//Register with the transfer mediator!
-		mTransferPool = mTransferMediator->registerClient(mClientID, std::tr1::bind(&SampleClient::transferFinished, this, _1));
-
+		mTransferPool = mTransferMediator->registerClient(mClientID);
+//std::tr1::bind(&SampleClient::transferFinished, this, _1)
 		for(int i=0; i<10; i++) {
 			for(std::vector<Transfer::URI>::iterator it = mURIList.begin(); it != mURIList.end(); it++) {
 				//SILOG(transfer, debug, mClientID << " adding " << it->toString());
@@ -118,21 +118,6 @@ class TransferTest : public CxxTest::TestSuite {
 	Task::GenEventManager *mEventSystem;
 	Thread *mEventProcessThread;
 
-	//Used to map from meerkat:// names to their mhash
-	Transfer::ServiceLookup *mNameService;
-	//Used to map from mhash:// to where to actually download
-	Transfer::ServiceLookup *mDownloadService;
-
-	//Name lookup handlers
-	Transfer::ProtocolRegistry<Transfer::NameLookupHandler> *mNameLookupReg;
-	Transfer::ServiceManager<Transfer::NameLookupHandler> *mNameLookupMgr;
-	Transfer::NameLookupManager *mNameLookup;
-
-	//Handlers for actual downloads
-	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mDownloadReg;
-	Transfer::ServiceManager<Transfer::DownloadHandler> *mDownloadMgr;
-	Transfer::CacheLayer *mNetworkCache;
-
 	//Set to true when event manager should shut down
 	volatile bool mDestroyEventManager;
 
@@ -161,37 +146,8 @@ public:
 			&TransferTest::sleep_processEventQueue, this));
 
 
-		//Makes it so we can look up files with meerkat:// URIs and find out their mhash value from /dns/names/global
-		mNameService = new Transfer::CachedServiceLookup;
-		Transfer::ListOfServices *services = new Transfer::ListOfServices;
-		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"),
-				Transfer::ServiceParams()));
-		mNameService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
-
-		//Makes it so we can find the content of files in /files/global using their mhash value
-		mDownloadService = new Transfer::CachedServiceLookup;
-		services = new Transfer::ListOfServices;
-		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"),
-				Transfer::ServiceParams()));
-		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
-
-		//We need to register a name lookup handler. HTTPDownloadHandler implements a name lookup via HTTP so register it here
-		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
-		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
-		mNameLookupReg->setHandler("http", httpHandler);
-		mNameLookupMgr = new Transfer::ServiceManager<Transfer::NameLookupHandler>(mNameService, mNameLookupReg);
-		mNameLookup = new Transfer::NameLookupManager(mNameLookupMgr);
-
-		//Register a download handler with the protocol registry. Note that NetworkCacheLayer is not really a cache
-		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
-		mDownloadReg->setHandler("http", httpHandler);
-		mDownloadMgr = new Transfer::ServiceManager<Transfer::DownloadHandler>(mDownloadService, mDownloadReg);
-		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadMgr);
-
 		//Create a transfer mediator to use for client transfer requests
-		mTransferMediator = new Transfer::TransferMediator(mNetworkCache, mNameLookup, mEventSystem);
+		mTransferMediator = new Transfer::TransferMediator(mEventSystem);
 
 		mMediatorThread = new Thread(std::tr1::bind(&Transfer::TransferMediator::mediatorThread, mTransferMediator));
 
@@ -229,17 +185,6 @@ public:
 	}
 
 	void tearDown() {
-		delete mNetworkCache;
-		delete mDownloadMgr;
-		delete mDownloadReg;
-
-		delete mNameLookup;
-		delete mNameLookupReg;
-		delete mNameLookupMgr;
-
-		delete mNameService;
-		delete mDownloadService;
-
 		mDestroyEventManager = true;
 		mWorkQueue->enqueue(NULL);
 		mEventProcessThread->join();
