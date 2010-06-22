@@ -103,9 +103,7 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
 v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 {
-
     JSObjectScript* target = GetTargetJSObjectScript(args);
-    
 
     target->test();
     return v8::Undefined();
@@ -289,11 +287,10 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     if (args.Length() != 4)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().")) );
     
-
     v8::Handle<v8::Value> pattern = args[0];
     v8::Handle<v8::Value> target_val = args[1];
     v8::Handle<v8::Value> cb_val = args[2];
-	v8::Handle<v8::Value> sender_val = args[3];
+    v8::Handle<v8::Value> sender_val = args[3];
 
     // Pattern
     PatternList native_patterns;
@@ -337,8 +334,6 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
 
 
-
-
     // Function
     if (!cb_val->IsFunction())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Must contain callback function.")) );
@@ -348,7 +343,6 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-
     JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
 
 
@@ -357,9 +351,8 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
      */
     
     //target_script->makeEventHandlerObject(evHand);
-//    return target_script->makeEventHandlerObject(evHand);
-    return v8::Undefined();
-
+    return target_script->makeEventHandlerObject(evHand);
+    //return v8::Undefined();
 }
 
 
