@@ -1,16 +1,21 @@
 cb = function(){ system.print("\n\n\nPrint Test\n\n")};
 
-mPat = system.Pattern("m");
+mPat = system.Pattern("m","o","oops");
+//mPat = system.Pattern("m");
 
-system.registerHandler(mPat,null,cb);
+system.print("\n\ncreated pattern\n");
 
+mHand = system.registerHandler(mPat,null,cb,null);
+
+system.print("\n\nregistered pattern\n");
+
+mHand.printContents();
+system.print("\n\nprinted contents.\n\n");
 
 tmp = Object();
-
-tmp.m = "I have an m field";
-
-
+tmp.m = "o";
 
 system.__broadcast(tmp);
 
+system.print("\n\nbroadcast pattern\n");
 

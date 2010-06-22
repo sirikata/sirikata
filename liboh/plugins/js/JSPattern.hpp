@@ -35,6 +35,8 @@
 
 #include "JSUtil.hpp"
 #include <v8.h>
+#include <iostream>
+#include <iomanip>
 
 namespace Sirikata {
 namespace JS {
@@ -45,11 +47,21 @@ namespace JS {
  */
 class Pattern {
 public:
-    Pattern(const std::string& _name,
-        v8::Handle<v8::Value> _value = v8::Handle<v8::Value>(),
-        v8::Handle<v8::Value> _proto = v8::Handle<v8::Value>())
-		:mName(_name), mValue(_value), mPrototype(_proto)
-    {}
+    Pattern(const std::string& _name,v8::Handle<v8::Value> _value = v8::Handle<v8::Value>(),v8::Handle<v8::Value> _proto = v8::Handle<v8::Value>());
+    
+    // Pattern(const std::string& _name,
+    //     v8::Handle<v8::Value> _value = v8::Handle<v8::Value>(),
+    //     v8::Handle<v8::Value> _proto = v8::Handle<v8::Value>())
+    //  :mName(_name), mValue(_value), mPrototype(_proto)
+    // {
+    //     std::cout<<"\n\nbftm debug inside of constructor\n\n";
+    //     std::cout.flush();
+    //     v8::String::Utf8Value stringValue1(mValue);
+    //     const char* strval1 = ToCString(stringValue1);
+    //     std::string stringVal1 (strval1);
+    //     std::cout<<"  mValue is: "<<stringVal1<<"\n";
+    //     std::cout.flush();
+    // }
 
     std::string name() const { return mName; }
 
@@ -59,9 +71,10 @@ public:
     bool hasPrototype() const { return !mPrototype.IsEmpty(); }
     v8::Handle<v8::Value> prototype() const { assert(hasPrototype()); return mPrototype; }
 
-	String toString() const { return "[Pattern]"; }
+    String toString() const { return "[Pattern]"; }
 
     bool matches(v8::Handle<v8::Object> obj) const;
+    void printPattern() const;
     
 private:
     std::string mName;

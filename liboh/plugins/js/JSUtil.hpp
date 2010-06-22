@@ -84,6 +84,12 @@ v8::Handle<v8::Function> FunctionCast(const v8::Handle<v8::Value>& v);
 v8::Handle<v8::Value> GetGlobal(v8::Handle<v8::Context>& ctx, const char* obj_name);
 
 
+static const char* ToCString(const v8::String::Utf8Value& value) {
+  return *value ? *value : "<string conversion failed>";
+}
+
+
+
 
 } // namespace JS
 } // namespace Sirikata

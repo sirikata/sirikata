@@ -57,7 +57,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
 
-
+    void testPrint();
     
 private:
 

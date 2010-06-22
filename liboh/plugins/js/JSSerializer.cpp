@@ -4,6 +4,7 @@
 #include <string>
 #include "JS_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageBody.hpp>
+#include "JSUtil.hpp"
 
 /*
   FIXME: If I do not include the JS_Sirikata.pbj.hpp, then just including the
@@ -17,9 +18,9 @@
 namespace Sirikata{
 namespace JS{
 
-static const char* ToCString(const v8::String::Utf8Value& value) {
-  return *value ? *value : "<string conversion failed>";
-}
+// static const char* ToCString(const v8::String::Utf8Value& value) {
+//   return *value ? *value : "<string conversion failed>";
+// }
 
 
 std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
@@ -54,10 +55,8 @@ std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
   std::string serialized_message;
   jsmessage.SerializeToString(&serialized_message);
 
-
   	
   return serialized_message;
-
 }
 
 std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)

@@ -116,7 +116,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
 
 
-
 void JSObjectScript::reboot()
 {
   // Need to delete the existing context? v8 garbage collects?
@@ -221,15 +220,14 @@ void JSObjectScript::bftm_populateAddressable(Local<Object>& system_obj )
     bftm_getAllMessageable(mAddressableList);
 
     v8::Context::Scope context_scope(mContext);
-
     v8::Local<v8::Array> arrayObj= v8::Array::New();
 
 
 
-	const HostedObject::SpaceSet& spaces = mParent->spaces();
+    const HostedObject::SpaceSet& spaces = mParent->spaces();
     SpaceID spaceider = *(spaces.begin());
 
-	UUID myUUID = mParent->getObjReference(spaceider).getAsUUID();;
+    UUID myUUID = mParent->getObjReference(spaceider).getAsUUID();;
 
 
 
@@ -241,14 +239,14 @@ void JSObjectScript::bftm_populateAddressable(Local<Object>& system_obj )
 
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
-		if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
-		{
-			system_obj->Set(v8::String::New("Self"), tmpObj);
+        if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
+            system_obj->Set(v8::String::New("Self"), tmpObj);
 
-		}
 
     }
     system_obj->Set(v8::String::New("addressable"),arrayObj);
+
+    //v8::Context::~Scope mContext;
 }
 
 
@@ -292,9 +290,9 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
 
 
 
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str) {
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
+{
     Context::Scope context_scope(mContext);
-
     v8::HandleScope handle_scope;
     TryCatch try_catch;
 
@@ -499,6 +497,7 @@ JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::
 {
     JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
     mEventHandlers.push_back(new_handler);
+    
     return new_handler;
 }
 
@@ -507,9 +506,12 @@ JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::
  * Populates the message properties
  */
 
-
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHeader& msgHeader)
 {
+    /**
+       FIXME: may need to declare a scope here.
+     */
+    
   ObjectReference* orp = new ObjectReference(msgHeader.source_object());
 
   Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
@@ -518,7 +520,6 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHead
 
 
   return tmpObj;
-
 }
 
 //just a handler for receiving any message.  for now, not doing any dispatch.
@@ -592,20 +593,21 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
     }
 }
 
-
+//This function takes in a jseventhandler, and wraps a javascript object with
+//it.  The function is called by registerEventHandler in JSSystem, which returns
+//the js object this function creates to the user.
 v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* evHand)
 {
-    v8::Handle<v8::Object> returner = mManager->mHandlerTemplate->NewInstance();
-    //returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
-    //returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
-
-    /*
-      FIXME: uncomment the set internal fields lines.
-     */
+    v8::Context::Scope context_scope(mContext);
+    v8::HandleScope handle_scope;
     
+    v8::Handle<v8::Object> returner =mManager->mHandlerTemplate->NewInstance();
+
+    returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
+    returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
+
     return returner;
 }
-
 
 
 } // namespace JS

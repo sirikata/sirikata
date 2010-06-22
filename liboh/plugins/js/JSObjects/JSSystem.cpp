@@ -281,7 +281,6 @@ void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> 
  *                  the global (root) object
  *   function cb: callback to invoke, with event as parameter
  */
-//v8::Handle<v8::Object> ScriptRegisterHandler(const v8::Arguments& args)
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 {
     if (args.Length() != 4)
@@ -345,14 +344,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
 
-
-    /*
-      FIXME: Target script is causing a bug here.
-     */
-    
-    //target_script->makeEventHandlerObject(evHand);
     return target_script->makeEventHandlerObject(evHand);
-    //return v8::Undefined();
 }
 
 

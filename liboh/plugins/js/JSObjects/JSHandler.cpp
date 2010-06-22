@@ -18,14 +18,43 @@ v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
     JSEventHandler* handler;
     readHandler(args,caller,handler);
 
-    std::cout<<"\n\n\nPRINTING BOTH\n\n\n";
-    //print both
-    /*
-      FIXME: Do we want to have both print functions within the pattern and
-      callback themselves?  Probably not.
-     */
+    //print all handler stuff
+    handler->printHandler();
     
     return v8::Undefined();
+}
+
+v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
+{
+    JSObjectScript* caller;
+    JSEventHandler* handler;
+    readHandler(args,caller,handler);
+
+    handler->suspend();
+    
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> __resume(const v8::Arguments& args)
+{
+    JSObjectScript* caller;
+    JSEventHandler* handler;
+    readHandler(args,caller,handler);
+
+    handler->resume();
+    
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args)
+{
+    JSObjectScript* caller;
+    JSEventHandler* handler;
+    readHandler(args,caller,handler);
+
+    bool isSusp = handler->isSuspended();
+
+    return v8::Boolean::New(isSusp);
 }
 
 
@@ -62,7 +91,7 @@ void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHand
            v8::Handle<v8::Object>::Cast(mHand->GetPrototype())->GetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD)
        );
    void* ptr2 = wrapEventHand->Value();
-   hand = static_cast<JSEventHandler*>(ptr);
+   hand = static_cast<JSEventHandler*>(ptr2);
 }
 
 

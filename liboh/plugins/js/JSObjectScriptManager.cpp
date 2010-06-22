@@ -62,6 +62,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
     createSystemTemplate();
     bftm_createAddressableTemplate();
+    createHandlerTemplate();
 }
 
 
@@ -143,10 +144,15 @@ void JSObjectScriptManager::createHandlerTemplate()
     v8::HandleScope handle_scope;
     mHandlerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
+
     // one field is the JSObjectScript associated with it
     // the other field is a pointer to the associated JSEventHandler.
     mHandlerTemplate->SetInternalFieldCount(2);
     mHandlerTemplate->Set(v8::String::New("printContents"), v8::FunctionTemplate::New(JSHandler::__printContents));
+    mHandlerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSHandler::__suspend));
+    mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::__isSuspended));
+    mHandlerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSHandler::__resume));
+    
 }
 
 
@@ -157,9 +163,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,const Arguments& args)
 {
-    //JSObjectScript* new_script = new JSObjectScript(ho, args,
-    //mGlobalTemplate,mAddressableTemplate);
-    JSObjectScript* new_script = new JSObjectScript(ho, args, this);//mGlobalTemplate,mAddressableTemplate);
+    JSObjectScript* new_script = new JSObjectScript(ho, args, this);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;
@@ -169,6 +173,12 @@ ObjectScript *JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,const
 
 void JSObjectScriptManager::destroyObjectScript(ObjectScript*toDestroy){
     delete toDestroy;
+}
+
+//DEBUG FUNCTION.
+void JSObjectScriptManager::testPrint()
+{
+    std::cout<<"\n\nTest print for js object script manager\n\n";
 }
 
 } // namespace JS

@@ -1,10 +1,10 @@
 cb = function(){ system.print("\n\n\nPrint Test\n\n")};
 
-mPat = system.Pattern("m");
+mPat = system.Pattern("m","o");
 
-handler = system.registerHandler(mPat,null,cb);
+handler = system.registerHandler(mPat,null,cb,null);
 
-//handler.printContents();
+handler.printContents();
 
 //should print a debugging message of some type.
 
