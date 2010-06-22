@@ -49,19 +49,6 @@ class Pattern {
 public:
     Pattern(const std::string& _name,v8::Handle<v8::Value> _value = v8::Handle<v8::Value>(),v8::Handle<v8::Value> _proto = v8::Handle<v8::Value>());
     
-    // Pattern(const std::string& _name,
-    //     v8::Handle<v8::Value> _value = v8::Handle<v8::Value>(),
-    //     v8::Handle<v8::Value> _proto = v8::Handle<v8::Value>())
-    //  :mName(_name), mValue(_value), mPrototype(_proto)
-    // {
-    //     std::cout<<"\n\nbftm debug inside of constructor\n\n";
-    //     std::cout.flush();
-    //     v8::String::Utf8Value stringValue1(mValue);
-    //     const char* strval1 = ToCString(stringValue1);
-    //     std::string stringVal1 (strval1);
-    //     std::cout<<"  mValue is: "<<stringVal1<<"\n";
-    //     std::cout.flush();
-    // }
 
     std::string name() const { return mName; }
 

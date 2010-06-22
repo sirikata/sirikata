@@ -54,51 +54,17 @@ Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handl
 
 bool Pattern::matches(v8::Handle<v8::Object> obj) const
 {
-    
     if (!obj->Has(v8::String::New(mName.c_str())))
         return false;
 
     
     if (hasValue())
     {
-        std::cout<<"\n\nHas value\n\n";
-        this->printPattern();
-        std::cout<<"\n\n";
-        std::cout.flush();
-
-        
         Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
-
-        std::cout<<"\n\nBefore check equals\n\n";
-        std::cout.flush();
-
-        v8::String::Utf8Value stringValue1(mValue);
-        const char* strval1 = ToCString(stringValue1);
-        std::string stringVal1 (strval1);
-        std::cout<<"  mValue is: "<<stringVal1<<"\n";
-        std::cout.flush();
-
-
         
         if (!field->Equals(mValue))
-        {
-            std::cout<<"\n\nValue was not equal in the pattern match statement\n";
-            std::cout.flush();
-            
-            v8::String::Utf8Value stringValue(mValue);
-            const char* strval = ToCString(stringValue);
-            std::string stringVal (strval);
-            std::cout<<"  mValue is: "<<stringVal<<"\n";
-            std::cout.flush();
-
-            v8::String::Utf8Value fieldValue(field);
-            const char* strfieldval = ToCString(fieldValue);
-            std::string stringField (strfieldval);
-            std::cout<<"  fieldValue is: "<<stringField<<"\n";
-            std::cout.flush();
-            
             return false;
-        }
+
     }
 
     if (hasPrototype()) {
@@ -183,17 +149,6 @@ Pattern PatternExtract(Handle<Object>& src_obj) {
     std::string name = StringExtract( src_obj->Get(JS_STRING(name)) );
     Handle<Value> val = src_obj->Has(JS_STRING(value)) ? src_obj->Get(JS_STRING(value)) : Handle<Value>();
     Handle<Value> proto = src_obj->Has(JS_STRING(proto)) ? src_obj->Get(JS_STRING(proto)) : Handle<Value>();
-
-
-    std::cout<<"\n\nbftm debug inside of pattern extract\n\n";
-    std::cout.flush();
-    v8::String::Utf8Value stringValue1(val);
-    const char* strval1 = ToCString(stringValue1);
-    std::string stringVal1 (strval1);
-    std::cout<<"  mValue is: "<<stringVal1<<"\n";
-    std::cout.flush();
-
-
     
     return Pattern(name, val, proto);
 }
