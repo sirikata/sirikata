@@ -74,9 +74,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     v8::HandleScope handle_scope;
     mContext = Context::New(NULL, mManager->mGlobalTemplate);
 
-    mOrefTemplate = oref_template;
-    mGlobalTemplate = global_template;
-
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -97,16 +94,15 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
 
-	for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
+    for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
-
+        //register for scripting messages from user
         SpaceID space_id=*space_it;
         mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
         if (mScriptingPort)
             mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
 
-        //bftm
-        //change the services to something else.;
+
         //register port for messaging
         mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
 
@@ -123,24 +119,22 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
 void JSObjectScript::reboot()
 {
-  
   // Need to delete the existing context? v8 garbage collects?
 
-
   v8::HandleScope handle_scope;
-  mContext = Context::New(NULL, mGlobalTemplate);
+  mContext = Context::New(NULL, mManager->mGlobalTemplate);
   Local<Object> global_obj = mContext->Global();
   Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
   global_proto->SetInternalField(0, External::New(this));
   Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
   system_obj->SetInternalField(0, External::New(this));
-  bftm_populateAddressable(mOrefTemplate,system_obj);
-
-  mEventHandlers.clear();
+  bftm_populateAddressable(system_obj);
 
 
+  for (int s=0; s < (int) mEventHandlers.size(); ++s)
+      delete mEventHandlers[s];
   
-
+  mEventHandlers.clear();
 }
 
 void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const
@@ -518,7 +512,7 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHead
 {
   ObjectReference* orp = new ObjectReference(msgHeader.source_object());
 
-  Local<Object> tmpObj = mOrefTemplate->NewInstance();
+  Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
   tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(orp));
   tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
 

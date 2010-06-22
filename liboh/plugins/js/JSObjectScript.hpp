@@ -119,11 +119,10 @@ private:
     v8::Handle<v8::Value> protectedEval(const String& script_str);
 
 
+    v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
+
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
-	
-	v8::Persistent<v8::ObjectTemplate> mOrefTemplate;
-	v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
 
     //bftm
     typedef std::vector<ObjectReference*> AddressableList;

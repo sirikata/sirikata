@@ -357,8 +357,8 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
      */
     
     //target_script->makeEventHandlerObject(evHand);
-    return target_script->makeEventHandlerObject(evHand);
-    //    return v8::Undefined();
+//    return target_script->makeEventHandlerObject(evHand);
+    return v8::Undefined();
 
 }
 
