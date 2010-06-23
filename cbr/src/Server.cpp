@@ -674,7 +674,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             Sirikata::Protocol::Migration::MigrationMessage migrate_msg;
             migrate_msg.set_source_server(mContext->id());
             migrate_msg.set_object(obj_id);
-            Sirikata::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
+            Sirikata::Protocol::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
             TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
             migrate_loc.set_t( obj_loc.updateTime() );
             migrate_loc.set_position( obj_loc.position() );

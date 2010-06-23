@@ -32,14 +32,9 @@
 
 "pbj-0.0.3"
 
+import "TimedMotionVector.pbj";
+
 package Sirikata.Protocol.Session;
-
-message TimedMotionVector {
-    required time t = 1;
-    required vector3f position = 2;
-    required vector3f velocity = 3;
-}
-
 
 /// Object Oriented Session Messages
 
@@ -52,7 +47,7 @@ message Connect {
 
     required ConnectionType type = 1;
     required uuid object = 2;
-    optional TimedMotionVector loc = 3;
+    optional Sirikata.Protocol._prefix_.TimedMotionVector loc = 3;
     optional boundingsphere3f bounds = 4;
     optional float query_angle = 5;
 }

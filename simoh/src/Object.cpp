@@ -116,7 +116,7 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
         // Generate and send an update to Loc
         Sirikata::Protocol::Loc::Container container;
         Sirikata::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
-        Sirikata::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
+        Sirikata::Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
         requested_loc.set_t(curLoc.updateTime());
         requested_loc.set_position(curLoc.position());
         requested_loc.set_velocity(curLoc.velocity());
@@ -294,7 +294,7 @@ void Object::locationMessage(uint8* buffer, int len) {
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-        Sirikata::Protocol::Loc::TimedMotionVector update_loc = update.location();
+        Sirikata::Protocol::TimedMotionVector update_loc = update.location();
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
         CONTEXT_TRACE(objectLoc,

@@ -32,17 +32,13 @@
 
 "pbj-0.0.3"
 
-package Sirikata.Protocol.Loc;
+import "TimedMotionVector.pbj";
 
-message TimedMotionVector {
-    required time t = 1;
-    required vector3f position = 2;
-    required vector3f velocity = 3;
-}
+package Sirikata.Protocol.Loc;
 
 message LocationUpdate {
     required uuid object = 1;
-    required TimedMotionVector location = 2;
+    required Sirikata.Protocol._prefix_.TimedMotionVector location = 2;
     required boundingsphere3f bounds = 3;
 }
 
@@ -55,7 +51,7 @@ message BulkLocationUpdate {
 // This should be sent from object -> Space(Loc) in an
 // ObjectMessage.
 message LocationUpdateRequest {
-    optional TimedMotionVector location = 1;
+    optional Sirikata.Protocol._prefix_.TimedMotionVector location = 1;
     optional boundingsphere3f bounds = 2;
 }
 

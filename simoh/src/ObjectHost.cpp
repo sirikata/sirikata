@@ -429,7 +429,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(uuid);
-    Sirikata::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
+    Sirikata::Protocol::ITimedMotionVector loc = connect_msg.mutable_loc();
     loc.set_t( ci.loc.updateTime() );
     loc.set_position( ci.loc.position() );
     loc.set_velocity( ci.loc.velocity() );

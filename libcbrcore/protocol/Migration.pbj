@@ -32,13 +32,9 @@
 
 "pbj-0.0.3"
 
-package Sirikata.Protocol.Migration;
+import "TimedMotionVector.pbj";
 
-message TimedMotionVector {
-    required time t = 1;
-    required vector3f position = 2;
-    required vector3f velocity = 3;
-}
+package Sirikata.Protocol.Migration;
 
 // Generic data for components of the space, e.g. prox, loc
 message MigrationClientData {
@@ -48,7 +44,7 @@ message MigrationClientData {
 
 message MigrationMessage {
     required uuid object = 1;
-    required TimedMotionVector loc = 2;
+    required Sirikata.Protocol._prefix_.TimedMotionVector loc = 2;
     required boundingsphere3f bounds = 3;
     repeated MigrationClientData client_data = 4;
     required uint32 source_server = 6; // FIXME should come from server to server header

@@ -154,7 +154,7 @@ void Proximity::sendQueryRequests() {
         Sirikata::Protocol::Prox::Container container;
         Sirikata::Protocol::Prox::IServerQuery msg = container.mutable_query();
         msg.set_action(Sirikata::Protocol::Prox::ServerQuery::AddOrUpdate);
-        Sirikata::Protocol::Prox::ITimedMotionVector msg_loc = msg.mutable_location();
+        Sirikata::Protocol::ITimedMotionVector msg_loc = msg.mutable_location();
         msg_loc.set_t(loc.updateTime());
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
@@ -199,7 +199,7 @@ void Proximity::receiveMessage(Message* msg) {
                 prox_query_msg.has_min_angle()
             );
 
-            Sirikata::Protocol::Prox::TimedMotionVector msg_loc = prox_query_msg.location();
+            Sirikata::Protocol::TimedMotionVector msg_loc = prox_query_msg.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             SolidAngle minangle(prox_query_msg.min_angle());
 
@@ -484,7 +484,7 @@ void Proximity::generateServerQueryEvents() {
                         addition.set_object( evt.id() );
 
                         TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
-                        Sirikata::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                        Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
                         msg_loc.set_t(loc.updateTime());
                         msg_loc.set_position(loc.position());
                         msg_loc.set_velocity(loc.velocity());
@@ -548,7 +548,7 @@ void Proximity::generateObjectQueryEvents() {
                         Sirikata::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
                         addition.set_object( evt.id() );
 
-                        Sirikata::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                        Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
                         TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
                         motion.set_t(loc.updateTime());
                         motion.set_position(loc.position());
