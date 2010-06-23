@@ -50,14 +50,11 @@ Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handl
 }
 
 
-
-
 bool Pattern::matches(v8::Handle<v8::Object> obj) const
 {
     if (!obj->Has(v8::String::New(mName.c_str())))
         return false;
 
-    
     if (hasValue())
     {
         Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
@@ -105,6 +102,7 @@ static Persistent<FunctionTemplate> PatternConstructorTemplate;
 
 void PatternFill(Handle<Object>& dest, const Pattern& src) {
     dest->Set(JS_STRING(name), v8::String::New(src.name().c_str(), src.name().size()));
+
     if (src.hasValue())
         dest->Set(JS_STRING(value), src.value());
     if (src.hasPrototype())
@@ -167,7 +165,8 @@ Handle<Value> PatternConstructor(const Arguments& args) {
     Handle<Value> proto = (args.Length() > 2) ? args[2] : Handle<Value>();
     PatternFill(self, Pattern(name, val, proto));
 
-    return self;
+    return v8::Undefined();
+    //return self;
 }
 
 Handle<Value> PatternToString(const Arguments& args) {

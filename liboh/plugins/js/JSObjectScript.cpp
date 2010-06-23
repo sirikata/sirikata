@@ -339,7 +339,7 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAva
     //proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
     proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
 
-    std::cout<<"\n\nBFTM:  this is the number of objects that are messageabe:  "<<allAvailableObjectReferences.size()<<"\n\n";
+    std::cout<<"\n\nBFTM:  this is the number of objects that are messageable:  "<<allAvailableObjectReferences.size()<<"\n\n";
 
     if (allAvailableObjectReferences.empty())
     {
