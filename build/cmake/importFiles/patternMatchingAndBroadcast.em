@@ -1,6 +1,6 @@
 cb = function(){ system.print("\n\n\nPrint Test\n\n")};
 
-mPat = system.Pattern("m","o","oops");
+mPat = new system.Pattern("m","o","oops");
 //mPat = system.Pattern("m");
 
 system.print("\n\ncreated pattern\n");

@@ -650,6 +650,22 @@ void JSObjectScript::removeHandler(JSEventHandler* toRemove)
     }
 }
 
+//takes in an event handler, if not currently handling an event, removes the
+//handler from the vector and deletes it.  Otherwise, adds the handler for
+//removal and deletion later.
+void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
+{
+    if (mHandlingEvent)
+    {
+        mQueuedHandlerEventsDelete.push_back(toDelete);
+        return;
+    }
+
+    removeHandler(toDelete);
+    delete toDelete;
+    toDelete = NULL;
+}
+
 
 
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload)

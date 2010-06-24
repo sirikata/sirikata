@@ -1,6 +1,6 @@
 cb = function(){ system.print("\n\n\nPrint Test\n\n")};
 
-mPat = system.Pattern("m");
+mPat = new system.Pattern("m");
 
 handler = system.registerHandler(mPat,null,cb,null);
 system.print("\n\nBefore suspended\n");

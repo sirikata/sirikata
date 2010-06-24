@@ -107,6 +107,8 @@ public:
     //void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
     JSEventHandler* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
+
+    void deleteHandler(JSEventHandler* toDelete);    
     
 private:
 
@@ -130,7 +132,7 @@ private:
     JSEventHandlerList mQueuedHandlerEventsAdd;
     JSEventHandlerList mQueuedHandlerEventsDelete;
     void removeHandler(JSEventHandler* toRemove);
-    
+
     
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;

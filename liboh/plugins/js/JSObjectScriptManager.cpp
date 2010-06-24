@@ -144,7 +144,6 @@ void JSObjectScriptManager::createHandlerTemplate()
     v8::HandleScope handle_scope;
     mHandlerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
-
     // one field is the JSObjectScript associated with it
     // the other field is a pointer to the associated JSEventHandler.
     mHandlerTemplate->SetInternalFieldCount(2);
@@ -152,7 +151,7 @@ void JSObjectScriptManager::createHandlerTemplate()
     mHandlerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSHandler::__suspend));
     mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::__isSuspended));
     mHandlerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSHandler::__resume));
-    
+    mHandlerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSHandler::__clear));
 }
 
 
