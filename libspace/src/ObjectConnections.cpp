@@ -35,13 +35,13 @@
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
-#include "Space_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/space/Registration.hpp>
 #include <sirikata/space/ObjectConnections.hpp>
 #include <sirikata/space/Space.hpp>
-#include "Space_Time.pbj.hpp"
+#include "Protocol_Time.pbj.hpp"
 
 namespace Sirikata {
 

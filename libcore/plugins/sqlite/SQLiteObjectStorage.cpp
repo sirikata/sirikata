@@ -36,7 +36,7 @@
 #include <boost/bind.hpp>
 #include <boost/program_options.hpp>
 #include <boost/thread.hpp>
-#include "SQLite_Persistence.pbj.hpp"
+#include "Protocol_Persistence.pbj.hpp"
 #include "SQLiteObjectStorage.hpp"
 #define OPTION_DATABASE   "db"
 

@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/space/Registration.hpp>
-#include "Space_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 namespace Sirikata {

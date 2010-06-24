@@ -31,8 +31,8 @@
  */
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include "ProxyObject_Sirikata.pbj.hpp"
-#include "ProxyObject_Persistence.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
+#include "Protocol_Persistence.pbj.hpp"
 #include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/SentMessage.hpp>
@@ -193,7 +193,7 @@ void VWObject::receivedProxObjectProperties(
         RPCMessage *request = new RPCMessage(realThis->getTracker(space),std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
         request->header().set_destination_space(proximateObjectId.space());
         request->header().set_destination_object(proximateObjectId.object());
-        Protocol::LocRequest loc;
+        ::Sirikata::Protocol::LocRequest loc;
         loc.SerializeToString(request->body().add_message("LocRequest"));
         request->serializeSend();
     }

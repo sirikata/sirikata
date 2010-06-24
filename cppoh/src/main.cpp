@@ -53,8 +53,8 @@
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/persistence/ObjectStorage.hpp>
 #include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
-#include <ObjectHostBinary_Persistence.pbj.hpp>
-#include <ObjectHostBinary_Sirikata.pbj.hpp>
+#include <Protocol_Persistence.pbj.hpp>
+#include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
 #include <sirikata/core/options/Options.hpp>

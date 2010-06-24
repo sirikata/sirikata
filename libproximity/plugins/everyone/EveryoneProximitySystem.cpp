@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ProxEveryone_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include "EveryoneProximitySystem.hpp"
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>

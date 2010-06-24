@@ -39,7 +39,7 @@
 #include "ReadWriteHandlerTest.hpp"
 
 #include <sirikata/core/util/AtomicTypes.hpp>
-#include "Test_Persistence.pbj.hpp"
+#include "Protocol_Persistence.pbj.hpp"
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
 
@@ -102,11 +102,11 @@ static void fill_read_write_handler(ReadWriteHandler* rwh) {
 static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *response, volatile bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
     using namespace Sirikata::Persistence::Protocol;
 
-    if (expected_error != Protocol::Response::SUCCESS) {
+    if (expected_error != ::Sirikata::Persistence::Protocol::Response::SUCCESS) {
         TS_ASSERT(response->has_return_status());
         TS_ASSERT_EQUALS( response->return_status(), expected_error );
     }else if (response->has_return_status()) {
-        TS_ASSERT_EQUALS(response->return_status(),Protocol::Response::SUCCESS);
+        TS_ASSERT_EQUALS(response->return_status(),::Sirikata::Persistence::Protocol::Response::SUCCESS);
     }
 
     TS_ASSERT_EQUALS( response->reads_size(), expected.reads_size() );

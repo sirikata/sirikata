@@ -60,6 +60,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
+
 IF(WIN32)
 ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
 SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
@@ -776,33 +777,15 @@ SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PY
 
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
-ADD_PBJ_TARGET(MessageHeader
+
+ADD_PBJ_TARGET(MessageHeader ${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES MessageHeader_PBJ_CPP_FILES
+  GENERATED_CPP_FILES Protocol_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Prox"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Prox_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ProxEveryone"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ProxEveryone_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -817,95 +800,20 @@ ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
 )
 SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ObjectHost"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ObjectHost_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
+ADD_PBJ_TARGET(Physics
   INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ProxyObject"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ProxyObject_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Ogre"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Ogre_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(Sirikata Physics
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Bullet"
+  PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   GENERATED_CPP_FILES Bullet_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_PROXYOBJECT_EXPORT
   ${PROTOCOLBUFFERS_GENS}
   )
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ObjectHostBinary"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ObjectHostBinary_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-  )
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Space"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Space_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Test"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Test_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(Persistence
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "SQLite"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES SQLite_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Proximity"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Proximity_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
 
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
@@ -1041,10 +949,16 @@ IF(MONO_FOUND)
 
 ENDIF()
 
+#IF(WIN32)
+#ADD_DEFINITIONS(/FI\"${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp\")
+#ELSE()
+#ADD_DEFINITIONS(-include \"${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp\")
+#ENDIF()
+
 
 SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
-        ${MessageHeader_PBJ_CPP_FILES}
+        ${Protocol_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
@@ -1169,6 +1083,7 @@ SET(LIBPROXIMITY_SOURCES
 
 SET(LIBPROXYOBJECT_SOURCES
   ${ProxyObject_PBJ_CPP_FILES}
+  ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
@@ -1662,7 +1577,6 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox-everyone)
 
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/bullet)
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_SOURCES
-  ${Bullet_PBJ_CPP_FILES}
  ${LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR}/BulletSystem.cpp
     )
 IF(bullet_FOUND)
@@ -1872,9 +1786,13 @@ ENDIF()
 
 #precompiled headers
 IF(WIN32) 
-  #right now protobuf compiler cannot output pch #include flags at the top of their files, so we cannot use them directly or have to turn off pch:
-  #resolved: turn off PCH on windows
-  #SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-Ycutil/Standard.hh")
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycutil/Standard.hh")
+
+  SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/proxyobject/Platform.hpp")
+ELSE()
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-include sirikata/core/util/Standard.hh")
+  SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/proxyobject/Platform.hpp")
+
 ENDIF()
 
 

@@ -36,9 +36,9 @@
 #include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
-#include <ObjectHost_Sirikata.pbj.hpp>
-#include <ObjectHost_Subscription.pbj.hpp>
-#include <ObjectHost_Persistence.pbj.hpp>
+#include <Protocol_Sirikata.pbj.hpp>
+#include <Protocol_Subscription.pbj.hpp>
+#include <Protocol_Persistence.pbj.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
@@ -583,7 +583,7 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
                         SpaceDataMap::const_iterator spaceiter = mSpaceData->begin();
                         for (;spaceiter != mSpaceData->end(); ++spaceiter) {
                             int subID = cachedProp.getSubscriptionID();
-                            Protocol::Broadcast subMsg;
+                            ::Sirikata::Protocol::Broadcast subMsg;
                             std::string subStr;
                             subMsg.set_broadcast_name(subID);
                             subMsg.set_data(cachedProp.mData);

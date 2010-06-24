@@ -33,7 +33,7 @@
 #include <sirikata/space/Physics.hpp>
 #include <sirikata/space/Space.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
-#include "Space_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 namespace Sirikata { namespace Space {
 

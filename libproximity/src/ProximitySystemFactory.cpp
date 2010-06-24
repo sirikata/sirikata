@@ -32,7 +32,7 @@
 
 #include <sirikata/proximity/Platform.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
-#include "Proximity_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/proximity/ProximitySystem.hpp>
 #include <sirikata/proximity/ProximitySystemFactory.hpp>
 

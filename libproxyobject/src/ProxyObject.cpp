@@ -35,7 +35,7 @@
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/proxyobject/PositionListener.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
-#include "ProxyObject_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/RoutableMessageHeader.hpp>

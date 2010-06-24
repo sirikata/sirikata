@@ -182,6 +182,9 @@
 #include <stdint.h>
 #endif
 #include <assert.h>
+
+#ifdef __cplusplus
+
 #include <cstddef>
 #include <cstring>
 #include <cmath>
@@ -386,5 +389,5 @@ template class std::vector<void*>;
 template class std::vector<Sirikata::int8>;
 template class std::vector<Sirikata::uint8>;
 #endif
-
+#endif //__cplusplus
 #endif //_SIRIKATA_PLATFORM_HPP_

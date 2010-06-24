@@ -40,7 +40,7 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/space/ObjectConnections.hpp>
-#include <Space_Sirikata.pbj.hpp>
+#include <Protocol_Sirikata.pbj.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/proximity/Platform.hpp>
