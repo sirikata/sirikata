@@ -27,8 +27,8 @@ function contains(x, A)
 registeredUsers = new Array();
 registeredStmts = new Array();
 
-addPattern = system.Pattern('add');
-readPattern = system.Pattern('read');
+addPattern = new system.Pattern('add');
+readPattern = new system.Pattern('read');
 
 
 sendRegistrationMessage = function(dest)
@@ -40,7 +40,7 @@ sendRegistrationMessage = function(dest)
 
 // callback when the user sends an add request
 addCallback = function(obj, sender){
-  print("Got a message from " + sender.toString());  	
+  print("Got a ADD message from " + sender.toString());  	
   // check if the user is known to us
   var x = contains(sender, registeredUsers);
   if( x != -1)
@@ -48,6 +48,7 @@ addCallback = function(obj, sender){
     //user is known to us
 	// add the messge field
     registeredStmts[x] += obj.add;
+
    
   }
   else
@@ -68,7 +69,7 @@ addCallback = function(obj, sender){
 
 readCallback = function(obj, sender){
   
-  print("Got a message from " + sender.toString());  	
+  print("Got a READ message from " + sender.toString());  	
 
   // reader is definitely known to us
 
@@ -91,17 +92,15 @@ broadCastCallback = function()
   bMsg.sender = system.Self;
 
   system.__broadcast(bMsg);
-  system.timeout(5, null, broadCastCallback);
+  system.timeout(30, null, broadCastCallback);
 }
 
-system.timeout(5, null, broadCastCallback);
+system.timeout(30, null, broadCastCallback);
 system.registerHandler(addPattern, null, addCallback, null);
 
 
 
 // broadCast that you are bulletiing board
-
-
 
 
 print("Done with evaluation of the Bulletin board");

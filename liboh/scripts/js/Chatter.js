@@ -3,13 +3,13 @@
 
 print = function(args)
 {
-  system.print("Chatter ( " + system.Self + " ): " + args);
+  system.print("\n\n\nChatter ( " + system.Self + " ): " + args + "\n\n\n");
 }
 
 
 print("Evaluating Bulletin Board");
 
-bulletinBoardPattern = system.Pattern("BulletinBoard");
+bulletinBoardPattern = new system.Pattern("BulletinBoard");
 
 
 bulletinBoard = "";
