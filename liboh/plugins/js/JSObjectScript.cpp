@@ -89,7 +89,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     //takes care of the addressable array in sys.
     bftm_populateAddressable(system_obj);
 
-
+    mHandlingEvent = false;
+    
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
@@ -111,7 +112,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
         space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
-    
 }
 
 
@@ -221,7 +221,6 @@ void JSObjectScript::bftm_populateAddressable(Local<Object>& system_obj )
 
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Array> arrayObj= v8::Array::New();
-
 
 
     const HostedObject::SpaceSet& spaces = mParent->spaces();
@@ -496,9 +495,32 @@ CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericVa
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
     JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
-    mEventHandlers.push_back(new_handler);
+
+
+    if ( mHandlingEvent)
+    {
+        //means that we're in the process of handling an event, and therefore
+        //cannot push onto the event handlers list.  instead, add it to another
+        //vector, which are additional changes to make after we've tried to
+        //match all events.
+        mQueuedHandlerEventsAdd.push_back(new_handler);
+    }
+    else
+        mEventHandlers.push_back(new_handler);
+
     
     return new_handler;
+}
+
+
+//for debugging
+void JSObjectScript::printAllHandlerLocations()
+{
+    std::cout<<"\nPrinting event handlers for "<<this<<": \n";
+    for (int s=0; s < (int) mEventHandlers.size(); ++s)
+        std::cout<<"\t"<<mEventHandlers[s];
+
+    std::cout<<"\n\n\n";
 }
 
 
@@ -509,8 +531,8 @@ JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHeader& msgHeader)
 {
     /**
-       FIXME: may need to declare a scope here.
-     */
+       FIXME: may need to declare a scope here?
+    */
     
   ObjectReference* orp = new ObjectReference(msgHeader.source_object());
 
@@ -530,7 +552,7 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     v8::Local<v8::Object> obj = v8::Object::New();
 
     v8::Local<v8::Object> msgSender = getMessageSender(hdr);
-	//try deserialization
+    //try deserialization
     bool deserializeWorks;
     deserializeWorks = JSSerializer::deserializeObject( payload,obj);
 
@@ -542,23 +564,32 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
         return;
 
 
-
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
-    for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
+
+    
+    //cannot affect the event handlers when we are executing event handlers.
+    mHandlingEvent = true;
+    
+    for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
-        if ((*handler_it)->matches(obj, msgSender))
+        if (mEventHandlers[s]->matches(obj,msgSender))
         {
             // Adding support for the knowing the message properties too
             int argc = 2;
 
             Handle<Value> argv[2] = { obj, msgSender };
-            ProtectedJSCallback(mContext, (*handler_it)->target, (*handler_it)->cb, argc, argv);
+            ProtectedJSCallback(mContext, mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;
         }
     }
 
+
+    mHandlingEvent = false;
+    flushQueuedHandlerEvents();
+
+    
 
     /*
       FIXME: What should I do if the message that I receive does not match any handler?
@@ -568,6 +599,56 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 
 }
 
+
+//This function takes care of all of the event handling changes that were queued
+//while we were trying to match event happenings.
+//adds all outstanding changes and then deletes all outstanding in that order.
+void JSObjectScript::flushQueuedHandlerEvents()
+{
+    //Adding
+    for (int s=0; s < (int)mQueuedHandlerEventsAdd.size(); ++s)
+    {
+        //add handlers requested to be added during matching of handlers
+        mEventHandlers.push_back(mQueuedHandlerEventsAdd[s]);
+    }
+    mQueuedHandlerEventsAdd.clear();
+
+
+    //deleting
+    for (int s=0; s < (int)mQueuedHandlerEventsDelete.size(); ++s)
+    {
+        //remove handlers requested to be deleted during matching of handlers
+        removeHandler(mQueuedHandlerEventsDelete[s]);
+    }
+
+    for (int s=0; s < (int) mQueuedHandlerEventsDelete.size(); ++s)
+    {
+        //actually delete the patterns
+        //have to do this sort of tortured structure with comparing against
+        //nulls in order to prevent deleting something twice (a user may have
+        //tried to get rid of this handler multiple times).
+        if (mQueuedHandlerEventsDelete[s] != NULL)
+        {
+            delete mQueuedHandlerEventsDelete[s];
+            mQueuedHandlerEventsDelete[s] = NULL;
+        }
+    }
+    mQueuedHandlerEventsDelete.clear();
+}
+
+
+
+void JSObjectScript::removeHandler(JSEventHandler* toRemove)
+{
+    JSEventHandlerList::iterator iter = mEventHandlers.begin();
+    while (iter != mEventHandlers.end())
+    {
+        if ((*iter) == toRemove)
+            iter = mEventHandlers.erase(iter);
+        else
+            ++iter;
+    }
+}
 
 
 
@@ -579,13 +660,15 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
     body.ParseFromArray(payload.data(), payload.size());
     Sirikata::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromString(body.payload());
-    if (!parsed) {
+    if (!parsed)
+    {
         JSLOG(fatal, "Parsing failed.");
         return;
     }
 
     // Handle all requests
-    for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++) {
+    for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
+    {
         Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
         String script_str = req.body();
 

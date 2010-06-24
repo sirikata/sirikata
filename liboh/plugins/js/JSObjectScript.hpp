@@ -110,6 +110,10 @@ public:
     
 private:
 
+    typedef std::vector<JSEventHandler*> JSEventHandlerList;
+    JSEventHandlerList mEventHandlers;
+
+    
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
     
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
@@ -121,6 +125,13 @@ private:
 
     v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
 
+    void flushQueuedHandlerEvents();
+    bool mHandlingEvent;
+    JSEventHandlerList mQueuedHandlerEventsAdd;
+    JSEventHandlerList mQueuedHandlerEventsDelete;
+    void removeHandler(JSEventHandler* toRemove);
+    
+    
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
 
@@ -129,13 +140,11 @@ private:
     AddressableList mAddressableList;
 
     void bftm_populateAddressable(Local<Object>& system_obj );
-
+    void printAllHandlerLocations();
+    
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
-
-    typedef std::vector<JSEventHandler*> JSEventHandlerList;
-    JSEventHandlerList mEventHandlers;
 
     JSObjectScriptManager* mManager;
 
