@@ -48,15 +48,15 @@ public:
 
 	//Return an aggregated priority given the list of priorities
 	inline static TransferRequest::PriorityType aggregate(
-			std::tr1::shared_ptr<TransferRequest> req, std::map<std::string, TransferRequest::PriorityType> & l) {
+	        std::map<std::string, std::tr1::shared_ptr<TransferRequest> > & l) {
 
 		//don't feel like making compare func for max_element so just manual laziness
-		std::map<std::string, TransferRequest::PriorityType>::iterator findMax = l.begin();
-		TransferRequest::PriorityType max = findMax->second;
+	    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findMax = l.begin();
+		TransferRequest::PriorityType max = findMax->second->getPriority();
 		findMax++;
 		while(findMax != l.end()) {
-			if(findMax->second > max) {
-				max = findMax->second;
+			if(findMax->second->getPriority() > max) {
+				max = findMax->second->getPriority();
 			}
 			findMax++;
 		}

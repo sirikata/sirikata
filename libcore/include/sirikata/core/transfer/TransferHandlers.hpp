@@ -35,18 +35,22 @@
 #define SIRIKATA_TransferHandlers_HPP__
 
 #include <map>
-#include <list>
+#include <queue>
 #include <string>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/network/IOServicePool.hpp>
+#include <sirikata/core/network/IOWork.hpp>
+#include <sirikata/core/network/Asio.hpp>
+#include <boost/asio.hpp>
+#include "http_parser.h"
 
 namespace Sirikata {
 namespace Transfer {
 
-typedef std::tr1::function<void(
-			std::tr1::shared_ptr<MetadataRequest> request,
-			std::tr1::shared_ptr<RemoteFileMetadata> response
-		)> NameCallback;
+//Forward declaration
+class MetadataRequest;
 
 /*
  * Base class for an implementation that satisfies name lookups
@@ -55,7 +59,11 @@ typedef std::tr1::function<void(
 class NameHandler {
 
 public:
-	virtual void resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) = 0;
+    typedef std::tr1::function<void(
+                std::tr1::shared_ptr<RemoteFileMetadata> response
+            )> NameCallback;
+
+    virtual void resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) = 0;
 
 	virtual ~NameHandler() {
 	}
@@ -63,26 +71,64 @@ public:
 };
 
 /*
- * Implements name lookups via HTTP
+ * Implements name lookups via HTTP, should only create one of these
  */
 class HttpNameHandler : public NameHandler {
 
 private:
-	typedef std::list<NameCallback> NameCallbackList;
-	typedef std::pair<std::tr1::shared_ptr<MetadataRequest>, NameCallbackList> RequestResponsePair;
-	typedef std::map<std::string,RequestResponsePair> RequestListMap;
+    //For convenience
+    typedef Sirikata::Network::IOServicePool IOServicePool;
+    typedef Sirikata::Network::TCPResolver TCPResolver;
+    typedef Sirikata::Network::TCPSocket TCPSocket;
+    typedef Sirikata::Network::IOWork IOWork;
+    typedef boost::asio::ip::tcp::endpoint TCPEndPoint;
 
-	/* Maps outstanding requests (based on their string identifier) to the MetadataRequest that generated it
-	 * as well as the set of NameCallbacks that have to be invoked when the operation completes (in case
-	 * multiple requests for the same MetadataRequest come in at once)
+    typedef std::map<std::tr1::shared_ptr<MetadataRequest>, NameCallback> RequestMapType;
+    typedef std::pair<std::tr1::shared_ptr<MetadataRequest>, NameCallback> ReqCallbackPairType;
+    typedef std::queue<ReqCallbackPairType> RequestQueueType;
+
+	//Maps outstanding requests to their associated callbacks
+    RequestMapType mOutstandingReqs;
+
+	//Queue of requests that need to be fulfilled
+	RequestQueueType mWaitingReqs;
+
+	IOServicePool* mServicePool;
+	TCPResolver* mResolver;
+	IOWork* mIOWork;
+	TCPSocket* mTCPSocket;
+	TCPEndPoint mTCPEndpoint;
+	bool mEndPointInitialized;
+
+	//TODO: should get these from settings
+	static const uint32_t MAX_CONCURRENT_REQUESTS = 1;
+	static const char CDN_HOST_NAME [];
+	static const uint32_t CDN_PORT = 80;
+
+	/*
+	 * Checks if any requests should be initiated
 	 */
-	RequestListMap mRequestList;
+	void processRequests();
+
+	/*
+	 * Resolves the CDN host:port
+	 */
+	void resolve_cdn();
+	void handle_resolve(const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator);
+
+	//Callbacks
+	void handle_connect(const boost::system::error_code& err, ReqCallbackPairType request);
+	void handle_write_request(const boost::system::error_code& err, ReqCallbackPairType request);
+	void handle_read(ReqCallbackPairType request, std::tr1::shared_ptr<boost::asio::streambuf> buf,
+	        const boost::system::error_code& err, std::size_t bytes_transferred);
 
 public:
-	HttpNameHandler() {
+	HttpNameHandler();
+	~HttpNameHandler();
 
-	}
-
+	/*
+	 * Resolves a metadata request via HTTP and calls callback when completed
+	 */
 	void resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback);
 };
 
