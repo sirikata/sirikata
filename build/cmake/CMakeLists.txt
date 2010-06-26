@@ -1786,7 +1786,7 @@ ENDIF()
 
 #precompiled headers
 IF(WIN32) 
-  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycutil/Standard.hh")
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycsirikata/core/util/Standard.hh")
 
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/proxyobject/Platform.hpp")
 ELSE()
