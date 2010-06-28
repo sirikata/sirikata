@@ -1015,10 +1015,17 @@ SET(SIRIKATA_CORE_SOURCES
 )
 
 #precompiled header
-IF(NOT WIN32)
+SET(LIBCORE_STANDARD_HH ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh)
+IF(WIN32)
+ SET(LIBCORE_STANDARD_CPP ${LIBCORE_SOURCE_DIR}/util/Standard.cpp)
+ # Add Standard.cpp, which generates the PCH. Other settings are created farther down when the necessary targets have been created
+ SET(SIRIKATA_CORE_SOURCES
+     ${SIRIKATA_CORE_SOURCES}
+     ${LIBCORE_STANDARD_CPP}
+ )
+ELSE()
  IF(${CMAKE_COMPILER_IS_GNUCXX})
-   SET(LIBCORE_STANDARD_HH ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh)
-   SET(LIBCORE_STANDARD_HH_GCH ${LIBCORE_STANDARD_HH}.gch)
+  SET(LIBCORE_STANDARD_HH_GCH ${LIBCORE_STANDARD_HH}.gch)
   SET(SIRIKATA_CORE_SOURCES
      ${LIBCORE_STANDARD_HH_GCH} ${SIRIKATA_CORE_SOURCES})
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
@@ -1788,8 +1795,12 @@ ENDIF()
 
 
 #precompiled headers
-IF(WIN32) 
-  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycsirikata/core/util/Standard.hh")
+IF(WIN32)
+  # Creation is turned on only for libcore/util/Standard.cpp
+  SET_SOURCE_FILES_PROPERTIES(${LIBCORE_STANDARD_CPP} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycsirikata/core/util/Standard.hh")
+
+  # Everything uses the PCH
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Yusirikata/core/util/Standard.hh")
 
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/proxyobject/Platform.hpp")
 ELSE()
