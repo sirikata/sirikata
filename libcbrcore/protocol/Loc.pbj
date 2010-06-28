@@ -38,7 +38,7 @@ package Sirikata.Protocol.Loc;
 
 message LocationUpdate {
     required uuid object = 1;
-    required Sirikata.Protocol._prefix_.TimedMotionVector location = 2;
+    required Sirikata.Protocol.TimedMotionVector location = 2;
     required boundingsphere3f bounds = 3;
 }
 
@@ -51,7 +51,7 @@ message BulkLocationUpdate {
 // This should be sent from object -> Space(Loc) in an
 // ObjectMessage.
 message LocationUpdateRequest {
-    optional Sirikata.Protocol._prefix_.TimedMotionVector location = 1;
+    optional Sirikata.Protocol.TimedMotionVector location = 1;
     optional boundingsphere3f bounds = 2;
 }
 

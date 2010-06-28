@@ -45,7 +45,7 @@ message ServerQuery {
     }
 
     required Action action = 1;
-    optional Sirikata.Protocol._prefix_.TimedMotionVector location = 2;
+    optional Sirikata.Protocol.TimedMotionVector location = 2;
     optional boundingsphere3f bounds = 3;
     optional float min_angle = 4;
 }
@@ -59,7 +59,7 @@ message ObjectMigrationData {
 
 message ObjectAddition {
     required uuid object = 1;
-    required Sirikata.Protocol._prefix_.TimedMotionVector location = 2;
+    required Sirikata.Protocol.TimedMotionVector location = 2;
     required boundingsphere3f bounds = 3;
 }
 

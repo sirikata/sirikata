@@ -47,7 +47,7 @@ message Connect {
 
     required ConnectionType type = 1;
     required uuid object = 2;
-    optional Sirikata.Protocol._prefix_.TimedMotionVector loc = 3;
+    optional Sirikata.Protocol.TimedMotionVector loc = 3;
     optional boundingsphere3f bounds = 4;
     optional float query_angle = 5;
 }
