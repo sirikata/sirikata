@@ -101,9 +101,9 @@ private:
 	bool mEndPointInitialized;
 
 	//TODO: should get these from settings
-	static const uint32_t MAX_CONCURRENT_REQUESTS = 1;
+	static const uint32 MAX_CONCURRENT_REQUESTS = 1;
 	static const char CDN_HOST_NAME [];
-	static const uint32_t CDN_PORT = 80;
+	static const uint32 CDN_PORT = 80;
 
 	/*
 	 * Checks if any requests should be initiated

@@ -216,7 +216,7 @@ class TransferMediator {
 	boost::shared_mutex mPoolMutex; //lock this to access mPools
 
 	bool mCleanup;
-	uint32_t mNumOutstanding;
+	uint32 mNumOutstanding;
 
 public:
 
