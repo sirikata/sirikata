@@ -51,6 +51,7 @@
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
 using namespace Sirikata;
+using boost::asio::ip::tcp;
 
 boost::condition_variable done;
 boost::mutex mut;
@@ -76,12 +77,14 @@ public:
 
 		//Register with the transfer mediator!
 		mTransferPool = mTransferMediator->registerClient(mClientID);
-//std::tr1::bind(&SampleClient::transferFinished, this, _1)
+
 		for(int i=0; i<10; i++) {
 			for(std::vector<Transfer::URI>::iterator it = mURIList.begin(); it != mURIList.end(); it++) {
 				//SILOG(transfer, debug, mClientID << " adding " << it->toString());
 				float pri = rand()/(float(RAND_MAX)+1);
-				std::tr1::shared_ptr<Transfer::TransferRequest> req(new Transfer::MetadataRequest(*it, pri));
+				std::tr1::shared_ptr<Transfer::TransferRequest> req(
+				        new Transfer::MetadataRequest(*it, pri, std::tr1::bind(
+				        &SampleClient::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 				mTransferPool->addRequest(req);
 			}
 
@@ -94,6 +97,11 @@ public:
 		if(numClis <= 0) {
 			done.notify_all();
 		}
+	}
+
+	void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+            std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response) {
+	    SILOG(transfer, debug, "metadata callback called");
 	}
 
 	Task::EventResponse transferFinished(Task::EventPtr evbase) {
@@ -114,9 +122,9 @@ class TransferTest : public CxxTest::TestSuite {
 	typedef Transfer::URIContext URIContext;
 
 	//Event-based / Thread stuff
-	Task::WorkQueue *mWorkQueue;
-	Task::GenEventManager *mEventSystem;
-	Thread *mEventProcessThread;
+	Task::WorkQueue* mWorkQueue;
+	Task::GenEventManager* mEventSystem;
+	Thread* mEventProcessThread;
 
 	//Set to true when event manager should shut down
 	volatile bool mDestroyEventManager;
@@ -124,14 +132,14 @@ class TransferTest : public CxxTest::TestSuite {
 	//Mediates transfers between subsystems (graphics, physics, etc)
 	Transfer::TransferMediator *mTransferMediator;
 
-	SampleClient * mSampleClient1;
-	SampleClient * mSampleClient2;
-	SampleClient * mSampleClient3;
+	SampleClient* mSampleClient1;
+	SampleClient* mSampleClient2;
+	SampleClient* mSampleClient3;
 
-	Thread * mMediatorThread;
-	Thread * mClientThread1;
-	Thread * mClientThread2;
-	Thread * mClientThread3;
+	Thread* mMediatorThread;
+	Thread* mClientThread1;
+	Thread* mClientThread2;
+	Thread* mClientThread3;
 	ThreadSafeQueue<int> mTestQueue;
 
 public:
@@ -145,9 +153,8 @@ public:
 		mEventProcessThread = new Thread(std::tr1::bind(
 			&TransferTest::sleep_processEventQueue, this));
 
-
 		//Create a transfer mediator to use for client transfer requests
-		mTransferMediator = new Transfer::TransferMediator(mEventSystem);
+		mTransferMediator = new Transfer::TransferMediator(mEventSystem, NULL /*mServicePool->service()*/);
 
 		mMediatorThread = new Thread(std::tr1::bind(&Transfer::TransferMediator::mediatorThread, mTransferMediator));
 
@@ -185,18 +192,22 @@ public:
 	}
 
 	void tearDown() {
-		mDestroyEventManager = true;
-		mWorkQueue->enqueue(NULL);
-		mEventProcessThread->join();
+	    //Bring down the event manager thread
+	    mDestroyEventManager = true;
+	    mWorkQueue->enqueue(NULL);
+        mEventProcessThread->join();
 
-		delete mEventProcessThread;
-		delete mEventSystem;
-		delete mWorkQueue;
+        delete mEventProcessThread;
+        delete mEventSystem;
+        delete mWorkQueue;
 
-		mClientThread1->join();
-		mClientThread2->join();
-		mClientThread3->join();
-		mMediatorThread->join();
+        //Make sure clients have exited
+	    mClientThread1->join();
+        mClientThread2->join();
+        mClientThread3->join();
+
+        //Wait for transfer mediator thread to exit
+        mMediatorThread->join();
 	}
 
 	void sleep_processEventQueue() {
@@ -211,5 +222,16 @@ public:
 		done.wait(lock);
 		mTransferMediator->cleanup();
 	}
+
+    void handle_resolve(const boost::system::error_code& err,
+            tcp::resolver::iterator endpoint_iterator) {
+        std::cout << "TESTTESTESTSETWT\n";
+        if (!err) {
+            tcp::endpoint endpoint = *endpoint_iterator;
+            SILOG(transfer, debug, "got IP from lookup!");
+        } else {
+            SILOG(transfer, debug, "Error: " << err.message());
+        }
+    }
 
 };

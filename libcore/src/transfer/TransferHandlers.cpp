@@ -38,22 +38,125 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferHandlers.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <boost/bind.hpp>
 
 namespace Sirikata {
 namespace Transfer {
 
-void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
-	std::string requestId = request->getIdentifier();
+const char HttpNameHandler::CDN_HOST_NAME [] = "cdn.sirikata.com";
 
-	RequestListMap::iterator it = mRequestList.find(requestId);
-	if(it == mRequestList.end()) {
-		NameCallbackList s;
-		s.push_back(callback);
-		RequestResponsePair pair(request, s);
-		mRequestList[requestId] = pair;
-	} else {
-		it->second.second.push_back(callback);
-	}
+HttpNameHandler::HttpNameHandler()
+    : mEndPointInitialized(false) {
+
+    //Making a single thread IOService to handle requests
+    mServicePool = new IOServicePool(1);
+
+    //Add a dummy IOWork so that the IOService stays running
+    mIOWork = new IOWork(*(mServicePool->service()));
+
+    //This runs an IOService in a new thread
+    mServicePool->run();
+
+    //Used to resolve host:port names to IP addresses
+    mResolver = new TCPResolver(*(mServicePool->service()));
+
+    resolve_cdn();
+}
+
+HttpNameHandler::~HttpNameHandler() {
+    //Cancel any pending requests to resolve names and delete resolver
+    mResolver->cancel();
+    delete mResolver;
+
+    //Stop the IOService and make sure its thread exist
+    mServicePool->service()->stop();
+    mServicePool->join();
+
+    //Delete dummy worker and service pool
+    delete mIOWork;
+    delete mServicePool;
+}
+
+void HttpNameHandler::resolve_cdn() {
+    //Resolve the CDN host:port
+    TCPResolver::query query(CDN_HOST_NAME, CDN_PORT);
+    mResolver->async_resolve(query, boost::bind(&HttpNameHandler::handle_resolve, this,
+                            boost::asio::placeholders::error, boost::asio::placeholders::iterator));
+}
+
+void HttpNameHandler::handle_resolve(const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator) {
+    if (!err) {
+        mTCPEndpoint = *endpoint_iterator;
+        mEndPointInitialized = true;
+        processRequests();
+    } else {
+        SILOG(transfer, error, "Failed to resolve CDN hostname. Error = " << err.message());
+        //TODO: is this the best way to handle this?
+        resolve_cdn();
+    }
+}
+
+void HttpNameHandler::handle_connect(const boost::system::error_code& err, ReqCallbackPairType request) {
+    if (!err) {
+
+        boost::asio::streambuf reqbuff;
+        std::ostream request_stream(&reqbuff);
+        request_stream << "GET /dns/global" << request.first->getURI().fullpath() << " HTTP/1.0\r\n";
+        request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        boost::asio::async_write(*mTCPSocket, reqbuff, boost::bind(
+                &HttpNameHandler::handle_write_request, this,
+                boost::asio::placeholders::error, request));
+    } else {
+        SILOG(transfer, fatal, "Failed to connect to CDN socket. Error = " << err.message());
+    }
+}
+
+void HttpNameHandler::handle_write_request(const boost::system::error_code& err, ReqCallbackPairType request) {
+    if (!err) {
+        std::tr1::shared_ptr<boost::asio::streambuf> buf(new boost::asio::streambuf());
+        boost::asio::async_read(*mTCPSocket, *buf, boost::bind(
+                &HttpNameHandler::handle_read, this, request, buf,
+                boost::asio::placeholders::error,
+                boost::asio::placeholders::bytes_transferred));
+    } else {
+        SILOG(transfer, fatal, "Failed to write to CDN socket. Error = " << err.message());
+    }
+}
+
+void HttpNameHandler::handle_read(ReqCallbackPairType request, std::tr1::shared_ptr<boost::asio::streambuf> buf,
+        const boost::system::error_code& err, std::size_t bytes_transferred) {
+    if (!err || err == boost::asio::error::eof) {
+        //parse_response();
+    } else {
+        SILOG(transfer, fatal, "Failed to read from CDN socket. Error = " << err.message());
+    }
+}
+
+void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
+	//Higher layer should ensure that we don't get duplicates
+    ReqCallbackPairType p(request, callback);
+    mWaitingReqs.push(p);
+	processRequests();
+}
+
+void HttpNameHandler::processRequests() {
+    if (mOutstandingReqs.size() >= MAX_CONCURRENT_REQUESTS ||
+            mWaitingReqs.empty() ||
+            !mEndPointInitialized) {
+        return;
+    }
+
+    ReqCallbackPairType p = mWaitingReqs.front();
+    mOutstandingReqs[p.first] = p.second;
+    mWaitingReqs.pop();
+
+    mTCPSocket = new TCPSocket(*(mServicePool->service()));
+    mTCPSocket->async_connect(
+            mTCPEndpoint, boost::bind(&HttpNameHandler::handle_connect, this,
+            boost::asio::placeholders::error, p));
 }
 
 }
