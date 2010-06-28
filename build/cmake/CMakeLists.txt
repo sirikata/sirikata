@@ -1800,11 +1800,11 @@ IF(WIN32)
   SET_SOURCE_FILES_PROPERTIES(${LIBCORE_STANDARD_CPP} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycsirikata/core/util/Standard.hh")
 
   # Everything uses the PCH
-  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Yusirikata/core/util/Standard.hh")
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Yusirikata/core/util/Standard.hh")
 
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/proxyobject/Platform.hpp")
 ELSE()
-  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-include sirikata/core/util/Standard.hh")
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/core/util/Standard.hh")
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/proxyobject/Platform.hpp")
 
 ENDIF()
