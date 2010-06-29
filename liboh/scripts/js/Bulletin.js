@@ -2,89 +2,81 @@
 
 print = function(args)
 {
-  system.print("Bulletin Board: " + args);
+  system.print("\n\n\nBulletin Board: " + args + "\n\n\n");
 }
 
 print("Evaluating Bulletin Board");
 
-// returns true if x is contained in array A
-function contains(x, A)
-{
-  for(i in A)
-  {
-    if(x == A[i])
-	{
-	  return i;
-	}
-  }
-  return -1;
-}
-
-//Create a hash table of the registered users
-// THe key is the username and the value is hte
-// list of statements of the user
-
-registeredUsers = new Array();
-registeredStmts = new Array();
+registeredUsers = new Object();
 
 addPattern = new system.Pattern('add');
 readPattern = new system.Pattern('read');
 
 
-sendRegistrationMessage = function(dest)
+sendAddConfirmationMessage = function(dest)
 {
   var msg = new Object();
   msg.result = "OK";
-  sender.sendMessage(msg);  
+  dest.sendMessage(msg);  
+
+  print("Sent add confirmation to " + dest);
 }
 
 // callback when the user sends an add request
-addCallback = function(obj, sender){
+function addCallback(obj, sender){
   print("Got a ADD message from " + sender.toString());  	
   // check if the user is known to us
-  var x = contains(sender, registeredUsers);
-  if( x != -1)
-  {
-    //user is known to us
-	// add the messge field
-    registeredStmts[x] += obj.add;
 
-   
+  var added = false;
+  if(registeredUsers[sender])
+  {
+
+    print("User already exists");
+    added = true;  
+    registeredUsers[sender].statements += obj.add;
   }
   else
   {
-    registeredUsers.push(sender);
-	registeredStmts[registeredUsers.length - 1] = "";
+    registeredUsers[sender] = new Object();
+	if(obj.add)
+	{
+	  registeredUsers[sender].statements = obj.add;
+	}
+	else
+	{
+	  
+	  registeredUsers[sender].statements = "";
+	}
+
+    print("User is new. Adding a read callback for the user "+sender);
+    system.registerHandler(readPattern, null, readCallback, sender);
+
   }
-
-  // register a callback fro a read messaage
-  // read will be called back only when we have a message from the registered users
-  system.registerHandler(readPattern, null, readCallback, sender);
-
-  sendRegistrationMessage();
+  
+  sendAddConfirmationMessage(sender);
 }
 
-
-
-
-readCallback = function(obj, sender){
+function readCallback(obj, sender){
   
   print("Got a READ message from " + sender.toString());  	
 
   // reader is definitely known to us
 
   var msg = new Object();
-  // a dictionary could have been helpful
-  // may be as a library
-  var xx = contains(sender, registeredUsers);
-  msg.val = registeredStmts[x];
+  
+  if(registeredUsers[sender])
+  {
+    print("The user " + sender + "exists.");
 
-  sender.sendMessage(msg);
-
+    msg.value = registeredUsers[sender].statements;
+    sender.sendMessage(msg);
+	
+	print("Sent the read reply ( " + msg.value + ") to "+ sender);
+  }
 
 }
 
-broadCastCallback = function()
+function broadCastCallback()
 {
   print("BroadCasting myself ");
   var bMsg = new Object();
