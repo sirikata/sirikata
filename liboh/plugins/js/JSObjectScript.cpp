@@ -366,7 +366,9 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
     if (result.IsEmpty()) {
         // FIXME what should we do with this exception?
         v8::String::Utf8Value error(try_catch.Exception());
-    }
+        const char* cMsg = ToCString(error);
+        std::cout << cMsg << "\n";
+	}
 }
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
