@@ -32,7 +32,6 @@
 
 #include <cassert>
 #include "CacheRecords.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include "Utility.hpp"
 
 namespace Sirikata

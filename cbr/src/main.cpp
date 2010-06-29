@@ -57,10 +57,10 @@
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
-#include <sirikata/cbrcore/LoadMonitor.hpp>
+#include "LoadMonitor.hpp"
 #include "CraqObjectSegmentation.hpp"
 
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 
 
 int main(int argc, char** argv) {

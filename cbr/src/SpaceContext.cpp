@@ -1,5 +1,5 @@
 /*  Sirikata
- *  CoordinateSegmentation.cpp
+ *  SpaceContext.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,35 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "SpaceContext.hpp"
+#include <sirikata/core/network/IOStrandImpl.hpp>
+
+#include <sirikata/cbrcore/SSTImpl.hpp>
 
 namespace Sirikata {
 
-CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
- : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
-   mContext(ctx)
+SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration)
+ : Context("Space", ios, strand, _trace, epoch, duration),
+   mID(_id),
+   mServerRouter(NULL),
+   mObjectRouter(NULL),
+   mServerDispatcher(NULL),
+   mObjectDispatcher(NULL)
 {
-    mServiceStage = mContext->profiler->addStage("CSeg");
 }
 
-void CoordinateSegmentation::addListener(Listener* listener) {
-    assert (mListeners.find(listener) == mListeners.end());
-    mListeners.insert(listener);
+SpaceContext::~SpaceContext() {
+    mObjectStreams.clear();
 }
 
-void CoordinateSegmentation::removeListener(Listener* listener) {
-    mListeners.erase(listener);
-}
+void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
+  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;
 
-void CoordinateSegmentation::notifyListeners(const std::vector<SegmentationInfo>& new_segmentation) {
-    for( std::set<Listener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->updatedSegmentation(this, new_segmentation);
-}
+  if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
+    std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";
+    mObjectStreams[sourceObject]->connection().lock()->close(true);
+  }
 
-void CoordinateSegmentation::poll() {
-    mServiceStage->started();
-    this->service();
-    mServiceStage->finished();
+  mObjectStreams[sourceObject] = s;
 }
 
 } // namespace Sirikata

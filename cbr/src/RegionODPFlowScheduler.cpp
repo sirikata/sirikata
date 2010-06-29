@@ -31,7 +31,7 @@
  */
 
 #include "RegionODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 
 namespace Sirikata {
 

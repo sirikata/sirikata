@@ -35,7 +35,7 @@
 #define _SIRIKATA_SERVER_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 
 #include "ObjectHostConnectionManager.hpp"
 #include <sirikata/core/service/Service.hpp>

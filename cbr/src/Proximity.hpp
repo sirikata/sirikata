@@ -35,7 +35,7 @@
 
 #include "ProxSimulationTraits.hpp"
 #include "CBRLocationServiceCache.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>

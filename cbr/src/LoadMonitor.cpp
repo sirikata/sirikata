@@ -31,8 +31,8 @@
  */
 
 
-#include <sirikata/cbrcore/LoadMonitor.hpp>
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "LoadMonitor.hpp"
+#include "CoordinateSegmentation.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
 #define THRESHOLD 5

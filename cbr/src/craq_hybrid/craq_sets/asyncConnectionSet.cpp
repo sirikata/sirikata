@@ -34,7 +34,6 @@
 #include <iostream>
 #include <map>
 #include <utility>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include <boost/asio.hpp>

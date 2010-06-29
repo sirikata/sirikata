@@ -33,7 +33,7 @@
 
 #include "SpaceNetwork.hpp"
 #include "Server.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <sirikata/cbrcore/Message.hpp>
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"

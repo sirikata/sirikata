@@ -32,7 +32,7 @@
 
 #include "CSFQODPFlowScheduler.hpp"
 #include "LocationService.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <sirikata/cbrcore/Random.hpp>
 #include "craq_oseg/CraqEntry.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>

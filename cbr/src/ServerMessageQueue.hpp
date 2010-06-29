@@ -34,9 +34,9 @@
 #define _SIRIKATA_SERVER_MESSAGE_QUEUE_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include "RateEstimator.hpp"
 
 namespace Sirikata{

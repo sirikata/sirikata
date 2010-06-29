@@ -37,7 +37,6 @@
 #include <vector>
 #include <string>
 #include "CacheRecords.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 
 #ifndef __FCACHE_HPP__

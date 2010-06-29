@@ -31,7 +31,7 @@
  */
 
 #include "ServerMessageReceiver.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include "SpaceNetwork.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 

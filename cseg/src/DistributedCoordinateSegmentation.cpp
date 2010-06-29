@@ -574,9 +574,6 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
 void DistributedCoordinateSegmentation::csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg) {
 }
 
-void DistributedCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {
-}
-
 void DistributedCoordinateSegmentation::serializeBSPTree(SerializedBSPTree* serializedBSPTree) {
   uint32 idx = 0;
   traverseAndStoreTree(&mTopLevelRegion, idx, serializedBSPTree);

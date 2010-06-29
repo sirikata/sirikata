@@ -50,7 +50,7 @@
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <sstream>
 #include <string.h>
 #include <stdlib.h>

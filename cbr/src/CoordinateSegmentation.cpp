@@ -1,5 +1,5 @@
 /*  Sirikata
- *  SpaceContext.cpp
+ *  CoordinateSegmentation.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,36 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/core/network/IOStrandImpl.hpp>
-
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include "CoordinateSegmentation.hpp"
 
 namespace Sirikata {
 
-SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration)
- : Context("Space", ios, strand, _trace, epoch, duration),
-   mID(_id),
-   mServerRouter(NULL),
-   mObjectRouter(NULL),
-   mServerDispatcher(NULL),
-   mObjectDispatcher(NULL)
+CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
+   mContext(ctx)
 {
+    mServiceStage = mContext->profiler->addStage("CSeg");
 }
 
-SpaceContext::~SpaceContext() {
-    mObjectStreams.clear();
+void CoordinateSegmentation::addListener(Listener* listener) {
+    assert (mListeners.find(listener) == mListeners.end());
+    mListeners.insert(listener);
 }
 
-void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;
+void CoordinateSegmentation::removeListener(Listener* listener) {
+    mListeners.erase(listener);
+}
 
-  if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
-    std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";
-    mObjectStreams[sourceObject]->connection().lock()->close(true);
-  }
+void CoordinateSegmentation::notifyListeners(const std::vector<SegmentationInfo>& new_segmentation) {
+    for( std::set<Listener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->updatedSegmentation(this, new_segmentation);
+}
 
-  mObjectStreams[sourceObject] = s;
+void CoordinateSegmentation::poll() {
+    mServiceStage->started();
+    this->service();
+    mServiceStage->finished();
 }
 
 } // namespace Sirikata

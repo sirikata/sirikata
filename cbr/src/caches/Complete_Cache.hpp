@@ -39,7 +39,6 @@
 #include <string>
 #include "CacheRecords.hpp"
 #include <float.h>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 
 

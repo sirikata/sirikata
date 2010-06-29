@@ -1270,7 +1270,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/SpaceContext.cpp
   ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
@@ -1278,13 +1277,12 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
   ${LIBCBRCORE_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/LoadMonitor.cpp
 )
 
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
@@ -1311,6 +1309,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
+  ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocalForwarder.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
@@ -1319,6 +1318,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
+  ${CBR_SOURCE_DIR}/SpaceContext.cpp
   ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Server.cpp

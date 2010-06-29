@@ -39,7 +39,7 @@
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <string.h>
 #include <vector>
 
