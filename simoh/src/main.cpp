@@ -51,7 +51,8 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
+    OHTrace::InitOptions();
     InitSimOHOptions();
     ParseOptions(argc, argv);
 
@@ -67,7 +68,7 @@ int main(int argc, char** argv) {
 
     ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
-    Trace* gTrace = new Trace(trace_file);
+    Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());

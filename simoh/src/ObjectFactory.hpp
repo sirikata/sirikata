@@ -39,7 +39,6 @@
 namespace Sirikata {
 class MotionPath;
 class Object;
-class Trace;
 class ObjectHostContext;
 
 /** Generates objects for the simulation.  This class actually has 2 jobs.

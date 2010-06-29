@@ -38,6 +38,7 @@
 #include "AnalysisEvents.hpp"
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 
+#include "CBR_Geometry.pbj.hpp"
 
 namespace Sirikata {
 
@@ -49,6 +50,8 @@ struct ServerDatagramQueuedEvent;
 struct ServerDatagramReceivedEvent;
 struct ServerDatagramQueueInfoEvent;
 struct PacketQueueInfoEvent;
+
+TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotionVector& tmv);
 
 /** Error of observed vs. true object locations over simulation period. */
 class LocationErrorAnalysis {

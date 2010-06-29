@@ -59,7 +59,7 @@ class CoordinateSegmentation;
  */
 class SpaceContext : public Context {
 public:
-    SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace* _trace, const Duration& duration);
+    SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration);
     ~SpaceContext();
 
     ServerID id() const {

@@ -39,6 +39,8 @@
 #include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 #include <algorithm>
 
+#include "CBR_Object.pbj.hpp"
+
 namespace Sirikata {
 
 bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_out) {
@@ -54,6 +56,17 @@ bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_o
     return true;
 }
 
+TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotionVector& tmv) {
+    TimedMotionVector3f result;
+    result.update( tmv.t(), tmv.position(), tmv.velocity() );
+    return result;
+}
+
+typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
+typedef PBJEvent<Trace::Object::LocUpdate> LocationEvent;
+typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+typedef PBJEvent<Trace::Object::ProxUpdate> ProximityEvent;
+
 Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID& trace_server_id) {
     std::istringstream record_is(record);
 
@@ -61,6 +74,12 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
       return NULL;
 
     Event* evt = NULL;
+
+#define PARSE_PBJ_RECORD(type)                                          \
+    PBJEvent<type>* pevt = new PBJEvent<type>;                          \
+    pevt->data.ParseFromIstream(&record_is);                            \
+    pevt->time = pevt->data.t();                                        \
+    evt = pevt;
 
     if (type_hint == Trace::SegmentationChangeTag) {
   	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
@@ -70,38 +89,16 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 	      evt = sevt;
     }
     else if (type_hint == Trace::ProximityTag) {
-              ProximityEvent* pevt = new ProximityEvent;
-              record_is.read( (char*)&pevt->time, sizeof(pevt->time) );
-              record_is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
-              record_is.read( (char*)&pevt->source, sizeof(pevt->source) );
-              record_is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
-              record_is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
-              evt = pevt;
-              }
+        PARSE_PBJ_RECORD(Trace::Object::ProxUpdate);
+    }
     else if (type_hint == Trace::ObjectConnectedTag) {
-              ObjectConnectedEvent* levt = new ObjectConnectedEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              levt->receiver = UUID::null();
-              record_is.read( (char*)&levt->server, sizeof(levt->server) );
-              evt = levt;
+        PARSE_PBJ_RECORD(Trace::Object::Connected);
     }
     else if (type_hint == Trace::ObjectLocationTag) {
-              LocationEvent* levt = new LocationEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              evt = levt;
+        PARSE_PBJ_RECORD(Trace::Object::LocUpdate);
     }
     else if (type_hint == Trace::ObjectGeneratedLocationTag) {
-              GeneratedLocationEvent* levt = new GeneratedLocationEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              levt->receiver = UUID::null();
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              record_is.read( (char*)&levt->bounds, sizeof(levt->bounds) );
-              evt = levt;
+        PARSE_PBJ_RECORD(Trace::Object::GeneratedLoc);
     }
     else if (type_hint == Trace::ObjectPingCreatedTag) {
               PingCreatedEvent *pevt = new PingCreatedEvent;
@@ -449,7 +446,7 @@ bool LocationErrorAnalysis::observed(const UUID& observer, const UUID& seen) con
 
     for(EventList::iterator event_it = events->begin(); event_it != events->end(); event_it++) {
         ProximityEvent* prox = dynamic_cast<ProximityEvent*>(*event_it);
-        if (prox != NULL && prox->entered)
+        if (prox != NULL && prox->data.entered())
             found_prox_entered = true;
 
         LocationEvent* loc = dynamic_cast<LocationEvent*>(*event_it);
@@ -469,12 +466,12 @@ struct AlwaysUpdatePredicate {
 
 static bool event_matches_prox_entered(ObjectEvent* evt) {
     ProximityEvent* prox = dynamic_cast<ProximityEvent*>(evt);
-    return (prox != NULL && prox->entered);
+    return (prox != NULL && prox->data.entered());
 }
 
 static bool event_matches_prox_exited(ObjectEvent* evt) {
     ProximityEvent* prox = dynamic_cast<ProximityEvent*>(evt);
-    return (prox != NULL && !prox->entered);
+    return (prox != NULL && !prox->data.entered());
 }
 
 static bool event_matches_loc(ObjectEvent* evt) {
@@ -528,7 +525,7 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
         if (mode == SEARCHING_PROX) {
             if (event_matches_prox_entered(cur_event)) {
                 ProximityEvent* prox = dynamic_cast<ProximityEvent*>(cur_event);
-                pred_motion = prox->loc;
+                pred_motion = extractTimedMotionVector(prox->data.loc());
                 cur_time = prox->time;
                 mode = SAMPLING;
             }
@@ -574,8 +571,9 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
                 mode = SEARCHING_PROX;
             else if (event_matches_loc(cur_event)) {
                 LocationEvent* loc = dynamic_cast<LocationEvent*>(cur_event);
-                if (loc->loc.time() >= pred_motion.time())
-                    pred_motion = loc->loc;
+                TimedMotionVector3f loc_loc = extractTimedMotionVector(loc->data.loc());
+                if (loc_loc.time() >= pred_motion.time())
+                    pred_motion = loc_loc;
             }
 
             cur_time = end_sampling_time;
@@ -2360,8 +2358,8 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
             LocationEvent* loc_evt = dynamic_cast<LocationEvent*>(evt);
 
             UUID source = UUID::null();
-            if (gen_loc_evt != NULL) source = gen_loc_evt->source;
-            if (loc_evt != NULL) source = loc_evt->source;
+            if (gen_loc_evt != NULL) source = gen_loc_evt->data.source();
+            if (loc_evt != NULL) source = loc_evt->data.source();
 
             if (gen_loc_evt || loc_evt) {
                 if (locEvents.find(source) == locEvents.end())
@@ -2402,15 +2400,18 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     if (loc_evt == NULL) continue;
 
                     // Make sure the updates match, because we loop over all loc updates after this and we might pass the
-                    // next gen_loc_evt but we can't stop looking because the latencies might be very high
-                    if ( (loc_evt->loc.updateTime() != gen_loc_evt->loc.updateTime()) ||
-                        (loc_evt->loc.position() != gen_loc_evt->loc.position()) ||
-                        (loc_evt->loc.velocity() != gen_loc_evt->loc.velocity()) )
+                    // next gen_loc_evt but we can't stop looking because the
+                    // latencies might be very high
+                    TimedMotionVector3f loc_loc = extractTimedMotionVector(loc_evt->data.loc());
+                    TimedMotionVector3f gen_loc_loc = extractTimedMotionVector(gen_loc_evt->data.loc());
+                    if ( (loc_loc.updateTime() != gen_loc_loc.updateTime()) ||
+                        (loc_loc.position() != gen_loc_loc.position()) ||
+                        (loc_loc.velocity() != gen_loc_loc.velocity()) )
                         continue;
 
 
-                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( gen_loc_evt->time ).value();
-                    MotionVector3f source_loc = loc_evt->loc.extrapolate( gen_loc_evt->time );
+                    MotionVector3f receiver_loc = paths[loc_evt->data.receiver()]->at( gen_loc_evt->time ).value();
+                    MotionVector3f source_loc = loc_loc.extrapolate( gen_loc_evt->time );
 
                     Duration latency = loc_evt->time - gen_loc_evt->time;
 
@@ -2462,14 +2463,14 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
     std::ofstream os(outfilename.c_str(), std::ios::out);
     for(ProxEventList::iterator it = prox_events.begin(); it != prox_events.end(); it++) {
         ProximityEvent* evt = *it;
-        const char* dir = evt->entered ? " in " : " out ";
+        const char* dir = evt->data.entered() ? " in " : " out ";
         os << (evt->time-Time::null()).toMicroseconds()
-           << evt->source.toString() << " "
-           << evt->receiver.toString()
+           << evt->data.source().toString() << " "
+           << evt->data.receiver().toString()
            << dir
-           << evt->loc.position() << " "
-           << evt->loc.velocity() << " "
-           << (evt->loc.time()-Time::null()).toMicroseconds()
+           << evt->data.loc().position() << " "
+           << evt->data.loc().velocity() << " "
+           << (evt->data.loc().t()-Time::null()).toMicroseconds()
            << std::endl;
     }
 }

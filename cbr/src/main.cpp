@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
     InitSpaceOptions();
     ParseOptions(argc, argv);
 
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    Sirikata::Trace* gTrace = new Trace(trace_file);
+    Sirikata::Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
     // Compute the starting date/time
     String start_time_str = GetOption("wait-until")->as<String>();

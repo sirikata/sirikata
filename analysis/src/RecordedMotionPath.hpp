@@ -53,7 +53,6 @@ public:
     virtual ~RecordedMotionPath();
 
     void add(Event* evt);
-    void add(GeneratedLocationEvent* evt);
 
     virtual const TimedMotionVector3f initial() const;
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;

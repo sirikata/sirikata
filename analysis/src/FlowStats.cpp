@@ -34,8 +34,13 @@
 #include "FlowStats.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
+#include "CBR_Object.pbj.hpp"
 
 namespace Sirikata {
+
+typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
+typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+
 
 FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers) {
     RegionWeightCalculator* swc =
@@ -58,14 +63,14 @@ FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers
             {
                 ObjectConnectedEvent* conn_evt = dynamic_cast<ObjectConnectedEvent*>(evt);
                 if (conn_evt != NULL) {
-                    mObjectMap[conn_evt->source].server = conn_evt->server;
+                    mObjectMap[conn_evt->data.source()].server = conn_evt->data.server();
                 }
             }
             {
                 GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(evt);
                 if (gen_loc_evt != NULL) {
-                    mObjectMap[gen_loc_evt->source].path.add(gen_loc_evt);
-                    mObjectMap[gen_loc_evt->source].bounds = gen_loc_evt->bounds;
+                    mObjectMap[gen_loc_evt->data.source()].path.add(gen_loc_evt);
+                    mObjectMap[gen_loc_evt->data.source()].bounds = gen_loc_evt->data.bounds();
                 }
             }
             {

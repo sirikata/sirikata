@@ -35,6 +35,7 @@
 
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/cbrcore/VWTypes.hpp>
+#include "Trace.hpp"
 
 namespace Sirikata {
 
@@ -42,10 +43,14 @@ class ObjectHost;
 
 class ObjectHostContext : public Context {
 public:
-    ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
+    ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen);
 
     ObjectHostID id;
     ObjectHost* objectHost;
+    OHTrace* ohtrace() const { return mOHTrace; }
+
+private:
+    OHTrace* mOHTrace;
 }; // class ObjectHostContext
 
 } // namespace Sirikata

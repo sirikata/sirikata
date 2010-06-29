@@ -72,7 +72,7 @@ private:
     SegmentedRegion mTopLevelRegion;
     bool mBSPTreeValid;
 
-    Trace* mTrace;
+    Trace::Trace* mTrace;
 
     std::map<ServerID, BoundingBoxList> mServerRegionCache;
 

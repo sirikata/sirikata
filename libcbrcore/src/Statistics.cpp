@@ -34,7 +34,6 @@
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include "CBR_Header.pbj.hpp"
 
 #include <iostream>
 
@@ -102,34 +101,35 @@ void BatchedBuffer::store(FILE* os) {
 }
 
 
-const uint8 Trace::ProximityTag = 0;
-const uint8 Trace::ObjectLocationTag = 1;
-const uint8 Trace::ServerDatagramQueuedTag = 4;
-const uint8 Trace::ServerDatagramSentTag = 5;
-const uint8 Trace::ServerDatagramReceivedTag = 6;
-const uint8 Trace::SegmentationChangeTag = 10;
-const uint8 Trace::ObjectBeginMigrateTag = 11;
-const uint8 Trace::ObjectAcknowledgeMigrateTag = 12;
-const uint8 Trace::ServerLocationTag = 13;
-const uint8 Trace::ServerObjectEventTag = 14;
-const uint8 Trace::ObjectSegmentationCraqLookupRequestAnalysisTag = 15;
-const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag = 16;
-const uint8 Trace::ObjectPingTag = 17;
-const uint8 Trace::ObjectPingCreatedTag = 32;
-const uint8 Trace::RoundTripMigrationTimeAnalysisTag = 18;
-const uint8 Trace::OSegTrackedSetResultAnalysisTag   = 19;
-const uint8 Trace::OSegShutdownEventTag              = 20;
-const uint8 Trace::ObjectGeneratedLocationTag = 22;
-const uint8 Trace::OSegCacheResponseTag = 23;
-const uint8 Trace::OSegLookupNotOnServerAnalysisTag = 24;
-const uint8 Trace::OSegCumulativeTraceAnalysisTag   = 25;
-const uint8 Trace::OSegCraqProcessTag                 = 26;
-const uint8 Trace::MessageTimestampTag = 30;
-const uint8 Trace::MessageCreationTimestampTag = 31;
+namespace Trace {
 
-const uint8 Trace::ObjectConnectedTag = 33;
+const uint8 ProximityTag = 0;
+const uint8 ObjectLocationTag = 1;
+const uint8 ServerDatagramQueuedTag = 4;
+const uint8 ServerDatagramSentTag = 5;
+const uint8 ServerDatagramReceivedTag = 6;
+const uint8 SegmentationChangeTag = 10;
+const uint8 ObjectBeginMigrateTag = 11;
+const uint8 ObjectAcknowledgeMigrateTag = 12;
+const uint8 ServerLocationTag = 13;
+const uint8 ServerObjectEventTag = 14;
+const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag = 15;
+const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
+const uint8 ObjectPingTag = 17;
+const uint8 ObjectPingCreatedTag = 32;
+const uint8 RoundTripMigrationTimeAnalysisTag = 18;
+const uint8 OSegTrackedSetResultAnalysisTag   = 19;
+const uint8 OSegShutdownEventTag              = 20;
+const uint8 ObjectGeneratedLocationTag = 22;
+const uint8 OSegCacheResponseTag = 23;
+const uint8 OSegLookupNotOnServerAnalysisTag = 24;
+const uint8 OSegCumulativeTraceAnalysisTag   = 25;
+const uint8 OSegCraqProcessTag                 = 26;
+const uint8 MessageTimestampTag = 30;
+const uint8 MessageCreationTimestampTag = 31;
 
-OptionValue* Trace::mLogObject;
+const uint8 ObjectConnectedTag = 33;
+
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogOSeg;
 OptionValue* Trace::mLogOSegCumulative;
@@ -140,7 +140,6 @@ OptionValue* Trace::mLogPacket;
 OptionValue* Trace::mLogPing;
 OptionValue* Trace::mLogMessage;
 
-#define TRACE_OBJECT_NAME                   "trace-object"
 #define TRACE_LOCPROX_NAME                  "trace-locprox"
 #define TRACE_OSEG_NAME                     "trace-oseg"
 #define TRACE_OSEG_CUMULATIVE_NAME          "trace-oseg-cumulative"
@@ -152,7 +151,6 @@ OptionValue* Trace::mLogMessage;
 #define TRACE_MESSAGE_NAME                  "trace-message"
 
 void Trace::InitOptions() {
-    mLogObject = new OptionValue(TRACE_OBJECT_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogOSegCumulative = new OptionValue(TRACE_OSEG_CUMULATIVE_NAME,"true",Sirikata::OptionValueType<bool>(),"Log oseg cumulative trace data");
@@ -164,7 +162,6 @@ void Trace::InitOptions() {
     mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(mLogObject)
         .addOption(mLogLocProx)
         .addOption(mLogOSeg)
         .addOption(mLogOSegCumulative)
@@ -239,7 +236,7 @@ void Trace::writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data_orig, uint3
 }
 
 
-std::ostream&Trace::Drops::output(std::ostream&output) {
+std::ostream&Drops::output(std::ostream&output) {
     for (int i=0;i<NUM_DROPS;++i) {
         if (d[i]&&n[i]) {
             output<<n[i]<<':'<<d[i]<<'\n';
@@ -252,76 +249,9 @@ Trace::~Trace() {
     std::cout<<"Summary of drop data:\n";
     drops.output(std::cout)<<"EOF\n";
 }
-// This macro simplifies creating the methods that check if we should actually
-// perform the trace.
-#define CREATE_TRACE_CHECK_DEF(___name , ___log_var)  \
-    bool Trace:: check ## ___name () const {          \
-        return ___log_var->as<bool>();                \
-    }
-
-#define CREATE_TRACE_EVAL_DEF(___name , ... ) \
-    void Trace:: ___name ( __VA_ARGS__ )
-
-// This macro takes care of everything -- just specify the name, the
-// OptionValue* to check, argument types, and then follow it with the body.
-#define CREATE_TRACE_DEF(___name , ___log_var, ... )    \
-    CREATE_TRACE_CHECK_DEF(___name, ___log_var)         \
-    CREATE_TRACE_EVAL_DEF(___name, __VA_ARGS__)
 
 
-CREATE_TRACE_DEF(prox, mLogObject, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 5;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
-        BatchedBuffer::IOVec(&source, sizeof(source)),
-        BatchedBuffer::IOVec(&entered, sizeof(entered)),
-        BatchedBuffer::IOVec(&loc, sizeof(loc))
-    };
-    writeRecord(ProximityTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(objectConnected, mLogObject, const Time& t, const UUID& source, const ServerID& sid) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 3;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&source, sizeof(source)),
-        BatchedBuffer::IOVec(&sid, sizeof(sid)),
-    };
-    writeRecord(ObjectConnectedTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(objectGenLoc, mLogObject, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 4;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&source, sizeof(source)),
-        BatchedBuffer::IOVec(&loc, sizeof(loc)),
-        BatchedBuffer::IOVec(&bnds, sizeof(bnds)),
-    };
-    writeRecord(ObjectGeneratedLocationTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(objectLoc, mLogObject, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 4;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
-        BatchedBuffer::IOVec(&source, sizeof(source)),
-        BatchedBuffer::IOVec(&loc, sizeof(loc)),
-    };
-    writeRecord(ObjectLocationTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(timestampMessageCreation, mLogMessage, const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt) {
+CREATE_TRACE_DEF(Trace, timestampMessageCreation, mLogMessage, const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 5;
@@ -335,7 +265,7 @@ CREATE_TRACE_DEF(timestampMessageCreation, mLogMessage, const Time&sent, uint64 
     writeRecord(MessageCreationTimestampTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(timestampMessage, mLogMessage, const Time&sent, uint64 uid, MessagePath path) {
+CREATE_TRACE_DEF(Trace, timestampMessage, mLogMessage, const Time&sent, uint64 uid, MessagePath path) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 3;
@@ -347,7 +277,7 @@ CREATE_TRACE_DEF(timestampMessage, mLogMessage, const Time&sent, uint64 uid, Mes
     writeRecord(MessageTimestampTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(pingCreated, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint32 sz) {
+CREATE_TRACE_DEF(Trace, pingCreated, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint32 sz) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 7;
@@ -363,7 +293,7 @@ CREATE_TRACE_DEF(pingCreated, mLogPing, const Time& src, const UUID&sender, cons
     writeRecord(ObjectPingCreatedTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(ping, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid, uint32 sz) {
+CREATE_TRACE_DEF(Trace, ping, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid, uint32 sz) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 8;
@@ -380,7 +310,7 @@ CREATE_TRACE_DEF(ping, mLogPing, const Time& src, const UUID&sender, const Time&
     writeRecord(ObjectPingTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(serverLoc, mLogLocProx, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
+CREATE_TRACE_DEF(Trace, serverLoc, mLogLocProx, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 5;
@@ -394,7 +324,7 @@ CREATE_TRACE_DEF(serverLoc, mLogLocProx, const Time& t, const ServerID& sender, 
     writeRecord(ServerLocationTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(serverObjectEvent, mLogLocProx, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
+CREATE_TRACE_DEF(Trace, serverObjectEvent, mLogLocProx, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
     if (mShuttingDown) return;
 
     uint8 raw_added = (added ? 1 : 0);
@@ -411,7 +341,7 @@ CREATE_TRACE_DEF(serverObjectEvent, mLogLocProx, const Time& t, const ServerID& 
     writeRecord(ServerObjectEventTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(serverDatagramQueued, mLogDatagram, const Time& t, const ServerID& dest, uint64 id, uint32 size) {
+CREATE_TRACE_DEF(Trace, serverDatagramQueued, mLogDatagram, const Time& t, const ServerID& dest, uint64 id, uint32 size) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 4;
@@ -424,7 +354,7 @@ CREATE_TRACE_DEF(serverDatagramQueued, mLogDatagram, const Time& t, const Server
     writeRecord(ServerDatagramQueuedTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(serverDatagramSent, mLogDatagram, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
+CREATE_TRACE_DEF(Trace, serverDatagramSent, mLogDatagram, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 7;
@@ -440,7 +370,7 @@ CREATE_TRACE_DEF(serverDatagramSent, mLogDatagram, const Time& start_time, const
     writeRecord(ServerDatagramSentTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(serverDatagramReceived, mLogDatagram, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
+CREATE_TRACE_DEF(Trace, serverDatagramReceived, mLogDatagram, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 6;
@@ -455,7 +385,7 @@ CREATE_TRACE_DEF(serverDatagramReceived, mLogDatagram, const Time& start_time, c
     writeRecord(ServerDatagramReceivedTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(segmentationChanged, mLogCSeg, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
+CREATE_TRACE_DEF(Trace, segmentationChanged, mLogCSeg, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
     if (mShuttingDown) return;
 
     const uint32 num_data = 3;
@@ -467,7 +397,7 @@ CREATE_TRACE_DEF(segmentationChanged, mLogCSeg, const Time& t, const BoundingBox
     writeRecord(SegmentationChangeTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(objectBeginMigrate, mLogMigration, const Time& t, const UUID& obj_id, const ServerID migrate_from, const ServerID migrate_to) {
+CREATE_TRACE_DEF(Trace, objectBeginMigrate, mLogMigration, const Time& t, const UUID& obj_id, const ServerID migrate_from, const ServerID migrate_to) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 4;
@@ -480,7 +410,7 @@ CREATE_TRACE_DEF(objectBeginMigrate, mLogMigration, const Time& t, const UUID& o
     writeRecord(ObjectBeginMigrateTag, data_vec, num_data);
   }
 
-CREATE_TRACE_DEF(objectAcknowledgeMigrate, mLogMigration, const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to) {
+CREATE_TRACE_DEF(Trace, objectAcknowledgeMigrate, mLogMigration, const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to) {
     if (mShuttingDown) return;
 
     const uint32 num_data = 4;
@@ -494,7 +424,7 @@ CREATE_TRACE_DEF(objectAcknowledgeMigrate, mLogMigration, const Time& t, const U
   }
 
 
-CREATE_TRACE_DEF(objectSegmentationCraqLookupRequest, mLogOSeg, const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo){
+CREATE_TRACE_DEF(Trace, objectSegmentationCraqLookupRequest, mLogOSeg, const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo){
     if (mShuttingDown) return;
 
     const uint32 num_data = 3;
@@ -506,7 +436,7 @@ CREATE_TRACE_DEF(objectSegmentationCraqLookupRequest, mLogOSeg, const Time& t, c
     writeRecord(ObjectSegmentationCraqLookupRequestAnalysisTag, data_vec, num_data);
   }
 
-CREATE_TRACE_DEF(objectSegmentationProcessedRequest, mLogOSeg, const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 objectsInQueue)
+CREATE_TRACE_DEF(Trace, objectSegmentationProcessedRequest, mLogOSeg, const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 objectsInQueue)
   {
     if (mShuttingDown) return;
 
@@ -523,7 +453,7 @@ CREATE_TRACE_DEF(objectSegmentationProcessedRequest, mLogOSeg, const Time&t, con
   }
 
 
-CREATE_TRACE_DEF(objectMigrationRoundTrip, mLogMigration, const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
+CREATE_TRACE_DEF(Trace, objectMigrationRoundTrip, mLogMigration, const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
 {
   if (mShuttingDown) return;
 
@@ -538,7 +468,7 @@ CREATE_TRACE_DEF(objectMigrationRoundTrip, mLogMigration, const Time& t, const U
   writeRecord(RoundTripMigrationTimeAnalysisTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(processOSegTrackedSetResults, mLogOSeg, const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds)
+CREATE_TRACE_DEF(Trace, processOSegTrackedSetResults, mLogOSeg, const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds)
 {
   if (mShuttingDown) return;
 
@@ -552,7 +482,7 @@ CREATE_TRACE_DEF(processOSegTrackedSetResults, mLogOSeg, const Time &t, const UU
   writeRecord(OSegTrackedSetResultAnalysisTag, data_vec, num_data);
 }
 
-CREATE_TRACE_DEF(processOSegShutdownEvents, mLogOSeg, const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet)
+CREATE_TRACE_DEF(Trace, processOSegShutdownEvents, mLogOSeg, const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet)
 {
   std::cout<<"\n\n**********oseg shutdown:  \n";
   std::cout<<"\tsid:                              "<<sID<<"\n";
@@ -579,7 +509,7 @@ CREATE_TRACE_DEF(processOSegShutdownEvents, mLogOSeg, const Time &t, const Serve
 
 
 
-CREATE_TRACE_DEF(osegCacheResponse, mLogOSeg, const Time &t, const ServerID& sID, const UUID& obj_id)
+CREATE_TRACE_DEF(Trace, osegCacheResponse, mLogOSeg, const Time &t, const ServerID& sID, const UUID& obj_id)
 {
   if (mShuttingDown) return;
 
@@ -593,7 +523,7 @@ CREATE_TRACE_DEF(osegCacheResponse, mLogOSeg, const Time &t, const ServerID& sID
 }
 
 
-CREATE_TRACE_DEF(objectSegmentationLookupNotOnServerRequest, mLogOSeg, const Time& t, const UUID& obj_id, const ServerID &sID_lookerupper)
+CREATE_TRACE_DEF(Trace, objectSegmentationLookupNotOnServerRequest, mLogOSeg, const Time& t, const UUID& obj_id, const ServerID &sID_lookerupper)
 {
   if (mShuttingDown) return;
 
@@ -607,7 +537,7 @@ CREATE_TRACE_DEF(objectSegmentationLookupNotOnServerRequest, mLogOSeg, const Tim
 }
 
 
-CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSegCumulative, const Time &t, OSegLookupTraceToken* traceToken)
+CREATE_TRACE_DEF(Trace, osegCumulativeResponse, mLogOSegCumulative, const Time &t, OSegLookupTraceToken* traceToken)
 {
   if (traceToken == NULL || mShuttingDown)
     return;
@@ -640,5 +570,6 @@ CREATE_TRACE_DEF(osegCumulativeResponse, mLogOSegCumulative, const Time &t, OSeg
 //     #endif
 //   }
 
+} // namespace Trace
 
 } // namespace Sirikata

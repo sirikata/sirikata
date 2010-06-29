@@ -277,7 +277,7 @@ ServerID ObjectHost::ObjectConnections::getConnectedServer(const UUID& obj_id, b
 
 // ObjectHost Implementation
 
-ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap)
+ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap* sidmap)
  : Service(),
    mContext( ctx ),
    mIOService( Network::IOServiceFactory::makeIOService() ),

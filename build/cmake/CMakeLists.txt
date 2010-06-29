@@ -815,6 +815,40 @@ ADD_PBJ_TARGET(Physics
 
 
 
+SET(PBJ_CPP_HEADER "\n")
+
+SET(TRACE_PROTOCOLS_CORE
+  Geometry.pbj
+)
+SET(TRACE_OBJECT_PROTOCOLS
+  Object.pbj
+)
+# protocol targets
+ADD_PBJ_TARGET(
+  ${TRACE_PROTOCOLS_CORE}
+  PLUGINNAME "CBR"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES TRACE_CORE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  GENERATE_CPP
+)
+ADD_PBJ_TARGET(
+  ${TRACE_OBJECT_PROTOCOLS}
+  DEPENDS ${CBR_CORE_PBJ_CPP_FILES}
+  PLUGINNAME "CBR"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES TRACE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  GENERATE_CPP
+)
+# Aggregate core and full pbj files
+SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
+
+
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(CBR_PROTOCOLS_CORE
@@ -834,7 +868,6 @@ SET(CBR_PROTOCOLS
   Forwarder.pbj
 )
 
-SET(PBJ_CPP_HEADER "\n")
 # protocol targets
 ADD_PBJ_TARGET(
   ${CBR_PROTOCOLS_CORE}
@@ -863,6 +896,7 @@ SET(CBR_PBJ_CPP_FILES ${CBR_PBJ_CPP_FILES} ${CBR_CORE_PBJ_CPP_FILES})
 # generated pbj implementation source files
 SET(CBR_PROTOCOL_SOURCES
   ${CBR_PBJ_CPP_FILES}
+  ${TRACE_PBJ_CPP_FILES}
 )
 
 #binary files to be linked into sirikata
@@ -1308,6 +1342,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
+  ${SIMOH_SOURCE_DIR}/Trace.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 

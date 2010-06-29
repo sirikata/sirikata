@@ -1,7 +1,7 @@
 /*  Sirikata
- *  SpaceContext.cpp
+ *  Trace.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/core/network/IOStrandImpl.hpp>
+#ifndef _SIRIKATA_SIMOH_TRACE_HPP_
+#define _SIRIKATA_SIMOH_TRACE_HPP_
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/cbrcore/Statistics.hpp>
 
 namespace Sirikata {
 
-SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration)
- : Context("Space", ios, strand, _trace, epoch, duration),
-   mID(_id),
-   mServerRouter(NULL),
-   mObjectRouter(NULL),
-   mServerDispatcher(NULL),
-   mObjectDispatcher(NULL)
-{
-}
+class OHTrace {
+public:
+    OHTrace(Trace::Trace* _trace)
+     : mTrace(_trace)
+    {
+    };
 
-SpaceContext::~SpaceContext() {
-    mObjectStreams.clear();
-}
+    static void InitOptions();
 
-void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;
+    CREATE_TRACE_DECL(prox, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
 
-  if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
-    std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";
-    mObjectStreams[sourceObject]->connection().lock()->close(true);
-  }
+    CREATE_TRACE_DECL(objectConnected, const Time& t, const UUID& receiver, const ServerID& sid);
+    CREATE_TRACE_DECL(objectLoc, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds);
 
-  mObjectStreams[sourceObject] = s;
-}
+private:
+    Trace::Trace* mTrace;
+    static OptionValue* mLogObject;
+};
+
+// This version of the OHTRACE macro automatically uses mContext->trace() and
+// passes mContext->simTime() as the first argument, which is the most common
+// form.
+#define CONTEXT_OHTRACE(___name, ...)                 \
+    TRACE( mContext->ohtrace(), ___name, mContext->simTime(), __VA_ARGS__)
+
+// This version is like the above, but you can specify the time yourself.  Use
+// this if you already called Context::simTime() recently. (It also works for
+// cases where the first parameter is not the current time.)
+#define CONTEXT_OHTRACE_NO_TIME(___name, ...)             \
+    TRACE( mContext->ohtrace(), ___name, __VA_ARGS__)
+
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_SIMOH_TRACE_HPP_

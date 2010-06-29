@@ -45,7 +45,9 @@
 
 namespace Sirikata {
 
+namespace Trace {
 class Trace;
+}
 
 /** Base class for Contexts, provides basic infrastructure such as IOServices,
  *  IOStrands, Trace, and timing information.
@@ -53,7 +55,7 @@ class Trace;
 class SIRIKATA_EXPORT Context : public Service {
 public:
 
-    Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen);
+    Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen);
     ~Context();
 
     Time epoch() const {
@@ -123,7 +125,7 @@ public:
     // Call after run returns to ensure all resources get cleaned up.
     void cleanup();
 
-    Trace* trace() const {
+    Trace::Trace* trace() const {
         return mTrace;
     }
 
@@ -150,7 +152,7 @@ protected:
         ioService->stop();
     }
 
-    Trace* mTrace;
+    Trace::Trace* mTrace;
 
     Sirikata::AtomicValue<Time> mEpoch;
     Sirikata::AtomicValue<Time> mLastSimTime;

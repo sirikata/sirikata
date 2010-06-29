@@ -59,7 +59,9 @@ namespace Sirikata
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class SpaceNetwork;
+namespace Trace {
   class Trace;
+}
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;

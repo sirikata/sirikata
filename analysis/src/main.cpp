@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
     InitAnalysisOptions();
     ParseOptions(argc, argv);
 

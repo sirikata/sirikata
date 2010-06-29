@@ -66,22 +66,17 @@ struct EventTimeComparator {
     }
 };
 
+template<typename T>
+struct PBJEvent : public Event {
+    T data;
+};
+
+
+
+
 struct ObjectEvent : public Event {
     UUID receiver;
     UUID source;
-};
-
-struct ObjectConnectedEvent : public ObjectEvent {
-    ServerID server;
-};
-
-struct ProximityEvent : public ObjectEvent {
-    bool entered;
-    TimedMotionVector3f loc;
-};
-
-struct LocationEvent : public ObjectEvent {
-    TimedMotionVector3f loc;
 };
 
 // NOTE: This could just reuse PingEvent except we have some backwards
@@ -118,12 +113,6 @@ struct PingEvent : public ObjectEvent {
     }
     uint32 size;
 };
-
-struct GeneratedLocationEvent : public ObjectEvent {
-    TimedMotionVector3f loc;
-    BoundingSphere3f bounds;
-};
-
 
 struct MessageTimestampEvent : public ObjectEvent {
     uint64 uid;

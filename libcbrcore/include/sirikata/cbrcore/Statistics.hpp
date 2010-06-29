@@ -95,107 +95,112 @@ private:
     ByteBatch* filling;
     std::deque<ByteBatch*> batches;
 };
+
 #define TRACE_DROP(nam) ((mContext->trace()->drops.n[::Sirikata::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::Sirikata::Trace::Drops::nam]))
+
+namespace Trace {
+
+struct Drops {
+    enum {
+        OH_DROPPED_AT_SEND,
+        OH_DROPPED_AT_RECEIVE_QUEUE,
+        SPACE_DROPPED_AT_MAIN_STRAND_CROSSING,
+        DROPPED_AT_FORWARDED_LOCALLY,
+        DROPPED_DURING_FORWARDING,
+        DROPPED_DURING_FORWARDING_ROUTING,
+        DROPPED_AT_SPACE_ENQUEUED,
+        DROPPED_CSFQ_OVERFLOW,
+        DROPPED_CSFQ_PROBABILISTIC,
+        NUM_DROPS
+    };
+    uint64 d[NUM_DROPS];
+    const char*n[NUM_DROPS];
+    Drops() {
+        memset(d,0,NUM_DROPS*sizeof(uint64));
+        memset(n,0,NUM_DROPS*sizeof(const char*));
+    }
+    std::ostream&output(std::ostream&output);
+};
+
+extern const uint8 ProximityTag;
+extern const uint8 ObjectLocationTag;
+extern const uint8 ServerDatagramQueuedTag;
+extern const uint8 ServerDatagramSentTag;
+extern const uint8 ServerDatagramReceivedTag;
+extern const uint8 SegmentationChangeTag;
+extern const uint8 ObjectBeginMigrateTag;
+extern const uint8 ObjectAcknowledgeMigrateTag;
+extern const uint8 ServerLocationTag;
+extern const uint8 ServerObjectEventTag;
+extern const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag;
+extern const uint8 ObjectSegmentationProcessedRequestAnalysisTag;
+extern const uint8 ObjectPingTag;
+extern const uint8 ObjectPingCreatedTag;
+extern const uint8 RoundTripMigrationTimeAnalysisTag;
+extern const uint8 OSegTrackedSetResultAnalysisTag;
+extern const uint8 OSegShutdownEventTag;
+extern const uint8 ObjectGeneratedLocationTag;
+extern const uint8 OSegCacheResponseTag;
+extern const uint8 OSegLookupNotOnServerAnalysisTag;
+extern const uint8 OSegCumulativeTraceAnalysisTag;
+extern const uint8 OSegCraqProcessTag;
+extern const uint8 MessageTimestampTag;
+extern const uint8 MessageCreationTimestampTag;
+
+extern const uint8 ObjectConnectedTag;
+
+enum MessagePath {
+    NONE, // Used when tag is needed but we don't have a name for it
+
+    // Object Host Checkpoints
+    CREATED,
+    DESTROYED,
+    OH_HIT_NETWORK,
+    OH_DROPPED_AT_SEND,
+    OH_NET_RECEIVED,
+    OH_DROPPED_AT_RECEIVE_QUEUE,
+    OH_RECEIVED,
+    SPACE_DROPPED_AT_MAIN_STRAND_CROSSING,
+    // Space Checkpoints
+    HANDLE_OBJECT_HOST_MESSAGE,
+    HANDLE_SPACE_MESSAGE,
+
+    FORWARDED_LOCALLY,
+    DROPPED_AT_FORWARDED_LOCALLY,
+
+    FORWARDING_STARTED,
+
+    FORWARDED_LOCALLY_SLOW_PATH,
+
+    // FIXME could follow FORWARDED_LOCALLY_SLOW_PATH or OSEG_LOOKUP_STARTED
+    DROPPED_DURING_FORWARDING,
+
+    OSEG_CACHE_CHECK_STARTED,
+    OSEG_CACHE_CHECK_FINISHED,
+
+    OSEG_LOOKUP_STARTED,
+    OSEG_CACHE_LOOKUP_FINISHED,
+    OSEG_SERVER_LOOKUP_FINISHED,
+    OSEG_LOOKUP_FINISHED,
+
+    SPACE_TO_SPACE_ENQUEUED,
+    DROPPED_AT_SPACE_ENQUEUED,
+
+    SPACE_TO_SPACE_HIT_NETWORK,
+
+    SPACE_TO_SPACE_READ_FROM_NET,
+    SPACE_TO_SPACE_SMR_DEQUEUED,
+
+    SPACE_TO_OH_ENQUEUED,
+
+    NUM_PATHS
+};
 
 class Trace {
 public:
-    struct Drops {
-        enum {
-            OH_DROPPED_AT_SEND,
-            OH_DROPPED_AT_RECEIVE_QUEUE,
-            SPACE_DROPPED_AT_MAIN_STRAND_CROSSING,
-            DROPPED_AT_FORWARDED_LOCALLY,
-            DROPPED_DURING_FORWARDING,
-            DROPPED_DURING_FORWARDING_ROUTING,
-            DROPPED_AT_SPACE_ENQUEUED,
-            DROPPED_CSFQ_OVERFLOW,
-            DROPPED_CSFQ_PROBABILISTIC,
-            NUM_DROPS
-        };
-        uint64 d[NUM_DROPS];
-        const char*n[NUM_DROPS];
-        Drops() {
-            memset(d,0,NUM_DROPS*sizeof(uint64));
-            memset(n,0,NUM_DROPS*sizeof(const char*));
-        }
-        std::ostream&output(std::ostream&output);
-    }drops;
-
+    Drops drops;
 
     ~Trace();
-    static const uint8 ProximityTag;
-    static const uint8 ObjectLocationTag;
-    static const uint8 ServerDatagramQueuedTag;
-    static const uint8 ServerDatagramSentTag;
-    static const uint8 ServerDatagramReceivedTag;
-    static const uint8 SegmentationChangeTag;
-    static const uint8 ObjectBeginMigrateTag;
-    static const uint8 ObjectAcknowledgeMigrateTag;
-    static const uint8 ServerLocationTag;
-    static const uint8 ServerObjectEventTag;
-    static const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag;
-    static const uint8 ObjectSegmentationProcessedRequestAnalysisTag;
-    static const uint8 ObjectPingTag;
-    static const uint8 ObjectPingCreatedTag;
-    static const uint8 RoundTripMigrationTimeAnalysisTag;
-    static const uint8 OSegTrackedSetResultAnalysisTag;
-    static const uint8 OSegShutdownEventTag;
-    static const uint8 ObjectGeneratedLocationTag;
-    static const uint8 OSegCacheResponseTag;
-    static const uint8 OSegLookupNotOnServerAnalysisTag;
-    static const uint8 OSegCumulativeTraceAnalysisTag;
-    static const uint8 OSegCraqProcessTag;
-    static const uint8 MessageTimestampTag;
-    static const uint8 MessageCreationTimestampTag;
-
-    static const uint8 ObjectConnectedTag;
-
-    enum MessagePath {
-        NONE, // Used when tag is needed but we don't have a name for it
-
-        // Object Host Checkpoints
-        CREATED,
-        DESTROYED,
-        OH_HIT_NETWORK,
-        OH_DROPPED_AT_SEND,
-        OH_NET_RECEIVED,
-        OH_DROPPED_AT_RECEIVE_QUEUE,
-        OH_RECEIVED,
-        SPACE_DROPPED_AT_MAIN_STRAND_CROSSING,
-        // Space Checkpoints
-        HANDLE_OBJECT_HOST_MESSAGE,
-        HANDLE_SPACE_MESSAGE,
-
-        FORWARDED_LOCALLY,
-        DROPPED_AT_FORWARDED_LOCALLY,
-
-        FORWARDING_STARTED,
-
-        FORWARDED_LOCALLY_SLOW_PATH,
-
-        // FIXME could follow FORWARDED_LOCALLY_SLOW_PATH or OSEG_LOOKUP_STARTED
-        DROPPED_DURING_FORWARDING,
-
-        OSEG_CACHE_CHECK_STARTED,
-        OSEG_CACHE_CHECK_FINISHED,
-
-        OSEG_LOOKUP_STARTED,
-        OSEG_CACHE_LOOKUP_FINISHED,
-        OSEG_SERVER_LOOKUP_FINISHED,
-        OSEG_LOOKUP_FINISHED,
-
-        SPACE_TO_SPACE_ENQUEUED,
-        DROPPED_AT_SPACE_ENQUEUED,
-
-        SPACE_TO_SPACE_HIT_NETWORK,
-
-        SPACE_TO_SPACE_READ_FROM_NET,
-        SPACE_TO_SPACE_SMR_DEQUEUED,
-
-        SPACE_TO_OH_ENQUEUED,
-
-        NUM_PATHS
-    };
 
     // Initialize options which flip recording of trace data on and off
     static void InitOptions();
@@ -212,14 +217,27 @@ public:
     CREATE_TRACE_CHECK_DECL(___name)            \
     CREATE_TRACE_EVAL_DECL(___name, __VA_ARGS__)
 
+
+
+// This macro simplifies creating the methods that check if we should actually
+// perform the trace.
+#define CREATE_TRACE_CHECK_DEF(__klass, ___name , ___log_var)    \
+    bool __klass :: check ## ___name () const {          \
+        return ___log_var->as<bool>();                \
+    }
+
+#define CREATE_TRACE_EVAL_DEF(__klass, ___name , ... )   \
+    void __klass :: ___name ( __VA_ARGS__ )
+
+// This macro takes care of everything -- just specify the name, the
+// OptionValue* to check, argument types, and then follow it with the body.
+#define CREATE_TRACE_DEF(__klass, ___name , ___log_var, ... )    \
+    CREATE_TRACE_CHECK_DEF(__klass, ___name, ___log_var)          \
+    CREATE_TRACE_EVAL_DEF(__klass, ___name, __VA_ARGS__)
+
+
     CREATE_TRACE_DECL(timestampMessageCreation, const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
     CREATE_TRACE_DECL(timestampMessage, const Time&t, uint64 packetId, MessagePath path);
-
-    CREATE_TRACE_DECL(prox, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
-
-    CREATE_TRACE_DECL(objectConnected, const Time& t, const UUID& receiver, const ServerID& sid);
-    CREATE_TRACE_DECL(objectLoc, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
-    CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds);
 
     // Server received a loc update
     CREATE_TRACE_DECL(serverLoc, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
@@ -256,15 +274,32 @@ public:
     CREATE_TRACE_DECL(osegCumulativeResponse, const Time &t, OSegLookupTraceToken* traceToken);
 
 
+    // Helper to prepend framing (size and payload type hint)
+    void writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data, uint32 iovcnt);
+
+    // Helper to prepend framing (size and payload type hint)
+    template<typename T>
+    void writeRecord(uint16 type_hint, const T& pl) {
+        if (mShuttingDown) return;
+
+        std::string serialized_pl;
+        bool serialized_success = pl.SerializeToString(&serialized_pl);
+        assert(serialized_success);
+
+        const uint32 num_data = 1;
+        BatchedBuffer::IOVec data_vec[num_data] = {
+            BatchedBuffer::IOVec(&(serialized_pl[0]), serialized_pl.size())
+        };
+        writeRecord(type_hint, data_vec, num_data);
+    }
+
+
 public:
 
   void prepareShutdown();
   void shutdown();
 
 private:
-    // Helper to prepend framing (size and payload type hint)
-    void writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data, uint32 iovcnt);
-
     // Thread which flushes data to disk periodically
     void storageThread(const String& filename);
 
@@ -275,7 +310,6 @@ private:
     Sirikata::AtomicValue<bool> mFinishStorage;
 
     // OptionValues that turn tracing on/off
-    static OptionValue* mLogObject;
     static OptionValue* mLogLocProx;
     static OptionValue* mLogOSeg;
     static OptionValue* mLogOSegCumulative;
@@ -286,6 +320,8 @@ private:
     static OptionValue* mLogPing;
     static OptionValue* mLogMessage;
 }; // class Trace
+
+} // namespace Trace
 
 // This is how you should *actually*
 #define TRACE(___trace, ___name, ...)            \

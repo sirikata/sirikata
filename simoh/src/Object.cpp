@@ -37,6 +37,7 @@
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
+#include "Trace.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
@@ -131,7 +132,7 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 	}
 
         // XXX FIXME do something on failure
-        CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, bounds());
+        CONTEXT_OHTRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, bounds());
     }
 
     scheduleNextLocUpdate();
@@ -233,8 +234,8 @@ void Object::handleSpaceConnection(ServerID sid) {
     const Time tnow = mContext->simTime();
     TimedMotionVector3f curLoc = location();
     BoundingSphere3f curBounds = bounds();
-    CONTEXT_TRACE_NO_TIME(objectConnected, tnow, mID, sid);
-    CONTEXT_TRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, curBounds);
+    CONTEXT_OHTRACE_NO_TIME(objectConnected, tnow, mID, sid);
+    CONTEXT_OHTRACE_NO_TIME(objectGenLoc, tnow, mID, curLoc, curBounds);
 
     // Start normal processing
     mContext->mainStrand->post(
@@ -297,7 +298,7 @@ void Object::locationMessage(uint8* buffer, int len) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
-        CONTEXT_TRACE(objectLoc,
+        CONTEXT_OHTRACE(objectLoc,
             mID,
             update.object(),
             loc
@@ -318,7 +319,7 @@ void Object::proximityMessage(uint8* buffer, int len) {
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-        CONTEXT_TRACE(prox,
+        CONTEXT_OHTRACE(prox,
             mID,
             addition.object(),
             true,
@@ -329,7 +330,7 @@ void Object::proximityMessage(uint8* buffer, int len) {
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 
-        CONTEXT_TRACE(prox,
+        CONTEXT_OHTRACE(prox,
             mID,
             removal.object(),
             false,
