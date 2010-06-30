@@ -32,7 +32,7 @@
 
 #include "Object.hpp"
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 #include "ObjectHostContext.hpp"
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"

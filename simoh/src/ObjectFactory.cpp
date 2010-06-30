@@ -34,7 +34,7 @@
 #include "ObjectHostContext.hpp"
 
 #include "Object.hpp"
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include "RandomMotionPath.hpp"
 #include "QuakeMotionPath.hpp"

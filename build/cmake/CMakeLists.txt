@@ -1019,6 +1019,7 @@ SET(SIRIKATA_CORE_SOURCES
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
    	${LIBCORE_SOURCE_DIR}/options/Config.cpp
    	${LIBCORE_SOURCE_DIR}/options/CDNConfig.cpp
+        ${LIBCORE_SOURCE_DIR}/network/Address4.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
@@ -1266,7 +1267,6 @@ ${GFX}/WebViewManager.cpp
 
 #source files
 SET(LIBCBRCORE_SOURCES
-  ${LIBCBRCORE_SOURCE_DIR}/Address4.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp

@@ -50,7 +50,7 @@
 #include "ForwarderServiceQueue.hpp"
 #include "LocalForwarder.hpp"
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include "ODPFlowScheduler.hpp"
 #include "RegionODPFlowScheduler.hpp"

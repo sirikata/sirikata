@@ -37,7 +37,7 @@
 #include "SpaceContext.hpp"
 #include "SpaceNetwork.hpp"
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Address4.hpp>
+#include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamListener.hpp>

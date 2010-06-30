@@ -34,7 +34,7 @@
 #define _SIRIKATA_SERVERID_MAP_HPP_
 
 #include "VWTypes.hpp"
-#include "Address4.hpp"
+#include <sirikata/core/network/Address4.hpp>
 
 namespace Sirikata {
 

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Address4.hpp
+ *  Address4.cpp
  *
  *  Copyright (c) 2010, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,51 +30,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_ADDRESS4_HPP_
-#define _SIRIKATA_ADDRESS4_HPP_
+#include <sirikata/core/network/Address4.hpp>
 
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/network/Address.hpp>
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#include <winsock2.h>
+#else
+#include <netdb.h>
+#endif
+namespace Sirikata{
 
-namespace Sirikata {
+Address4 Address4::Null = Address4(0,0);
 
-class Address4 {
-public:
-    unsigned int ip;
-    unsigned short port;
-    class Hasher{
-    public:
-        size_t operator() (const Address4&addy)const {
-            return std::tr1::hash<unsigned int>()(addy.ip^addy.port);
+Address4::Address4(const Sirikata::Network::Address&a){
+    hostent*addrs=gethostbyname(a.getHostName().c_str());
+    if (addrs) {
+        if (addrs->h_addr_list[0]) {
+            memset(&this->ip,0,sizeof(this->ip));
+            if (addrs->h_length<=(int)sizeof(this->ip)) {
+                memcpy(&this->ip,addrs->h_addr_list[0],addrs->h_length);
+            }else {
+                fprintf (stderr,"Error translating address %s: please specify with dot notation \n",a.getHostName().c_str());
+            }
         }
-    };
-    Address4() {
-        ip=port=0;
     }
-    Address4(const Sirikata::Network::Address&a);
-    Address4(unsigned int ip, unsigned short prt) {
-        this->ip=ip;
-        this->port=prt;
-    }
-    bool operator ==(const Address4&other)const {
-        return ip==other.ip&&port==other.port;
-    }
-    bool operator!=(const Address4& other) const {
-        return ip != other.ip || port != other.port;
-    }
-    bool operator<(const Address4& other) const {
-        return (ip < other.ip) || (ip == other.ip && port < other.port);
-    }
-    uint16 getPort() const {
-        return port;
-    }
+    this->port=atoi(a.getService().c_str());
+}
+using namespace Sirikata::Network;
+Address convertAddress4ToSirikata(const Address4&addy) {
+    std::stringstream port;
+    port << addy.getPort();
+    std::stringstream hostname;
+    uint32 mynum=addy.ip;
+    unsigned char bleh[4];
+    memcpy(bleh,&mynum,4);
 
-    static Address4 Null;
-};
-Sirikata::Network::Address convertAddress4ToSirikata(const Address4&addy);
-inline size_t hash_value(const Address4&addy) {
-    return std::tr1::hash<unsigned int>()(addy.ip)^std::tr1::hash<unsigned short>()(addy.port);
+    hostname << (unsigned int)bleh[0]<<'.'<<(unsigned int)bleh[1]<<'.'<<(unsigned int)bleh[2]<<'.'<<(unsigned int)bleh[3];
+
+    return Address(hostname.str(),port.str());
 }
 
 }
-#endif //_SIRIKATA_ADDRESS4_HPP_

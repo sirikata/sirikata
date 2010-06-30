@@ -46,7 +46,7 @@
 #include "ObjectConnection.hpp"
 #include "ObjectHostConnectionManager.hpp"
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include <iostream>
 #include <iomanip>

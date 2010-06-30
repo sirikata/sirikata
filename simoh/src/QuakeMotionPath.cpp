@@ -35,7 +35,7 @@
 #include <cmath>
 #include <boost/tokenizer.hpp>
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #ifndef PI
 #define PI 3.14159f

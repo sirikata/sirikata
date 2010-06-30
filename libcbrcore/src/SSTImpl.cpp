@@ -34,8 +34,8 @@
 
 #include <sirikata/core/network/Address.hpp>
 
-#include <sirikata/cbrcore/Address4.hpp>
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/network/Address4.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include <boost/bind.hpp>
 

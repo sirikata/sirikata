@@ -34,7 +34,7 @@
 #define _SIRIKATA_TCP_SPACE_NETWORK_HPP_
 
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/Address4.hpp>
+#include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/util/PluginManager.hpp>

@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Address4.hpp>
+#include <sirikata/core/network/Address4.hpp>
 #include <sirikata/cbrcore/TabularServerIDMap.hpp>
 
 namespace Sirikata {
