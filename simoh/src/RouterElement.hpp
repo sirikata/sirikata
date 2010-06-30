@@ -42,6 +42,7 @@ namespace Sirikata {
  *  be scheduled for events and have a single method which is called when their
  *  task is handled.
  */
+// DEPRECATED
 class SchedulableRouterElement {
 public:
     /** Create a SchedulableRouterElement which will run its tasks in the specified strand.

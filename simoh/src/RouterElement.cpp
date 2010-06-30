@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/RouterElement.hpp>
+#include "RouterElement.hpp"
 
 namespace Sirikata {
 

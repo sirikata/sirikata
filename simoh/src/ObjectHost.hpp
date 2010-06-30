@@ -35,7 +35,7 @@
 
 #include "ObjectHostContext.hpp"
 #include "ObjectHostListener.hpp"
-#include <sirikata/cbrcore/QueueRouterElement.hpp>
+#include "QueueRouterElement.hpp"
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
 #include <sirikata/cbrcore/Message.hpp>

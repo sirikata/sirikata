@@ -1269,7 +1269,6 @@ ${GFX}/WebViewManager.cpp
 SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
   ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
@@ -1329,6 +1328,7 @@ SET(CBR_SOURCES
 )
 
 SET(SIMOH_SOURCES
+  ${SIMOH_SOURCE_DIR}/RouterElement.cpp
   ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
