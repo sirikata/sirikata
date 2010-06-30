@@ -107,14 +107,12 @@ OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogCSeg;
 OptionValue* Trace::mLogDatagram;
 OptionValue* Trace::mLogPacket;
-OptionValue* Trace::mLogPing;
 OptionValue* Trace::mLogMessage;
 
 #define TRACE_LOCPROX_NAME                  "trace-locprox"
 #define TRACE_CSEG_NAME                     "trace-cseg"
 #define TRACE_DATAGRAM_NAME                 "trace-datagram"
 #define TRACE_PACKET_NAME                   "trace-packet"
-#define TRACE_PING_NAME                     "trace-ping"
 #define TRACE_MESSAGE_NAME                  "trace-message"
 
 void Trace::InitOptions() {
@@ -122,7 +120,6 @@ void Trace::InitOptions() {
     mLogCSeg = new OptionValue(TRACE_CSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogPacket = new OptionValue(TRACE_PACKET_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogPing = new OptionValue(TRACE_PING_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
@@ -130,7 +127,6 @@ void Trace::InitOptions() {
         .addOption(mLogCSeg)
         .addOption(mLogDatagram)
         .addOption(mLogPacket)
-        .addOption(mLogPing)
         .addOption(mLogMessage)
         ;
 }
@@ -236,39 +232,6 @@ CREATE_TRACE_DEF(Trace, timestampMessage, mLogMessage, const Time&sent, uint64 u
         BatchedBuffer::IOVec(&path, sizeof(path)),
     };
     writeRecord(MessageTimestampTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, pingCreated, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint32 sz) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 7;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&src, sizeof(src)),
-        BatchedBuffer::IOVec(&sender, sizeof(sender)),
-        BatchedBuffer::IOVec(&dst, sizeof(dst)),
-        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
-        BatchedBuffer::IOVec(&id, sizeof(id)),
-        BatchedBuffer::IOVec(&distance, sizeof(distance)),
-        BatchedBuffer::IOVec(&sz, sizeof(sz)),
-    };
-    writeRecord(ObjectPingCreatedTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, ping, mLogPing, const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid, uint32 sz) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 8;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&src, sizeof(src)),
-        BatchedBuffer::IOVec(&sender, sizeof(sender)),
-        BatchedBuffer::IOVec(&dst, sizeof(dst)),
-        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
-        BatchedBuffer::IOVec(&id, sizeof(id)),
-        BatchedBuffer::IOVec(&distance, sizeof(distance)),
-        BatchedBuffer::IOVec(&uid, sizeof(uid)),
-        BatchedBuffer::IOVec(&sz, sizeof(sz)),
-    };
-    writeRecord(ObjectPingTag, data_vec, num_data);
 }
 
 CREATE_TRACE_DEF(Trace, serverLoc, mLogLocProx, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {

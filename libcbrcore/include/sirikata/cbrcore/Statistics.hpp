@@ -251,9 +251,6 @@ public:
     CREATE_TRACE_DECL(serverDatagramSent, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
     CREATE_TRACE_DECL(serverDatagramReceived, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
-    CREATE_TRACE_DECL(pingCreated, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint32 sz);
-    CREATE_TRACE_DECL(ping, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId, uint32 sz);
-
     CREATE_TRACE_DECL(segmentationChanged, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
 

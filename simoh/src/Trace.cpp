@@ -32,19 +32,25 @@
 
 #include "Trace.hpp"
 #include "CBR_Object.pbj.hpp"
+#include "CBR_PingTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
 
 #define TRACE_OBJECT_NAME                   "trace-object"
+#define TRACE_PING_NAME                     "trace-ping"
 
 OptionValue* OHTrace::mLogObject;
+OptionValue* OHTrace::mLogPing;
 
 void OHTrace::InitOptions() {
     mLogObject = new OptionValue(TRACE_OBJECT_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogPing = new OptionValue(TRACE_PING_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(mLogObject);
+        .addOption(mLogObject)
+        .addOption(mLogPing)
+        ;
 }
 
 static void fillTimedMotionVector(Sirikata::Trace::ITimedMotionVector tmv, const TimedMotionVector3f& val) {
@@ -52,6 +58,8 @@ static void fillTimedMotionVector(Sirikata::Trace::ITimedMotionVector tmv, const
     tmv.set_position(val.position());
     tmv.set_velocity(val.velocity());
 }
+
+// Object
 
 CREATE_TRACE_DEF(OHTrace, prox, mLogObject, const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
     Sirikata::Trace::Object::ProxUpdate pu;
@@ -95,5 +103,35 @@ CREATE_TRACE_DEF(OHTrace, objectLoc, mLogObject, const Time& t, const UUID& rece
 
     mTrace->writeRecord(ObjectLocationTag, lu);
 }
+
+// Ping
+
+CREATE_TRACE_DEF(OHTrace, pingCreated, mLogPing, const Time& t, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint32 sz) {
+    Sirikata::Trace::Ping::Created rec;
+    rec.set_t(t);
+    rec.set_sender(sender);
+    rec.set_received(dst);
+    rec.set_receiver(receiver);
+    rec.set_ping_id(id);
+    rec.set_distance(distance);
+    rec.set_size(sz);
+
+    mTrace->writeRecord(ObjectPingCreatedTag, rec);
+}
+
+CREATE_TRACE_DEF(OHTrace, ping, mLogPing, const Time& t, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid, uint32 sz) {
+    Sirikata::Trace::Ping::Sent rec;
+    rec.set_t(t);
+    rec.set_sender(sender);
+    rec.set_received(dst);
+    rec.set_receiver(receiver);
+    rec.set_ping_id(id);
+    rec.set_distance(distance);
+    rec.set_ping_uid(uid);
+    rec.set_size(sz);
+
+    mTrace->writeRecord(ObjectPingCreatedTag, rec);
+}
+
 
 } // namespace Sirikata

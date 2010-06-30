@@ -592,7 +592,7 @@ bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, Siri
     bool send_success = send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,ping_serialized,destServer);
 
     if (send_success)
-        CONTEXT_TRACE_NO_TIME(pingCreated,
+        CONTEXT_OHTRACE_NO_TIME(pingCreated,
             ping_msg->ping(),
             src,
             t,
@@ -765,7 +765,7 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         Sirikata::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        CONTEXT_TRACE_NO_TIME(ping,
+        CONTEXT_OHTRACE_NO_TIME(ping,
             ping_msg.ping(),
             msg->source_object(),
             mContext->simTime(),

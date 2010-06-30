@@ -76,15 +76,15 @@ FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers
             {
                 PingCreatedEvent* ping_evt = dynamic_cast<PingCreatedEvent*>(evt);
                 if (ping_evt != NULL) {
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].sent_count++;
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].sent_bytes += ping_evt->size;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].sent_count++;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].sent_bytes += ping_evt->data.size();
                 }
             }
             {
                 PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
                 if (ping_evt != NULL) {
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].recv_count++;
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].recv_bytes += ping_evt->size;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].recv_count++;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].recv_bytes += ping_evt->data.size();
                 }
             }
             delete evt;

@@ -38,7 +38,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         self.cs.odp_flow_scheduler = self.scheme
 
         if 'object' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('object')
-        if 'ping' not in self.cs.traces['all']: self.cs.traces['all'].append('ping')
+        if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
         if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim

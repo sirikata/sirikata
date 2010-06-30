@@ -52,9 +52,12 @@ public:
     CREATE_TRACE_DECL(objectLoc, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     CREATE_TRACE_DECL(objectGenLoc, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds);
 
+    CREATE_TRACE_DECL(pingCreated, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint32 sz);
+    CREATE_TRACE_DECL(ping, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId, uint32 sz);
 private:
     Trace::Trace* mTrace;
     static OptionValue* mLogObject;
+    static OptionValue* mLogPing;
 };
 
 // This version of the OHTRACE macro automatically uses mContext->trace() and

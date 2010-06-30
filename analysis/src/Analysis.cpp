@@ -93,28 +93,11 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
         PARSE_PBJ_RECORD(Trace::Object::GeneratedLoc);
     }
     else if (type_hint == ObjectPingCreatedTag) {
-              PingCreatedEvent *pevt = new PingCreatedEvent;
-              record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
-              record_is.read((char*)&pevt->source, sizeof(pevt->source));
-              record_is.read((char*)&pevt->time, sizeof(pevt->time));
-              record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
-              record_is.read((char*)&pevt->id,sizeof(pevt->id));
-              record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
-              record_is.read((char*)&pevt->size,sizeof(pevt->size));
-              evt=pevt;
-          }
+        PARSE_PBJ_RECORD(Trace::Ping::Created);
+    }
     else if (type_hint == ObjectPingTag) {
-              PingEvent *pevt = new PingEvent;
-              record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
-              record_is.read((char*)&pevt->source, sizeof(pevt->source));
-              record_is.read((char*)&pevt->time, sizeof(pevt->time));
-              record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
-              record_is.read((char*)&pevt->id,sizeof(pevt->id));
-              record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
-              record_is.read((char*)&pevt->uid,sizeof(pevt->uid));
-              record_is.read((char*)&pevt->size,sizeof(pevt->size));
-              evt=pevt;
-          }
+        PARSE_PBJ_RECORD(Trace::Ping::Sent);
+    }
     else if (type_hint == MessageCreationTimestampTag) {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));

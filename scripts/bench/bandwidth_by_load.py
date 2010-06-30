@@ -66,7 +66,7 @@ class BandwidthByLoad:
             )
 
         if 'datagram' not in self.cs.traces['all']: self.cs.traces['all'].append('datagram')
-        if 'ping' not in self.cs.traces['all']: self.cs.traces['all'].append('ping')
+        if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
