@@ -38,7 +38,7 @@
 
 #include <sirikata/core/service/PollingService.hpp>
 
-#include <sirikata/cbrcore/SegmentedRegion.hpp>
+#include <sirikata/space/SegmentedRegion.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include "CSegContext.hpp"
 

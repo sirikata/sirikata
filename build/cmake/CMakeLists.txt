@@ -1125,6 +1125,7 @@ SET(LIBSPACE_SOURCES
                      ${LIBSPACE_SOURCE_DIR}/Loc.cpp
                      ${LIBSPACE_SOURCE_DIR}/Registration.cpp
                       )
+
 SET(LIBPROXIMITY_SOURCES
   ${Proximity_PBJ_CPP_FILES}
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp
