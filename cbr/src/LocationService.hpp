@@ -34,7 +34,7 @@
 #define _SIRIKATA_LOCATION_SERVICE_HPP_
 
 #include "SpaceContext.hpp"
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 

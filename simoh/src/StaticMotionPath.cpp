@@ -1,5 +1,5 @@
 /*  Sirikata
- *  RandomMotionPath.hpp
+ *  StaticMotionPath.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,30 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_RANDOM_MOTION_PATH_HPP_
-#define _SIRIKATA_RANDOM_MOTION_PATH_HPP_
-
-#include "MotionPath.hpp"
+#include "StaticMotionPath.hpp"
 
 namespace Sirikata {
 
-/** Random motion path.  Initialize with a starting position, speed, and
- *  change frequency.  It will then generate a random path based on these
- *  parameters.
- *  NOTE: This is for testing only, and will generate inconsistent results
- *  if used across multiple servers.
- */
-class RandomMotionPath : public MotionPath {
-public:
-    RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor);
+StaticMotionPath::StaticMotionPath(const Time& start, const Vector3f& startpos) {
+    mMotion = TimedMotionVector3f(start, MotionVector3f(startpos, Vector3f(0,0,0)));
+}
 
-    virtual const TimedMotionVector3f initial() const;
-    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
-    virtual const TimedMotionVector3f at(const Time& t) const;
-private:
-    std::vector<TimedMotionVector3f> mUpdates;
-}; // class RandomMotionPath
+const TimedMotionVector3f StaticMotionPath::initial() const {
+    return mMotion;
+}
+
+const TimedMotionVector3f* StaticMotionPath::nextUpdate(const Time& curtime) const {
+    if (mMotion.time() > curtime) return &mMotion;
+    return NULL;
+}
+
+const TimedMotionVector3f StaticMotionPath::at(const Time& t) const {
+    return mMotion;
+}
 
 } // namespace Sirikata
-
-#endif //_SIRIKATA_RANDOM_MOTION_PATH_HPP_

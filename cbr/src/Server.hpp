@@ -41,7 +41,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 #include "CBR_Session.pbj.hpp"
 #include "CBR_Migration.pbj.hpp"

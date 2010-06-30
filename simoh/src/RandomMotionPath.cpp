@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/RandomMotionPath.hpp>
+#include "RandomMotionPath.hpp"
 #include <algorithm>
 #include <cmath>
 #include <sirikata/cbrcore/Random.hpp>

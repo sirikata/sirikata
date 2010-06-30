@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/MotionPath.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
 #include <sirikata/cbrcore/SSTImpl.hpp>
 
 #include <sirikata/core/util/SimpleExtrapolator.hpp>

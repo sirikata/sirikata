@@ -40,7 +40,7 @@
 #include <sirikata/core/service/TimeProfiler.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/cbrcore/SSTImpl.hpp>
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 #include <sirikata/core/network/Stream.hpp>

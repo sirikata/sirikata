@@ -35,7 +35,7 @@
 #define _SIRIKATA_OSEG_TEST_MOTION_PATH_HPP_
 
 
-#include <sirikata/cbrcore/MotionPath.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
 
 
 namespace Sirikata

@@ -33,7 +33,7 @@
 #include "Analysis.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/MotionPath.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
 #include "RecordedMotionPath.hpp"
 #include <algorithm>

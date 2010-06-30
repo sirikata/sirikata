@@ -1269,9 +1269,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
@@ -1332,6 +1329,9 @@ SET(CBR_SOURCES
 )
 
 SET(SIMOH_SOURCES
+  ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp

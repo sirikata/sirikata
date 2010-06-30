@@ -34,7 +34,7 @@
 #define _SIRIKATA_ANALYSIS_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 #include "CBR_Geometry.pbj.hpp"
 #include "AnalysisEvents.hpp"
 

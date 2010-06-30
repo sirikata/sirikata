@@ -40,7 +40,7 @@
 namespace Sirikata {
 
 template<typename CoordType>
-class MotionVector {
+class SIRIKATA_EXPORT MotionVector {
 public:
     typedef CoordType PositionType;
     typedef CoordType VelocityType;

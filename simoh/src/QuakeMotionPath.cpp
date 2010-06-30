@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/QuakeMotionPath.hpp>
+#include "QuakeMotionPath.hpp"
 #include <algorithm>
 #include <cmath>
 #include <boost/tokenizer.hpp>

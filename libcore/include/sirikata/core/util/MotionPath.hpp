@@ -1,5 +1,5 @@
 /*  Sirikata
- *  StaticMotionPath.hpp
+ *  MotionPath.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,27 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_STATIC_MOTION_PATH_HPP_
-#define _SIRIKATA_STATIC_MOTION_PATH_HPP_
+#ifndef _SIRIKATA_MOTION_PATH_HPP_
+#define _SIRIKATA_MOTION_PATH_HPP_
 
-#include "MotionPath.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include "MotionVector.hpp"
 
 namespace Sirikata {
 
-/** Static motion path, i.e. not a motion path at all.  Just has a single initial
- *  update which has 0 velocityy.
+/** Base class for MotionPaths. All motion paths must implement one method
+ *  that allows random access into the update list, given the next update
+ *  that will occur after a specified time.
  */
-class StaticMotionPath : public MotionPath {
+class SIRIKATA_EXPORT MotionPath {
 public:
-    StaticMotionPath(const Time& start, const Vector3f& startpos);
+    virtual ~MotionPath() {}
 
-    virtual const TimedMotionVector3f initial() const;
-    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
-    virtual const TimedMotionVector3f at(const Time& t) const;
-private:
-    TimedMotionVector3f mMotion;
-}; // class StaticMotionPath
+    /** The initial motion vector for the object. */
+    virtual const TimedMotionVector3f initial() const = 0;
+    /** Given a current time, return the next update that will occur. Returns
+     *  NULL if there is not another update.
+     */
+    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const = 0;
+    /** Get the value at the specified time. */
+    virtual const TimedMotionVector3f at(const Time& t) const = 0;
+}; // class MotionPath
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_STATIC_MOTION_PATH_HPP_
+#endif //_SIRIKATA_MOTION_PATH_HPP_

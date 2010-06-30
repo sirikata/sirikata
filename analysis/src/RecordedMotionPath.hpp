@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_RECORDED_MOTION_PATH_HPP_
 #define _SIRIKATA_RECORDED_MOTION_PATH_HPP_
 
-#include <sirikata/cbrcore/MotionPath.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
 
 namespace Sirikata {

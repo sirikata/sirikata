@@ -1,5 +1,5 @@
 /*  Sirikata
- *  StaticMotionPath.cpp
+ *  StaticMotionPath.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,25 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/StaticMotionPath.hpp>
+#ifndef _SIRIKATA_STATIC_MOTION_PATH_HPP_
+#define _SIRIKATA_STATIC_MOTION_PATH_HPP_
+
+#include <sirikata/core/util/MotionPath.hpp>
 
 namespace Sirikata {
 
-StaticMotionPath::StaticMotionPath(const Time& start, const Vector3f& startpos) {
-    mMotion = TimedMotionVector3f(start, MotionVector3f(startpos, Vector3f(0,0,0)));
-}
+/** Static motion path, i.e. not a motion path at all.  Just has a single initial
+ *  update which has 0 velocityy.
+ */
+class StaticMotionPath : public MotionPath {
+public:
+    StaticMotionPath(const Time& start, const Vector3f& startpos);
 
-const TimedMotionVector3f StaticMotionPath::initial() const {
-    return mMotion;
-}
-
-const TimedMotionVector3f* StaticMotionPath::nextUpdate(const Time& curtime) const {
-    if (mMotion.time() > curtime) return &mMotion;
-    return NULL;
-}
-
-const TimedMotionVector3f StaticMotionPath::at(const Time& t) const {
-    return mMotion;
-}
+    virtual const TimedMotionVector3f initial() const;
+    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
+    virtual const TimedMotionVector3f at(const Time& t) const;
+private:
+    TimedMotionVector3f mMotion;
+}; // class StaticMotionPath
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_STATIC_MOTION_PATH_HPP_
