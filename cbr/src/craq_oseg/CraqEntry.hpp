@@ -33,7 +33,7 @@
 #ifndef _CRAQ_ENTRY_HPP_
 #define _CRAQ_ENTRY_HPP_
 
-#include <sirikata/cbrcore/VWTypes.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata {
 enum {

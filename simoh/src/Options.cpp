@@ -32,7 +32,6 @@
 
 #include "Options.hpp"
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/cbrcore/VWTypes.hpp>
 #include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {

@@ -98,7 +98,11 @@
 #     endif
 #   endif
 # else
-#   define SIRIKATA_FUNCTION_EXPORT
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_FUNCTION_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_FUNCTION_EXPORT
+#   endif
 # endif
 #endif
 
@@ -291,7 +295,7 @@ class OptionSet;
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"
-#include "../options/OptionValue.hpp"
+#include <sirikata/core/options/OptionValue.hpp>
 #include "Logging.hpp"
 #include "Location.hpp"
 #include "VInt.hpp"
@@ -362,6 +366,39 @@ typedef BoundingBox<float64> BoundingBox3d;
 typedef BoundingSphere<float32> BoundingSphere3f;
 typedef BoundingSphere<float64> BoundingSphere3d;
 }
+
+// A select few system-wide types
+namespace Sirikata {
+
+typedef uint32 ServerID;
+#define NullServerID 0
+
+// Space Server Regions
+typedef std::vector<BoundingBox3f> BoundingBoxList;
+struct SegmentationInfo {
+    ServerID server;
+    BoundingBoxList region;
+};
+
+struct ObjectHostID {
+    ObjectHostID()
+     : id(0)
+    {
+    }
+
+    explicit ObjectHostID(uint64 _id)
+     : id(_id)
+    {
+    }
+
+    uint64 id;
+};
+
+SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs);
+SIRIKATA_FUNCTION_EXPORT std::istream& operator>>(std::istream& is, ObjectHostID& rhs);
+
+} // namespace Sirikata
+
 #if 0
 template class std::tr1::unordered_map<Sirikata::int32, Sirikata::int32>;
 template class std::tr1::unordered_map<Sirikata::uint32, Sirikata::uint32>;

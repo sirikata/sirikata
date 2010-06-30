@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SERVERID_MAP_HPP_
 #define _SIRIKATA_SERVERID_MAP_HPP_
 
-#include "VWTypes.hpp"
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Address4.hpp>
 
 namespace Sirikata {

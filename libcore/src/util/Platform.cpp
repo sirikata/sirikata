@@ -1,5 +1,5 @@
 /*  Sirikata
- *  VWTypes.cpp
+ *  Platform.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/VWTypes.hpp>
+#include <sirikata/core/util/Standard.hh>
 
 namespace Sirikata {
 

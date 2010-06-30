@@ -34,7 +34,6 @@
 #define _SIRIKATA_CSEG_CONTEXT_HPP_
 
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/cbrcore/VWTypes.hpp>
 
 namespace Sirikata {
 

@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MESSAGE_HPP_
 #define _SIRIKATA_MESSAGE_HPP_
 
-#include "VWTypes.hpp"
+#include <sirikata/core/util/Platform.hpp>
 
 #include "CBR_ServerMessage.pbj.hpp"
 #include "CBR_ObjectMessage.pbj.hpp"

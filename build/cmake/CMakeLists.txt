@@ -1043,8 +1043,9 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
 	${LIBCORE_SOURCE_DIR}/util/SolidAngle.cpp
 	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-    ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
+        ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
         ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
@@ -1271,7 +1272,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
 )
 

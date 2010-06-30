@@ -34,7 +34,6 @@
 #define _SIRIKATA_SPACE_CONTEXT_HPP_
 
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/cbrcore/VWTypes.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include "Trace.hpp"
 
