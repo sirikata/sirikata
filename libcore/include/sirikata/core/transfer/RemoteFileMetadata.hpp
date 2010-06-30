@@ -50,21 +50,22 @@ typedef SHA256 Fingerprint;
  * Uses Range and Fingerprint
  */
 class Chunk {
-	Fingerprint mHash;
-	Range mRange;
+private:
+    Fingerprint mHash;
+    Range mRange;
+public:
+    Chunk(const Fingerprint &fingerprint, const Range &range) :
+        mHash(fingerprint), mRange(range) {
 
-	Chunk(const Fingerprint &fingerprint, const Range &range)
-		: mHash(fingerprint), mRange(range) {
+    }
 
-	}
+    inline const Fingerprint getHash() const {
+        return mHash;
+    }
 
-	inline const Fingerprint getHash() const {
-		return mHash;
-	}
-
-	inline const Range getRange() const {
-		return mRange;
-	}
+    inline const Range getRange() const {
+        return mRange;
+    }
 
 };
 
@@ -86,6 +87,10 @@ public:
 	RemoteFileMetadata(const Fingerprint &fingerprint, const URI &uri, size_type size, const ChunkList &chunklist, const FileHeaders &headers)
 		: mHash(fingerprint), mURI(uri), mSize(size), mChunkList(chunklist), mHeaders(headers) {
 
+	}
+
+	inline size_type getSize() const {
+	    return mSize;
 	}
 
 	inline std::string toString() const {

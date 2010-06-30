@@ -40,123 +40,138 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <boost/bind.hpp>
 
+AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpNameHandler);
+
 namespace Sirikata {
 namespace Transfer {
 
+HttpNameHandler& HttpNameHandler::getSingleton() {
+    return AutoSingleton<HttpNameHandler>::getSingleton();
+}
+void HttpNameHandler::destroy() {
+    AutoSingleton<HttpNameHandler>::destroy();
+}
+
 const char HttpNameHandler::CDN_HOST_NAME [] = "cdn.sirikata.com";
+const char HttpNameHandler::CDN_SERVICE [] = "http";
 
 HttpNameHandler::HttpNameHandler()
-    : mEndPointInitialized(false) {
+    : mCdnAddr(CDN_HOST_NAME, CDN_SERVICE) {
 
-    //Making a single thread IOService to handle requests
-    mServicePool = new IOServicePool(1);
-
-    //Add a dummy IOWork so that the IOService stays running
-    mIOWork = new IOWork(*(mServicePool->service()));
-
-    //This runs an IOService in a new thread
-    mServicePool->run();
-
-    //Used to resolve host:port names to IP addresses
-    mResolver = new TCPResolver(*(mServicePool->service()));
-
-    resolve_cdn();
 }
 
 HttpNameHandler::~HttpNameHandler() {
-    //Cancel any pending requests to resolve names and delete resolver
-    mResolver->cancel();
-    delete mResolver;
 
-    //Stop the IOService and make sure its thread exist
-    mServicePool->service()->stop();
-    mServicePool->join();
-
-    //Delete dummy worker and service pool
-    delete mIOWork;
-    delete mServicePool;
-}
-
-void HttpNameHandler::resolve_cdn() {
-    //Resolve the CDN host:port
-    TCPResolver::query query(CDN_HOST_NAME, CDN_PORT);
-    mResolver->async_resolve(query, boost::bind(&HttpNameHandler::handle_resolve, this,
-                            boost::asio::placeholders::error, boost::asio::placeholders::iterator));
-}
-
-void HttpNameHandler::handle_resolve(const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator) {
-    if (!err) {
-        mTCPEndpoint = *endpoint_iterator;
-        mEndPointInitialized = true;
-        processRequests();
-    } else {
-        SILOG(transfer, error, "Failed to resolve CDN hostname. Error = " << err.message());
-        //TODO: is this the best way to handle this?
-        resolve_cdn();
-    }
-}
-
-void HttpNameHandler::handle_connect(const boost::system::error_code& err, ReqCallbackPairType request) {
-    if (!err) {
-
-        boost::asio::streambuf reqbuff;
-        std::ostream request_stream(&reqbuff);
-        request_stream << "GET /dns/global" << request.first->getURI().fullpath() << " HTTP/1.0\r\n";
-        request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
-
-        boost::asio::async_write(*mTCPSocket, reqbuff, boost::bind(
-                &HttpNameHandler::handle_write_request, this,
-                boost::asio::placeholders::error, request));
-    } else {
-        SILOG(transfer, fatal, "Failed to connect to CDN socket. Error = " << err.message());
-    }
-}
-
-void HttpNameHandler::handle_write_request(const boost::system::error_code& err, ReqCallbackPairType request) {
-    if (!err) {
-        std::tr1::shared_ptr<boost::asio::streambuf> buf(new boost::asio::streambuf());
-        boost::asio::async_read(*mTCPSocket, *buf, boost::bind(
-                &HttpNameHandler::handle_read, this, request, buf,
-                boost::asio::placeholders::error,
-                boost::asio::placeholders::bytes_transferred));
-    } else {
-        SILOG(transfer, fatal, "Failed to write to CDN socket. Error = " << err.message());
-    }
-}
-
-void HttpNameHandler::handle_read(ReqCallbackPairType request, std::tr1::shared_ptr<boost::asio::streambuf> buf,
-        const boost::system::error_code& err, std::size_t bytes_transferred) {
-    if (!err || err == boost::asio::error::eof) {
-        //parse_response();
-    } else {
-        SILOG(transfer, fatal, "Failed to read from CDN socket. Error = " << err.message());
-    }
 }
 
 void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
-	//Higher layer should ensure that we don't get duplicates
-    ReqCallbackPairType p(request, callback);
-    mWaitingReqs.push(p);
-	processRequests();
+    std::ostringstream request_stream;
+    request_stream << "HEAD /dns/global" << request->getURI().fullpath() << " HTTP/1.1\r\n";
+    request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
+    request_stream << "Accept: * /*\r\n";
+    request_stream << "Connection: close\r\n\r\n";
+
+    HttpManager::getSingleton().makeRequest(mCdnAddr, request_stream.str(), std::tr1::bind(
+            &HttpNameHandler::request_finished, this, _1, _2, _3, request, callback));
 }
 
-void HttpNameHandler::processRequests() {
-    if (mOutstandingReqs.size() >= MAX_CONCURRENT_REQUESTS ||
-            mWaitingReqs.empty() ||
-            !mEndPointInitialized) {
+void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+        HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+        std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
+
+    std::tr1::shared_ptr<RemoteFileMetadata> bad;
+
+    if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+        SILOG(transfer, error, "Request parsing failed during an HTTP name lookup");
+        callback(bad);
+        return;
+    } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+        SILOG(transfer, error, "Response parsing failed during an HTTP name lookup");
+        callback(bad);
+        return;
+    } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+        SILOG(transfer, error, "A boost error happened during an HTTP name lookup. Boost error = " << boost_error.message());
+        callback(bad);
+        return;
+    } else if (error != HttpManager::SUCCESS) {
+        SILOG(transfer, error, "An unknown error happened during an HTTP name lookup.");
+        callback(bad);
         return;
     }
 
-    ReqCallbackPairType p = mWaitingReqs.front();
-    mOutstandingReqs[p.first] = p.second;
-    mWaitingReqs.pop();
+    if (response->getHeaders().size() == 0) {
+        SILOG(transfer, error, "There were no headers returned during an HTTP name lookup");
+        callback(bad);
+        return;
+    }
 
-    mTCPSocket = new TCPSocket(*(mServicePool->service()));
-    mTCPSocket->async_connect(
-            mTCPEndpoint, boost::bind(&HttpNameHandler::handle_connect, this,
-            boost::asio::placeholders::error, p));
+    std::map<std::string, std::string>::const_iterator it;
+    it = response->getHeaders().find("Content-Length");
+    if (it != response->getHeaders().end()) {
+        SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP name lookup");
+        callback(bad);
+        return;
+    }
+
+    if (response->getStatusCode() != 200) {
+        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP name lookup");
+        callback(bad);
+        return;
+    }
+
+    it = response->getHeaders().find("File-Size");
+    if (it == response->getHeaders().end()) {
+        SILOG(transfer, error, "Expected File-Size header not present during an HTTP name lookup");
+        callback(bad);
+        return;
+    }
+    std::string file_size_str = it->second;
+
+    it = response->getHeaders().find("Hash");
+    if (it == response->getHeaders().end()) {
+        SILOG(transfer, error, "Expected Hash header not present during an HTTP name lookup");
+        callback(bad);
+        return;
+    }
+    std::string hash = it->second;
+
+    if (response->getData()) {
+        SILOG(transfer, error, "Body present during an HTTP name lookup");
+        callback(bad);
+        return;
+    }
+
+    Fingerprint fp;
+    try {
+        fp = Fingerprint::convertFromHex(hash);
+    } catch(std::invalid_argument e) {
+        SILOG(transfer, error, "Hash header didn't contain a valid Fingerprint string");
+        callback(bad);
+        return;
+    }
+
+    std::istringstream istream(file_size_str);
+    uint64 file_size;
+    istream >> file_size;
+    std::ostringstream ostream;
+    ostream << file_size;
+    if(ostream.str() != file_size_str) {
+        SILOG(transfer, error, "Error converting File-Size header string to integer");
+        callback(bad);
+        return;
+    }
+
+    //Just treat everything as a single chunk for now
+    Range whole(true);
+    Chunk chunk(fp, whole);
+    ChunkList chunkList;
+    chunkList.push_back(chunk);
+
+    std::tr1::shared_ptr<RemoteFileMetadata> met(new RemoteFileMetadata(fp, request->getURI(),
+            file_size, chunkList, response->getHeaders()));
+
+    callback(met);
+    SILOG(transfer, debug, "done transferhandlers request_finished");
 }
 
 }

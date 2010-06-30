@@ -63,6 +63,10 @@ public:
 		std::copy(str.begin(), str.end(), writableData());
 	}
 
+	DenseData(const Range& range, const char* str, size_t len)
+        : Range(range), mData(str, str+len) {
+	}
+
 	/// equals dataAt(startbyte()).
 	inline const unsigned char *data() const {
 		return &(mData[0]);

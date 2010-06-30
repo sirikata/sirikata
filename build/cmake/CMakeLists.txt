@@ -966,6 +966,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp
@@ -1402,7 +1403,7 @@ SET(SIRIKATA_CORE_LIBRARIES
 
     ${CURL_LIBRARIES}
     ${Boost_LIBRARIES}
-    ${HTTP_PARSER_LIBRARY} )
+    HTTP_PARSER_LIBRARY )
 
 IF(BERKELIUM_FOUND)
   SET(BERKELIUM_CFLAGS -DHAVE_BERKELIUM)

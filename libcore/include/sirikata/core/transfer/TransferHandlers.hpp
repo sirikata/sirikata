@@ -40,11 +40,9 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/core/network/IOServicePool.hpp>
-#include <sirikata/core/network/IOWork.hpp>
-#include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/transfer/HttpManager.hpp>
 #include <boost/asio.hpp>
-#include "http_parser.h"
+#include <sirikata/core/network/Address.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -71,56 +69,16 @@ public:
 };
 
 /*
- * Implements name lookups via HTTP, should only create one of these
+ * Implements name lookups via HTTP
  */
-class HttpNameHandler : public NameHandler {
+class SIRIKATA_EXPORT HttpNameHandler
+    : public NameHandler, public AutoSingleton<HttpNameHandler> {
 
 private:
-    //For convenience
-    typedef Sirikata::Network::IOServicePool IOServicePool;
-    typedef Sirikata::Network::TCPResolver TCPResolver;
-    typedef Sirikata::Network::TCPSocket TCPSocket;
-    typedef Sirikata::Network::IOWork IOWork;
-    typedef boost::asio::ip::tcp::endpoint TCPEndPoint;
-
-    typedef std::map<std::tr1::shared_ptr<MetadataRequest>, NameCallback> RequestMapType;
-    typedef std::pair<std::tr1::shared_ptr<MetadataRequest>, NameCallback> ReqCallbackPairType;
-    typedef std::queue<ReqCallbackPairType> RequestQueueType;
-
-	//Maps outstanding requests to their associated callbacks
-    RequestMapType mOutstandingReqs;
-
-	//Queue of requests that need to be fulfilled
-	RequestQueueType mWaitingReqs;
-
-	IOServicePool* mServicePool;
-	TCPResolver* mResolver;
-	IOWork* mIOWork;
-	TCPSocket* mTCPSocket;
-	TCPEndPoint mTCPEndpoint;
-	bool mEndPointInitialized;
-
 	//TODO: should get these from settings
-	static const uint32 MAX_CONCURRENT_REQUESTS = 1;
 	static const char CDN_HOST_NAME [];
-	static const uint32 CDN_PORT = 80;
-
-	/*
-	 * Checks if any requests should be initiated
-	 */
-	void processRequests();
-
-	/*
-	 * Resolves the CDN host:port
-	 */
-	void resolve_cdn();
-	void handle_resolve(const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator);
-
-	//Callbacks
-	void handle_connect(const boost::system::error_code& err, ReqCallbackPairType request);
-	void handle_write_request(const boost::system::error_code& err, ReqCallbackPairType request);
-	void handle_read(ReqCallbackPairType request, std::tr1::shared_ptr<boost::asio::streambuf> buf,
-	        const boost::system::error_code& err, std::size_t bytes_transferred);
+	static const char CDN_SERVICE [];
+	const Network::Address mCdnAddr;
 
 public:
 	HttpNameHandler();
@@ -130,6 +88,17 @@ public:
 	 * Resolves a metadata request via HTTP and calls callback when completed
 	 */
 	void resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback);
+
+	/*
+	 * Callback from HttpManager when an http request finishes
+	 */
+	void request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+	        HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+	        std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback);
+
+    static HttpNameHandler& getSingleton();
+    static void destroy();
+
 };
 
 }

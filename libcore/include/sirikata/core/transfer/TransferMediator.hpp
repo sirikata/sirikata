@@ -256,37 +256,70 @@ public:
 		mCleanup = true;
 	}
 
-	void execute_finished(std::string id) {
-        SILOG(transfer, debug, "OMG I GOT AN EXECUTE CALLBACK");
+	void execute_finished(std::tr1::shared_ptr<TransferRequest> req, std::string id) {
+        boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
+        lock.lock();
+
+        AggregateListByID& idIndex = mAggregateList.get<tagID>();
+        AggregateListByID::iterator findID = idIndex.find(id);
+        if(findID == idIndex.end()) {
+            SILOG(transfer, error, "Got a callback in TransferMediator from a TransferRequest with no associated ID");
+            mNumOutstanding--;
+            lock.unlock();
+            return;
+        }
+
+        const std::map<std::string, std::tr1::shared_ptr<TransferRequest> >&
+            allReqs = (*findID)->getTransferRequests();
+
+        for(std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::const_iterator
+                it = allReqs.begin(); it != allReqs.end(); it++) {
+            SILOG(transfer, debug, "Notifying a caller that TransferRequest is complete");
+            it->second->notifyCaller(req);
+        }
+
+        mAggregateList.erase(findID);
+
+        mNumOutstanding--;
+        lock.unlock();
+        SILOG(transfer, debug, "done transfer mediator execute_finished");
+        checkQueue();
+	}
+
+	void checkQueue() {
+	    boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
+
+        lock.lock();
+
+        AggregateListByPriority & priorityIndex = mAggregateList.get<tagPriority>();
+        AggregateListByPriority::iterator findTop = priorityIndex.begin();
+
+        if(findTop != priorityIndex.end()) {
+            std::string topId = (*findTop)->getIdentifier();
+
+            SILOG(transfer, debug, priorityIndex.size() << " length agg list, top priority "
+                    << (*findTop)->getPriority() << " id " << topId);
+
+            std::tr1::shared_ptr<TransferRequest> req = (*findTop)->getSingleRequest();
+
+            if(mNumOutstanding == 0) {
+                mNumOutstanding++;
+                req->execute(req, std::tr1::bind(&TransferMediator::execute_finished, this, req, topId));
+            }
+
+        } else {
+            //SILOG(transfer, debug, priorityIndex.size() << " length agg list");
+        }
+
+        lock.unlock();
 	}
 
 	/*
 	 * Main thread that handles the input pools
 	 */
 	void mediatorThread() {
-		boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
-
 		while(!mCleanup) {
-			lock.lock();
-			AggregateListByPriority & priorityIndex = mAggregateList.get<tagPriority>();
-			AggregateListByPriority::iterator findTop = priorityIndex.begin();
-			if(findTop != priorityIndex.end()) {
-			    std::string topId = (*findTop)->getIdentifier();
-
-			    SILOG(transfer, debug, priorityIndex.size() << " length agg list, top priority "
-				        << (*findTop)->getPriority() << " id " << topId);
-
-				std::tr1::shared_ptr<TransferRequest> req = (*findTop)->getSingleRequest();
-
-				if(mNumOutstanding == 0) {
-				    mNumOutstanding++;
-				    req->execute(std::tr1::bind(&TransferMediator::execute_finished, this, topId));
-				}
-
-			} else {
-				SILOG(transfer, debug, priorityIndex.size() << " length agg list");
-			}
-			lock.unlock();
+		    checkQueue();
 			boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 		}
 		for(PoolType::iterator pool = mPools.begin(); pool != mPools.end(); pool++) {

@@ -65,10 +65,11 @@ public:
 		return mClientID;
 	}
 
-	virtual void execute(ExecuteFinished cb) = 0;
+	virtual void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) = 0;
 
-	virtual ~TransferRequest() {
-	}
+    virtual void notifyCaller(std::tr1::shared_ptr<TransferRequest>) = 0;
+
+	virtual ~TransferRequest() {}
 
 	friend class TransferPool;
 
@@ -95,7 +96,6 @@ public:
     MetadataRequest(const URI &uri, PriorityType priority, MetadataCallback cb) :
         mURI(uri), mUniqueID(uri.toString()), mCallback(cb) {
         mPriority = priority;
-        makeHandler();
     }
 
     inline const std::string &getIdentifier() const {
@@ -106,8 +106,17 @@ public:
         return mURI;
     }
 
-    inline void execute(ExecuteFinished cb) {
-        //mNameHandler->resolve(*this)
+    inline void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
+        std::tr1::shared_ptr<MetadataRequest> casted =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(req);
+        HttpNameHandler::getSingleton().resolve(casted, std::tr1::bind(
+                &MetadataRequest::execute_finished, this, _1, cb));
+    }
+
+    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
+        std::tr1::shared_ptr<MetadataRequest> fromC =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
+        mCallback(fromC, fromC->mRemoteFileMetadata);
     }
 
     inline bool operator==(const MetadataRequest& other) const {
@@ -121,19 +130,17 @@ protected:
     const URI mURI;
     const std::string mUniqueID;
     MetadataCallback mCallback;
-    //static std::tr1::shared_ptr<NameHandler> mNameHandler;
-
-    inline void makeHandler() {
-        /*if(mNameHandler == NULL) {
-            std::tr1::shared_ptr<NameHandler> x(new HttpNameHandler());
-            mNameHandler = x;
-        }*/
-    }
+    std::tr1::shared_ptr<RemoteFileMetadata> mRemoteFileMetadata;
 
     MetadataRequest(const URI &uri, PriorityType priority) :
         mURI(uri), mUniqueID(uri.toString()) {
         mPriority = priority;
-        makeHandler();
+    }
+
+    inline void execute_finished(std::tr1::shared_ptr<RemoteFileMetadata> response, ExecuteFinished cb) {
+        mRemoteFileMetadata = response;
+        cb();
+        SILOG(transfer, debug, "done transferpool execute_finished");
     }
 
 };
@@ -162,9 +169,16 @@ public:
 		return mChunkID;
 	}
 
-	inline void execute(ExecuteFinished cb) {
+	inline void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
 
 	}
+
+    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
+        /*std::tr1::shared_ptr<MetadataRequest> me(this);
+        std::tr1::shared_ptr<MetadataRequest> otherC =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(other);
+        mCallback(me, otherC->mRemoteFileMetadata);*/
+    }
 
 };
 
