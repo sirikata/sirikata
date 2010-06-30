@@ -34,6 +34,8 @@
 #include "CBR_OSegTrace.pbj.hpp"
 #include "CBR_MigrationTrace.pbj.hpp"
 #include "CBR_DatagramTrace.pbj.hpp"
+#include "CBR_LocProxTrace.pbj.hpp"
+#include "CBR_CSegTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
@@ -42,25 +44,41 @@ namespace Sirikata {
 #define TRACE_OSEG_CUMULATIVE_NAME          "trace-oseg-cumulative"
 #define TRACE_MIGRATION_NAME                "trace-migration"
 #define TRACE_DATAGRAM_NAME                 "trace-datagram"
+#define TRACE_LOCPROX_NAME                  "trace-locprox"
+#define TRACE_CSEG_NAME                     "trace-cseg"
 
 OptionValue* SpaceTrace::mLogOSeg;
 OptionValue* SpaceTrace::mLogOSegCumulative;
 OptionValue* SpaceTrace::mLogMigration;
 OptionValue* SpaceTrace::mLogDatagram;
+OptionValue* SpaceTrace::mLogLocProx;
+OptionValue* SpaceTrace::mLogCSeg;
 
 void SpaceTrace::InitOptions() {
     mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogOSegCumulative = new OptionValue(TRACE_OSEG_CUMULATIVE_NAME,"true",Sirikata::OptionValueType<bool>(),"Log oseg cumulative trace data");
     mLogMigration = new OptionValue(TRACE_MIGRATION_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogCSeg = new OptionValue(TRACE_CSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(mLogOSeg)
         .addOption(mLogOSegCumulative)
         .addOption(mLogMigration)
         .addOption(mLogDatagram)
+        .addOption(mLogLocProx)
+        .addOption(mLogCSeg)
         ;
 }
+
+
+static void fillTimedMotionVector(Sirikata::Trace::ITimedMotionVector tmv, const TimedMotionVector3f& val) {
+    tmv.set_t(val.time());
+    tmv.set_position(val.position());
+    tmv.set_velocity(val.velocity());
+}
+
 
 // OSeg
 
@@ -254,6 +272,39 @@ CREATE_TRACE_DEF(SpaceTrace, serverDatagramReceived, mLogDatagram, const Time& s
     rec.set_end_time(end_time);
 
     mTrace->writeRecord(ServerDatagramReceivedTag, rec);
+}
+
+CREATE_TRACE_DEF(SpaceTrace, serverLoc, mLogLocProx, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
+    Sirikata::Trace::LocProx::LocUpdate rec;
+    rec.set_t(t);
+    rec.set_sender(sender);
+    rec.set_receiver(receiver);
+    rec.set_object(obj);
+    Sirikata::Trace::ITimedMotionVector rec_loc = rec.mutable_loc();
+    fillTimedMotionVector(rec_loc, loc);
+
+    mTrace->writeRecord(ServerLocationTag, rec);
+}
+
+CREATE_TRACE_DEF(SpaceTrace, serverObjectEvent, mLogLocProx, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
+    Sirikata::Trace::LocProx::ObjectEvent rec;
+    rec.set_t(t);
+    rec.set_sender(source);
+    rec.set_receiver(dest);
+    rec.set_object(obj);
+    rec.set_added(added);
+    Sirikata::Trace::ITimedMotionVector rec_loc = rec.mutable_loc();
+    fillTimedMotionVector(rec_loc, loc);
+
+    mTrace->writeRecord(ServerObjectEventTag, rec);
+}
+
+CREATE_TRACE_DEF(SpaceTrace, segmentationChanged, mLogCSeg, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
+    Sirikata::Trace::CSeg::SegmentationChanged rec;
+    rec.set_t(t);
+    rec.set_bbox(bbox);
+    rec.set_server(serverID);
+    mTrace->writeRecord(SegmentationChangeTag, rec);
 }
 
 

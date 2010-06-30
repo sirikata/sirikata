@@ -241,14 +241,6 @@ public:
     CREATE_TRACE_DECL(timestampMessageCreation, const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0);
     CREATE_TRACE_DECL(timestampMessage, const Time&t, uint64 packetId, MessagePath path);
 
-    // Server received a loc update
-    CREATE_TRACE_DECL(serverLoc, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
-    // Object tracking change
-    CREATE_TRACE_DECL(serverObjectEvent, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc);
-
-
-    CREATE_TRACE_DECL(segmentationChanged, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
-
 
     // Helper to prepend framing (size and payload type hint)
     void writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data, uint32 iovcnt);
@@ -286,10 +278,6 @@ private:
     Sirikata::AtomicValue<bool> mFinishStorage;
 
     // OptionValues that turn tracing on/off
-    static OptionValue* mLogLocProx;
-    static OptionValue* mLogCSeg;
-    static OptionValue* mLogPacket;
-    static OptionValue* mLogPing;
     static OptionValue* mLogMessage;
 }; // class Trace
 

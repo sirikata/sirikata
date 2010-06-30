@@ -74,11 +74,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
     evt = pevt;
 
     if (type_hint == SegmentationChangeTag) {
-  	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
-	      record_is.read( (char*)&sevt->time, sizeof(sevt->time) );
-	      record_is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
-	      record_is.read( (char*)&sevt->server, sizeof(sevt->server) );
-	      evt = sevt;
+        PARSE_PBJ_RECORD(Trace::CSeg::SegmentationChanged);
     }
     else if (type_hint == ProximityTag) {
         PARSE_PBJ_RECORD(Trace::Object::ProxUpdate);
@@ -157,26 +153,11 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
         pevt->data.set_server(trace_server_id);
     }
     else if (type_hint == ServerLocationTag) {
-              ServerLocationEvent* levt = new ServerLocationEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->dest, sizeof(levt->dest) );
-              record_is.read( (char*)&levt->object, sizeof(levt->object) );
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              evt = levt;
-          }
+        PARSE_PBJ_RECORD(Trace::LocProx::LocUpdate);
+    }
     else if (type_hint == ServerObjectEventTag) {
-              ServerObjectEventEvent* levt = new ServerObjectEventEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->dest, sizeof(levt->dest) );
-              record_is.read( (char*)&levt->object, sizeof(levt->object) );
-              uint8 raw_added = 0;
-              record_is.read( (char*)&raw_added, sizeof(raw_added) );
-              levt->added = (raw_added > 0);
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              evt = levt;
-          }
+        PARSE_PBJ_RECORD(Trace::LocProx::ObjectEvent);
+    }
     else if (type_hint == ObjectSegmentationCraqLookupRequestAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::CraqRequest);
     }
@@ -268,8 +249,8 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
             ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
             ProximityEvent* pe = dynamic_cast<ProximityEvent*>(evt);
             LocationEvent* le = dynamic_cast<LocationEvent*>(evt);
-            ServerObjectEventEvent* sobj_evt = dynamic_cast<ServerObjectEventEvent*>(evt);
-            ServerLocationEvent* sloc_evt = dynamic_cast<ServerLocationEvent*>(evt);
+            ServerObjectLocUpdateEvent* sobj_evt = dynamic_cast<ServerObjectLocUpdateEvent*>(evt);
+            ServerLocUpdateEvent* sloc_evt = dynamic_cast<ServerLocUpdateEvent*>(evt);
 
             if (obj_evt != NULL && (pe != NULL || le != NULL)) {
                 ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
@@ -283,10 +264,10 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
                 evt_list->push_back(obj_evt);
             }
             else if (sobj_evt != NULL) {
-                ServerEventListMap::iterator it = mServerEventLists.find( sobj_evt->dest );
+                ServerEventListMap::iterator it = mServerEventLists.find( sobj_evt->data.receiver() );
                 if (it == mServerEventLists.end()) {
-                    mServerEventLists[ sobj_evt->dest ] = new EventList;
-                    it = mServerEventLists.find( sobj_evt->dest );
+                    mServerEventLists[ sobj_evt->data.receiver() ] = new EventList;
+                    it = mServerEventLists.find( sobj_evt->data.receiver() );
                 }
                 assert( it != mServerEventLists.end() );
 
@@ -294,10 +275,10 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
                 evt_list->push_back(sobj_evt);
             }
             else if (sloc_evt != NULL) {
-                ServerEventListMap::iterator it = mServerEventLists.find( sloc_evt->dest );
+                ServerEventListMap::iterator it = mServerEventLists.find( sloc_evt->data.receiver() );
                 if (it == mServerEventLists.end()) {
-                    mServerEventLists[ sloc_evt->dest ] = new EventList;
-                    it = mServerEventLists.find( sloc_evt->dest );
+                    mServerEventLists[ sloc_evt->data.receiver() ] = new EventList;
+                    it = mServerEventLists.find( sloc_evt->data.receiver() );
                 }
                 assert( it != mServerEventLists.end() );
 

@@ -66,12 +66,22 @@ public:
     CREATE_TRACE_DECL(serverDatagramSent, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
     CREATE_TRACE_DECL(serverDatagramReceived, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
+    // Loc/Prox
+    CREATE_TRACE_DECL(serverLoc, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
+    CREATE_TRACE_DECL(serverObjectEvent, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc);
+
+    // CSeg
+    CREATE_TRACE_DECL(segmentationChanged, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
+
+
 private:
     Trace::Trace* mTrace;
     static OptionValue* mLogOSeg;
     static OptionValue* mLogOSegCumulative;
     static OptionValue* mLogMigration;
     static OptionValue* mLogDatagram;
+    static OptionValue* mLogLocProx;
+    static OptionValue* mLogCSeg;
 };
 
 // This version of the SPACETRACE macro automatically uses mContext->trace() and

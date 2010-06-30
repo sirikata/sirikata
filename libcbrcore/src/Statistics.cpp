@@ -103,26 +103,14 @@ void BatchedBuffer::store(FILE* os) {
 
 namespace Trace {
 
-OptionValue* Trace::mLogLocProx;
-OptionValue* Trace::mLogCSeg;
-OptionValue* Trace::mLogPacket;
 OptionValue* Trace::mLogMessage;
 
-#define TRACE_LOCPROX_NAME                  "trace-locprox"
-#define TRACE_CSEG_NAME                     "trace-cseg"
-#define TRACE_PACKET_NAME                   "trace-packet"
 #define TRACE_MESSAGE_NAME                  "trace-message"
 
 void Trace::InitOptions() {
-    mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogCSeg = new OptionValue(TRACE_CSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogPacket = new OptionValue(TRACE_PACKET_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(mLogLocProx)
-        .addOption(mLogCSeg)
-        .addOption(mLogPacket)
         .addOption(mLogMessage)
         ;
 }
@@ -229,50 +217,6 @@ CREATE_TRACE_DEF(Trace, timestampMessage, mLogMessage, const Time&sent, uint64 u
     };
     writeRecord(MessageTimestampTag, data_vec, num_data);
 }
-
-CREATE_TRACE_DEF(Trace, serverLoc, mLogLocProx, const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 5;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&sender, sizeof(sender)),
-        BatchedBuffer::IOVec(&receiver, sizeof(receiver)),
-        BatchedBuffer::IOVec(&obj, sizeof(obj)),
-        BatchedBuffer::IOVec(&loc, sizeof(loc)),
-    };
-    writeRecord(ServerLocationTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, serverObjectEvent, mLogLocProx, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
-    if (mShuttingDown) return;
-
-    uint8 raw_added = (added ? 1 : 0);
-
-    const uint32 num_data = 6;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&source, sizeof(source)),
-        BatchedBuffer::IOVec(&dest, sizeof(dest)),
-        BatchedBuffer::IOVec(&obj, sizeof(obj)),
-        BatchedBuffer::IOVec(&raw_added, sizeof(raw_added)),
-        BatchedBuffer::IOVec(&loc, sizeof(loc)),
-    };
-    writeRecord(ServerObjectEventTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, segmentationChanged, mLogCSeg, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 3;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&bbox, sizeof(bbox)),
-        BatchedBuffer::IOVec(&serverID, sizeof(serverID)),
-    };
-    writeRecord(SegmentationChangeTag, data_vec, num_data);
-}
-
 
 } // namespace Trace
 

@@ -826,6 +826,8 @@ SET(TRACE_OBJECT_PROTOCOLS
   MigrationTrace.pbj
   PingTrace.pbj
   DatagramTrace.pbj
+  LocProxTrace.pbj
+  CSegTrace.pbj
 )
 # protocol targets
 ADD_PBJ_TARGET(
