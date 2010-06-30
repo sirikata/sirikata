@@ -116,7 +116,13 @@ class ClusterSimSettings:
         # Trace:
         # list of trace types to enable, e.g. ['object', 'oseg'] will
         # result in --trace-object --trace-oseg being passed in
-        self.traces = []
+        self.traces = {
+            'all' : [],
+            'space' : [],
+            'simoh' : [],
+            'cseg' : [],
+            'analysis' : []
+            }
 
         self.loglevels = {
             "prox" : "warn",
@@ -191,6 +197,10 @@ class ClusterSim:
         params = [
             '--plugins=' + self.config.plugins
             ]
+
+        for tracetype in self.settings.traces['all']:
+            params.append( '--trace-%s=true' % (tracetype) )
+
         return params
 
     def cbr_parameters(self):
@@ -214,7 +224,11 @@ class ClusterSim:
             'oseg-cache-clean-group-size' : "--oseg-cache-clean-group-size=" + str(self.settings.oseg_cache_clean_group),
             'oseg-cache-entry-lifetime' : "--oseg-cache-entry-lifetime=" + str(self.settings.oseg_cache_entry_lifetime),
             }
+        for tracetype in self.settings.traces['space']:
+            class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
+
         params = ['%(' + x + ')s' for x in class_params.keys()]
+
         return (params, class_params)
 
 
@@ -251,7 +265,11 @@ class ClusterSim:
         class_params['object.scenario'] = '--scenario=' + self.settings.scenario
         class_params['object.scenario-options'] = '--scenario-options=' + self.settings.scenario_options
 
+        for tracetype in self.settings.traces['simoh']:
+            class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
+
         params = ['%(' + x + ')s' for x in class_params.keys()]
+
         return (params, class_params)
 
     def cseg_parameters(self):
@@ -263,7 +281,11 @@ class ClusterSim:
             'cseg-server-options' : '--cseg-servermap-options=' + '--filename=' + self.settings.cseg_ip_file,
             'max-servers' : '--max-servers=' + str(self.settings.space_server_pool),
             }
+        for tracetype in self.settings.traces['cseg']:
+            class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
+
         params = ['%(' + x + ')s' for x in class_params.keys()]
+
         return (params, class_params)
 
 
@@ -279,6 +301,10 @@ class ClusterSim:
             '--region-weight=' + str(self.settings.region_weight),
             '--region-weight-args=' + str(self.settings.region_weight_options),
             ]
+
+        for tracetype in self.settings.traces['analysis']:
+            params.append( '--trace-%s=true' % (tracetype) )
+
         return params
 
     def vis_parameters(self):
@@ -461,8 +487,6 @@ class ClusterSim:
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
         cmd_seq.extend(cseg_params)
-        for tracetype in self.settings.traces:
-            cmd_seq.append( '--trace-%s=true' % (tracetype) )
 
         # Add a param for loglevel if necessary
         if len(self.settings.loglevels) > 0:
