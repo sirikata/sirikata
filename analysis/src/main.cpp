@@ -212,23 +212,6 @@ int main(int argc, char** argv) {
                     ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
             }
         }
-        // Queue information
-        //  * Raw dump
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.dumpDatagramQueueInfo(sender, receiver, std::cout, queue_info_file);
-            }
-        }
-        //  * Send
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.windowedDatagramSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
-            }
-        }
-        //  * Receive
-        // None
 
         exit(0);
     }

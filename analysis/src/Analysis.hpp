@@ -42,12 +42,6 @@ namespace Sirikata {
 
 struct Event;
 struct ObjectEvent;
-struct ServerDatagramEvent;
-struct ServerDatagramSentEvent;
-struct ServerDatagramQueuedEvent;
-struct ServerDatagramReceivedEvent;
-struct ServerDatagramQueueInfoEvent;
-struct PacketQueueInfoEvent;
 
 TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotionVector& tmv);
 
@@ -93,44 +87,24 @@ public:
     void computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
     void computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
 
-    void dumpDatagramQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
-    void dumpPacketQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
-
-
-    void windowedDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
     // No datagram receive queues
-
-    void windowedPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
-    void windowedPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
-
 
    void computeJFI(const ServerID& server_id) const;
 
 private:
-    typedef std::vector<ServerDatagramEvent*> DatagramEventList;
+    typedef std::vector<Event*> DatagramEventList;
     typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
     DatagramEventList mEmptyDatagramEventList;
-
-    typedef std::vector<ServerDatagramQueueInfoEvent*> DatagramQueueInfoEventList;
-    typedef std::map<ServerID, DatagramQueueInfoEventList*> ServerDatagramQueueInfoEventListMap;
-    DatagramQueueInfoEventList mEmptyDatagramQueueInfoEventList;
 
     DatagramEventList::const_iterator datagramBegin(const ServerID& server) const;
     DatagramEventList::const_iterator datagramEnd(const ServerID& server) const;
 
-    DatagramQueueInfoEventList::const_iterator datagramQueueInfoBegin(const ServerID& server) const;
-    DatagramQueueInfoEventList::const_iterator datagramQueueInfoEnd(const ServerID& server) const;
-
     const DatagramEventList* getDatagramEventList(const ServerID& server) const;
-
-    const DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
 
     template<typename EventType, typename EventIteratorType>
     void computeJFI(const ServerID& sender, const ServerID& filter) const;
 
     ServerDatagramEventListMap mDatagramEventLists;
-
-    ServerDatagramQueueInfoEventListMap mDatagramQueueInfoEventLists;
 
     uint32 mNumberOfServers;
 }; // class BandwidthAnalysis
@@ -152,8 +126,8 @@ class LatencyAnalysis {
         friend class LatencyAnalysis;
     public:
         PacketData();
-        void addPacketSentEvent(ServerDatagramQueuedEvent*);
-        void addPacketReceivedEvent(ServerDatagramReceivedEvent*);
+        void addPacketSentEvent(DatagramQueuedEvent*);
+        void addPacketReceivedEvent(DatagramReceivedEvent*);
     };
 
 public:

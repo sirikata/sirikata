@@ -33,6 +33,7 @@
 #include "Trace.hpp"
 #include "CBR_OSegTrace.pbj.hpp"
 #include "CBR_MigrationTrace.pbj.hpp"
+#include "CBR_DatagramTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
@@ -40,20 +41,24 @@ namespace Sirikata {
 #define TRACE_OSEG_NAME                     "trace-oseg"
 #define TRACE_OSEG_CUMULATIVE_NAME          "trace-oseg-cumulative"
 #define TRACE_MIGRATION_NAME                "trace-migration"
+#define TRACE_DATAGRAM_NAME                 "trace-datagram"
 
 OptionValue* SpaceTrace::mLogOSeg;
 OptionValue* SpaceTrace::mLogOSegCumulative;
 OptionValue* SpaceTrace::mLogMigration;
+OptionValue* SpaceTrace::mLogDatagram;
 
 void SpaceTrace::InitOptions() {
     mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogOSegCumulative = new OptionValue(TRACE_OSEG_CUMULATIVE_NAME,"true",Sirikata::OptionValueType<bool>(),"Log oseg cumulative trace data");
     mLogMigration = new OptionValue(TRACE_MIGRATION_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
+    mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(mLogOSeg)
         .addOption(mLogOSegCumulative)
         .addOption(mLogMigration)
+        .addOption(mLogDatagram)
         ;
 }
 
@@ -212,6 +217,43 @@ CREATE_TRACE_DEF(SpaceTrace, objectMigrationRoundTrip, mLogMigration, const Time
     rt.set_roundtrip(round_trip);
 
     mTrace->writeRecord(MigrationRoundTripTag, rt);
+}
+
+// Datagram
+
+CREATE_TRACE_DEF(SpaceTrace, serverDatagramQueued, mLogDatagram, const Time& t, const ServerID& dest, uint64 id, uint32 size) {
+    Sirikata::Trace::Datagram::Queued rec;
+    rec.set_t(t);
+    rec.set_dest_server(dest);
+    rec.set_uid(id);
+    rec.set_size(size);
+
+    mTrace->writeRecord(ServerDatagramQueuedTag, rec);
+}
+
+CREATE_TRACE_DEF(SpaceTrace, serverDatagramSent, mLogDatagram, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
+    Sirikata::Trace::Datagram::Sent rec;
+    rec.set_t(start_time);
+    rec.set_dest_server(dest);
+    rec.set_uid(id);
+    rec.set_size(size);
+    rec.set_weight(weight);
+    rec.set_start_time(start_time);
+    rec.set_end_time(end_time);
+
+    mTrace->writeRecord(ServerDatagramSentTag, rec);
+}
+
+CREATE_TRACE_DEF(SpaceTrace, serverDatagramReceived, mLogDatagram, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
+    Sirikata::Trace::Datagram::Received rec;
+    rec.set_t(start_time);
+    rec.set_source_server(src);
+    rec.set_uid(id);
+    rec.set_size(size);
+    rec.set_start_time(start_time);
+    rec.set_end_time(end_time);
+
+    mTrace->writeRecord(ServerDatagramReceivedTag, rec);
 }
 
 

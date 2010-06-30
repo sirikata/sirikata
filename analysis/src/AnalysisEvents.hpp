@@ -39,6 +39,7 @@
 #include "CBR_OSegTrace.pbj.hpp"
 #include "CBR_MigrationTrace.pbj.hpp"
 #include "CBR_PingTrace.pbj.hpp"
+#include "CBR_DatagramTrace.pbj.hpp"
 
 namespace Sirikata {
 
@@ -54,13 +55,6 @@ struct Event {
     virtual ~Event() {}
 
     Time time;
-
-    virtual Time begin_time() const {
-        return time;
-    }
-    virtual Time end_time() const {
-        return time;
-    }
 };
 
 struct EventTimeComparator {
@@ -90,60 +84,6 @@ struct MessageTimestampEvent : public ObjectEvent {
 struct MessageCreationTimestampEvent : public MessageTimestampEvent {
     ObjectMessagePort srcport;
     ObjectMessagePort dstport;
-};
-
-
-struct ServerDatagramQueueInfoEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    uint32 send_size;
-    uint32 send_queued;
-    float send_weight;
-};
-
-
-struct ServerDatagramEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    uint64 id;
-    uint32 size;
-};
-
-struct ServerDatagramQueuedEvent : public ServerDatagramEvent {
-};
-
-struct ServerDatagramSentEvent : public ServerDatagramEvent {
-    ServerDatagramSentEvent()
-     : ServerDatagramEvent(), _start_time(Time::null()), _end_time(Time::null())
-    {}
-
-    virtual Time begin_time() const {
-        return _start_time;
-    }
-    virtual Time end_time() const {
-        return _end_time;
-    }
-
-    float weight;
-
-    Time _start_time;
-    Time _end_time;
-};
-
-struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
-    ServerDatagramReceivedEvent()
-     : ServerDatagramEvent(), _start_time(Time::null()), _end_time(Time::null())
-    {}
-
-    virtual Time begin_time() const {
-        return _start_time;
-    }
-    virtual Time end_time() const {
-        return _end_time;
-    }
-
-    Time _start_time;
-    Time _end_time;
 };
 
 
@@ -196,6 +136,10 @@ typedef PBJEvent<Trace::Migration::RoundTrip> MigrationRoundTripEvent;
 //Ping
 typedef PBJEvent<Trace::Ping::Created> PingCreatedEvent;
 typedef PBJEvent<Trace::Ping::Sent> PingEvent;
+//Ping
+typedef PBJEvent<Trace::Datagram::Queued> DatagramQueuedEvent;
+typedef PBJEvent<Trace::Datagram::Sent> DatagramSentEvent;
+typedef PBJEvent<Trace::Datagram::Received> DatagramReceivedEvent;
 
 }
 

@@ -825,6 +825,7 @@ SET(TRACE_OBJECT_PROTOCOLS
   OSegTrace.pbj
   MigrationTrace.pbj
   PingTrace.pbj
+  DatagramTrace.pbj
 )
 # protocol targets
 ADD_PBJ_TARGET(

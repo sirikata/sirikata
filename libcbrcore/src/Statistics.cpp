@@ -105,27 +105,23 @@ namespace Trace {
 
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogCSeg;
-OptionValue* Trace::mLogDatagram;
 OptionValue* Trace::mLogPacket;
 OptionValue* Trace::mLogMessage;
 
 #define TRACE_LOCPROX_NAME                  "trace-locprox"
 #define TRACE_CSEG_NAME                     "trace-cseg"
-#define TRACE_DATAGRAM_NAME                 "trace-datagram"
 #define TRACE_PACKET_NAME                   "trace-packet"
 #define TRACE_MESSAGE_NAME                  "trace-message"
 
 void Trace::InitOptions() {
     mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogCSeg = new OptionValue(TRACE_CSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogPacket = new OptionValue(TRACE_PACKET_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogMessage = new OptionValue(TRACE_MESSAGE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(mLogLocProx)
         .addOption(mLogCSeg)
-        .addOption(mLogDatagram)
         .addOption(mLogPacket)
         .addOption(mLogMessage)
         ;
@@ -263,50 +259,6 @@ CREATE_TRACE_DEF(Trace, serverObjectEvent, mLogLocProx, const Time& t, const Ser
         BatchedBuffer::IOVec(&loc, sizeof(loc)),
     };
     writeRecord(ServerObjectEventTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, serverDatagramQueued, mLogDatagram, const Time& t, const ServerID& dest, uint64 id, uint32 size) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 4;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&t, sizeof(t)),
-        BatchedBuffer::IOVec(&dest, sizeof(dest)),
-        BatchedBuffer::IOVec(&id, sizeof(id)),
-        BatchedBuffer::IOVec(&size, sizeof(size)),
-    };
-    writeRecord(ServerDatagramQueuedTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, serverDatagramSent, mLogDatagram, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 7;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
-        BatchedBuffer::IOVec(&dest, sizeof(dest)),
-        BatchedBuffer::IOVec(&id, sizeof(id)),
-        BatchedBuffer::IOVec(&size, sizeof(size)),
-        BatchedBuffer::IOVec(&weight, sizeof(weight)),
-        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
-        BatchedBuffer::IOVec(&end_time, sizeof(end_time)),
-    };
-    writeRecord(ServerDatagramSentTag, data_vec, num_data);
-}
-
-CREATE_TRACE_DEF(Trace, serverDatagramReceived, mLogDatagram, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
-    if (mShuttingDown) return;
-
-    const uint32 num_data = 6;
-    BatchedBuffer::IOVec data_vec[num_data] = {
-        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
-        BatchedBuffer::IOVec(&src, sizeof(src)),
-        BatchedBuffer::IOVec(&id, sizeof(id)),
-        BatchedBuffer::IOVec(&size, sizeof(size)),
-        BatchedBuffer::IOVec(&start_time, sizeof(start_time)),
-        BatchedBuffer::IOVec(&end_time, sizeof(end_time)),
-    };
-    writeRecord(ServerDatagramReceivedTag, data_vec, num_data);
 }
 
 CREATE_TRACE_DEF(Trace, segmentationChanged, mLogCSeg, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){

@@ -115,14 +115,9 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt=pevt;
           }
     else if (type_hint == ServerDatagramQueuedTag) {
-              ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
-              record_is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
-              pqevt->source = trace_server_id;
-              record_is.read( (char*)&pqevt->dest, sizeof(pqevt->dest) );
-              record_is.read( (char*)&pqevt->id, sizeof(pqevt->id) );
-              record_is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
-              evt = pqevt;
-          }
+        PARSE_PBJ_RECORD(Trace::Datagram::Queued);
+        pevt->data.set_source_server(trace_server_id);
+    }
     else if (type_hint == OSegCumulativeTraceAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::CumulativeResponse);
     }
@@ -135,28 +130,13 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           evt = craqProcEvt;
         }
     else if (type_hint == ServerDatagramSentTag) {
-              ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
-              record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
-              psevt->source = trace_server_id;
-              record_is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
-              record_is.read( (char*)&psevt->id, sizeof(psevt->id) );
-              record_is.read( (char*)&psevt->size, sizeof(psevt->size) );
-              record_is.read( (char*)&psevt->weight, sizeof(psevt->weight) );
-              record_is.read( (char*)&psevt->_start_time, sizeof(psevt->_start_time) );
-              record_is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
-              evt = psevt;
-          }
+        PARSE_PBJ_RECORD(Trace::Datagram::Sent);
+        pevt->data.set_source_server(trace_server_id);
+    }
     else if (type_hint == ServerDatagramReceivedTag) {
-              ServerDatagramReceivedEvent* prevt = new ServerDatagramReceivedEvent;
-              record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
-              record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
-              prevt->dest = trace_server_id;
-              record_is.read( (char*)&prevt->id, sizeof(prevt->id) );
-              record_is.read( (char*)&prevt->size, sizeof(prevt->size) );
-              record_is.read( (char*)&prevt->_start_time, sizeof(prevt->_start_time) );
-              record_is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
-              evt = prevt;
-          }
+        PARSE_PBJ_RECORD(Trace::Datagram::Received);
+        pevt->data.set_dest_server(trace_server_id);
+    }
     else if (type_hint == MigrationBeginTag) {
         PARSE_PBJ_RECORD(Trace::Migration::Begin);
     }
@@ -250,7 +230,7 @@ private:
     bool currentMatches() {
         EventType* event = dynamic_cast<EventType*>(*mRangeCurrent);
         if (event == NULL) return false;
-        if (event->source != mSender || event->dest != mReceiver) return false;
+        if (event->data.source_server() != mSender || event->data.dest_server() != mReceiver) return false;
         return true;
     }
 
@@ -540,10 +520,10 @@ void insert_event(EventType* evt, EventListMapType& lists) {
     assert(evt != NULL);
 
     // put it in the source queue
-    typename EventListMapType::iterator source_it = lists.find( evt->source );
+    typename EventListMapType::iterator source_it = lists.find( evt->data.source_server() );
     if (source_it == lists.end()) {
-        lists[ evt->source ] = new EventListType;
-        source_it = lists.find( evt->source );
+        lists[ evt->data.source_server() ] = new EventListType;
+        source_it = lists.find( evt->data.source_server() );
     }
     assert( source_it != lists.end() );
 
@@ -551,10 +531,10 @@ void insert_event(EventType* evt, EventListMapType& lists) {
     evt_list->push_back(evt);
 
     // put it in the dest queue
-    typename EventListMapType::iterator dest_it = lists.find( evt->dest );
+    typename EventListMapType::iterator dest_it = lists.find( evt->data.dest_server() );
     if (dest_it == lists.end()) {
-        lists[ evt->dest ] = new EventListType;
-        dest_it = lists.find( evt->dest );
+        lists[ evt->data.dest_server() ] = new EventListType;
+        dest_it = lists.find( evt->data.dest_server() );
     }
     assert( dest_it != lists.end() );
 
@@ -580,16 +560,20 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
 
             bool used = false;
 
-            ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
-            if (datagram_evt != NULL) {
+            DatagramQueuedEvent* datagram_queued_evt = dynamic_cast<DatagramQueuedEvent*>(evt);
+            DatagramSentEvent* datagram_sent_evt = dynamic_cast<DatagramSentEvent*>(evt);
+            DatagramReceivedEvent* datagram_received_evt = dynamic_cast<DatagramReceivedEvent*>(evt);
+            if (datagram_queued_evt != NULL) {
                 used = true;
-                insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
+                insert_event<DatagramQueuedEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_queued_evt, mDatagramEventLists);
             }
-
-            ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
-            if (datagram_qi_evt != NULL) {
+            else if (datagram_sent_evt != NULL) {
                 used = true;
-                insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
+                insert_event<DatagramSentEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_sent_evt, mDatagramEventLists);
+            }
+            else if (datagram_received_evt != NULL) {
+                used = true;
+                insert_event<DatagramReceivedEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_received_evt, mDatagramEventLists);
             }
 
             if (!used) delete evt;
@@ -598,8 +582,6 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
 
     // Sort all lists of events by time
     sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
-
-    sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
 }
 
 BandwidthAnalysis::~BandwidthAnalysis() {
@@ -609,7 +591,12 @@ BandwidthAnalysis::~BandwidthAnalysis() {
         for(DatagramEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
             // each event is put in both the source and the dest server event lists,
             // to avoid double deleting, only delete if this is the event's source list
-            if ((*events_it)->source == server_id)
+            DatagramQueuedEvent* datagram_queued_evt = dynamic_cast<DatagramQueuedEvent*>(*events_it);
+            DatagramSentEvent* datagram_sent_evt = dynamic_cast<DatagramSentEvent*>(*events_it);
+            DatagramReceivedEvent* datagram_received_evt = dynamic_cast<DatagramReceivedEvent*>(*events_it);
+            if ((datagram_queued_evt != NULL && datagram_queued_evt->data.source_server() == server_id) ||
+                (datagram_sent_evt != NULL && datagram_sent_evt->data.source_server() == server_id) ||
+                (datagram_received_evt != NULL && datagram_received_evt->data.source_server() == server_id))
                 delete *events_it;
         }
     }
@@ -623,27 +610,12 @@ const BandwidthAnalysis::DatagramEventList* BandwidthAnalysis::getDatagramEventL
 }
 
 
-const BandwidthAnalysis::DatagramQueueInfoEventList* BandwidthAnalysis::getDatagramQueueInfoEventList(const ServerID& server) const {
-    ServerDatagramQueueInfoEventListMap::const_iterator event_lists_it = mDatagramQueueInfoEventLists.find(server);
-    if (event_lists_it == mDatagramQueueInfoEventLists.end()) return &mEmptyDatagramQueueInfoEventList;
-
-    return event_lists_it->second;
-}
-
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramBegin(const ServerID& server) const {
     return getDatagramEventList(server)->begin();
 }
 
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramEnd(const ServerID& server) const {
     return getDatagramEventList(server)->end();
-}
-
-BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoBegin(const ServerID& server) const {
-    return getDatagramQueueInfoEventList(server)->begin();
-}
-
-BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoEnd(const ServerID& server) const {
-    return getDatagramQueueInfoEventList(server)->end();
 }
 
 
@@ -657,7 +629,7 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
     for(EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end); event_it.current() != NULL; event_it.next() ) {
         EventType* p_evt = event_it.current();
 
-        total_bytes += p_evt->size;
+        total_bytes += p_evt->data.size();
 
         if (p_evt->time != last_time) {
             double bandwidth = (double)last_bytes / last_duration.toSeconds();
@@ -669,7 +641,7 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
             last_time = p_evt->time;
         }
 
-        last_bytes += p_evt->size;
+        last_bytes += p_evt->data.size();
     }
 
     printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
@@ -682,7 +654,7 @@ void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& 
 	return;
     }
 
-    computeRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
+    computeRate<DatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
@@ -691,7 +663,7 @@ void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerI
 	return;
     }
 
-    computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
+    computeRate<DatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
 
 // note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
@@ -712,15 +684,15 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         while(true) {
             EventType* evt = event_it.current();
             if (evt == NULL) break;
-            if (evt->end_time() > window_end) {
-                if (evt->begin_time() + window < window_end) {
-                    double packet_frac = (window_end - evt->begin_time()).toSeconds() / (evt->end_time() - evt->begin_time()).toSeconds();
-                    last_packet_partial_size = evt->size * packet_frac;
+            if (evt->data.end_time() > window_end) {
+                if (evt->data.start_time() + window < window_end) {
+                    double packet_frac = (window_end - evt->data.start_time()).toSeconds() / (evt->data.end_time() - evt->data.start_time()).toSeconds();
+                    last_packet_partial_size = evt->data.size() * packet_frac;
                 }
                 break;
             }
-            bytes += evt->size;
-            total_bytes += evt->size;
+            bytes += evt->data.size();
+            total_bytes += evt->data.size();
             window_events.push(evt);
             event_it.next();
         }
@@ -730,15 +702,15 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         uint32 first_packet_partial_size = 0;
         while(!window_events.empty()) {
             EventType* pevt = window_events.front();
-            if (pevt->begin_time() + window >= window_end) break;
+            if (pevt->data.start_time() + window >= window_end) break;
 
-            bytes -= pevt->size;
+            bytes -= pevt->data.size();
             window_events.pop();
 
-            if (pevt->end_time() + window >= window_end) {
+            if (pevt->data.end_time() + window >= window_end) {
                 // note the order of the numerator is important to avoid underflow
-                double packet_frac = (pevt->end_time() + window - window_end).toSeconds() / (pevt->end_time() - pevt->begin_time()).toSeconds();
-                first_packet_partial_size = pevt->size * packet_frac;
+                double packet_frac = (pevt->data.end_time() + window - window_end).toSeconds() / (pevt->data.end_time() - pevt->data.start_time()).toSeconds();
+                first_packet_partial_size = pevt->data.size() * packet_frac;
                 break;
             }
         }
@@ -781,9 +753,9 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
             {
               EventType* p_evt = event_it.current();
 
-              total_bytes += p_evt->size;
+              total_bytes += p_evt->data.size();
 
-              weight = p_evt->weight;
+              weight = p_evt->data.weight();
 
 
             }
@@ -804,138 +776,16 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
 
 
 void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
+    computeWindowedRate<DatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
 }
 
 void BandwidthAnalysis::computeWindowedDatagramReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
+    computeWindowedRate<DatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
 }
 
 void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
-  computeJFI<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, sender);
+  computeJFI<DatagramSentEvent, DatagramEventList::const_iterator>(sender, sender);
 }
-
-
-template<typename EventType, typename EventIteratorType>
-void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
-    EventType* q_evt = NULL;
-    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
-
-    while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << (q_evt->time-Time::null()).toMilliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << " " << q_evt->receive_size << " " << q_evt->receive_queued << " " << q_evt->receive_weight << std::endl;
-        event_it.next();
-    }
-    //summary_out << std::endl;
-}
-
-template<typename EventType, typename EventIteratorType>
-void dumpQueueInfoSend(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
-    EventType* q_evt = NULL;
-    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
-
-    while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << (q_evt->time-Time::null()).toMilliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << std::endl;
-        event_it.next();
-    }
-    //summary_out << std::endl;
-}
-
-void BandwidthAnalysis::dumpDatagramQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
-    dumpQueueInfoSend<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
-}
-
-
-// note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
-template<typename EventType, typename EventIteratorType, typename ValueFunctor>
-void windowedQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const ValueFunctor& value_func, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out, bool swap_sender_receiver) {
-    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
-    std::queue<EventType*> window_events;
-
-    uint64 window_queued_bytes = 0;
-    float window_weight = 0.f;
-
-    for(Time window_center = start_time; window_center < end_time; window_center += sample_rate) {
-        Time window_end = window_center + window / 2.f;
-
-        // add in any new packets that now fit in the window
-        while(true) {
-            EventType* evt = event_it.current();
-            if (evt == NULL) break;
-            if (evt->end_time() > window_end)
-                break;
-            window_queued_bytes += value_func.queued(evt);
-            window_weight += value_func.weight(evt);
-            window_events.push(evt);
-            event_it.next();
-        }
-
-        // subtract out any packets that have fallen out of the window
-        // note we use event_time + window < window_end because subtracting could underflow the time
-        while(!window_events.empty()) {
-            EventType* pevt = window_events.front();
-            if (pevt->begin_time() + window >= window_end) break;
-
-            window_queued_bytes -= value_func.queued(pevt);
-            window_weight -= value_func.weight(pevt);
-            window_events.pop();
-        }
-
-        // finally compute the current values
-        uint64 window_queued_avg = (window_events.size() == 0) ? 0 : window_queued_bytes / window_events.size();
-        float window_weight_avg = (window_events.size() == 0) ? 0 : window_weight / window_events.size();
-
-        // optionally swap order for sake of graphing code, generally will be used when collecting stats for "receiver" side
-        if (swap_sender_receiver)
-            detail_out << receiver << " " << sender << " ";
-        else
-            detail_out << sender << " " << receiver << " ";
-        detail_out << (window_center-Time::null()).toMilliseconds() << " " << window_queued_avg << " " << window_weight_avg << std::endl;
-    }
-
-    // FIXME we should probably output *something* for summary_out
-}
-
-
-template<typename EventType>
-struct SendQueueFunctor {
-    uint32 size(const EventType* evt) const {
-        return evt->send_size;
-    }
-    uint32 queued(const EventType* evt) const {
-        return evt->send_queued;
-    }
-    float weight(const EventType* evt) const {
-        return evt->send_weight;
-    }
-};
-
-template<typename EventType>
-struct ReceiveQueueFunctor {
-    uint32 size(const EventType* evt) const {
-        return evt->receive_size;
-    }
-    uint32 queued(const EventType* evt) const {
-        return evt->receive_queued;
-    }
-    float weight(const EventType* evt) const {
-        return evt->receive_weight;
-    }
-};
-
-
-void BandwidthAnalysis::windowedDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    windowedQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator, SendQueueFunctor<ServerDatagramQueueInfoEvent> >(
-        sender, receiver,
-        datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender),
-        SendQueueFunctor<ServerDatagramQueueInfoEvent>(),
-        window, sample_rate, start_time, end_time,
-        summary_out, detail_out,
-        false
-    );
-}
-
-
-
 
 
 
@@ -948,24 +798,24 @@ LatencyAnalysis::PacketData::PacketData()
     mSize=0;
     mId=0;
 }
-void LatencyAnalysis::PacketData::addPacketSentEvent(ServerDatagramQueuedEvent*sde) {
-    mSize=sde->size;
-    mId=sde->id;
-    source=sde->source;
-    dest=sde->dest;
-    if (_send_start_time==Time::null()||_send_start_time>=sde->begin_time()) {
+void LatencyAnalysis::PacketData::addPacketSentEvent(DatagramQueuedEvent*sde) {
+    mSize=sde->data.size();
+    mId=sde->data.uid();
+    source=sde->data.source_server();
+    dest=sde->data.dest_server();
+    if (_send_start_time==Time::null()||_send_start_time>=sde->time) {
         _send_start_time=sde->time;
         _send_end_time=sde->time;
     }
 }
-void LatencyAnalysis::PacketData::addPacketReceivedEvent(ServerDatagramReceivedEvent*sde) {
-    mSize=sde->size;
-    mId=sde->id;
-    source=sde->source;
-    dest=sde->dest;
-    if (_receive_end_time==Time::null()||_receive_end_time<=sde->end_time()) {
-        _receive_start_time=sde->begin_time();
-        _receive_end_time=sde->end_time();
+void LatencyAnalysis::PacketData::addPacketReceivedEvent(DatagramReceivedEvent*sde) {
+    mSize=sde->data.size();
+    mId=sde->data.uid();
+    source=sde->data.source_server();
+    dest=sde->data.dest_server();
+    if (_receive_end_time==Time::null()||_receive_end_time<=sde->data.end_time()) {
+        _receive_start_time=sde->data.start_time();
+        _receive_end_time=sde->data.end_time();
     }
 }
 
@@ -987,20 +837,16 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
 
 
             {
-                ServerDatagramReceivedEvent* datagram_evt = dynamic_cast<ServerDatagramReceivedEvent*>(evt);
+                DatagramReceivedEvent* datagram_evt = dynamic_cast<DatagramReceivedEvent*>(evt);
                 if (datagram_evt != NULL) {
-                    packetFlow[datagram_evt->id].addPacketReceivedEvent(datagram_evt);
+                    packetFlow[datagram_evt->data.uid()].addPacketReceivedEvent(datagram_evt);
                 }
             }
             {
-                ServerDatagramQueuedEvent* datagram_evt = dynamic_cast<ServerDatagramQueuedEvent*>(evt);
+                DatagramQueuedEvent* datagram_evt = dynamic_cast<DatagramQueuedEvent*>(evt);
                 if (datagram_evt != NULL) {
-                    packetFlow[datagram_evt->id].addPacketSentEvent(datagram_evt);
+                    packetFlow[datagram_evt->data.uid()].addPacketSentEvent(datagram_evt);
                 }
-            }
-            ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
-            if (datagram_qi_evt != NULL) {
-                //insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
             }
 
             delete evt;

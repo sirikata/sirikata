@@ -592,7 +592,7 @@ Message* Forwarder::serverMessagePull(ServerID dest) {
     if (next_msg == NULL)
         return NULL;
 
-    CONTEXT_TRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+    CONTEXT_SPACETRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
 
     return next_msg;
 }

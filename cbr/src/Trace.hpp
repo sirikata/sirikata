@@ -61,13 +61,17 @@ public:
     CREATE_TRACE_DECL(objectAcknowledgeMigrate, const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
     CREATE_TRACE_DECL(objectMigrationRoundTrip, const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, const Duration& round_trip);
 
-
+    // Datagram
+    CREATE_TRACE_DECL(serverDatagramQueued, const Time& t, const ServerID& dest, uint64 id, uint32 size);
+    CREATE_TRACE_DECL(serverDatagramSent, const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
+    CREATE_TRACE_DECL(serverDatagramReceived, const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
 private:
     Trace::Trace* mTrace;
     static OptionValue* mLogOSeg;
     static OptionValue* mLogOSegCumulative;
     static OptionValue* mLogMigration;
+    static OptionValue* mLogDatagram;
 };
 
 // This version of the SPACETRACE macro automatically uses mContext->trace() and
