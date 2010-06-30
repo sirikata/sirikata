@@ -117,14 +117,6 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
     else if (type_hint == OSegCumulativeTraceAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::CumulativeResponse);
     }
-    else if (type_hint == OSegCraqProcessTag) {
-          OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
-          record_is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
-          record_is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
-          record_is.read((char*)&craqProcEvt->numProcessed, sizeof(craqProcEvt->numProcessed));
-          record_is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
-          evt = craqProcEvt;
-        }
     else if (type_hint == ServerDatagramSentTag) {
         PARSE_PBJ_RECORD(Trace::Datagram::Sent);
         pevt->data.set_source_server(trace_server_id);
@@ -2687,105 +2679,6 @@ void OSegCumulativeTraceAnalysis::generateRunTime()
     toPush =(uint64) ((allTraces[s]->time - Time::null()).toMicroseconds() - mInitialTime);
     mCumData[s]->runTime = toPush;
   }
-}
-
-
-
-OSegProcessCraqReturnAnalysis::OSegProcessCraqReturnAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds)
-  : mInitialTime (0)
-{
-  for(uint32 server_id = 1; server_id <= nservers; server_id++)
-  {
-    String loc_file = GetPerServerFile(opt_name, server_id);
-    std::ifstream is(loc_file.c_str(), std::ios::in);
-
-    while(is)
-    {
-      uint16 type_hint;
-      std::string raw_evt;
-      read_record(is, &type_hint, &raw_evt);
-      Event* evt = Event::parse(type_hint, raw_evt, server_id);
-
-      if (evt == NULL)
-        break;
-
-      OSegCraqProcEvent* oseg_craq_proc_evt = dynamic_cast<OSegCraqProcEvent*> (evt);
-      if (oseg_craq_proc_evt != NULL)
-      {
-        if (allProcEvts.size() == 0)
-          mInitialTime = (oseg_craq_proc_evt->time - Time::null()).toMicroseconds();
-        else if (mInitialTime > (uint64) (oseg_craq_proc_evt->time - Time::null()).toMicroseconds())
-          mInitialTime = (oseg_craq_proc_evt->time - Time::null()).toMicroseconds();
-
-        allProcEvts.push_back(oseg_craq_proc_evt);
-        continue;
-      }
-      delete evt;
-    }
-  }
-
-  filterTimeAfter(time_after_seconds*OSEG_CRAQ_PROCESS_RETURN_ANALYSIS_ECONDS_TO_MICROSECONDS);
-}
-
-
-
-OSegProcessCraqReturnAnalysis::~OSegProcessCraqReturnAnalysis()
-{
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    delete allProcEvts[s];
-  }
-  allProcEvts.clear();
-}
-
-void OSegProcessCraqReturnAnalysis::filterTimeAfter(uint64 time_after_microseconds)
-{
-  std::vector<OSegCraqProcEvent*>::iterator cpIt = allProcEvts.begin();
-
-  while(cpIt != allProcEvts.end())
-  {
-    if (((*cpIt)->time -Time::null()).toMicroseconds()- mInitialTime < time_after_microseconds)
-    {
-      delete (*cpIt);
-      cpIt = allProcEvts.erase(cpIt);
-    }
-    else
-      ++cpIt;
-  }
-}
-
-void OSegProcessCraqReturnAnalysis::printData(std::ostream &fileOut)
-{
-  sortAllEvents();
-  for (int s=0;s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut <<  allProcEvts[s]->timeItTook.toMicroseconds() << "\t";
-  }
-
-  fileOut <<"\n";
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut << allProcEvts[s]->numProcessed << "\t";
-  }
-
-  fileOut <<"\n";
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut << allProcEvts[s]->sizeIncomingString << "\t";
-  }
-
-  fileOut <<"\n";
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut << (allProcEvts[s]->time - Time::null()).toMilliseconds() << "\t";
-  }
-
-  fileOut <<"\n\n\n";
-}
-
-void OSegProcessCraqReturnAnalysis::sortAllEvents()
-{
-  std::sort(allProcEvts.begin(), allProcEvts.end(), OSegProcessCraqComparator());
 }
 
 

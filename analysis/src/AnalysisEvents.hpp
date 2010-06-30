@@ -40,6 +40,8 @@
 #include "CBR_MigrationTrace.pbj.hpp"
 #include "CBR_PingTrace.pbj.hpp"
 #include "CBR_DatagramTrace.pbj.hpp"
+#include "CBR_CSegTrace.pbj.hpp"
+#include "CBR_LocProxTrace.pbj.hpp"
 
 namespace Sirikata {
 
@@ -87,35 +89,6 @@ struct MessageCreationTimestampEvent : public MessageTimestampEvent {
 };
 
 
-struct SegmentationChangeEvent : public Event {
-  BoundingBox3f bbox;
-  ServerID server;
-};
-
-
-struct ServerLocationEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    UUID object;
-    TimedMotionVector3f loc;
-};
-
-struct ServerObjectEventEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    UUID object;
-    bool added;
-    TimedMotionVector3f loc;
-};
-
-struct OSegCraqProcEvent : public Event
-{
-  Duration timeItTook;
-  uint32 numProcessed;
-  uint32 sizeIncomingString;
-};
-
-
 // Object
 typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
 typedef PBJEvent<Trace::Object::LocUpdate> LocationEvent;
@@ -136,11 +109,15 @@ typedef PBJEvent<Trace::Migration::RoundTrip> MigrationRoundTripEvent;
 //Ping
 typedef PBJEvent<Trace::Ping::Created> PingCreatedEvent;
 typedef PBJEvent<Trace::Ping::Sent> PingEvent;
-//Ping
+//Datagram
 typedef PBJEvent<Trace::Datagram::Queued> DatagramQueuedEvent;
 typedef PBJEvent<Trace::Datagram::Sent> DatagramSentEvent;
 typedef PBJEvent<Trace::Datagram::Received> DatagramReceivedEvent;
-
+//CSeg
+typedef PBJEvent<Trace::CSeg::SegmentationChanged> SegmentationChangedEvent;
+//LocProx
+typedef PBJEvent<Trace::LocProx::LocUpdate> ServerLocUpdateEvent;
+typedef PBJEvent<Trace::LocProx::ObjectEvent> ServerObjectLocUpdateEvent;
 }
 
 #endif

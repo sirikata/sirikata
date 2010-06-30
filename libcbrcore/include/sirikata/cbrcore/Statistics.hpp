@@ -145,7 +145,6 @@ struct Drops {
 #define OSegCacheResponseTag 23
 #define OSegLookupNotOnServerAnalysisTag 24
 #define OSegCumulativeTraceAnalysisTag   25
-#define OSegCraqProcessTag                 26
 #define MessageTimestampTag 30
 #define MessageCreationTimestampTag 31
 
