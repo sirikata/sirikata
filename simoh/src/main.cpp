@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/TimeSync.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
 
 #include "ObjectHost.hpp"
 #include "Object.hpp"
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOption(OPT_OH_PLUGINS)->as<String>() );
 
     std::string time_server=GetOption("time-server")->as<String>();
-    TimeSync sync;
+    NTPTimeSync sync;
     if (time_server.size() > 0)
         sync.start(time_server);
 

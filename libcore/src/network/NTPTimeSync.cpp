@@ -1,5 +1,5 @@
 /*  Sirikata
- *  TimeSync.cpp
+ *  NTPTimeSync.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/TimeSync.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
 #include <sirikata/core/util/Timer.hpp>
 
 #define STDIN 0
@@ -88,13 +88,13 @@ void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synce
 }
 #endif
 
-TimeSync::TimeSync()
+NTPTimeSync::NTPTimeSync()
  : mDone(false),
    mSyncThread(NULL)
 {
 }
 
-void TimeSync::start(const String& server) {
+void NTPTimeSync::start(const String& server) {
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 	// FIXME #92
 	mDone = true;
@@ -140,7 +140,7 @@ void TimeSync::start(const String& server) {
 #endif
 }
 
-void TimeSync::stop() {
+void NTPTimeSync::stop() {
     assert(mSyncThread != NULL);
     printf("Stopping sync and waiting for sync thread to exit...\n"); fflush(stdout);
     mDone = true;

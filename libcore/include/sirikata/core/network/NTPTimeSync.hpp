@@ -1,5 +1,5 @@
 /*  Sirikata
- *  TimeSync.hpp
+ *  NTPTimeSync.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -40,9 +40,9 @@
 namespace Sirikata {
 
 /** Handles synchronization with a central server. */
-class TimeSync {
+class SIRIKATA_EXPORT NTPTimeSync {
 public:
-    TimeSync();
+    NTPTimeSync();
 
     void start(const String& server);
     void stop();
@@ -53,7 +53,7 @@ private:
     int ntp_ctl_pipes[2]; // Control data from cbr -> sync.py
     int ntp_data_pipes[2]; // Offset data from sync.py -> cbr
     Thread* mSyncThread;
-}; // class TimeSync
+}; // class NTPTimeSync
 
 } // namespace Sirikata
 

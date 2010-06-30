@@ -1029,6 +1029,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/StreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
+        ${LIBCORE_SOURCE_DIR}/network/NTPTimeSync.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1271,7 +1272,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
   ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
 )
