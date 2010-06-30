@@ -1269,7 +1269,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
@@ -1336,6 +1335,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/ScenarioFactory.cpp
   ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp

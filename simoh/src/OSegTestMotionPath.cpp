@@ -31,7 +31,7 @@
  */
 
 
-#include <sirikata/cbrcore/OSegTestMotionPath.hpp>
+#include "OSegTestMotionPath.hpp"
 #include <sirikata/cbrcore/Random.hpp>
 
 #include <algorithm>

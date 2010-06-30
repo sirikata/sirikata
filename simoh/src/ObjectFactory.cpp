@@ -39,7 +39,7 @@
 #include <sirikata/cbrcore/RandomMotionPath.hpp>
 #include <sirikata/cbrcore/QuakeMotionPath.hpp>
 #include <sirikata/cbrcore/StaticMotionPath.hpp>
-#include <sirikata/cbrcore/OSegTestMotionPath.hpp>
+#include "OSegTestMotionPath.hpp"
 
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
