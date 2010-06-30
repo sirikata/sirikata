@@ -62,7 +62,7 @@ CREATE_TRACE_DEF(OHTrace, prox, mLogObject, const Time& t, const UUID& receiver,
     Sirikata::Trace::ITimedMotionVector pu_loc = pu.mutable_loc();
     fillTimedMotionVector(pu_loc, loc);
 
-    mTrace->writeRecord(Trace::ProximityTag, pu);
+    mTrace->writeRecord(ProximityTag, pu);
 }
 
 CREATE_TRACE_DEF(OHTrace, objectConnected, mLogObject, const Time& t, const UUID& source, const ServerID& sid) {
@@ -71,7 +71,7 @@ CREATE_TRACE_DEF(OHTrace, objectConnected, mLogObject, const Time& t, const UUID
     co.set_source(source);
     co.set_server(sid);
 
-    mTrace->writeRecord(Trace::ObjectConnectedTag, co);
+    mTrace->writeRecord(ObjectConnectedTag, co);
 }
 
 CREATE_TRACE_DEF(OHTrace, objectGenLoc, mLogObject, const Time& t, const UUID& source, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
@@ -82,7 +82,7 @@ CREATE_TRACE_DEF(OHTrace, objectGenLoc, mLogObject, const Time& t, const UUID& s
     fillTimedMotionVector(lu_loc, loc);
     lu.set_bounds(bnds);
 
-    mTrace->writeRecord(Trace::ObjectGeneratedLocationTag, lu);
+    mTrace->writeRecord(ObjectGeneratedLocationTag, lu);
 }
 
 CREATE_TRACE_DEF(OHTrace, objectLoc, mLogObject, const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
@@ -93,7 +93,7 @@ CREATE_TRACE_DEF(OHTrace, objectLoc, mLogObject, const Time& t, const UUID& rece
     Sirikata::Trace::ITimedMotionVector lu_loc = lu.mutable_loc();
     fillTimedMotionVector(lu_loc, loc);
 
-    mTrace->writeRecord(Trace::ObjectLocationTag, lu);
+    mTrace->writeRecord(ObjectLocationTag, lu);
 }
 
 } // namespace Sirikata

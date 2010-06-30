@@ -73,26 +73,26 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
     pevt->time = pevt->data.t();                                        \
     evt = pevt;
 
-    if (type_hint == Trace::SegmentationChangeTag) {
+    if (type_hint == SegmentationChangeTag) {
   	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
 	      record_is.read( (char*)&sevt->time, sizeof(sevt->time) );
 	      record_is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
 	      record_is.read( (char*)&sevt->server, sizeof(sevt->server) );
 	      evt = sevt;
     }
-    else if (type_hint == Trace::ProximityTag) {
+    else if (type_hint == ProximityTag) {
         PARSE_PBJ_RECORD(Trace::Object::ProxUpdate);
     }
-    else if (type_hint == Trace::ObjectConnectedTag) {
+    else if (type_hint == ObjectConnectedTag) {
         PARSE_PBJ_RECORD(Trace::Object::Connected);
     }
-    else if (type_hint == Trace::ObjectLocationTag) {
+    else if (type_hint == ObjectLocationTag) {
         PARSE_PBJ_RECORD(Trace::Object::LocUpdate);
     }
-    else if (type_hint == Trace::ObjectGeneratedLocationTag) {
+    else if (type_hint == ObjectGeneratedLocationTag) {
         PARSE_PBJ_RECORD(Trace::Object::GeneratedLoc);
     }
-    else if (type_hint == Trace::ObjectPingCreatedTag) {
+    else if (type_hint == ObjectPingCreatedTag) {
               PingCreatedEvent *pevt = new PingCreatedEvent;
               record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
               record_is.read((char*)&pevt->source, sizeof(pevt->source));
@@ -103,7 +103,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->size,sizeof(pevt->size));
               evt=pevt;
           }
-    else if (type_hint == Trace::ObjectPingTag) {
+    else if (type_hint == ObjectPingTag) {
               PingEvent *pevt = new PingEvent;
               record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
               record_is.read((char*)&pevt->source, sizeof(pevt->source));
@@ -115,7 +115,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->size,sizeof(pevt->size));
               evt=pevt;
           }
-    else if (type_hint == Trace::MessageCreationTimestampTag) {
+    else if (type_hint == MessageCreationTimestampTag) {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
               record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
@@ -124,14 +124,14 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
               evt=pevt;
           }
-    else if (type_hint == Trace::MessageTimestampTag) {
+    else if (type_hint == MessageTimestampTag) {
               MessageTimestampEvent *pevt = new MessageTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
               record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
               record_is.read((char*)&pevt->path, sizeof(pevt->path));
               evt=pevt;
           }
-    else if (type_hint == Trace::ServerDatagramQueuedTag) {
+    else if (type_hint == ServerDatagramQueuedTag) {
               ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
               record_is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
               pqevt->source = trace_server_id;
@@ -140,10 +140,10 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
               evt = pqevt;
           }
-    else if (type_hint == Trace::OSegCumulativeTraceAnalysisTag) {
+    else if (type_hint == OSegCumulativeTraceAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::CumulativeResponse);
     }
-    else if (type_hint == Trace::OSegCraqProcessTag) {
+    else if (type_hint == OSegCraqProcessTag) {
           OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
           record_is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
           record_is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
@@ -151,7 +151,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
           record_is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
           evt = craqProcEvt;
         }
-    else if (type_hint == Trace::ServerDatagramSentTag) {
+    else if (type_hint == ServerDatagramSentTag) {
               ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
               record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
               psevt->source = trace_server_id;
@@ -163,7 +163,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
               evt = psevt;
           }
-    else if (type_hint == Trace::ServerDatagramReceivedTag) {
+    else if (type_hint == ServerDatagramReceivedTag) {
               ServerDatagramReceivedEvent* prevt = new ServerDatagramReceivedEvent;
               record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
               record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
@@ -174,26 +174,26 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
               evt = prevt;
           }
-    else if (type_hint == Trace::MigrationBeginTag) {
+    else if (type_hint == MigrationBeginTag) {
         PARSE_PBJ_RECORD(Trace::Migration::Begin);
     }
-    else if (type_hint == Trace::MigrationAckTag) {
+    else if (type_hint == MigrationAckTag) {
         PARSE_PBJ_RECORD(Trace::Migration::Ack);
     }
-    else if (type_hint == Trace::MigrationRoundTripTag) {
+    else if (type_hint == MigrationRoundTripTag) {
         PARSE_PBJ_RECORD(Trace::Migration::RoundTrip);
     }
-    else if (type_hint == Trace::OSegTrackedSetResultAnalysisTag) {
+    else if (type_hint == OSegTrackedSetResultAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::TrackedSetResults);
     }
-    else if (type_hint == Trace::OSegCacheResponseTag) {
+    else if (type_hint == OSegCacheResponseTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::CacheResponse);
     }
-    else if (type_hint == Trace::OSegShutdownEventTag) {
+    else if (type_hint == OSegShutdownEventTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::Shutdown);
         pevt->data.set_server(trace_server_id);
     }
-    else if (type_hint == Trace::ServerLocationTag) {
+    else if (type_hint == ServerLocationTag) {
               ServerLocationEvent* levt = new ServerLocationEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
@@ -202,7 +202,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
-    else if (type_hint == Trace::ServerObjectEventTag) {
+    else if (type_hint == ServerObjectEventTag) {
               ServerObjectEventEvent* levt = new ServerObjectEventEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
               record_is.read( (char*)&levt->source, sizeof(levt->source) );
@@ -214,13 +214,13 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
               evt = levt;
           }
-    else if (type_hint == Trace::ObjectSegmentationCraqLookupRequestAnalysisTag) {
+    else if (type_hint == ObjectSegmentationCraqLookupRequestAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::CraqRequest);
     }
-    else if (type_hint == Trace::OSegLookupNotOnServerAnalysisTag) {
+    else if (type_hint == OSegLookupNotOnServerAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::InvalidLookup);
     }
-    else if (type_hint == Trace::ObjectSegmentationProcessedRequestAnalysisTag) {
+    else if (type_hint == ObjectSegmentationProcessedRequestAnalysisTag) {
         PARSE_PBJ_RECORD(Trace::OSeg::ProcessedRequest);
     }
       else {

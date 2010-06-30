@@ -103,36 +103,6 @@ void BatchedBuffer::store(FILE* os) {
 
 namespace Trace {
 
-const uint8 ProximityTag = 0;
-const uint8 ObjectLocationTag = 1;
-const uint8 ServerDatagramQueuedTag = 4;
-const uint8 ServerDatagramSentTag = 5;
-const uint8 ServerDatagramReceivedTag = 6;
-const uint8 SegmentationChangeTag = 10;
-
-const uint8 MigrationBeginTag = 11;
-const uint8 MigrationAckTag = 12;
-const uint8 MigrationRoundTripTag = 18;
-
-const uint8 ServerLocationTag = 13;
-const uint8 ServerObjectEventTag = 14;
-const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag = 15;
-const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
-const uint8 ObjectPingTag = 17;
-const uint8 ObjectPingCreatedTag = 32;
-
-const uint8 OSegTrackedSetResultAnalysisTag   = 19;
-const uint8 OSegShutdownEventTag              = 20;
-const uint8 ObjectGeneratedLocationTag = 22;
-const uint8 OSegCacheResponseTag = 23;
-const uint8 OSegLookupNotOnServerAnalysisTag = 24;
-const uint8 OSegCumulativeTraceAnalysisTag   = 25;
-const uint8 OSegCraqProcessTag                 = 26;
-const uint8 MessageTimestampTag = 30;
-const uint8 MessageCreationTimestampTag = 31;
-
-const uint8 ObjectConnectedTag = 33;
-
 OptionValue* Trace::mLogLocProx;
 OptionValue* Trace::mLogCSeg;
 OptionValue* Trace::mLogDatagram;

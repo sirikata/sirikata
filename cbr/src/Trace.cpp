@@ -65,7 +65,7 @@ CREATE_TRACE_DEF(SpaceTrace, objectSegmentationCraqLookupRequest, mLogOSeg, cons
     rec.set_object(obj_id);
     rec.set_server(sID_lookupTo);
 
-    mTrace->writeRecord(Trace::ObjectSegmentationCraqLookupRequestAnalysisTag, rec);
+    mTrace->writeRecord(ObjectSegmentationCraqLookupRequestAnalysisTag, rec);
 }
 
 CREATE_TRACE_DEF(SpaceTrace, objectSegmentationProcessedRequest, mLogOSeg, const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 objectsInQueue)
@@ -78,7 +78,7 @@ CREATE_TRACE_DEF(SpaceTrace, objectSegmentationProcessedRequest, mLogOSeg, const
     rec.set_dtime(sID);
     rec.set_queued(objectsInQueue);
 
-    mTrace->writeRecord(Trace::ObjectSegmentationProcessedRequestAnalysisTag, rec);
+    mTrace->writeRecord(ObjectSegmentationProcessedRequestAnalysisTag, rec);
 }
 
 
@@ -90,7 +90,7 @@ CREATE_TRACE_DEF(SpaceTrace, processOSegTrackedSetResults, mLogOSeg, const Time 
     rec.set_server(sID_migratingTo);
     rec.set_roundtrip(dur);
 
-    mTrace->writeRecord(Trace::OSegTrackedSetResultAnalysisTag, rec);
+    mTrace->writeRecord(OSegTrackedSetResultAnalysisTag, rec);
 }
 
 CREATE_TRACE_DEF(SpaceTrace, processOSegShutdownEvents, mLogOSeg, const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet)
@@ -113,7 +113,7 @@ CREATE_TRACE_DEF(SpaceTrace, processOSegShutdownEvents, mLogOSeg, const Time &t,
   rec.set_cache_eviction_elapsed(num_time_elapsed_cache_eviction);
   rec.set_outstanding_migrations(num_migration_not_complete_yet);
 
-  mTrace->writeRecord(Trace::OSegShutdownEventTag, rec);
+  mTrace->writeRecord(OSegShutdownEventTag, rec);
 }
 
 
@@ -126,7 +126,7 @@ CREATE_TRACE_DEF(SpaceTrace, osegCacheResponse, mLogOSeg, const Time &t, const S
     rec.set_server(sID);
     rec.set_object(obj_id);
 
-    mTrace->writeRecord(Trace::OSegCacheResponseTag, rec);
+    mTrace->writeRecord(OSegCacheResponseTag, rec);
 }
 
 
@@ -137,7 +137,7 @@ CREATE_TRACE_DEF(SpaceTrace, objectSegmentationLookupNotOnServerRequest, mLogOSe
     rec.set_server(sID_lookerupper);
     rec.set_object(obj_id);
 
-    mTrace->writeRecord(Trace::OSegLookupNotOnServerAnalysisTag, rec);
+    mTrace->writeRecord(OSegLookupNotOnServerAnalysisTag, rec);
 }
 
 
@@ -177,7 +177,7 @@ CREATE_TRACE_DEF(SpaceTrace, osegCumulativeResponse, mLogOSegCumulative, const T
     rec.set_lookup_return_begin(traceToken->lookupReturnBegin);
     rec.set_lookup_return_end(traceToken->lookupReturnEnd);
 
-    mTrace->writeRecord(Trace::OSegCumulativeTraceAnalysisTag, rec);
+    mTrace->writeRecord(OSegCumulativeTraceAnalysisTag, rec);
 }
 
 // Migration
@@ -189,7 +189,7 @@ CREATE_TRACE_DEF(SpaceTrace, objectBeginMigrate, mLogMigration, const Time& t, c
     begin.set_from(migrate_from);
     begin.set_toward(migrate_to);
 
-    mTrace->writeRecord(Trace::MigrationBeginTag, begin);
+    mTrace->writeRecord(MigrationBeginTag, begin);
 }
 
 CREATE_TRACE_DEF(SpaceTrace, objectAcknowledgeMigrate, mLogMigration, const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to) {
@@ -199,7 +199,7 @@ CREATE_TRACE_DEF(SpaceTrace, objectAcknowledgeMigrate, mLogMigration, const Time
     ack.set_from(acknowledge_to);
     ack.set_toward(acknowledge_from);
 
-    mTrace->writeRecord(Trace::MigrationAckTag, ack);
+    mTrace->writeRecord(MigrationAckTag, ack);
 }
 
 CREATE_TRACE_DEF(SpaceTrace, objectMigrationRoundTrip, mLogMigration, const Time& t, const UUID& obj_id, const ServerID &migrate_to, const ServerID& migrate_from, const Duration& round_trip)
@@ -211,7 +211,7 @@ CREATE_TRACE_DEF(SpaceTrace, objectMigrationRoundTrip, mLogMigration, const Time
     rt.set_toward(migrate_to);
     rt.set_roundtrip(round_trip);
 
-    mTrace->writeRecord(Trace::MigrationRoundTripTag, rt);
+    mTrace->writeRecord(MigrationRoundTripTag, rt);
 }
 
 

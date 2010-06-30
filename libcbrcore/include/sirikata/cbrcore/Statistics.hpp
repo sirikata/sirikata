@@ -121,34 +121,35 @@ struct Drops {
     std::ostream&output(std::ostream&output);
 };
 
-extern const uint8 ProximityTag;
-extern const uint8 ObjectLocationTag;
-extern const uint8 ServerDatagramQueuedTag;
-extern const uint8 ServerDatagramSentTag;
-extern const uint8 ServerDatagramReceivedTag;
-extern const uint8 SegmentationChangeTag;
+#define ProximityTag 0
+#define ObjectLocationTag 1
+#define ServerDatagramQueuedTag 4
+#define ServerDatagramSentTag 5
+#define ServerDatagramReceivedTag 6
+#define SegmentationChangeTag 10
 
-extern const uint8 MigrationBeginTag;
-extern const uint8 MigrationAckTag;
-extern const uint8 MigrationRoundTripTag;
+#define MigrationBeginTag 11
+#define MigrationAckTag 12
+#define MigrationRoundTripTag 18
 
-extern const uint8 ServerLocationTag;
-extern const uint8 ServerObjectEventTag;
-extern const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag;
-extern const uint8 ObjectSegmentationProcessedRequestAnalysisTag;
-extern const uint8 ObjectPingTag;
-extern const uint8 ObjectPingCreatedTag;
-extern const uint8 OSegTrackedSetResultAnalysisTag;
-extern const uint8 OSegShutdownEventTag;
-extern const uint8 ObjectGeneratedLocationTag;
-extern const uint8 OSegCacheResponseTag;
-extern const uint8 OSegLookupNotOnServerAnalysisTag;
-extern const uint8 OSegCumulativeTraceAnalysisTag;
-extern const uint8 OSegCraqProcessTag;
-extern const uint8 MessageTimestampTag;
-extern const uint8 MessageCreationTimestampTag;
+#define ServerLocationTag 13
+#define ServerObjectEventTag 14
+#define ObjectSegmentationCraqLookupRequestAnalysisTag 15
+#define ObjectSegmentationProcessedRequestAnalysisTag 16
+#define ObjectPingTag 17
+#define ObjectPingCreatedTag 32
 
-extern const uint8 ObjectConnectedTag;
+#define OSegTrackedSetResultAnalysisTag   19
+#define OSegShutdownEventTag              20
+#define ObjectGeneratedLocationTag 22
+#define OSegCacheResponseTag 23
+#define OSegLookupNotOnServerAnalysisTag 24
+#define OSegCumulativeTraceAnalysisTag   25
+#define OSegCraqProcessTag                 26
+#define MessageTimestampTag 30
+#define MessageCreationTimestampTag 31
+
+#define ObjectConnectedTag 33
 
 enum MessagePath {
     NONE, // Used when tag is needed but we don't have a name for it
