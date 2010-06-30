@@ -35,7 +35,9 @@
 #define __SIRIKATA_ANALYSIS_EVENTS_HPP__
 
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "CBR_Object.pbj.hpp"
+#include "CBR_OSegTrace.pbj.hpp"
+#include "CBR_MigrationTrace.pbj.hpp"
 
 namespace Sirikata {
 
@@ -185,40 +187,6 @@ struct SegmentationChangeEvent : public Event {
 };
 
 
-struct ObjectBeginMigrateEvent : public Event
-{
-  UUID mObjID;
-  ServerID mMigrateFrom, mMigrateTo;
-};
-
-struct ObjectAcknowledgeMigrateEvent : public Event
-{
-  UUID mObjID;
-  ServerID mAcknowledgeFrom, mAcknowledgeTo;
-};
-
-struct ObjectCraqLookupEvent: public Event
-{
-  UUID mObjID;
-  ServerID mID_lookup;
-};
-
-
-struct ObjectLookupNotOnServerEvent: public Event
-{
-  UUID mObjID;
-  ServerID mID_lookup;
-};
-
-struct ObjectLookupProcessedEvent: public Event
-{
-  UUID mObjID;
-  ServerID mID_processor, mID_objectOn;
-  uint32 deltaTime;
-  uint32 stillInQueue;
-};
-
-
 struct ServerLocationEvent : public Event {
     ServerID source;
     ServerID dest;
@@ -234,44 +202,6 @@ struct ServerObjectEventEvent : public Event {
     TimedMotionVector3f loc;
 };
 
-struct ObjectMigrationRoundTripEvent : public Event
-{
-  UUID obj_id;
-  ServerID sID_migratingFrom;
-  ServerID sID_migratingTo;
-  int numMill;
-};
-
-struct OSegTrackedSetResultsEvent : public Event
-{
-  UUID obj_id;
-  ServerID sID_migratingTo;
-  int numMill;
-};
-
-struct OSegShutdownEvent : public Event
-{
-  ServerID sID;
-  int numLookups;
-  int numOnThisServer;
-  int numCacheHits;
-  int numCraqLookups;
-  int numTimeElapsedCacheEviction;
-  int numMigrationNotCompleteYet;
-
-};
-
-struct OSegCacheResponseEvent : public Event
-{
-  ServerID cacheResponseID;
-  UUID obj_id;
-};
-
-struct OSegCumulativeEvent : public Event
-{
-  OSegLookupTraceToken traceToken;
-};
-
 struct OSegCraqProcEvent : public Event
 {
   Duration timeItTook;
@@ -279,6 +209,24 @@ struct OSegCraqProcEvent : public Event
   uint32 sizeIncomingString;
 };
 
+
+// Object
+typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
+typedef PBJEvent<Trace::Object::LocUpdate> LocationEvent;
+typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+typedef PBJEvent<Trace::Object::ProxUpdate> ProximityEvent;
+//OSeg
+typedef PBJEvent<Trace::OSeg::CraqRequest> OSegCraqRequestEvent;
+typedef PBJEvent<Trace::OSeg::ProcessedRequest> OSegProcessedRequestEvent;
+typedef PBJEvent<Trace::OSeg::TrackedSetResults> OSegTrackedSetResultsEvent;
+typedef PBJEvent<Trace::OSeg::Shutdown> OSegShutdownEvent;
+typedef PBJEvent<Trace::OSeg::CacheResponse> OSegCacheResponseEvent;
+typedef PBJEvent<Trace::OSeg::InvalidLookup> OSegInvalidLookupEvent;
+typedef PBJEvent<Trace::OSeg::CumulativeResponse> OSegCumulativeResponseEvent;
+//Migration
+typedef PBJEvent<Trace::Migration::Begin> MigrationBeginEvent;
+typedef PBJEvent<Trace::Migration::Ack> MigrationAckEvent;
+typedef PBJEvent<Trace::Migration::RoundTrip> MigrationRoundTripEvent;
 
 }
 

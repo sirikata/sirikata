@@ -822,6 +822,8 @@ SET(TRACE_PROTOCOLS_CORE
 )
 SET(TRACE_OBJECT_PROTOCOLS
   Object.pbj
+  OSegTrace.pbj
+  MigrationTrace.pbj
 )
 # protocol targets
 ADD_PBJ_TARGET(
@@ -1276,7 +1278,6 @@ SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
   ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/OSegLookupTraceToken.cpp
 )
 
 SET(CBR_SOURCES
@@ -1316,6 +1317,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${CBR_SOURCE_DIR}/Trace.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
   ${CBR_SOURCE_DIR}/SpaceContext.cpp

@@ -41,7 +41,7 @@
 
 #include "../../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "../../OSegLookupTraceToken.hpp"
 
 
 #ifndef __ASYNC_CRAQ_GET_CLASS_H__

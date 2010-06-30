@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "OSegLookupTraceToken.hpp"
 
 #include <iostream>
 #include <iomanip>

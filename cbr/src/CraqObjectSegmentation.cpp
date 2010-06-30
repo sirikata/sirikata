@@ -56,7 +56,6 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <boost/thread/mutex.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
@@ -178,7 +177,7 @@ namespace Sirikata
 
 
 
-    CONTEXT_TRACE(processOSegShutdownEvents,
+    CONTEXT_SPACETRACE(processOSegShutdownEvents,
         mContext->id(),
         numLookups,
         numOnThisServer,
@@ -385,7 +384,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     }
 
     //log the request.
-    CONTEXT_TRACE(objectSegmentationLookupNotOnServerRequest,
+    CONTEXT_SPACETRACE(objectSegmentationLookupNotOnServerRequest,
         obj_id,
         mContext->id());
 
@@ -403,7 +402,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     CraqEntry cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
-        CONTEXT_TRACE(osegCacheResponse,
+        CONTEXT_SPACETRACE(osegCacheResponse,
             cacheReturn.server(),
             obj_id);
 
@@ -463,7 +462,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
       //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
-      CONTEXT_TRACE(objectSegmentationCraqLookupRequest,
+      CONTEXT_SPACETRACE(objectSegmentationCraqLookupRequest,
           obj_id,
           mContext->id());
 
@@ -490,7 +489,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
       ++numAlreadyLookingUp;
       Duration endCraqDur  = Time::local() - Time::epoch();
       traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
-      CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+      CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
       delete traceToken;
     }
   }
@@ -573,7 +572,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       return;
 
     //log the message.
-    CONTEXT_TRACE(objectBeginMigrate,
+    CONTEXT_SPACETRACE(objectBeginMigrate,
         obj_id,mContext->id(),
         new_server_id.server());
 
@@ -619,7 +618,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     }
 
     if (traceToken != NULL) {
-        CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+        CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
         delete traceToken;
     }
 
@@ -711,7 +710,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
 
 
       //log reception of acknowled message
-      CONTEXT_TRACE(objectAcknowledgeMigrate,
+      CONTEXT_SPACETRACE(objectAcknowledgeMigrate,
                     obj_id,serv_from.server(),
                     mContext->id());
     }
@@ -862,7 +861,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       //log message stating that object was processed.
       Duration timerDur = Time::local() - Time::epoch();
 
-      CONTEXT_TRACE(objectSegmentationProcessedRequest,
+      CONTEXT_SPACETRACE(objectSegmentationProcessedRequest,
           tmper,
           cor->servID.server(),
           mContext->id(),
@@ -964,12 +963,12 @@ void CraqObjectSegmentation::trySendMigAcks() {
       //      Duration procTrackedSetRes = mTimer.elapsed();
       Duration procTrackedSetRes = Time::local() - Time::epoch();
 
-      int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
+      Duration dur = procTrackedSetRes - trackingMessages[trackedSetResult->trackedMessage].dur;
 
-      CONTEXT_TRACE(processOSegTrackedSetResults,
+      CONTEXT_SPACETRACE(processOSegTrackedSetResults,
           obj_id,
           mContext->id(),
-          durMs);
+          dur);
 
       //send an acknowledge message to space server that formerly hosted object.
       Message* to_send = new Message(

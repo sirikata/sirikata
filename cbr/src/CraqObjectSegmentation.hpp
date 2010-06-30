@@ -47,7 +47,7 @@
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
 
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "OSegLookupTraceToken.hpp"
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>

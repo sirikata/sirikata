@@ -36,6 +36,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/cbrcore/VWTypes.hpp>
 #include <sirikata/core/util/UUID.hpp>
+#include "Trace.hpp"
 
 namespace Sirikata {
 
@@ -95,6 +96,7 @@ public:
       return boost::shared_ptr<Stream<UUID> >();
     }
 
+    SpaceTrace* spacetrace() const { return mSpaceTrace; }
 private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
@@ -110,6 +112,8 @@ private:
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
     std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
+
+    SpaceTrace* mSpaceTrace;
 }; // class SpaceContext
 
 } // namespace Sirikata

@@ -41,7 +41,6 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 
 namespace Sirikata
 {

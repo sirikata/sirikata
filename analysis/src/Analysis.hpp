@@ -35,10 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/cbrcore/MotionVector.hpp>
-#include "AnalysisEvents.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
-
 #include "CBR_Geometry.pbj.hpp"
+#include "AnalysisEvents.hpp"
 
 namespace Sirikata {
 
@@ -186,9 +184,9 @@ private:
   std::vector<ServerID> objectAcknowledgeAcknowledgeFrom;
   std::vector<ServerID> objectAcknowledgeAcknowledgeTo;
 
-  static bool compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B);
-  static bool compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B);
-  void convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents);
+  static bool compareObjectBeginMigrateEvts(MigrationBeginEvent A, MigrationBeginEvent B);
+  static bool compareObjectAcknowledgeMigrateEvts(MigrationAckEvent A, MigrationAckEvent B);
+  void convertToEvtsAndSort(std::vector<MigrationBeginEvent> &sortedBeginMigrateEvents, std::vector<MigrationAckEvent> &sortedAcknowledgeMigrateEvents);
 
 public:
   ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers);
@@ -208,8 +206,8 @@ private:
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_lookup;
 
-  void convertToEvtsAndSort(std::vector<ObjectCraqLookupEvent>&);
-  static bool compareEvts(ObjectCraqLookupEvent A, ObjectCraqLookupEvent B);
+  void convertToEvtsAndSort(std::vector<OSegCraqRequestEvent>&);
+  static bool compareEvts(OSegCraqRequestEvent A, OSegCraqRequestEvent B);
 
 public:
   ObjectSegmentationCraqLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
@@ -226,8 +224,8 @@ private:
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_lookup;
 
-  void convertToEvtsAndSort(std::vector<ObjectLookupNotOnServerEvent>&);
-  static bool compareEvts(ObjectLookupNotOnServerEvent A, ObjectLookupNotOnServerEvent B);
+  void convertToEvtsAndSort(std::vector<OSegInvalidLookupEvent>&);
+  static bool compareEvts(OSegInvalidLookupEvent A, OSegInvalidLookupEvent B);
 
 public:
   ObjectSegmentationLookupNotOnServerRequestsAnalysis(const char* opt_name, const uint32 nservers);
@@ -247,8 +245,8 @@ private:
   std::vector<uint32> dTimes;
   std::vector<uint32> stillInQueues;
 
-  void convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&);
-  static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
+  void convertToEvtsAndSort(std::vector<OSegProcessedRequestEvent>&);
+  static bool compareEvts(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B);
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime = true, int processedAfter =0);
@@ -262,8 +260,8 @@ public:
 class ObjectMigrationRoundTripAnalysis
 {
 private:
-  std::vector< ObjectMigrationRoundTripEvent> allRoundTripEvts;
-  static bool compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
+  std::vector< MigrationRoundTripEvent> allRoundTripEvts;
+  static bool compareEvts (MigrationRoundTripEvent A, MigrationRoundTripEvent B);
 
 public:
   ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers);
@@ -315,7 +313,7 @@ public:
   {
   private:
     static const uint64 OSEG_CUMULATIVE_ANALYSIS_SECONDS_TO_MICROSECONDS = 1000000;
-    std::vector<OSegCumulativeEvent*> allTraces;
+    std::vector<OSegCumulativeResponseEvent*> allTraces;
     void filterShorterPath(uint64 time_after_microseconds);
     void generateAllData();
     void generateCacheTime();
@@ -434,10 +432,10 @@ private:
 
   ObjectLocationMap mObjLoc;
 
-  std::vector< ObjectMigrationRoundTripEvent >                mMigrationVector; //round trip event
-  std::vector< ObjectLookupProcessedEvent >                      mLookupVector; //lookup proc'd
+  std::vector< MigrationRoundTripEvent >                mMigrationVector; //round trip event
+  std::vector< OSegProcessedRequestEvent >                      mLookupVector; //lookup proc'd
   std::vector< OSegCacheResponseEvent >                   mCacheResponseVector;
-  std::vector< ObjectLookupNotOnServerEvent >   mObjectLookupNotOnServerVector;
+  std::vector< OSegInvalidLookupEvent >   mObjectLookupNotOnServerVector;
 
   //basic strategy: load all migration events.
   //write all migrate times in for each object.
@@ -448,8 +446,8 @@ private:
   void buildObjectMap();
 
   static bool compareCacheResponseEvents(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
-  static bool compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
-  static bool compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
+  static bool compareLookupProcessedEvents(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B);
+  static bool compareRoundTripEvents(MigrationRoundTripEvent A, MigrationRoundTripEvent B);
 
 
   void analyzeMisses(Results& res);

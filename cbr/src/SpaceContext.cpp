@@ -43,7 +43,8 @@ SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStr
    mServerRouter(NULL),
    mObjectRouter(NULL),
    mServerDispatcher(NULL),
-   mObjectDispatcher(NULL)
+   mObjectDispatcher(NULL),
+   mSpaceTrace( new SpaceTrace(_trace) )
 {
 }
 

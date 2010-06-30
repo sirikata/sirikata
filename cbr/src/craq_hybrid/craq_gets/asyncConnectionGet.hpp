@@ -41,7 +41,7 @@
 #include <sirikata/core/network/Asio.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "../../OSegLookupTraceToken.hpp"
 
 namespace Sirikata
 {

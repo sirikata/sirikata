@@ -36,10 +36,7 @@
 #include <sirikata/cbrcore/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
 #include "RecordedMotionPath.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 #include <algorithm>
-
-#include "CBR_Object.pbj.hpp"
 
 namespace Sirikata {
 
@@ -61,11 +58,6 @@ TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotion
     result.update( tmv.t(), tmv.position(), tmv.velocity() );
     return result;
 }
-
-typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
-typedef PBJEvent<Trace::Object::LocUpdate> LocationEvent;
-typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
-typedef PBJEvent<Trace::Object::ProxUpdate> ProximityEvent;
 
 Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID& trace_server_id) {
     std::istringstream record_is(record);
@@ -149,11 +141,8 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt = pqevt;
           }
     else if (type_hint == Trace::OSegCumulativeTraceAnalysisTag) {
-          OSegCumulativeEvent* cumevt = new OSegCumulativeEvent;
-          record_is.read((char*)&cumevt->time, sizeof(cumevt->time));
-          record_is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
-          evt = cumevt;
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::CumulativeResponse);
+    }
     else if (type_hint == Trace::OSegCraqProcessTag) {
           OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
           record_is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
@@ -185,66 +174,25 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
               evt = prevt;
           }
-    else if (type_hint == Trace::ObjectBeginMigrateTag) {
-          ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
-          record_is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
-          record_is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
-          record_is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
-          record_is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
-
-          evt = objBegMig_evt;
-        }
-    else if (type_hint == Trace::ObjectAcknowledgeMigrateTag) {
-          ObjectAcknowledgeMigrateEvent* objAckMig_evt = new ObjectAcknowledgeMigrateEvent;
-          record_is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
-
-          record_is.read((char*) &objAckMig_evt->mObjID, sizeof(objAckMig_evt->mObjID) );
-
-          record_is.read((char*) & objAckMig_evt->mAcknowledgeFrom, sizeof(objAckMig_evt->mAcknowledgeFrom));
-          record_is.read((char*) & objAckMig_evt->mAcknowledgeTo, sizeof(objAckMig_evt->mAcknowledgeTo));
-
-          evt = objAckMig_evt;
-        }
-    else if (type_hint == Trace::RoundTripMigrationTimeAnalysisTag) {
-          ObjectMigrationRoundTripEvent* rdTripMig_evt = new ObjectMigrationRoundTripEvent;
-          record_is.read((char*)&rdTripMig_evt->time,sizeof(rdTripMig_evt->time));
-          record_is.read((char*)&rdTripMig_evt->obj_id,sizeof(rdTripMig_evt->obj_id));
-          record_is.read((char*)&rdTripMig_evt->sID_migratingFrom, sizeof(rdTripMig_evt->sID_migratingFrom));
-          record_is.read((char*)&rdTripMig_evt->sID_migratingTo,sizeof(rdTripMig_evt->sID_migratingTo));
-          record_is.read((char*)&rdTripMig_evt->numMill,sizeof(rdTripMig_evt->numMill));
-
-          evt = rdTripMig_evt;
-        }
+    else if (type_hint == Trace::MigrationBeginTag) {
+        PARSE_PBJ_RECORD(Trace::Migration::Begin);
+    }
+    else if (type_hint == Trace::MigrationAckTag) {
+        PARSE_PBJ_RECORD(Trace::Migration::Ack);
+    }
+    else if (type_hint == Trace::MigrationRoundTripTag) {
+        PARSE_PBJ_RECORD(Trace::Migration::RoundTrip);
+    }
     else if (type_hint == Trace::OSegTrackedSetResultAnalysisTag) {
-          OSegTrackedSetResultsEvent* trackedSetResults_evt = new OSegTrackedSetResultsEvent;
-          record_is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
-          record_is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
-          record_is.read((char*)&trackedSetResults_evt->sID_migratingTo, sizeof(trackedSetResults_evt->sID_migratingTo));
-          record_is.read((char*)&trackedSetResults_evt->numMill, sizeof(trackedSetResults_evt->numMill));
-
-          evt = trackedSetResults_evt;
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::TrackedSetResults);
+    }
     else if (type_hint == Trace::OSegCacheResponseTag) {
-          OSegCacheResponseEvent* cachedResponse_evt = new OSegCacheResponseEvent;
-          record_is.read((char*)&cachedResponse_evt->time,sizeof(cachedResponse_evt->time));
-          record_is.read((char*)&cachedResponse_evt->cacheResponseID, sizeof(cachedResponse_evt->cacheResponseID));
-          record_is.read((char*)&cachedResponse_evt->obj_id, sizeof(cachedResponse_evt->obj_id));
-          evt = cachedResponse_evt;
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::CacheResponse);
+    }
     else if (type_hint == Trace::OSegShutdownEventTag) {
-          OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
-          record_is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
-          record_is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
-          record_is.read((char*)&shutdown_evt->numLookups, sizeof(shutdown_evt->numLookups));
-          record_is.read((char*)&shutdown_evt->numOnThisServer,sizeof(shutdown_evt->numOnThisServer));
-          record_is.read((char*)&shutdown_evt->numCacheHits, sizeof(shutdown_evt->numCacheHits));
-          record_is.read((char*)&shutdown_evt->numCraqLookups, sizeof(shutdown_evt->numCraqLookups));
-          record_is.read((char*)&shutdown_evt->numTimeElapsedCacheEviction, sizeof(shutdown_evt->numTimeElapsedCacheEviction));
-          record_is.read((char*)&shutdown_evt->numMigrationNotCompleteYet, sizeof(shutdown_evt->numMigrationNotCompleteYet));
-
-          evt = shutdown_evt;
-
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::Shutdown);
+        pevt->data.set_server(trace_server_id);
+    }
     else if (type_hint == Trace::ServerLocationTag) {
               ServerLocationEvent* levt = new ServerLocationEvent;
               record_is.read( (char*)&levt->time, sizeof(levt->time) );
@@ -267,31 +215,14 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               evt = levt;
           }
     else if (type_hint == Trace::ObjectSegmentationCraqLookupRequestAnalysisTag) {
-          ObjectCraqLookupEvent* obj_lookupReq_evt = new ObjectCraqLookupEvent;
-          record_is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
-          record_is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
-          record_is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
-
-          evt = obj_lookupReq_evt;
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::CraqRequest);
+    }
     else if (type_hint == Trace::OSegLookupNotOnServerAnalysisTag) {
-          ObjectLookupNotOnServerEvent* obj_lookup_not_on_server_evt = new ObjectLookupNotOnServerEvent;
-          record_is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
-          record_is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
-          record_is.read( (char*)&obj_lookup_not_on_server_evt->mID_lookup, sizeof(obj_lookup_not_on_server_evt->mID_lookup) );
-
-          evt = obj_lookup_not_on_server_evt;
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::InvalidLookup);
+    }
     else if (type_hint == Trace::ObjectSegmentationProcessedRequestAnalysisTag) {
-          ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
-          record_is.read( (char* )&obj_lookupProc_evt->time, sizeof(obj_lookupProc_evt->time)  );
-          record_is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
-          record_is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
-          record_is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
-          record_is.read( (char* )&obj_lookupProc_evt->deltaTime, sizeof(obj_lookupProc_evt->deltaTime) );
-          record_is.read( (char* )&obj_lookupProc_evt->stillInQueue, sizeof(obj_lookupProc_evt->stillInQueue) );
-          evt = obj_lookupProc_evt;
-        }
+        PARSE_PBJ_RECORD(Trace::OSeg::ProcessedRequest);
+    }
       else {
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)type_hint<<"\n";
       }
@@ -1229,26 +1160,26 @@ LatencyAnalysis::~LatencyAnalysis() {
               break;
 
 
-        ObjectBeginMigrateEvent* obj_mig_evt = dynamic_cast<ObjectBeginMigrateEvent*>(evt);
+        MigrationBeginEvent* obj_mig_evt = dynamic_cast<MigrationBeginEvent*>(evt);
         if (obj_mig_evt != NULL)
         {
           objectBeginMigrateTimes.push_back(obj_mig_evt->time);
 
-          objectBeginMigrateID.push_back(obj_mig_evt->mObjID);
-          objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->mMigrateFrom);
-          objectBeginMigrateMigrateTo.push_back(obj_mig_evt->mMigrateTo);
+          objectBeginMigrateID.push_back(obj_mig_evt->data.object());
+          objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->data.from());
+          objectBeginMigrateMigrateTo.push_back(obj_mig_evt->data.toward());
           delete evt;
           continue;
         }
 
-        ObjectAcknowledgeMigrateEvent* obj_ack_mig_evt = dynamic_cast<ObjectAcknowledgeMigrateEvent*> (evt);
+        MigrationAckEvent* obj_ack_mig_evt = dynamic_cast<MigrationAckEvent*> (evt);
         if (obj_ack_mig_evt != NULL)
         {
           objectAcknowledgeMigrateTimes.push_back(obj_ack_mig_evt->time);
 
-          objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->mObjID);
-          objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
-          objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
+          objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->data.object());
+          objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->data.from());
+          objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->data.toward());
           delete evt;
           continue;
         }
@@ -1269,29 +1200,29 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
   }
 
-  bool ObjectSegmentationAnalysis::compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B)
+  bool ObjectSegmentationAnalysis::compareObjectBeginMigrateEvts(MigrationBeginEvent A, MigrationBeginEvent B)
   {
     return A.time < B.time;
   }
 
 
-  bool ObjectSegmentationAnalysis::compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B)
+  bool ObjectSegmentationAnalysis::compareObjectAcknowledgeMigrateEvts(MigrationAckEvent A, MigrationAckEvent B)
   {
     return A.time < B.time;
   }
 
 
-  void ObjectSegmentationAnalysis::convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents)
+  void ObjectSegmentationAnalysis::convertToEvtsAndSort(std::vector<MigrationBeginEvent> &sortedBeginMigrateEvents, std::vector<MigrationAckEvent> &sortedAcknowledgeMigrateEvents)
   {
     //begin migrate events
-    ObjectBeginMigrateEvent obme;
+    MigrationBeginEvent obme;
 
     for (int s= 0; s < (int) objectBeginMigrateTimes.size(); ++s)
     {
       obme.time           =        objectBeginMigrateTimes[s];
-      obme.mObjID         =           objectBeginMigrateID[s];
-      obme.mMigrateFrom   =  objectBeginMigrateMigrateFrom[s];
-      obme.mMigrateTo     =    objectBeginMigrateMigrateTo[s];
+      obme.data.set_object(objectBeginMigrateID[s]);
+      obme.data.set_from(objectBeginMigrateMigrateFrom[s]);
+      obme.data.set_toward(objectBeginMigrateMigrateTo[s]);
 
       sortedBeginMigrateEvents.push_back(obme);
     }
@@ -1299,14 +1230,14 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedBeginMigrateEvents.begin(),sortedBeginMigrateEvents.end(), compareObjectBeginMigrateEvts );
 
     //acknowledge events
-    ObjectAcknowledgeMigrateEvent oame;
+    MigrationAckEvent oame;
 
     for (int s =0; s < (int) objectAcknowledgeMigrateTimes.size(); ++s)
     {
       oame.time             =     objectAcknowledgeMigrateTimes[s];
-      oame.mObjID           =        objectAcknowledgeMigrateID[s];
-      oame.mAcknowledgeFrom =  objectAcknowledgeAcknowledgeFrom[s];
-      oame.mAcknowledgeTo   =    objectAcknowledgeAcknowledgeTo[s];
+      oame.data.set_object(objectAcknowledgeMigrateID[s]);
+      oame.data.set_from(objectAcknowledgeAcknowledgeFrom[s]);
+      oame.data.set_toward(objectAcknowledgeAcknowledgeTo[s]);
 
       sortedAcknowledgeMigrateEvents.push_back(oame);
     }
@@ -1322,8 +1253,8 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
     if (sortedByTime)
     {
-      std::vector<ObjectBeginMigrateEvent>               sortedBeginMigrateEvents;
-      std::vector<ObjectAcknowledgeMigrateEvent>   sortedAcknowledgeMigrateEvents;
+      std::vector<MigrationBeginEvent>               sortedBeginMigrateEvents;
+      std::vector<MigrationAckEvent>   sortedAcknowledgeMigrateEvents;
 
       convertToEvtsAndSort(sortedBeginMigrateEvents, sortedAcknowledgeMigrateEvents);
 
@@ -1335,9 +1266,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s=0; s < (int)sortedBeginMigrateEvents.size(); ++s)
       {
         fileOut << sortedBeginMigrateEvents[s].time.raw() << "\n";
-        fileOut << "          obj id:       " << sortedBeginMigrateEvents[s].mObjID.toString() << "\n";
-        fileOut << "          migrate from: " << sortedBeginMigrateEvents[s].mMigrateFrom      << "\n";
-        fileOut << "          migrate to:   " << sortedBeginMigrateEvents[s].mMigrateTo        << "\n";
+        fileOut << "          obj id:       " << sortedBeginMigrateEvents[s].data.object().toString() << "\n";
+        fileOut << "          migrate from: " << sortedBeginMigrateEvents[s].data.from()      << "\n";
+        fileOut << "          migrate to:   " << sortedBeginMigrateEvents[s].data.toward()        << "\n";
         fileOut << "\n\n";
       }
 
@@ -1346,9 +1277,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s=0; s < (int) sortedAcknowledgeMigrateEvents.size(); ++s)
       {
         fileOut << sortedAcknowledgeMigrateEvents[s].time.raw() << "\n";
-        fileOut << "          obj id:           " << sortedAcknowledgeMigrateEvents[s].mObjID.toString() << "\n";
-        fileOut << "          acknowledge from: " << sortedAcknowledgeMigrateEvents[s].mAcknowledgeFrom  << "\n";
-        fileOut << "          acknowledge to:   " << sortedAcknowledgeMigrateEvents[s].mAcknowledgeTo    << "\n";
+        fileOut << "          obj id:           " << sortedAcknowledgeMigrateEvents[s].data.object().toString() << "\n";
+        fileOut << "          acknowledge from: " << sortedAcknowledgeMigrateEvents[s].data.from()  << "\n";
+        fileOut << "          acknowledge to:   " << sortedAcknowledgeMigrateEvents[s].data.toward()    << "\n";
         fileOut << "\n\n";
       }
     }
@@ -1402,12 +1333,12 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectCraqLookupEvent* obj_lookup_evt = dynamic_cast<ObjectCraqLookupEvent*> (evt);
+        OSegCraqRequestEvent* obj_lookup_evt = dynamic_cast<OSegCraqRequestEvent*> (evt);
         if (obj_lookup_evt != NULL)
         {
           times.push_back(obj_lookup_evt->time);
-          obj_ids.push_back(obj_lookup_evt->mObjID);
-          sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          obj_ids.push_back(obj_lookup_evt->data.object());
+          sID_lookup.push_back(obj_lookup_evt->data.server());
           delete evt;
           continue;
         }
@@ -1422,7 +1353,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortByTime)
     {
-      std::vector<ObjectCraqLookupEvent> sortedEvents;
+      std::vector<OSegCraqRequestEvent> sortedEvents;
       convertToEvtsAndSort(sortedEvents);
 
       fileOut << "\n\n*******************Begin Craq Lookup Requests Messages*************\n\n\n";
@@ -1432,9 +1363,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvents.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:   "<<sortedEvents[s].mID_lookup<<"\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvents[s].data.server()<<"\n";
         fileOut<< "\tTime at:           "<<sortedEvents[s].time.raw()<<"\n";
-        fileOut<< "\tObj id:            "<<sortedEvents[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObj id:            "<<sortedEvents[s].data.object().toString()<<"\n";
       }
 
       fileOut<<"\n\n\n\nEND\n";
@@ -1464,15 +1395,15 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   //want to sort by times.
   //probably a bad way to do this.  I could have just read them in correctly in the first place.
-  void ObjectSegmentationCraqLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectCraqLookupEvent> &sortedEvents)
+  void ObjectSegmentationCraqLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<OSegCraqRequestEvent> &sortedEvents)
   {
-    ObjectCraqLookupEvent ole;
+    OSegCraqRequestEvent ole;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
       ole.time = times[s];
-      ole.mObjID = obj_ids[s];
-      ole.mID_lookup = sID_lookup[s];
+      ole.data.set_object(obj_ids[s]);
+      ole.data.set_server(sID_lookup[s]);
 
       sortedEvents.push_back(ole);
     }
@@ -1480,7 +1411,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
   }
 
-  bool ObjectSegmentationCraqLookupRequestsAnalysis::compareEvts(ObjectCraqLookupEvent A, ObjectCraqLookupEvent B)
+  bool ObjectSegmentationCraqLookupRequestsAnalysis::compareEvts(OSegCraqRequestEvent A, OSegCraqRequestEvent B)
   {
     return A.time < B.time;
   }
@@ -1510,12 +1441,12 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectLookupNotOnServerEvent* obj_lookup_evt = dynamic_cast<ObjectLookupNotOnServerEvent*> (evt);
+        OSegInvalidLookupEvent* obj_lookup_evt = dynamic_cast<OSegInvalidLookupEvent*> (evt);
         if (obj_lookup_evt != NULL)
         {
           times.push_back(obj_lookup_evt->time);
-          obj_ids.push_back(obj_lookup_evt->mObjID);
-          sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          obj_ids.push_back(obj_lookup_evt->data.object());
+          sID_lookup.push_back(obj_lookup_evt->data.server());
           delete evt;
           continue;
         }
@@ -1530,7 +1461,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortByTime)
     {
-      std::vector<ObjectLookupNotOnServerEvent> sortedEvents;
+      std::vector<OSegInvalidLookupEvent> sortedEvents;
       convertToEvtsAndSort(sortedEvents);
 
       fileOut << "\n\n*******************Begin Lookup Requests Not On Server Messages*************\n\n\n";
@@ -1540,9 +1471,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvents.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:   "<<sortedEvents[s].mID_lookup<<"\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvents[s].data.server()<<"\n";
         fileOut<< "\tTime at:           "<<sortedEvents[s].time.raw()<<"\n";
-        fileOut<< "\tObj id:            "<<sortedEvents[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObj id:            "<<sortedEvents[s].data.object().toString()<<"\n";
       }
 
       fileOut<<"\n\n\n\nEND\n";
@@ -1572,15 +1503,15 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   //want to sort by times.
   //probably a bad way to do this.  I could have just read them in correctly in the first place.
-  void ObjectSegmentationLookupNotOnServerRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupNotOnServerEvent> &sortedEvents)
+  void ObjectSegmentationLookupNotOnServerRequestsAnalysis::convertToEvtsAndSort(std::vector<OSegInvalidLookupEvent> &sortedEvents)
   {
-    ObjectLookupNotOnServerEvent ole;
+    OSegInvalidLookupEvent ole;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
       ole.time = times[s];
-      ole.mObjID = obj_ids[s];
-      ole.mID_lookup = sID_lookup[s];
+      ole.data.set_object(obj_ids[s]);
+      ole.data.set_server(sID_lookup[s]);
 
       sortedEvents.push_back(ole);
     }
@@ -1588,7 +1519,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
   }
 
-  bool ObjectSegmentationLookupNotOnServerRequestsAnalysis::compareEvts(ObjectLookupNotOnServerEvent A, ObjectLookupNotOnServerEvent B)
+  bool ObjectSegmentationLookupNotOnServerRequestsAnalysis::compareEvts(OSegInvalidLookupEvent A, OSegInvalidLookupEvent B)
   {
     return A.time < B.time;
   }
@@ -1619,16 +1550,16 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectLookupProcessedEvent* obj_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
+        OSegProcessedRequestEvent* obj_lookup_proc_evt = dynamic_cast<OSegProcessedRequestEvent*> (evt);
 
         if (obj_lookup_proc_evt != NULL)
         {
           times.push_back(obj_lookup_proc_evt->time);
-          obj_ids.push_back(obj_lookup_proc_evt->mObjID);
-          sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
-          sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
-          dTimes.push_back(obj_lookup_proc_evt->deltaTime);
-          stillInQueues.push_back(obj_lookup_proc_evt->stillInQueue);
+          obj_ids.push_back(obj_lookup_proc_evt->data.object());
+          sID_processor.push_back(obj_lookup_proc_evt->data.processor());
+          sID_objectOn.push_back(obj_lookup_proc_evt->data.server());
+          dTimes.push_back(obj_lookup_proc_evt->data.dtime());
+          stillInQueues.push_back(obj_lookup_proc_evt->data.queued());
           delete evt;
           continue;
         }
@@ -1647,14 +1578,14 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortedByTime)
     {
-      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      std::vector<OSegProcessedRequestEvent> sortedEvts;
       convertToEvtsAndSort(sortedEvts);
 
       for (int s=0; s < (int) sortedEvts.size(); ++s)
       {
         if (sortedEvts[s].time.raw() > processAfterInMicro)
         {
-          fileOut <<sortedEvts[s].deltaTime<<",";
+            fileOut <<sortedEvts[s].data.dtime()<<",";
         }
       }
     }
@@ -1709,7 +1640,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortedByTime)
     {
-      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      std::vector<OSegProcessedRequestEvent> sortedEvts;
       convertToEvtsAndSort(sortedEvts);
 
       fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
@@ -1718,21 +1649,21 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvts.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:           "<<sortedEvts[s].mID_processor<<"\n";
+        fileOut<< "\tRegistered from:           "<<sortedEvts[s].data.processor()<<"\n";
         fileOut<< "\tTime at:                   "<<sortedEvts[s].time.raw()<<"\n";
-        fileOut<< "\tID Lookup:                 "<<sortedEvts[s].mObjID.toString()<<"\n";
-        fileOut<< "\tObject on:                 "<<sortedEvts[s].mID_objectOn<<"\n";
-        fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].stillInQueue<<"\n";
-        fileOut<< "\tTime taken:                "<<sortedEvts[s].deltaTime<<"\n";
+        fileOut<< "\tID Lookup:                 "<<sortedEvts[s].data.object().toString()<<"\n";
+        fileOut<< "\tObject on:                 "<<sortedEvts[s].data.server()<<"\n";
+        fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].data.queued()<<"\n";
+        fileOut<< "\tTime taken:                "<<sortedEvts[s].data.dtime()<<"\n";
 
         if (sortedEvts[s].time.raw() > processAfterInMicro)
         {
           ++numCountedLatency;
-          totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
+          totalLatency = totalLatency + (int)sortedEvts[s].data.dtime();
 
-          if ((int)sortedEvts[s].deltaTime > maxLatency)
+          if ((int)sortedEvts[s].data.dtime() > maxLatency)
           {
-            maxLatency = (int)sortedEvts[s].deltaTime;
+              maxLatency = (int)sortedEvts[s].data.dtime();
           }
         }
       }
@@ -1781,25 +1712,25 @@ LatencyAnalysis::~LatencyAnalysis() {
     }
   }
 
-  void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&sortedEvts)
+  void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<OSegProcessedRequestEvent>&sortedEvts)
   {
-    ObjectLookupProcessedEvent olpe;
+    OSegProcessedRequestEvent olpe;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
       olpe.time             = times[s];
-      olpe.mObjID           = obj_ids[s];
-      olpe.mID_processor    = sID_processor[s];
-      olpe.mID_objectOn     = sID_objectOn[s];
-      olpe.deltaTime        = dTimes[s];
-      olpe.stillInQueue      = stillInQueues[s];
+      olpe.data.set_object(obj_ids[s]);
+      olpe.data.set_processor(sID_processor[s]);
+      olpe.data.set_server(sID_objectOn[s]);
+      olpe.data.set_dtime(dTimes[s]);
+      olpe.data.set_queued(stillInQueues[s]);
 
       sortedEvts.push_back(olpe);
     }
     std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );
   }
 
-  bool ObjectSegmentationProcessedRequestsAnalysis::compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
+  bool ObjectSegmentationProcessedRequestsAnalysis::compareEvts(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B)
   {
     return A.time < B.time;
   }
@@ -1825,11 +1756,11 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectMigrationRoundTripEvent* obj_rdt_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
+        MigrationRoundTripEvent* obj_rdt_evt = dynamic_cast<MigrationRoundTripEvent*> (evt);
 
         if (obj_rdt_evt != NULL)
         {
-          ObjectMigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
+          MigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
           allRoundTripEvts.push_back(rdt_evt);
           delete evt;
           continue;
@@ -1861,15 +1792,15 @@ LatencyAnalysis::~LatencyAnalysis() {
     for (int s=0; s < (int) allRoundTripEvts.size(); ++s)
     {
       fileOut<< "\n\n********************************\n";
-      fileOut<< "\tObject id          " << allRoundTripEvts[s].obj_id.toString() <<"\n";
+      fileOut<< "\tObject id          " << allRoundTripEvts[s].data.object().toString() <<"\n";
       fileOut<< "\tTime at:           " << allRoundTripEvts[s].time.raw()        <<"\n";
-      fileOut<< "\tMigrating from:    " << allRoundTripEvts[s].sID_migratingFrom <<"\n";
-      fileOut<< "\tMigrating to:      " << allRoundTripEvts[s].sID_migratingTo   <<"\n";
-      fileOut<< "\tTime taken:        " << allRoundTripEvts[s].numMill           <<"\n";
+      fileOut<< "\tMigrating from:    " << allRoundTripEvts[s].data.from() <<"\n";
+      fileOut<< "\tMigrating to:      " << allRoundTripEvts[s].data.toward()   <<"\n";
+      fileOut<< "\tTime taken:        " << allRoundTripEvts[s].data.roundtrip()           <<"\n";
 
       if (allRoundTripEvts[s].time.raw() > processedAfterInMicro)
       {
-        totalTimes = totalTimes + ((double) allRoundTripEvts[s].numMill);
+          totalTimes = totalTimes + ((double) allRoundTripEvts[s].data.roundtrip().toMilliseconds());
         ++numProcessedAfter;
       }
 
@@ -1884,7 +1815,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
-  bool ObjectMigrationRoundTripAnalysis::compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
+  bool ObjectMigrationRoundTripAnalysis::compareEvts (MigrationRoundTripEvent A, MigrationRoundTripEvent B)
   {
     return A.time < B.time;
   }
@@ -1937,16 +1868,16 @@ LatencyAnalysis::~LatencyAnalysis() {
     for(int s=0;s < (int) allTrackedSetResultsEvts.size(); ++s)
     {
       fileOut<<"\n\n******************\n";
-      fileOut<<"\tobj_id:      "<<allTrackedSetResultsEvts[s].obj_id.toString()<<"\n";
+      fileOut<<"\tobj_id:      "<<allTrackedSetResultsEvts[s].data.object().toString()<<"\n";
       fileOut<<"\ttime at:     "<<allTrackedSetResultsEvts[s].time.raw()<<"\n";
-      fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].sID_migratingTo<<"\n";
-      fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].numMill<<"\n\n";
+      fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].data.server()<<"\n";
+      fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].data.roundtrip()<<"\n\n";
 
 
       if (allTrackedSetResultsEvts[s].time.raw() > processedAfterInMicro)
       {
         ++numProcessedAfter;
-        averager = averager + allTrackedSetResultsEvts[s].numMill;
+        averager = averager + allTrackedSetResultsEvts[s].data.roundtrip().toMilliseconds();
       }
     }
 
@@ -2015,13 +1946,13 @@ LatencyAnalysis::~LatencyAnalysis() {
     for(int s=0; s < (int) allShutdownEvts.size(); ++s)
     {
       fileOut << "\n\n\n";
-      fileOut << "ServerID:            "<<allShutdownEvts[s].sID<<"\n";
-      fileOut << "\tnumLookups:        "<<allShutdownEvts[s].numLookups<<"\n";
-      fileOut << "\tnumOnThisServer:   "<<allShutdownEvts[s].numOnThisServer<<"\n";
-      fileOut << "\tnumCacheHits:      "<<allShutdownEvts[s].numCacheHits<<"\n";
-      fileOut << "\tnumCraqLookups:    "<<allShutdownEvts[s].numCraqLookups<<"\n";
-      fileOut << "\tnumTimeElapsedCacheEviction:   "<<allShutdownEvts[s].numTimeElapsedCacheEviction  << "\n";
-      fileOut << "\tnumMigrationNotCompleteYet:    "<<allShutdownEvts[s].numMigrationNotCompleteYet   << "\n";
+      fileOut << "ServerID:            "<<allShutdownEvts[s].data.server()<<"\n";
+      fileOut << "\tnumLookups:        "<<allShutdownEvts[s].data.lookups()<<"\n";
+      fileOut << "\tnumOnThisServer:   "<<allShutdownEvts[s].data.local_lookups()<<"\n";
+      fileOut << "\tnumCacheHits:      "<<allShutdownEvts[s].data.cache_hits()<<"\n";
+      fileOut << "\tnumCraqLookups:    "<<allShutdownEvts[s].data.craq_lookups()<<"\n";
+      fileOut << "\tnumTimeElapsedCacheEviction:   "<<allShutdownEvts[s].data.cache_eviction_elapsed()  << "\n";
+      fileOut << "\tnumMigrationNotCompleteYet:    "<<allShutdownEvts[s].data.outstanding_migrations()  << "\n";
 
     }
 
@@ -2085,8 +2016,8 @@ void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfte
   {
     fileOut << "\n\n\n";
     fileOut << "Time:            "<<allCacheResponseEvts[s].time.raw()<<"\n";
-    fileOut << "\tobj_id:        "<<allCacheResponseEvts[s].obj_id.toString()<<"\n";
-    fileOut << "\tserver_id:     "<<allCacheResponseEvts[s].cacheResponseID<<"\n";
+    fileOut << "\tobj_id:        "<<allCacheResponseEvts[s].data.object().toString()<<"\n";
+    fileOut << "\tserver_id:     "<<allCacheResponseEvts[s].data.server()<<"\n";
 
     if (allCacheResponseEvts[s].time.raw() > numProcessedAfter)
     {
@@ -2125,7 +2056,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (evt == NULL)
         break;
 
-      ObjectMigrationRoundTripEvent* oseg_rd_trip_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
+      MigrationRoundTripEvent* oseg_rd_trip_evt = dynamic_cast<MigrationRoundTripEvent*> (evt);
       if (oseg_rd_trip_evt != NULL)
       {
         mMigrationVector.push_back(*oseg_rd_trip_evt);
@@ -2133,7 +2064,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
         continue;
       }
 
-      ObjectLookupProcessedEvent* oseg_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
+      OSegProcessedRequestEvent* oseg_lookup_proc_evt = dynamic_cast<OSegProcessedRequestEvent*> (evt);
       if (oseg_lookup_proc_evt != NULL)
       {
         mLookupVector.push_back(*oseg_lookup_proc_evt);
@@ -2149,7 +2080,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
         continue;
       }
 
-      ObjectLookupNotOnServerEvent* oseg_lookup_not_on_server_evt = dynamic_cast<ObjectLookupNotOnServerEvent*> (evt);
+      OSegInvalidLookupEvent* oseg_lookup_not_on_server_evt = dynamic_cast<OSegInvalidLookupEvent*> (evt);
       if (oseg_lookup_not_on_server_evt != NULL)
       {
         mObjectLookupNotOnServerVector.push_back(*oseg_lookup_not_on_server_evt);
@@ -2163,12 +2094,12 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
 }
 
 
-bool OSegCacheErrorAnalysis::compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
+bool OSegCacheErrorAnalysis::compareRoundTripEvents(MigrationRoundTripEvent A, MigrationRoundTripEvent B)
 {
   return A.time < B.time;
 }
 
-bool OSegCacheErrorAnalysis::compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
+bool OSegCacheErrorAnalysis::compareLookupProcessedEvents(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B)
 {
   return A.time < B.time;
 }
@@ -2187,31 +2118,31 @@ void OSegCacheErrorAnalysis::buildObjectMap()
 
 
   //First read through all object migrations.
-  std::vector< ObjectMigrationRoundTripEvent >::const_iterator migrationIterator;
+  std::vector< MigrationRoundTripEvent >::const_iterator migrationIterator;
 
   for(migrationIterator =  mMigrationVector.begin(); migrationIterator != mMigrationVector.end(); ++migrationIterator)
   {
     ServerIDTimePair sidtime;
-    sidtime.sID = migrationIterator->sID_migratingTo;
+    sidtime.sID = migrationIterator->data.toward();
     sidtime.t   = migrationIterator->time;
 
-    mObjLoc[migrationIterator->obj_id].push_back(sidtime);
+    mObjLoc[migrationIterator->data.object()].push_back(sidtime);
   }
 
   //now, read through the lookup vector.  If an object does not exist in map, then put it in.
 
-  std::vector<ObjectLookupProcessedEvent >::const_iterator lookupIterator;
+  std::vector<OSegProcessedRequestEvent >::const_iterator lookupIterator;
   for (lookupIterator = mLookupVector.begin(); lookupIterator != mLookupVector.end(); ++lookupIterator)
   {
     ServerIDTimePair sidtime;
-    sidtime.sID = lookupIterator->mID_objectOn;
+    sidtime.sID = lookupIterator->data.server();
     sidtime.t   = lookupIterator->time;
 
     //    if (mObjLoc[lookupIterator->mObjID] == mObjLoc.end())
-    if (mObjLoc.find(lookupIterator->mObjID) == mObjLoc.end())
+    if (mObjLoc.find(lookupIterator->data.object()) == mObjLoc.end())
     {
       //means that we don't have any record of the object yet.
-      mObjLoc[lookupIterator->mObjID].push_back(sidtime);
+        mObjLoc[lookupIterator->data.object()].push_back(sidtime);
     }
   }
 }
@@ -2234,9 +2165,9 @@ void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterIn
   for (cacheResponseIterator = mCacheResponseVector.begin(); cacheResponseIterator != mCacheResponseVector.end(); ++cacheResponseIterator)
   {
     OSegCacheResponseEvent os_cache_resp = (*cacheResponseIterator);
-    UUID obj_ider   = os_cache_resp.obj_id;
+    UUID obj_ider   = os_cache_resp.data.object();
     Time ter        = os_cache_resp.time;
-    ServerID sIDer  = os_cache_resp.cacheResponseID;
+    ServerID sIDer  = os_cache_resp.data.server();
 
     if (os_cache_resp.time.raw() >= processedAfterInMicro)
     {
@@ -2254,7 +2185,7 @@ void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterIn
 
 
   //this counts the number of lookups made
-  std::vector< ObjectLookupNotOnServerEvent>::const_iterator lookupNotOnServerIter;
+  std::vector< OSegInvalidLookupEvent>::const_iterator lookupNotOnServerIter;
   for (lookupNotOnServerIter =  mObjectLookupNotOnServerVector.begin();  lookupNotOnServerIter != mObjectLookupNotOnServerVector.end(); ++lookupNotOnServerIter)
   {
     if (lookupNotOnServerIter->time.raw() >= processedAfterInMicro )
@@ -2494,7 +2425,7 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
       if (evt == NULL)
         break;
 
-      OSegCumulativeEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeEvent*> (evt);
+      OSegCumulativeResponseEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeResponseEvent*> (evt);
       if (oseg_cum_evt != NULL)
       {
         if (allTraces.size() == 0)
@@ -2714,29 +2645,29 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
 
 void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microseconds)
 {
-  std::vector<OSegCumulativeEvent*>::iterator traceIt = allTraces.begin();
+  std::vector<OSegCumulativeResponseEvent*>::iterator traceIt = allTraces.begin();
 
   while(traceIt != allTraces.end())
   {
-    if( ((*traceIt)->traceToken.notReady)                                 ||
-        ((*traceIt)->traceToken.shuttingDown)                             ||
-        ((*traceIt)->traceToken.deadlineExpired)                          ||
-        ((*traceIt)->traceToken.notFound)                                 ||
-        ((*traceIt)->traceToken.initialLookupTime                   == 0) ||
-        ((*traceIt)->traceToken.checkCacheLocalBegin                == 0) ||
-        ((*traceIt)->traceToken.checkCacheLocalEnd                  == 0) ||
-        ((*traceIt)->traceToken.craqLookupBegin                     == 0) ||
-        ((*traceIt)->traceToken.craqLookupEnd                       == 0) ||
-        ((*traceIt)->traceToken.craqLookupNotAlreadyLookingUpBegin  == 0) ||
-        ((*traceIt)->traceToken.craqLookupNotAlreadyLookingUpEnd    == 0) ||
-        ((*traceIt)->traceToken.getManagerEnqueueBegin              == 0) ||
-        ((*traceIt)->traceToken.getManagerEnqueueEnd                == 0) ||
-        ((*traceIt)->traceToken.getManagerDequeued                  == 0) ||
-        ((*traceIt)->traceToken.getConnectionNetworkGetBegin        == 0) ||
-        ((*traceIt)->traceToken.getConnectionNetworkGetEnd          == 0) ||
-        ((*traceIt)->traceToken.getConnectionNetworkReceived        == 0) ||
-        ((*traceIt)->traceToken.lookupReturnBegin                   == 0) ||
-        ((*traceIt)->traceToken.lookupReturnEnd                     == 0))
+      if( ((*traceIt)->data.not_ready())                                 ||
+          ((*traceIt)->data.shutting_down())                             ||
+          ((*traceIt)->data.deadline_expired())                          ||
+          ((*traceIt)->data.not_found())                                 ||
+          ((*traceIt)->data.initial_lookup_time()                   == 0) ||
+          ((*traceIt)->data.check_cache_local_begin()                == 0) ||
+          ((*traceIt)->data.check_cache_local_end()                  == 0) ||
+          ((*traceIt)->data.craq_lookup_begin()                     == 0) ||
+          ((*traceIt)->data.craq_lookup_end()                       == 0) ||
+          ((*traceIt)->data.craq_lookup_not_already_lookup_begin()  == 0) ||
+          ((*traceIt)->data.craq_lookup_not_already_lookup_end()    == 0) ||
+          ((*traceIt)->data.get_manager_enqueue_begin()              == 0) ||
+          ((*traceIt)->data.get_manager_enqueue_end()                == 0) ||
+          ((*traceIt)->data.get_manager_dequeued()                  == 0) ||
+          ((*traceIt)->data.get_connection_network_begin()        == 0) ||
+          ((*traceIt)->data.get_connection_network_end()          == 0) ||
+          ((*traceIt)->data.get_connection_network_received()        == 0) ||
+          ((*traceIt)->data.lookup_return_begin()                   == 0) ||
+          ((*traceIt)->data.lookup_return_end()                     == 0))
     {
       delete (*traceIt);
       traceIt = allTraces.erase(traceIt);
@@ -2750,10 +2681,33 @@ void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microsecon
       }
       else
       {
-        if((*traceIt)->traceToken.osegQLenPostQuery > 1000 )
+          if((*traceIt)->data.qlen_post_query() > 1000 )
         {
           std::cout<<"\nWhat happened here\n";
-          (*traceIt)->traceToken.printCumulativeTraceToken();
+
+          std::cout<<"\n\n";
+          std::cout<<"ID: \t\t"<<(*traceIt)->data.object().toString()<<"\n";
+          std::cout<<"not ready: \t\t"<<(*traceIt)->data.not_ready()<<"\n";
+          std::cout<<"shuttingDown: \t\t"<<(*traceIt)->data.shutting_down()<<"\n";
+          std::cout<<"notFound:\t\t"<<(*traceIt)->data.not_found()<<"\n";
+          std::cout<<"initialLookupTime:\t\t"<<(*traceIt)->data.initial_lookup_time()<<"\n";
+          std::cout<<"checkCacheLocalBeing:\t\t"<<(*traceIt)->data.check_cache_local_begin()<<"\n";
+          std::cout<<"checkCacheLocalEnd:\t\t"<<(*traceIt)->data.check_cache_local_end()<<"\n";
+          std::cout<<"craqLookupBegin:\t\t"<<(*traceIt)->data.craq_lookup_begin()<<"\n";
+          std::cout<<"craqLookupEnd:\t\t"<<(*traceIt)->data.craq_lookup_end()<<"\n";
+          std::cout<<"craqLookupNotAlreadyLookingUpBegin:\t\t"<<(*traceIt)->data.craq_lookup_not_already_lookup_begin()<<"\n";
+          std::cout<<"craqLookupNotAlreadyLookingUpEnd:\t\t"<<(*traceIt)->data.craq_lookup_not_already_lookup_end()<<"\n";
+          std::cout<<"getManagerEnqueueBegin:\t\t"<<(*traceIt)->data.get_manager_enqueue_begin()<<"\n";
+          std::cout<<"getManagerEnqueueEnd:\t\t"<<(*traceIt)->data.get_manager_enqueue_end()<<"\n";
+          std::cout<<"getManagerDequeued:\t\t"<<(*traceIt)->data.get_manager_dequeued()<<"\n";
+          std::cout<<"getConnectionNetworkGetBegin:\t\t"<<(*traceIt)->data.get_connection_network_begin()<<"\n";
+          std::cout<<"getConnectionNetworkGetEnd:\t\t"<<(*traceIt)->data.get_connection_network_end()<<"\n";
+          std::cout<<"getConnectionNetworkReceived:\t\t"<<(*traceIt)->data.get_connection_network_received()<<"\n";
+          std::cout<<"lookupReturnBegin:\t\t"<<(*traceIt)->data.lookup_return_begin()<<"\n";
+          std::cout<<"lookupReturnEnd:\t\t"<<(*traceIt)->data.lookup_return_end()<<"\n";
+          std::cout<<"osegQLenPostReturn:\t\t"<<(*traceIt)->data.qlen_post_return()<<"\n";
+          std::cout<<"osegQLenPostQuery:\t\t"<<(*traceIt)->data.qlen_post_query()<<"\n";
+          std::cout<<"\n\n";
         }
 
         ++traceIt;
@@ -2768,7 +2722,7 @@ void OSegCumulativeTraceAnalysis::generateCacheTime()
   uint64 toPush;
   for (int s= 0; s < (int)allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.checkCacheLocalEnd - allTraces[s]->traceToken.checkCacheLocalBegin;
+      toPush = allTraces[s]->data.check_cache_local_end() - allTraces[s]->data.check_cache_local_begin();
 
     mCumData[s]->cacheTime = toPush;
   }
@@ -2779,7 +2733,7 @@ void OSegCumulativeTraceAnalysis::generateGetCraqLookupPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.craqLookupBegin -  allTraces[s]->traceToken.checkCacheLocalEnd;
+      toPush = allTraces[s]->data.craq_lookup_begin() -  allTraces[s]->data.check_cache_local_end();
 
     mCumData[s]->craqLookupPostTime = toPush;
   }
@@ -2790,7 +2744,7 @@ void OSegCumulativeTraceAnalysis::generateCraqLookupTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.craqLookupEnd - allTraces[s]->traceToken.craqLookupBegin;
+      toPush = allTraces[s]->data.craq_lookup_end() - allTraces[s]->data.craq_lookup_begin();
 
     mCumData[s]->craqLookupTime = toPush;
   }
@@ -2800,7 +2754,7 @@ void OSegCumulativeTraceAnalysis::generateCraqLookupNotAlreadyLookingUpTime()
   uint64 toPush;
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpBegin;
+      toPush = allTraces[s]->data.craq_lookup_not_already_lookup_end() - allTraces[s]->data.craq_lookup_not_already_lookup_begin();
 
     mCumData[s]->craqLookupNotAlreadyLookingUpTime = toPush;
   }
@@ -2810,7 +2764,7 @@ void OSegCumulativeTraceAnalysis::generateManagerPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getManagerEnqueueBegin - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd;
+      toPush = allTraces[s]->data.get_manager_enqueue_begin() - allTraces[s]->data.craq_lookup_not_already_lookup_end();
 
     mCumData[s]->managerPostTime = toPush;
   }
@@ -2820,7 +2774,7 @@ void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
   uint64 toPush;
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getManagerEnqueueEnd - allTraces[s]->traceToken.getManagerEnqueueBegin;
+      toPush = allTraces[s]->data.get_manager_enqueue_end() - allTraces[s]->data.get_manager_enqueue_begin();
 
     mCumData[s]->managerEnqueueTime = toPush;
   }
@@ -2831,7 +2785,7 @@ void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getManagerDequeued - allTraces[s]->traceToken.getManagerEnqueueEnd;
+      toPush = allTraces[s]->data.get_manager_dequeued() - allTraces[s]->data.get_manager_enqueue_end();
 
     mCumData[s]->managerDequeueTime = toPush;
   }
@@ -2841,7 +2795,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getConnectionNetworkGetBegin - allTraces[s]->traceToken.getManagerDequeued;
+      toPush = allTraces[s]->data.get_connection_network_begin() - allTraces[s]->data.get_manager_dequeued();
 
     mCumData[s]->connectionPostTime = toPush;
   }
@@ -2851,7 +2805,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getConnectionNetworkGetEnd - allTraces[s]->traceToken.getConnectionNetworkGetBegin;
+      toPush = allTraces[s]->data.get_connection_network_end() - allTraces[s]->data.get_connection_network_begin();
 
     mCumData[s]->connectionNetworkQueryTime = toPush;
   }
@@ -2861,7 +2815,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
   uint64 toPush;
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getConnectionNetworkReceived - allTraces[s]->traceToken.getConnectionNetworkGetEnd;
+      toPush = allTraces[s]->data.get_connection_network_received() - allTraces[s]->data.get_connection_network_end();
 
     mCumData[s]->connectionsNetworkTime = toPush;
   }
@@ -2871,7 +2825,7 @@ void OSegCumulativeTraceAnalysis::generateReturnPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.lookupReturnBegin - allTraces[s]->traceToken.getConnectionNetworkReceived;
+      toPush = allTraces[s]->data.lookup_return_begin() - allTraces[s]->data.get_connection_network_received();
 
     mCumData[s]->returnPostTime = toPush;
   }
@@ -2881,7 +2835,7 @@ void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size();++s)
   {
-    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.lookupReturnBegin;
+      toPush = allTraces[s]->data.lookup_return_end() - allTraces[s]->data.lookup_return_begin();
     mCumData[s]->lookupReturnsTime = toPush;
   }
 }
@@ -2891,7 +2845,7 @@ void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.initialLookupTime;
+      toPush = allTraces[s]->data.lookup_return_end() - allTraces[s]->data.initial_lookup_time();
     mCumData[s]->completeLookupTime = toPush;
   }
 }
@@ -2901,7 +2855,7 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenQuery()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = (uint64)(allTraces[s]->traceToken.osegQLenPostQuery);
+      toPush = (uint64)(allTraces[s]->data.qlen_post_query());
     mCumData[s]->osegQLenPostQuery = toPush;
   }
 }
@@ -2910,7 +2864,7 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenReturn()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = (uint64)(allTraces[s]->traceToken.osegQLenPostReturn);
+      toPush = (uint64)(allTraces[s]->data.qlen_post_return());
     mCumData[s]->osegQLenPostReturn = toPush;
   }
 }

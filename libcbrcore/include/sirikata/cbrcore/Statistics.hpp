@@ -38,7 +38,6 @@
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include "MotionVector.hpp"
 #include "Message.hpp"
-#include "OSegLookupTraceToken.hpp"
 
 #include <boost/thread/recursive_mutex.hpp>
 
@@ -128,15 +127,17 @@ extern const uint8 ServerDatagramQueuedTag;
 extern const uint8 ServerDatagramSentTag;
 extern const uint8 ServerDatagramReceivedTag;
 extern const uint8 SegmentationChangeTag;
-extern const uint8 ObjectBeginMigrateTag;
-extern const uint8 ObjectAcknowledgeMigrateTag;
+
+extern const uint8 MigrationBeginTag;
+extern const uint8 MigrationAckTag;
+extern const uint8 MigrationRoundTripTag;
+
 extern const uint8 ServerLocationTag;
 extern const uint8 ServerObjectEventTag;
 extern const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag;
 extern const uint8 ObjectSegmentationProcessedRequestAnalysisTag;
 extern const uint8 ObjectPingTag;
 extern const uint8 ObjectPingCreatedTag;
-extern const uint8 RoundTripMigrationTimeAnalysisTag;
 extern const uint8 OSegTrackedSetResultAnalysisTag;
 extern const uint8 OSegShutdownEventTag;
 extern const uint8 ObjectGeneratedLocationTag;
@@ -254,25 +255,6 @@ public:
 
     CREATE_TRACE_DECL(segmentationChanged, const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
-    CREATE_TRACE_DECL(objectBeginMigrate, const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
-    CREATE_TRACE_DECL(objectAcknowledgeMigrate, const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
-
-    CREATE_TRACE_DECL(objectSegmentationCraqLookupRequest, const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
-    CREATE_TRACE_DECL(objectSegmentationLookupNotOnServerRequest, const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
-
-
-    CREATE_TRACE_DECL(objectSegmentationProcessedRequest, const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 stillInQueue);
-
-    CREATE_TRACE_DECL(objectMigrationRoundTrip, const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
-
-    CREATE_TRACE_DECL(processOSegTrackedSetResults, const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds);
-
-    CREATE_TRACE_DECL(processOSegShutdownEvents, const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet);
-
-    CREATE_TRACE_DECL(osegCacheResponse, const Time &t, const ServerID& sID, const UUID& obj);
-
-    CREATE_TRACE_DECL(osegCumulativeResponse, const Time &t, OSegLookupTraceToken* traceToken);
-
 
     // Helper to prepend framing (size and payload type hint)
     void writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data, uint32 iovcnt);
@@ -311,10 +293,7 @@ private:
 
     // OptionValues that turn tracing on/off
     static OptionValue* mLogLocProx;
-    static OptionValue* mLogOSeg;
-    static OptionValue* mLogOSegCumulative;
     static OptionValue* mLogCSeg;
-    static OptionValue* mLogMigration;
     static OptionValue* mLogDatagram;
     static OptionValue* mLogPacket;
     static OptionValue* mLogPing;

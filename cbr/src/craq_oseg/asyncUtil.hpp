@@ -34,7 +34,7 @@
 #define __ASYNC_UTIL_HPP__
 
 #include <string>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "../OSegLookupTraceToken.hpp"
 #include "CraqEntry.hpp"
 namespace Sirikata
 {

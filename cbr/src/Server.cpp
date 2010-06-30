@@ -896,9 +896,9 @@ void Server::killObjectConnection(const UUID& obj_id)
 
     //log the event's completion.
     Duration currentDur = mMigrationTimer.elapsed();
-    int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
+    Duration timeTakenMs = Duration::milliseconds(currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds);
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
-    CONTEXT_TRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
+    CONTEXT_SPACETRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
 
     mMigratingConnections.erase(objConMapIt);
   }

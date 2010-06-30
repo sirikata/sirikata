@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
 
     InitOptions();
     Trace::Trace::InitOptions();
+    SpaceTrace::InitOptions();
     InitSpaceOptions();
     ParseOptions(argc, argv);
 

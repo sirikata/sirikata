@@ -36,7 +36,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
-#include "VWTypes.hpp"
+#include <sirikata/cbrcore/VWTypes.hpp>
 
 namespace Sirikata
 {
