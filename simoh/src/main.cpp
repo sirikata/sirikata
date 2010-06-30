@@ -42,7 +42,7 @@
 #include "Options.hpp"
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
@@ -70,10 +70,10 @@ int main(int argc, char** argv) {
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
     Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-
+    String servermap_type = GetOption("servermap")->as<String>();
+    String servermap_options = GetOption("servermap-options")->as<String>();
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 

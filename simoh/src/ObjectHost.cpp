@@ -36,7 +36,7 @@
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/cbrcore/ServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 #include <sirikata/core/util/Random.hpp>
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>

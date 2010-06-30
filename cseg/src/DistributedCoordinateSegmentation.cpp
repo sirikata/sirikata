@@ -42,7 +42,7 @@
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/core/util/Hash.hpp>
 #include "WorldPopulationBSPTree.hpp"
-#include <sirikata/cbrcore/ServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {
 

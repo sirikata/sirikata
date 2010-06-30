@@ -33,13 +33,14 @@
 #ifndef _SIRIKATA_TABULARSERVERID_MAP_HPP_
 #define _SIRIKATA_TABULARSERVERID_MAP_HPP_
 
-#include "ServerIDMap.hpp"
+#include <sirikata/core/network/ServerIDMap.hpp>
 #include <fstream>
+
 namespace Sirikata {
 
 /* Represents the physical network addresses of servers
  */
-class TabularServerIDMap:public ServerIDMap {
+class TabularServerIDMap : public ServerIDMap {
     std::tr1::unordered_map<ServerID,Address4> mInternalIDMap;
     std::tr1::unordered_map<Address4,ServerID,Address4::Hasher> mInternalAddressMap;
 

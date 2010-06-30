@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/core/network/Address4.hpp>
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
+#include "TabularServerIDMap.hpp"
 
 namespace Sirikata {
 

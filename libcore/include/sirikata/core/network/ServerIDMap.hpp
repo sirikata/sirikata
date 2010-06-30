@@ -35,12 +35,13 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Address4.hpp>
+#include <sirikata/core/util/Factory.hpp>
 
 namespace Sirikata {
 
 /* Represents the physical network addresses of servers
  */
-class ServerIDMap {
+class SIRIKATA_EXPORT ServerIDMap {
 public:
     ServerIDMap()
     {}
@@ -58,6 +59,16 @@ public:
     virtual ServerID* lookupExternal(const Address4& pos) = 0;
     virtual Address4* lookupExternal(const ServerID& obj_id) = 0;
 };
+
+class SIRIKATA_EXPORT ServerIDMapFactory
+    : public AutoSingleton<ServerIDMapFactory>,
+      public Factory1<ServerIDMap*, const String &>
+{
+  public:
+    static ServerIDMapFactory& getSingleton();
+    static void destroy();
+}; // class ServerIDMapFactory
+
 
 } // namespace Sirikata
 

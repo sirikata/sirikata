@@ -51,7 +51,7 @@ class ClusterConfig:
         self.unique = None
         self.ccache = False
 
-        self.plugins = 'tcpsst'
+        self.plugins = 'tcpsst,servermap-tabular'
         self.space_plugins = 'weight-exp,weight-sqr'
         self.cseg_plugins = ''
         self.simoh_plugins = 'weight-exp,weight-sqr'

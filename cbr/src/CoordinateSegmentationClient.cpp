@@ -41,7 +41,7 @@
 
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/ServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {
 

@@ -54,7 +54,7 @@
 #include "TCPSpaceNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 #include "FairServerMessageQueue.hpp"
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
@@ -126,9 +126,11 @@ int main(int argc, char** argv) {
     srand( GetOption("rand-seed")->as<uint32>() );
 
 
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    String servermap_type = GetOption("servermap")->as<String>();
+    String servermap_options = GetOption("servermap-options")->as<String>();
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+
     gNetwork->setServerIDMap(server_id_map);
 
 
