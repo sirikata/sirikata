@@ -46,7 +46,7 @@
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 #include "ForwarderServiceQueue.hpp"
 

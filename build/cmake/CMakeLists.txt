@@ -767,6 +767,7 @@ SET(ProtocolBuffersSources
   Subscription
   Test
   ObjectMessage
+  SSTHeader
   )
 
 
@@ -882,7 +883,6 @@ SET(CBR_PROTOCOLS
   CSeg.pbj
   Session.pbj
   OSeg.pbj
-  SSTHeader.pbj
   Forwarder.pbj
 )
 
@@ -1049,6 +1049,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/NTPTimeSync.cpp
         ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
         ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
+        ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1295,7 +1296,6 @@ ${GFX}/WebViewManager.cpp
 SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
 )
 
 SET(CBR_SOURCES

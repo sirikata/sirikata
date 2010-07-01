@@ -37,7 +37,7 @@
 
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/MotionPath.hpp>
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 #include <sirikata/core/util/SimpleExtrapolator.hpp>
 

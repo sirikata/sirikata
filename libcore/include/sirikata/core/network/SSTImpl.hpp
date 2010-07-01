@@ -52,7 +52,7 @@
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 
-#include "CBR_SSTHeader.pbj.hpp"
+#include "Protocol_SSTHeader.pbj.hpp"
 
 namespace Sirikata {
 
@@ -105,7 +105,7 @@ class Stream;
 
 
 template <typename EndPointType>
-class BaseDatagramLayer:public ObjectMessageRecipient
+class SIRIKATA_EXPORT BaseDatagramLayer:public ObjectMessageRecipient
 {
 private:
 
@@ -234,7 +234,7 @@ public:
 
 
 template <class EndPointType>
-class Connection : public ObjectMessageRecipient {
+class SIRIKATA_EXPORT Connection : public ObjectMessageRecipient {
 
 private:
   friend class Stream<EndPointType>;
@@ -1157,7 +1157,7 @@ public:
 };
 
 template <class EndPointType>
-class Stream  {
+class SIRIKATA_EXPORT Stream  {
 public:
 
    enum StreamStates {

@@ -39,7 +39,7 @@
 #include <sirikata/core/network/ObjectMessage.hpp>
 
 #include "CBR_ServerMessage.pbj.hpp"
-#include "CBR_SSTHeader.pbj.hpp"
+//#include "CBR_SSTHeader.pbj.hpp"
 
 
 namespace Sirikata {

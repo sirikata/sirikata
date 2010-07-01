@@ -33,7 +33,7 @@
 #include "SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 namespace Sirikata {
 

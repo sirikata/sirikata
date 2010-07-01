@@ -41,7 +41,7 @@
 #include <prox/LocationUpdateListener.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
 namespace Sirikata {

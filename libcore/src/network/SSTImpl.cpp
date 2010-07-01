@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 #include <sirikata/core/network/Address.hpp>
 
