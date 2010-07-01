@@ -32,7 +32,7 @@
 
 #include "AnalysisEvents.hpp"
 #include "MessageLatency.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #define INFO_LOG(msg) SILOG(message_latency_analysis,insane,"[MSG_LAT_ANLS] " << msg)
 #define ERROR_LOG(msg) SILOG(message_latency_analysis,error,"[MSG_LAT_ANLS] " << msg)

@@ -35,7 +35,7 @@
 
 #include "LocationService.hpp"
 #include "Options.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 
@@ -219,7 +219,7 @@ private:
         }
 
         void service() {
-            uint32 max_updates = GetOption(LOC_MAX_PER_RESULT)->as<uint32>();
+            uint32 max_updates = GetOptionValue<uint32>(LOC_MAX_PER_RESULT);
 
             std::list<SubscriberType> to_delete;
 

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Options.cpp
+ *  CommonOptions.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/Time.hpp>
 
@@ -86,6 +86,25 @@ OptionValue* GetOption(const char* name) {
     return options->referenceOption(name);
 }
 
+template<typename T>
+T GetOptionValueUnsafe(const char* name) {
+    OptionValue* opt = GetOption(name);
+    return opt->unsafeAs<T>();
+}
+
+#define DEFINE_UNSAFE_GETOPTIONVALUE(T) \
+    template<>                                                          \
+    T GetOptionValue<T>(const char* name) { return GetOptionValueUnsafe<T>(name); }
+
+DEFINE_UNSAFE_GETOPTIONVALUE(String)
+DEFINE_UNSAFE_GETOPTIONVALUE(Vector3f)
+DEFINE_UNSAFE_GETOPTIONVALUE(Vector3ui32)
+DEFINE_UNSAFE_GETOPTIONVALUE(BoundingBox3f)
+DEFINE_UNSAFE_GETOPTIONVALUE(ObjectHostID)
+DEFINE_UNSAFE_GETOPTIONVALUE(Task::DeltaTime)
+DEFINE_UNSAFE_GETOPTIONVALUE(uint32)
+DEFINE_UNSAFE_GETOPTIONVALUE(bool)
+
 // FIXME method naming
 String GetPerServerString(const String& orig, const ServerID& sid) {
     int32 dot_pos = orig.rfind(".");
@@ -99,7 +118,7 @@ String GetPerServerString(const String& orig, const ServerID& sid) {
 }
 
 String GetPerServerFile(const char* opt_name, const ServerID& sid) {
-    String orig = GetOption(opt_name)->as<String>();
+    String orig = GetOptionValue<String>(opt_name);
     return GetPerServerString(orig, sid);
 }
 

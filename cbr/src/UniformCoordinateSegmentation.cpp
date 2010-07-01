@@ -34,7 +34,7 @@
 
 #include <algorithm>
 #include <boost/tokenizer.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 
 

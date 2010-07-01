@@ -39,7 +39,7 @@
 #include "ServerMessageReceiver.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include "Options.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include "Forwarder.hpp"
 #include "ObjectSegmentation.hpp"
@@ -107,9 +107,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
                  Duration::milliseconds((int64)10)),
-            mReceivedMessages(Sirikata::SizedResourceMonitor(GetOption(FORWARDER_RECEIVE_QUEUE_SIZE)->as<uint32>()))
+             mReceivedMessages(Sirikata::SizedResourceMonitor(GetOptionValue<uint32>(FORWARDER_RECEIVE_QUEUE_SIZE)))
 {
-    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOption(FORWARDER_SEND_QUEUE_SIZE)->as<uint32>(), (ForwarderServiceQueue::Listener*)this);
+    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOptionValue<uint32>(FORWARDER_SEND_QUEUE_SIZE), (ForwarderServiceQueue::Listener*)this);
 
     // Fill in the rest of the context
     mContext->mServerRouter = this;
@@ -244,7 +244,7 @@ void Forwarder::addODPServerMessageService(LocationService* loc) {
 }
 
 ODPFlowScheduler* Forwarder::createODPFlowScheduler(LocationService* loc, ServerID remote_server, uint32 max_size) {
-    String flow_sched_type = GetOption(SERVER_ODP_FLOW_SCHEDULER)->as<String>();
+    String flow_sched_type = GetOptionValue<String>(SERVER_ODP_FLOW_SCHEDULER);
     ODPFlowScheduler* new_flow_scheduler = NULL;
 
     if (flow_sched_type == "region") {

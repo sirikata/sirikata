@@ -31,7 +31,7 @@
  */
 
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata{
 

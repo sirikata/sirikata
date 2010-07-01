@@ -32,7 +32,7 @@
 
 #include "AnalysisEvents.hpp"
 #include "ObjectLatency.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 

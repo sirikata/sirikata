@@ -37,7 +37,7 @@
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include "ServerMessage.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
@@ -267,11 +267,11 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
    mSendListener(NULL),
    mReceiveListener(NULL)
 {
-    mStreamPlugin = GetOption("spacestreamlib")->as<String>();
+    mStreamPlugin = GetOptionValue<String>("spacestreamlib");
     mPluginManager.load(mStreamPlugin);
 
-    mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
-    mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
+    mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
+    mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
 
     mIOService = Network::IOServiceFactory::makeIOService();
     mIOWork = new Network::IOWork(mIOService, "TCPSpaceNetwork Work");

@@ -33,7 +33,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
 #include "WorldPopulationBSPTree.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <boost/tokenizer.hpp>
 
 namespace Sirikata {
@@ -186,15 +186,15 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
 }
 
 WorldPopulationBSPTree::WorldPopulationBSPTree()
-  : mFileName(GetOption("cseg-population-density-file")->as<String>()),
-    mMaxPeopleInLeaf(GetOption("cseg-max-leaf-population")->as<uint32>())
+ : mFileName(GetOptionValue<String>("cseg-population-density-file")),
+   mMaxPeopleInLeaf(GetOptionValue<uint32>("cseg-max-leaf-population"))
 {
-  mWorldWidth = GetOption("cseg-world-width")->as<uint32>();
-  mWorldHeight = GetOption("cseg-world-height")->as<uint32>();
+    mWorldWidth = GetOptionValue<uint32>("cseg-world-width");
+    mWorldHeight = GetOptionValue<uint32>("cseg-world-height");
   mBiggestDepth = 0;
   mNumRegions = mWorldWidth * mWorldHeight;
 
-  Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+  Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
   mInitialSpaceServerCount = layout.x * layout.y * layout.z;
 
   mCellEdgeWidth = sqrt(WORLD_SURFACE_AREA/(mWorldWidth*mWorldHeight));

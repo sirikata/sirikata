@@ -48,7 +48,7 @@
 #include "caches/CacheLRUOriginal.hpp"
 
 #include "Options.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include "CoordinateSegmentation.hpp"
 #include <sstream>
@@ -79,11 +79,11 @@ namespace Sirikata
   {
 
 
-    std::string cacheSelector     =  GetOption(CACHE_SELECTOR)->as<String>();
-    uint32  cacheSize             =  GetOption(OSEG_CACHE_SIZE)->as<uint32>();
-    uint32  cacheCleanGroupSize   =  GetOption(OSEG_CACHE_CLEAN_GROUP_SIZE)->as<uint32>();
-    double  cacheCommScaling      =  GetOption(CACHE_COMM_SCALING)->as<double>();
-    Duration entryLifetime        =  GetOption(OSEG_CACHE_ENTRY_LIFETIME)->as<Duration>();
+      std::string cacheSelector     =  GetOptionValue<String>(CACHE_SELECTOR);
+      uint32  cacheSize             =  GetOptionValue<uint32>(OSEG_CACHE_SIZE);
+      uint32  cacheCleanGroupSize   =  GetOptionValue<uint32>(OSEG_CACHE_CLEAN_GROUP_SIZE);
+      double  cacheCommScaling      =  GetOptionValue<double>(CACHE_COMM_SCALING);
+      Duration entryLifetime        =  GetOptionValue<Duration>(OSEG_CACHE_ENTRY_LIFETIME);
 
 
     if (cacheSelector == CACHE_TYPE_COMMUNICATION)

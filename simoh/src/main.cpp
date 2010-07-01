@@ -38,7 +38,7 @@
 #include "ObjectFactory.hpp"
 #include "ScenarioFactory.hpp"
 
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include "Options.hpp"
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
@@ -57,39 +57,39 @@ int main(int argc, char** argv) {
     ParseOptions(argc, argv);
 
     PluginManager plugins;
-    plugins.loadList( GetOption(OPT_PLUGINS)->as<String>() );
-    plugins.loadList( GetOption(OPT_OH_PLUGINS)->as<String>() );
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
 
-    std::string time_server=GetOption("time-server")->as<String>();
+    std::string time_server=GetOptionValue<String>("time-server");
     NTPTimeSync sync;
     if (time_server.size() > 0)
         sync.start(time_server);
 
 
-    ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
+    ObjectHostID oh_id = GetOptionValue<ObjectHostID>("ohid");
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
     Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
-    String servermap_type = GetOption("servermap")->as<String>();
-    String servermap_options = GetOption("servermap-options")->as<String>();
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
     ServerIDMap * server_id_map =
         ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
-    MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
+    MaxDistUpdatePredicate::maxDist = GetOptionValue<float64>(MAX_EXTRAPOLATOR_DIST);
 
-    BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
-    Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
+    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
 
-    Duration duration = GetOption("duration")->as<Duration>();
+    Duration duration = GetOptionValue<Duration>("duration");
 
     // Get the starting time
-    String start_time_str = GetOption("wait-until")->as<String>();
+    String start_time_str = GetOptionValue<String>("wait-until");
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time += GetOption("wait-additional")->as<Duration>();
+    start_time += GetOptionValue<Duration>("wait-additional");
 
 
-    srand( GetOption("rand-seed")->as<uint32>() );
+    srand( GetOptionValue<uint32>("rand-seed") );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
-    Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOption("scenario")->as<String>())(GetOption("scenario-options")->as<String>());
+    Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOptionValue<String>("scenario"))(GetOptionValue<String>("scenario-options"));
     scenario->initialize(ctx);
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 
     ctx->cleanup();
 
-    if (GetOption(PROFILE)->as<bool>()) {
+    if (GetOptionValue<bool>(PROFILE)) {
         ctx->profiler->report();
     }
 

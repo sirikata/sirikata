@@ -32,7 +32,7 @@
 
 #include "AnalysisEvents.hpp"
 #include "FlowStats.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
 #include "Protocol_ObjectTrace.pbj.hpp"
 
@@ -44,7 +44,7 @@ typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
 
 FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers) {
     RegionWeightCalculator* swc =
-        RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOption(OPT_REGION_WEIGHT)->as<String>())(GetOption(OPT_REGION_WEIGHT_ARGS)->as<String>())
+        RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOptionValue<String>(OPT_REGION_WEIGHT))(GetOptionValue<String>(OPT_REGION_WEIGHT_ARGS))
 ;
 
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {

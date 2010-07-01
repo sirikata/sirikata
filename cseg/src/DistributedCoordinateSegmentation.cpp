@@ -38,7 +38,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/util/Hash.hpp>
 #include "WorldPopulationBSPTree.hpp"
@@ -168,11 +168,11 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
    mLastUpdateTime(Time::null()),
    mSidMap(sidmap)
 {
-  mAvailableCSEGServers = GetOption("num-cseg-servers")->as<uint16>();
+    mAvailableCSEGServers = GetOptionValue<uint16>("num-cseg-servers");
 
   assert (nservers >= (int)(perdim.x * perdim.y * perdim.z));
 
-  if (GetOption("cseg-uses-world-pop")->as<bool>()) {
+  if (GetOptionValue<bool>("cseg-uses-world-pop")) {
     WorldPopulationBSPTree wPopTree;
     wPopTree.constructBSPTree(mTopLevelRegion);
   }
@@ -195,7 +195,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
   }
 
   if (ctx->id() == 1) {
-    mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
+      mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
     startAccepting();
   }
 
@@ -406,7 +406,7 @@ void DistributedCoordinateSegmentation::poll() {
 }
 
 void DistributedCoordinateSegmentation::service() {
-  static bool random_splits_merges = GetOption("random-splits-merges")->as<bool>();
+    static bool random_splits_merges = GetOptionValue<bool>("random-splits-merges");
 
   if (!random_splits_merges) {
     return;

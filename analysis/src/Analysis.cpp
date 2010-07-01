@@ -32,7 +32,7 @@
 
 #include "Analysis.hpp"
 #include <sirikata/core/trace/Trace.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
 #include "RecordedMotionPath.hpp"

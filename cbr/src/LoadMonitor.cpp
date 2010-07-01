@@ -33,7 +33,7 @@
 
 #include "LoadMonitor.hpp"
 #include "CoordinateSegmentation.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #define THRESHOLD 5
 #define ALPHA 0.3
@@ -150,7 +150,7 @@ void LoadMonitor::loadStatusMessage(const ServerID source, const Sirikata::Proto
 void LoadMonitor::poll() {
     mProfiler->started();
 
-    if (GetOption("monitor-load")->as<bool>())
+    if (GetOptionValue<bool>("monitor-load"))
         addLoadReading();
 
     mProfiler->finished();

@@ -36,7 +36,7 @@
 #include "CoordinateSegmentation.hpp"
 #include "ServerMessage.hpp"
 #include <sirikata/core/trace/Trace.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include "Forwarder.hpp"
 #include "LocalForwarder.hpp"
 #include "MigrationMonitor.hpp"
@@ -68,7 +68,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
-   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>()))
+   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     mContext->mCSeg = mCSeg;
 

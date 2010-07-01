@@ -39,7 +39,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include "ServerMessage.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
@@ -175,8 +175,8 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -214,8 +214,8 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -299,8 +299,8 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -404,8 +404,8 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -500,8 +500,8 @@ uint32 CoordinateSegmentationClient::numServers()  {
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Options.hpp
+ *  CommonOptions.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CBR_OPTIONS_HPP_
-#define _SIRIKATA_CBR_OPTIONS_HPP_
+#ifndef _SIRIKATA_COMMON_OPTIONS_HPP_
+#define _SIRIKATA_COMMON_OPTIONS_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
 
@@ -45,17 +45,44 @@
 
 namespace Sirikata {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
+SIRIKATA_FUNCTION_EXPORT void InitOptions();
+SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv);
+
+// Be careful with GetOption.  Using it and ->as() directly can be dangerous
+// because some types are defined per-library and won't dynamic_cast properly.
+// It is suggested that you use GetOptionValue where possible.
+SIRIKATA_FUNCTION_EXPORT OptionValue* GetOption(const char* name);
+
+template<typename T>
+T GetOptionValue(const char* name) {
+    OptionValue* opt = GetOption(name);
+    return opt->as<T>();
+}
+
+template<>
+SIRIKATA_FUNCTION_EXPORT String GetOptionValue<String>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT Vector3f GetOptionValue<Vector3f>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT Vector3ui32 GetOptionValue<Vector3ui32>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT BoundingBox3f GetOptionValue<BoundingBox3f>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT ObjectHostID GetOptionValue<ObjectHostID>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT Task::DeltaTime GetOptionValue<Task::DeltaTime>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT uint32 GetOptionValue<uint32>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT bool GetOptionValue<bool>(const char* name);
 
 
-String GetPerServerString(const String& orig, const ServerID& sid);
+SIRIKATA_FUNCTION_EXPORT String GetPerServerString(const String& orig, const ServerID& sid);
 /** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
-String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
+SIRIKATA_FUNCTION_EXPORT String GetPerServerFile(const char* opt_name, const ServerID& sid);
+SIRIKATA_FUNCTION_EXPORT String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
 
 } // namespace Sirikata
 
 
-#endif //_SIRIKATA_CBR_OPTIONS_HPP_
+#endif //_SIRIKATA_COMMON_OPTIONS_HPP_

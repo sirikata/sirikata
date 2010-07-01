@@ -38,7 +38,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
 #include <sirikata/core/util/Random.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
@@ -57,13 +57,13 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Net
  : mContext(ctx),
    parent(ctx->objectHost),
    server(sid),
-   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
+   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(&ioStrand->service(),streamOptions)),
    connecting(false),
-   receive_queue(GetOption("object-host-receive-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
+   receive_queue(GetOptionValue<size_t>("object-host-receive-buffer"), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(GetOption("ohstreamlib")->as<String>()),0);
+    static int tcpSstLoaded=(sPluginManager.load(GetOptionValue<String>("ohstreamlib")),0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -290,9 +290,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap*
 {
     mPingId=0;
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(GetOption("ohstreamlib")->as<String>()),0);
+    static int tcpSstLoaded=(sPluginManager.load(GetOptionValue<String>("ohstreamlib")),0);
 
-    mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
+    mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOptionValue<String>("ohstreamlib"))(GetOptionValue<String>("ohstreamoptions"));
 
     mHandleReadProfiler = mContext->profiler->addStage("Handle Read Network");
     mHandleMessageProfiler = mContext->profiler->addStage("Handle Server Message");

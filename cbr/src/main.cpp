@@ -47,7 +47,7 @@
 #include "Server.hpp"
 
 #include "Options.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include "StandardLocationService.hpp"
@@ -74,25 +74,25 @@ int main(int argc, char** argv) {
     ParseOptions(argc, argv);
 
     PluginManager plugins;
-    plugins.loadList( GetOption(OPT_PLUGINS)->as<String>() );
-    plugins.loadList( GetOption(OPT_SPACE_PLUGINS)->as<String>() );
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_SPACE_PLUGINS) );
 
-    std::string time_server=GetOption("time-server")->as<String>();
+    std::string time_server=GetOptionValue<String>("time-server");
     NTPTimeSync sync;
     if (time_server.size() > 0)
         sync.start(time_server);
 
 
-    ServerID server_id = GetOption("id")->as<ServerID>();
+    ServerID server_id = GetOptionValue<ServerID>("id");
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
     Sirikata::Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
     // Compute the starting date/time
-    String start_time_str = GetOption("wait-until")->as<String>();
+    String start_time_str = GetOptionValue<String>("wait-until");
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time += GetOption("wait-additional")->as<Duration>();
+    start_time += GetOptionValue<Duration>("wait-additional");
 
-    Duration duration = GetOption("duration")->as<Duration>();
+    Duration duration = GetOptionValue<Duration>("duration");
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
@@ -101,16 +101,16 @@ int main(int argc, char** argv) {
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
 
     Sirikata::SpaceNetwork* gNetwork = NULL;
-    String network_type = GetOption(NETWORK_TYPE)->as<String>();
+    String network_type = GetOptionValue<String>(NETWORK_TYPE);
     if (network_type == "tcp")
       gNetwork = new TCPSpaceNetwork(space_context);
 
     /*
-    String test_mode = GetOption("test")->as<String>();
+    String test_mode = GetOptionValue<String>("test");
     if (test_mode != "none") {
-        String server_port = GetOption("server-port")->as<String>();
-        String client_port = GetOption("client-port")->as<String>();
-        String host = GetOption("host")->as<String>();
+        String server_port = GetOptionValue<String>("server-port");
+        String client_port = GetOptionValue<String>("client-port");
+        String host = GetOptionValue<String>("host");
         if (test_mode == "server")
             CBR::testServer(server_port.c_str(), host.c_str(), client_port.c_str());
         else if (test_mode == "client")
@@ -119,15 +119,15 @@ int main(int argc, char** argv) {
     }
     */
 
-    BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
-    Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
+    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
 
-    srand( GetOption("rand-seed")->as<uint32>() );
+    srand( GetOptionValue<uint32>("rand-seed") );
 
 
-    String servermap_type = GetOption("servermap")->as<String>();
-    String servermap_options = GetOption("servermap-options")->as<String>();
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
     ServerIDMap * server_id_map =
         ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
     Forwarder* forwarder = new Forwarder(space_context);
 
 
-    String cseg_type = GetOption(CSEG)->as<String>();
+    String cseg_type = GetOptionValue<String>(CSEG);
     CoordinateSegmentation* cseg = NULL;
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
 
 
     LocationService* loc_service = NULL;
-    String loc_service_type = GetOption(LOC)->as<String>();
+    String loc_service_type = GetOptionValue<String>(LOC);
     if (loc_service_type == "standard")
         loc_service = new StandardLocationService(space_context);
     else
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
 
 
     ServerMessageQueue* sq = NULL;
-    String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
+    String server_queue_type = GetOptionValue<String>(SERVER_QUEUE);
     if (server_queue_type == "fair") {
         sq = new FairServerMessageQueue(
             space_context, gNetwork,
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     }
 
     ServerMessageReceiver* server_message_receiver = NULL;
-    String server_receiver_type = GetOption(SERVER_RECEIVER)->as<String>();
+    String server_receiver_type = GetOptionValue<String>(SERVER_RECEIVER);
     if (server_queue_type == "fair")
         server_message_receiver =
                 new FairServerMessageReceiver(space_context, gNetwork, (ServerMessageReceiver::Listener*)forwarder);
@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
 
 
     //Create OSeg
-    std::string oseg_type=GetOption(OSEG)->as<String>();
+    std::string oseg_type=GetOptionValue<String>(OSEG);
     Network::IOStrand* osegStrand = space_context->ioService->createStrand();
     ObjectSegmentation* oseg = NULL;
     if (oseg_type == OSEG_OPTION_CRAQ)
@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
       craqArgsSet.push_back(cInitArgs2);
 
 
-      std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
+      std::string oseg_craq_prefix=GetOptionValue<String>(OSEG_UNIQUE_CRAQ_PREFIX);
 
       if (oseg_type.size() ==0)
       {
@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
 
     space_context->cleanup();
 
-    if (GetOption(PROFILE)->as<bool>()) {
+    if (GetOptionValue<bool>(PROFILE)) {
         space_context->profiler->report();
     }
 

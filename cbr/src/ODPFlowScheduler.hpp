@@ -37,7 +37,7 @@
 #include <sirikata/core/queue/AbstractQueue.hpp>
 #include "ForwarderServiceQueue.hpp"
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 class CraqEntry;
@@ -73,7 +73,7 @@ public:
        mReceiverCapacity(0.0)
     {
         mWeightCalculator =
-            RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOption(OPT_REGION_WEIGHT)->as<String>())(GetOption(OPT_REGION_WEIGHT_ARGS)->as<String>())
+            RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOptionValue<String>(OPT_REGION_WEIGHT))(GetOptionValue<String>(OPT_REGION_WEIGHT_ARGS))
             ;
     }
 

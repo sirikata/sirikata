@@ -32,7 +32,7 @@
 
 #include "Proximity.hpp"
 #include "Options.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include <algorithm>
 
@@ -456,7 +456,7 @@ void Proximity::generateServerQueryEvents() {
     typedef std::deque<QueryEvent> QueryEventList;
 
     Time t = mContext->simTime();
-    uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
+    uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
         ServerID sid = query_it->first;
@@ -521,7 +521,7 @@ void Proximity::generateServerQueryEvents() {
 void Proximity::generateObjectQueryEvents() {
     typedef std::deque<QueryEvent> QueryEventList;
 
-    uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
+    uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
         UUID query_id = query_it->first;

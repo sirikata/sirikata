@@ -32,7 +32,7 @@
 
 #include "ServerMessageQueue.hpp"
 #include <sirikata/core/trace/Trace.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 
@@ -47,7 +47,7 @@ ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sen
 {
     mProfiler = mContext->profiler->addStage("Server Message Queue");
     mNetwork->setSendListener(this);
-    mCapacityOverestimate=GetOption("send-capacity-overestimate")->as<double>();
+    mCapacityOverestimate=GetOptionValue<double>("send-capacity-overestimate");
 }
 
 ServerMessageQueue::~ServerMessageQueue(){}
