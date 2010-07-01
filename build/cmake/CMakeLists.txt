@@ -803,6 +803,7 @@ ADD_PBJ_TARGET(
 )
 ADD_PBJ_TARGET(
   MessageHeader ${ProtocolBuffersSources}
+  DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
   INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
