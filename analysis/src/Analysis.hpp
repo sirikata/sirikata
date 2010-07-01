@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
-#include "CBR_Geometry.pbj.hpp"
+#include "Protocol_Geometry.pbj.hpp"
 #include "AnalysisEvents.hpp"
 
 namespace Sirikata {

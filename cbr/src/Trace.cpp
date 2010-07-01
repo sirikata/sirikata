@@ -31,11 +31,11 @@
  */
 
 #include "Trace.hpp"
-#include "CBR_OSegTrace.pbj.hpp"
-#include "CBR_MigrationTrace.pbj.hpp"
-#include "CBR_DatagramTrace.pbj.hpp"
-#include "CBR_LocProxTrace.pbj.hpp"
-#include "CBR_CSegTrace.pbj.hpp"
+#include "Protocol_OSegTrace.pbj.hpp"
+#include "Protocol_MigrationTrace.pbj.hpp"
+#include "Protocol_DatagramTrace.pbj.hpp"
+#include "Protocol_LocProxTrace.pbj.hpp"
+#include "Protocol_CSegTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {

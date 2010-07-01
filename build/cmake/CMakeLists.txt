@@ -770,7 +770,6 @@ SET(ProtocolBuffersSources
   SSTHeader
   )
 
-
 # Based on dependencies, generate arguments for protocol buffers generation
 SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
@@ -794,6 +793,47 @@ ADD_PBJ_TARGET(MessageHeader ${ProtocolBuffersSources}
   EXPORTMACRO SIRIKATA_EXPORT
   ${PROTOCOLBUFFERS_GENS}
 )
+
+# For Traces
+# Trace protocol buffers are handled separately to handle dependencies and their slightly different location
+SET(TRACE_PROTOCOLS_CORE
+  Geometry.pbj
+)
+SET(TRACE_OBJECT_PROTOCOLS
+  ObjectTrace.pbj
+  OSegTrace.pbj
+  MigrationTrace.pbj
+  PingTrace.pbj
+  DatagramTrace.pbj
+  LocProxTrace.pbj
+  CSegTrace.pbj
+)
+ADD_PBJ_TARGET(
+  ${TRACE_PROTOCOLS_CORE}
+  PLUGINNAME "Protocol"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES TRACE_CORE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  GENERATE_CPP
+)
+ADD_PBJ_TARGET(
+  ${TRACE_OBJECT_PROTOCOLS}
+  DEPENDS ${CBR_CORE_PBJ_CPP_FILES}
+  PLUGINNAME "Protocol"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES TRACE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  GENERATE_CPP
+)
+# Aggregate core and full pbj files
+SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
+
 
 # For scripting
 SET(ScriptingProtocolBuffersSources
@@ -830,44 +870,6 @@ ADD_PBJ_TARGET(Physics
 
 
 SET(PBJ_CPP_HEADER "\n")
-
-SET(TRACE_PROTOCOLS_CORE
-  Geometry.pbj
-)
-SET(TRACE_OBJECT_PROTOCOLS
-  ObjectTrace.pbj
-  OSegTrace.pbj
-  MigrationTrace.pbj
-  PingTrace.pbj
-  DatagramTrace.pbj
-  LocProxTrace.pbj
-  CSegTrace.pbj
-)
-# protocol targets
-ADD_PBJ_TARGET(
-  ${TRACE_PROTOCOLS_CORE}
-  PLUGINNAME "CBR"
-  INPUTDIR ${ProtocolBuffersRoot}/trace
-  IMPORTS ${ProtocolBuffersRoot}/trace
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES TRACE_CORE_PBJ_CPP_FILES
-  CPP_HEADER ${PBJ_CPP_HEADER}
-  GENERATE_CPP
-)
-ADD_PBJ_TARGET(
-  ${TRACE_OBJECT_PROTOCOLS}
-  DEPENDS ${CBR_CORE_PBJ_CPP_FILES}
-  PLUGINNAME "CBR"
-  INPUTDIR ${ProtocolBuffersRoot}/trace
-  IMPORTS ${ProtocolBuffersRoot}/trace
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES TRACE_PBJ_CPP_FILES
-  CPP_HEADER ${PBJ_CPP_HEADER}
-  GENERATE_CPP
-)
-# Aggregate core and full pbj files
-SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
-
 
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
@@ -914,7 +916,6 @@ SET(CBR_PBJ_CPP_FILES ${CBR_PBJ_CPP_FILES} ${CBR_CORE_PBJ_CPP_FILES})
 # generated pbj implementation source files
 SET(CBR_PROTOCOL_SOURCES
   ${CBR_PBJ_CPP_FILES}
-  ${TRACE_PBJ_CPP_FILES}
 )
 
 #binary files to be linked into sirikata
@@ -1014,6 +1015,7 @@ ENDIF()
 SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
         ${Protocol_PBJ_CPP_FILES}
+        ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp

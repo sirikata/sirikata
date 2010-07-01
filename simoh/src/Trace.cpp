@@ -31,8 +31,8 @@
  */
 
 #include "Trace.hpp"
-#include "CBR_ObjectTrace.pbj.hpp"
-#include "CBR_PingTrace.pbj.hpp"
+#include "Protocol_ObjectTrace.pbj.hpp"
+#include "Protocol_PingTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {

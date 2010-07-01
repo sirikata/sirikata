@@ -35,13 +35,13 @@
 #define __SIRIKATA_ANALYSIS_EVENTS_HPP__
 
 #include <sirikata/core/trace/Trace.hpp>
-#include "CBR_ObjectTrace.pbj.hpp"
-#include "CBR_OSegTrace.pbj.hpp"
-#include "CBR_MigrationTrace.pbj.hpp"
-#include "CBR_PingTrace.pbj.hpp"
-#include "CBR_DatagramTrace.pbj.hpp"
-#include "CBR_CSegTrace.pbj.hpp"
-#include "CBR_LocProxTrace.pbj.hpp"
+#include "Protocol_ObjectTrace.pbj.hpp"
+#include "Protocol_OSegTrace.pbj.hpp"
+#include "Protocol_MigrationTrace.pbj.hpp"
+#include "Protocol_PingTrace.pbj.hpp"
+#include "Protocol_DatagramTrace.pbj.hpp"
+#include "Protocol_CSegTrace.pbj.hpp"
+#include "Protocol_LocProxTrace.pbj.hpp"
 
 namespace Sirikata {
 
