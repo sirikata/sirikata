@@ -49,7 +49,6 @@ class DenseData : Noncopyable, public Range {
 	DenseData(const unsigned char *str, size_t len) : Range(false) {}
 
 public:
-	/// The only constructor--the length can be changed later with setLength().
 	DenseData(const Range &range)
 			:Range(range) {
 		if (range.length()) {
@@ -63,12 +62,16 @@ public:
 		std::copy(str.begin(), str.end(), writableData());
 	}
 
-	DenseData(const Range& range, const char* str, size_t len)
-        : Range(range), mData(str, str+len) {
+	DenseData(const Range& range, const char* str)
+        : Range(range), mData(str, str+range.length()) {
+	    if(range.length() == 0)
+	        throw std::invalid_argument("Tried to create DenseData with length of 0");
 	}
 
 	/// equals dataAt(startbyte()).
 	inline const unsigned char *data() const {
+	    if(mData.size() == 0)
+	        throw std::length_error("Tried to get a const pointer to DenseData with 0 length");
 		return &(mData[0]);
 	}
 
@@ -82,6 +85,8 @@ public:
 
 	/// Returns a non-const data, starting at startbyte().
 	inline unsigned char *writableData() {
+	    if(mData.size() == 0)
+	        throw std::length_error("Tried to get a writable pointer to DenseData with 0 length");
 		return &(mData[0]);
 	}
 
@@ -90,9 +95,8 @@ public:
 	 * Note that it will also return NULL if startbyte() > offset.
 	 */
 	inline const unsigned char *dataAt(base_type offset) const {
-		if (offset >= endbyte() || offset < startbyte()) {
-			return NULL;
-		}
+		if (offset >= endbyte() || offset < startbyte())
+		    return NULL;
 		return &(mData[(std::vector<unsigned char>::size_type)(offset-startbyte())]);
 	}
 

@@ -117,7 +117,7 @@ public:
 
         /*
          * For HEAD file request, make sure body is null,
-         * content length is present and not 0, status code is 200
+         * content length is present and correct, status code is 200
          */
         request_stream.str("");
         request_stream << "HEAD /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
@@ -134,7 +134,7 @@ public:
         if(mHttpResponse) {
             it = mHttpResponse->getHeaders().find("Content-Length");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
-            TS_ASSERT(mHttpResponse->getContentLength() != 0);
+            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             TS_ASSERT( !(mHttpResponse->getData()) );
@@ -144,10 +144,11 @@ public:
 
         /*
          * For GET file request, check content length is present,
-         * content length = data size, http status code 200
+         * content length = data size, http status code 200,
+         * check content length = correct size of file
          */
         request_stream.str("");
-        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.0\r\n";
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
         request_stream << "Host: cdn.sirikata.com\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Connection: close\r\n\r\n";
@@ -165,6 +166,39 @@ public:
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+        }
+
+
+
+
+        /*
+         * For GET file range request, check content length is present,
+         * content length = range size, http status code 200
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Range: bytes=10-20\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing get file range request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getData());
+            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11);
+            SILOG(transfer, debug, "content length is " << mHttpResponse->getContentLength());
+            SILOG(transfer, debug, "data length is " << mHttpResponse->getData()->length());
         }
 
 

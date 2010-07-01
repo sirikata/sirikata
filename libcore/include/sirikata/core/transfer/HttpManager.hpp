@@ -165,6 +165,7 @@ private:
     static std::string mTempHeaderName;
     static int on_header_field(http_parser *_, const char *at, size_t len);
     static int on_header_value(http_parser *_, const char *at, size_t len);
+    static int on_headers_complete(http_parser *_);
     static int on_body(http_parser *_, const char *at, size_t len);
 
 };

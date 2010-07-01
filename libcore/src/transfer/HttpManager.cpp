@@ -106,8 +106,8 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, std::string req, 
 }
 
 void HttpManager::processQueue() {
-    SILOG(transfer, debug, "processQueue called, numOutstanding = "
-            << numOutstanding << " and request queue size = " << mRequestQueue.size());
+    /*SILOG(transfer, debug, "processQueue called, numOutstanding = "
+            << numOutstanding << " and request queue size = " << mRequestQueue.size());*/
     if(numOutstanding < MAX_CONCURRENT_REQUESTS && !mRequestQueue.empty()) {
         HttpRequest r = mRequestQueue.front();
         mRequestQueue.pop();
@@ -184,6 +184,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, HttpReques
         mHttpSettings.on_header_field = &HttpManager::on_header_field;
         mHttpSettings.on_header_value = &HttpManager::on_header_value;
         mHttpSettings.on_body = &HttpManager::on_body;
+        mHttpSettings.on_headers_complete = &HttpManager::on_headers_complete;
 
         http_parser_init(&mHttpParser, HTTP_RESPONSE);
 
@@ -197,9 +198,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, HttpReques
             SILOG(transfer, warning, "Failed to parse http response. nparsed=" << nparsed << " while responsesize=" << responseSize);
             req.cb(std::tr1::shared_ptr<HttpResponse>(), RESPONSE_PARSING_FAILED, ec);
         } else {
-            SILOG(transfer, debug, "Finished http transfer");
-            mTempResponse->mContentLength = mHttpParser.content_length;
-            mTempResponse->mStatusCode = mHttpParser.status_code;
+            SILOG(transfer, debug, "Finished http transfer with content length of " << mTempResponse->getContentLength());
             req.cb(mTempResponse, SUCCESS, ec);
         }
     } else {
@@ -210,6 +209,13 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, HttpReques
     socket->close();
     numOutstanding--;
     processQueue();
+}
+
+int HttpManager::on_headers_complete(http_parser *_) {
+    //SILOG(transfer, debug, "headers complete. content length = " << _->content_length);
+    mTempResponse->mContentLength = _->content_length;
+    mTempResponse->mStatusCode = _->status_code;
+    return 0;
 }
 
 int HttpManager::on_header_field(http_parser *_, const char *at, size_t len) {
@@ -227,8 +233,8 @@ int HttpManager::on_header_value(http_parser *_, const char *at, size_t len) {
 }
 
 int HttpManager::on_body(http_parser *_, const char *at, size_t len) {
-    //SILOG(transfer, debug, "on_body called");
-    std::tr1::shared_ptr<DenseData> d(new DenseData(Range(true), at, len));
+    //SILOG(transfer, debug, "on_body called with length = " << len);
+    std::tr1::shared_ptr<DenseData> d(new DenseData(Range(0, len, LENGTH, true), at));
     mTempResponse->mData = d;
     return 0;
 }
