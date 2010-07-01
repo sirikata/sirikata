@@ -36,12 +36,12 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "../../OSegLookupTraceToken.hpp"
 
 namespace Sirikata
 {

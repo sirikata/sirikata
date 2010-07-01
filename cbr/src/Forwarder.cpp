@@ -33,7 +33,7 @@
 
 #include "SpaceNetwork.hpp"
 #include "Server.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <sirikata/cbrcore/Message.hpp>
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
@@ -50,7 +50,7 @@
 #include "ForwarderServiceQueue.hpp"
 #include "LocalForwarder.hpp"
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include "ODPFlowScheduler.hpp"
 #include "RegionODPFlowScheduler.hpp"
@@ -592,7 +592,7 @@ Message* Forwarder::serverMessagePull(ServerID dest) {
     if (next_msg == NULL)
         return NULL;
 
-    CONTEXT_TRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+    CONTEXT_SPACETRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
 
     return next_msg;
 }

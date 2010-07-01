@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 namespace Sirikata {
 

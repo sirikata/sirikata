@@ -34,13 +34,11 @@
 #include <iostream>
 #include <map>
 #include <utility>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/VWTypes.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <functional>

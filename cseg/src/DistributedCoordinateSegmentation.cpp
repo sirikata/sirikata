@@ -42,7 +42,7 @@
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/core/util/Hash.hpp>
 #include "WorldPopulationBSPTree.hpp"
-#include <sirikata/cbrcore/ServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {
 
@@ -572,9 +572,6 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
 }
 
 void DistributedCoordinateSegmentation::csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg) {
-}
-
-void DistributedCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {
 }
 
 void DistributedCoordinateSegmentation::serializeBSPTree(SerializedBSPTree* serializedBSPTree) {

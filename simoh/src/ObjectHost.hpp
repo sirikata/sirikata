@@ -35,12 +35,12 @@
 
 #include "ObjectHostContext.hpp"
 #include "ObjectHostListener.hpp"
-#include <sirikata/cbrcore/QueueRouterElement.hpp>
+#include "QueueRouterElement.hpp"
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/cbrcore/SSTImpl.hpp>
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 #include <sirikata/core/network/Stream.hpp>
@@ -66,7 +66,7 @@ public:
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
-    ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap);
+    ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap* sidmap);
 
     ~ObjectHost();
 

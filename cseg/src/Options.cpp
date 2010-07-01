@@ -50,7 +50,7 @@ void InitCSegOptions() {
         .addOption(new OptionValue("cseg-world-height", "3432", Sirikata::OptionValueType<uint32>(), "The number of cells across the height of the world population dataset."))
         .addOption(new OptionValue("cseg-max-leaf-population", "800", Sirikata::OptionValueType<uint32>(), "The maximum number of avatars/people at the leaf of the BSP tree."))
       .addOption(new OptionValue("cseg-population-density-file", "glds00ag.asc", Sirikata::OptionValueType<String>(), "The file containing the population density numbers."))
-      .addOption(new OptionValue("cseg-serverips", "cseg_serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list for cseg servers."))
+      .addOption(new OptionValue("cseg-servermap-options", "--filename=cseg_serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list for cseg servers."))
       .addOption(new OptionValue("cseg-id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this CSEG server"))
       .addOption(new OptionValue("additional-cseg-duration", "5s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
       ;

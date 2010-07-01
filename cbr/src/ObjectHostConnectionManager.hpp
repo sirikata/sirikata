@@ -34,10 +34,10 @@
 #define _SIRIKATA_OBJECT_HOST_CONNECTION_MANAGER_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include "SpaceNetwork.hpp"
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Address4.hpp>
+#include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamListener.hpp>

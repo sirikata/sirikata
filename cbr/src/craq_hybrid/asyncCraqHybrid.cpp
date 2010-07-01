@@ -34,7 +34,6 @@
 #include "craq_sets/asyncCraqSet.hpp"
 #include "asyncCraqUtil.hpp"
 #include "asyncCraqHybrid.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../ObjectSegmentation.hpp"
 

@@ -42,7 +42,6 @@
 #include <cassert>
 #include <string>
 #include "CacheRecords.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 
 

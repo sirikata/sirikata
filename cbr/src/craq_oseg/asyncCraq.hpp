@@ -35,7 +35,7 @@
 #include "asyncUtil.hpp"
 #include "asyncConnection.hpp"
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../SpaceContext.hpp"
 
 
 #ifndef __ASYNC_CRAQ_CLASS_H__

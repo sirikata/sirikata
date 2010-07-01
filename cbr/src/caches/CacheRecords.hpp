@@ -32,7 +32,7 @@
 
 
 #include "Utility.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../SpaceContext.hpp"
 
 #ifndef __CACHE_RECORDS_HPP__
 #define __CACHE_RECORDS_HPP__

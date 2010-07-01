@@ -33,10 +33,10 @@
 #include "craq_gets/asyncCraqGet.hpp"
 #include "craq_sets/asyncCraqSet.hpp"
 #include "asyncCraqUtil.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "asyncCraqScheduler.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "../OSegLookupTraceToken.hpp"
 
 #ifndef  __ASYNC_CRAQ_HYBRID_HPP__
 #define  __ASYNC_CRAQ_HYBRID_HPP__

@@ -32,7 +32,6 @@
 
 #include "Complete_Cache.hpp"
 #include "../craq_oseg/CraqEntry.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <boost/thread/mutex.hpp>
 #include "CraqCache.hpp"
 

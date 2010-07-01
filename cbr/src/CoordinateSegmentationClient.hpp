@@ -35,8 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-#include <sirikata/cbrcore/SegmentedRegion.hpp>
+#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/SegmentedRegion.hpp>
 
 #include "CBR_CSeg.pbj.hpp"
 
@@ -72,7 +72,7 @@ private:
     SegmentedRegion mTopLevelRegion;
     bool mBSPTreeValid;
 
-    Trace* mTrace;
+    Trace::Trace* mTrace;
 
     std::map<ServerID, BoundingBoxList> mServerRegionCache;
 

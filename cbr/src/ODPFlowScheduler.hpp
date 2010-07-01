@@ -33,7 +33,7 @@
 #ifndef _ODP_FLOW_SCHEDULER_HPP_
 #define _ODP_FLOW_SCHEDULER_HPP_
 
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include <sirikata/core/queue/AbstractQueue.hpp>
 #include "ForwarderServiceQueue.hpp"
 #include <sirikata/core/util/RegionWeightCalculator.hpp>

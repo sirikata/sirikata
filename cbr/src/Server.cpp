@@ -33,7 +33,7 @@
 #include "SpaceNetwork.hpp"
 #include "Server.hpp"
 #include "Proximity.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
 #include <sirikata/cbrcore/Options.hpp>
@@ -46,7 +46,7 @@
 #include "ObjectConnection.hpp"
 #include "ObjectHostConnectionManager.hpp"
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -896,9 +896,9 @@ void Server::killObjectConnection(const UUID& obj_id)
 
     //log the event's completion.
     Duration currentDur = mMigrationTimer.elapsed();
-    int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
+    Duration timeTakenMs = Duration::milliseconds(currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds);
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
-    CONTEXT_TRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
+    CONTEXT_SPACETRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
 
     mMigratingConnections.erase(objConMapIt);
   }

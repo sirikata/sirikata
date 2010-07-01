@@ -34,12 +34,12 @@
 #include "ObjectHostContext.hpp"
 
 #include "Object.hpp"
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
-#include <sirikata/cbrcore/RandomMotionPath.hpp>
-#include <sirikata/cbrcore/QuakeMotionPath.hpp>
-#include <sirikata/cbrcore/StaticMotionPath.hpp>
-#include <sirikata/cbrcore/OSegTestMotionPath.hpp>
+#include "RandomMotionPath.hpp"
+#include "QuakeMotionPath.hpp"
+#include "StaticMotionPath.hpp"
+#include "OSegTestMotionPath.hpp"
 
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>

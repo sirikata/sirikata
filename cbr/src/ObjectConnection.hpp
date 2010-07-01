@@ -39,7 +39,9 @@
 
 namespace Sirikata {
 
+namespace Trace {
 class Trace;
+}
 class Server;
 
 /** Represents a connection a space has to an object.

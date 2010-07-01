@@ -33,7 +33,6 @@
 #include "asyncConnection.hpp"
 #include <iostream>
 #include <boost/bind.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "CraqEntry.hpp"
 namespace Sirikata

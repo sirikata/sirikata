@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_CBR_OPTIONS_HPP_
 #define _SIRIKATA_CBR_OPTIONS_HPP_
 
-#include "VWTypes.hpp"
+#include <sirikata/core/util/Platform.hpp>
 
 #define OPT_PLUGINS               "plugins"
 

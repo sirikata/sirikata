@@ -39,7 +39,7 @@
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <string.h>
 #include <vector>
 
@@ -47,7 +47,7 @@
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
 
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "OSegLookupTraceToken.hpp"
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>

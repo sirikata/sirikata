@@ -36,10 +36,10 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 
-#include <sirikata/cbrcore/VWTypes.hpp>
-#include <sirikata/cbrcore/SegmentedRegion.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+
+#include <sirikata/space/SegmentedRegion.hpp>
 #include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/LoadMonitor.hpp>
 #include "CSegContext.hpp"
 
 #include "CBR_CSeg.pbj.hpp"
@@ -79,8 +79,6 @@ public:
 
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);
-
-    virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
     void service();

@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/TimeSync.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
 
 #include "ObjectHost.hpp"
 #include "Object.hpp"
@@ -42,7 +42,7 @@
 #include "Options.hpp"
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
@@ -51,7 +51,8 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
+    OHTrace::InitOptions();
     InitSimOHOptions();
     ParseOptions(argc, argv);
 
@@ -60,19 +61,19 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOption(OPT_OH_PLUGINS)->as<String>() );
 
     std::string time_server=GetOption("time-server")->as<String>();
-    TimeSync sync;
+    NTPTimeSync sync;
     if (time_server.size() > 0)
         sync.start(time_server);
 
 
     ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
-    Trace* gTrace = new Trace(trace_file);
+    Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-
+    String servermap_type = GetOption("servermap")->as<String>();
+    String servermap_options = GetOption("servermap-options")->as<String>();
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 

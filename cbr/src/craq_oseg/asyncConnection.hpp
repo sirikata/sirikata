@@ -37,7 +37,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <boost/asio.hpp>
 #include "asyncUtil.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../SpaceContext.hpp"
 
 
 //#define ASYNC_CONNECTION_DEBUG

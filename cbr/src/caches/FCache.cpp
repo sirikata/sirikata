@@ -47,7 +47,6 @@
 #include <string>
 #include <cmath>
 #include "CacheRecords.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 
 //#define FCACHE_LOG_REMOVALS

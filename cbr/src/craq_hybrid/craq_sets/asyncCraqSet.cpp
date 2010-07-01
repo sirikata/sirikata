@@ -40,7 +40,6 @@
 
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionSet.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include <functional>

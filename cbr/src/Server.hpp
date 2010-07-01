@@ -35,13 +35,13 @@
 #define _SIRIKATA_SERVER_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 
 #include "ObjectHostConnectionManager.hpp"
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 #include "CBR_Session.pbj.hpp"
 #include "CBR_Migration.pbj.hpp"

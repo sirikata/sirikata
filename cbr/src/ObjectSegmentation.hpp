@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_SEGMENTATION_HPP_
 #define _SIRIKATA_OBJECT_SEGMENTATION_HPP_
 
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include <sirikata/cbrcore/Message.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <iostream>

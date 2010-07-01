@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"

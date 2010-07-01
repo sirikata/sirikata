@@ -815,6 +815,46 @@ ADD_PBJ_TARGET(Physics
 
 
 
+SET(PBJ_CPP_HEADER "\n")
+
+SET(TRACE_PROTOCOLS_CORE
+  Geometry.pbj
+)
+SET(TRACE_OBJECT_PROTOCOLS
+  Object.pbj
+  OSegTrace.pbj
+  MigrationTrace.pbj
+  PingTrace.pbj
+  DatagramTrace.pbj
+  LocProxTrace.pbj
+  CSegTrace.pbj
+)
+# protocol targets
+ADD_PBJ_TARGET(
+  ${TRACE_PROTOCOLS_CORE}
+  PLUGINNAME "CBR"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES TRACE_CORE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  GENERATE_CPP
+)
+ADD_PBJ_TARGET(
+  ${TRACE_OBJECT_PROTOCOLS}
+  DEPENDS ${CBR_CORE_PBJ_CPP_FILES}
+  PLUGINNAME "CBR"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES TRACE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  GENERATE_CPP
+)
+# Aggregate core and full pbj files
+SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
+
+
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(CBR_PROTOCOLS_CORE
@@ -834,7 +874,6 @@ SET(CBR_PROTOCOLS
   Forwarder.pbj
 )
 
-SET(PBJ_CPP_HEADER "\n")
 # protocol targets
 ADD_PBJ_TARGET(
   ${CBR_PROTOCOLS_CORE}
@@ -863,6 +902,7 @@ SET(CBR_PBJ_CPP_FILES ${CBR_PBJ_CPP_FILES} ${CBR_CORE_PBJ_CPP_FILES})
 # generated pbj implementation source files
 SET(CBR_PROTOCOL_SOURCES
   ${CBR_PBJ_CPP_FILES}
+  ${TRACE_PBJ_CPP_FILES}
 )
 
 #binary files to be linked into sirikata
@@ -983,6 +1023,7 @@ SET(SIRIKATA_CORE_SOURCES
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
    	${LIBCORE_SOURCE_DIR}/options/Config.cpp
    	${LIBCORE_SOURCE_DIR}/options/CDNConfig.cpp
+        ${LIBCORE_SOURCE_DIR}/network/Address4.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
@@ -993,6 +1034,8 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/StreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
+        ${LIBCORE_SOURCE_DIR}/network/NTPTimeSync.cpp
+        ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1005,8 +1048,9 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
 	${LIBCORE_SOURCE_DIR}/util/SolidAngle.cpp
 	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-    ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
+        ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
         ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
@@ -1085,6 +1129,7 @@ SET(LIBSPACE_SOURCES
                      ${LIBSPACE_SOURCE_DIR}/Loc.cpp
                      ${LIBSPACE_SOURCE_DIR}/Registration.cpp
                       )
+
 SET(LIBPROXIMITY_SOURCES
   ${Proximity_PBJ_CPP_FILES}
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp
@@ -1168,6 +1213,12 @@ SET(LIBCORE_PLUGIN_WEIGHTSQR_SOURCES
   ${LIBCORE_PLUGIN_WEIGHTSQR_DIR}/SqrIntegral.cpp
   )
 
+SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR ${LIBCORE_PLUGIN_DIR}/servermap_tabular)
+SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES
+  ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/TabularServerIDMap.cpp
+  )
+
 
 SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/ogre)
 SET(GFX ${LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR})
@@ -1229,28 +1280,16 @@ ${GFX}/WebViewManager.cpp
 
 #source files
 SET(LIBCBRCORE_SOURCES
-  ${LIBCBRCORE_SOURCE_DIR}/Address4.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/SpaceContext.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
   ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/LoadMonitor.cpp
 )
 
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
@@ -1277,14 +1316,18 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
+  ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocalForwarder.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${CBR_SOURCE_DIR}/Trace.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
+  ${CBR_SOURCE_DIR}/SpaceContext.cpp
   ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
@@ -1296,9 +1339,14 @@ SET(CBR_SOURCES
 )
 
 SET(SIMOH_SOURCES
+  ${SIMOH_SOURCE_DIR}/RouterElement.cpp
+  ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/ScenarioFactory.cpp
   ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
@@ -1308,6 +1356,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
+  ${SIMOH_SOURCE_DIR}/Trace.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 
@@ -1545,6 +1594,13 @@ ADD_PLUGIN_TARGET(weight-sqr
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-sqr)
+
+ADD_PLUGIN_TARGET(servermap-tabular
+                    SOURCES ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} servermap-tabular)
 
 
 IF(OGRE_FOUND AND sdl_FOUND )

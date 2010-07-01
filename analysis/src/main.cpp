@@ -36,7 +36,6 @@
 #include <sirikata/core/network/IOStrand.hpp>
 
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/TimeSync.hpp>
 
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
@@ -76,7 +75,7 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
     InitAnalysisOptions();
     ParseOptions(argc, argv);
 
@@ -213,23 +212,6 @@ int main(int argc, char** argv) {
                     ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
             }
         }
-        // Queue information
-        //  * Raw dump
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.dumpDatagramQueueInfo(sender, receiver, std::cout, queue_info_file);
-            }
-        }
-        //  * Send
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.windowedDatagramSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
-            }
-        }
-        //  * Receive
-        // None
 
         exit(0);
     }
@@ -295,20 +277,6 @@ int main(int argc, char** argv) {
         cumulativeOsegAnalysis.printData(oseg_cumulative_stream_csv);
         oseg_cumulative_stream_csv.flush();
         oseg_cumulative_stream_csv.close();
-
-
-        //oseg how long it takes to process craq responses
-        String  object_segmentation_craq_process_filename_csv = "oseg_object_segmentation_craq_response_file";
-        object_segmentation_craq_process_filename_csv += ".csv";
-        OSegProcessCraqReturnAnalysis craqProcAnalysis(STATS_TRACE_FILE,max_space_servers, osegProcessedAfterSeconds);
-
-        std::ofstream oseg_craq_process_stream_csv(object_segmentation_craq_process_filename_csv.c_str());
-
-        craqProcAnalysis.printData(oseg_craq_process_stream_csv);
-
-        oseg_craq_process_stream_csv.flush();
-        oseg_craq_process_stream_csv.close();
-
 
 
         //completed round trip migrate times

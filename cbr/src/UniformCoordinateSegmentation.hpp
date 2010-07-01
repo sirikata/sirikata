@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_UNIFORM_COORDINATE_SEGMENTATION_HPP_
 #define _SIRIKATA_UNIFORM_COORDINATE_SEGMENTATION_HPP_
 
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 
 namespace Sirikata {
 

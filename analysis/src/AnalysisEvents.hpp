@@ -35,7 +35,13 @@
 #define __SIRIKATA_ANALYSIS_EVENTS_HPP__
 
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "CBR_Object.pbj.hpp"
+#include "CBR_OSegTrace.pbj.hpp"
+#include "CBR_MigrationTrace.pbj.hpp"
+#include "CBR_PingTrace.pbj.hpp"
+#include "CBR_DatagramTrace.pbj.hpp"
+#include "CBR_CSegTrace.pbj.hpp"
+#include "CBR_LocProxTrace.pbj.hpp"
 
 namespace Sirikata {
 
@@ -51,13 +57,6 @@ struct Event {
     virtual ~Event() {}
 
     Time time;
-
-    virtual Time begin_time() const {
-        return time;
-    }
-    virtual Time end_time() const {
-        return time;
-    }
 };
 
 struct EventTimeComparator {
@@ -66,64 +65,18 @@ struct EventTimeComparator {
     }
 };
 
+template<typename T>
+struct PBJEvent : public Event {
+    T data;
+};
+
+
+
+
 struct ObjectEvent : public Event {
     UUID receiver;
     UUID source;
 };
-
-struct ObjectConnectedEvent : public ObjectEvent {
-    ServerID server;
-};
-
-struct ProximityEvent : public ObjectEvent {
-    bool entered;
-    TimedMotionVector3f loc;
-};
-
-struct LocationEvent : public ObjectEvent {
-    TimedMotionVector3f loc;
-};
-
-// NOTE: This could just reuse PingEvent except we have some backwards
-// compatibility problems where analyses would interpret it as an actual ping
-// event instead of just a creation, causing double counting.
-struct PingCreatedEvent : public ObjectEvent {
-    Time sentTime;
-    //ping count
-    uint64 id;
-    double distance;
-    PingCreatedEvent():sentTime(Time::null()){}
-    virtual Time begin_time() const {
-        return sentTime;
-    }
-    virtual Time end_time() const {
-        return time;
-    }
-    uint32 size;
-};
-
-struct PingEvent : public ObjectEvent {
-    Time sentTime;
-    //ping count
-    uint64 id;
-    //unique id for all packets across the board
-    uint64 uid;
-    double distance;
-    PingEvent():sentTime(Time::null()){}
-    virtual Time begin_time() const {
-        return sentTime;
-    }
-    virtual Time end_time() const {
-        return time;
-    }
-    uint32 size;
-};
-
-struct GeneratedLocationEvent : public ObjectEvent {
-    TimedMotionVector3f loc;
-    BoundingSphere3f bounds;
-};
-
 
 struct MessageTimestampEvent : public ObjectEvent {
     uint64 uid;
@@ -136,161 +89,35 @@ struct MessageCreationTimestampEvent : public MessageTimestampEvent {
 };
 
 
-struct ServerDatagramQueueInfoEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    uint32 send_size;
-    uint32 send_queued;
-    float send_weight;
-};
-
-
-struct ServerDatagramEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    uint64 id;
-    uint32 size;
-};
-
-struct ServerDatagramQueuedEvent : public ServerDatagramEvent {
-};
-
-struct ServerDatagramSentEvent : public ServerDatagramEvent {
-    ServerDatagramSentEvent()
-     : ServerDatagramEvent(), _start_time(Time::null()), _end_time(Time::null())
-    {}
-
-    virtual Time begin_time() const {
-        return _start_time;
-    }
-    virtual Time end_time() const {
-        return _end_time;
-    }
-
-    float weight;
-
-    Time _start_time;
-    Time _end_time;
-};
-
-struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
-    ServerDatagramReceivedEvent()
-     : ServerDatagramEvent(), _start_time(Time::null()), _end_time(Time::null())
-    {}
-
-    virtual Time begin_time() const {
-        return _start_time;
-    }
-    virtual Time end_time() const {
-        return _end_time;
-    }
-
-    Time _start_time;
-    Time _end_time;
-};
-
-
-struct SegmentationChangeEvent : public Event {
-  BoundingBox3f bbox;
-  ServerID server;
-};
-
-
-struct ObjectBeginMigrateEvent : public Event
-{
-  UUID mObjID;
-  ServerID mMigrateFrom, mMigrateTo;
-};
-
-struct ObjectAcknowledgeMigrateEvent : public Event
-{
-  UUID mObjID;
-  ServerID mAcknowledgeFrom, mAcknowledgeTo;
-};
-
-struct ObjectCraqLookupEvent: public Event
-{
-  UUID mObjID;
-  ServerID mID_lookup;
-};
-
-
-struct ObjectLookupNotOnServerEvent: public Event
-{
-  UUID mObjID;
-  ServerID mID_lookup;
-};
-
-struct ObjectLookupProcessedEvent: public Event
-{
-  UUID mObjID;
-  ServerID mID_processor, mID_objectOn;
-  uint32 deltaTime;
-  uint32 stillInQueue;
-};
-
-
-struct ServerLocationEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    UUID object;
-    TimedMotionVector3f loc;
-};
-
-struct ServerObjectEventEvent : public Event {
-    ServerID source;
-    ServerID dest;
-    UUID object;
-    bool added;
-    TimedMotionVector3f loc;
-};
-
-struct ObjectMigrationRoundTripEvent : public Event
-{
-  UUID obj_id;
-  ServerID sID_migratingFrom;
-  ServerID sID_migratingTo;
-  int numMill;
-};
-
-struct OSegTrackedSetResultsEvent : public Event
-{
-  UUID obj_id;
-  ServerID sID_migratingTo;
-  int numMill;
-};
-
-struct OSegShutdownEvent : public Event
-{
-  ServerID sID;
-  int numLookups;
-  int numOnThisServer;
-  int numCacheHits;
-  int numCraqLookups;
-  int numTimeElapsedCacheEviction;
-  int numMigrationNotCompleteYet;
-
-};
-
-struct OSegCacheResponseEvent : public Event
-{
-  ServerID cacheResponseID;
-  UUID obj_id;
-};
-
-struct OSegCumulativeEvent : public Event
-{
-  OSegLookupTraceToken traceToken;
-};
-
-struct OSegCraqProcEvent : public Event
-{
-  Duration timeItTook;
-  uint32 numProcessed;
-  uint32 sizeIncomingString;
-};
-
-
+// Object
+typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
+typedef PBJEvent<Trace::Object::LocUpdate> LocationEvent;
+typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+typedef PBJEvent<Trace::Object::ProxUpdate> ProximityEvent;
+//OSeg
+typedef PBJEvent<Trace::OSeg::CraqRequest> OSegCraqRequestEvent;
+typedef PBJEvent<Trace::OSeg::ProcessedRequest> OSegProcessedRequestEvent;
+typedef PBJEvent<Trace::OSeg::TrackedSetResults> OSegTrackedSetResultsEvent;
+typedef PBJEvent<Trace::OSeg::Shutdown> OSegShutdownEvent;
+typedef PBJEvent<Trace::OSeg::CacheResponse> OSegCacheResponseEvent;
+typedef PBJEvent<Trace::OSeg::InvalidLookup> OSegInvalidLookupEvent;
+typedef PBJEvent<Trace::OSeg::CumulativeResponse> OSegCumulativeResponseEvent;
+//Migration
+typedef PBJEvent<Trace::Migration::Begin> MigrationBeginEvent;
+typedef PBJEvent<Trace::Migration::Ack> MigrationAckEvent;
+typedef PBJEvent<Trace::Migration::RoundTrip> MigrationRoundTripEvent;
+//Ping
+typedef PBJEvent<Trace::Ping::Created> PingCreatedEvent;
+typedef PBJEvent<Trace::Ping::Sent> PingEvent;
+//Datagram
+typedef PBJEvent<Trace::Datagram::Queued> DatagramQueuedEvent;
+typedef PBJEvent<Trace::Datagram::Sent> DatagramSentEvent;
+typedef PBJEvent<Trace::Datagram::Received> DatagramReceivedEvent;
+//CSeg
+typedef PBJEvent<Trace::CSeg::SegmentationChanged> SegmentationChangedEvent;
+//LocProx
+typedef PBJEvent<Trace::LocProx::LocUpdate> ServerLocUpdateEvent;
+typedef PBJEvent<Trace::LocProx::ObjectEvent> ServerObjectLocUpdateEvent;
 }
 
 #endif

@@ -34,7 +34,7 @@
 #define _SIRIKATA_FORWARDER_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include <sirikata/cbrcore/Message.hpp>
 #include "SpaceNetwork.hpp"
 
@@ -59,7 +59,9 @@ namespace Sirikata
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class SpaceNetwork;
+namespace Trace {
   class Trace;
+}
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;

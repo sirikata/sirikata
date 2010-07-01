@@ -33,7 +33,7 @@
 
 
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/cbrcore/TimeSync.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
@@ -54,13 +54,13 @@
 #include "TCPSpaceNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 #include "FairServerMessageQueue.hpp"
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
-#include <sirikata/cbrcore/LoadMonitor.hpp>
+#include "LoadMonitor.hpp"
 #include "CraqObjectSegmentation.hpp"
 
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 
 
 int main(int argc, char** argv) {
@@ -68,7 +68,8 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
+    SpaceTrace::InitOptions();
     InitSpaceOptions();
     ParseOptions(argc, argv);
 
@@ -77,14 +78,14 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOption(OPT_SPACE_PLUGINS)->as<String>() );
 
     std::string time_server=GetOption("time-server")->as<String>();
-    TimeSync sync;
+    NTPTimeSync sync;
     if (time_server.size() > 0)
         sync.start(time_server);
 
 
     ServerID server_id = GetOption("id")->as<ServerID>();
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    Sirikata::Trace* gTrace = new Trace(trace_file);
+    Sirikata::Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
     // Compute the starting date/time
     String start_time_str = GetOption("wait-until")->as<String>();
@@ -125,9 +126,11 @@ int main(int argc, char** argv) {
     srand( GetOption("rand-seed")->as<uint32>() );
 
 
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    String servermap_type = GetOption("servermap")->as<String>();
+    String servermap_options = GetOption("servermap-options")->as<String>();
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+
     gNetwork->setServerIDMap(server_id_map);
 
 

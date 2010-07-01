@@ -32,10 +32,11 @@
 
 #include "CSFQODPFlowScheduler.hpp"
 #include "LocationService.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-#include <sirikata/cbrcore/Random.hpp>
+#include "CoordinateSegmentation.hpp"
+#include <sirikata/core/util/Random.hpp>
 #include "craq_oseg/CraqEntry.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
+
 #define _Kf (Duration::milliseconds((int64)10000))
 #define _Kf_double (_Kf.toSeconds())
 #define _Kcwin (Duration::milliseconds((int64)10))

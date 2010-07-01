@@ -33,7 +33,6 @@
 #ifndef _SCENARIO_HPP_
 #define _SCENARIO_HPP_
 #include "ObjectHostContext.hpp"
-#include <sirikata/cbrcore/QueueRouterElement.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/cbrcore/Message.hpp>
 

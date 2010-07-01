@@ -54,7 +54,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
                 PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
                 if (ping_evt != NULL) {
                     mLatency.insert(
-                        PingMap::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
+                        PingMap::value_type(ping_evt->data.distance(),ping_evt->data.received()-ping_evt->data.t()));
                 }
             }
             delete evt;
