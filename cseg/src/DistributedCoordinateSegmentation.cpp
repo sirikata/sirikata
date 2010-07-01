@@ -39,7 +39,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/util/Hash.hpp>
 #include "WorldPopulationBSPTree.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
@@ -517,9 +517,6 @@ void DistributedCoordinateSegmentation::service() {
 
     Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,this,segInfoVector));
   }
-}
-
-void DistributedCoordinateSegmentation::receiveMessage(Message* msg) {
 }
 
 void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector)

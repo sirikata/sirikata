@@ -34,7 +34,7 @@
 #define _OSEG_LOOKUP_QUEUE_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include "ObjectSegmentation.hpp"
 
 namespace Sirikata {

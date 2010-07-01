@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Message.hpp
+ *  ServerMessage.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,13 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_MESSAGE_HPP_
-#define _SIRIKATA_MESSAGE_HPP_
+#ifndef _SIRIKATA_SERVER_MESSAGE_HPP_
+#define _SIRIKATA_SERVER_MESSAGE_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
 
+#include <sirikata/core/network/Message.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
+
 #include "CBR_ServerMessage.pbj.hpp"
-#include "CBR_ObjectMessage.pbj.hpp"
 #include "CBR_SSTHeader.pbj.hpp"
 
 
@@ -57,86 +59,6 @@ typedef uint16 ServerMessagePort;
 #define SERVER_PORT_OSEG_UPDATE                15
 #define SERVER_PORT_FORWARDER_WEIGHT_UPDATE    16
 #define SERVER_PORT_UNPROCESSED_PACKET         0xFFFF
-
-
-typedef uint16 ObjectMessagePort;
-
-// List of well known object ports.
-#define OBJECT_PORT_SESSION       1
-#define OBJECT_PORT_PROXIMITY     2
-#define OBJECT_PORT_LOCATION      3
-#define OBJECT_SPACE_PORT         253
-#define OBJECT_PORT_PING          254
-
-#define MESSAGE_ID_SERVER_SHIFT 52
-#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
-
-typedef uint64 UniqueMessageID;
-
-template<typename PBJMessageType>
-std::string serializePBJMessage(const PBJMessageType& contents) {
-    std::string payload;
-    bool serialized_success = contents.SerializeToString(&payload);
-    assert(serialized_success);
-
-    return payload;
-}
-
-template<typename PBJMessageType>
-bool serializePBJMessage(std::string* payload, const PBJMessageType& contents) {
-    return contents.SerializeToString(payload);
-}
-
-/** Parse a PBJ message from the wire, starting at the given offset from the .
- *  \param contents pointer to the message to parse from the data
- *  \param wire the raw data to parse from, either a Network::Chunk or std::string
- *  \param offset the number of bytes into the data to start parsing
- *  \param length the number of bytes to parse, or -1 to use the entire
- *  \returns true if parsed successfully, false otherwise
- */
-template<typename PBJMessageType, typename WireType>
-bool parsePBJMessage(PBJMessageType* contents, const WireType& wire, uint32 offset = 0, int32 length = -1) {
-    assert(contents != NULL);
-    uint32 rlen = (length == -1) ? (wire.size() - offset) : length;
-    assert(offset + rlen <= wire.size()); // buffer overrun
-    return contents->ParseFromArray((void*)&wire[offset], rlen);
-}
-
-
-#define MESSAGE_ID_SERVER_SHIFT 52
-#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
-
-namespace {
-
-uint64 sIDSource = 0;
-
-uint64 GenerateUniqueID(const ServerID& origin) {
-    uint64 id_src = sIDSource++;
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    uint64 server_int = (uint64)origin;
-    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
-    assert( (server_shifted & ~message_id_server_bits) == 0 );
-    return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
-}
-
-uint64 GenerateUniqueID(const ObjectHostID& origin) {
-    return GenerateUniqueID(origin.id);
-}
-
-ServerID GetUniqueIDServerID(uint64 uid) {
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    uint64 server_int = ( uid & message_id_server_bits ) >> MESSAGE_ID_SERVER_SHIFT;
-    return (ServerID) server_int;
-}
-
-uint64 GetUniqueIDMessageID(uint64 uid) {
-    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    return ( uid & ~message_id_server_bits );
-}
-
-}
-
-Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
@@ -213,36 +135,6 @@ public:
 }; // class MessageRecipient
 
 
-// Wrapper class for Protocol::Object::Message which provides it some missing methods
-// that are useful, e.g. size().
-class ObjectMessage : public Sirikata::Protocol::Object::ObjectMessage {
-public:
-    uint32 size() {
-        return this->ByteSize();
-    }
-
-    void serialize(std::string* result) const {
-        serializePBJMessage(result, *this);
-    }
-
-    std::string* serialize() const {
-        return new std::string( serializePBJMessage(*this) );
-    };
-}; // class ObjectMessage
-
-// FIXME get rid of this
-void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
-
-/** Interface for classes that need to receive object messages, i.e. those that
- *  need to talk to objects/object hosts.
- */
-class ObjectMessageRecipient {
-public:
-    virtual ~ObjectMessageRecipient() {}
-
-    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
-};
-
 /** Base class for a message dispatcher. */
 class ServerMessageDispatcher {
 public:
@@ -262,23 +154,6 @@ private:
 
 }; // class ServerMessageDispatcher
 
-class ObjectMessageDispatcher {
-public:
-    virtual ~ObjectMessageDispatcher() {}
-
-    // Registration and unregistration for object messages destined for the space
-    void registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
-    void unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
-protected:
-
-    virtual void dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
-
-private:
-
-    typedef std::map<ObjectMessagePort, ObjectMessageRecipient*> ObjectMessageRecipientMap;
-    ObjectMessageRecipientMap mObjectMessageRecipients;
-}; // class ObjectMessageDispatcher
-
 template<typename MessageType>
 class Router {
   public:
@@ -295,16 +170,6 @@ public:
     virtual Router<Message*>* createServerMessageService(const String& name) = 0;
 };
 
-class ObjectMessageRouter {
-public:
-
-    virtual ~ObjectMessageRouter() {}
-
-    WARN_UNUSED
-    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg) = 0;
-};
-
-
 } // namespace Sirikata
 
-#endif //_SIRIKATA_MESSAGE_HPP_
+#endif //_SIRIKATA_SERVER_MESSAGE_HPP_

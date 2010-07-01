@@ -34,7 +34,7 @@
 #define _NETWORK_QUEUE_WRAPPER
 
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include <sirikata/cbrcore/Statistics.hpp>
 
 namespace Sirikata {

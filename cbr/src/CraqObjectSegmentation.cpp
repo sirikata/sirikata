@@ -34,7 +34,7 @@
 
 
 #include "ObjectSegmentation.hpp"
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include <map>
 #include <vector>
 #include <sirikata/cbrcore/Statistics.hpp>

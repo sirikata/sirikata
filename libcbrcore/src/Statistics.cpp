@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/network/Message.hpp>
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/options/Options.hpp>
 

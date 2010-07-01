@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Message.cpp
+ *  ServerMessage.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 
 namespace Sirikata {
 
@@ -152,30 +152,6 @@ void ServerMessageDispatcher::unregisterMessageRecipient(ServerMessagePort type,
     mMessageRecipients.erase(it);
 }
 
-void ObjectMessageDispatcher::registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient) {
-    ObjectMessageRecipientMap::iterator it = mObjectMessageRecipients.find(port);
-    if (it != mObjectMessageRecipients.end()) {
-        // FIXME warn that we are overriding old recipient
-    }
-
-    mObjectMessageRecipients[port] = recipient;
-}
-
-void ObjectMessageDispatcher::unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient) {
-    ObjectMessageRecipientMap::iterator it = mObjectMessageRecipients.find(port);
-    if (it == mObjectMessageRecipients.end()) {
-        // FIXME warn that we are trying to remove an recipient that hasn't been registered
-        return;
-    }
-
-    if (it->second != recipient) {
-        // FIXME warn that we tried to remove the wrong recipient
-        return;
-    }
-
-    mObjectMessageRecipients.erase(it);
-}
-
 void ServerMessageDispatcher::dispatchMessage(Message* msg) const {
     if (msg == NULL) return;
 
@@ -189,46 +165,6 @@ void ServerMessageDispatcher::dispatchMessage(Message* msg) const {
 
     MessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
-}
-
-void ObjectMessageDispatcher::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const {
-    // This is on the space server, so we should only be calling this if the dest is the space
-    //assert(msg.dest_object() == UUID::null());
-    ObjectMessageRecipientMap::const_iterator it = mObjectMessageRecipients.find(msg.dest_port());
-
-    if (it == mObjectMessageRecipients.end()) {
-        // FIXME log warning
-        return;
-    }
-
-    ObjectMessageRecipient* recipient = it->second;
-    recipient->receiveMessage(msg);
-}
-
-
-
-void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result) {
-    if (result == NULL) return;
-
-    result->set_source_object(src);
-    result->set_source_port(src_port);
-    result->set_dest_object(dest);
-    result->set_dest_port(dest_port);
-    result->set_unique(GenerateUniqueID(source_server));
-    result->set_payload(payload);
-}
-
-Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
-    Sirikata::Protocol::Object::ObjectMessage* result = new Sirikata::Protocol::Object::ObjectMessage();
-
-    result->set_source_object(src);
-    result->set_source_port(src_port);
-    result->set_dest_object(dest);
-    result->set_dest_port(dest_port);
-    result->set_unique(GenerateUniqueID(source_server));
-    result->set_payload(payload);
-
-    return result;
 }
 
 } // namespace Sirikata

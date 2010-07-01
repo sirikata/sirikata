@@ -761,7 +761,12 @@ ENDFOREACH()
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
-  Persistence Sirikata Time Subscription Test
+  Persistence
+  Sirikata
+  Time
+  Subscription
+  Test
+  ObjectMessage
   )
 
 
@@ -790,7 +795,15 @@ ADD_PBJ_TARGET(MessageHeader ${ProtocolBuffersSources}
 )
 
 # For scripting
-SET(ScriptingProtocolBuffersSources ${ProtocolBuffersSources} MessageHeader Physics)
+SET(ScriptingProtocolBuffersSources
+  Persistence
+  Sirikata
+  Time
+  Subscription
+  Test
+  MessageHeader
+  Physics
+  )
 
 ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
@@ -861,7 +874,6 @@ SET(CBR_PROTOCOLS_CORE
   TimedMotionVector.pbj
 )
 SET(CBR_PROTOCOLS
-  ObjectMessage.pbj
   Header.pbj
   ServerMessage.pbj
   Loc.pbj
@@ -1036,6 +1048,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
         ${LIBCORE_SOURCE_DIR}/network/NTPTimeSync.cpp
         ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
+        ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1280,13 +1293,13 @@ ${GFX}/WebViewManager.cpp
 
 #source files
 SET(LIBCBRCORE_SOURCES
-  ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
   ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
   ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
 )
 
 SET(CBR_SOURCES
+  ${CBR_SOURCE_DIR}/ServerMessage.cpp
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
@@ -1716,6 +1729,7 @@ ENDIF(OpenCOLLADA_FOUND)
 #libs
 ADD_LIBRARY(cbrcore STATIC ${LIBCBRCORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
 SET_TARGET_PROPERTIES(cbrcore PROPERTIES ${COMPILE_DEFS_OPT})
+ADD_DEPENDENCIES(cbrcore ${SIRIKATA_CORE_LIB})
 
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL

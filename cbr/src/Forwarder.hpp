@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include "SpaceContext.hpp"
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include "SpaceNetwork.hpp"
 
 #include <sirikata/core/queue/Queue.hpp>

@@ -34,7 +34,7 @@
 #define _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 
 #include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include "ObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"

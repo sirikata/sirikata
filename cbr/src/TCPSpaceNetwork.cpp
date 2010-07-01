@@ -38,7 +38,7 @@
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
 using namespace Sirikata::Network;

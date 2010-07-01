@@ -32,7 +32,7 @@
 
 #include "ObjectHostConnectionManager.hpp"
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrand.hpp>

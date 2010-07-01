@@ -38,7 +38,7 @@
 #include "QueueRouterElement.hpp"
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/cbrcore/SSTImpl.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 

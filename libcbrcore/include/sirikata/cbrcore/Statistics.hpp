@@ -37,7 +37,7 @@
 #include <sirikata/core/util/Thread.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
-#include "Message.hpp"
+#include <sirikata/core/network/ObjectMessage.hpp>
 
 #include <boost/thread/recursive_mutex.hpp>
 

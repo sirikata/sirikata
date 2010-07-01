@@ -39,7 +39,6 @@
 #include <sirikata/core/service/PollingService.hpp>
 
 #include <sirikata/space/SegmentedRegion.hpp>
-#include <sirikata/cbrcore/Message.hpp>
 #include "CSegContext.hpp"
 
 #include "CBR_CSeg.pbj.hpp"
@@ -76,9 +75,6 @@ public:
 
     virtual void poll();
     virtual void stop();
-
-    // From MessageRecipient
-    virtual void receiveMessage(Message* msg);
 
 private:
     void service();

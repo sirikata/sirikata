@@ -34,7 +34,7 @@
 #define _SIRIKATA_OBJECT_CONNECTION_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include "ObjectHostConnectionManager.hpp"
 
 namespace Sirikata {

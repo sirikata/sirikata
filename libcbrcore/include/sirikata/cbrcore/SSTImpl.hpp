@@ -43,7 +43,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
@@ -52,6 +52,7 @@
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 
+#include "CBR_SSTHeader.pbj.hpp"
 
 namespace Sirikata {
 

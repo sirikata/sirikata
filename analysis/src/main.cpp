@@ -47,8 +47,6 @@
 #include "FlowStats.hpp"
 //#include "Visualization.hpp"
 
-#include <sirikata/cbrcore/Message.hpp>
-
 void *main_loop(void *);
 
 bool is_analysis() {

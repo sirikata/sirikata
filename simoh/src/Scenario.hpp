@@ -34,7 +34,7 @@
 #define _SCENARIO_HPP_
 #include "ObjectHostContext.hpp"
 #include <sirikata/core/service/Service.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 

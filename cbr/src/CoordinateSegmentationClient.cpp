@@ -40,7 +40,7 @@
 #include <boost/bind.hpp>
 
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {
