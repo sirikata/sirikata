@@ -34,7 +34,7 @@
 #include "FlowStats.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
-#include "CBR_Object.pbj.hpp"
+#include "CBR_ObjectTrace.pbj.hpp"
 
 namespace Sirikata {
 

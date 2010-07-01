@@ -31,7 +31,7 @@
  */
 
 #include "Trace.hpp"
-#include "CBR_Object.pbj.hpp"
+#include "CBR_ObjectTrace.pbj.hpp"
 #include "CBR_PingTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>
 

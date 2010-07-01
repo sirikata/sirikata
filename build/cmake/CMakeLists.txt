@@ -835,7 +835,7 @@ SET(TRACE_PROTOCOLS_CORE
   Geometry.pbj
 )
 SET(TRACE_OBJECT_PROTOCOLS
-  Object.pbj
+  ObjectTrace.pbj
   OSegTrace.pbj
   MigrationTrace.pbj
   PingTrace.pbj

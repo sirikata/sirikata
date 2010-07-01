@@ -35,7 +35,7 @@
 #define __SIRIKATA_ANALYSIS_EVENTS_HPP__
 
 #include <sirikata/cbrcore/Statistics.hpp>
-#include "CBR_Object.pbj.hpp"
+#include "CBR_ObjectTrace.pbj.hpp"
 #include "CBR_OSegTrace.pbj.hpp"
 #include "CBR_MigrationTrace.pbj.hpp"
 #include "CBR_PingTrace.pbj.hpp"

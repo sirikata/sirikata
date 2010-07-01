@@ -31,7 +31,7 @@
  */
 
 #include "RecordedMotionPath.hpp"
-#include "CBR_Object.pbj.hpp"
+#include "CBR_ObjectTrace.pbj.hpp"
 #include "Analysis.hpp"
 
 namespace Sirikata {
