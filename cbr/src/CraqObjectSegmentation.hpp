@@ -52,7 +52,7 @@
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>
 
-#include "CBR_OSeg.pbj.hpp"
+#include "Protocol_OSeg.pbj.hpp"
 
 #include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 

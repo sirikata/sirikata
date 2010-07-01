@@ -37,7 +37,7 @@
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 
-#include "CBR_Loc.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
 
 namespace Sirikata {
 

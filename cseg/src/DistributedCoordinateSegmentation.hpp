@@ -41,7 +41,7 @@
 #include <sirikata/space/SegmentedRegion.hpp>
 #include "CSegContext.hpp"
 
-#include "CBR_CSeg.pbj.hpp"
+#include "Protocol_CSeg.pbj.hpp"
 
 typedef boost::asio::ip::tcp tcp;
 

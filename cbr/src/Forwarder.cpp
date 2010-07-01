@@ -58,9 +58,9 @@
 
 // FIXME we shouldn't have oseg specific things here, this should be delegated
 // to OSeg as necessary
-#include "CBR_OSeg.pbj.hpp"
+#include "Protocol_OSeg.pbj.hpp"
 
-#include "CBR_Forwarder.pbj.hpp"
+#include "Protocol_Forwarder.pbj.hpp"
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 

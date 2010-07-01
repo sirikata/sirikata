@@ -33,7 +33,7 @@
 #include "StandardLocationService.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 
-#include "CBR_Loc.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
 
 namespace Sirikata {
 

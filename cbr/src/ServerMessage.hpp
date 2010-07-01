@@ -38,8 +38,7 @@
 #include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
 
-#include "CBR_ServerMessage.pbj.hpp"
-//#include "CBR_SSTHeader.pbj.hpp"
+#include "Protocol_ServerMessage.pbj.hpp"
 
 
 namespace Sirikata {

@@ -38,7 +38,7 @@
 #include "CoordinateSegmentation.hpp"
 #include <sirikata/space/SegmentedRegion.hpp>
 
-#include "CBR_CSeg.pbj.hpp"
+#include "Protocol_CSeg.pbj.hpp"
 
 namespace Sirikata {
 

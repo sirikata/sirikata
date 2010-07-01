@@ -760,6 +760,11 @@ ENDFOREACH()
 
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
+# protocol files
+# FIXME we should jsut change ADD_PBJ_TARGET to take full paths
+SET(ProtocolBuffersSourcesCore
+  TimedMotionVector
+)
 SET(ProtocolBuffersSources
   Persistence
   Sirikata
@@ -768,6 +773,15 @@ SET(ProtocolBuffersSources
   Test
   ObjectMessage
   SSTHeader
+
+  Loc
+  Prox
+  Session
+  CSeg
+  ServerMessage
+  Migration
+  OSeg
+  Forwarder
   )
 
 # Based on dependencies, generate arguments for protocol buffers generation
@@ -783,7 +797,19 @@ SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PY
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 
-ADD_PBJ_TARGET(MessageHeader ${ProtocolBuffersSources}
+ADD_PBJ_TARGET(
+  ${ProtocolBuffersSourcesCore}
+  INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "Protocol"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES ProtocolCore_PBJ_CPP_FILES
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  GENERATE_CPP
+)
+ADD_PBJ_TARGET(
+  MessageHeader ${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
@@ -793,6 +819,8 @@ ADD_PBJ_TARGET(MessageHeader ${ProtocolBuffersSources}
   EXPORTMACRO SIRIKATA_EXPORT
   ${PROTOCOLBUFFERS_GENS}
 )
+#Aggregate core and normal
+SET(Protocol_PBJ_CPP_FILES ${ProtocolCore_PBJ_CPP_FILES} ${Protocol_PBJ_CPP_FILES})
 
 # For Traces
 # Trace protocol buffers are handled separately to handle dependencies and their slightly different location
@@ -821,7 +849,7 @@ ADD_PBJ_TARGET(
 )
 ADD_PBJ_TARGET(
   ${TRACE_OBJECT_PROTOCOLS}
-  DEPENDS ${CBR_CORE_PBJ_CPP_FILES}
+  DEPENDS ${TRACE_CORE_PBJ_CPP_FILES}
   PLUGINNAME "Protocol"
   INPUTDIR ${ProtocolBuffersRoot}/trace
   IMPORTS ${ProtocolBuffersRoot}/trace
@@ -866,57 +894,6 @@ ADD_PBJ_TARGET(Physics
   ${PROTOCOLBUFFERS_GENS}
   )
 
-
-
-
-SET(PBJ_CPP_HEADER "\n")
-
-# protocol files
-# FIXME we should jsut change ADD_PBJ_TARGET to take full paths
-SET(CBR_PROTOCOLS_CORE
-  TimedMotionVector.pbj
-)
-SET(CBR_PROTOCOLS
-  Header.pbj
-  ServerMessage.pbj
-  Loc.pbj
-  Prox.pbj
-  Migration.pbj
-  CSeg.pbj
-  Session.pbj
-  OSeg.pbj
-  Forwarder.pbj
-)
-
-# protocol targets
-ADD_PBJ_TARGET(
-  ${CBR_PROTOCOLS_CORE}
-  PLUGINNAME "CBR"
-  INPUTDIR ${CBR_PROTOCOL_DIR}
-  IMPORTS ${CBR_PROTOCOL_DIR}
-  OUTPUTDIR ${CBR_GENERATED_DIR}
-  GENERATED_CPP_FILES CBR_CORE_PBJ_CPP_FILES
-  CPP_HEADER ${PBJ_CPP_HEADER}
-  GENERATE_CPP
-)
-ADD_PBJ_TARGET(
-  ${CBR_PROTOCOLS}
-  DEPENDS ${CBR_CORE_PBJ_CPP_FILES}
-  PLUGINNAME "CBR"
-  INPUTDIR ${CBR_PROTOCOL_DIR}
-  IMPORTS ${CBR_PROTOCOL_DIR}
-  OUTPUTDIR ${CBR_GENERATED_DIR}
-  GENERATED_CPP_FILES CBR_PBJ_CPP_FILES
-  CPP_HEADER ${PBJ_CPP_HEADER}
-  GENERATE_CPP
-)
-# Aggregate core and full pbj files
-SET(CBR_PBJ_CPP_FILES ${CBR_PBJ_CPP_FILES} ${CBR_CORE_PBJ_CPP_FILES})
-
-# generated pbj implementation source files
-SET(CBR_PROTOCOL_SOURCES
-  ${CBR_PBJ_CPP_FILES}
-)
 
 #binary files to be linked into sirikata
 SET(BINARY_TO_CPP_SOURCE_FILE ${TOP_LEVEL}/externals/binarytocpp/binarytocpp.cpp)
@@ -1730,7 +1707,7 @@ IF(OpenCOLLADA_FOUND)
 ENDIF(OpenCOLLADA_FOUND)
 
 #libs
-ADD_LIBRARY(cbrcore STATIC ${LIBCBRCORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_LIBRARY(cbrcore STATIC ${LIBCBRCORE_SOURCES})
 SET_TARGET_PROPERTIES(cbrcore PROPERTIES ${COMPILE_DEFS_OPT})
 ADD_DEPENDENCIES(cbrcore ${SIRIKATA_CORE_LIB})
 
@@ -1756,7 +1733,7 @@ TARGET_LINK_LIBRARIES(cbr
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
-ADD_EXECUTABLE(simoh ${SIMOH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_EXECUTABLE(simoh ${SIMOH_SOURCES})
 SET_TARGET_PROPERTIES(simoh PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(simoh
   cbrcore
@@ -1765,7 +1742,7 @@ TARGET_LINK_LIBRARIES(simoh
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
-ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_EXECUTABLE(cseg ${CSEG_SOURCES})
 SET_TARGET_PROPERTIES(cseg PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cseg
   cbrcore
@@ -1774,7 +1751,7 @@ TARGET_LINK_LIBRARIES(cseg
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
-ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES})
 SET_TARGET_PROPERTIES(analysis PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(analysis
   cbrcore
@@ -1784,7 +1761,7 @@ TARGET_LINK_LIBRARIES(analysis
         #${GLUT_LIBRARIES}
         )
 
-ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES})
 SET_TARGET_PROPERTIES(${BENCH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(${BENCH_BINARY}
   cbrcore

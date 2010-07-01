@@ -43,8 +43,8 @@
 
 #include <sirikata/core/util/MotionVector.hpp>
 
-#include "CBR_Session.pbj.hpp"
-#include "CBR_Migration.pbj.hpp"
+#include "Protocol_Session.pbj.hpp"
+#include "Protocol_Migration.pbj.hpp"
 
 #include "ObjectSegmentation.hpp"
 

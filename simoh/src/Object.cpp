@@ -41,8 +41,8 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
-#include "CBR_Prox.pbj.hpp"
-#include "CBR_Loc.pbj.hpp"
+#include "Protocol_Prox.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
 
 
 #define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)

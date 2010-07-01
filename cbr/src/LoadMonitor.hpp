@@ -37,7 +37,7 @@
 #include "ServerMessage.hpp"
 #include <sirikata/core/service/PollingService.hpp>
 
-#include "CBR_CSeg.pbj.hpp"
+#include "Protocol_CSeg.pbj.hpp"
 
 namespace Sirikata {
 

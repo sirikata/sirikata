@@ -39,7 +39,7 @@
 #include <prox/BruteForceQueryHandler.hpp>
 #include <prox/RTreeQueryHandler.hpp>
 
-#include "CBR_Prox.pbj.hpp"
+#include "Protocol_Prox.pbj.hpp"
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
