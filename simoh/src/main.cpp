@@ -41,7 +41,7 @@
 #include <sirikata/cbrcore/Options.hpp>
 #include "Options.hpp"
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>

@@ -1,7 +1,7 @@
 /*  Sirikata
- *  ObjectConnection.cpp
+ *  BatchedBuffer.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,37 +30,66 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectConnection.hpp"
-#include "ServerMessage.hpp"
-#include <sirikata/core/trace/Trace.hpp>
+#ifndef _SIRIKATA_BATCHED_BUFFER_HPP_
+#define _SIRIKATA_BATCHED_BUFFER_HPP_
+
+#include <sirikata/core/util/Platform.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 namespace Sirikata {
 
-ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
- : mID(_id),
-   mConnectionManager(conn_mgr),
-   mOHConnection(conn_id),
-   mEnabled(false)
-{
-}
+template<typename T>
+struct Batch {
+    static const uint16 max_size = 65535;
+    uint16 size;
+    T items[max_size];
 
-UUID ObjectConnection::id() const {
-    return mID;
-}
+    Batch() : size(0) {}
 
-bool ObjectConnection::send(Sirikata::Protocol::Object::ObjectMessage* msg) {
-    if (!mEnabled)
-        return false;
+    bool full() const {
+        return (size >= max_size);
+    }
 
-    return mConnectionManager->send(mOHConnection, msg);
-}
+    uint32 avail() const {
+        return max_size - size;
+    }
+};
 
-void ObjectConnection::enable() {
-    mEnabled = true;
-}
+class BatchedBuffer {
+public:
+    struct IOVec {
+        IOVec()
+                : base(NULL),
+                  len(0)
+        {}
 
-bool ObjectConnection::enabled() {
-    return mEnabled;
-}
+        IOVec(const void* _b, uint32 _l)
+                : base(_b),
+                  len(_l)
+        {}
+
+        const void* base;
+        uint32 len;
+    };
+
+    BatchedBuffer();
+
+    void write(const IOVec* iov, uint32 iovcnt);
+
+    void flush();
+
+    // write the buffer to an ostream
+    void store(FILE* os);
+private:
+    // write the specified number of bytes from the pointer to the buffer
+    void write(const void* buf, uint32 nbytes);
+
+    typedef Batch<uint8> ByteBatch;
+    boost::recursive_mutex mMutex;
+    ByteBatch* filling;
+    std::deque<ByteBatch*> batches;
+};
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_BATCHED_BUFFER_HPP_

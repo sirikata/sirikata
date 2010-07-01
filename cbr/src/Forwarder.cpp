@@ -37,7 +37,7 @@
 #include "ServerMessage.hpp"
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "Options.hpp"
 #include <sirikata/cbrcore/Options.hpp>
 

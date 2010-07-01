@@ -35,7 +35,7 @@
 #include "Proximity.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "ServerMessage.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/cbrcore/Options.hpp>
 #include "Forwarder.hpp"
 #include "LocalForwarder.hpp"

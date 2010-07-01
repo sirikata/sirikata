@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Statistics.cpp
+ *  Trace.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,9 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/network/Message.hpp>
-#include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/options/Options.hpp>
 
 #include <iostream>
@@ -41,66 +40,6 @@
 
 
 namespace Sirikata {
-
-BatchedBuffer::BatchedBuffer()
- : filling(NULL)
-{
-}
-
-// write the specified number of bytes from the pointer to the buffer
-void BatchedBuffer::write(const void* buf, uint32 nbytes)
-{
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-
-    const uint8* bufptr = (const uint8*)buf;
-    while( nbytes > 0 ) {
-        if (filling == NULL)
-            filling = new ByteBatch();
-
-        uint32 to_copy = std::min(filling->avail(), nbytes);
-
-        memcpy( &filling->items[filling->size], bufptr, to_copy);
-        filling->size += to_copy;
-        bufptr += to_copy;
-        nbytes -= to_copy;
-
-        if (filling->full())
-            flush();
-    }
-}
-
-void BatchedBuffer::write(const IOVec* iov, uint32 iovcnt) {
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-
-    for(uint32 i = 0; i < iovcnt; i++)
-        write(iov[i].base, iov[i].len);
-}
-
-void BatchedBuffer::flush() {
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-
-    if (filling == NULL)
-        return;
-
-    batches.push_back(filling);
-    filling = NULL;
-}
-
-// write the buffer to an ostream
-void BatchedBuffer::store(FILE* os) {
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-
-    std::deque<ByteBatch*> bufs;
-    batches.swap(bufs);
-
-    for(std::deque<ByteBatch*>::iterator it = bufs.begin(); it != bufs.end(); it++) {
-        ByteBatch* bb = *it;
-        fwrite((void*)&(bb->items[0]), 1, bb->size, os);
-        delete bb;
-    }
-}
-
-
 namespace Trace {
 
 OptionValue* Trace::mLogMessage;
@@ -219,5 +158,4 @@ CREATE_TRACE_DEF(Trace, timestampMessage, mLogMessage, const Time&sent, uint64 u
 }
 
 } // namespace Trace
-
 } // namespace Sirikata

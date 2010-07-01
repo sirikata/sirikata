@@ -37,7 +37,7 @@
 #include "ServerMessage.hpp"
 #include <map>
 #include <vector>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "CraqObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"

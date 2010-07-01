@@ -1,7 +1,7 @@
 /*  Sirikata
- *  ObjectConnection.cpp
+ *  BatchedBuffer.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,37 +30,67 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectConnection.hpp"
-#include "ServerMessage.hpp"
-#include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/trace/BatchedBuffer.hpp>
 
 namespace Sirikata {
 
-ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
- : mID(_id),
-   mConnectionManager(conn_mgr),
-   mOHConnection(conn_id),
-   mEnabled(false)
+BatchedBuffer::BatchedBuffer()
+ : filling(NULL)
 {
 }
 
-UUID ObjectConnection::id() const {
-    return mID;
+// write the specified number of bytes from the pointer to the buffer
+void BatchedBuffer::write(const void* buf, uint32 nbytes)
+{
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
+    const uint8* bufptr = (const uint8*)buf;
+    while( nbytes > 0 ) {
+        if (filling == NULL)
+            filling = new ByteBatch();
+
+        uint32 to_copy = std::min(filling->avail(), nbytes);
+
+        memcpy( &filling->items[filling->size], bufptr, to_copy);
+        filling->size += to_copy;
+        bufptr += to_copy;
+        nbytes -= to_copy;
+
+        if (filling->full())
+            flush();
+    }
 }
 
-bool ObjectConnection::send(Sirikata::Protocol::Object::ObjectMessage* msg) {
-    if (!mEnabled)
-        return false;
+void BatchedBuffer::write(const IOVec* iov, uint32 iovcnt) {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
 
-    return mConnectionManager->send(mOHConnection, msg);
+    for(uint32 i = 0; i < iovcnt; i++)
+        write(iov[i].base, iov[i].len);
 }
 
-void ObjectConnection::enable() {
-    mEnabled = true;
+void BatchedBuffer::flush() {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
+    if (filling == NULL)
+        return;
+
+    batches.push_back(filling);
+    filling = NULL;
 }
 
-bool ObjectConnection::enabled() {
-    return mEnabled;
+// write the buffer to an ostream
+void BatchedBuffer::store(FILE* os) {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+
+    std::deque<ByteBatch*> bufs;
+    batches.swap(bufs);
+
+    for(std::deque<ByteBatch*>::iterator it = bufs.begin(); it != bufs.end(); it++) {
+        ByteBatch* bb = *it;
+        fwrite((void*)&(bb->items[0]), 1, bb->size, os);
+        delete bb;
+    }
 }
 
 } // namespace Sirikata

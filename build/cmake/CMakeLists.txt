@@ -1071,6 +1071,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
+        ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
+        ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
 )
 
 #precompiled header
@@ -1295,7 +1297,6 @@ ${GFX}/WebViewManager.cpp
 #source files
 SET(LIBCBRCORE_SOURCES
   ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
 )
 
 SET(CBR_SOURCES

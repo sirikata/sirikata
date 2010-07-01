@@ -34,7 +34,7 @@
 #ifndef __SIRIKATA_ANALYSIS_EVENTS_HPP__
 #define __SIRIKATA_ANALYSIS_EVENTS_HPP__
 
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "CBR_ObjectTrace.pbj.hpp"
 #include "CBR_OSegTrace.pbj.hpp"
 #include "CBR_MigrationTrace.pbj.hpp"

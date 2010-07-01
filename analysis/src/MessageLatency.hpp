@@ -33,7 +33,7 @@
 #ifndef _ANALYSIS_MESSAGE_LATENCY_HPP_
 #define _ANALYSIS_MESSAGE_LATENCY_HPP_
 
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 
 namespace Sirikata {
 

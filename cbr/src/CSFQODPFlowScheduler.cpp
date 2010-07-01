@@ -35,7 +35,7 @@
 #include "CoordinateSegmentation.hpp"
 #include <sirikata/core/util/Random.hpp>
 #include "craq_oseg/CraqEntry.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 
 #define _Kf (Duration::milliseconds((int64)10000))
 #define _Kf_double (_Kf.toSeconds())

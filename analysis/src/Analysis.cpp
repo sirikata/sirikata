@@ -31,7 +31,7 @@
  */
 
 #include "Analysis.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/cbrcore/Options.hpp>
 #include <sirikata/core/util/MotionPath.hpp>
 #include "AnalysisEvents.hpp"

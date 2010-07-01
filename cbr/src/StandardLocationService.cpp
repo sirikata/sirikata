@@ -31,7 +31,7 @@
  */
 
 #include "StandardLocationService.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 
 #include "CBR_Loc.pbj.hpp"
 

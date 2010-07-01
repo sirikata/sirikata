@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_FLOW_STATS_ANALYSIS_HPP_
 #define _SIRIKATA_FLOW_STATS_ANALYSIS_HPP_
 
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "RecordedMotionPath.hpp"
 
 namespace Sirikata {

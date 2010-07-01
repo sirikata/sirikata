@@ -31,7 +31,7 @@
  */
 
 #include "ObjectHost.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "Object.hpp"
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/Stream.hpp>

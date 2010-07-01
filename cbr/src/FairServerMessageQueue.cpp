@@ -34,7 +34,7 @@
 #include "SpaceNetwork.hpp"
 #include "ServerMessage.hpp"
 #include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 
 namespace Sirikata{
 

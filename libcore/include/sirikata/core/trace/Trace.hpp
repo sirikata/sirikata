@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Statistics.hpp
+ *  Trace.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,74 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_STATISTICS_HPP_
-#define _SIRIKATA_STATISTICS_HPP_
+#ifndef _SIRIKATA_CORE_TRACE_HPP_
+#define _SIRIKATA_CORE_TRACE_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Thread.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
-#include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
-
-#include <boost/thread/recursive_mutex.hpp>
+#include <sirikata/core/trace/BatchedBuffer.hpp>
 
 namespace Sirikata {
-
-template<typename T>
-struct Batch {
-    static const uint16 max_size = 65535;
-    uint16 size;
-    T items[max_size];
-
-    Batch() : size(0) {}
-
-    bool full() const {
-        return (size >= max_size);
-    }
-
-    uint32 avail() const {
-        return max_size - size;
-    }
-};
-
-class BatchedBuffer {
-public:
-    struct IOVec {
-        IOVec()
-                : base(NULL),
-                  len(0)
-        {}
-
-        IOVec(const void* _b, uint32 _l)
-                : base(_b),
-                  len(_l)
-        {}
-
-        const void* base;
-        uint32 len;
-    };
-
-    BatchedBuffer();
-
-    void write(const IOVec* iov, uint32 iovcnt);
-
-    void flush();
-
-    // write the buffer to an ostream
-    void store(FILE* os);
-private:
-    // write the specified number of bytes from the pointer to the buffer
-    void write(const void* buf, uint32 nbytes);
-
-    typedef Batch<uint8> ByteBatch;
-    boost::recursive_mutex mMutex;
-    ByteBatch* filling;
-    std::deque<ByteBatch*> batches;
-};
+namespace Trace {
 
 #define TRACE_DROP(nam) ((mContext->trace()->drops.n[::Sirikata::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::Sirikata::Trace::Drops::nam]))
-
-namespace Trace {
 
 struct Drops {
     enum {
@@ -197,7 +142,7 @@ enum MessagePath {
     NUM_PATHS
 };
 
-class Trace {
+class SIRIKATA_EXPORT Trace {
 public:
     Drops drops;
 

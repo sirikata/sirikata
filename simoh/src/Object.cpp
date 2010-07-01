@@ -36,7 +36,7 @@
 #include "ObjectHostContext.hpp"
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "Trace.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>

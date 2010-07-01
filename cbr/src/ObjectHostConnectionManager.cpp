@@ -39,7 +39,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #define SPACE_LOG(level,msg) SILOG(space,level,"[SPACE] " << msg)
 
 namespace Sirikata {

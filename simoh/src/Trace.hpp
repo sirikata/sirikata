@@ -33,7 +33,8 @@
 #ifndef _SIRIKATA_SIMOH_TRACE_HPP_
 #define _SIRIKATA_SIMOH_TRACE_HPP_
 
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 namespace Sirikata {
 
