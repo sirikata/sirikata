@@ -4,7 +4,8 @@
 #include "../JSSerializer.hpp"
 #include "JSObjectsUtils.hpp"
 #include "JSHandler.hpp"
-
+#include "JSVec3.hpp";
+#include "../JSUtil.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -12,6 +13,25 @@ namespace JSSystem{
 
 
 
+v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
+{
+ 
+  JSObjectScript* target_script = GetTargetJSObjectScript(args);
+  // get the location from the args
+
+  Handle<Object> val_obj = ObjectCast(args[0]);
+  if( !Vec3Validate(val_obj))
+  {
+    return v8::Undefined();
+  }
+
+  Vector3d pos(Vec3Extract(val_obj));
+  
+
+  target_script->create_entity(pos);
+
+  return v8::Undefined();
+}
 
 v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args)
 {
@@ -200,6 +220,7 @@ void ScriptSetScale(v8::Local<v8::String> property, v8::Local<v8::Value> value, 
 
 v8::Handle<v8::Value> ScriptGetPosition(v8::Local<v8::String> property, const v8::AccessorInfo &info)
 {
+     
     JSObjectScript* target_script = GetTargetJSObjectScript(info);
     return target_script->getPosition();
 }

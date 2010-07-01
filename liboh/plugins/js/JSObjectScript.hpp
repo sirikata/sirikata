@@ -85,6 +85,9 @@ public:
 	/** reboot the state of the script, basically reset the state */
 	void reboot();
 
+	/** create a new entity at the run time */
+	void create_entity(Vector3d&);
+
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);
 

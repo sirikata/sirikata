@@ -53,10 +53,10 @@ public:
         const Arguments &args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
+    v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
-
     void testPrint();
     
 private:

@@ -14,6 +14,7 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args);
 template<typename WithHolderType>
 JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder);
 
+v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args);	
 v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args);	
 v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info);

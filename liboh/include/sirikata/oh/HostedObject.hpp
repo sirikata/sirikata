@@ -41,6 +41,10 @@
 
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
+#include <sirikata/oh/ObjectScriptManager.hpp>
+
+#include <map>
+#include <utility>
 
 namespace Sirikata {
 class ObjectHost;
@@ -115,7 +119,7 @@ protected:
                                    // using messaging outside of spaces in order
                                    // to communicate with the db, which is
                                    // required for initialization....
-//------- Constructors/Destructors
+    //------- Constructors/Destructors
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
@@ -185,6 +189,21 @@ public:
         }
         return 0;
     }
+    
+	/** These are properties related the object script 
+	    that would be attached to this hosted object in case
+		it is a scripted object
+	*/
+	
+	bool mHasScript;
+	String mScriptType;
+	ObjectScriptManager::Arguments mScriptArgs;
+
+
+	bool hasScript()
+	{
+	  return mHasScript;
+	}
 
 protected:
 
@@ -269,6 +288,7 @@ public:
     void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
 
   private:
+    
 
     /** Sends directly via an attached space, without going through the ObjectHost.
         No messages with a null SpaceId (i.e. for a local object or message service)
@@ -337,10 +357,14 @@ public:
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 };
 
+
+
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 /// weak_ptr, to be used to hold onto a HostedObject reference. @see SelfWeakPtr.
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
+
+
 
 }
 

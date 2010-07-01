@@ -57,12 +57,15 @@
 
 #include <sirikata/core/odp/Defs.hpp>
 #include <vector>
-
+#include <set>
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
 
-using namespace v8;
 
+
+
+using namespace v8;
+using namespace std;
 namespace Sirikata {
 namespace JS {
 
@@ -87,7 +90,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     system_obj->SetInternalField(0, External::New(this));
 
     //takes care of the addressable array in sys.
-    bftm_populateAddressable(system_obj);
+	bftm_populateAddressable(system_obj);
 
     mHandlingEvent = false;
     
@@ -114,6 +117,42 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     }
 }
 
+
+void JSObjectScript::create_entity(Vector3d& vec)
+{
+  
+  
+  //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+  
+  // get the script type
+  String script_type = "js";
+  Sirikata::Protocol::CreateObject creator;
+  Sirikata::Protocol::IConnectToSpace space = creator.add_space_properties();
+  Sirikata::Protocol::IObjLoc loc = space.mutable_requested_object_loc();
+  //loc.set_position(curLoc.getPosition() + Vector3d(direction(curLoc.getOrientation()))*WORLD_SCALE/3);
+  loc.set_position(vec);
+  //loc.set_orientation(curLoc.getOrientation());
+  loc.set_velocity(Vector3f(0,0,0));
+  loc.set_angular_speed(0);
+  loc.set_rotational_axis(Vector3f(1,0,0));
+
+  creator.set_mesh("http://www.sirikata.com/content/assets/cube.dae");
+  creator.set_scale(Vector3f(1,1,1));
+  creator.set_script(script_type);
+  //Sirikata::Protocol::IStringMapProperty script_args = creator.mutable_script_args();
+  std::string serializedCreate;
+  creator.SerializeToString(&serializedCreate);
+  RoutableMessageBody body;
+  body.add_message("CreateObject", serializedCreate);
+  std::string serialized;
+  body.SerializeToString(&serialized);
+
+  const HostedObject::SpaceSet& spaces = mParent->spaces();
+  SpaceID spaceider = *(spaces.begin());
+  ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
+  mMessagingPort->send(dest, MemoryReference(serialized.data(), serialized.length()));
+  
+}
 
 
 void JSObjectScript::reboot()

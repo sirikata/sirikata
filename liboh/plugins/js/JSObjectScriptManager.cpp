@@ -63,6 +63,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     createSystemTemplate();
     bftm_createAddressableTemplate();
     createHandlerTemplate();
+	
 }
 
 
@@ -88,6 +89,10 @@ void JSObjectScriptManager::createSystemTemplate()
 
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
 
+	system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
+    
+
+
     //these are mutable fields
 	
     system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
@@ -108,7 +113,6 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
     system_templ->Set(JS_STRING(Pattern), mPatternTemplate);
-
 
     /**
        FIXME: need to add way to remove a handler.
@@ -154,8 +158,7 @@ void JSObjectScriptManager::createHandlerTemplate()
     mHandlerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSHandler::__clear));
 }
 
-
-        
+      
 JSObjectScriptManager::~JSObjectScriptManager()
 {
 }

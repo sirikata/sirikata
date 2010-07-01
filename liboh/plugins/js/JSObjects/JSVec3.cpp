@@ -171,7 +171,7 @@ Handle<FunctionTemplate> CreateVec3Template() {
     vec3_prototype_templ->Set(JS_STRING(toString), v8::FunctionTemplate::New(Vec3ToString));
 
     // Vec3 instance
-    Local<ObjectTemplate> vec3_instance_templ = vec3_constructor_templ->InstanceTemplate();
+    //Local<ObjectTemplate> vec3_instance_templ = vec3_constructor_templ->InstanceTemplate();
 
     return vec3_constructor_templ;
 }

@@ -208,6 +208,8 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     mSendService.ho = this;
     mReceiveService.ho = this;
 
+
+
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
             &HostedObject::createDelegateODPPort, this,
@@ -216,6 +218,8 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     );
 
     mDefaultTracker = NULL;
+
+	mHasScript = false;
 }
 
 HostedObject::~HostedObject() {
@@ -1094,7 +1098,15 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                         for (int i = 0; i < args_map.keys_size(); ++i)
                             script_args[ args_map.keys(i) ] = args_map.values(i);
                     }
-                    obj->initializeScript(script_type, script_args);
+
+					//make an entry of the uuid, script_type and script_args
+					//this will be used to initialize the script later
+                    mHasScript = true; 
+                    mScriptType = script_type;
+					mScriptArgs = script_args;
+
+					//when the confirmation from the 
+                    //obj->initializeScript(script_type, script_args);
                 }
                 return;
     }
@@ -1265,6 +1277,13 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     receivedPropertyUpdate(proxyObj, iter->first, iter->second.mData);
                 }
             }
+
+
+            if(mHasScript)
+			{
+			  // do something to initialize the object script
+			  initializeScript(mScriptType, mScriptArgs);
+		    } 	  
         }
     } else {
         printstr<<"Message to be handled in script: "<<name;
