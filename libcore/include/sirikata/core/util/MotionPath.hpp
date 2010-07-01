@@ -42,7 +42,7 @@ namespace Sirikata {
  *  that allows random access into the update list, given the next update
  *  that will occur after a specified time.
  */
-class SIRIKATA_EXPORT MotionPath {
+class MotionPath {
 public:
     virtual ~MotionPath() {}
 
