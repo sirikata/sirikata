@@ -446,7 +446,7 @@ class ClusterSim:
             for x in range(0, node_count):
                 # FIXME should just map directly to binaries
                 if (node_type == 'space'):
-                    node_params['binary'].append('cbr')
+                    node_params['binary'].append('space')
                 elif (node_type == 'simoh'):
                     node_params['binary'].append('simoh')
                 elif (node_type == 'vis'):

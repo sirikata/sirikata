@@ -118,10 +118,10 @@ MARK_AS_ADVANCED(
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
 
 # Profile build target
-SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
-SET( CMAKE_C_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET( CMAKE_C_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
     "Built cflags with default settings."
     FORCE )
 SET( CMAKE_EXE_LINKER_FLAGS_PROFILE
@@ -139,10 +139,10 @@ MARK_AS_ADVANCED(
     CMAKE_SHARED_LINKER_FLAGS_PROFILE )
 
 # Coverage build target
-SET(CMAKE_CXX_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET(CMAKE_CXX_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
-SET( CMAKE_C_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET( CMAKE_C_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage" CACHE STRING
     "Built cflags with default settings."
     FORCE )
 SET( CMAKE_EXE_LINKER_FLAGS_COVERAGE
@@ -662,7 +662,6 @@ SET(PROXIMITY_SOURCE_DIR ${PROXIMITY_DIR}/src)
 SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
 #source file location (cbr)
 SET(SIMOH_SOURCE_DIR ${TOP_LEVEL}/simoh/src)
-SET(CBR_SOURCE_DIR ${TOP_LEVEL}/cbr/src)
 SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
@@ -688,7 +687,6 @@ SET(INCLUDE_DIRECTORIES
   ${LIBOH_INCLUDE_DIR}
   ${LIBPROXYOBJECT_INCLUDE_DIR}/models
   ${LIBPROXYOBJECT_INCLUDE_DIR}
-  ${SPACE_SOURCE_DIR}
   ${PROXIMITY_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
 
@@ -1111,25 +1109,18 @@ ELSE()
 ENDIF()
 
 SET(LIBSPACE_SOURCES
-  ${Space_PBJ_CPP_FILES}
-                     ${LIBSPACE_SOURCE_DIR}/Space.cpp
-                     ${LIBSPACE_SOURCE_DIR}/SpaceProxyManager.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Physics.cpp
-                     ${LIBSPACE_SOURCE_DIR}/ObjectConnections.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Subscription.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Loc.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Registration.cpp
-                      )
+  ${LIBSPACE_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
+  ${LIBSPACE_SOURCE_DIR}/Trace.cpp
+  )
 
 SET(LIBPROXIMITY_SOURCES
-  ${Proximity_PBJ_CPP_FILES}
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystem.cpp
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystemFactory.cpp
                   ${LIBPROXIMITY_SOURCE_DIR}/SingleStreamProximityConnection.cpp )
 
 SET(LIBPROXYOBJECT_SOURCES
-  ${ProxyObject_PBJ_CPP_FILES}
   ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
@@ -1142,7 +1133,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
-  ${ObjectHost_PBJ_CPP_FILES}
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
@@ -1154,7 +1144,6 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                    )
 
-SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp)
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
@@ -1269,57 +1258,54 @@ ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp
         )
 
-SET(CBR_SOURCES
-  ${CBR_SOURCE_DIR}/ServerMessage.cpp
-  ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
-  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
-  ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
-  ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
-  ${CBR_SOURCE_DIR}/caches/CacheRecords.cpp
-  ${CBR_SOURCE_DIR}/caches/FCache.cpp
-  ${CBR_SOURCE_DIR}/caches/CommunicationCache.cpp
-  ${CBR_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/Base64.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
-  ${CBR_SOURCE_DIR}/RegionODPFlowScheduler.cpp
-  ${CBR_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
-  ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
-  ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
-  ${CBR_SOURCE_DIR}/ServerMessageQueue.cpp
-  ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
-  ${CBR_SOURCE_DIR}/Forwarder.cpp
-  ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
-  ${CBR_SOURCE_DIR}/LoadMonitor.cpp
-  ${CBR_SOURCE_DIR}/LocalForwarder.cpp
-  ${CBR_SOURCE_DIR}/LocationService.cpp
-  ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
-  ${CBR_SOURCE_DIR}/ObjectConnection.cpp
-  ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
-  ${CBR_SOURCE_DIR}/Options.cpp
-  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${CBR_SOURCE_DIR}/Trace.cpp
-  ${CBR_SOURCE_DIR}/OSegHasher.cpp
-  ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
-  ${CBR_SOURCE_DIR}/SpaceContext.cpp
-  ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
-  ${CBR_SOURCE_DIR}/Proximity.cpp
-  ${CBR_SOURCE_DIR}/Server.cpp
-  ${CBR_SOURCE_DIR}/StandardLocationService.cpp
-  ${CBR_SOURCE_DIR}/TCPSpaceNetwork.cpp
-#  ${CBR_SOURCE_DIR}/Test.cpp
-  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/main.cpp
+SET(SPACE_SOURCES
+  ${SPACE_SOURCE_DIR}/ServerMessage.cpp
+  ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
+  ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
+  ${SPACE_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${SPACE_SOURCE_DIR}/CraqObjectSegmentation.cpp
+  ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
+  ${SPACE_SOURCE_DIR}/caches/CacheRecords.cpp
+  ${SPACE_SOURCE_DIR}/caches/FCache.cpp
+  ${SPACE_SOURCE_DIR}/caches/CommunicationCache.cpp
+  ${SPACE_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
+  ${SPACE_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
+  ${SPACE_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
+  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
+  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
+  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
+  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
+  ${SPACE_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
+  ${SPACE_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
+  ${SPACE_SOURCE_DIR}/craq_oseg/Base64.cpp
+  ${SPACE_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
+  ${SPACE_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
+  ${SPACE_SOURCE_DIR}/RegionODPFlowScheduler.cpp
+  ${SPACE_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
+  ${SPACE_SOURCE_DIR}/ServerMessageReceiver.cpp
+  ${SPACE_SOURCE_DIR}/FairServerMessageReceiver.cpp
+  ${SPACE_SOURCE_DIR}/ServerMessageQueue.cpp
+  ${SPACE_SOURCE_DIR}/FairServerMessageQueue.cpp
+  ${SPACE_SOURCE_DIR}/Forwarder.cpp
+  ${SPACE_SOURCE_DIR}/ForwarderServiceQueue.cpp
+  ${SPACE_SOURCE_DIR}/LoadMonitor.cpp
+  ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
+  ${SPACE_SOURCE_DIR}/LocationService.cpp
+  ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp
+  ${SPACE_SOURCE_DIR}/ObjectConnection.cpp
+  ${SPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
+  ${SPACE_SOURCE_DIR}/Options.cpp
+  ${SPACE_SOURCE_DIR}/OSegHasher.cpp
+  ${SPACE_SOURCE_DIR}/OSegLookupQueue.cpp
+  ${SPACE_SOURCE_DIR}/SpaceNetwork.cpp
+  ${SPACE_SOURCE_DIR}/Proximity.cpp
+  ${SPACE_SOURCE_DIR}/Server.cpp
+  ${SPACE_SOURCE_DIR}/StandardLocationService.cpp
+  ${SPACE_SOURCE_DIR}/TCPSpaceNetwork.cpp
+#  ${SPACE_SOURCE_DIR}/Test.cpp
+  ${SPACE_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${SPACE_SOURCE_DIR}/main.cpp
 )
 
 SET(SIMOH_SOURCES
@@ -1705,20 +1691,18 @@ SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 
 ADD_EXECUTABLE(${SPACE_BINARY} ${SPACE_SOURCES})
 SET_TARGET_PROPERTIES(${SPACE_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(${SPACE_BINARY}
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_SPACE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
 
 ADD_EXECUTABLE(${PROXIMITY_BINARY} ${PROXIMITY_SOURCES})
 SET_TARGET_PROPERTIES(${PROXIMITY_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 
 ADD_EXECUTABLE(${CPPOH_BINARY} ${CPPOH_SOURCES})
 SET_TARGET_PROPERTIES(${CPPOH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
-
-ADD_EXECUTABLE(cbr ${CBR_SOURCES})
-SET_TARGET_PROPERTIES(cbr PROPERTIES ${COMPILE_DEFS_OPT})
-TARGET_LINK_LIBRARIES(cbr
-        ${Boost_LIBRARIES}
-        ${SIRIKATA_CORE_LIB}
-        ${PROTOCOLBUFFERS_LIBRARIES}
-        )
 
 ADD_EXECUTABLE(simoh ${SIMOH_SOURCES})
 SET_TARGET_PROPERTIES(simoh PROPERTIES ${COMPILE_DEFS_OPT})
