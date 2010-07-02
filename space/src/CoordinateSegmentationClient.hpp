@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/SegmentedRegion.hpp>
 
 #include "Protocol_CSeg.pbj.hpp"

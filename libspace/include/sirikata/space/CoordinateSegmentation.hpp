@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
-#include "LoadMonitor.hpp"
+#include <sirikata/space/LoadMonitor.hpp>
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
@@ -46,7 +46,7 @@ namespace Sirikata {
  *   position -> ServerID
  *   ServerID -> region
  */
-class CoordinateSegmentation : public MessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT CoordinateSegmentation : public MessageRecipient, public PollingService {
 public:
     /** Listens for updates about the coordinate segmentation. */
     class Listener {

@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/CoordinateSegmentation.hpp>
 
 namespace Sirikata {
 

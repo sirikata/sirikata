@@ -1,7 +1,7 @@
 /*  Sirikata
- *  UniformCoordinateSegmentation.hpp
+ *  ObjectSegmentation.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,45 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_UNIFORM_COORDINATE_SEGMENTATION_HPP_
-#define _SIRIKATA_UNIFORM_COORDINATE_SEGMENTATION_HPP_
+#include <sirikata/space/ObjectSegmentation.hpp>
 
-#include <sirikata/space/CoordinateSegmentation.hpp>
+AUTO_SINGLETON_INSTANCE(Sirikata::OSegFactory);
 
 namespace Sirikata {
 
-struct LayoutChangeEntry {
-  uint64 time;
+OSegFactory& OSegFactory::getSingleton() {
+    return AutoSingleton<OSegFactory>::getSingleton();
+}
 
-  Vector3ui32 layout;
-};
-
-
-/** Uniform grid implementation of CoordinateSegmentation. */
-class UniformCoordinateSegmentation : public CoordinateSegmentation {
-public:
-    UniformCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim);
-    virtual ~UniformCoordinateSegmentation();
-
-    virtual ServerID lookup(const Vector3f& pos) ;
-    virtual BoundingBoxList serverRegion(const ServerID& server) ;
-    virtual BoundingBox3f region() ;
-    virtual uint32 numServers() ;
-    virtual std::vector<ServerID> lookupBoundingBox(const BoundingBox3f& bbox);
-
-    // From MessageRecipient
-    virtual void receiveMessage(Message* msg);
-private:
-    virtual void service();
-
-    BoundingBox3f mRegion;
-    Vector3ui32 mServersPerDim;
-
-    std::vector<LayoutChangeEntry> mLayoutChangeEntries;
-    uint32 lastLayoutChangeIdx;
-
-}; // class CoordinateSegmentation
+void OSegFactory::destroy() {
+    AutoSingleton<OSegFactory>::destroy();
+}
 
 } // namespace Sirikata
-
-#endif

@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include "LocationService.hpp"
-#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/CoordinateSegmentation.hpp>
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/member.hpp>

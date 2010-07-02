@@ -42,7 +42,6 @@
 namespace Sirikata {
 
 class SpaceContext;
-class ServerMessageQueue;
 class CoordinateSegmentation;
 
 typedef struct ServerLoadInfo{
@@ -60,9 +59,9 @@ typedef struct ServerLoadInfo{
 
 
 
-class LoadMonitor : public MessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT LoadMonitor : public MessageRecipient, public PollingService {
 public:
-    LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
+    LoadMonitor(SpaceContext* ctx, CoordinateSegmentation* cseg);
     ~LoadMonitor();
 
   void addLoadReading();
@@ -95,7 +94,6 @@ private:
 
     SpaceContext* mContext;
     Router<Message*>* mLoadServerMessageService;
-    ServerMessageQueue* mServerMsgQueue;
     CoordinateSegmentation* mCoordinateSegmentation;
 
     TimeProfiler::Stage* mProfiler;

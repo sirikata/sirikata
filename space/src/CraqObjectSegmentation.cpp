@@ -50,7 +50,7 @@
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
-#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sstream>
 #include <string.h>
 #include <stdlib.h>
@@ -65,18 +65,32 @@ namespace Sirikata
   /*
     Basic constructor
   */
-  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, Network::IOStrand* o_strand, Network::IOStrand* strand_to_post_to)
- : ObjectSegmentation(con, o_strand),
+CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg)
+   : ObjectSegmentation(con, o_strand),
    mCSeg (cseg),
    craqDhtGet(con, o_strand, this),
    craqDhtSet(con, o_strand, this),
-   postingStrand(strand_to_post_to),
+   postingStrand(con->mainStrand),
    mStrand(o_strand),
    mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
    mFrontMigAck(NULL),
    ctx(con),
    mReceivedStopRequest(false)
   {
+
+      std::vector<CraqInitializeArgs> getInitArgs;
+      CraqInitializeArgs cInitArgs1;
+
+      cInitArgs1.ipAdd = "localhost";
+      cInitArgs1.port  =     "10498"; //craq version 2
+      getInitArgs.push_back(cInitArgs1);
+
+      std::vector<CraqInitializeArgs> setInitArgs;
+      CraqInitializeArgs cInitArgs2;
+      cInitArgs2.ipAdd = "localhost";
+      cInitArgs2.port  =     "10499";
+      setInitArgs.push_back(cInitArgs2);
+
 
 
       std::string cacheSelector     =  GetOptionValue<String>(CACHE_SELECTOR);
@@ -113,7 +127,14 @@ namespace Sirikata
     craqDhtGet.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
 
-    myUniquePrefixKey = prefixID;
+    std::string oseg_craq_prefix = GetOptionValue<String>(OSEG_UNIQUE_CRAQ_PREFIX);
+
+    if (oseg_craq_prefix.size() ==0)
+    {
+        std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
+        assert(false);
+    }
+    myUniquePrefixKey = oseg_craq_prefix[0];
 
     numCacheHits     = 0;
     numOnThisServer  = 0;

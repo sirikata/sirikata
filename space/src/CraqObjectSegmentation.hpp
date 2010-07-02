@@ -43,7 +43,7 @@ class CraqObjectSegmentation;
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
-#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/CoordinateSegmentation.hpp>
 #include <string.h>
 #include <vector>
 
@@ -196,7 +196,7 @@ namespace Sirikata
     bool mReceivedStopRequest;
 
   public:
-    CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, Network::IOStrand* o_strand, Network::IOStrand* strand_to_post_to);
+      CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg);
 
 
     virtual ~CraqObjectSegmentation();

@@ -57,7 +57,7 @@
 #include <sirikata/core/network/ServerIDMap.hpp>
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
-#include "LoadMonitor.hpp"
+#include <sirikata/space/LoadMonitor.hpp>
 #include "CraqObjectSegmentation.hpp"
 
 #include <sirikata/space/SpaceContext.hpp>
@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
 
 
 
-    LoadMonitor* loadMonitor = new LoadMonitor(space_context, sq, cseg);
+    LoadMonitor* loadMonitor = new LoadMonitor(space_context, cseg);
 
 
     //Create OSeg
@@ -191,35 +191,7 @@ int main(int argc, char** argv) {
     Network::IOStrand* osegStrand = space_context->ioService->createStrand();
     ObjectSegmentation* oseg = NULL;
     if (oseg_type == OSEG_OPTION_CRAQ)
-    {
-      //using craq approach
-      std::vector<UUID> initServObjVec;
-
-      std::vector<CraqInitializeArgs> craqArgsGet;
-      CraqInitializeArgs cInitArgs1;
-
-      cInitArgs1.ipAdd = "localhost";
-      cInitArgs1.port  =     "10498"; //craq version 2
-      craqArgsGet.push_back(cInitArgs1);
-
-      std::vector<CraqInitializeArgs> craqArgsSet;
-      CraqInitializeArgs cInitArgs2;
-      cInitArgs2.ipAdd = "localhost";
-      cInitArgs2.port  =     "10499";
-      craqArgsSet.push_back(cInitArgs2);
-
-
-      std::string oseg_craq_prefix=GetOptionValue<String>(OSEG_UNIQUE_CRAQ_PREFIX);
-
-      if (oseg_type.size() ==0)
-      {
-        std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
-        assert(false);
-      }
-
-      oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0],osegStrand,space_context->mainStrand);
-
-    }      //end craq approach
+        oseg = new CraqObjectSegmentation (space_context, osegStrand, cseg);
 
     //end create oseg
 

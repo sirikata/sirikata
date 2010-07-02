@@ -35,12 +35,9 @@
 
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/space/ServerMessage.hpp>
+#include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/core/service/Service.hpp>
-#include <iostream>
-#include <iomanip>
-//#include "craq_oseg/asyncUtil.hpp"
-#include <queue>
-//object segmenter h file
+#include <sirikata/core/util/Factory.hpp>
 
 namespace Sirikata
 {
@@ -105,17 +102,16 @@ public:
 
 
 class ObjectSegmentation : public MessageRecipient, public Service
-  {
-  protected:
+{
+protected:
     SpaceContext* mContext;
     OSegLookupListener* mLookupListener;
-      OSegWriteListener* mWriteListener;
+    OSegWriteListener* mWriteListener;
     Network::IOStrand* oStrand;
 
 
-  public:
-
-    ObjectSegmentation(SpaceContext* ctx,Network::IOStrand* o_strand)
+public:
+    ObjectSegmentation(SpaceContext* ctx, Network::IOStrand* o_strand)
      : mContext(ctx),
        mLookupListener(NULL),
        mWriteListener(NULL),
@@ -144,5 +140,16 @@ class ObjectSegmentation : public MessageRecipient, public Service
     virtual void newObjectAdd(const UUID& obj_id, float radius) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
   };
-}
+
+class SIRIKATA_EXPORT OSegFactory
+    : public AutoSingleton<OSegFactory>,
+      public Factory4<ObjectSegmentation*, SpaceContext*, Network::IOStrand*, CoordinateSegmentation*, const String &>
+{
+  public:
+    static OSegFactory& getSingleton();
+    static void destroy();
+}; // class OSegFactory
+
+} // namespace Sirikata
+
 #endif

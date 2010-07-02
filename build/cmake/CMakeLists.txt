@@ -1109,6 +1109,9 @@ ELSE()
 ENDIF()
 
 SET(LIBSPACE_SOURCES
+  ${LIBSPACE_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${LIBSPACE_SOURCE_DIR}/LoadMonitor.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectSegmentation.cpp
   ${LIBSPACE_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${LIBSPACE_SOURCE_DIR}/ServerMessage.cpp
   ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
@@ -1262,7 +1265,6 @@ ${GFX}/WebViewManager.cpp
 SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
-  ${SPACE_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${SPACE_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
@@ -1289,7 +1291,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${SPACE_SOURCE_DIR}/Forwarder.cpp
   ${SPACE_SOURCE_DIR}/ForwarderServiceQueue.cpp
-  ${SPACE_SOURCE_DIR}/LoadMonitor.cpp
   ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
   ${SPACE_SOURCE_DIR}/LocationService.cpp
   ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp

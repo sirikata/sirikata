@@ -31,8 +31,8 @@
  */
 
 
-#include "LoadMonitor.hpp"
-#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/LoadMonitor.hpp>
+#include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 
 #define THRESHOLD 5
@@ -45,10 +45,9 @@ bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
     return sli1.mLoadReading < sli2.mLoadReading;
 }
 
-LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
+LoadMonitor::LoadMonitor(SpaceContext* ctx, CoordinateSegmentation* cseg)
  : PollingService(ctx->mainStrand, Duration::seconds(5)),
    mContext(ctx),
-   mServerMsgQueue(serverMsgQueue),
    mCoordinateSegmentation(cseg),
    mCurrentLoadReading(0),
    mAveragedLoadReading(0)
