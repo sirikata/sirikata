@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_LOCAL_FORWARDER_HPP_
 #define _SIRIKATA_LOCAL_FORWARDER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include "ObjectConnection.hpp"
 
 namespace Sirikata {

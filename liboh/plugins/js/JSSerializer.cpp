@@ -2,7 +2,7 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "JSSerializer.hpp"
 #include <string>
-#include "JS_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include "JSUtil.hpp"
 
@@ -27,7 +27,7 @@ std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
 {
   Sirikata::JS::Protocol::JSMessage jsmessage ;
   Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
-  
+
   v8::HandleScope handle_scope;
 
   v8::Handle<v8::Value> name = v8Func->GetName();
@@ -55,7 +55,7 @@ std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
   std::string serialized_message;
   jsmessage.SerializeToString(&serialized_message);
 
-  	
+
   return serialized_message;
 }
 
@@ -111,19 +111,19 @@ bool JSSerializer::deserializeObject( std::string strDecode,v8::Local<v8::Object
     Sirikata::JS::Protocol::JSMessage jsmessage;
     bool parseWorked = jsmessage.ParseFromString(strDecode);
 
-    
+
     if (! parseWorked)
         return false; //means that we couldn't parse out the message
 
-    
+
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-        
+
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
 
         const char* str = jsf.name().c_str();
-        
+
         v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
         if(jsvalue.has_s_value())
         {

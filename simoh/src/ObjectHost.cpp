@@ -31,18 +31,20 @@
  */
 
 #include "ObjectHost.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "Object.hpp"
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/cbrcore/ServerIDMap.hpp>
-#include <sirikata/cbrcore/Random.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
+#include <sirikata/core/util/Random.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
-#include "CBR_Session.pbj.hpp"
+#include "Protocol_Session.pbj.hpp"
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
 
@@ -51,17 +53,17 @@ using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
  : mContext(ctx),
    parent(ctx->objectHost),
    server(sid),
-   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ioStrand->service(),streamOptions)),
+   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(&ioStrand->service(),streamOptions)),
    connecting(false),
-   receive_queue(GetOption("object-host-receive-buffer")->as<size_t>(), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
+   receive_queue(GetOptionValue<size_t>("object-host-receive-buffer"), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mReceiveCB(rcb)
 {
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
+    static int tcpSstLoaded=(sPluginManager.load(GetOptionValue<String>("ohstreamlib")),0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -275,10 +277,10 @@ ServerID ObjectHost::ObjectConnections::getConnectedServer(const UUID& obj_id, b
 
 // ObjectHost Implementation
 
-ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap)
+ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap* sidmap)
  : Service(),
    mContext( ctx ),
-   mIOService( IOServiceFactory::makeIOService() ),
+   mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
    mIOThread(NULL),
@@ -288,9 +290,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap
 {
     mPingId=0;
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
+    static int tcpSstLoaded=(sPluginManager.load(GetOptionValue<String>("ohstreamlib")),0);
 
-    mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
+    mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOptionValue<String>("ohstreamlib"))(GetOptionValue<String>("ohstreamoptions"));
 
     mHandleReadProfiler = mContext->profiler->addStage("Handle Read Network");
     mHandleMessageProfiler = mContext->profiler->addStage("Handle Server Message");
@@ -311,7 +313,7 @@ ObjectHost::~ObjectHost() {
     delete mHandleMessageProfiler;
 
     delete mIOStrand;
-    IOServiceFactory::destroyIOService(mIOService);
+    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 const ObjectHostContext* ObjectHost::context() const {
@@ -320,8 +322,8 @@ const ObjectHostContext* ObjectHost::context() const {
 
 void ObjectHost::start() {
 
-    mIOWork = new IOWork( mIOService, "ObjectHost Work" );
-    mIOThread = new Thread( std::tr1::bind(&IOService::runNoReturn, mIOService) );
+    mIOWork = new Network::IOWork( mIOService, "ObjectHost Work" );
+    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
 }
 
 void ObjectHost::stop() {
@@ -427,7 +429,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(uuid);
-    Sirikata::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
+    Sirikata::Protocol::ITimedMotionVector loc = connect_msg.mutable_loc();
     loc.set_t( ci.loc.updateTime() );
     loc.set_position( ci.loc.position() );
     loc.set_velocity( ci.loc.velocity() );
@@ -548,7 +550,7 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     return conn->push(obj_msg);
 }
 
-void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, IOStrand* strand, const Duration& rate) {
+void ObjectHost::sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
     bool sent = send(
         src, src_port,
         dest, dest_port,
@@ -590,7 +592,7 @@ bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, Siri
     bool send_success = send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,ping_serialized,destServer);
 
     if (send_success)
-        CONTEXT_TRACE_NO_TIME(pingCreated,
+        CONTEXT_OHTRACE_NO_TIME(pingCreated,
             ping_msg->ping(),
             src,
             t,
@@ -763,7 +765,7 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         Sirikata::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        CONTEXT_TRACE_NO_TIME(ping,
+        CONTEXT_OHTRACE_NO_TIME(ping,
             ping_msg.ping(),
             msg->source_object(),
             mContext->simTime(),

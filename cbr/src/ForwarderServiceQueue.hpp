@@ -33,9 +33,10 @@
 #ifndef _SIRIKATA_FORWARDER_SERVICE_QUEUE_HPP_
 #define _SIRIKATA_FORWARDER_SERVICE_QUEUE_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/FairQueue.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
+#include "ServerMessage.hpp"
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 

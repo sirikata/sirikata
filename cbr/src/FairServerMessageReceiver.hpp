@@ -34,7 +34,7 @@
 #define _SIRIKATA_FAIR_SERVER_MESSAGE_RECEIVER_HPP_
 
 #include "ServerMessageReceiver.hpp"
-#include <sirikata/cbrcore/FairQueue.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
 #include "NetworkQueueWrapper.hpp"
 
 namespace Sirikata {
@@ -63,7 +63,7 @@ private:
     // the next packet.
     void service();
 
-    IOTimerPtr mServiceTimer; // Timer used to generate another service callback
+    Network::IOTimerPtr mServiceTimer; // Timer used to generate another service callback
                               // when waiting for enough bytes to service next
                               // packet
 

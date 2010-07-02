@@ -32,9 +32,9 @@
 
 #include "FairServerMessageQueue.hpp"
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include "ServerMessage.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 
 namespace Sirikata{
 

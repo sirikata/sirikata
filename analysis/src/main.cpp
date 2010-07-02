@@ -30,79 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Timer.hpp>
-#include <sirikata/cbrcore/TimeSync.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/util/Timer.hpp>
+
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "Analysis.hpp"
 #include "MessageLatency.hpp"
 #include "ObjectLatency.hpp"
 #include "FlowStats.hpp"
 //#include "Visualization.hpp"
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
-//#include "UniformCoordinateSegmentation.hpp"
-//#include "CoordinateSegmentationClient.hpp"
-
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
-
-namespace {
-Sirikata::Trace* gTrace = NULL;
-Sirikata::SpaceContext* gSpaceContext = NULL;
-}
-
-
-namespace Sirikata {
-/** Mock Router<Message*> class, needed to satisfy CoordinateSegmentation. */
-class MockServerMessageRouter : public Router<Message*> {
-  public:
-    WARN_UNUSED
-    virtual bool route(Message* msg) {
-        return true;
-    }
-};
-/** Mock forwarder class, neeeded because CoordinateSegmentation uses it via SpaceContext. */
-  class MockForwarder : public ServerMessageDispatcher,
-			public ServerMessageRouter,
-			public ObjectMessageRouter,
-			public ObjectMessageDispatcher {
-public:
-    MockForwarder(SpaceContext* ctx) {
-        ctx->mObjectRouter = this;
-	ctx->mServerRouter = this;
-        ctx->mServerDispatcher = this;
-	ctx->mObjectDispatcher = this;
-    }
-
-      virtual Router<Message*>* createServerMessageService(const String&) {
-          return new MockServerMessageRouter();
-      }
-
-    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-        return true;
-    }
-};
-} // namespace Sirikata
 
 void *main_loop(void *);
 
 bool is_analysis() {
     using namespace Sirikata;
 
-    if (GetOption(ANALYSIS_LOC)->as<bool>() ||
-        GetOption(ANALYSIS_LOCVIS)->as<String>() != "none" ||
-        GetOption(ANALYSIS_LATENCY)->as<bool>() ||
-        GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ||
-        GetOption(ANALYSIS_MESSAGE_LATENCY)->as<bool>() ||
-        GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ||
-        !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ||
-        GetOption(ANALYSIS_OSEG)->as<bool>() ||
-        GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ||
-        GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() ||
-        !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty() ||
-        GetOption(ANALYSIS_FLOW_STATS)->as<bool>())
+    if (GetOptionValue<bool>(ANALYSIS_LOC) ||
+        GetOptionValue<String>(ANALYSIS_LOCVIS) != "none" ||
+        GetOptionValue<bool>(ANALYSIS_LATENCY) ||
+        GetOptionValue<bool>(ANALYSIS_OBJECT_LATENCY) ||
+        GetOptionValue<bool>(ANALYSIS_MESSAGE_LATENCY) ||
+        GetOptionValue<bool>(ANALYSIS_BANDWIDTH) ||
+        !GetOptionValue<String>(ANALYSIS_WINDOWED_BANDWIDTH).empty() ||
+        GetOptionValue<bool>(ANALYSIS_OSEG) ||
+        GetOptionValue<bool>(ANALYSIS_OBJECT_LATENCY) ||
+        GetOptionValue<bool>(ANALYSIS_LOC_LATENCY) ||
+        !GetOptionValue<String>(ANALYSIS_PROX_DUMP).empty() ||
+        GetOptionValue<bool>(ANALYSIS_FLOW_STATS))
         return true;
 
     return false;
@@ -112,84 +73,59 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
+    InitAnalysisOptions();
     ParseOptions(argc, argv);
+
+    PluginManager plugins;
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_ANALYSIS_PLUGINS) );
 
     assert(is_analysis());
 
-    ServerID server_id = GetOption("id")->as<ServerID>();
     String trace_file = "analysis.trace";
-    gTrace = new Trace(trace_file);
 
     // Compute the starting date/time
-    String start_time_str = GetOption("wait-until")->as<String>();
+    String start_time_str = GetOptionValue<String>("wait-until");
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time += GetOption("wait-additional")->as<Duration>();
+    start_time += GetOptionValue<Duration>("wait-additional");
 
-    Duration duration = GetOption("duration")->as<Duration>();
+    Duration duration = GetOptionValue<Duration>("duration");
 
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
-
-
-    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
-    MockForwarder* forwarder = new MockForwarder(space_context);
-
-    BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
-    Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
 
 
-    uint32 max_space_servers = GetOption("max-servers")->as<uint32>();
+    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
+    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
+
+
+    uint32 max_space_servers = GetOptionValue<uint32>("max-servers");
     if (max_space_servers == 0)
       max_space_servers = layout.x * layout.y * layout.z;
-    uint32 num_oh_servers = GetOption("num-oh")->as<uint32>();
+    uint32 num_oh_servers = GetOptionValue<uint32>("num-oh");
     uint32 nservers = max_space_servers + num_oh_servers;
 
-    srand( GetOption("rand-seed")->as<uint32>() );
+    srand( GetOptionValue<uint32>("rand-seed") );
 
 
-    String filehandle = GetOption("serverips")->as<String>();
+    String filehandle = GetOptionValue<String>("serverips");
     std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
 
-
-/*
-    String cseg_type = GetOption(CSEG)->as<String>();
-    CoordinateSegmentation* cseg = NULL;
-    if (cseg_type == "uniform")
-        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
-    else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
-    }
-    else {
-        assert(false);
-        exit(-1);
-    }
-*/
-
-    if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
+    if ( GetOptionValue<bool>(ANALYSIS_LOC) ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10)));
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
-        /*String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, cseg);
-
-        if (vistype == "object")
-            lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
-        else if (vistype == "server")
-            lea.displayRandomServerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
-
-        exit(0);*/
+    else if ( GetOptionValue<String>(ANALYSIS_LOCVIS) != "none") {
+        assert(false);
     }
-    else if ( GetOption(ANALYSIS_LATENCY)->as<bool>() ) {
+    else if ( GetOptionValue<bool>(ANALYSIS_LATENCY) ) {
         LatencyAnalysis la(STATS_TRACE_FILE,nservers);
 
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ) {
+    else if ( GetOptionValue<bool>(ANALYSIS_OBJECT_LATENCY) ) {
         ObjectLatencyAnalysis la(STATS_TRACE_FILE,nservers);
         std::ofstream histogram_data("distance_latency_histogram.csv");
         la.printHistogramDistanceData(histogram_data,10);
@@ -197,7 +133,7 @@ int main(int argc, char** argv) {
         histogram_data.close();
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_MESSAGE_LATENCY)->as<bool>() ) {
+    else if ( GetOptionValue<bool>(ANALYSIS_MESSAGE_LATENCY) ) {
         uint16 ping_port=OBJECT_PORT_PING;
         uint32 unservers=nservers;
         MessageLatencyFilters filter(&ping_port,&unservers,//filter by created @ object host
@@ -207,7 +143,7 @@ int main(int argc, char** argv) {
         MessageLatencyAnalysis(STATS_TRACE_FILE,nservers,pingfilter/*,"stage_samples.txt"*/);
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
+    else if ( GetOptionValue<bool>(ANALYSIS_BANDWIDTH) ) {
         BandwidthAnalysis ba(STATS_TRACE_FILE, max_space_servers);
         printf("Send rates\n");
         for(ServerID sender = 1; sender <= max_space_servers; sender++) {
@@ -222,11 +158,11 @@ int main(int argc, char** argv) {
             }
         }
 
-        ba.computeJFI(server_id);
+        ba.computeJFI(1);
         exit(0);
     }
-    else if ( !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ) {
-        String windowed_analysis_type = GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>();
+    else if ( !GetOptionValue<String>(ANALYSIS_WINDOWED_BANDWIDTH).empty() ) {
+        String windowed_analysis_type = GetOptionValue<String>(ANALYSIS_WINDOWED_BANDWIDTH);
 
         String windowed_analysis_send_filename = "windowed_bandwidth_";
         windowed_analysis_send_filename += windowed_analysis_type;
@@ -255,8 +191,8 @@ int main(int argc, char** argv) {
         std::ofstream windowed_queue_info_send_file(windowed_queue_info_send_filename.c_str());
         std::ofstream windowed_queue_info_receive_file(windowed_queue_info_receive_filename.c_str());
 
-        Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
-        Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
+        Duration window = GetOptionValue<Duration>(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW);
+        Duration sample_rate = GetOptionValue<Duration>(ANALYSIS_WINDOWED_BANDWIDTH_RATE);
         BandwidthAnalysis ba(STATS_TRACE_FILE, max_space_servers);
         Time start_time = Time::null();
         Time end_time = start_time + duration;
@@ -274,30 +210,13 @@ int main(int argc, char** argv) {
                     ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
             }
         }
-        // Queue information
-        //  * Raw dump
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.dumpDatagramQueueInfo(sender, receiver, std::cout, queue_info_file);
-            }
-        }
-        //  * Send
-        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
-            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
-                if (windowed_analysis_type == "datagram")
-                    ba.windowedDatagramSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
-            }
-        }
-        //  * Receive
-        // None
 
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_OSEG)->as<bool>() )
+    else if ( GetOptionValue<bool>(ANALYSIS_OSEG) )
     {
       //bftm additional object messages log file creation.
-      int osegProcessedAfterSeconds = GetOption(OSEG_ANALYZE_AFTER)->as<int>();
+        int osegProcessedAfterSeconds = GetOptionValue<int>(OSEG_ANALYZE_AFTER);
 
 
         //oseg migrates
@@ -356,20 +275,6 @@ int main(int argc, char** argv) {
         cumulativeOsegAnalysis.printData(oseg_cumulative_stream_csv);
         oseg_cumulative_stream_csv.flush();
         oseg_cumulative_stream_csv.close();
-
-
-        //oseg how long it takes to process craq responses
-        String  object_segmentation_craq_process_filename_csv = "oseg_object_segmentation_craq_response_file";
-        object_segmentation_craq_process_filename_csv += ".csv";
-        OSegProcessCraqReturnAnalysis craqProcAnalysis(STATS_TRACE_FILE,max_space_servers, osegProcessedAfterSeconds);
-
-        std::ofstream oseg_craq_process_stream_csv(object_segmentation_craq_process_filename_csv.c_str());
-
-        craqProcAnalysis.printData(oseg_craq_process_stream_csv);
-
-        oseg_craq_process_stream_csv.flush();
-        oseg_craq_process_stream_csv.close();
-
 
 
         //completed round trip migrate times
@@ -445,36 +350,23 @@ int main(int argc, char** argv) {
 
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() ) {
+    else if ( GetOptionValue<bool>(ANALYSIS_LOC_LATENCY) ) {
         LocationLatencyAnalysis(STATS_TRACE_FILE, nservers);
         exit(0);
     }
-    else if ( !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty() ) {
-        ProximityDumpAnalysis(STATS_TRACE_FILE, nservers, GetOption(ANALYSIS_PROX_DUMP)->as<String>());
+    else if ( !GetOptionValue<String>(ANALYSIS_PROX_DUMP).empty() ) {
+        ProximityDumpAnalysis(STATS_TRACE_FILE, nservers, GetOptionValue<String>(ANALYSIS_PROX_DUMP));
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_FLOW_STATS)->as<bool>() ) {
+    else if ( GetOptionValue<bool>(ANALYSIS_FLOW_STATS) ) {
         FlowStatsAnalysis(STATS_TRACE_FILE, nservers);
         exit(0);
     }
 
-    gTrace->prepareShutdown();
-
-    delete server_id_map;
-/*
-    delete cseg;
-*/
-    delete forwarder;
-
-    gTrace->shutdown();
-    delete gTrace;
-    gTrace = NULL;
-
-    delete space_context;
-    space_context = NULL;
-
     delete mainStrand;
-    IOServiceFactory::destroyIOService(ios);
+    Network::IOServiceFactory::destroyIOService(ios);
+
+    plugins.gc();
 
     return 0;
 }

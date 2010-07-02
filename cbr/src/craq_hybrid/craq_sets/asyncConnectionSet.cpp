@@ -34,13 +34,11 @@
 #include <iostream>
 #include <map>
 #include <utility>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
-#include <sirikata/cbrcore/VWTypes.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <functional>
@@ -49,7 +47,7 @@ namespace Sirikata
 {
 
   //constructor
-AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readyStateChangedCb)
+AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readyStateChangedCb)
   : mSocket(NULL),
     ctx(con),
     mStrand(str),

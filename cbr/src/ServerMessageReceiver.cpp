@@ -31,9 +31,9 @@
  */
 
 #include "ServerMessageReceiver.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "SpaceContext.hpp"
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 
@@ -48,7 +48,7 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* ne
 {
     mProfiler = mContext->profiler->addStage("Server Message Receiver");
     net->listen(mContext->id(), this);
-    mCapacityOverestimate=GetOption("receive-capacity-overestimate")->as<double>();
+    mCapacityOverestimate=GetOptionValue<double>("receive-capacity-overestimate");
 }
 
 ServerMessageReceiver::~ServerMessageReceiver() {

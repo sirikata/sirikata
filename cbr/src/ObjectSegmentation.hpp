@@ -33,10 +33,9 @@
 #ifndef _SIRIKATA_OBJECT_SEGMENTATION_HPP_
 #define _SIRIKATA_OBJECT_SEGMENTATION_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include "SpaceContext.hpp"
+#include "ServerMessage.hpp"
+#include <sirikata/core/service/Service.hpp>
 #include <iostream>
 #include <iomanip>
 #include "craq_oseg/asyncUtil.hpp"
@@ -77,12 +76,12 @@ class ObjectSegmentation : public MessageRecipient, public Service
     SpaceContext* mContext;
     OSegLookupListener* mLookupListener;
       OSegWriteListener* mWriteListener;
-    IOStrand* oStrand;
+    Network::IOStrand* oStrand;
 
 
   public:
 
-    ObjectSegmentation(SpaceContext* ctx,IOStrand* o_strand)
+    ObjectSegmentation(SpaceContext* ctx,Network::IOStrand* o_strand)
      : mContext(ctx),
        mLookupListener(NULL),
        mWriteListener(NULL),

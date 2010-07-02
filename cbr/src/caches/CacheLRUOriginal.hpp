@@ -41,12 +41,12 @@
 #include <vector>
 #include <list>
 #include <boost/bind.hpp>
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include <boost/thread/mutex.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
-#include <sirikata/cbrcore/Context.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include "CraqCache.hpp"
+#include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata
 {
@@ -69,7 +69,7 @@ namespace Sirikata
 
     typedef std::multimap<int,CraqCacheRecordLRUOriginal*> TimeRecordMap;
     TimeRecordMap timeRecMap;
-    IOStrand* mStrand;
+    Network::IOStrand* mStrand;
 
     Timer mTimer;
     void maintain();

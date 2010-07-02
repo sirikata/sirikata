@@ -33,12 +33,13 @@
 #ifndef _SIRIKATA_OBJECT_HOST_CONNECTION_MANAGER_HPP_
 #define _SIRIKATA_OBJECT_HOST_CONNECTION_MANAGER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include "SpaceContext.hpp"
 #include "SpaceNetwork.hpp"
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Address4.hpp>
+#include "ServerMessage.hpp"
+#include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 
 namespace Sirikata {
@@ -82,15 +83,15 @@ public:
 
     void shutdown();
 
-    IOStrand* const netStrand() const {
+    Network::IOStrand* const netStrand() const {
         return mIOStrand;
     }
 private:
     SpaceContext* mContext;
 
-    IOService* mIOService; // FIXME we should be able to use main IOService, but need underlying connections to be stranded
-    IOStrand* mIOStrand;
-    IOWork* mIOWork;
+    Network::IOService* mIOService; // FIXME we should be able to use main IOService, but need underlying connections to be stranded
+    Network::IOStrand* mIOStrand;
+    Network::IOWork* mIOWork;
     Thread* mIOThread;
 
     Sirikata::Network::StreamListener* mAcceptor;

@@ -38,9 +38,8 @@
 #include <functional>
 #include <iostream>
 #include <iomanip>
-#include <sirikata/cbrcore/Timer.hpp>
 #include <boost/thread/mutex.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 
 

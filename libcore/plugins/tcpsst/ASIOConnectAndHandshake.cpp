@@ -33,7 +33,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include "TCPStream.hpp"
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
 #include "ASIOReadBuffer.hpp"
 #include "TCPStream.hpp"

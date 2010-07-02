@@ -186,10 +186,22 @@ MACRO (_Boost_ADJUST_LIB_VARS basename)
       SET(Boost_${basename}_LIBRARY         ${Boost_${basename}_LIBRARY_DEBUG})
       SET(Boost_${basename}_LIBRARIES       ${Boost_${basename}_LIBRARY_DEBUG})
     ENDIF (Boost_${basename}_LIBRARY_DEBUG AND NOT Boost_${basename}_LIBRARY_RELEASE)
-    
+
     IF (Boost_${basename}_LIBRARY)
       SET(Boost_${basename}_LIBRARY ${Boost_${basename}_LIBRARY} CACHE FILEPATH "The Boost ${basename} library")
-      GET_FILENAME_COMPONENT(Boost_LIBRARY_DIRS "${Boost_${basename}_LIBRARY}" PATH)
+
+      # extract include directories for each type of library available
+      SET(Boost_LIBRARY_DIRS)
+      IF (Boost_${basename}_LIBRARY_DEBUG)
+        GET_FILENAME_COMPONENT(Boost_LIBRARY_DIRS_DEBUG "${Boost_${basename}_LIBRARY_DEBUG}" PATH)
+        SET(Boost_LIBRARY_DIRS ${Boost_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS_DEBUG})
+      ENDIF (Boost_${basename}_LIBRARY_DEBUG)
+
+      IF(Boost_${basename}_LIBRARY_RELEASE)
+        GET_FILENAME_COMPONENT(Boost_LIBRARY_DIRS_RELEASE "${Boost_${basename}_LIBRARY_RELEASE}" PATH)
+        SET(Boost_LIBRARY_DIRS ${Boost_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS_RELEASE})
+      ENDIF(Boost_${basename}_LIBRARY_RELEASE)
+
       SET(Boost_LIBRARY_DIRS ${Boost_LIBRARY_DIRS} CACHE FILEPATH "Boost library directory")
       SET(Boost_${basename}_FOUND ON CACHE INTERNAL "Whether the Boost ${basename} library found")
     ENDIF (Boost_${basename}_LIBRARY)

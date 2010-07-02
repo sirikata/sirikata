@@ -34,15 +34,16 @@
 #include "ObjectHostContext.hpp"
 
 #include "Object.hpp"
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
-#include <sirikata/cbrcore/RandomMotionPath.hpp>
-#include <sirikata/cbrcore/QuakeMotionPath.hpp>
-#include <sirikata/cbrcore/StaticMotionPath.hpp>
-#include <sirikata/cbrcore/OSegTestMotionPath.hpp>
+#include "RandomMotionPath.hpp"
+#include "QuakeMotionPath.hpp"
+#include "StaticMotionPath.hpp"
+#include "OSegTestMotionPath.hpp"
 
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
@@ -100,16 +101,16 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects              = GetOption(OBJECT_NUM_RANDOM)->as<uint32>();
+    uint32 nobjects              = GetOptionValue<uint32>(OBJECT_NUM_RANDOM);
     if (nobjects == 0) return;
-    bool simple                  =   GetOption(OBJECT_SIMPLE)->as<bool>();
-    bool only_2d                 =       GetOption(OBJECT_2D)->as<bool>();
-    std::string motion_path_type = GetOption(OBJECT_STATIC)->as<String>();
-    float driftX                 = GetOption(OBJECT_DRIFT_X)->as<float>();
-    float driftY                 = GetOption(OBJECT_DRIFT_Y)->as<float>();
-    float driftZ                 = GetOption(OBJECT_DRIFT_Z)->as<float>();
+    bool simple                  =   GetOptionValue<bool>(OBJECT_SIMPLE);
+    bool only_2d                 =       GetOptionValue<bool>(OBJECT_2D);
+    std::string motion_path_type = GetOptionValue<String>(OBJECT_STATIC);
+    float driftX                 = GetOptionValue<float>(OBJECT_DRIFT_X);
+    float driftY                 = GetOptionValue<float>(OBJECT_DRIFT_Y);
+    float driftZ                 = GetOptionValue<float>(OBJECT_DRIFT_Z);
 
-    float percent_queriers       = GetOption(OBJECT_QUERY_FRAC)->as<float>();
+    float percent_queriers       = GetOptionValue<float>(OBJECT_QUERY_FRAC);
 
     Vector3f driftVecDir(driftX,driftY,driftZ);
 
@@ -139,7 +140,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
         inputs->connectAt = Duration::seconds(0.f);
 
-        inputs->startTimer = IOTimer::create(mContext->ioService);
+        inputs->startTimer = Network::IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -165,12 +166,12 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects = GetOption(OBJECT_PACK_NUM)->as<uint32>();
+    uint32 nobjects = GetOptionValue<uint32>(OBJECT_PACK_NUM);
     if (nobjects == 0) return;
-    String pack_filename = GetOption(OBJECT_PACK)->as<String>();
+    String pack_filename = GetOptionValue<String>(OBJECT_PACK);
     assert(!pack_filename.empty());
 
-    String pack_dir = GetOption(OBJECT_PACK_DIR)->as<String>();
+    String pack_dir = GetOptionValue<String>(OBJECT_PACK_DIR);
     pack_filename = pack_dir + pack_filename;
 
     FILE* pack_file = fopen(pack_filename.c_str(), "rb");
@@ -181,7 +182,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     }
 
     // First offset ourselves into the file
-    uint32 pack_offset = GetOption(OBJECT_PACK_OFFSET)->as<uint32>();
+    uint32 pack_offset = GetOptionValue<uint32>(OBJECT_PACK_OFFSET);
 
     uint32 obj_pack_size =
         8 + // objid
@@ -220,7 +221,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
         inputs->queryAngle = SolidAngle::Max;
         inputs->connectAt = Duration::seconds(0.f);
 
-        inputs->startTimer = IOTimer::create(mContext->ioService);
+        inputs->startTimer = Network::IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -260,14 +261,14 @@ void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, cons
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects = GetOption(OBJECT_SL_NUM)->as<uint32>();
+    uint32 nobjects = GetOptionValue<uint32>(OBJECT_SL_NUM);
     if (nobjects == 0) return;
-    String pack_filename = GetOption(OBJECT_SL_FILE)->as<String>();
+    String pack_filename = GetOptionValue<String>(OBJECT_SL_FILE);
     assert(!pack_filename.empty());
-    String pack_dir = GetOption(OBJECT_PACK_DIR)->as<String>();
+    String pack_dir = GetOptionValue<String>(OBJECT_PACK_DIR);
     pack_filename = pack_dir + pack_filename;
 
-    Vector3f sim_center = GetOption(OBJECT_SL_CENTER)->as<Vector3f>();
+    Vector3f sim_center = GetOptionValue<Vector3f>(OBJECT_SL_CENTER);
 
     // First, load in all the objects.
     FILE* pack_file = fopen(pack_filename.c_str(), "rb");
@@ -312,7 +313,7 @@ void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, cons
         inputs->queryAngle = SolidAngle::Max;
         inputs->connectAt = Duration::seconds(0.f);
 
-        inputs->startTimer = IOTimer::create(mContext->ioService);
+        inputs->startTimer = Network::IOTimer::create(mContext->ioService);
 
         mObjectIDs.insert(first.uuid);
         mInputs[first.uuid] = inputs;
@@ -320,11 +321,11 @@ void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, cons
 }
 
 void ObjectFactory::dumpObjectPack() const {
-    String pack_filename = GetOption(OBJECT_PACK_DUMP)->as<String>();
+    String pack_filename = GetOptionValue<String>(OBJECT_PACK_DUMP);
     if (pack_filename.empty())
         return;
 
-    String pack_dir = GetOption(OBJECT_PACK_DIR)->as<String>();
+    String pack_dir = GetOptionValue<String>(OBJECT_PACK_DIR);
     pack_filename = pack_dir + pack_filename;
 
     FILE* pack_file = fopen(pack_filename.c_str(), "wb");
@@ -353,7 +354,7 @@ void ObjectFactory::dumpObjectPack() const {
 }
 
 void ObjectFactory::setConnectTimes() {
-    Duration total_duration = GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
+    Duration total_duration = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
 
     for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end(); it++) {
         ObjectInputs* inputs = it->second;

@@ -34,10 +34,11 @@
 #include "ScenarioFactory.hpp"
 #include "ObjectHost.hpp"
 #include "Object.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
 namespace Sirikata {
 void DPSInitOptions(LoadPacketTrace *thus) {
 
@@ -127,7 +128,6 @@ LoadPacketTrace::LoadPacketTrace(const String &options)
         new Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>(
             CountResourceMonitor(std::max((uint32)(mNumPingsPerSecond / 4), (uint32)2))
         );
-    mWeightCalculator=WeightCalculatorFactory(NULL);
     mPingPoller = NULL;
     // NOTE: We have this limit because we can get in lock-step with the
     // generator, causing this to run for excessively long when we fall behind
@@ -161,7 +161,7 @@ void LoadPacketTrace::addConstructorToFactory(ScenarioFactory*thus){
 }
 
 void LoadPacketTrace::initialize(ObjectHostContext*ctx) {
-    mGenPhase=GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
+    mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext=ctx;
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
 
@@ -188,7 +188,7 @@ void LoadPacketTrace::initialize(ObjectHostContext*ctx) {
 }
 
 void LoadPacketTrace::start() {
-    Duration connect_phase = GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
+    Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
         std::tr1::bind(&LoadPacketTrace::delayedStart, this)

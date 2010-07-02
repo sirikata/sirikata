@@ -53,8 +53,8 @@
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/persistence/ObjectStorage.hpp>
 #include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
-#include <ObjectHostBinary_Persistence.pbj.hpp>
-#include <ObjectHostBinary_Sirikata.pbj.hpp>
+#include <Protocol_Persistence.pbj.hpp>
+#include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -187,7 +187,7 @@ int main ( int argc,const char**argv ) {
         NULL
     };
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
-        plugins.load( DynamicLibrary::filename(*plugin_name) );
+        plugins.load( *plugin_name );
 
     OptionSet::getOptions ( "" )->parse ( myargc,myargv );
 

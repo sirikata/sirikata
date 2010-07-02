@@ -30,69 +30,75 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Timer.hpp>
-#include <sirikata/cbrcore/TimeSync.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/TabularServerIDMap.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "Options.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
+
+#include <sirikata/core/network/IOServiceFactory.hpp>
 
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
-    Trace::InitOptions();
+    Trace::Trace::InitOptions();
+    InitCSegOptions();
     ParseOptions(argc, argv);
 
-    ServerID server_id = GetOption("cseg-id")->as<ServerID>();
+    PluginManager plugins;
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS));
+    plugins.loadList( GetOptionValue<String>(OPT_CSEG_PLUGINS));
+
+    ServerID server_id = GetOptionValue<ServerID>("cseg-id");
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    Trace* trace = new Trace(trace_file);
+    Trace::Trace* trace = new Trace::Trace(trace_file);
 
     // Compute the starting date/time
-    String start_time_str = GetOption("wait-until")->as<String>();
+    String start_time_str = GetOptionValue<String>("wait-until");
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time +=  GetOption("wait-additional")->as<Duration>();
+    start_time +=  GetOptionValue<Duration>("wait-additional");
 
-    Duration duration = GetOption("duration")->as<Duration>() + GetOption("additional-cseg-duration")->as<Duration>();
+    Duration duration = GetOptionValue<Duration>("duration") + GetOptionValue<Duration>("additional-cseg-duration");
 
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
 
 
-    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, trace, duration);
+    CSegContext* cseg_context = new CSegContext(server_id, ios, mainStrand, trace, start_time, duration);
 
-    BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
-    Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
+    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
-    uint32 max_space_servers = GetOption("max-servers")->as<uint32>();
+    uint32 max_space_servers = GetOptionValue<uint32>("max-servers");
     if (max_space_servers == 0)
       max_space_servers = layout.x * layout.y * layout.z;
 
-    srand( GetOption("rand-seed")->as<uint32>() );
+    srand( GetOptionValue<uint32>("rand-seed") );
 
-    String filehandle = GetOption("cseg-serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("cseg-servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
-    String cseg_type = GetOption(CSEG)->as<String>();
-    CoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers, server_id_map);
+    DistributedCoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(cseg_context, region, layout, max_space_servers, server_id_map);
 
     ///////////Go go go!! start of simulation/////////////////////
 
     srand(time(NULL));
 
-    space_context->add(space_context);
-    space_context->add(cseg);
+    cseg_context->add(cseg_context);
+    cseg_context->add(cseg);
 
-    space_context->run(1);
+    cseg_context->run(1);
 
-    space_context->cleanup();
+    cseg_context->cleanup();
 
-    if (GetOption(PROFILE)->as<bool>()) {
-        space_context->profiler->report();
+    if (GetOptionValue<bool>(PROFILE)) {
+        cseg_context->profiler->report();
     }
 
     trace->prepareShutdown();
@@ -103,11 +109,13 @@ int main(int argc, char** argv) {
     delete trace;
     trace = NULL;
 
-    delete space_context;
-    space_context = NULL;
+    delete cseg_context;
+    cseg_context = NULL;
 
     delete mainStrand;
-    IOServiceFactory::destroyIOService(ios);
+    Network::IOServiceFactory::destroyIOService(ios);
+
+    plugins.gc();
 
     return 0;
 }

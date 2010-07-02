@@ -32,7 +32,7 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
-#include <ProxyObject_Sirikata.pbj.hpp>
+#include <Protocol_Sirikata.pbj.hpp>
 
 namespace Sirikata {
 

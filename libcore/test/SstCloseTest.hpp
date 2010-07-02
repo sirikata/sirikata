@@ -129,7 +129,7 @@ public:
 private:
     SstCloseTest() {
         Sirikata::PluginManager plugins;
-        plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
+        plugins.load( "tcpsst" );
 
         uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
         mPort = boost::lexical_cast<std::string>(randport);

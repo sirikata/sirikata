@@ -74,7 +74,8 @@ void PluginManager::searchPath(const String& path) {
 }
 
 void PluginManager::load(const String& filename) {
-    Plugin* plugin = new Plugin(filename);
+    String real_filename = DynamicLibrary::filename(filename);
+    Plugin* plugin = new Plugin(real_filename);
 
     if (!plugin->load()) {
         delete plugin;
@@ -85,10 +86,26 @@ void PluginManager::load(const String& filename) {
 
     PluginInfo* pi = new PluginInfo();
     pi->plugin = plugin;
-    pi->filename = filename;
+    pi->filename = real_filename;
     pi->name = plugin->name();
 
     mPlugins.push_back(pi);
+}
+
+void PluginManager::loadList(const String& filename_list) {
+    String::size_type next_start = 0;
+    while(next_start < filename_list.size()) {
+        String::size_type comma_idx = filename_list.find(',', next_start);
+
+        String filename = comma_idx == String::npos ?
+            filename_list.substr(next_start) :
+            filename_list.substr(next_start, comma_idx - next_start);
+        load(filename);
+
+        if (comma_idx == String::npos)
+            break;
+        next_start = comma_idx + 1;
+    }
 }
 
 void PluginManager::gc() {

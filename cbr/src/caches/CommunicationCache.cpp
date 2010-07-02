@@ -34,8 +34,7 @@
 #include <float.h>
 #include <cmath>
 #include "../craq_oseg/CraqEntry.hpp"
-#include "../Proximity.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../CoordinateSegmentation.hpp"
 
 namespace Sirikata
 {

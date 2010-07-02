@@ -1,0 +1,113 @@
+/*  Sirikata
+ *  Object.pbj
+ *
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+"pbj-0.0.3"
+
+package Sirikata.Trace.OSeg;
+
+message CraqRequest {
+    optional time t = 1;
+    optional uuid object = 2;
+    optional uint64 server = 3;
+}
+
+message ProcessedRequest {
+    optional time t = 1;
+    optional uuid object = 2;
+    optional uint64 server = 3;
+    optional uint64 processor = 4;
+    optional uint32 dtime = 5;
+    optional uint32 queued = 6;
+}
+
+message TrackedSetResults {
+    optional time t = 1;
+    optional uuid object = 2;
+    optional uint64 server = 3;
+    optional duration roundtrip = 4;
+}
+
+message Shutdown {
+    optional time t = 1;
+    optional uint64 server = 2;
+    optional uint64 lookups = 3;
+    optional uint64 local_lookups = 4;
+    optional uint64 cache_hits = 5;
+    optional uint64 craq_lookups = 6;
+    optional uint64 cache_eviction_elapsed = 7;
+    optional uint64 outstanding_migrations = 8;
+}
+
+message CacheResponse {
+    optional time t = 1;
+    optional uint64 server = 2;
+    optional uuid object = 3;
+}
+
+message InvalidLookup {
+    optional time t = 1;
+    optional uint64 server = 2;
+    optional uuid object = 3;
+}
+
+message CumulativeResponse {
+    optional time t = 1;
+    optional uuid object = 2;
+
+    optional uint64 lookup_server = 4;
+    optional uint64 location_server = 5;
+
+    optional bool not_ready = 6;
+    optional bool shutting_down = 7;
+    optional bool deadline_expired = 8;
+    optional bool not_found = 9;
+
+    optional uint64 initial_lookup_time = 10;
+    optional uint64 check_cache_local_begin = 11;
+    optional uint64 check_cache_local_end = 12;
+    optional uint64 qlen_post_query = 13;
+    optional uint64 craq_lookup_begin = 14;
+    optional uint64 craq_lookup_end = 15;
+    optional uint64 craq_lookup_not_already_lookup_begin = 16;
+    optional uint64 craq_lookup_not_already_lookup_end = 17;
+
+    optional uint64 get_manager_enqueue_begin = 18;
+    optional uint64 get_manager_enqueue_end = 19;
+    optional uint64 get_manager_dequeued = 20;
+    optional uint64 get_connection_network_begin = 21;
+    optional uint64 get_connection_network_end = 22;
+
+    optional uint64 get_connection_network_received = 23;
+    optional uint64 qlen_post_return = 24;
+    optional uint64 lookup_return_begin = 25;
+    optional uint64 lookup_return_end = 26;
+}

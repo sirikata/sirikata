@@ -36,14 +36,12 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <boost/asio.hpp>
 #include "../asyncCraqUtil.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
 #include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "../../OSegLookupTraceToken.hpp"
 
 namespace Sirikata
 {
@@ -84,7 +82,7 @@ public:
 
 
   ~AsyncConnectionGet();
-    AsyncConnectionGet(SpaceContext* con, IOStrand* str, IOStrand* error_strand, IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()> &readyStateChangedCb );
+    AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()> &readyStateChangedCb );
 
   int numStillProcessing();
   void printOutstanding();
@@ -173,9 +171,9 @@ private:
 
   //***strand and context
   SpaceContext* ctx;
-  IOStrand* mStrand;
-  IOStrand* mPostErrorsStrand;
-  IOStrand* mResultStrand;
+  Network::IOStrand* mStrand;
+  Network::IOStrand* mPostErrorsStrand;
+  Network::IOStrand* mResultStrand;
   AsyncCraqScheduler* mSchedulerMaster;
   ObjectSegmentation* mOSeg;
   double getTime;

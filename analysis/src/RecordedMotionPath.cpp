@@ -31,8 +31,13 @@
  */
 
 #include "RecordedMotionPath.hpp"
+#include "Protocol_ObjectTrace.pbj.hpp"
+#include "Analysis.hpp"
 
 namespace Sirikata {
+
+typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+
 
 TimedMotionVector3f RecordedMotionPath::DummyUpdate;
 
@@ -46,11 +51,8 @@ RecordedMotionPath::~RecordedMotionPath() {
 void RecordedMotionPath::add(Event* evt) {
     GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(evt);
     if (gen_loc_evt != NULL)
+        addUpdate(extractTimedMotionVector(gen_loc_evt->data.loc()));
         add(gen_loc_evt);
-}
-
-void RecordedMotionPath::add(GeneratedLocationEvent* evt) {
-    addUpdate(evt->loc);
 }
 
 const TimedMotionVector3f RecordedMotionPath::initial() const {

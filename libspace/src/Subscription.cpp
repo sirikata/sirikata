@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Space_Subscription.pbj.hpp"
+#include "Protocol_Subscription.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/space/Subscription.hpp>

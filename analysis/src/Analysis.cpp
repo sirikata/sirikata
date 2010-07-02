@@ -31,13 +31,11 @@
  */
 
 #include "Analysis.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/MotionPath.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
-#include <sirikata/cbrcore/Utility.hpp>
 #include "RecordedMotionPath.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
 #include <algorithm>
 
 namespace Sirikata {
@@ -55,6 +53,12 @@ bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_o
     return true;
 }
 
+TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotionVector& tmv) {
+    TimedMotionVector3f result;
+    result.update( tmv.t(), tmv.position(), tmv.velocity() );
+    return result;
+}
+
 Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID& trace_server_id) {
     std::istringstream record_is(record);
 
@@ -63,71 +67,34 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
 
     Event* evt = NULL;
 
-    if (type_hint == Trace::SegmentationChangeTag) {
-  	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
-	      record_is.read( (char*)&sevt->time, sizeof(sevt->time) );
-	      record_is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
-	      record_is.read( (char*)&sevt->server, sizeof(sevt->server) );
-	      evt = sevt;
+#define PARSE_PBJ_RECORD(type)                                          \
+    PBJEvent<type>* pevt = new PBJEvent<type>;                          \
+    pevt->data.ParseFromIstream(&record_is);                            \
+    pevt->time = pevt->data.t();                                        \
+    evt = pevt;
+
+    if (type_hint == SegmentationChangeTag) {
+        PARSE_PBJ_RECORD(Trace::CSeg::SegmentationChanged);
     }
-    else if (type_hint == Trace::ProximityTag) {
-              ProximityEvent* pevt = new ProximityEvent;
-              record_is.read( (char*)&pevt->time, sizeof(pevt->time) );
-              record_is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
-              record_is.read( (char*)&pevt->source, sizeof(pevt->source) );
-              record_is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
-              record_is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
-              evt = pevt;
-              }
-    else if (type_hint == Trace::ObjectConnectedTag) {
-              ObjectConnectedEvent* levt = new ObjectConnectedEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              levt->receiver = UUID::null();
-              record_is.read( (char*)&levt->server, sizeof(levt->server) );
-              evt = levt;
+    else if (type_hint == ProximityTag) {
+        PARSE_PBJ_RECORD(Trace::Object::ProxUpdate);
     }
-    else if (type_hint == Trace::ObjectLocationTag) {
-              LocationEvent* levt = new LocationEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              evt = levt;
+    else if (type_hint == ObjectConnectedTag) {
+        PARSE_PBJ_RECORD(Trace::Object::Connected);
     }
-    else if (type_hint == Trace::ObjectGeneratedLocationTag) {
-              GeneratedLocationEvent* levt = new GeneratedLocationEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              levt->receiver = UUID::null();
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              record_is.read( (char*)&levt->bounds, sizeof(levt->bounds) );
-              evt = levt;
+    else if (type_hint == ObjectLocationTag) {
+        PARSE_PBJ_RECORD(Trace::Object::LocUpdate);
     }
-    else if (type_hint == Trace::ObjectPingCreatedTag) {
-              PingCreatedEvent *pevt = new PingCreatedEvent;
-              record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
-              record_is.read((char*)&pevt->source, sizeof(pevt->source));
-              record_is.read((char*)&pevt->time, sizeof(pevt->time));
-              record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
-              record_is.read((char*)&pevt->id,sizeof(pevt->id));
-              record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
-              record_is.read((char*)&pevt->size,sizeof(pevt->size));
-              evt=pevt;
-          }
-    else if (type_hint == Trace::ObjectPingTag) {
-              PingEvent *pevt = new PingEvent;
-              record_is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
-              record_is.read((char*)&pevt->source, sizeof(pevt->source));
-              record_is.read((char*)&pevt->time, sizeof(pevt->time));
-              record_is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
-              record_is.read((char*)&pevt->id,sizeof(pevt->id));
-              record_is.read((char*)&pevt->distance,sizeof(pevt->distance));
-              record_is.read((char*)&pevt->uid,sizeof(pevt->uid));
-              record_is.read((char*)&pevt->size,sizeof(pevt->size));
-              evt=pevt;
-          }
-    else if (type_hint == Trace::MessageCreationTimestampTag) {
+    else if (type_hint == ObjectGeneratedLocationTag) {
+        PARSE_PBJ_RECORD(Trace::Object::GeneratedLoc);
+    }
+    else if (type_hint == ObjectPingCreatedTag) {
+        PARSE_PBJ_RECORD(Trace::Ping::Created);
+    }
+    else if (type_hint == ObjectPingTag) {
+        PARSE_PBJ_RECORD(Trace::Ping::Sent);
+    }
+    else if (type_hint == MessageCreationTimestampTag) {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
               record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
@@ -136,166 +103,62 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
               record_is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
               evt=pevt;
           }
-    else if (type_hint == Trace::MessageTimestampTag) {
+    else if (type_hint == MessageTimestampTag) {
               MessageTimestampEvent *pevt = new MessageTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
               record_is.read((char*)&pevt->uid, sizeof(pevt->uid));
               record_is.read((char*)&pevt->path, sizeof(pevt->path));
               evt=pevt;
           }
-    else if (type_hint == Trace::ServerDatagramQueuedTag) {
-              ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
-              record_is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
-              pqevt->source = trace_server_id;
-              record_is.read( (char*)&pqevt->dest, sizeof(pqevt->dest) );
-              record_is.read( (char*)&pqevt->id, sizeof(pqevt->id) );
-              record_is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
-              evt = pqevt;
-          }
-    else if (type_hint == Trace::OSegCumulativeTraceAnalysisTag) {
-          OSegCumulativeEvent* cumevt = new OSegCumulativeEvent;
-          record_is.read((char*)&cumevt->time, sizeof(cumevt->time));
-          record_is.read((char*)&cumevt->traceToken, sizeof(cumevt->traceToken));
-          evt = cumevt;
-        }
-    else if (type_hint == Trace::OSegCraqProcessTag) {
-          OSegCraqProcEvent* craqProcEvt = new OSegCraqProcEvent;
-          record_is.read((char*)&craqProcEvt->time, sizeof(craqProcEvt->time));
-          record_is.read((char*)&craqProcEvt->timeItTook,sizeof(craqProcEvt->timeItTook));
-          record_is.read((char*)&craqProcEvt->numProcessed, sizeof(craqProcEvt->numProcessed));
-          record_is.read((char*)&craqProcEvt->sizeIncomingString,sizeof(craqProcEvt->sizeIncomingString));
-          evt = craqProcEvt;
-        }
-    else if (type_hint == Trace::ServerDatagramSentTag) {
-              ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
-              record_is.read( (char*)&psevt->time, sizeof(psevt->time) );
-              psevt->source = trace_server_id;
-              record_is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
-              record_is.read( (char*)&psevt->id, sizeof(psevt->id) );
-              record_is.read( (char*)&psevt->size, sizeof(psevt->size) );
-              record_is.read( (char*)&psevt->weight, sizeof(psevt->weight) );
-              record_is.read( (char*)&psevt->_start_time, sizeof(psevt->_start_time) );
-              record_is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
-              evt = psevt;
-          }
-    else if (type_hint == Trace::ServerDatagramReceivedTag) {
-              ServerDatagramReceivedEvent* prevt = new ServerDatagramReceivedEvent;
-              record_is.read( (char*)&prevt->time, sizeof(prevt->time) );
-              record_is.read( (char*)&prevt->source, sizeof(prevt->source) );
-              prevt->dest = trace_server_id;
-              record_is.read( (char*)&prevt->id, sizeof(prevt->id) );
-              record_is.read( (char*)&prevt->size, sizeof(prevt->size) );
-              record_is.read( (char*)&prevt->_start_time, sizeof(prevt->_start_time) );
-              record_is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
-              evt = prevt;
-          }
-    else if (type_hint == Trace::ObjectBeginMigrateTag) {
-          ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
-          record_is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
-          record_is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
-          record_is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
-          record_is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
-
-          evt = objBegMig_evt;
-        }
-    else if (type_hint == Trace::ObjectAcknowledgeMigrateTag) {
-          ObjectAcknowledgeMigrateEvent* objAckMig_evt = new ObjectAcknowledgeMigrateEvent;
-          record_is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
-
-          record_is.read((char*) &objAckMig_evt->mObjID, sizeof(objAckMig_evt->mObjID) );
-
-          record_is.read((char*) & objAckMig_evt->mAcknowledgeFrom, sizeof(objAckMig_evt->mAcknowledgeFrom));
-          record_is.read((char*) & objAckMig_evt->mAcknowledgeTo, sizeof(objAckMig_evt->mAcknowledgeTo));
-
-          evt = objAckMig_evt;
-        }
-    else if (type_hint == Trace::RoundTripMigrationTimeAnalysisTag) {
-          ObjectMigrationRoundTripEvent* rdTripMig_evt = new ObjectMigrationRoundTripEvent;
-          record_is.read((char*)&rdTripMig_evt->time,sizeof(rdTripMig_evt->time));
-          record_is.read((char*)&rdTripMig_evt->obj_id,sizeof(rdTripMig_evt->obj_id));
-          record_is.read((char*)&rdTripMig_evt->sID_migratingFrom, sizeof(rdTripMig_evt->sID_migratingFrom));
-          record_is.read((char*)&rdTripMig_evt->sID_migratingTo,sizeof(rdTripMig_evt->sID_migratingTo));
-          record_is.read((char*)&rdTripMig_evt->numMill,sizeof(rdTripMig_evt->numMill));
-
-          evt = rdTripMig_evt;
-        }
-    else if (type_hint == Trace::OSegTrackedSetResultAnalysisTag) {
-          OSegTrackedSetResultsEvent* trackedSetResults_evt = new OSegTrackedSetResultsEvent;
-          record_is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
-          record_is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
-          record_is.read((char*)&trackedSetResults_evt->sID_migratingTo, sizeof(trackedSetResults_evt->sID_migratingTo));
-          record_is.read((char*)&trackedSetResults_evt->numMill, sizeof(trackedSetResults_evt->numMill));
-
-          evt = trackedSetResults_evt;
-        }
-    else if (type_hint == Trace::OSegCacheResponseTag) {
-          OSegCacheResponseEvent* cachedResponse_evt = new OSegCacheResponseEvent;
-          record_is.read((char*)&cachedResponse_evt->time,sizeof(cachedResponse_evt->time));
-          record_is.read((char*)&cachedResponse_evt->cacheResponseID, sizeof(cachedResponse_evt->cacheResponseID));
-          record_is.read((char*)&cachedResponse_evt->obj_id, sizeof(cachedResponse_evt->obj_id));
-          evt = cachedResponse_evt;
-        }
-    else if (type_hint == Trace::OSegShutdownEventTag) {
-          OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
-          record_is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
-          record_is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
-          record_is.read((char*)&shutdown_evt->numLookups, sizeof(shutdown_evt->numLookups));
-          record_is.read((char*)&shutdown_evt->numOnThisServer,sizeof(shutdown_evt->numOnThisServer));
-          record_is.read((char*)&shutdown_evt->numCacheHits, sizeof(shutdown_evt->numCacheHits));
-          record_is.read((char*)&shutdown_evt->numCraqLookups, sizeof(shutdown_evt->numCraqLookups));
-          record_is.read((char*)&shutdown_evt->numTimeElapsedCacheEviction, sizeof(shutdown_evt->numTimeElapsedCacheEviction));
-          record_is.read((char*)&shutdown_evt->numMigrationNotCompleteYet, sizeof(shutdown_evt->numMigrationNotCompleteYet));
-
-          evt = shutdown_evt;
-
-        }
-    else if (type_hint == Trace::ServerLocationTag) {
-              ServerLocationEvent* levt = new ServerLocationEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->dest, sizeof(levt->dest) );
-              record_is.read( (char*)&levt->object, sizeof(levt->object) );
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              evt = levt;
-          }
-    else if (type_hint == Trace::ServerObjectEventTag) {
-              ServerObjectEventEvent* levt = new ServerObjectEventEvent;
-              record_is.read( (char*)&levt->time, sizeof(levt->time) );
-              record_is.read( (char*)&levt->source, sizeof(levt->source) );
-              record_is.read( (char*)&levt->dest, sizeof(levt->dest) );
-              record_is.read( (char*)&levt->object, sizeof(levt->object) );
-              uint8 raw_added = 0;
-              record_is.read( (char*)&raw_added, sizeof(raw_added) );
-              levt->added = (raw_added > 0);
-              record_is.read( (char*)&levt->loc, sizeof(levt->loc) );
-              evt = levt;
-          }
-    else if (type_hint == Trace::ObjectSegmentationCraqLookupRequestAnalysisTag) {
-          ObjectCraqLookupEvent* obj_lookupReq_evt = new ObjectCraqLookupEvent;
-          record_is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
-          record_is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
-          record_is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
-
-          evt = obj_lookupReq_evt;
-        }
-    else if (type_hint == Trace::OSegLookupNotOnServerAnalysisTag) {
-          ObjectLookupNotOnServerEvent* obj_lookup_not_on_server_evt = new ObjectLookupNotOnServerEvent;
-          record_is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
-          record_is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
-          record_is.read( (char*)&obj_lookup_not_on_server_evt->mID_lookup, sizeof(obj_lookup_not_on_server_evt->mID_lookup) );
-
-          evt = obj_lookup_not_on_server_evt;
-        }
-    else if (type_hint == Trace::ObjectSegmentationProcessedRequestAnalysisTag) {
-          ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
-          record_is.read( (char* )&obj_lookupProc_evt->time, sizeof(obj_lookupProc_evt->time)  );
-          record_is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
-          record_is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
-          record_is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
-          record_is.read( (char* )&obj_lookupProc_evt->deltaTime, sizeof(obj_lookupProc_evt->deltaTime) );
-          record_is.read( (char* )&obj_lookupProc_evt->stillInQueue, sizeof(obj_lookupProc_evt->stillInQueue) );
-          evt = obj_lookupProc_evt;
-        }
+    else if (type_hint == ServerDatagramQueuedTag) {
+        PARSE_PBJ_RECORD(Trace::Datagram::Queued);
+        pevt->data.set_source_server(trace_server_id);
+    }
+    else if (type_hint == OSegCumulativeTraceAnalysisTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::CumulativeResponse);
+    }
+    else if (type_hint == ServerDatagramSentTag) {
+        PARSE_PBJ_RECORD(Trace::Datagram::Sent);
+        pevt->data.set_source_server(trace_server_id);
+    }
+    else if (type_hint == ServerDatagramReceivedTag) {
+        PARSE_PBJ_RECORD(Trace::Datagram::Received);
+        pevt->data.set_dest_server(trace_server_id);
+    }
+    else if (type_hint == MigrationBeginTag) {
+        PARSE_PBJ_RECORD(Trace::Migration::Begin);
+    }
+    else if (type_hint == MigrationAckTag) {
+        PARSE_PBJ_RECORD(Trace::Migration::Ack);
+    }
+    else if (type_hint == MigrationRoundTripTag) {
+        PARSE_PBJ_RECORD(Trace::Migration::RoundTrip);
+    }
+    else if (type_hint == OSegTrackedSetResultAnalysisTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::TrackedSetResults);
+    }
+    else if (type_hint == OSegCacheResponseTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::CacheResponse);
+    }
+    else if (type_hint == OSegShutdownEventTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::Shutdown);
+        pevt->data.set_server(trace_server_id);
+    }
+    else if (type_hint == ServerLocationTag) {
+        PARSE_PBJ_RECORD(Trace::LocProx::LocUpdate);
+    }
+    else if (type_hint == ServerObjectEventTag) {
+        PARSE_PBJ_RECORD(Trace::LocProx::ObjectEvent);
+    }
+    else if (type_hint == ObjectSegmentationCraqLookupRequestAnalysisTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::CraqRequest);
+    }
+    else if (type_hint == OSegLookupNotOnServerAnalysisTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::InvalidLookup);
+    }
+    else if (type_hint == ObjectSegmentationProcessedRequestAnalysisTag) {
+        PARSE_PBJ_RECORD(Trace::OSeg::ProcessedRequest);
+    }
       else {
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)type_hint<<"\n";
       }
@@ -340,7 +203,7 @@ private:
     bool currentMatches() {
         EventType* event = dynamic_cast<EventType*>(*mRangeCurrent);
         if (event == NULL) return false;
-        if (event->source != mSender || event->dest != mReceiver) return false;
+        if (event->data.source_server() != mSender || event->data.dest_server() != mReceiver) return false;
         return true;
     }
 
@@ -378,8 +241,8 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
             ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
             ProximityEvent* pe = dynamic_cast<ProximityEvent*>(evt);
             LocationEvent* le = dynamic_cast<LocationEvent*>(evt);
-            ServerObjectEventEvent* sobj_evt = dynamic_cast<ServerObjectEventEvent*>(evt);
-            ServerLocationEvent* sloc_evt = dynamic_cast<ServerLocationEvent*>(evt);
+            ServerObjectLocUpdateEvent* sobj_evt = dynamic_cast<ServerObjectLocUpdateEvent*>(evt);
+            ServerLocUpdateEvent* sloc_evt = dynamic_cast<ServerLocUpdateEvent*>(evt);
 
             if (obj_evt != NULL && (pe != NULL || le != NULL)) {
                 ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
@@ -393,10 +256,10 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
                 evt_list->push_back(obj_evt);
             }
             else if (sobj_evt != NULL) {
-                ServerEventListMap::iterator it = mServerEventLists.find( sobj_evt->dest );
+                ServerEventListMap::iterator it = mServerEventLists.find( sobj_evt->data.receiver() );
                 if (it == mServerEventLists.end()) {
-                    mServerEventLists[ sobj_evt->dest ] = new EventList;
-                    it = mServerEventLists.find( sobj_evt->dest );
+                    mServerEventLists[ sobj_evt->data.receiver() ] = new EventList;
+                    it = mServerEventLists.find( sobj_evt->data.receiver() );
                 }
                 assert( it != mServerEventLists.end() );
 
@@ -404,10 +267,10 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
                 evt_list->push_back(sobj_evt);
             }
             else if (sloc_evt != NULL) {
-                ServerEventListMap::iterator it = mServerEventLists.find( sloc_evt->dest );
+                ServerEventListMap::iterator it = mServerEventLists.find( sloc_evt->data.receiver() );
                 if (it == mServerEventLists.end()) {
-                    mServerEventLists[ sloc_evt->dest ] = new EventList;
-                    it = mServerEventLists.find( sloc_evt->dest );
+                    mServerEventLists[ sloc_evt->data.receiver() ] = new EventList;
+                    it = mServerEventLists.find( sloc_evt->data.receiver() );
                 }
                 assert( it != mServerEventLists.end() );
 
@@ -450,7 +313,7 @@ bool LocationErrorAnalysis::observed(const UUID& observer, const UUID& seen) con
 
     for(EventList::iterator event_it = events->begin(); event_it != events->end(); event_it++) {
         ProximityEvent* prox = dynamic_cast<ProximityEvent*>(*event_it);
-        if (prox != NULL && prox->entered)
+        if (prox != NULL && prox->data.entered())
             found_prox_entered = true;
 
         LocationEvent* loc = dynamic_cast<LocationEvent*>(*event_it);
@@ -470,12 +333,12 @@ struct AlwaysUpdatePredicate {
 
 static bool event_matches_prox_entered(ObjectEvent* evt) {
     ProximityEvent* prox = dynamic_cast<ProximityEvent*>(evt);
-    return (prox != NULL && prox->entered);
+    return (prox != NULL && prox->data.entered());
 }
 
 static bool event_matches_prox_exited(ObjectEvent* evt) {
     ProximityEvent* prox = dynamic_cast<ProximityEvent*>(evt);
-    return (prox != NULL && !prox->entered);
+    return (prox != NULL && !prox->data.entered());
 }
 
 static bool event_matches_loc(ObjectEvent* evt) {
@@ -529,7 +392,7 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
         if (mode == SEARCHING_PROX) {
             if (event_matches_prox_entered(cur_event)) {
                 ProximityEvent* prox = dynamic_cast<ProximityEvent*>(cur_event);
-                pred_motion = prox->loc;
+                pred_motion = extractTimedMotionVector(prox->data.loc());
                 cur_time = prox->time;
                 mode = SAMPLING;
             }
@@ -575,8 +438,9 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
                 mode = SEARCHING_PROX;
             else if (event_matches_loc(cur_event)) {
                 LocationEvent* loc = dynamic_cast<LocationEvent*>(cur_event);
-                if (loc->loc.time() >= pred_motion.time())
-                    pred_motion = loc->loc;
+                TimedMotionVector3f loc_loc = extractTimedMotionVector(loc->data.loc());
+                if (loc_loc.time() >= pred_motion.time())
+                    pred_motion = loc_loc;
             }
 
             cur_time = end_sampling_time;
@@ -629,10 +493,10 @@ void insert_event(EventType* evt, EventListMapType& lists) {
     assert(evt != NULL);
 
     // put it in the source queue
-    typename EventListMapType::iterator source_it = lists.find( evt->source );
+    typename EventListMapType::iterator source_it = lists.find( evt->data.source_server() );
     if (source_it == lists.end()) {
-        lists[ evt->source ] = new EventListType;
-        source_it = lists.find( evt->source );
+        lists[ evt->data.source_server() ] = new EventListType;
+        source_it = lists.find( evt->data.source_server() );
     }
     assert( source_it != lists.end() );
 
@@ -640,10 +504,10 @@ void insert_event(EventType* evt, EventListMapType& lists) {
     evt_list->push_back(evt);
 
     // put it in the dest queue
-    typename EventListMapType::iterator dest_it = lists.find( evt->dest );
+    typename EventListMapType::iterator dest_it = lists.find( evt->data.dest_server() );
     if (dest_it == lists.end()) {
-        lists[ evt->dest ] = new EventListType;
-        dest_it = lists.find( evt->dest );
+        lists[ evt->data.dest_server() ] = new EventListType;
+        dest_it = lists.find( evt->data.dest_server() );
     }
     assert( dest_it != lists.end() );
 
@@ -669,16 +533,20 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
 
             bool used = false;
 
-            ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
-            if (datagram_evt != NULL) {
+            DatagramQueuedEvent* datagram_queued_evt = dynamic_cast<DatagramQueuedEvent*>(evt);
+            DatagramSentEvent* datagram_sent_evt = dynamic_cast<DatagramSentEvent*>(evt);
+            DatagramReceivedEvent* datagram_received_evt = dynamic_cast<DatagramReceivedEvent*>(evt);
+            if (datagram_queued_evt != NULL) {
                 used = true;
-                insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
+                insert_event<DatagramQueuedEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_queued_evt, mDatagramEventLists);
             }
-
-            ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
-            if (datagram_qi_evt != NULL) {
+            else if (datagram_sent_evt != NULL) {
                 used = true;
-                insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
+                insert_event<DatagramSentEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_sent_evt, mDatagramEventLists);
+            }
+            else if (datagram_received_evt != NULL) {
+                used = true;
+                insert_event<DatagramReceivedEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_received_evt, mDatagramEventLists);
             }
 
             if (!used) delete evt;
@@ -687,8 +555,6 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
 
     // Sort all lists of events by time
     sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
-
-    sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
 }
 
 BandwidthAnalysis::~BandwidthAnalysis() {
@@ -698,7 +564,12 @@ BandwidthAnalysis::~BandwidthAnalysis() {
         for(DatagramEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
             // each event is put in both the source and the dest server event lists,
             // to avoid double deleting, only delete if this is the event's source list
-            if ((*events_it)->source == server_id)
+            DatagramQueuedEvent* datagram_queued_evt = dynamic_cast<DatagramQueuedEvent*>(*events_it);
+            DatagramSentEvent* datagram_sent_evt = dynamic_cast<DatagramSentEvent*>(*events_it);
+            DatagramReceivedEvent* datagram_received_evt = dynamic_cast<DatagramReceivedEvent*>(*events_it);
+            if ((datagram_queued_evt != NULL && datagram_queued_evt->data.source_server() == server_id) ||
+                (datagram_sent_evt != NULL && datagram_sent_evt->data.source_server() == server_id) ||
+                (datagram_received_evt != NULL && datagram_received_evt->data.source_server() == server_id))
                 delete *events_it;
         }
     }
@@ -712,27 +583,12 @@ const BandwidthAnalysis::DatagramEventList* BandwidthAnalysis::getDatagramEventL
 }
 
 
-const BandwidthAnalysis::DatagramQueueInfoEventList* BandwidthAnalysis::getDatagramQueueInfoEventList(const ServerID& server) const {
-    ServerDatagramQueueInfoEventListMap::const_iterator event_lists_it = mDatagramQueueInfoEventLists.find(server);
-    if (event_lists_it == mDatagramQueueInfoEventLists.end()) return &mEmptyDatagramQueueInfoEventList;
-
-    return event_lists_it->second;
-}
-
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramBegin(const ServerID& server) const {
     return getDatagramEventList(server)->begin();
 }
 
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramEnd(const ServerID& server) const {
     return getDatagramEventList(server)->end();
-}
-
-BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoBegin(const ServerID& server) const {
-    return getDatagramQueueInfoEventList(server)->begin();
-}
-
-BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoEnd(const ServerID& server) const {
-    return getDatagramQueueInfoEventList(server)->end();
 }
 
 
@@ -746,7 +602,7 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
     for(EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end); event_it.current() != NULL; event_it.next() ) {
         EventType* p_evt = event_it.current();
 
-        total_bytes += p_evt->size;
+        total_bytes += p_evt->data.size();
 
         if (p_evt->time != last_time) {
             double bandwidth = (double)last_bytes / last_duration.toSeconds();
@@ -758,7 +614,7 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
             last_time = p_evt->time;
         }
 
-        last_bytes += p_evt->size;
+        last_bytes += p_evt->data.size();
     }
 
     printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
@@ -771,7 +627,7 @@ void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& 
 	return;
     }
 
-    computeRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
+    computeRate<DatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
@@ -780,7 +636,7 @@ void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerI
 	return;
     }
 
-    computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
+    computeRate<DatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
 
 // note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
@@ -801,15 +657,15 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         while(true) {
             EventType* evt = event_it.current();
             if (evt == NULL) break;
-            if (evt->end_time() > window_end) {
-                if (evt->begin_time() + window < window_end) {
-                    double packet_frac = (window_end - evt->begin_time()).toSeconds() / (evt->end_time() - evt->begin_time()).toSeconds();
-                    last_packet_partial_size = evt->size * packet_frac;
+            if (evt->data.end_time() > window_end) {
+                if (evt->data.start_time() + window < window_end) {
+                    double packet_frac = (window_end - evt->data.start_time()).toSeconds() / (evt->data.end_time() - evt->data.start_time()).toSeconds();
+                    last_packet_partial_size = evt->data.size() * packet_frac;
                 }
                 break;
             }
-            bytes += evt->size;
-            total_bytes += evt->size;
+            bytes += evt->data.size();
+            total_bytes += evt->data.size();
             window_events.push(evt);
             event_it.next();
         }
@@ -819,15 +675,15 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         uint32 first_packet_partial_size = 0;
         while(!window_events.empty()) {
             EventType* pevt = window_events.front();
-            if (pevt->begin_time() + window >= window_end) break;
+            if (pevt->data.start_time() + window >= window_end) break;
 
-            bytes -= pevt->size;
+            bytes -= pevt->data.size();
             window_events.pop();
 
-            if (pevt->end_time() + window >= window_end) {
+            if (pevt->data.end_time() + window >= window_end) {
                 // note the order of the numerator is important to avoid underflow
-                double packet_frac = (pevt->end_time() + window - window_end).toSeconds() / (pevt->end_time() - pevt->begin_time()).toSeconds();
-                first_packet_partial_size = pevt->size * packet_frac;
+                double packet_frac = (pevt->data.end_time() + window - window_end).toSeconds() / (pevt->data.end_time() - pevt->data.start_time()).toSeconds();
+                first_packet_partial_size = pevt->data.size() * packet_frac;
                 break;
             }
         }
@@ -870,9 +726,9 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
             {
               EventType* p_evt = event_it.current();
 
-              total_bytes += p_evt->size;
+              total_bytes += p_evt->data.size();
 
-              weight = p_evt->weight;
+              weight = p_evt->data.weight();
 
 
             }
@@ -893,138 +749,16 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
 
 
 void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
+    computeWindowedRate<DatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
 }
 
 void BandwidthAnalysis::computeWindowedDatagramReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
+    computeWindowedRate<DatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
 }
 
 void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
-  computeJFI<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, sender);
+  computeJFI<DatagramSentEvent, DatagramEventList::const_iterator>(sender, sender);
 }
-
-
-template<typename EventType, typename EventIteratorType>
-void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
-    EventType* q_evt = NULL;
-    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
-
-    while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << (q_evt->time-Time::null()).toMilliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << " " << q_evt->receive_size << " " << q_evt->receive_queued << " " << q_evt->receive_weight << std::endl;
-        event_it.next();
-    }
-    //summary_out << std::endl;
-}
-
-template<typename EventType, typename EventIteratorType>
-void dumpQueueInfoSend(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
-    EventType* q_evt = NULL;
-    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
-
-    while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << (q_evt->time-Time::null()).toMilliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << std::endl;
-        event_it.next();
-    }
-    //summary_out << std::endl;
-}
-
-void BandwidthAnalysis::dumpDatagramQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
-    dumpQueueInfoSend<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
-}
-
-
-// note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
-template<typename EventType, typename EventIteratorType, typename ValueFunctor>
-void windowedQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const ValueFunctor& value_func, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out, bool swap_sender_receiver) {
-    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
-    std::queue<EventType*> window_events;
-
-    uint64 window_queued_bytes = 0;
-    float window_weight = 0.f;
-
-    for(Time window_center = start_time; window_center < end_time; window_center += sample_rate) {
-        Time window_end = window_center + window / 2.f;
-
-        // add in any new packets that now fit in the window
-        while(true) {
-            EventType* evt = event_it.current();
-            if (evt == NULL) break;
-            if (evt->end_time() > window_end)
-                break;
-            window_queued_bytes += value_func.queued(evt);
-            window_weight += value_func.weight(evt);
-            window_events.push(evt);
-            event_it.next();
-        }
-
-        // subtract out any packets that have fallen out of the window
-        // note we use event_time + window < window_end because subtracting could underflow the time
-        while(!window_events.empty()) {
-            EventType* pevt = window_events.front();
-            if (pevt->begin_time() + window >= window_end) break;
-
-            window_queued_bytes -= value_func.queued(pevt);
-            window_weight -= value_func.weight(pevt);
-            window_events.pop();
-        }
-
-        // finally compute the current values
-        uint64 window_queued_avg = (window_events.size() == 0) ? 0 : window_queued_bytes / window_events.size();
-        float window_weight_avg = (window_events.size() == 0) ? 0 : window_weight / window_events.size();
-
-        // optionally swap order for sake of graphing code, generally will be used when collecting stats for "receiver" side
-        if (swap_sender_receiver)
-            detail_out << receiver << " " << sender << " ";
-        else
-            detail_out << sender << " " << receiver << " ";
-        detail_out << (window_center-Time::null()).toMilliseconds() << " " << window_queued_avg << " " << window_weight_avg << std::endl;
-    }
-
-    // FIXME we should probably output *something* for summary_out
-}
-
-
-template<typename EventType>
-struct SendQueueFunctor {
-    uint32 size(const EventType* evt) const {
-        return evt->send_size;
-    }
-    uint32 queued(const EventType* evt) const {
-        return evt->send_queued;
-    }
-    float weight(const EventType* evt) const {
-        return evt->send_weight;
-    }
-};
-
-template<typename EventType>
-struct ReceiveQueueFunctor {
-    uint32 size(const EventType* evt) const {
-        return evt->receive_size;
-    }
-    uint32 queued(const EventType* evt) const {
-        return evt->receive_queued;
-    }
-    float weight(const EventType* evt) const {
-        return evt->receive_weight;
-    }
-};
-
-
-void BandwidthAnalysis::windowedDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    windowedQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator, SendQueueFunctor<ServerDatagramQueueInfoEvent> >(
-        sender, receiver,
-        datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender),
-        SendQueueFunctor<ServerDatagramQueueInfoEvent>(),
-        window, sample_rate, start_time, end_time,
-        summary_out, detail_out,
-        false
-    );
-}
-
-
-
 
 
 
@@ -1037,24 +771,24 @@ LatencyAnalysis::PacketData::PacketData()
     mSize=0;
     mId=0;
 }
-void LatencyAnalysis::PacketData::addPacketSentEvent(ServerDatagramQueuedEvent*sde) {
-    mSize=sde->size;
-    mId=sde->id;
-    source=sde->source;
-    dest=sde->dest;
-    if (_send_start_time==Time::null()||_send_start_time>=sde->begin_time()) {
+void LatencyAnalysis::PacketData::addPacketSentEvent(DatagramQueuedEvent*sde) {
+    mSize=sde->data.size();
+    mId=sde->data.uid();
+    source=sde->data.source_server();
+    dest=sde->data.dest_server();
+    if (_send_start_time==Time::null()||_send_start_time>=sde->time) {
         _send_start_time=sde->time;
         _send_end_time=sde->time;
     }
 }
-void LatencyAnalysis::PacketData::addPacketReceivedEvent(ServerDatagramReceivedEvent*sde) {
-    mSize=sde->size;
-    mId=sde->id;
-    source=sde->source;
-    dest=sde->dest;
-    if (_receive_end_time==Time::null()||_receive_end_time<=sde->end_time()) {
-        _receive_start_time=sde->begin_time();
-        _receive_end_time=sde->end_time();
+void LatencyAnalysis::PacketData::addPacketReceivedEvent(DatagramReceivedEvent*sde) {
+    mSize=sde->data.size();
+    mId=sde->data.uid();
+    source=sde->data.source_server();
+    dest=sde->data.dest_server();
+    if (_receive_end_time==Time::null()||_receive_end_time<=sde->data.end_time()) {
+        _receive_start_time=sde->data.start_time();
+        _receive_end_time=sde->data.end_time();
     }
 }
 
@@ -1076,20 +810,16 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
 
 
             {
-                ServerDatagramReceivedEvent* datagram_evt = dynamic_cast<ServerDatagramReceivedEvent*>(evt);
+                DatagramReceivedEvent* datagram_evt = dynamic_cast<DatagramReceivedEvent*>(evt);
                 if (datagram_evt != NULL) {
-                    packetFlow[datagram_evt->id].addPacketReceivedEvent(datagram_evt);
+                    packetFlow[datagram_evt->data.uid()].addPacketReceivedEvent(datagram_evt);
                 }
             }
             {
-                ServerDatagramQueuedEvent* datagram_evt = dynamic_cast<ServerDatagramQueuedEvent*>(evt);
+                DatagramQueuedEvent* datagram_evt = dynamic_cast<DatagramQueuedEvent*>(evt);
                 if (datagram_evt != NULL) {
-                    packetFlow[datagram_evt->id].addPacketSentEvent(datagram_evt);
+                    packetFlow[datagram_evt->data.uid()].addPacketSentEvent(datagram_evt);
                 }
-            }
-            ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
-            if (datagram_qi_evt != NULL) {
-                //insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
             }
 
             delete evt;
@@ -1232,26 +962,26 @@ LatencyAnalysis::~LatencyAnalysis() {
               break;
 
 
-        ObjectBeginMigrateEvent* obj_mig_evt = dynamic_cast<ObjectBeginMigrateEvent*>(evt);
+        MigrationBeginEvent* obj_mig_evt = dynamic_cast<MigrationBeginEvent*>(evt);
         if (obj_mig_evt != NULL)
         {
           objectBeginMigrateTimes.push_back(obj_mig_evt->time);
 
-          objectBeginMigrateID.push_back(obj_mig_evt->mObjID);
-          objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->mMigrateFrom);
-          objectBeginMigrateMigrateTo.push_back(obj_mig_evt->mMigrateTo);
+          objectBeginMigrateID.push_back(obj_mig_evt->data.object());
+          objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->data.from());
+          objectBeginMigrateMigrateTo.push_back(obj_mig_evt->data.toward());
           delete evt;
           continue;
         }
 
-        ObjectAcknowledgeMigrateEvent* obj_ack_mig_evt = dynamic_cast<ObjectAcknowledgeMigrateEvent*> (evt);
+        MigrationAckEvent* obj_ack_mig_evt = dynamic_cast<MigrationAckEvent*> (evt);
         if (obj_ack_mig_evt != NULL)
         {
           objectAcknowledgeMigrateTimes.push_back(obj_ack_mig_evt->time);
 
-          objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->mObjID);
-          objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
-          objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
+          objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->data.object());
+          objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->data.from());
+          objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->data.toward());
           delete evt;
           continue;
         }
@@ -1272,29 +1002,29 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
   }
 
-  bool ObjectSegmentationAnalysis::compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B)
+  bool ObjectSegmentationAnalysis::compareObjectBeginMigrateEvts(MigrationBeginEvent A, MigrationBeginEvent B)
   {
     return A.time < B.time;
   }
 
 
-  bool ObjectSegmentationAnalysis::compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B)
+  bool ObjectSegmentationAnalysis::compareObjectAcknowledgeMigrateEvts(MigrationAckEvent A, MigrationAckEvent B)
   {
     return A.time < B.time;
   }
 
 
-  void ObjectSegmentationAnalysis::convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents)
+  void ObjectSegmentationAnalysis::convertToEvtsAndSort(std::vector<MigrationBeginEvent> &sortedBeginMigrateEvents, std::vector<MigrationAckEvent> &sortedAcknowledgeMigrateEvents)
   {
     //begin migrate events
-    ObjectBeginMigrateEvent obme;
+    MigrationBeginEvent obme;
 
     for (int s= 0; s < (int) objectBeginMigrateTimes.size(); ++s)
     {
       obme.time           =        objectBeginMigrateTimes[s];
-      obme.mObjID         =           objectBeginMigrateID[s];
-      obme.mMigrateFrom   =  objectBeginMigrateMigrateFrom[s];
-      obme.mMigrateTo     =    objectBeginMigrateMigrateTo[s];
+      obme.data.set_object(objectBeginMigrateID[s]);
+      obme.data.set_from(objectBeginMigrateMigrateFrom[s]);
+      obme.data.set_toward(objectBeginMigrateMigrateTo[s]);
 
       sortedBeginMigrateEvents.push_back(obme);
     }
@@ -1302,14 +1032,14 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedBeginMigrateEvents.begin(),sortedBeginMigrateEvents.end(), compareObjectBeginMigrateEvts );
 
     //acknowledge events
-    ObjectAcknowledgeMigrateEvent oame;
+    MigrationAckEvent oame;
 
     for (int s =0; s < (int) objectAcknowledgeMigrateTimes.size(); ++s)
     {
       oame.time             =     objectAcknowledgeMigrateTimes[s];
-      oame.mObjID           =        objectAcknowledgeMigrateID[s];
-      oame.mAcknowledgeFrom =  objectAcknowledgeAcknowledgeFrom[s];
-      oame.mAcknowledgeTo   =    objectAcknowledgeAcknowledgeTo[s];
+      oame.data.set_object(objectAcknowledgeMigrateID[s]);
+      oame.data.set_from(objectAcknowledgeAcknowledgeFrom[s]);
+      oame.data.set_toward(objectAcknowledgeAcknowledgeTo[s]);
 
       sortedAcknowledgeMigrateEvents.push_back(oame);
     }
@@ -1325,8 +1055,8 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
     if (sortedByTime)
     {
-      std::vector<ObjectBeginMigrateEvent>               sortedBeginMigrateEvents;
-      std::vector<ObjectAcknowledgeMigrateEvent>   sortedAcknowledgeMigrateEvents;
+      std::vector<MigrationBeginEvent>               sortedBeginMigrateEvents;
+      std::vector<MigrationAckEvent>   sortedAcknowledgeMigrateEvents;
 
       convertToEvtsAndSort(sortedBeginMigrateEvents, sortedAcknowledgeMigrateEvents);
 
@@ -1338,9 +1068,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s=0; s < (int)sortedBeginMigrateEvents.size(); ++s)
       {
         fileOut << sortedBeginMigrateEvents[s].time.raw() << "\n";
-        fileOut << "          obj id:       " << sortedBeginMigrateEvents[s].mObjID.toString() << "\n";
-        fileOut << "          migrate from: " << sortedBeginMigrateEvents[s].mMigrateFrom      << "\n";
-        fileOut << "          migrate to:   " << sortedBeginMigrateEvents[s].mMigrateTo        << "\n";
+        fileOut << "          obj id:       " << sortedBeginMigrateEvents[s].data.object().toString() << "\n";
+        fileOut << "          migrate from: " << sortedBeginMigrateEvents[s].data.from()      << "\n";
+        fileOut << "          migrate to:   " << sortedBeginMigrateEvents[s].data.toward()        << "\n";
         fileOut << "\n\n";
       }
 
@@ -1349,9 +1079,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s=0; s < (int) sortedAcknowledgeMigrateEvents.size(); ++s)
       {
         fileOut << sortedAcknowledgeMigrateEvents[s].time.raw() << "\n";
-        fileOut << "          obj id:           " << sortedAcknowledgeMigrateEvents[s].mObjID.toString() << "\n";
-        fileOut << "          acknowledge from: " << sortedAcknowledgeMigrateEvents[s].mAcknowledgeFrom  << "\n";
-        fileOut << "          acknowledge to:   " << sortedAcknowledgeMigrateEvents[s].mAcknowledgeTo    << "\n";
+        fileOut << "          obj id:           " << sortedAcknowledgeMigrateEvents[s].data.object().toString() << "\n";
+        fileOut << "          acknowledge from: " << sortedAcknowledgeMigrateEvents[s].data.from()  << "\n";
+        fileOut << "          acknowledge to:   " << sortedAcknowledgeMigrateEvents[s].data.toward()    << "\n";
         fileOut << "\n\n";
       }
     }
@@ -1405,12 +1135,12 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectCraqLookupEvent* obj_lookup_evt = dynamic_cast<ObjectCraqLookupEvent*> (evt);
+        OSegCraqRequestEvent* obj_lookup_evt = dynamic_cast<OSegCraqRequestEvent*> (evt);
         if (obj_lookup_evt != NULL)
         {
           times.push_back(obj_lookup_evt->time);
-          obj_ids.push_back(obj_lookup_evt->mObjID);
-          sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          obj_ids.push_back(obj_lookup_evt->data.object());
+          sID_lookup.push_back(obj_lookup_evt->data.server());
           delete evt;
           continue;
         }
@@ -1425,7 +1155,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortByTime)
     {
-      std::vector<ObjectCraqLookupEvent> sortedEvents;
+      std::vector<OSegCraqRequestEvent> sortedEvents;
       convertToEvtsAndSort(sortedEvents);
 
       fileOut << "\n\n*******************Begin Craq Lookup Requests Messages*************\n\n\n";
@@ -1435,9 +1165,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvents.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:   "<<sortedEvents[s].mID_lookup<<"\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvents[s].data.server()<<"\n";
         fileOut<< "\tTime at:           "<<sortedEvents[s].time.raw()<<"\n";
-        fileOut<< "\tObj id:            "<<sortedEvents[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObj id:            "<<sortedEvents[s].data.object().toString()<<"\n";
       }
 
       fileOut<<"\n\n\n\nEND\n";
@@ -1467,15 +1197,15 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   //want to sort by times.
   //probably a bad way to do this.  I could have just read them in correctly in the first place.
-  void ObjectSegmentationCraqLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectCraqLookupEvent> &sortedEvents)
+  void ObjectSegmentationCraqLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<OSegCraqRequestEvent> &sortedEvents)
   {
-    ObjectCraqLookupEvent ole;
+    OSegCraqRequestEvent ole;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
       ole.time = times[s];
-      ole.mObjID = obj_ids[s];
-      ole.mID_lookup = sID_lookup[s];
+      ole.data.set_object(obj_ids[s]);
+      ole.data.set_server(sID_lookup[s]);
 
       sortedEvents.push_back(ole);
     }
@@ -1483,7 +1213,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
   }
 
-  bool ObjectSegmentationCraqLookupRequestsAnalysis::compareEvts(ObjectCraqLookupEvent A, ObjectCraqLookupEvent B)
+  bool ObjectSegmentationCraqLookupRequestsAnalysis::compareEvts(OSegCraqRequestEvent A, OSegCraqRequestEvent B)
   {
     return A.time < B.time;
   }
@@ -1513,12 +1243,12 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectLookupNotOnServerEvent* obj_lookup_evt = dynamic_cast<ObjectLookupNotOnServerEvent*> (evt);
+        OSegInvalidLookupEvent* obj_lookup_evt = dynamic_cast<OSegInvalidLookupEvent*> (evt);
         if (obj_lookup_evt != NULL)
         {
           times.push_back(obj_lookup_evt->time);
-          obj_ids.push_back(obj_lookup_evt->mObjID);
-          sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          obj_ids.push_back(obj_lookup_evt->data.object());
+          sID_lookup.push_back(obj_lookup_evt->data.server());
           delete evt;
           continue;
         }
@@ -1533,7 +1263,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortByTime)
     {
-      std::vector<ObjectLookupNotOnServerEvent> sortedEvents;
+      std::vector<OSegInvalidLookupEvent> sortedEvents;
       convertToEvtsAndSort(sortedEvents);
 
       fileOut << "\n\n*******************Begin Lookup Requests Not On Server Messages*************\n\n\n";
@@ -1543,9 +1273,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvents.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:   "<<sortedEvents[s].mID_lookup<<"\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvents[s].data.server()<<"\n";
         fileOut<< "\tTime at:           "<<sortedEvents[s].time.raw()<<"\n";
-        fileOut<< "\tObj id:            "<<sortedEvents[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObj id:            "<<sortedEvents[s].data.object().toString()<<"\n";
       }
 
       fileOut<<"\n\n\n\nEND\n";
@@ -1575,15 +1305,15 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   //want to sort by times.
   //probably a bad way to do this.  I could have just read them in correctly in the first place.
-  void ObjectSegmentationLookupNotOnServerRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupNotOnServerEvent> &sortedEvents)
+  void ObjectSegmentationLookupNotOnServerRequestsAnalysis::convertToEvtsAndSort(std::vector<OSegInvalidLookupEvent> &sortedEvents)
   {
-    ObjectLookupNotOnServerEvent ole;
+    OSegInvalidLookupEvent ole;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
       ole.time = times[s];
-      ole.mObjID = obj_ids[s];
-      ole.mID_lookup = sID_lookup[s];
+      ole.data.set_object(obj_ids[s]);
+      ole.data.set_server(sID_lookup[s]);
 
       sortedEvents.push_back(ole);
     }
@@ -1591,7 +1321,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
   }
 
-  bool ObjectSegmentationLookupNotOnServerRequestsAnalysis::compareEvts(ObjectLookupNotOnServerEvent A, ObjectLookupNotOnServerEvent B)
+  bool ObjectSegmentationLookupNotOnServerRequestsAnalysis::compareEvts(OSegInvalidLookupEvent A, OSegInvalidLookupEvent B)
   {
     return A.time < B.time;
   }
@@ -1622,16 +1352,16 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectLookupProcessedEvent* obj_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
+        OSegProcessedRequestEvent* obj_lookup_proc_evt = dynamic_cast<OSegProcessedRequestEvent*> (evt);
 
         if (obj_lookup_proc_evt != NULL)
         {
           times.push_back(obj_lookup_proc_evt->time);
-          obj_ids.push_back(obj_lookup_proc_evt->mObjID);
-          sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
-          sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
-          dTimes.push_back(obj_lookup_proc_evt->deltaTime);
-          stillInQueues.push_back(obj_lookup_proc_evt->stillInQueue);
+          obj_ids.push_back(obj_lookup_proc_evt->data.object());
+          sID_processor.push_back(obj_lookup_proc_evt->data.processor());
+          sID_objectOn.push_back(obj_lookup_proc_evt->data.server());
+          dTimes.push_back(obj_lookup_proc_evt->data.dtime());
+          stillInQueues.push_back(obj_lookup_proc_evt->data.queued());
           delete evt;
           continue;
         }
@@ -1650,14 +1380,14 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortedByTime)
     {
-      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      std::vector<OSegProcessedRequestEvent> sortedEvts;
       convertToEvtsAndSort(sortedEvts);
 
       for (int s=0; s < (int) sortedEvts.size(); ++s)
       {
         if (sortedEvts[s].time.raw() > processAfterInMicro)
         {
-          fileOut <<sortedEvts[s].deltaTime<<",";
+            fileOut <<sortedEvts[s].data.dtime()<<",";
         }
       }
     }
@@ -1712,7 +1442,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     if (sortedByTime)
     {
-      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      std::vector<OSegProcessedRequestEvent> sortedEvts;
       convertToEvtsAndSort(sortedEvts);
 
       fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
@@ -1721,21 +1451,21 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvts.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:           "<<sortedEvts[s].mID_processor<<"\n";
+        fileOut<< "\tRegistered from:           "<<sortedEvts[s].data.processor()<<"\n";
         fileOut<< "\tTime at:                   "<<sortedEvts[s].time.raw()<<"\n";
-        fileOut<< "\tID Lookup:                 "<<sortedEvts[s].mObjID.toString()<<"\n";
-        fileOut<< "\tObject on:                 "<<sortedEvts[s].mID_objectOn<<"\n";
-        fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].stillInQueue<<"\n";
-        fileOut<< "\tTime taken:                "<<sortedEvts[s].deltaTime<<"\n";
+        fileOut<< "\tID Lookup:                 "<<sortedEvts[s].data.object().toString()<<"\n";
+        fileOut<< "\tObject on:                 "<<sortedEvts[s].data.server()<<"\n";
+        fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].data.queued()<<"\n";
+        fileOut<< "\tTime taken:                "<<sortedEvts[s].data.dtime()<<"\n";
 
         if (sortedEvts[s].time.raw() > processAfterInMicro)
         {
           ++numCountedLatency;
-          totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
+          totalLatency = totalLatency + (int)sortedEvts[s].data.dtime();
 
-          if ((int)sortedEvts[s].deltaTime > maxLatency)
+          if ((int)sortedEvts[s].data.dtime() > maxLatency)
           {
-            maxLatency = (int)sortedEvts[s].deltaTime;
+              maxLatency = (int)sortedEvts[s].data.dtime();
           }
         }
       }
@@ -1784,25 +1514,25 @@ LatencyAnalysis::~LatencyAnalysis() {
     }
   }
 
-  void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&sortedEvts)
+  void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<OSegProcessedRequestEvent>&sortedEvts)
   {
-    ObjectLookupProcessedEvent olpe;
+    OSegProcessedRequestEvent olpe;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
       olpe.time             = times[s];
-      olpe.mObjID           = obj_ids[s];
-      olpe.mID_processor    = sID_processor[s];
-      olpe.mID_objectOn     = sID_objectOn[s];
-      olpe.deltaTime        = dTimes[s];
-      olpe.stillInQueue      = stillInQueues[s];
+      olpe.data.set_object(obj_ids[s]);
+      olpe.data.set_processor(sID_processor[s]);
+      olpe.data.set_server(sID_objectOn[s]);
+      olpe.data.set_dtime(dTimes[s]);
+      olpe.data.set_queued(stillInQueues[s]);
 
       sortedEvts.push_back(olpe);
     }
     std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );
   }
 
-  bool ObjectSegmentationProcessedRequestsAnalysis::compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
+  bool ObjectSegmentationProcessedRequestsAnalysis::compareEvts(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B)
   {
     return A.time < B.time;
   }
@@ -1828,11 +1558,11 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectMigrationRoundTripEvent* obj_rdt_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
+        MigrationRoundTripEvent* obj_rdt_evt = dynamic_cast<MigrationRoundTripEvent*> (evt);
 
         if (obj_rdt_evt != NULL)
         {
-          ObjectMigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
+          MigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
           allRoundTripEvts.push_back(rdt_evt);
           delete evt;
           continue;
@@ -1864,15 +1594,15 @@ LatencyAnalysis::~LatencyAnalysis() {
     for (int s=0; s < (int) allRoundTripEvts.size(); ++s)
     {
       fileOut<< "\n\n********************************\n";
-      fileOut<< "\tObject id          " << allRoundTripEvts[s].obj_id.toString() <<"\n";
+      fileOut<< "\tObject id          " << allRoundTripEvts[s].data.object().toString() <<"\n";
       fileOut<< "\tTime at:           " << allRoundTripEvts[s].time.raw()        <<"\n";
-      fileOut<< "\tMigrating from:    " << allRoundTripEvts[s].sID_migratingFrom <<"\n";
-      fileOut<< "\tMigrating to:      " << allRoundTripEvts[s].sID_migratingTo   <<"\n";
-      fileOut<< "\tTime taken:        " << allRoundTripEvts[s].numMill           <<"\n";
+      fileOut<< "\tMigrating from:    " << allRoundTripEvts[s].data.from() <<"\n";
+      fileOut<< "\tMigrating to:      " << allRoundTripEvts[s].data.toward()   <<"\n";
+      fileOut<< "\tTime taken:        " << allRoundTripEvts[s].data.roundtrip()           <<"\n";
 
       if (allRoundTripEvts[s].time.raw() > processedAfterInMicro)
       {
-        totalTimes = totalTimes + ((double) allRoundTripEvts[s].numMill);
+          totalTimes = totalTimes + ((double) allRoundTripEvts[s].data.roundtrip().toMilliseconds());
         ++numProcessedAfter;
       }
 
@@ -1887,7 +1617,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
-  bool ObjectMigrationRoundTripAnalysis::compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
+  bool ObjectMigrationRoundTripAnalysis::compareEvts (MigrationRoundTripEvent A, MigrationRoundTripEvent B)
   {
     return A.time < B.time;
   }
@@ -1940,16 +1670,16 @@ LatencyAnalysis::~LatencyAnalysis() {
     for(int s=0;s < (int) allTrackedSetResultsEvts.size(); ++s)
     {
       fileOut<<"\n\n******************\n";
-      fileOut<<"\tobj_id:      "<<allTrackedSetResultsEvts[s].obj_id.toString()<<"\n";
+      fileOut<<"\tobj_id:      "<<allTrackedSetResultsEvts[s].data.object().toString()<<"\n";
       fileOut<<"\ttime at:     "<<allTrackedSetResultsEvts[s].time.raw()<<"\n";
-      fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].sID_migratingTo<<"\n";
-      fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].numMill<<"\n\n";
+      fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].data.server()<<"\n";
+      fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].data.roundtrip()<<"\n\n";
 
 
       if (allTrackedSetResultsEvts[s].time.raw() > processedAfterInMicro)
       {
         ++numProcessedAfter;
-        averager = averager + allTrackedSetResultsEvts[s].numMill;
+        averager = averager + allTrackedSetResultsEvts[s].data.roundtrip().toMilliseconds();
       }
     }
 
@@ -2018,13 +1748,13 @@ LatencyAnalysis::~LatencyAnalysis() {
     for(int s=0; s < (int) allShutdownEvts.size(); ++s)
     {
       fileOut << "\n\n\n";
-      fileOut << "ServerID:            "<<allShutdownEvts[s].sID<<"\n";
-      fileOut << "\tnumLookups:        "<<allShutdownEvts[s].numLookups<<"\n";
-      fileOut << "\tnumOnThisServer:   "<<allShutdownEvts[s].numOnThisServer<<"\n";
-      fileOut << "\tnumCacheHits:      "<<allShutdownEvts[s].numCacheHits<<"\n";
-      fileOut << "\tnumCraqLookups:    "<<allShutdownEvts[s].numCraqLookups<<"\n";
-      fileOut << "\tnumTimeElapsedCacheEviction:   "<<allShutdownEvts[s].numTimeElapsedCacheEviction  << "\n";
-      fileOut << "\tnumMigrationNotCompleteYet:    "<<allShutdownEvts[s].numMigrationNotCompleteYet   << "\n";
+      fileOut << "ServerID:            "<<allShutdownEvts[s].data.server()<<"\n";
+      fileOut << "\tnumLookups:        "<<allShutdownEvts[s].data.lookups()<<"\n";
+      fileOut << "\tnumOnThisServer:   "<<allShutdownEvts[s].data.local_lookups()<<"\n";
+      fileOut << "\tnumCacheHits:      "<<allShutdownEvts[s].data.cache_hits()<<"\n";
+      fileOut << "\tnumCraqLookups:    "<<allShutdownEvts[s].data.craq_lookups()<<"\n";
+      fileOut << "\tnumTimeElapsedCacheEviction:   "<<allShutdownEvts[s].data.cache_eviction_elapsed()  << "\n";
+      fileOut << "\tnumMigrationNotCompleteYet:    "<<allShutdownEvts[s].data.outstanding_migrations()  << "\n";
 
     }
 
@@ -2088,8 +1818,8 @@ void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfte
   {
     fileOut << "\n\n\n";
     fileOut << "Time:            "<<allCacheResponseEvts[s].time.raw()<<"\n";
-    fileOut << "\tobj_id:        "<<allCacheResponseEvts[s].obj_id.toString()<<"\n";
-    fileOut << "\tserver_id:     "<<allCacheResponseEvts[s].cacheResponseID<<"\n";
+    fileOut << "\tobj_id:        "<<allCacheResponseEvts[s].data.object().toString()<<"\n";
+    fileOut << "\tserver_id:     "<<allCacheResponseEvts[s].data.server()<<"\n";
 
     if (allCacheResponseEvts[s].time.raw() > numProcessedAfter)
     {
@@ -2128,7 +1858,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       if (evt == NULL)
         break;
 
-      ObjectMigrationRoundTripEvent* oseg_rd_trip_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
+      MigrationRoundTripEvent* oseg_rd_trip_evt = dynamic_cast<MigrationRoundTripEvent*> (evt);
       if (oseg_rd_trip_evt != NULL)
       {
         mMigrationVector.push_back(*oseg_rd_trip_evt);
@@ -2136,7 +1866,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
         continue;
       }
 
-      ObjectLookupProcessedEvent* oseg_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
+      OSegProcessedRequestEvent* oseg_lookup_proc_evt = dynamic_cast<OSegProcessedRequestEvent*> (evt);
       if (oseg_lookup_proc_evt != NULL)
       {
         mLookupVector.push_back(*oseg_lookup_proc_evt);
@@ -2152,7 +1882,7 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
         continue;
       }
 
-      ObjectLookupNotOnServerEvent* oseg_lookup_not_on_server_evt = dynamic_cast<ObjectLookupNotOnServerEvent*> (evt);
+      OSegInvalidLookupEvent* oseg_lookup_not_on_server_evt = dynamic_cast<OSegInvalidLookupEvent*> (evt);
       if (oseg_lookup_not_on_server_evt != NULL)
       {
         mObjectLookupNotOnServerVector.push_back(*oseg_lookup_not_on_server_evt);
@@ -2166,12 +1896,12 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
 }
 
 
-bool OSegCacheErrorAnalysis::compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
+bool OSegCacheErrorAnalysis::compareRoundTripEvents(MigrationRoundTripEvent A, MigrationRoundTripEvent B)
 {
   return A.time < B.time;
 }
 
-bool OSegCacheErrorAnalysis::compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
+bool OSegCacheErrorAnalysis::compareLookupProcessedEvents(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B)
 {
   return A.time < B.time;
 }
@@ -2190,31 +1920,31 @@ void OSegCacheErrorAnalysis::buildObjectMap()
 
 
   //First read through all object migrations.
-  std::vector< ObjectMigrationRoundTripEvent >::const_iterator migrationIterator;
+  std::vector< MigrationRoundTripEvent >::const_iterator migrationIterator;
 
   for(migrationIterator =  mMigrationVector.begin(); migrationIterator != mMigrationVector.end(); ++migrationIterator)
   {
     ServerIDTimePair sidtime;
-    sidtime.sID = migrationIterator->sID_migratingTo;
+    sidtime.sID = migrationIterator->data.toward();
     sidtime.t   = migrationIterator->time;
 
-    mObjLoc[migrationIterator->obj_id].push_back(sidtime);
+    mObjLoc[migrationIterator->data.object()].push_back(sidtime);
   }
 
   //now, read through the lookup vector.  If an object does not exist in map, then put it in.
 
-  std::vector<ObjectLookupProcessedEvent >::const_iterator lookupIterator;
+  std::vector<OSegProcessedRequestEvent >::const_iterator lookupIterator;
   for (lookupIterator = mLookupVector.begin(); lookupIterator != mLookupVector.end(); ++lookupIterator)
   {
     ServerIDTimePair sidtime;
-    sidtime.sID = lookupIterator->mID_objectOn;
+    sidtime.sID = lookupIterator->data.server();
     sidtime.t   = lookupIterator->time;
 
     //    if (mObjLoc[lookupIterator->mObjID] == mObjLoc.end())
-    if (mObjLoc.find(lookupIterator->mObjID) == mObjLoc.end())
+    if (mObjLoc.find(lookupIterator->data.object()) == mObjLoc.end())
     {
       //means that we don't have any record of the object yet.
-      mObjLoc[lookupIterator->mObjID].push_back(sidtime);
+        mObjLoc[lookupIterator->data.object()].push_back(sidtime);
     }
   }
 }
@@ -2237,9 +1967,9 @@ void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterIn
   for (cacheResponseIterator = mCacheResponseVector.begin(); cacheResponseIterator != mCacheResponseVector.end(); ++cacheResponseIterator)
   {
     OSegCacheResponseEvent os_cache_resp = (*cacheResponseIterator);
-    UUID obj_ider   = os_cache_resp.obj_id;
+    UUID obj_ider   = os_cache_resp.data.object();
     Time ter        = os_cache_resp.time;
-    ServerID sIDer  = os_cache_resp.cacheResponseID;
+    ServerID sIDer  = os_cache_resp.data.server();
 
     if (os_cache_resp.time.raw() >= processedAfterInMicro)
     {
@@ -2257,7 +1987,7 @@ void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterIn
 
 
   //this counts the number of lookups made
-  std::vector< ObjectLookupNotOnServerEvent>::const_iterator lookupNotOnServerIter;
+  std::vector< OSegInvalidLookupEvent>::const_iterator lookupNotOnServerIter;
   for (lookupNotOnServerIter =  mObjectLookupNotOnServerVector.begin();  lookupNotOnServerIter != mObjectLookupNotOnServerVector.end(); ++lookupNotOnServerIter)
   {
     if (lookupNotOnServerIter->time.raw() >= processedAfterInMicro )
@@ -2361,8 +2091,8 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
             LocationEvent* loc_evt = dynamic_cast<LocationEvent*>(evt);
 
             UUID source = UUID::null();
-            if (gen_loc_evt != NULL) source = gen_loc_evt->source;
-            if (loc_evt != NULL) source = loc_evt->source;
+            if (gen_loc_evt != NULL) source = gen_loc_evt->data.source();
+            if (loc_evt != NULL) source = loc_evt->data.source();
 
             if (gen_loc_evt || loc_evt) {
                 if (locEvents.find(source) == locEvents.end())
@@ -2403,15 +2133,18 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     if (loc_evt == NULL) continue;
 
                     // Make sure the updates match, because we loop over all loc updates after this and we might pass the
-                    // next gen_loc_evt but we can't stop looking because the latencies might be very high
-                    if ( (loc_evt->loc.updateTime() != gen_loc_evt->loc.updateTime()) ||
-                        (loc_evt->loc.position() != gen_loc_evt->loc.position()) ||
-                        (loc_evt->loc.velocity() != gen_loc_evt->loc.velocity()) )
+                    // next gen_loc_evt but we can't stop looking because the
+                    // latencies might be very high
+                    TimedMotionVector3f loc_loc = extractTimedMotionVector(loc_evt->data.loc());
+                    TimedMotionVector3f gen_loc_loc = extractTimedMotionVector(gen_loc_evt->data.loc());
+                    if ( (loc_loc.updateTime() != gen_loc_loc.updateTime()) ||
+                        (loc_loc.position() != gen_loc_loc.position()) ||
+                        (loc_loc.velocity() != gen_loc_loc.velocity()) )
                         continue;
 
 
-                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( gen_loc_evt->time ).value();
-                    MotionVector3f source_loc = loc_evt->loc.extrapolate( gen_loc_evt->time );
+                    MotionVector3f receiver_loc = paths[loc_evt->data.receiver()]->at( gen_loc_evt->time ).value();
+                    MotionVector3f source_loc = loc_loc.extrapolate( gen_loc_evt->time );
 
                     Duration latency = loc_evt->time - gen_loc_evt->time;
 
@@ -2463,14 +2196,14 @@ void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const St
     std::ofstream os(outfilename.c_str(), std::ios::out);
     for(ProxEventList::iterator it = prox_events.begin(); it != prox_events.end(); it++) {
         ProximityEvent* evt = *it;
-        const char* dir = evt->entered ? " in " : " out ";
+        const char* dir = evt->data.entered() ? " in " : " out ";
         os << (evt->time-Time::null()).toMicroseconds()
-           << evt->source.toString() << " "
-           << evt->receiver.toString()
+           << evt->data.source().toString() << " "
+           << evt->data.receiver().toString()
            << dir
-           << evt->loc.position() << " "
-           << evt->loc.velocity() << " "
-           << (evt->loc.time()-Time::null()).toMicroseconds()
+           << evt->data.loc().position() << " "
+           << evt->data.loc().velocity() << " "
+           << (evt->data.loc().t()-Time::null()).toMicroseconds()
            << std::endl;
     }
 }
@@ -2494,7 +2227,7 @@ OSegCumulativeTraceAnalysis::OSegCumulativeTraceAnalysis(const char* opt_name, c
       if (evt == NULL)
         break;
 
-      OSegCumulativeEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeEvent*> (evt);
+      OSegCumulativeResponseEvent* oseg_cum_evt = dynamic_cast<OSegCumulativeResponseEvent*> (evt);
       if (oseg_cum_evt != NULL)
       {
         if (allTraces.size() == 0)
@@ -2714,29 +2447,29 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
 
 void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microseconds)
 {
-  std::vector<OSegCumulativeEvent*>::iterator traceIt = allTraces.begin();
+  std::vector<OSegCumulativeResponseEvent*>::iterator traceIt = allTraces.begin();
 
   while(traceIt != allTraces.end())
   {
-    if( ((*traceIt)->traceToken.notReady)                                 ||
-        ((*traceIt)->traceToken.shuttingDown)                             ||
-        ((*traceIt)->traceToken.deadlineExpired)                          ||
-        ((*traceIt)->traceToken.notFound)                                 ||
-        ((*traceIt)->traceToken.initialLookupTime                   == 0) ||
-        ((*traceIt)->traceToken.checkCacheLocalBegin                == 0) ||
-        ((*traceIt)->traceToken.checkCacheLocalEnd                  == 0) ||
-        ((*traceIt)->traceToken.craqLookupBegin                     == 0) ||
-        ((*traceIt)->traceToken.craqLookupEnd                       == 0) ||
-        ((*traceIt)->traceToken.craqLookupNotAlreadyLookingUpBegin  == 0) ||
-        ((*traceIt)->traceToken.craqLookupNotAlreadyLookingUpEnd    == 0) ||
-        ((*traceIt)->traceToken.getManagerEnqueueBegin              == 0) ||
-        ((*traceIt)->traceToken.getManagerEnqueueEnd                == 0) ||
-        ((*traceIt)->traceToken.getManagerDequeued                  == 0) ||
-        ((*traceIt)->traceToken.getConnectionNetworkGetBegin        == 0) ||
-        ((*traceIt)->traceToken.getConnectionNetworkGetEnd          == 0) ||
-        ((*traceIt)->traceToken.getConnectionNetworkReceived        == 0) ||
-        ((*traceIt)->traceToken.lookupReturnBegin                   == 0) ||
-        ((*traceIt)->traceToken.lookupReturnEnd                     == 0))
+      if( ((*traceIt)->data.not_ready())                                 ||
+          ((*traceIt)->data.shutting_down())                             ||
+          ((*traceIt)->data.deadline_expired())                          ||
+          ((*traceIt)->data.not_found())                                 ||
+          ((*traceIt)->data.initial_lookup_time()                   == 0) ||
+          ((*traceIt)->data.check_cache_local_begin()                == 0) ||
+          ((*traceIt)->data.check_cache_local_end()                  == 0) ||
+          ((*traceIt)->data.craq_lookup_begin()                     == 0) ||
+          ((*traceIt)->data.craq_lookup_end()                       == 0) ||
+          ((*traceIt)->data.craq_lookup_not_already_lookup_begin()  == 0) ||
+          ((*traceIt)->data.craq_lookup_not_already_lookup_end()    == 0) ||
+          ((*traceIt)->data.get_manager_enqueue_begin()              == 0) ||
+          ((*traceIt)->data.get_manager_enqueue_end()                == 0) ||
+          ((*traceIt)->data.get_manager_dequeued()                  == 0) ||
+          ((*traceIt)->data.get_connection_network_begin()        == 0) ||
+          ((*traceIt)->data.get_connection_network_end()          == 0) ||
+          ((*traceIt)->data.get_connection_network_received()        == 0) ||
+          ((*traceIt)->data.lookup_return_begin()                   == 0) ||
+          ((*traceIt)->data.lookup_return_end()                     == 0))
     {
       delete (*traceIt);
       traceIt = allTraces.erase(traceIt);
@@ -2750,10 +2483,33 @@ void OSegCumulativeTraceAnalysis::filterShorterPath(uint64 time_after_microsecon
       }
       else
       {
-        if((*traceIt)->traceToken.osegQLenPostQuery > 1000 )
+          if((*traceIt)->data.qlen_post_query() > 1000 )
         {
           std::cout<<"\nWhat happened here\n";
-          (*traceIt)->traceToken.printCumulativeTraceToken();
+
+          std::cout<<"\n\n";
+          std::cout<<"ID: \t\t"<<(*traceIt)->data.object().toString()<<"\n";
+          std::cout<<"not ready: \t\t"<<(*traceIt)->data.not_ready()<<"\n";
+          std::cout<<"shuttingDown: \t\t"<<(*traceIt)->data.shutting_down()<<"\n";
+          std::cout<<"notFound:\t\t"<<(*traceIt)->data.not_found()<<"\n";
+          std::cout<<"initialLookupTime:\t\t"<<(*traceIt)->data.initial_lookup_time()<<"\n";
+          std::cout<<"checkCacheLocalBeing:\t\t"<<(*traceIt)->data.check_cache_local_begin()<<"\n";
+          std::cout<<"checkCacheLocalEnd:\t\t"<<(*traceIt)->data.check_cache_local_end()<<"\n";
+          std::cout<<"craqLookupBegin:\t\t"<<(*traceIt)->data.craq_lookup_begin()<<"\n";
+          std::cout<<"craqLookupEnd:\t\t"<<(*traceIt)->data.craq_lookup_end()<<"\n";
+          std::cout<<"craqLookupNotAlreadyLookingUpBegin:\t\t"<<(*traceIt)->data.craq_lookup_not_already_lookup_begin()<<"\n";
+          std::cout<<"craqLookupNotAlreadyLookingUpEnd:\t\t"<<(*traceIt)->data.craq_lookup_not_already_lookup_end()<<"\n";
+          std::cout<<"getManagerEnqueueBegin:\t\t"<<(*traceIt)->data.get_manager_enqueue_begin()<<"\n";
+          std::cout<<"getManagerEnqueueEnd:\t\t"<<(*traceIt)->data.get_manager_enqueue_end()<<"\n";
+          std::cout<<"getManagerDequeued:\t\t"<<(*traceIt)->data.get_manager_dequeued()<<"\n";
+          std::cout<<"getConnectionNetworkGetBegin:\t\t"<<(*traceIt)->data.get_connection_network_begin()<<"\n";
+          std::cout<<"getConnectionNetworkGetEnd:\t\t"<<(*traceIt)->data.get_connection_network_end()<<"\n";
+          std::cout<<"getConnectionNetworkReceived:\t\t"<<(*traceIt)->data.get_connection_network_received()<<"\n";
+          std::cout<<"lookupReturnBegin:\t\t"<<(*traceIt)->data.lookup_return_begin()<<"\n";
+          std::cout<<"lookupReturnEnd:\t\t"<<(*traceIt)->data.lookup_return_end()<<"\n";
+          std::cout<<"osegQLenPostReturn:\t\t"<<(*traceIt)->data.qlen_post_return()<<"\n";
+          std::cout<<"osegQLenPostQuery:\t\t"<<(*traceIt)->data.qlen_post_query()<<"\n";
+          std::cout<<"\n\n";
         }
 
         ++traceIt;
@@ -2768,7 +2524,7 @@ void OSegCumulativeTraceAnalysis::generateCacheTime()
   uint64 toPush;
   for (int s= 0; s < (int)allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.checkCacheLocalEnd - allTraces[s]->traceToken.checkCacheLocalBegin;
+      toPush = allTraces[s]->data.check_cache_local_end() - allTraces[s]->data.check_cache_local_begin();
 
     mCumData[s]->cacheTime = toPush;
   }
@@ -2779,7 +2535,7 @@ void OSegCumulativeTraceAnalysis::generateGetCraqLookupPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.craqLookupBegin -  allTraces[s]->traceToken.checkCacheLocalEnd;
+      toPush = allTraces[s]->data.craq_lookup_begin() -  allTraces[s]->data.check_cache_local_end();
 
     mCumData[s]->craqLookupPostTime = toPush;
   }
@@ -2790,7 +2546,7 @@ void OSegCumulativeTraceAnalysis::generateCraqLookupTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.craqLookupEnd - allTraces[s]->traceToken.craqLookupBegin;
+      toPush = allTraces[s]->data.craq_lookup_end() - allTraces[s]->data.craq_lookup_begin();
 
     mCumData[s]->craqLookupTime = toPush;
   }
@@ -2800,7 +2556,7 @@ void OSegCumulativeTraceAnalysis::generateCraqLookupNotAlreadyLookingUpTime()
   uint64 toPush;
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpBegin;
+      toPush = allTraces[s]->data.craq_lookup_not_already_lookup_end() - allTraces[s]->data.craq_lookup_not_already_lookup_begin();
 
     mCumData[s]->craqLookupNotAlreadyLookingUpTime = toPush;
   }
@@ -2810,7 +2566,7 @@ void OSegCumulativeTraceAnalysis::generateManagerPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getManagerEnqueueBegin - allTraces[s]->traceToken.craqLookupNotAlreadyLookingUpEnd;
+      toPush = allTraces[s]->data.get_manager_enqueue_begin() - allTraces[s]->data.craq_lookup_not_already_lookup_end();
 
     mCumData[s]->managerPostTime = toPush;
   }
@@ -2820,7 +2576,7 @@ void OSegCumulativeTraceAnalysis::generateManagerEnqueueTime()
   uint64 toPush;
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getManagerEnqueueEnd - allTraces[s]->traceToken.getManagerEnqueueBegin;
+      toPush = allTraces[s]->data.get_manager_enqueue_end() - allTraces[s]->data.get_manager_enqueue_begin();
 
     mCumData[s]->managerEnqueueTime = toPush;
   }
@@ -2831,7 +2587,7 @@ void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getManagerDequeued - allTraces[s]->traceToken.getManagerEnqueueEnd;
+      toPush = allTraces[s]->data.get_manager_dequeued() - allTraces[s]->data.get_manager_enqueue_end();
 
     mCumData[s]->managerDequeueTime = toPush;
   }
@@ -2841,7 +2597,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getConnectionNetworkGetBegin - allTraces[s]->traceToken.getManagerDequeued;
+      toPush = allTraces[s]->data.get_connection_network_begin() - allTraces[s]->data.get_manager_dequeued();
 
     mCumData[s]->connectionPostTime = toPush;
   }
@@ -2851,7 +2607,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getConnectionNetworkGetEnd - allTraces[s]->traceToken.getConnectionNetworkGetBegin;
+      toPush = allTraces[s]->data.get_connection_network_end() - allTraces[s]->data.get_connection_network_begin();
 
     mCumData[s]->connectionNetworkQueryTime = toPush;
   }
@@ -2861,7 +2617,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
   uint64 toPush;
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.getConnectionNetworkReceived - allTraces[s]->traceToken.getConnectionNetworkGetEnd;
+      toPush = allTraces[s]->data.get_connection_network_received() - allTraces[s]->data.get_connection_network_end();
 
     mCumData[s]->connectionsNetworkTime = toPush;
   }
@@ -2871,7 +2627,7 @@ void OSegCumulativeTraceAnalysis::generateReturnPostTime()
   uint64 toPush;
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.lookupReturnBegin - allTraces[s]->traceToken.getConnectionNetworkReceived;
+      toPush = allTraces[s]->data.lookup_return_begin() - allTraces[s]->data.get_connection_network_received();
 
     mCumData[s]->returnPostTime = toPush;
   }
@@ -2881,7 +2637,7 @@ void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size();++s)
   {
-    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.lookupReturnBegin;
+      toPush = allTraces[s]->data.lookup_return_end() - allTraces[s]->data.lookup_return_begin();
     mCumData[s]->lookupReturnsTime = toPush;
   }
 }
@@ -2891,7 +2647,7 @@ void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = allTraces[s]->traceToken.lookupReturnEnd - allTraces[s]->traceToken.initialLookupTime;
+      toPush = allTraces[s]->data.lookup_return_end() - allTraces[s]->data.initial_lookup_time();
     mCumData[s]->completeLookupTime = toPush;
   }
 }
@@ -2901,7 +2657,7 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenQuery()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = (uint64)(allTraces[s]->traceToken.osegQLenPostQuery);
+      toPush = (uint64)(allTraces[s]->data.qlen_post_query());
     mCumData[s]->osegQLenPostQuery = toPush;
   }
 }
@@ -2910,7 +2666,7 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenReturn()
   uint64 toPush;
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
-    toPush = (uint64)(allTraces[s]->traceToken.osegQLenPostReturn);
+      toPush = (uint64)(allTraces[s]->data.qlen_post_return());
     mCumData[s]->osegQLenPostReturn = toPush;
   }
 }
@@ -2923,105 +2679,6 @@ void OSegCumulativeTraceAnalysis::generateRunTime()
     toPush =(uint64) ((allTraces[s]->time - Time::null()).toMicroseconds() - mInitialTime);
     mCumData[s]->runTime = toPush;
   }
-}
-
-
-
-OSegProcessCraqReturnAnalysis::OSegProcessCraqReturnAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds)
-  : mInitialTime (0)
-{
-  for(uint32 server_id = 1; server_id <= nservers; server_id++)
-  {
-    String loc_file = GetPerServerFile(opt_name, server_id);
-    std::ifstream is(loc_file.c_str(), std::ios::in);
-
-    while(is)
-    {
-      uint16 type_hint;
-      std::string raw_evt;
-      read_record(is, &type_hint, &raw_evt);
-      Event* evt = Event::parse(type_hint, raw_evt, server_id);
-
-      if (evt == NULL)
-        break;
-
-      OSegCraqProcEvent* oseg_craq_proc_evt = dynamic_cast<OSegCraqProcEvent*> (evt);
-      if (oseg_craq_proc_evt != NULL)
-      {
-        if (allProcEvts.size() == 0)
-          mInitialTime = (oseg_craq_proc_evt->time - Time::null()).toMicroseconds();
-        else if (mInitialTime > (uint64) (oseg_craq_proc_evt->time - Time::null()).toMicroseconds())
-          mInitialTime = (oseg_craq_proc_evt->time - Time::null()).toMicroseconds();
-
-        allProcEvts.push_back(oseg_craq_proc_evt);
-        continue;
-      }
-      delete evt;
-    }
-  }
-
-  filterTimeAfter(time_after_seconds*OSEG_CRAQ_PROCESS_RETURN_ANALYSIS_ECONDS_TO_MICROSECONDS);
-}
-
-
-
-OSegProcessCraqReturnAnalysis::~OSegProcessCraqReturnAnalysis()
-{
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    delete allProcEvts[s];
-  }
-  allProcEvts.clear();
-}
-
-void OSegProcessCraqReturnAnalysis::filterTimeAfter(uint64 time_after_microseconds)
-{
-  std::vector<OSegCraqProcEvent*>::iterator cpIt = allProcEvts.begin();
-
-  while(cpIt != allProcEvts.end())
-  {
-    if (((*cpIt)->time -Time::null()).toMicroseconds()- mInitialTime < time_after_microseconds)
-    {
-      delete (*cpIt);
-      cpIt = allProcEvts.erase(cpIt);
-    }
-    else
-      ++cpIt;
-  }
-}
-
-void OSegProcessCraqReturnAnalysis::printData(std::ostream &fileOut)
-{
-  sortAllEvents();
-  for (int s=0;s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut <<  allProcEvts[s]->timeItTook.toMicroseconds() << "\t";
-  }
-
-  fileOut <<"\n";
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut << allProcEvts[s]->numProcessed << "\t";
-  }
-
-  fileOut <<"\n";
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut << allProcEvts[s]->sizeIncomingString << "\t";
-  }
-
-  fileOut <<"\n";
-  for (int s=0; s < (int) allProcEvts.size(); ++s)
-  {
-    fileOut << (allProcEvts[s]->time - Time::null()).toMilliseconds() << "\t";
-  }
-
-  fileOut <<"\n\n\n";
-}
-
-void OSegProcessCraqReturnAnalysis::sortAllEvents()
-{
-  std::sort(allProcEvts.begin(), allProcEvts.end(), OSegProcessCraqComparator());
 }
 
 

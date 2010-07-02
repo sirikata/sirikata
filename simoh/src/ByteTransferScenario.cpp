@@ -34,7 +34,8 @@
 #include "ScenarioFactory.hpp"
 #include "ObjectHost.hpp"
 #include "Object.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include "ConnectedObjectTracker.hpp"
 
 namespace Sirikata{

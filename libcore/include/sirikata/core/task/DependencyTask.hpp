@@ -35,7 +35,7 @@
 
 #include <sirikata/core/task/Time.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
-#include <sirikata/core/util/LockFreeQueue.hpp>
+#include <sirikata/core/queue/LockFreeQueue.hpp>
 
 namespace Sirikata {
 namespace Task {

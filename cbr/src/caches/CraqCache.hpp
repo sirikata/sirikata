@@ -34,8 +34,8 @@
 #define __CRAQ_CACHE_HPP__
 
 #include "../craq_oseg/CraqEntry.hpp"
-#include <sirikata/cbrcore/Context.hpp>
-
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata
 {

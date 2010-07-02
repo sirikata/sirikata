@@ -31,7 +31,7 @@
  */
 #include <sirikata/core/util/Standard.hh>
 #include "ObjectStorageTest.hpp"
-#include "Test_Persistence.pbj.hpp"
+#include "Protocol_Persistence.pbj.hpp"
 #include <sirikata/core/util/AtomicTypes.hpp>
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
@@ -52,7 +52,7 @@ static void generate_pairs() {
         String field(rand() % 15 + 1, 'a');
         for(std::size_t j = 0; j < field.size(); j++)
             field[j] = 'a' + (rand() % 25);
-        Sirikata::Persistence::Protocol::StorageElement tmp;
+        ::Sirikata::Persistence::Protocol::StorageElement tmp;
         String testuuid(16,uuidseed++%64);
         UUID test(testuuid,UUID::BinaryString());
         tmp.set_object_uuid(test);

@@ -55,7 +55,7 @@ public:
      *  replicas is true, then it caches replica entries from locservice, in addition
      *  to the local entries it always caches.
      */
-    CBRLocationServiceCache(IOStrand* strand, LocationService* locservice, bool replicas);
+    CBRLocationServiceCache(Network::IOStrand* strand, LocationService* locservice, bool replicas);
     virtual ~CBRLocationServiceCache();
 
     /* LocationServiceCache members. */
@@ -96,7 +96,7 @@ private:
 
     CBRLocationServiceCache();
 
-    IOStrand* mStrand;
+    Network::IOStrand* mStrand;
     LocationService* mLoc;
 
     typedef std::set<LocationUpdateListener*> ListenerSet;

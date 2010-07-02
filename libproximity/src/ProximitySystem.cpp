@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/proximity/Platform.hpp>
-#include "Proximity_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/proximity/ProximitySystem.hpp>

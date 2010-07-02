@@ -10,3 +10,6 @@
 [submodule "externals/prox"]
 	path = externals/prox
 	url = git://github.com/sirikata/prox.git
+[submodule "externals/http-parser"]
+	path = externals/http-parser
+	url = git://github.com/ry/http-parser.git

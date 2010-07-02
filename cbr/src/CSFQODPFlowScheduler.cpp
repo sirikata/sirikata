@@ -31,12 +31,12 @@
  */
 
 #include "CSFQODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
 #include "LocationService.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-#include <sirikata/cbrcore/Random.hpp>
+#include "CoordinateSegmentation.hpp"
+#include <sirikata/core/util/Random.hpp>
 #include "craq_oseg/CraqEntry.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+
 #define _Kf (Duration::milliseconds((int64)10000))
 #define _Kf_double (_Kf.toSeconds())
 #define _Kcwin (Duration::milliseconds((int64)10))
@@ -68,15 +68,11 @@ CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQu
    mKAlphaReductionsLeft(KALPHA),
    mTotalActiveWeight(0)
 {
-    mWeightCalculator = WeightCalculatorFactory(mContext->cseg());
-
     for(int i = 0; i < NUM_DOWNSTREAM; i++)
         mTotalUsedWeight[i] = 0.0;
 }
 
 CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
-    delete mWeightCalculator;
-
 #ifdef CSFQODP_DEBUG
     CSFQLOG(warn,"Flow");
     for(FlowMap::iterator flow_it = mFlows.begin(); flow_it != mFlows.end(); flow_it++) {

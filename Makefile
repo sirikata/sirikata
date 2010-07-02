@@ -13,6 +13,7 @@ debug:
 	cmake . -DCMAKE_BUILD_TYPE=Debug && \
 	$(MAKE) $(*)
 
+.PHONY: test
 test:
 	cd build/cmake && \
 	cmake . && \

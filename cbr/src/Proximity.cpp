@@ -31,14 +31,17 @@
  */
 
 #include "Proximity.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include <algorithm>
 
 #include <prox/BruteForceQueryHandler.hpp>
 #include <prox/RTreeQueryHandler.hpp>
 
-#include "CBR_Prox.pbj.hpp"
+#include "Protocol_Prox.pbj.hpp"
+
+#include <sirikata/core/network/IOServiceFactory.hpp>
 
 #include <float.h>
 
@@ -68,7 +71,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 {
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
-    mProxService = IOServiceFactory::makeIOService();
+    mProxService = Network::IOServiceFactory::makeIOService();
     mProxStrand = mProxService->createStrand();
 
     // Server Queries
@@ -103,7 +106,7 @@ Proximity::~Proximity() {
     delete mLocalLocCache;
 
     delete mProxStrand;
-    IOServiceFactory::destroyIOService(mProxService);
+    Network::IOServiceFactory::destroyIOService(mProxService);
     mProxService = NULL;
 }
 
@@ -151,7 +154,7 @@ void Proximity::sendQueryRequests() {
         Sirikata::Protocol::Prox::Container container;
         Sirikata::Protocol::Prox::IServerQuery msg = container.mutable_query();
         msg.set_action(Sirikata::Protocol::Prox::ServerQuery::AddOrUpdate);
-        Sirikata::Protocol::Prox::ITimedMotionVector msg_loc = msg.mutable_location();
+        Sirikata::Protocol::ITimedMotionVector msg_loc = msg.mutable_location();
         msg_loc.set_t(loc.updateTime());
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
@@ -196,7 +199,7 @@ void Proximity::receiveMessage(Message* msg) {
                 prox_query_msg.has_min_angle()
             );
 
-            Sirikata::Protocol::Prox::TimedMotionVector msg_loc = prox_query_msg.location();
+            Sirikata::Protocol::TimedMotionVector msg_loc = prox_query_msg.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             SolidAngle minangle(prox_query_msg.min_angle());
 
@@ -453,7 +456,7 @@ void Proximity::generateServerQueryEvents() {
     typedef std::deque<QueryEvent> QueryEventList;
 
     Time t = mContext->simTime();
-    uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
+    uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
         ServerID sid = query_it->first;
@@ -481,7 +484,7 @@ void Proximity::generateServerQueryEvents() {
                         addition.set_object( evt.id() );
 
                         TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
-                        Sirikata::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                        Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
                         msg_loc.set_t(loc.updateTime());
                         msg_loc.set_position(loc.position());
                         msg_loc.set_velocity(loc.velocity());
@@ -518,7 +521,7 @@ void Proximity::generateServerQueryEvents() {
 void Proximity::generateObjectQueryEvents() {
     typedef std::deque<QueryEvent> QueryEventList;
 
-    uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
+    uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
         UUID query_id = query_it->first;
@@ -545,7 +548,7 @@ void Proximity::generateObjectQueryEvents() {
                         Sirikata::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
                         addition.set_object( evt.id() );
 
-                        Sirikata::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                        Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
                         TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
                         motion.set_t(loc.updateTime());
                         motion.set_position(loc.position());

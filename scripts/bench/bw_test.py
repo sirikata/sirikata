@@ -10,7 +10,7 @@ csim = sim.ClusterSimSettings(cc, 8, (8,1), 1)
 csim.duration = '100s'
 csim.tx_bandwidth = 500000
 csim.rx_bandwidth = 500000
-csim.flatness = 256
+csim.region_weight_options = '--flatness=256'
 csim.server_queue = 'fair'
 csim.server_queue_length = 65536
 csim.object_queue = 'fairfifo'
@@ -56,7 +56,7 @@ csim.loglevels = {
             "prox" : "warn",
             }
 
-csim.traces = ['ping', 'message', 'packet', 'datagram']
+csim.traces['all'] = ['ping', 'message', 'packet', 'datagram']
 
 
 

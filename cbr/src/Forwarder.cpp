@@ -33,12 +33,13 @@
 
 #include "SpaceNetwork.hpp"
 #include "Server.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include "CoordinateSegmentation.hpp"
+#include "ServerMessage.hpp"
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
-#include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include "Forwarder.hpp"
 #include "ObjectSegmentation.hpp"
@@ -49,7 +50,7 @@
 #include "ForwarderServiceQueue.hpp"
 #include "LocalForwarder.hpp"
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include "ODPFlowScheduler.hpp"
 #include "RegionODPFlowScheduler.hpp"
@@ -57,9 +58,9 @@
 
 // FIXME we shouldn't have oseg specific things here, this should be delegated
 // to OSeg as necessary
-#include "CBR_OSeg.pbj.hpp"
+#include "Protocol_OSeg.pbj.hpp"
 
-#include "CBR_Forwarder.pbj.hpp"
+#include "Protocol_Forwarder.pbj.hpp"
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
@@ -106,9 +107,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
                  Duration::milliseconds((int64)10)),
-            mReceivedMessages(Sirikata::SizedResourceMonitor(GetOption(FORWARDER_RECEIVE_QUEUE_SIZE)->as<uint32>()))
+             mReceivedMessages(Sirikata::SizedResourceMonitor(GetOptionValue<uint32>(FORWARDER_RECEIVE_QUEUE_SIZE)))
 {
-    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOption(FORWARDER_SEND_QUEUE_SIZE)->as<uint32>(), (ForwarderServiceQueue::Listener*)this);
+    mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOptionValue<uint32>(FORWARDER_SEND_QUEUE_SIZE), (ForwarderServiceQueue::Listener*)this);
 
     // Fill in the rest of the context
     mContext->mServerRouter = this;
@@ -243,7 +244,7 @@ void Forwarder::addODPServerMessageService(LocationService* loc) {
 }
 
 ODPFlowScheduler* Forwarder::createODPFlowScheduler(LocationService* loc, ServerID remote_server, uint32 max_size) {
-    String flow_sched_type = GetOption(SERVER_ODP_FLOW_SCHEDULER)->as<String>();
+    String flow_sched_type = GetOptionValue<String>(SERVER_ODP_FLOW_SCHEDULER);
     ODPFlowScheduler* new_flow_scheduler = NULL;
 
     if (flow_sched_type == "region") {
@@ -591,7 +592,7 @@ Message* Forwarder::serverMessagePull(ServerID dest) {
     if (next_msg == NULL)
         return NULL;
 
-    CONTEXT_TRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+    CONTEXT_SPACETRACE(serverDatagramQueued, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
 
     return next_msg;
 }

@@ -38,7 +38,7 @@
 #include <boost/regex.hpp>
 #include <boost/asio.hpp>
 #include "asyncConnection.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
 
 using Sirikata::Network::TCPSocket;
 using Sirikata::Network::TCPResolver;
@@ -50,15 +50,15 @@ namespace Sirikata
 //nothing to destroy
 AsyncCraq::~AsyncCraq()
 {
-    IOServiceFactory::destroyIOService(io_service);
+    Network::IOServiceFactory::destroyIOService(io_service);
   //  delete mSocket;
 }
 
 
 //nothing to initialize
-AsyncCraq::AsyncCraq(SpaceContext* spx, IOStrand* str)
+AsyncCraq::AsyncCraq(SpaceContext* spx, Network::IOStrand* str)
 {
-  io_service = IOServiceFactory::makeIOService();
+  io_service = Network::IOServiceFactory::makeIOService();
 
   mContext = spx;
   mStrand  = str;

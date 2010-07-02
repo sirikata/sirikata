@@ -38,7 +38,7 @@
 #include <sirikata/oh/SpaceIDMap.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include "ObjectHost_Time.pbj.hpp"
+#include "Protocol_Time.pbj.hpp"
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/network/TimeSyncImpl.hpp>
 #include <sirikata/oh/SpaceTimeOffsetManager.hpp>

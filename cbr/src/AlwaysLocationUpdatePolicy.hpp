@@ -34,9 +34,10 @@
 #define _ALWAYS_LOCATION_UPDATE_POLICY_HPP_
 
 #include "LocationService.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
-#include "CBR_Loc.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
 
 namespace Sirikata {
 
@@ -218,7 +219,7 @@ private:
         }
 
         void service() {
-            uint32 max_updates = GetOption(LOC_MAX_PER_RESULT)->as<uint32>();
+            uint32 max_updates = GetOptionValue<uint32>(LOC_MAX_PER_RESULT);
 
             std::list<SubscriberType> to_delete;
 
@@ -233,7 +234,7 @@ private:
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
                     Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
                     update.set_object(up_it->first);
-                    Sirikata::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
+                    Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
                     location.set_velocity(up_it->second.location.velocity());

@@ -34,7 +34,7 @@
 #include <iomanip>
 #include "Utility.hpp"
 #include <string>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../SpaceContext.hpp"
 #include "../craq_oseg/CraqEntry.hpp"
 
 #ifndef __CACHE_HPP__

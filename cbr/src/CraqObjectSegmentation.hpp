@@ -33,15 +33,13 @@
 #ifndef _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 #define _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+#include "ServerMessage.hpp"
 #include "ObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <string.h>
 #include <vector>
 
@@ -49,14 +47,14 @@
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
 
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
+#include "OSegLookupTraceToken.hpp"
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>
 
-#include "CBR_OSeg.pbj.hpp"
+#include "Protocol_OSeg.pbj.hpp"
 
-#include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
@@ -103,7 +101,6 @@ namespace Sirikata
     int numAlreadyLookingUp;
     int numServices;
     int numLookingUpDebug;
-    Timer mServiceTimer;
     Duration lastTimerDur;
     //end for logging.
 
@@ -151,8 +148,8 @@ namespace Sirikata
     boost::mutex atomic_track_id_m;
     int getUniqueTrackID();
 
-    IOStrand* postingStrand;
-    IOStrand* mStrand;
+    Network::IOStrand* postingStrand;
+    Network::IOStrand* mStrand;
 
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
@@ -195,7 +192,7 @@ namespace Sirikata
     bool mReceivedStopRequest;
 
   public:
-    CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to);
+    CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, Network::IOStrand* o_strand, Network::IOStrand* strand_to_post_to);
 
 
     virtual ~CraqObjectSegmentation();

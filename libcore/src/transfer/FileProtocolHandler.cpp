@@ -32,8 +32,8 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/transfer/ServiceLookup.hpp>
 #include <sirikata/core/transfer/FileProtocolHandler.hpp>
-#include <sirikata/core/util/LockFreeQueue.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/LockFreeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <errno.h>

@@ -31,7 +31,7 @@
  */
 
 #include "TimerMonotonicityBenchmark.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 #define ITERATIONS 10000000
 

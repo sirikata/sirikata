@@ -64,6 +64,9 @@ public:
 template <typename Value>
 class TemporalValue : public TemporalValueBase<Value, Time> {
 public:
+    TemporalValue()
+     : TemporalValueBase<Value, Time>( Time(Time::null()), Value() )
+    {}
     TemporalValue(const Time& when, const Value& l)
      : TemporalValueBase<Value, Time>(when, l)
     {}

@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
+
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 #include <winsock2.h>
 #else

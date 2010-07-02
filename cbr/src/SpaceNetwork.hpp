@@ -33,11 +33,11 @@
 #ifndef _SIRIKATA_SPACE_NETWORK_HPP_
 #define _SIRIKATA_SPACE_NETWORK_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include "SpaceContext.hpp"
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Stream.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/Service.hpp>
 
 namespace Sirikata {
 

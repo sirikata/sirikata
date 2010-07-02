@@ -33,7 +33,7 @@
 
 #include <sirikata/oh/Platform.hpp>
 
-#include "JS_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/RoutableMessageBody.hpp>
@@ -93,7 +93,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 	bftm_populateAddressable(system_obj);
 
     mHandlingEvent = false;
-    
+
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
@@ -120,10 +120,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
 void JSObjectScript::create_entity(Vector3d& vec)
 {
-  
-  
+
+
   //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-  
+
   // get the script type
   String script_type = "js";
   Sirikata::Protocol::CreateObject creator;
@@ -151,7 +151,7 @@ void JSObjectScript::create_entity(Vector3d& vec)
   SpaceID spaceider = *(spaces.begin());
   ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
   mMessagingPort->send(dest, MemoryReference(serialized.data(), serialized.length()));
-  
+
 }
 
 
@@ -171,7 +171,7 @@ void JSObjectScript::reboot()
 
   for (int s=0; s < (int) mEventHandlers.size(); ++s)
       delete mEventHandlers[s];
-  
+
   mEventHandlers.clear();
 }
 
@@ -190,7 +190,7 @@ JSObjectScript::~JSObjectScript()
         delete *handler_it;
 
     mEventHandlers.clear();
-    
+
     mContext.Dispose();
 }
 
@@ -549,7 +549,7 @@ JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::
     else
         mEventHandlers.push_back(new_handler);
 
-    
+
     return new_handler;
 }
 
@@ -574,7 +574,7 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHead
     /**
        FIXME: may need to declare a scope here?
     */
-    
+
   ObjectReference* orp = new ObjectReference(msgHeader.source_object());
 
   Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
@@ -608,10 +608,10 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
 
-    
+
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
-    
+
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
         if (mEventHandlers[s]->matches(obj,msgSender))
@@ -630,7 +630,7 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     mHandlingEvent = false;
     flushQueuedHandlerEvents();
 
-    
+
 
     /*
       FIXME: What should I do if the message that I receive does not match any handler?
@@ -740,7 +740,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
 {
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
-    
+
     v8::Handle<v8::Object> returner =mManager->mHandlerTemplate->NewInstance();
 
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));

@@ -32,7 +32,7 @@
 
 #include <sirikata/proximity/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include "Proximity_Sirikata.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/proximity/ProximityConnection.hpp>
 #include <sirikata/proximity/SingleStreamProximityConnection.hpp>

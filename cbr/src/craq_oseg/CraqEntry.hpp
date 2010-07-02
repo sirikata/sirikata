@@ -32,6 +32,9 @@
 
 #ifndef _CRAQ_ENTRY_HPP_
 #define _CRAQ_ENTRY_HPP_
+
+#include <sirikata/core/util/Platform.hpp>
+
 namespace Sirikata {
 enum {
     CRAQ_SERVER_SIZE             =    10

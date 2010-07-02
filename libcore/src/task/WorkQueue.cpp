@@ -34,8 +34,8 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/task/Time.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
-#include <sirikata/core/util/LockFreeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/LockFreeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {

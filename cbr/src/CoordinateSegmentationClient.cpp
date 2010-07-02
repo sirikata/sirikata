@@ -39,9 +39,9 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/ServerIDMap.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "ServerMessage.hpp"
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {
 
@@ -67,7 +67,7 @@ using Sirikata::Network::TCPListener;
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
 							   ServerIDMap* sidmap)
-                               : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false), mAvailableServersCount(0), mIOService(IOServiceFactory::makeIOService()), mSidMap(sidmap)
+                               : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false), mAvailableServersCount(0), mIOService(Network::IOServiceFactory::makeIOService()), mSidMap(sidmap)
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 
@@ -123,10 +123,10 @@ void CoordinateSegmentationClient::accept_handler() {
     mServerRegionCache.clear();
 
     int offset = 2;
-    std::vector<Listener::SegmentationInfo> segInfoVector;
+    std::vector<SegmentationInfo> segInfoVector;
     for (int i=0; i<segChangeMessage->numEntries; i++) {
       BoundingBoxList bbList;
-      Listener::SegmentationInfo segInfo;
+      SegmentationInfo segInfo;
       SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);
 
       for (unsigned int j=0; j < segChange->listLength; j++) {
@@ -171,12 +171,12 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
   ip_addr.s_addr = addy->ip;
   char* addr = inet_ntoa(ip_addr);
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -200,7 +200,7 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
 
   socket.close();
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 }
 
 
@@ -210,12 +210,12 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   lookupMessage.y = pos.y;
   lookupMessage.z = pos.z;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -276,7 +276,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
     free(dataReceived);
   }
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   return retval;
 }
@@ -295,12 +295,12 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -384,7 +384,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 
   mServerRegionCache[server] = boundingBoxList;
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   return boundingBoxList;
 }
@@ -400,12 +400,12 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   RegionRequestMessage requestMessage;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -481,7 +481,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   mTopLevelRegion.mBoundingBox = bbox;
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   return bbox;
 }
@@ -496,12 +496,12 @@ uint32 CoordinateSegmentationClient::numServers()  {
 
   NumServersRequestMessage requestMessage;
 
-  IOService* io_service = IOServiceFactory::makeIOService();
+  Network::IOService* io_service = Network::IOServiceFactory::makeIOService();
 
   TCPResolver resolver(*io_service);
 
-  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
+  TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
+      GetOptionValue<String>("cseg-service-tcp-port"));
 
   TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -566,7 +566,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
     free(dataReceived);
   }
 
-  IOServiceFactory::destroyIOService(io_service);
+  Network::IOServiceFactory::destroyIOService(io_service);
 
   //std::cout << "numServers returned " <<  retval << "\n";
   return retval;

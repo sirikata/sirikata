@@ -30,14 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/service/TimeProfiler.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 namespace Sirikata {
 class MotionPath;
 class Object;
-class Trace;
 class ObjectHostContext;
 
 /** Generates objects for the simulation.  This class actually has 2 jobs.
@@ -55,7 +56,7 @@ class ObjectFactory : public Service {
         SolidAngle queryAngle;
         Duration connectAt;
 
-        IOTimerPtr startTimer;
+        Network::IOTimerPtr startTimer;
     };
     typedef std::tr1::unordered_map<UUID, ObjectInputs*,UUID::Hasher> ObjectInputsMap;
     typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;

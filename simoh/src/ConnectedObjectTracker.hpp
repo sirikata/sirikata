@@ -34,6 +34,7 @@
 #define _SIRIKATA_OH_CONNECTED_OBJECT_TRACKER_HPP_
 
 #include "ObjectHostListener.hpp"
+#include <sirikata/core/util/UUID.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
 namespace Sirikata {

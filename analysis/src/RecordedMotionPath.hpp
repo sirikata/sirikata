@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_RECORDED_MOTION_PATH_HPP_
 #define _SIRIKATA_RECORDED_MOTION_PATH_HPP_
 
-#include <sirikata/cbrcore/MotionPath.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
 #include "AnalysisEvents.hpp"
 
 namespace Sirikata {
@@ -53,7 +53,6 @@ public:
     virtual ~RecordedMotionPath();
 
     void add(Event* evt);
-    void add(GeneratedLocationEvent* evt);
 
     virtual const TimedMotionVector3f initial() const;
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;

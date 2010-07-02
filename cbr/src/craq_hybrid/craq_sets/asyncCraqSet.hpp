@@ -38,7 +38,7 @@
 #include <queue>
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionSet.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include "../../SpaceContext.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "../asyncCraqScheduler.hpp"
 
@@ -53,7 +53,7 @@ class AsyncCraqSet : public AsyncCraqScheduler
   {
   public:
 
-    AsyncCraqSet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
+    AsyncCraqSet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
     ~AsyncCraqSet();
 
 
@@ -73,7 +73,7 @@ class AsyncCraqSet : public AsyncCraqScheduler
 
     std::vector<CraqInitializeArgs> mIpAddPort;
     std::vector<AsyncConnectionSet*> mConnections;
-    std::vector<IOStrand*>mConnectionsStrands;
+    std::vector<Network::IOStrand*>mConnectionsStrands;
 
 
     bool connected;
@@ -87,8 +87,8 @@ class AsyncCraqSet : public AsyncCraqScheduler
     void pushQueue(const CraqDataSetGet&dataToSet);
     std::vector<int> mReadyConnections;
     SpaceContext*                    ctx;
-    IOStrand*                    mStrand;
-    IOStrand*             mResultsStrand;
+    Network::IOStrand*                    mStrand;
+    Network::IOStrand*             mResultsStrand;
     ObjectSegmentation*            mOSeg;
 
   };

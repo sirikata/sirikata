@@ -42,8 +42,6 @@
 #include <cassert>
 #include <string>
 #include "CacheRecords.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
 #include "../craq_oseg/CraqEntry.hpp"
 
 

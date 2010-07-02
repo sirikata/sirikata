@@ -34,8 +34,9 @@
 #define _PING_DELUGE_SCENARIO_HPP_
 
 #include "Scenario.hpp"
-#include <sirikata/cbrcore/CountResourceMonitor.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/CountResourceMonitor.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/service/Poller.hpp>
 
 namespace Sirikata {
 
@@ -49,7 +50,7 @@ class PingDelugeScenario : public Scenario {
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
 
-    IOStrand* mGeneratePingsStrand;
+    Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
 
     struct PingInfo {

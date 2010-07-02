@@ -35,10 +35,12 @@
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 
+#include <sirikata/core/options/Options.hpp>
+
 #include <functional>
 #include "SSTBenchmark.hpp"
-#include <sirikata/cbrcore/Timer.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/util/Timer.hpp>
+#include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #define ITERATIONS 1000000
 
@@ -206,7 +208,7 @@ void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Netw
 void noop(){}
 void SSTBenchmark::start() {
     static Sirikata::PluginManager pluginManager;
-    pluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
+    pluginManager.load(mStreamPlugin);
     mForceStop = false;
     if (!mHost.empty()) {
         mStream=Sirikata::Network::StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mStreamOptions));
@@ -236,7 +238,7 @@ void SSTBenchmark::stop() {
     if(mStream)
         mStream->close();
     if (mIOService)
-        IOServiceFactory::destroyIOService(mIOService);
+        Network::IOServiceFactory::destroyIOService(mIOService);
     mIOService=NULL;
     mStream=NULL;
     mListener=NULL;

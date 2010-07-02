@@ -35,16 +35,16 @@
 
 #include "ObjectHostContext.hpp"
 #include "ObjectHostListener.hpp"
-#include <sirikata/cbrcore/QueueRouterElement.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/cbrcore/TimeProfiler.hpp>
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/SSTImpl.hpp>
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include "QueueRouterElement.hpp"
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/service/TimeProfiler.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 #include <sirikata/core/network/Stream.hpp>
-
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
 
@@ -66,7 +66,7 @@ public:
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
-    ObjectHost(ObjectHostContext* ctx, Trace* trace, ServerIDMap* sidmap);
+    ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap* sidmap);
 
     ~ObjectHost();
 
@@ -151,7 +151,7 @@ private:
 
 
     // Utility method which keeps trying to resend a message
-    void sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, IOStrand* strand, const Duration& rate);
+    void sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
 
     /** SpaceNodeConnection initiation. */
 
@@ -197,9 +197,9 @@ private:
 
     ObjectHostContext* mContext;
 
-    IOService* mIOService;
-    IOStrand* mIOStrand;
-    IOWork* mIOWork;
+    Network::IOService* mIOService;
+    Network::IOStrand* mIOStrand;
+    Network::IOWork* mIOWork;
     Thread* mIOThread;
 
     ServerIDMap* mServerIDMap;
@@ -216,7 +216,7 @@ private:
     struct SpaceNodeConnection {
         typedef std::tr1::function<void(SpaceNodeConnection*)> ReceiveCallback;
 
-        SpaceNodeConnection(ObjectHostContext* ctx, IOStrand* ioStrand, OptionSet *streamOptions, ServerID sid, ReceiveCallback rcb);
+        SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, OptionSet *streamOptions, ServerID sid, ReceiveCallback rcb);
         ~SpaceNodeConnection();
 
         // Thread Safe

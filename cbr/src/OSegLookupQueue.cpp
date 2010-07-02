@@ -32,7 +32,8 @@
 
 #include "OSegLookupQueue.hpp"
 #include "ObjectSegmentation.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 
@@ -67,12 +68,12 @@ OSegLookupQueue::OSegLookupList::iterator OSegLookupQueue::OSegLookupList::end()
 // OSegLookupQueue Implementation
 
 
-OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg)
+OSegLookupQueue::OSegLookupQueue(Network::IOStrand* net_strand, ObjectSegmentation* oseg)
  : mNetworkStrand(net_strand),
    mOSeg(oseg),
    mTotalSize(0)
 {
-    mMaxLookups = GetOption(OSEG_LOOKUP_QUEUE_SIZE)->as<uint32>();
+    mMaxLookups = GetOptionValue<uint32>(OSEG_LOOKUP_QUEUE_SIZE);
     mOSeg->setLookupListener(this);
 }
 

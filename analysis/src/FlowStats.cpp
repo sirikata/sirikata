@@ -32,13 +32,20 @@
 
 #include "AnalysisEvents.hpp"
 #include "FlowStats.hpp"
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/ServerWeightCalculator.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
+#include "Protocol_ObjectTrace.pbj.hpp"
 
 namespace Sirikata {
 
+typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
+typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+
+
 FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers) {
-    ServerWeightCalculator* swc = WeightCalculatorFactory(NULL);
+    RegionWeightCalculator* swc =
+        RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOptionValue<String>(OPT_REGION_WEIGHT))(GetOptionValue<String>(OPT_REGION_WEIGHT_ARGS))
+;
 
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
@@ -56,28 +63,28 @@ FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers
             {
                 ObjectConnectedEvent* conn_evt = dynamic_cast<ObjectConnectedEvent*>(evt);
                 if (conn_evt != NULL) {
-                    mObjectMap[conn_evt->source].server = conn_evt->server;
+                    mObjectMap[conn_evt->data.source()].server = conn_evt->data.server();
                 }
             }
             {
                 GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(evt);
                 if (gen_loc_evt != NULL) {
-                    mObjectMap[gen_loc_evt->source].path.add(gen_loc_evt);
-                    mObjectMap[gen_loc_evt->source].bounds = gen_loc_evt->bounds;
+                    mObjectMap[gen_loc_evt->data.source()].path.add(gen_loc_evt);
+                    mObjectMap[gen_loc_evt->data.source()].bounds = gen_loc_evt->data.bounds();
                 }
             }
             {
                 PingCreatedEvent* ping_evt = dynamic_cast<PingCreatedEvent*>(evt);
                 if (ping_evt != NULL) {
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].sent_count++;
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].sent_bytes += ping_evt->size;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].sent_count++;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].sent_bytes += ping_evt->data.size();
                 }
             }
             {
                 PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
                 if (ping_evt != NULL) {
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].recv_count++;
-                    mFlowMap[ ObjectPair(ping_evt->source,ping_evt->receiver) ].recv_bytes += ping_evt->size;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].recv_count++;
+                    mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].recv_bytes += ping_evt->data.size();
                 }
             }
             delete evt;

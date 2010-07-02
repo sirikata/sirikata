@@ -60,6 +60,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
+
 IF(WIN32)
 ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
 SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
@@ -634,11 +635,6 @@ ENDIF()
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
-# Debug compile flags
-IF(ISDEBUG)
-  ADD_DEFINITIONS(-DSIRIKATA_DEBUG_BUILD)
-ENDIF()
-
 # -- User defined variables that control behavior at compile time
 SET(CBR_TIMESTAMP_PACKETS TRUE
   CACHE BOOL "If enabled, detailed timestamps are recorded for each packet, enabling high granularity latency breakdowns."
@@ -666,6 +662,7 @@ SET(LIBSPACE_INCLUDE_DIR ${LIBSPACE_DIR}/include)
 SET(LIBPROXIMITY_INCLUDE_DIR ${LIBPROXIMITY_DIR}/include)
 SET(LIBOH_INCLUDE_DIR ${LIBOH_DIR}/include)
 SET(LIBPROXYOBJECT_INCLUDE_DIR ${LIBPROXYOBJECT_DIR}/include)
+SET(HTTP_PARSER_INCLUDE_DIR ${TOP_LEVEL}/externals/http-parser)
 
 #source file locations
 SET(LIBCORE_SOURCE_DIR ${LIBCORE_DIR}/src)
@@ -677,9 +674,6 @@ SET(SPACE_SOURCE_DIR ${SPACE_DIR}/src)
 SET(PROXIMITY_SOURCE_DIR ${PROXIMITY_DIR}/src)
 SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
 #source file location (cbr)
-SET(LIBCBRCORE_DIR ${TOP_LEVEL}/libcbrcore)
-SET(LIBCBRCORE_INCLUDE_DIR ${TOP_LEVEL}/libcbrcore/include)
-SET(LIBCBRCORE_SOURCE_DIR ${TOP_LEVEL}/libcbrcore/src)
 SET(SIMOH_SOURCE_DIR ${TOP_LEVEL}/simoh/src)
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/cbr/src)
 SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
@@ -693,8 +687,6 @@ SET(LIBPROXIMITY_PLUGIN_DIR ${LIBPROXIMITY_DIR}/plugins)
 SET(LIBPROXYOBJECT_PLUGIN_DIR ${LIBPROXYOBJECT_DIR}/plugins)
 SET(LIBOH_PLUGIN_DIR ${LIBOH_DIR}/plugins)
 
-#protocol file location
-SET(CBR_PROTOCOL_DIR ${LIBCBRCORE_DIR}/protocol)
 #generated source files
 SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
 
@@ -713,8 +705,6 @@ SET(INCLUDE_DIRECTORIES
   ${PROXIMITY_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
 
-  ${LIBCBRCORE_INCLUDE_DIR}
-
   ${SirikataProtocolDirectory}
 
   ${Boost_INCLUDE_DIRS}
@@ -728,6 +718,7 @@ SET(INCLUDE_DIRECTORIES
   ${SQLite3_INCLUDE_DIRS}
   #${GLUT_INCLUDE_DIR}
   ${GSL_INCLUDE_DIR}
+  ${HTTP_PARSER_INCLUDE_DIR}
   )
 
 IF(OGRE_FOUND AND sdl_FOUND)
@@ -778,10 +769,29 @@ ENDFOREACH()
 
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
+# protocol files
+# FIXME we should jsut change ADD_PBJ_TARGET to take full paths
+SET(ProtocolBuffersSourcesCore
+  TimedMotionVector
+)
 SET(ProtocolBuffersSources
-  Persistence Sirikata Time Subscription Test
-  )
+  Persistence
+  Sirikata
+  Time
+  Subscription
+  Test
+  ObjectMessage
+  SSTHeader
 
+  Loc
+  Prox
+  Session
+  CSeg
+  ServerMessage
+  Migration
+  OSeg
+  Forwarder
+  )
 
 # Based on dependencies, generate arguments for protocol buffers generation
 SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
@@ -795,89 +805,76 @@ SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PY
 
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
-ADD_PBJ_TARGET(MessageHeader
+
+ADD_PBJ_TARGET(
+  ${ProtocolBuffersSourcesCore}
   INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES MessageHeader_PBJ_CPP_FILES
+  GENERATED_CPP_FILES ProtocolCore_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
+  EXPORTMACRO SIRIKATA_EXPORT
+  GENERATE_CPP
 )
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
+ADD_PBJ_TARGET(
+  MessageHeader ${ProtocolBuffersSources}
+  DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
   INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Prox"
+  PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Prox_PBJ_CPP_FILES
+  GENERATED_CPP_FILES Protocol_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
   ${PROTOCOLBUFFERS_GENS}
 )
+#Aggregate core and normal
+SET(Protocol_PBJ_CPP_FILES ${ProtocolCore_PBJ_CPP_FILES} ${Protocol_PBJ_CPP_FILES})
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ProxEveryone"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ProxEveryone_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
+# For Traces
+# Trace protocol buffers are handled separately to handle dependencies and their slightly different location
+SET(TRACE_PROTOCOLS_CORE
+  Geometry.pbj
 )
-
-# For scripting
-SET(ScriptingProtocolBuffersSources ${ProtocolBuffersSources} MessageHeader Physics)
-
-ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  ${SCRIPTING_PROTOCOLBUFFERS_GENS}
+SET(TRACE_OBJECT_PROTOCOLS
+  ObjectTrace.pbj
+  OSegTrace.pbj
+  MigrationTrace.pbj
+  PingTrace.pbj
+  DatagramTrace.pbj
+  LocProxTrace.pbj
+  CSegTrace.pbj
 )
-SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ObjectHost"
-  IMPORTS ${ProtocolBuffersRoot}
+ADD_PBJ_TARGET(
+  ${TRACE_PROTOCOLS_CORE}
+  PLUGINNAME "Protocol"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ObjectHost_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
+  GENERATED_CPP_FILES TRACE_CORE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  GENERATE_CPP
 )
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ProxyObject"
-  IMPORTS ${ProtocolBuffersRoot}
+ADD_PBJ_TARGET(
+  ${TRACE_OBJECT_PROTOCOLS}
+  DEPENDS ${TRACE_CORE_PBJ_CPP_FILES}
+  PLUGINNAME "Protocol"
+  INPUTDIR ${ProtocolBuffersRoot}/trace
+  IMPORTS ${ProtocolBuffersRoot}/trace
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ProxyObject_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
+  GENERATED_CPP_FILES TRACE_PBJ_CPP_FILES
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  GENERATE_CPP
 )
+# Aggregate core and full pbj files
+SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Ogre"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Ogre_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(Sirikata Physics
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Bullet"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Bullet_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-  )
 
 IF(V8_FOUND)
-  SET(JS_ProtocolBuffersSources Sirikata JSMessage)
+  SET(JS_ProtocolBuffersSources JSMessage)
   ADD_PBJ_TARGET(${JS_ProtocolBuffersSources}
     INPUTDIR ${ProtocolBuffersRoot}
     PLUGINNAME "JS"
@@ -889,95 +886,49 @@ IF(V8_FOUND)
     )
 ENDIF(V8_FOUND)
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
+# For scripting
+SET(ScriptingProtocolBuffersSources
+  Persistence
+  Sirikata
+  Time
+  Subscription
+  Test
+  MessageHeader
+  Physics
+  )
+
+ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "ObjectHostBinary"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES ObjectHostBinary_PBJ_CPP_FILES
+  ${SCRIPTING_PROTOCOLBUFFERS_GENS}
+)
+SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})
+
+
+ADD_PBJ_TARGET(Physics
+  INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "Protocol"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES Bullet_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_PROXYOBJECT_EXPORT
   ${PROTOCOLBUFFERS_GENS}
   )
 
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Space"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Space_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Test"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Test_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(Persistence
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "SQLite"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES SQLite_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-ADD_PBJ_TARGET(${ProtocolBuffersSources}
-  INPUTDIR ${ProtocolBuffersRoot}
-  PLUGINNAME "Proximity"
-  IMPORTS ${ProtocolBuffersRoot}
-  OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Proximity_PBJ_CPP_FILES
-  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
-  ${PROTOCOLBUFFERS_GENS}
-)
-
-# protocol files
-# FIXME we should jsut change ADD_PBJ_TARGET to take full paths
-SET(CBR_PROTOCOLS
-  ObjectMessage.pbj
-  Header.pbj
-  ServerMessage.pbj
-  Loc.pbj
-  Prox.pbj
-  Migration.pbj
-  CSeg.pbj
-  Session.pbj
-  OSeg.pbj
-  SSTHeader.pbj
-  Forwarder.pbj
-)
-
-SET(PBJ_CPP_HEADER "\n")
-# protocol targets
-ADD_PBJ_TARGET(
-  ${CBR_PROTOCOLS}
-  PLUGINNAME "CBR"
-  INPUTDIR ${CBR_PROTOCOL_DIR}
-  IMPORTS ${CBR_PROTOCOL_DIR}
-  OUTPUTDIR ${CBR_GENERATED_DIR}
-  GENERATED_CPP_FILES CBR_PBJ_CPP_FILES
-  CPP_HEADER ${PBJ_CPP_HEADER}
-  GENERATE_CPP
-)
-
-# generated pbj implementation source files
-SET(CBR_PROTOCOL_SOURCES
-  ${CBR_PBJ_CPP_FILES}
-)
 
 #binary files to be linked into sirikata
 SET(BINARY_TO_CPP_SOURCE_FILE ${TOP_LEVEL}/externals/binarytocpp/binarytocpp.cpp)
 SET(BINARY_TO_CPP_BINARY binarytocpp)
 ADD_EXECUTABLE(${BINARY_TO_CPP_BINARY} ${BINARY_TO_CPP_SOURCE_FILE} )
 GET_TARGET_PROPERTY(BINARY_TO_CPP_RUNABLE ${BINARY_TO_CPP_BINARY} LOCATION)
+
+SET(HTTP_PARSER_SOURCE_FILE ${TOP_LEVEL}/externals/http-parser/http_parser.c)
+IF(WIN32)
+  SET_SOURCE_FILES_PROPERTIES(${HTTP_PARSER_SOURCE_FILE} PROPERTIES LANGUAGE CXX)
+ENDIF()
+ADD_LIBRARY(http-parser ${HTTP_PARSER_SOURCE_FILE} )
 
 IF(OGRE_ZIP_PATH)
     SET(SirikataOgreCoreZipCpp ${CMAKE_CURRENT_SOURCE_DIR}/ogreCoreZip.hpp)
@@ -1054,13 +1005,22 @@ IF(MONO_FOUND)
 
 ENDIF()
 
+#IF(WIN32)
+#ADD_DEFINITIONS(/FI\"${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp\")
+#ELSE()
+#ADD_DEFINITIONS(-include \"${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp\")
+#ENDIF()
+
 
 SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
-        ${MessageHeader_PBJ_CPP_FILES}
+        ${Protocol_PBJ_CPP_FILES}
+        ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp
@@ -1077,6 +1037,8 @@ SET(SIRIKATA_CORE_SOURCES
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
    	${LIBCORE_SOURCE_DIR}/options/Config.cpp
    	${LIBCORE_SOURCE_DIR}/options/CDNConfig.cpp
+   	${LIBCORE_SOURCE_DIR}/options/CommonOptions.cpp
+        ${LIBCORE_SOURCE_DIR}/network/Address4.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
@@ -1087,6 +1049,14 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/StreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
+        ${LIBCORE_SOURCE_DIR}/network/NTPTimeSync.cpp
+        ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
+        ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
+        ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
+        ${LIBCORE_SOURCE_DIR}/service/Context.cpp
+        ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
+        ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
+        ${LIBCORE_SOURCE_DIR}/service/TimeProfiler.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
@@ -1094,20 +1064,32 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/PluginManager.cpp
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
 	${LIBCORE_SOURCE_DIR}/util/SolidAngle.cpp
-	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
+	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-    ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
+        ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
         ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
+        ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
+        ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
+        ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
 )
 
 #precompiled header
-IF(NOT WIN32)
+SET(LIBCORE_STANDARD_HH ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh)
+IF(WIN32)
+ SET(LIBCORE_STANDARD_CPP ${LIBCORE_SOURCE_DIR}/util/Standard.cpp)
+ # Add Standard.cpp, which generates the PCH. Other settings are created farther down when the necessary targets have been created
+ SET(SIRIKATA_CORE_SOURCES
+     ${SIRIKATA_CORE_SOURCES}
+     ${LIBCORE_STANDARD_CPP}
+ )
+ELSE()
  IF(${CMAKE_COMPILER_IS_GNUCXX})
-   SET(LIBCORE_STANDARD_HH ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh)
-   SET(LIBCORE_STANDARD_HH_GCH ${LIBCORE_STANDARD_HH}.gch)
+  SET(LIBCORE_STANDARD_HH_GCH ${LIBCORE_STANDARD_HH}.gch)
   SET(SIRIKATA_CORE_SOURCES
      ${LIBCORE_STANDARD_HH_GCH} ${SIRIKATA_CORE_SOURCES})
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
@@ -1166,6 +1148,7 @@ SET(LIBSPACE_SOURCES
                      ${LIBSPACE_SOURCE_DIR}/Loc.cpp
                      ${LIBSPACE_SOURCE_DIR}/Registration.cpp
                       )
+
 SET(LIBPROXIMITY_SOURCES
   ${Proximity_PBJ_CPP_FILES}
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp
@@ -1175,6 +1158,7 @@ SET(LIBPROXIMITY_SOURCES
 
 SET(LIBPROXYOBJECT_SOURCES
   ${ProxyObject_PBJ_CPP_FILES}
+  ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
@@ -1186,7 +1170,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
-  ${ObjectHost_PBJ_CPP_FILES}
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
@@ -1235,6 +1218,24 @@ SET(LIBCORE_PLUGIN_TCPSST_SOURCES
         ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOReadBuffer.cpp
         ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOSocketWrapper.cpp
         ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOStreamBuilder.cpp)
+
+SET(LIBCORE_PLUGIN_WEIGHTEXP_DIR ${LIBCORE_PLUGIN_DIR}/weightexp)
+SET(LIBCORE_PLUGIN_WEIGHTEXP_SOURCES
+  ${LIBCORE_PLUGIN_WEIGHTEXP_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_WEIGHTEXP_DIR}/ExpIntegral.cpp
+  )
+
+SET(LIBCORE_PLUGIN_WEIGHTSQR_DIR ${LIBCORE_PLUGIN_DIR}/weightsqr)
+SET(LIBCORE_PLUGIN_WEIGHTSQR_SOURCES
+  ${LIBCORE_PLUGIN_WEIGHTSQR_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_WEIGHTSQR_DIR}/SqrIntegral.cpp
+  )
+
+SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR ${LIBCORE_PLUGIN_DIR}/servermap_tabular)
+SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES
+  ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/TabularServerIDMap.cpp
+  )
 
 
 SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/ogre)
@@ -1295,37 +1296,11 @@ ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp
         )
 
-#source files
-SET(LIBCBRCORE_SOURCES
-  ${LIBCBRCORE_SOURCE_DIR}/Address4.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Context.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Message.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Options.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/RouterElement.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/PollingService.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/OSegTestMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/RandomMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/QuakeMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/SpaceContext.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/StaticMotionPath.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Statistics.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TimeProfiler.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/Timer.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/TimeSync.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/VWTypes.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/ServerWeightCalculator.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/ExpIntegral.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/SqrIntegral.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/SSTImpl.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${LIBCBRCORE_SOURCE_DIR}/LoadMonitor.cpp
-)
-
 SET(CBR_SOURCES
+  ${CBR_SOURCE_DIR}/ServerMessage.cpp
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
@@ -1352,13 +1327,18 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
+  ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocalForwarder.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
+  ${CBR_SOURCE_DIR}/Options.cpp
+  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${CBR_SOURCE_DIR}/Trace.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
+  ${CBR_SOURCE_DIR}/SpaceContext.cpp
   ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
@@ -1370,9 +1350,14 @@ SET(CBR_SOURCES
 )
 
 SET(SIMOH_SOURCES
+  ${SIMOH_SOURCE_DIR}/RouterElement.cpp
+  ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/ScenarioFactory.cpp
   ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
@@ -1381,11 +1366,14 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/Options.cpp
+  ${SIMOH_SOURCE_DIR}/Trace.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 
 SET(CSEG_SOURCES
   ${CSEG_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CSEG_SOURCE_DIR}/Options.cpp
   ${CSEG_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CSEG_SOURCE_DIR}/main.cpp
   )
@@ -1396,12 +1384,9 @@ SET(ANALYSIS_SOURCES
   ${ANALYSIS_SOURCE_DIR}/RecordedMotionPath.cpp
   ${ANALYSIS_SOURCE_DIR}/MessageLatency.cpp
   ${ANALYSIS_SOURCE_DIR}/ObjectLatency.cpp
+  ${ANALYSIS_SOURCE_DIR}/Options.cpp
   #${ANALYSIS_SOURCE_DIR}/Visualization.cpp
   ${ANALYSIS_SOURCE_DIR}/main.cpp
-)
-
-SET(CBRTEST_SOURCES
-  ${TEST_SOURCE_DIR}/test.cpp
 )
 
 SET(BENCH_SOURCES
@@ -1423,6 +1408,7 @@ libcore/test/DownloadTest.hpp
 libcore/test/EventTest.hpp
 libcore/test/ExtrapolationTest.hpp
 libcore/test/FactoryTest.hpp
+libcore/test/FairQueueTest.hpp
 libcore/test/ListenerTest.hpp
 libcore/test/Matrix3Test.hpp
 libcore/test/MinitransactionHandlerTest.hpp
@@ -1476,7 +1462,8 @@ SET(SIRIKATA_CORE_LIBRARIES
     ${SYSTEM_DL_LIBRARY}
 
     ${CURL_LIBRARIES}
-    ${Boost_LIBRARIES} )
+    ${Boost_LIBRARIES}
+    http-parser )
 
 IF(BERKELIUM_FOUND)
   SET(BERKELIUM_CFLAGS -DHAVE_BERKELIUM)
@@ -1524,9 +1511,24 @@ SET(BENCH_BINARY bench)
 # macros working properly.
 # ADD_DEFINITIONS(-DSTATIC_LINKED)
 
+# Debug compile flags. On windows this can't be done globally -- we need to specify this
+# only on the debug build because ISDEBUG isn't picked up since there is not build type on
+# Windows, all are generated.  Instead we just set up a variable to apply to all targets.
+SET(COMPILE_DEFS_OPT COMPILE_DEFINITIONS_DEBUG SIRIKATA_DEBUG_BUILD)
+# Unfortunately, CMake 2.4 doesn't handle the above flag
+# properly. This should only be an issue on Mac and Linux, and on
+# those platforms ISDEBUG should work fine.
+IF (${CMAKE_MAJOR_VERSION} LESS 3)
+  IF(${CMAKE_MINOR_VERSION} LESS 6)
+    IF(ISDEBUG)
+      ADD_DEFINITIONS(-DSIRIKATA_DEBUG_BUILD)
+    ENDIF()
+  ENDIF()
+ENDIF()
+
 #libraries
 ADD_LIBRARY(${SIRIKATA_CORE_LIB} SHARED ${SIRIKATA_CORE_SOURCES})
-SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES COMPILE_DEFINITIONS SIRIKATA_BUILD)
+SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_BUILD)
 TARGET_LINK_LIBRARIES(${SIRIKATA_CORE_LIB} ${SIRIKATA_CORE_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 IF(sirikata_core_LDFLAGS OR sirikata_LDFLAGS)
   SET(sirikata_core_LDFLAGS ${sirikata_core_LDFLAGS} ${sirikata_LDFLAGS})
@@ -1535,7 +1537,7 @@ ENDIF()
 #ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB})
 
 ADD_LIBRARY(${SIRIKATA_PROXIMITY_LIB} SHARED ${LIBPROXIMITY_SOURCES})
-SET_TARGET_PROPERTIES(${SIRIKATA_PROXIMITY_LIB} PROPERTIES COMPILE_DEFINITIONS SIRIKATA_PROXIMITY_BUILD)
+SET_TARGET_PROPERTIES(${SIRIKATA_PROXIMITY_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_PROXIMITY_BUILD)
 ADD_DEPENDENCIES(${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB})
 IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXIMITY_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
@@ -1543,7 +1545,7 @@ ENDIF()
 TARGET_LINK_LIBRARIES(${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_LIBRARIES})
 
 ADD_LIBRARY(${SIRIKATA_SPACE_LIB} SHARED ${LIBSPACE_SOURCES})
-SET_TARGET_PROPERTIES(${SIRIKATA_SPACE_LIB} PROPERTIES COMPILE_DEFINITIONS SIRIKATA_SPACE_BUILD)
+SET_TARGET_PROPERTIES(${SIRIKATA_SPACE_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_SPACE_BUILD)
 ADD_DEPENDENCIES(${SIRIKATA_SPACE_LIB} ${SIRIKATA_PROXYOBJECT_LIB}  ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXIMITY_LIB})
 IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
   SET_TARGET_PROPERTIES(${SIRIKATA_SPACE_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
@@ -1552,7 +1554,7 @@ TARGET_LINK_LIBRARIES(${SIRIKATA_SPACE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKA
 
 
 ADD_LIBRARY(${SIRIKATA_PROXYOBJECT_LIB} SHARED ${LIBPROXYOBJECT_SOURCES})
-SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_DEFINITIONS SIRIKATA_PROXYOBJECT_BUILD)
+SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_PROXYOBJECT_BUILD)
 ADD_DEPENDENCIES(${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB})
 IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
@@ -1560,7 +1562,7 @@ ENDIF()
 TARGET_LINK_LIBRARIES(${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB})
 
 ADD_LIBRARY(${SIRIKATA_OH_LIB} SHARED ${LIBOH_SOURCES})
-SET_TARGET_PROPERTIES(${SIRIKATA_OH_LIB} PROPERTIES COMPILE_DEFINITIONS SIRIKATA_OH_BUILD)
+SET_TARGET_PROPERTIES(${SIRIKATA_OH_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_OH_BUILD)
 ADD_DEPENDENCIES(${SIRIKATA_OH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB})
 IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
   SET_TARGET_PROPERTIES(${SIRIKATA_OH_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
@@ -1589,6 +1591,28 @@ ADD_PLUGIN_TARGET(tcpsst
                     LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
+
+ADD_PLUGIN_TARGET(weight-exp
+                    SOURCES ${LIBCORE_PLUGIN_WEIGHTEXP_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-exp)
+
+ADD_PLUGIN_TARGET(weight-sqr
+                    SOURCES ${LIBCORE_PLUGIN_WEIGHTSQR_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-sqr)
+
+ADD_PLUGIN_TARGET(servermap-tabular
+                    SOURCES ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} servermap-tabular)
+
 
 IF(OGRE_FOUND AND sdl_FOUND )
   IF(WIN32)#not sure why this needs to happen again
@@ -1631,7 +1655,6 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox-everyone)
 
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/bullet)
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_SOURCES
-  ${Bullet_PBJ_CPP_FILES}
  ${LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR}/BulletSystem.cpp
     )
 IF(bullet_FOUND)
@@ -1729,58 +1752,55 @@ IF(OpenCOLLADA_FOUND)
   SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} colladamodels)
 ENDIF(OpenCOLLADA_FOUND)
 
-#libs
-ADD_LIBRARY(cbrcore STATIC ${LIBCBRCORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
-
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL
+SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+
 ADD_EXECUTABLE(${SPACE_BINARY} ${SPACE_SOURCES})
+SET_TARGET_PROPERTIES(${SPACE_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+
 ADD_EXECUTABLE(${PROXIMITY_BINARY} ${PROXIMITY_SOURCES})
+SET_TARGET_PROPERTIES(${PROXIMITY_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 
 ADD_EXECUTABLE(${CPPOH_BINARY} ${CPPOH_SOURCES})
+SET_TARGET_PROPERTIES(${CPPOH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 
 ADD_EXECUTABLE(cbr ${CBR_SOURCES})
+SET_TARGET_PROPERTIES(cbr PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cbr
-  cbrcore
-        ${GSL_LIBRARIES}
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
-ADD_EXECUTABLE(simoh ${SIMOH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+
+ADD_EXECUTABLE(simoh ${SIMOH_SOURCES})
+SET_TARGET_PROPERTIES(simoh PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(simoh
-  cbrcore
-        ${GSL_LIBRARIES}
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
-ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
+
+ADD_EXECUTABLE(cseg ${CSEG_SOURCES})
+SET_TARGET_PROPERTIES(cseg PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cseg
-  cbrcore
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
-ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
+
+ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES})
+SET_TARGET_PROPERTIES(analysis PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(analysis
-  cbrcore
-        ${GSL_LIBRARIES}
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         #${GLUT_LIBRARIES}
         )
-ADD_EXECUTABLE(cbrtest ${CBRTEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
-TARGET_LINK_LIBRARIES(cbrtest
-  cbrcore
-  ${Boost_LIBRARIES}
-  ${SIRIKATA_CORE_LIB}
-  ${PROTOCOLBUFFERS_LIBRARIES}
-  )
-ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+
+ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES})
+SET_TARGET_PROPERTIES(${BENCH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(${BENCH_BINARY}
-  cbrcore
   ${Boost_LIBRARIES}
   ${SIRIKATA_CORE_LIB}
   ${PROTOCOLBUFFERS_LIBRARIES}
@@ -1863,9 +1883,16 @@ ENDIF()
 
 #precompiled headers
 IF(WIN32)
-  #right now protobuf compiler cannot output pch #include flags at the top of their files, so we cannot use them directly or have to turn off pch:
-  #resolved: turn off PCH on windows
-  #SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${TEST_BINARY} PROPERTIES COMPILE_FLAGS "-Ycutil/Standard.hh")
+  # Creation is turned on only for libcore/util/Standard.cpp
+  SET_SOURCE_FILES_PROPERTIES(${LIBCORE_STANDARD_CPP} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Ycsirikata/core/util/Standard.hh")
+
+  # Everything uses the PCH
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/core/util/Standard.hh -Yusirikata/core/util/Standard.hh")
+
+  SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-FIsirikata/proxyobject/Platform.hpp")
+ELSE()
+  SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/core/util/Standard.hh")
+  SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/proxyobject/Platform.hpp")
 ENDIF()
 
 

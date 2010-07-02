@@ -33,7 +33,8 @@
 #ifndef _SIRIKATA_MIGRATION_DATA_CLIENT_HPP_
 #define _SIRIKATA_MIGRATION_DATA_CLIENT_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata {
 

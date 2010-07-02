@@ -31,15 +31,15 @@
  */
 
 #include "ObjectHostConnectionManager.hpp"
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "ServerMessage.hpp"
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #define SPACE_LOG(level,msg) SILOG(space,level,"[SPACE] " << msg)
 
 namespace Sirikata {
@@ -83,15 +83,15 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHos
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
-   mIOService( IOServiceFactory::makeIOService() ),
+   mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
    mIOThread(NULL),
    mAcceptor(NULL),
    mMessageReceivedCallback(cb)
 {
-    mIOWork = new IOWork( mIOService, "ObjectHostConnectionManager Work" );
-    mIOThread = new Thread( std::tr1::bind(&IOService::runNoReturn, mIOService) );
+    mIOWork = new Network::IOWork( mIOService, "ObjectHostConnectionManager Work" );
+    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
 
     listen(listen_addr);
 }
@@ -103,7 +103,7 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
         delete mIOWork;
 
     delete mIOStrand;
-    IOServiceFactory::destroyIOService(mIOService);
+    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 
@@ -134,10 +134,10 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     using std::tr1::placeholders::_2;
 
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
+    sPluginManager.load("tcpsst");
 
-    String oh_stream_lib = GetOption("ohstreamlib")->as<String>();
-    String oh_stream_options = GetOption("ohstreamoptions")->as<String>();
+    String oh_stream_lib = GetOptionValue<String>("ohstreamlib");
+    String oh_stream_options = GetOptionValue<String>("ohstreamoptions");
 
     assert(mAcceptor == NULL);
     mAcceptor=Sirikata::Network::StreamListenerFactory::getSingleton()

@@ -32,7 +32,7 @@
 
 #include "AnalysisEvents.hpp"
 #include "MessageLatency.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #define INFO_LOG(msg) SILOG(message_latency_analysis,insane,"[MSG_LAT_ANLS] " << msg)
 #define ERROR_LOG(msg) SILOG(message_latency_analysis,error,"[MSG_LAT_ANLS] " << msg)
@@ -960,7 +960,7 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
 
                         if (should_insert) {
                             PacketData* pd = &packetFlow[tevt->uid];
-                            pd->stamps[server_id].push_back(PacketSample(tevt->begin_time(), server_id, tevt->path));
+                            pd->stamps[server_id].push_back(PacketSample(tevt->time, server_id, tevt->path));
                             MessageCreationTimestampEvent* cevt = dynamic_cast<MessageCreationTimestampEvent*>(evt);
                             if (cevt != NULL) {
                                 if (cevt->srcport!=0) pd->source_port = cevt->srcport;

@@ -33,7 +33,6 @@
 #include "asyncConnection.hpp"
 #include <iostream>
 #include <boost/bind.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "CraqEntry.hpp"
 namespace Sirikata
@@ -98,7 +97,7 @@ void AsyncConnection::tick(std::vector<CraqOperationResult*>&opResults_get, std:
 
 
 //void AsyncConnection::initialize( boost::asio::ip::tcp::socket* socket,    boost::asio::ip::tcp::resolver::iterator it)
-void AsyncConnection::initialize(boost::asio::ip::tcp::socket* socket, boost::asio::ip::tcp::resolver::iterator it, SpaceContext* spc, IOStrand* strand )
+void AsyncConnection::initialize(boost::asio::ip::tcp::socket* socket, boost::asio::ip::tcp::resolver::iterator it, SpaceContext* spc, Network::IOStrand* strand )
 {
   mSocket =       socket;
   mReady  =   PROCESSING;

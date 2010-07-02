@@ -34,14 +34,15 @@
 #define _DELUGE_PAIR_SCENARIO_HPP_
 
 #include "Scenario.hpp"
-#include <sirikata/cbrcore/CountResourceMonitor.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/CountResourceMonitor.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/service/Poller.hpp>
 
 namespace Sirikata {
 
 class ScenarioFactory;
 class ConnectedObjectTracker;
-class ServerWeightCalculator;
+class RegionWeightCalculator;
 class DelugePairScenario : public Scenario {
     double mNumPingsPerSecond;
 
@@ -49,7 +50,7 @@ class DelugePairScenario : public Scenario {
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
 
-    IOStrand* mGeneratePingsStrand;
+    Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
 
     struct PingInfo {
@@ -95,7 +96,7 @@ class DelugePairScenario : public Scenario {
     void generatePings();
 
     void sendPings();
-    ServerWeightCalculator* mWeightCalculator;
+    RegionWeightCalculator* mWeightCalculator;
     static DelugePairScenario*create(const String&options);
     void generatePairs();
 public:

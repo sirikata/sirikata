@@ -49,8 +49,14 @@ public:
      *  initializing them. */
     void searchPath(const String& path);
 
-    /** Load a specific plugin from the specified file. */
-    void load(const String& filename);
+    /** Load the plugin with the given name. Note that this name does not
+     *  include platform-specific naming, i.e. it should be plugin not
+     *  libplugin.so.
+     */
+    void load(const String& name);
+
+    /** Load all plugins in a comma separated list of plugin names. */
+    void loadList(const String& name_list);
 
     /** Perform garbage collection on plugins, unloading any currently unused
      *  plugins.  */

@@ -35,7 +35,9 @@
 #define SIRIKATA_TransferPool_HPP__
 
 #include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include "RemoteFileMetadata.hpp"
+#include "TransferHandlers.hpp"
 #include "URI.hpp"
 
 namespace Sirikata {
@@ -48,7 +50,8 @@ namespace Transfer {
 class TransferRequest {
 
 public:
-	typedef float PriorityType;
+    typedef std::tr1::function<void()> ExecuteFinished;
+    typedef float PriorityType;
 
 	//Return the priority of the request
 	inline PriorityType getPriority() const {
@@ -56,38 +59,90 @@ public:
 	}
 
 	//Return a unique identifier for the request
-	virtual const std::string &getIdentifier() const = 0;
+	virtual const std::string& getIdentifier() const = 0;
 
-	virtual ~TransferRequest() {
+	inline const std::string& getClientID() const {
+		return mClientID;
 	}
 
+	virtual void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) = 0;
+
+    virtual void notifyCaller(std::tr1::shared_ptr<TransferRequest>) = 0;
+
+	virtual ~TransferRequest() {}
+
+	friend class TransferPool;
+
 protected:
+	inline void setClientID(const std::string& clientID) {
+		mClientID = clientID;
+	}
+
 	PriorityType mPriority;
+	std::string mClientID;
 
 };
 
 /*
  * Handles requests for metadata of a file when all you have is the URI
  */
-class MetadataRequest : public TransferRequest {
-
-protected:
-	const URI mURI;
-	const std::string mUniqueID;
+class MetadataRequest: public TransferRequest {
 
 public:
-	MetadataRequest(const URI &uri, PriorityType priority)
-		: mURI(uri), mUniqueID(uri.toString()) {
-		mPriority = priority;
-	}
+    typedef std::tr1::function<void(
+            std::tr1::shared_ptr<MetadataRequest> request,
+            std::tr1::shared_ptr<RemoteFileMetadata> response)> MetadataCallback;
 
-	inline const std::string &getIdentifier() const {
-		return mUniqueID;
-	}
+    MetadataRequest(const URI &uri, PriorityType priority, MetadataCallback cb) :
+        mURI(uri), mUniqueID(uri.toString()), mCallback(cb) {
+        mPriority = priority;
+    }
 
-	inline const URI& getURI() {
-		return mURI;
-	}
+    inline const std::string &getIdentifier() const {
+        return mUniqueID;
+    }
+
+    inline const URI& getURI() {
+        return mURI;
+    }
+
+    inline void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
+        std::tr1::shared_ptr<MetadataRequest> casted =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(req);
+        HttpNameHandler::getSingleton().resolve(casted, std::tr1::bind(
+                &MetadataRequest::execute_finished, this, _1, cb));
+    }
+
+    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
+        std::tr1::shared_ptr<MetadataRequest> fromC =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
+        mCallback(fromC, fromC->mRemoteFileMetadata);
+    }
+
+    inline bool operator==(const MetadataRequest& other) const {
+        return mUniqueID == other.mUniqueID;
+    }
+    inline bool operator<(const MetadataRequest& other) const {
+        return mUniqueID < other.mUniqueID;
+    }
+
+protected:
+    const URI mURI;
+    const std::string mUniqueID;
+    MetadataCallback mCallback;
+    std::tr1::shared_ptr<RemoteFileMetadata> mRemoteFileMetadata;
+
+    MetadataRequest(const URI &uri, PriorityType priority) :
+        mURI(uri), mUniqueID(uri.toString()) {
+        mPriority = priority;
+    }
+
+    inline void execute_finished(std::tr1::shared_ptr<RemoteFileMetadata> response, ExecuteFinished cb) {
+        mRemoteFileMetadata = response;
+        cb();
+        SILOG(transfer, debug, "done transferpool execute_finished");
+    }
+
 };
 
 /*
@@ -114,6 +169,17 @@ public:
 		return mChunkID;
 	}
 
+	inline void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
+
+	}
+
+    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
+        /*std::tr1::shared_ptr<MetadataRequest> me(this);
+        std::tr1::shared_ptr<MetadataRequest> otherC =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(other);
+        mCallback(me, otherC->mRemoteFileMetadata);*/
+    }
+
 };
 
 /*
@@ -126,7 +192,7 @@ public:
 
 	//Return an aggregated priority given the list of priorities
 	virtual TransferRequest::PriorityType aggregate(
-			std::tr1::shared_ptr<TransferRequest> req, std::map<std::string, TransferRequest::PriorityType> &) const = 0;
+	        std::map<std::string, std::tr1::shared_ptr<TransferRequest> > &) const = 0;
 
 	virtual ~PriorityAggregationAlgorithm() {
 	}
@@ -138,30 +204,23 @@ public:
  */
 class TransferPool {
 
-	typedef Task::GenEventManager::EventListener EventListener;
-
 	const std::string mClientID;
-	const EventListener &mEventListener;
 	ThreadSafeQueue<std::tr1::shared_ptr<TransferRequest> > mDeltaQueue;
 
 public:
-	TransferPool(const std::string &clientID, const EventListener &listener)
-		: mClientID(clientID), mEventListener(listener) {
+	TransferPool(const std::string &clientID)
+		: mClientID(clientID) {
 
 	}
 
 	//Returns client identifier
-	inline const std::string getClientID() const {
+	inline const std::string& getClientID() const {
 		return mClientID;
-	}
-
-	//Returns the listener that should be called when a request is fulfilled
-	inline const EventListener getListener() const {
-		return mEventListener;
 	}
 
 	//Puts a request into the pool
 	inline void addRequest(std::tr1::shared_ptr<TransferRequest> req) {
+		if(req != NULL) req->setClientID(mClientID);
 		mDeltaQueue.push(req);
 	}
 

@@ -38,7 +38,7 @@ namespace Sirikata {
 FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener)
         : ServerMessageReceiver(ctx, net, listener),
           mServiceTimer(
-              IOTimer::create(
+              Network::IOTimer::create(
                   ctx->ioService,
                   mReceiverStrand->wrap( std::tr1::bind(&FairServerMessageReceiver::service, this) )
                               )
@@ -110,7 +110,7 @@ void FairServerMessageReceiver::service() {
 
         cum_recv_size += next_recv_msg->size();
 
-        CONTEXT_TRACE(serverDatagramReceived, mContext->simTime(), next_recv_msg->source_server(), next_recv_msg->id(), next_recv_msg->serializedSize());
+        CONTEXT_SPACETRACE(serverDatagramReceived, mContext->simTime(), next_recv_msg->source_server(), next_recv_msg->id(), next_recv_msg->serializedSize());
         mListener->serverMessageReceived(next_recv_msg);
 
         num_recv++;

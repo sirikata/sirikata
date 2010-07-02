@@ -33,27 +33,25 @@
 #ifndef _SIRIKATA_FORWARDER_HPP_
 #define _SIRIKATA_FORWARDER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include "SpaceContext.hpp"
+#include "ServerMessage.hpp"
 #include "SpaceNetwork.hpp"
 
-#include <sirikata/cbrcore/Queue.hpp>
-#include <sirikata/cbrcore/FairQueue.hpp>
-
-#include <sirikata/cbrcore/TimeProfiler.hpp>
+#include <sirikata/core/queue/Queue.hpp>
+#include <sirikata/core/queue/FairQueue.hpp>
 
 #include "OSegLookupQueue.hpp"
 
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 #include "ForwarderServiceQueue.hpp"
 
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
-#include <sirikata/core/util/ThreadSafeQueueWithNotification.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 namespace Sirikata
 {
@@ -61,7 +59,9 @@ namespace Sirikata
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class SpaceNetwork;
+namespace Trace {
   class Trace;
+}
   class ObjectConnection;
   class OSegLookupQueue;
 class ForwarderServiceQueue;

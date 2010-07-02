@@ -35,7 +35,7 @@
 #include <sirikata/core/persistence/ObjectStorage.hpp>
 #include <sirikata/core/persistence/MinitransactionHandlerFactory.hpp>
 #include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
-#include "SQLite_Persistence.pbj.hpp"
+#include "Protocol_Persistence.pbj.hpp"
 #include "SQLiteObjectStorage.hpp"
 static int core_plugin_refcount = 0;
 

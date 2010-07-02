@@ -33,10 +33,13 @@
 #ifndef _SIRIKATA_OBJECT_HPP_
 #define _SIRIKATA_OBJECT_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/MotionPath.hpp>
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/util/Platform.hpp>
+
+#include <sirikata/core/network/ObjectMessage.hpp>
+#include <sirikata/core/util/MotionPath.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
+
+#include <sirikata/core/util/SimpleExtrapolator.hpp>
 
 
 #include <boost/thread/shared_mutex.hpp>
@@ -162,7 +165,7 @@ private:
     bool mMigrating;
     bool mQuitting;
 
-    IOTimerPtr mLocUpdateTimer;
+    Network::IOTimerPtr mLocUpdateTimer;
 
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 }; // class Object

@@ -34,18 +34,17 @@
 #ifndef _SIRIKATA_SERVER_HPP_
 #define _SIRIKATA_SERVER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include "SpaceContext.hpp"
 
 #include "ObjectHostConnectionManager.hpp"
-#include <sirikata/cbrcore/TimeProfiler.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
-#include "CBR_Session.pbj.hpp"
-#include "CBR_Migration.pbj.hpp"
+#include "Protocol_Session.pbj.hpp"
+#include "Protocol_Migration.pbj.hpp"
 
 #include "ObjectSegmentation.hpp"
 

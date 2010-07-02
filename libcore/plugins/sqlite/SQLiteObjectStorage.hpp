@@ -36,7 +36,7 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 #include "SQLite.hpp"
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
-#include <sirikata/core/util/ThreadSafeQueue.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 namespace Sirikata { namespace Persistence {
 
 /** SQLite based object storage.  This class provides both ReadWriteHandler and

@@ -35,10 +35,10 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-#include <sirikata/cbrcore/SegmentedRegion.hpp>
+#include "CoordinateSegmentation.hpp"
+#include <sirikata/space/SegmentedRegion.hpp>
 
-#include "CBR_CSeg.pbj.hpp"
+#include "Protocol_CSeg.pbj.hpp"
 
 namespace Sirikata {
 
@@ -72,13 +72,13 @@ private:
     SegmentedRegion mTopLevelRegion;
     bool mBSPTreeValid;
 
-    Trace* mTrace;
+    Trace::Trace* mTrace;
 
     std::map<ServerID, BoundingBoxList> mServerRegionCache;
 
     uint16 mAvailableServersCount;
 
-    IOService* mIOService;  //creates an io service
+    Network::IOService* mIOService;  //creates an io service
     boost::shared_ptr<Network::TCPListener> mAcceptor;
     boost::shared_ptr<Network::TCPSocket> mSocket;
 

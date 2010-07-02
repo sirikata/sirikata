@@ -41,7 +41,6 @@
 
 #include "asyncConnectionGet.hpp"
 #include "../asyncCraqUtil.hpp"
-#include <sirikata/cbrcore/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
 
@@ -83,7 +82,7 @@ namespace Sirikata
 
 
   //nothing to initialize
-  AsyncCraqGet::AsyncCraqGet(SpaceContext* con, IOStrand* strand_this_runs_on, IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
+  AsyncCraqGet::AsyncCraqGet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
    : ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
@@ -113,7 +112,7 @@ namespace Sirikata
     for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_GET; ++s)
     {
 
-      IOStrand* tmpStrand         = ctx->ioService->createStrand();
+      Network::IOStrand* tmpStrand         = ctx->ioService->createStrand();
       mConnectionsStrands.push_back(tmpStrand);
 
 

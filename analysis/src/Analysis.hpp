@@ -33,22 +33,17 @@
 #ifndef _SIRIKATA_ANALYSIS_HPP_
 #define _SIRIKATA_ANALYSIS_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/MotionVector.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
+#include "Protocol_Geometry.pbj.hpp"
 #include "AnalysisEvents.hpp"
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
-
 
 namespace Sirikata {
 
 struct Event;
 struct ObjectEvent;
-struct ServerDatagramEvent;
-struct ServerDatagramSentEvent;
-struct ServerDatagramQueuedEvent;
-struct ServerDatagramReceivedEvent;
-struct ServerDatagramQueueInfoEvent;
-struct PacketQueueInfoEvent;
+
+TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotionVector& tmv);
 
 /** Error of observed vs. true object locations over simulation period. */
 class LocationErrorAnalysis {
@@ -92,44 +87,24 @@ public:
     void computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
     void computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
 
-    void dumpDatagramQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
-    void dumpPacketQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
-
-
-    void windowedDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
     // No datagram receive queues
-
-    void windowedPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
-    void windowedPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
-
 
    void computeJFI(const ServerID& server_id) const;
 
 private:
-    typedef std::vector<ServerDatagramEvent*> DatagramEventList;
+    typedef std::vector<Event*> DatagramEventList;
     typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
     DatagramEventList mEmptyDatagramEventList;
-
-    typedef std::vector<ServerDatagramQueueInfoEvent*> DatagramQueueInfoEventList;
-    typedef std::map<ServerID, DatagramQueueInfoEventList*> ServerDatagramQueueInfoEventListMap;
-    DatagramQueueInfoEventList mEmptyDatagramQueueInfoEventList;
 
     DatagramEventList::const_iterator datagramBegin(const ServerID& server) const;
     DatagramEventList::const_iterator datagramEnd(const ServerID& server) const;
 
-    DatagramQueueInfoEventList::const_iterator datagramQueueInfoBegin(const ServerID& server) const;
-    DatagramQueueInfoEventList::const_iterator datagramQueueInfoEnd(const ServerID& server) const;
-
     const DatagramEventList* getDatagramEventList(const ServerID& server) const;
-
-    const DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
 
     template<typename EventType, typename EventIteratorType>
     void computeJFI(const ServerID& sender, const ServerID& filter) const;
 
     ServerDatagramEventListMap mDatagramEventLists;
-
-    ServerDatagramQueueInfoEventListMap mDatagramQueueInfoEventLists;
 
     uint32 mNumberOfServers;
 }; // class BandwidthAnalysis
@@ -151,8 +126,8 @@ class LatencyAnalysis {
         friend class LatencyAnalysis;
     public:
         PacketData();
-        void addPacketSentEvent(ServerDatagramQueuedEvent*);
-        void addPacketReceivedEvent(ServerDatagramReceivedEvent*);
+        void addPacketSentEvent(DatagramQueuedEvent*);
+        void addPacketReceivedEvent(DatagramReceivedEvent*);
     };
 
 public:
@@ -183,9 +158,9 @@ private:
   std::vector<ServerID> objectAcknowledgeAcknowledgeFrom;
   std::vector<ServerID> objectAcknowledgeAcknowledgeTo;
 
-  static bool compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B);
-  static bool compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B);
-  void convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents);
+  static bool compareObjectBeginMigrateEvts(MigrationBeginEvent A, MigrationBeginEvent B);
+  static bool compareObjectAcknowledgeMigrateEvts(MigrationAckEvent A, MigrationAckEvent B);
+  void convertToEvtsAndSort(std::vector<MigrationBeginEvent> &sortedBeginMigrateEvents, std::vector<MigrationAckEvent> &sortedAcknowledgeMigrateEvents);
 
 public:
   ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers);
@@ -205,8 +180,8 @@ private:
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_lookup;
 
-  void convertToEvtsAndSort(std::vector<ObjectCraqLookupEvent>&);
-  static bool compareEvts(ObjectCraqLookupEvent A, ObjectCraqLookupEvent B);
+  void convertToEvtsAndSort(std::vector<OSegCraqRequestEvent>&);
+  static bool compareEvts(OSegCraqRequestEvent A, OSegCraqRequestEvent B);
 
 public:
   ObjectSegmentationCraqLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
@@ -223,8 +198,8 @@ private:
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_lookup;
 
-  void convertToEvtsAndSort(std::vector<ObjectLookupNotOnServerEvent>&);
-  static bool compareEvts(ObjectLookupNotOnServerEvent A, ObjectLookupNotOnServerEvent B);
+  void convertToEvtsAndSort(std::vector<OSegInvalidLookupEvent>&);
+  static bool compareEvts(OSegInvalidLookupEvent A, OSegInvalidLookupEvent B);
 
 public:
   ObjectSegmentationLookupNotOnServerRequestsAnalysis(const char* opt_name, const uint32 nservers);
@@ -244,8 +219,8 @@ private:
   std::vector<uint32> dTimes;
   std::vector<uint32> stillInQueues;
 
-  void convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&);
-  static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
+  void convertToEvtsAndSort(std::vector<OSegProcessedRequestEvent>&);
+  static bool compareEvts(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B);
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime = true, int processedAfter =0);
@@ -259,8 +234,8 @@ public:
 class ObjectMigrationRoundTripAnalysis
 {
 private:
-  std::vector< ObjectMigrationRoundTripEvent> allRoundTripEvts;
-  static bool compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
+  std::vector< MigrationRoundTripEvent> allRoundTripEvts;
+  static bool compareEvts (MigrationRoundTripEvent A, MigrationRoundTripEvent B);
 
 public:
   ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers);
@@ -312,7 +287,7 @@ public:
   {
   private:
     static const uint64 OSEG_CUMULATIVE_ANALYSIS_SECONDS_TO_MICROSECONDS = 1000000;
-    std::vector<OSegCumulativeEvent*> allTraces;
+    std::vector<OSegCumulativeResponseEvent*> allTraces;
     void filterShorterPath(uint64 time_after_microseconds);
     void generateAllData();
     void generateCacheTime();
@@ -377,29 +352,6 @@ public:
 
 
 
-  class OSegProcessCraqReturnAnalysis
-  {
-  private:
-    static const uint64 OSEG_CRAQ_PROCESS_RETURN_ANALYSIS_ECONDS_TO_MICROSECONDS = 1000000;
-    std::vector<OSegCraqProcEvent*>allProcEvts;
-    uint64 mInitialTime;
-    struct OSegProcessCraqComparator
-    {
-      bool operator()(const OSegCraqProcEvent* lhs, const OSegCraqProcEvent* rhs) const
-      {
-        return (lhs->timeItTook.toMicroseconds() < rhs->timeItTook.toMicroseconds());
-      }
-    };
-    void filterTimeAfter(uint64 tafter_us);
-    void sortAllEvents();
-
-  public:
-    OSegProcessCraqReturnAnalysis(const char* opt_name, const uint32 nservers, uint64 time_after_seconds =  0);
-    ~OSegProcessCraqReturnAnalysis();
-    void printData(std::ostream &fileOut);
-  };
-
-
 class OSegCacheErrorAnalysis
 {
 
@@ -431,10 +383,10 @@ private:
 
   ObjectLocationMap mObjLoc;
 
-  std::vector< ObjectMigrationRoundTripEvent >                mMigrationVector; //round trip event
-  std::vector< ObjectLookupProcessedEvent >                      mLookupVector; //lookup proc'd
+  std::vector< MigrationRoundTripEvent >                mMigrationVector; //round trip event
+  std::vector< OSegProcessedRequestEvent >                      mLookupVector; //lookup proc'd
   std::vector< OSegCacheResponseEvent >                   mCacheResponseVector;
-  std::vector< ObjectLookupNotOnServerEvent >   mObjectLookupNotOnServerVector;
+  std::vector< OSegInvalidLookupEvent >   mObjectLookupNotOnServerVector;
 
   //basic strategy: load all migration events.
   //write all migrate times in for each object.
@@ -445,8 +397,8 @@ private:
   void buildObjectMap();
 
   static bool compareCacheResponseEvents(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
-  static bool compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
-  static bool compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
+  static bool compareLookupProcessedEvents(OSegProcessedRequestEvent A, OSegProcessedRequestEvent B);
+  static bool compareRoundTripEvents(MigrationRoundTripEvent A, MigrationRoundTripEvent B);
 
 
   void analyzeMisses(Results& res);

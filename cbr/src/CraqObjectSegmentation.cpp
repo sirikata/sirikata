@@ -34,11 +34,10 @@
 
 
 #include "ObjectSegmentation.hpp"
-#include <sirikata/cbrcore/Message.hpp>
+#include "ServerMessage.hpp"
 #include <map>
 #include <vector>
-#include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Timer.hpp>
+#include <sirikata/core/trace/Trace.hpp>
 #include "CraqObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
@@ -48,16 +47,15 @@
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
 
-#include <sirikata/cbrcore/Options.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include <sstream>
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <boost/thread/mutex.hpp>
-#include <sirikata/cbrcore/OSegLookupTraceToken.hpp>
-#include <sirikata/cbrcore/Utility.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
@@ -67,7 +65,7 @@ namespace Sirikata
   /*
     Basic constructor
   */
-  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, IOStrand* o_strand, IOStrand* strand_to_post_to)
+  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID, Network::IOStrand* o_strand, Network::IOStrand* strand_to_post_to)
  : ObjectSegmentation(con, o_strand),
    mCSeg (cseg),
    craqDhtGet(con, o_strand, this),
@@ -81,11 +79,11 @@ namespace Sirikata
   {
 
 
-    std::string cacheSelector     =  GetOption(CACHE_SELECTOR)->as<String>();
-    uint32  cacheSize             =  GetOption(OSEG_CACHE_SIZE)->as<uint32>();
-    uint32  cacheCleanGroupSize   =  GetOption(OSEG_CACHE_CLEAN_GROUP_SIZE)->as<uint32>();
-    double  cacheCommScaling      =  GetOption(CACHE_COMM_SCALING)->as<double>();
-    Duration entryLifetime        =  GetOption(OSEG_CACHE_ENTRY_LIFETIME)->as<Duration>();
+      std::string cacheSelector     =  GetOptionValue<String>(CACHE_SELECTOR);
+      uint32  cacheSize             =  GetOptionValue<uint32>(OSEG_CACHE_SIZE);
+      uint32  cacheCleanGroupSize   =  GetOptionValue<uint32>(OSEG_CACHE_CLEAN_GROUP_SIZE);
+      double  cacheCommScaling      =  GetOptionValue<double>(CACHE_COMM_SCALING);
+      Duration entryLifetime        =  GetOptionValue<Duration>(OSEG_CACHE_ENTRY_LIFETIME);
 
 
     if (cacheSelector == CACHE_TYPE_COMMUNICATION)
@@ -126,7 +124,6 @@ namespace Sirikata
     numAlreadyLookingUp         = 0;
     numServices                 = 0;
     numLookingUpDebug           = 0;
-    mServiceTimer.start();
 
     checkOwnTimeDur   = 0;
     checkOwnTimeCount = 0;
@@ -180,7 +177,7 @@ namespace Sirikata
 
 
 
-    CONTEXT_TRACE(processOSegShutdownEvents,
+    CONTEXT_SPACETRACE(processOSegShutdownEvents,
         mContext->id(),
         numLookups,
         numOnThisServer,
@@ -387,7 +384,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     }
 
     //log the request.
-    CONTEXT_TRACE(objectSegmentationLookupNotOnServerRequest,
+    CONTEXT_SPACETRACE(objectSegmentationLookupNotOnServerRequest,
         obj_id,
         mContext->id());
 
@@ -405,7 +402,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     CraqEntry cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
-        CONTEXT_TRACE(osegCacheResponse,
+        CONTEXT_SPACETRACE(osegCacheResponse,
             cacheReturn.server(),
             obj_id);
 
@@ -465,7 +462,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
       //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
-      CONTEXT_TRACE(objectSegmentationCraqLookupRequest,
+      CONTEXT_SPACETRACE(objectSegmentationCraqLookupRequest,
           obj_id,
           mContext->id());
 
@@ -492,7 +489,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
       ++numAlreadyLookingUp;
       Duration endCraqDur  = Time::local() - Time::epoch();
       traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
-      CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+      CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
       delete traceToken;
     }
   }
@@ -575,7 +572,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
       return;
 
     //log the message.
-    CONTEXT_TRACE(objectBeginMigrate,
+    CONTEXT_SPACETRACE(objectBeginMigrate,
         obj_id,mContext->id(),
         new_server_id.server());
 
@@ -621,7 +618,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     }
 
     if (traceToken != NULL) {
-        CONTEXT_TRACE(osegCumulativeResponse, traceToken);
+        CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
         delete traceToken;
     }
 
@@ -713,7 +710,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
 
 
       //log reception of acknowled message
-      CONTEXT_TRACE(objectAcknowledgeMigrate,
+      CONTEXT_SPACETRACE(objectAcknowledgeMigrate,
                     obj_id,serv_from.server(),
                     mContext->id());
     }
@@ -864,7 +861,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       //log message stating that object was processed.
       Duration timerDur = Time::local() - Time::epoch();
 
-      CONTEXT_TRACE(objectSegmentationProcessedRequest,
+      CONTEXT_SPACETRACE(objectSegmentationProcessedRequest,
           tmper,
           cor->servID.server(),
           mContext->id(),
@@ -966,12 +963,12 @@ void CraqObjectSegmentation::trySendMigAcks() {
       //      Duration procTrackedSetRes = mTimer.elapsed();
       Duration procTrackedSetRes = Time::local() - Time::epoch();
 
-      int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResult->trackedMessage].dur.toMilliseconds();
+      Duration dur = procTrackedSetRes - trackingMessages[trackedSetResult->trackedMessage].dur;
 
-      CONTEXT_TRACE(processOSegTrackedSetResults,
+      CONTEXT_SPACETRACE(processOSegTrackedSetResults,
           obj_id,
           mContext->id(),
-          durMs);
+          dur);
 
       //send an acknowledge message to space server that formerly hosted object.
       Message* to_send = new Message(

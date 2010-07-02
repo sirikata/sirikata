@@ -54,7 +54,7 @@ public:
     Sirikata::Persistence::ReadWriteHandler*mDatabase;
     SQLiteReadWriteTest() {
         Sirikata::PluginManager plugins;
-        plugins.load(Sirikata::DynamicLibrary::filename("sqlite"));
+        plugins.load("sqlite");
         mDatabase=createReadWritealHandlerFunction("");
     }
     ~SQLiteReadWriteTest(){

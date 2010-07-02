@@ -37,9 +37,9 @@ class FlowPairFairness(flow_fairness.FlowFairness):
             )
         self.cs.odp_flow_scheduler = self.scheme
 
-        if 'object' not in self.cs.traces: self.cs.traces.append('object')
-        if 'ping' not in self.cs.traces: self.cs.traces.append('ping')
-        #if 'message' not in self.cs.traces: self.cs.traces.append('message')
+        if 'object' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('object')
+        if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
+        #if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
     
-    cs.flatness=8;
+    cs.region_weight_options = '--flatness=8'
     cs.debug = True
 
     cs.valgrind = False

@@ -35,13 +35,14 @@
 
 #include "ProxSimulationTraits.hpp"
 #include "CBRLocationServiceCache.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
+#include "CoordinateSegmentation.hpp"
 #include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
-#include <sirikata/cbrcore/PollingService.hpp>
+#include <sirikata/core/service/PollingService.hpp>
 
-#include <sirikata/cbrcore/SSTImpl.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
 namespace Sirikata {
 
@@ -173,8 +174,8 @@ private:
     void tickQueryHandler(ProxQueryHandler* qh);
 
     Thread* mProxThread;
-    IOService* mProxService;
-    IOStrand* mProxStrand;
+    Network::IOService* mProxService;
+    Network::IOStrand* mProxStrand;
     Sirikata::AtomicValue<bool> mShutdownProxThread;
 
     // These track local objects and answer queries from other

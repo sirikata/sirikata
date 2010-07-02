@@ -34,7 +34,9 @@
 #include "ScenarioFactory.hpp"
 #include "ObjectHost.hpp"
 #include "Object.hpp"
-#include <sirikata/cbrcore/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 
 namespace Sirikata {
@@ -126,7 +128,7 @@ void PingDelugeScenario::initialize(ObjectHostContext*ctx) {
 }
 
 void PingDelugeScenario::start() {
-    Duration connect_phase = GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
+    Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
         std::tr1::bind(&PingDelugeScenario::delayedStart, this)

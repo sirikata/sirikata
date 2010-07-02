@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_WORLD_POPULATION_BSPTREE_HPP_
 #define _SIRIKATA_WORLD_POPULATION_BSPTREE_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
 #define NUM_HISTOGRAM_BINS 50
 #define WORLD_SURFACE_AREA 510072000.0

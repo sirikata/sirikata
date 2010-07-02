@@ -33,13 +33,15 @@
 #ifndef _SIRIKATA_OBJECT_CONNECTION_HPP_
 #define _SIRIKATA_OBJECT_CONNECTION_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include "ServerMessage.hpp"
 #include "ObjectHostConnectionManager.hpp"
 
 namespace Sirikata {
 
+namespace Trace {
 class Trace;
+}
 class Server;
 
 /** Represents a connection a space has to an object.

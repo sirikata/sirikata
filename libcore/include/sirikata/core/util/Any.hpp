@@ -104,13 +104,15 @@ public:
         return mHolder?mHolder->typeOf():typeid(void);
     }
     template <class T> T& as () {
-        return dynamic_cast<SubHolder<T>*>(mHolder)->mValue;
+        // Dereference first so the dynamic_cast will throw bad_cast on failure.
+        return dynamic_cast<SubHolder<T>&>(*mHolder).mValue;
     }
     template <class T> T& unsafeAs () {
         return static_cast<SubHolder<T>*>(mHolder)->mValue;
     }
     template <class T> const T& as () const{
-        return dynamic_cast<const SubHolder<T>*>(mHolder)->mValue;
+        // Dereference first so the dynamic_cast will throw bad_cast on failure.
+        return dynamic_cast<const SubHolder<T>&>(*mHolder)->mValue;
     }
     template <class T> const T& unsafeAs () const{
         return static_cast<const SubHolder<T>*>(mHolder)->mValue;

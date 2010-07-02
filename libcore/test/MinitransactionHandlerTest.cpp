@@ -37,7 +37,7 @@
 #include "MinitransactionHandlerTest.hpp"
 
 #include <sirikata/core/util/AtomicTypes.hpp>
-#include "Test_Persistence.pbj.hpp"
+#include "Protocol_Persistence.pbj.hpp"
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
 

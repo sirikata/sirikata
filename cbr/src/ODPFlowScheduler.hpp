@@ -33,10 +33,11 @@
 #ifndef _ODP_FLOW_SCHEDULER_HPP_
 #define _ODP_FLOW_SCHEDULER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
-#include <sirikata/cbrcore/SpaceContext.hpp>
-#include <sirikata/cbrcore/AbstractQueue.hpp>
+#include "SpaceContext.hpp"
+#include <sirikata/core/queue/AbstractQueue.hpp>
 #include "ForwarderServiceQueue.hpp"
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 class CraqEntry;
@@ -70,9 +71,15 @@ public:
        mSenderCapacity(0.0),
        mReceiverTotalWeight(0.0),
        mReceiverCapacity(0.0)
-    {}
+    {
+        mWeightCalculator =
+            RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOptionValue<String>(OPT_REGION_WEIGHT))(GetOptionValue<String>(OPT_REGION_WEIGHT_ARGS))
+            ;
+    }
 
-    virtual ~ODPFlowScheduler() {}
+    virtual ~ODPFlowScheduler() {
+        delete mWeightCalculator;
+    }
 
     // Interface: AbstractQueue<Message*>
 	virtual QueueEnum::PushResult push(const Type& msg) { assert(false); return QueueEnum::PushExceededMaximumSize; }
@@ -139,6 +146,8 @@ protected:
     double mSenderCapacity; // Capacity of sender
     double mReceiverTotalWeight; // Total input weight to receiver (sum of used weights)
     double mReceiverCapacity; // Capacity of receiver
+
+    RegionWeightCalculator* mWeightCalculator;
 }; // class ODPFlowScheduler
 
 } // namespace Sirikata

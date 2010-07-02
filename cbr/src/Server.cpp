@@ -33,10 +33,10 @@
 #include "SpaceNetwork.hpp"
 #include "Server.hpp"
 #include "Proximity.hpp"
-#include <sirikata/cbrcore/CoordinateSegmentation.hpp>
-#include <sirikata/cbrcore/Message.hpp>
-#include <sirikata/cbrcore/Statistics.hpp>
-#include <sirikata/cbrcore/Options.hpp>
+#include "CoordinateSegmentation.hpp"
+#include "ServerMessage.hpp"
+#include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include "Forwarder.hpp"
 #include "LocalForwarder.hpp"
 #include "MigrationMonitor.hpp"
@@ -46,7 +46,7 @@
 #include "ObjectConnection.hpp"
 #include "ObjectHostConnectionManager.hpp"
 
-#include <sirikata/cbrcore/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -68,7 +68,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
-   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOption("route-object-message-buffer")->as<size_t>()))
+   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     mContext->mCSeg = mCSeg;
 
@@ -674,7 +674,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             Sirikata::Protocol::Migration::MigrationMessage migrate_msg;
             migrate_msg.set_source_server(mContext->id());
             migrate_msg.set_object(obj_id);
-            Sirikata::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
+            Sirikata::Protocol::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
             TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
             migrate_loc.set_t( obj_loc.updateTime() );
             migrate_loc.set_position( obj_loc.position() );
@@ -896,9 +896,9 @@ void Server::killObjectConnection(const UUID& obj_id)
 
     //log the event's completion.
     Duration currentDur = mMigrationTimer.elapsed();
-    int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
+    Duration timeTakenMs = Duration::milliseconds(currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds);
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
-    CONTEXT_TRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
+    CONTEXT_SPACETRACE(objectMigrationRoundTrip, obj_id, mContext->id(), migTo , timeTakenMs);
 
     mMigratingConnections.erase(objConMapIt);
   }

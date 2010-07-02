@@ -34,15 +34,14 @@
 #define _CSFQ_ODP_FLOW_SCHEDULER_HPP_
 
 #include "ODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/Queue.hpp>
+#include <sirikata/core/queue/Queue.hpp>
 #include "RateEstimator.hpp"
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 //#define CSFQODP_DEBUG
 
 namespace Sirikata {
 
-class ServerWeightCalculator;
 class LocationService;
 
 /** CSFQODPFlowScheduler tracks all active flows and uses a CSFQ-style
@@ -163,7 +162,6 @@ private:
     mutable QueuedMessage mQueueBuffer;
     mutable Sirikata::SizedThreadSafeQueue<QueuedMessage> mQueue;
     mutable Sirikata::AtomicValue<bool> mNeedsNotification;
-    ServerWeightCalculator* mWeightCalculator;
     // Used to collect information for weight computation
     LocationService* mLoc;
 

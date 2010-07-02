@@ -41,8 +41,8 @@
 #include "btBulletDynamicsCommon.h"
 #include "btBulletCollisionCommon.h"
 #include "BulletSystem.hpp"
-#include "Bullet_Sirikata.pbj.hpp"
-#include "Bullet_Physics.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
+#include "Protocol_Physics.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/KnownServices.hpp>

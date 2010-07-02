@@ -34,12 +34,10 @@
 #define _REGION_ODP_FLOW_SCHEDULER_HPP_
 
 #include "ODPFlowScheduler.hpp"
-#include <sirikata/cbrcore/Queue.hpp>
-#include <sirikata/core/util/SizedThreadSafeQueue.hpp>
+#include <sirikata/core/queue/Queue.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 namespace Sirikata {
-
-class ServerWeightCalculator;
 
 /** RegionODPFlowScheduler doesn't collect any real statistics about ODP flows.
  *  Instead, it uses a simple FIFO queue for packets and just reports
@@ -74,7 +72,6 @@ private:
     mutable Message* mQueueBuffer;
     mutable Sirikata::SizedThreadSafeQueue<Message*> mQueue;
     mutable Sirikata::AtomicValue<bool> mNeedsNotification;
-    ServerWeightCalculator* mWeightCalculator;
 }; // class RegionODPFlowScheduler
 
 } // namespace Sirikata

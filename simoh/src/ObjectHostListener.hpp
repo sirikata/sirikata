@@ -33,7 +33,8 @@
 #ifndef _SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
 #define _SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
 
-#include <sirikata/cbrcore/Utility.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata {
 

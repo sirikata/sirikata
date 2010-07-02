@@ -38,11 +38,11 @@
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include <sirikata/cbrcore/Options.hpp>
-#include <sirikata/cbrcore/Message.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/util/Hash.hpp>
 #include "WorldPopulationBSPTree.hpp"
-#include <sirikata/cbrcore/ServerIDMap.hpp>
+#include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {
 
@@ -162,16 +162,17 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
 
 }
 
-DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
- : CoordinateSegmentation(ctx),
+DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
+   mContext(ctx),
    mLastUpdateTime(Time::null()),
    mSidMap(sidmap)
 {
-  mAvailableCSEGServers = GetOption("num-cseg-servers")->as<uint16>();
+    mAvailableCSEGServers = GetOptionValue<uint16>("num-cseg-servers");
 
   assert (nservers >= (int)(perdim.x * perdim.y * perdim.z));
 
-  if (GetOption("cseg-uses-world-pop")->as<bool>()) {
+  if (GetOptionValue<bool>("cseg-uses-world-pop")) {
     WorldPopulationBSPTree wPopTree;
     wPopTree.constructBSPTree(mTopLevelRegion);
   }
@@ -194,7 +195,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
   }
 
   if (ctx->id() == 1) {
-    mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
+      mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
     startAccepting();
   }
 
@@ -400,8 +401,12 @@ void DistributedCoordinateSegmentation::stop() {
   mLLIOService.stop();
 }
 
+void DistributedCoordinateSegmentation::poll() {
+    service();
+}
+
 void DistributedCoordinateSegmentation::service() {
-  static bool random_splits_merges = GetOption("random-splits-merges")->as<bool>();
+    static bool random_splits_merges = GetOptionValue<bool>("random-splits-merges");
 
   if (!random_splits_merges) {
     return;
@@ -437,7 +442,7 @@ void DistributedCoordinateSegmentation::service() {
       }
     }
 
-    std::vector<Listener::SegmentationInfo> segInfoVector;
+    std::vector<SegmentationInfo> segInfoVector;
     if (okToMerge && rand() % 2 == 0 && false) {
       if (parent == NULL) {
 	return;
@@ -461,7 +466,7 @@ void DistributedCoordinateSegmentation::service() {
       mWholeTreeServerRegionMap.erase(parent->mServer);
       mLowerTreeServerRegionMap.erase(rightChild->mServer);
 
-      Listener::SegmentationInfo segInfo, segInfo2;
+      SegmentationInfo segInfo, segInfo2;
       segInfo.server = parent->mServer;
       segInfo.region = serverRegion(parent->mServer);
       segInfoVector.push_back( segInfo );
@@ -500,7 +505,7 @@ void DistributedCoordinateSegmentation::service() {
       mWholeTreeServerRegionMap.erase(randomLeaf->mServer);
       mLowerTreeServerRegionMap.erase(availableServer);
 
-      Listener::SegmentationInfo segInfo, segInfo2;
+      SegmentationInfo segInfo, segInfo2;
       segInfo.server = randomLeaf->mServer;
       segInfo.region = serverRegion(randomLeaf->mServer);
       segInfoVector.push_back( segInfo );
@@ -514,10 +519,7 @@ void DistributedCoordinateSegmentation::service() {
   }
 }
 
-void DistributedCoordinateSegmentation::receiveMessage(Message* msg) {
-}
-
-void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<Listener::SegmentationInfo> segInfoVector)
+void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector)
 {
   if (segInfoVector.size() == 0) {
     return;
@@ -567,9 +569,6 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
 }
 
 void DistributedCoordinateSegmentation::csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg) {
-}
-
-void DistributedCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {
 }
 
 void DistributedCoordinateSegmentation::serializeBSPTree(SerializedBSPTree* serializedBSPTree) {
