@@ -156,6 +156,8 @@ public:
     void dequeueAll() const;
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
+
+	void updateAddressable() const;
 }; // class ObjectHost
 
 } // namespace Sirikata

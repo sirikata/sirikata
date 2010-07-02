@@ -62,6 +62,8 @@ public:
     bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
     void processMessage(const RoutableMessageHeader& header, MemoryReference body);
 
+	void updateAddressable();
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
@@ -143,8 +145,8 @@ private:
     //bftm
     typedef std::vector<ObjectReference*> AddressableList;
     AddressableList mAddressableList;
-
-    void bftm_populateAddressable(Local<Object>& system_obj );
+    Handle<Object> getSystemObject();
+    void bftm_populateAddressable(Handle<Object>& system_obj );
     void printAllHandlerLocations();
     
 

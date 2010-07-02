@@ -205,6 +205,22 @@ public:
 	  return mHasScript;
 	}
 
+	void setHasScript(bool t)
+	{
+	  mHasScript = t;
+	}
+   
+    void setScriptType(String s)
+	{
+	  mScriptType = s;
+
+	}
+
+	void setScriptArgs(ObjectScriptManager::Arguments& args)
+	{
+	   mScriptArgs = args;
+	}
+
 protected:
 
     /// Checks for a public cached property named propName.
@@ -330,6 +346,7 @@ public:
     //bftm Object Reference
     ObjectReference getObjReference(const SpaceID& space);
 
+	void updateAddressable();
 
     // Visual (mesh)
     virtual Transfer::URI getVisual(const SpaceID& space);

@@ -252,7 +252,7 @@ void JSObjectScript::test() const {
 
 //bftm
 //populates the internal addressable object references vector
-void JSObjectScript::bftm_populateAddressable(Local<Object>& system_obj )
+void JSObjectScript::bftm_populateAddressable(Handle<Object>& system_obj )
 {
     //loading the vector
     mAddressableList.clear();
@@ -747,6 +747,31 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
 
     return returner;
+}
+
+
+
+Handle<Object> JSObjectScript::getSystemObject()
+{
+  HandleScope handle_scope;
+  Local<Object> global_obj = mContext->Global();
+  // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+  // The template actually generates the root objects prototype, not the root
+  // itself.
+  Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+  // And we add an internal field to the system object as well to make it
+  // easier to find the pointer in different calls. Note that in this case we
+  // don't use the prototype -- non-global objects work as we would expect.
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
+  
+  Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
+  return ret_obj;
+}
+void JSObjectScript::updateAddressable()
+{
+  HandleScope handle_scope;
+  Handle<Object> system_obj = getSystemObject();
+  bftm_populateAddressable(system_obj);
 }
 
 

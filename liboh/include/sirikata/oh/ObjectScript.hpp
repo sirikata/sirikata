@@ -49,6 +49,14 @@ class SIRIKATA_OH_EXPORT ObjectScript : public MessageService{
 
     /// Destructor: called from the plugin itself.
     ~ObjectScript(){}
+
+
+	// This will update the addressables for the entity. 
+	//Addressables depend upon the space the presence is
+	//Different presences have different spaces
+
+     virtual void updateAddressable() = 0;
+
 };
 
 }

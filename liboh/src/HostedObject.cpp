@@ -1054,6 +1054,30 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 } else {
                     obj->initializeDefault(mesh,pLight,weburl,co.scale(),phys);
                 }
+                
+				
+                if (co.has_script()) {
+                    String script_type = co.script();
+                    ObjectScriptManager::Arguments script_args;
+                    if (co.has_script_args()) {
+                        Protocol::StringMapProperty args_map = co.script_args();
+                        assert(args_map.keys_size() == args_map.values_size());
+                        for (int i = 0; i < args_map.keys_size(); ++i)
+                            script_args[ args_map.keys(i) ] = args_map.values(i);
+                    }
+
+					//make an entry of the uuid, script_type and script_args
+					//this will be used to initialize the script later
+                    obj->setHasScript(true); 
+                    obj->setScriptType(script_type);
+					obj->setScriptArgs(script_args);
+
+					//when the confirmation from the 
+                    //obj->initializeScript(script_type, script_args);
+                }
+
+
+
                 for (int i = 0; i < co.space_properties_size(); ++i) {
                     //RoutableMessageHeader connMessage
                     //obj->processRoutableMessage(connMessageHeader, connMessageData);
@@ -1086,29 +1110,13 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                         if (loc.has_angular_speed()) {
                             location.setAngularSpeed(loc.angular_speed());
                         }
+
+                       
+
                         obj->connectToSpace(spaceid, getSharedPtr(), location, bs, evidence);
                     }
                 }
-                if (co.has_script()) {
-                    String script_type = co.script();
-                    ObjectScriptManager::Arguments script_args;
-                    if (co.has_script_args()) {
-                        Protocol::StringMapProperty args_map = co.script_args();
-                        assert(args_map.keys_size() == args_map.values_size());
-                        for (int i = 0; i < args_map.keys_size(); ++i)
-                            script_args[ args_map.keys(i) ] = args_map.values(i);
-                    }
-
-					//make an entry of the uuid, script_type and script_args
-					//this will be used to initialize the script later
-                    mHasScript = true; 
-                    mScriptType = script_type;
-					mScriptArgs = script_args;
-
-					//when the confirmation from the 
-                    //obj->initializeScript(script_type, script_args);
-                }
-                return;
+                                return;
     }
     if (name == "InitScript") {
         Protocol::ScriptingInit si;
@@ -1123,6 +1131,9 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 for (int i = 0; i < args_map.keys_size(); ++i)
                     script_args[ args_map.keys(i) ] = args_map.values(i);
             }
+			mHasScript = true;
+			mScriptType = script_type;
+			mScriptArgs = script_args;
             initializeScript(script_type, script_args);
         }
 
@@ -1284,6 +1295,9 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
 			  // do something to initialize the object script
 			  initializeScript(mScriptType, mScriptArgs);
 		    } 	  
+			//update all the entities on this object host
+            mObjectHost->updateAddressable();  
+
         }
     } else {
         printstr<<"Message to be handled in script: "<<name;
@@ -1489,6 +1503,29 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
     MemoryReference body_data(serialized_body);
 
     return space_conn.getStream()->send(hdr_data, body_data, Network::ReliableOrdered);
+}
+
+void HostedObject::updateAddressable()
+{
+  // should be a scripted entity to have the addressable
+
+  //std::cout << "In HostedObject::updateAddressable()" << "\n";
+  SpaceDataMap::iterator it = mSpaceData->begin();
+  for( ; it != mSpaceData->end(); it++)
+  {
+    //currently just calling with no space data
+	//but in the future with multiple spaces,
+	// this entity will have multiple addressable arrays
+	// one for each presence
+    if(mObjectScript)
+    {
+	  
+      mObjectScript->updateAddressable();
+
+	  //std::cout << "Updated the addressable for " << getObjReference((*it).first) << "\n";
+
+    }
+  }	
 }
 
 }
