@@ -137,12 +137,12 @@ void HttpManager::handle_resolve(HttpRequest req, const boost::system::error_cod
 void HttpManager::handle_connect(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
         const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator) {
     if (!err) {
-        boost::asio::streambuf request;
-        std::ostream request_stream(&request);
+        std::tr1::shared_ptr<boost::asio::streambuf> request_ptr(new boost::asio::streambuf());
+        std::ostream request_stream(request_ptr.get());
         request_stream << req.req;
-        boost::asio::async_write(*socket, request, boost::bind(
+        boost::asio::async_write(*socket, *request_ptr, boost::bind(
                 &HttpManager::handle_write_request, this, socket, req,
-                boost::asio::placeholders::error));
+                boost::asio::placeholders::error, request_ptr));
     } else if (endpoint_iterator != TCPResolver::iterator()) {
         socket->close();
         TCPEndPoint endpoint = *endpoint_iterator;
@@ -158,7 +158,7 @@ void HttpManager::handle_connect(std::tr1::shared_ptr<TCPSocket> socket, HttpReq
 }
 
 void HttpManager::handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
-        const boost::system::error_code& err) {
+        const boost::system::error_code& err, std::tr1::shared_ptr<boost::asio::streambuf> request_stream) {
     if (!err) {
         std::tr1::shared_ptr<boost::asio::streambuf> response(new boost::asio::streambuf());
         boost::asio::async_read(*socket, *response, boost::bind(
