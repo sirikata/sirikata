@@ -193,8 +193,15 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
     std::size_t num_packets=toSend.size();
     if (num_packets==0) {
         //if there are no packets in the queue, some other send() operation will need to take the torch to send further packets
+        mOutstandingDataParent.reset();
+        if (!mSendQueue.probablyEmpty()){
+            mOutstandingDataParent=parentMultiSocket;//something just got pushed on, and we still have the check lock
+        }
         mSendingStatus-=(ASYNCHRONOUS_SEND_FLAG+QUEUE_CHECK_FLAG);
     }else {
+        if (!mOutstandingDataParent) {
+            mOutstandingDataParent=parentMultiSocket;//keep alive until send finishes
+        }
         //there are packets in the queue, now is the chance to send them out, so get rid of the queue check flag since further items *will* be checked from the queue as soon as the
         //send finishes
         mSendingStatus-=QUEUE_CHECK_FLAG;
@@ -362,6 +369,7 @@ bool ASIOSocketWrapper::rawSend(const MultiplexedSocketPtr&parentMultiSocket, Ch
     uint32 current_status=++mSendingStatus;
     if (current_status==1) {//we are teh chosen thread
         mSendingStatus+=(ASYNCHRONOUS_SEND_FLAG-1);//committed to be the sender thread
+        mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes
         sendToWire(parentMultiSocket, chunk);
     }else {//if someone else is possibly sending a packet
         //push the packet on the queue

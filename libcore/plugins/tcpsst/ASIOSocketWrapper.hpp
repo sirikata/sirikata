@@ -88,6 +88,7 @@ class ASIOSocketWrapper {
     std::vector<Stream::StreamID> mPausedSendStreams;
     std::deque<TimestampedChunk> mToSend;
     std::tr1::weak_ptr<MultiplexedSocket>mParent;
+    std::tr1::shared_ptr<MultiplexedSocket>mOutstandingDataParent;
     /** Call this any time a chunk finishes being sent so statistics can be collected. */
     void finishedSendingChunk(const TimestampedChunk& tc);
 
@@ -168,7 +169,10 @@ public:
     }
     void bindFunctions(const MultiplexedSocketPtr&parent);
     ~ASIOSocketWrapper() {
-
+        if (mToSend.size()!=0) {
+            SILOG(tcpsst,error,"Outstanding data left on socket that is being deleted. mOutstandingDataParent is "<<(size_t)mOutstandingDataParent.get());
+        }
+        assert(mToSend.size()==0);
     }
 
     ASIOSocketWrapper&operator=(const ASIOSocketWrapper& socket){

@@ -543,7 +543,7 @@ public:
             }
             //wait until done
             time_t last_time=time(NULL);
-            int retry_count=20;
+            int retry_count=200;
             while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
                 if (0&&rand()<RAND_MAX/10) {
                     if (r)
@@ -559,7 +559,7 @@ public:
                 }
 
                 time_t this_time=time(NULL);
-                if (this_time>last_time+5) {
+                if (this_time>last_time+50) {
                     std::cerr<<"Message Receive Count == "<<mCount.read()<<'\n';
                     last_time=this_time;
                     if (--retry_count<=0) {

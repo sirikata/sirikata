@@ -69,6 +69,7 @@ class SstCloseTest : public CxxTest::TestSuite
     void listenerConnectionCallback(int id, Stream::ConnectionStatus stat, const std::string&reason) {
         if (stat!=Stream::Connected) {
             if(mSendReceiveMap[id]==-1) {
+                SILOG(ssttest,error,"Connection failure for stream "<<id<<" with reason "<<reason);
                 TS_ASSERT(mSendReceiveMap[id]!=-1);
             }else{
                 mReceiversData[mSendReceiveMap[id]]+=1;
@@ -184,7 +185,7 @@ public:
 #ifdef _WIN32
         //Sleep(1000);
 #else
-//        sleep(1);
+        sleep(1);
 #endif
 
         int sentSoFar=0;
@@ -216,7 +217,7 @@ public:
 #ifdef _WIN32
                 Sleep(1000);
 #else
-                sleep(1);
+//                sleep(1);
 #endif
             }
             sentSoFar=willHaveSent;
@@ -225,12 +226,14 @@ public:
 #ifdef _WIN32
             Sleep(1000);
 #else
-            sleep(1);
+//            sleep(1);
 #endif
         }
+        //SILOG(tcpsst,error,"CLOSING");
         for (int i=mOffset;i<NUM_TEST_STREAMS;++i) {
             mSenders[i]->close();
         }
+        //SILOG(tcpsst,error,"CLOSED");
         bool done=true;
         int counter=0;
         do {
@@ -238,12 +241,12 @@ public:
             for (int i=mOffset;i<NUM_TEST_STREAMS;++i) {
                 if (mReceiversData[i].read()!=mBytes*2+1) {
                     done=false;
-                    if (counter>3) {
+                    if (counter>4998) {
                         SILOG(ssttest,error,"Data "<<i<<" only "<<mReceiversData[i].read()<<" != "<<mBytes*2+1);
                     }
                 }
             }
-            if (!done) {
+            if (counter>4997&&!done) {
 #ifdef _WIN32
                 Sleep(1000);
 #else
