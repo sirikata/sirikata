@@ -69,8 +69,10 @@
 #   else
 #     if defined(SIRIKATA_BUILD)
 #       define SIRIKATA_EXPORT __declspec(dllexport)
+#       define SIRIKATA_EXPORT_TEMPLATE
 #     else
 #       define SIRIKATA_EXPORT __declspec(dllimport)
+#       define SIRIKATA_EXPORT_TEMPLATE extern
 #     endif
 #   endif
 #   define SIRIKATA_PLUGIN_EXPORT __declspec(dllexport)
@@ -82,6 +84,7 @@
 #     define SIRIKATA_EXPORT
 #     define SIRIKATA_PLUGIN_EXPORT
 #   endif
+#   define SIRIKATA_EXPORT_TEMPLATE
 # endif
 #endif
 

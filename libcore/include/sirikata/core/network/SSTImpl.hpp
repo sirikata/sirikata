@@ -103,7 +103,6 @@ class Connection;
 template <class EndPointType>
 class Stream;
 
-
 template <typename EndPointType>
 class SIRIKATA_EXPORT BaseDatagramLayer:public ObjectMessageRecipient
 {
@@ -183,6 +182,7 @@ private:
   static std::map<EndPointType, boost::shared_ptr<BaseDatagramLayer<EndPointType> > > mDatagramLayerMap;
 };
 
+SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<Sirikata::UUID>;
 
 
 typedef std::tr1::function< void(int, boost::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
@@ -231,7 +231,6 @@ public:
   }
 
 };
-
 
 template <class EndPointType>
 class SIRIKATA_EXPORT Connection : public ObjectMessageRecipient {
@@ -1127,6 +1126,7 @@ public:
 
 
 };
+SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUID>;
 
 
 class StreamBuffer{
@@ -1926,6 +1926,7 @@ private:
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
 };
+SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
 
 class SSTConnectionManager : public PollingService {
 public:
