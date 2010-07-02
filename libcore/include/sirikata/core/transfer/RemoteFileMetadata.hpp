@@ -67,6 +67,10 @@ public:
         return mRange;
     }
 
+    inline bool operator==(const Chunk &other) const {
+        return (mHash == other.mHash && mRange == other.mRange);
+    }
+
 };
 
 typedef std::list<Chunk> ChunkList;
