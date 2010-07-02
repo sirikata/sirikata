@@ -182,8 +182,9 @@ private:
   static std::map<EndPointType, boost::shared_ptr<BaseDatagramLayer<EndPointType> > > mDatagramLayerMap;
 };
 
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<Sirikata::UUID>;
-
+#endif
 
 typedef std::tr1::function< void(int, boost::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
 
@@ -1126,8 +1127,9 @@ public:
 
 
 };
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUID>;
-
+#endif
 
 class StreamBuffer{
 public:
@@ -1926,7 +1928,9 @@ private:
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
 };
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
+#endif
 
 class SSTConnectionManager : public PollingService {
 public:
