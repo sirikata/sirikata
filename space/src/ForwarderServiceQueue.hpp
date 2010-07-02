@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/queue/FairQueue.hpp>
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <boost/thread.hpp>
 
 namespace Sirikata {

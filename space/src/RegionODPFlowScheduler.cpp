@@ -47,7 +47,7 @@ RegionODPFlowScheduler::~RegionODPFlowScheduler() {
 }
 
 // ODP push interface
-bool RegionODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&,const CraqEntry&) {
+bool RegionODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry&, const OSegEntry&) {
     Message* serv_msg = createMessageFromODP(msg, mDestServer);
     if (!mQueue.push(serv_msg, false)) {
         delete serv_msg;

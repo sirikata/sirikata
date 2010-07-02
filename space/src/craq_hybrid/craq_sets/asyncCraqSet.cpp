@@ -41,7 +41,7 @@
 #include "../asyncCraqUtil.hpp"
 #include "asyncConnectionSet.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include "../../ObjectSegmentation.hpp"
+#include "../../CraqObjectSegmentation.hpp"
 #include <functional>
 #include <sirikata/core/network/Asio.hpp>
 
@@ -73,7 +73,7 @@ namespace Sirikata
     mConnectionsStrands.clear();
   }
 
-  AsyncCraqSet::AsyncCraqSet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
+  AsyncCraqSet::AsyncCraqSet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* parent_oseg_called)
    : ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),

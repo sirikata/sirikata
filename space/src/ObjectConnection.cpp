@@ -31,7 +31,7 @@
  */
 
 #include "ObjectConnection.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 
 namespace Sirikata {

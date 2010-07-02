@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include "SpaceNetwork.hpp"
 
 #include <sirikata/core/queue/Queue.hpp>
@@ -191,9 +191,9 @@ private:
     bool forward(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID forwardFrom = NullServerID);
 
     // This version is provided if you already know which server the message should be sent to
-    void routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+    void routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
     WARN_UNUSED
-    bool routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+    bool routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
 
     // Handles the case where OSeg told us we have the object. Post this to the
     // main strand.

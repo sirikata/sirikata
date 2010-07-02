@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 
 namespace Sirikata {
 

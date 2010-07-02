@@ -44,7 +44,7 @@
 namespace Sirikata
 {
 //constructor
-  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>&readyStateChangedCallback)
+  AsyncConnectionGet::AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, CraqObjectSegmentation* oseg, const std::tr1::function<void()>&readyStateChangedCallback)
   : ctx(con),
     mStrand(str),
     mPostErrorsStrand(error_strand),
@@ -741,7 +741,7 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mResultStrand->post(std::tr1::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
+      mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor));
 
 
       if (outQueriesIter->second->deadline_timer != NULL)
@@ -889,7 +889,7 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry&
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
 
-      mResultStrand->post(std::tr1::bind(&ObjectSegmentation::craqGetResult, mOSeg, cor));
+      mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor));
 
 
 
@@ -982,7 +982,7 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mResultStrand->post(std::tr1::bind(&ObjectSegmentation::craqSetResult, mOSeg, cor));
+      mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqSetResult, mOSeg, cor));
 
 
       if (outQueriesIter->second->deadline_timer != NULL)

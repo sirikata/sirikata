@@ -35,12 +35,12 @@
 #include "asyncCraqUtil.hpp"
 #include "asyncCraqHybrid.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include "../ObjectSegmentation.hpp"
+#include "../CraqObjectSegmentation.hpp"
 
 namespace Sirikata
 {
 
-  AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg)
+  AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* oseg)
   : ctx(con),
     mGetStrand(con->ioService->createStrand()),
     mSetStrand(con->ioService->createStrand()),

@@ -39,7 +39,7 @@
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include "../../ObjectSegmentation.hpp"
+#include "../../CraqObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
 #include <sirikata/space/OSegLookupTraceToken.hpp>
 
@@ -82,7 +82,7 @@ public:
 
 
   ~AsyncConnectionGet();
-    AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()> &readyStateChangedCb );
+    AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, CraqObjectSegmentation* oseg, const std::tr1::function<void()> &readyStateChangedCb );
 
   int numStillProcessing();
   void printOutstanding();
@@ -175,7 +175,7 @@ private:
   Network::IOStrand* mPostErrorsStrand;
   Network::IOStrand* mResultStrand;
   AsyncCraqScheduler* mSchedulerMaster;
-  ObjectSegmentation* mOSeg;
+  CraqObjectSegmentation* mOSeg;
   double getTime;
   int numGets;
   bool mReceivedStopRequest;

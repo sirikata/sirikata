@@ -49,11 +49,13 @@
 namespace Sirikata
 {
 
+class CraqObjectSegmentation;
+
 class AsyncCraqSet : public AsyncCraqScheduler
   {
   public:
 
-    AsyncCraqSet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
+    AsyncCraqSet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* parent_oseg_called);
     ~AsyncCraqSet();
 
 
@@ -89,7 +91,7 @@ class AsyncCraqSet : public AsyncCraqScheduler
     SpaceContext*                    ctx;
     Network::IOStrand*                    mStrand;
     Network::IOStrand*             mResultsStrand;
-    ObjectSegmentation*            mOSeg;
+    CraqObjectSegmentation*            mOSeg;
 
   };
 

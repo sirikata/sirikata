@@ -33,8 +33,8 @@
 
 
 
-#include "ObjectSegmentation.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
+#include <sirikata/space/ServerMessage.hpp>
 #include <map>
 #include <vector>
 #include <sirikata/core/trace/Trace.hpp>
@@ -344,7 +344,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     return oadd;
   }
 
-  CraqEntry CraqObjectSegmentation::cacheLookup(const UUID& obj_id)
+  OSegEntry CraqObjectSegmentation::cacheLookup(const UUID& obj_id)
   {
       // NOTE: This must be thread safe, so don't access most state.  Don't
       // bother with local/migration checks.  Just check the cache and move on.
@@ -363,7 +363,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     After insuring that the object isn't in transit, the lookup should querry the dht.
     Only called from postingStrand
   */
-  CraqEntry CraqObjectSegmentation::lookup(const UUID& obj_id)
+  OSegEntry CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
     Duration beginDur = Time::local() - Time::epoch();
 
@@ -566,7 +566,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     Whatever calls this must verify that the object is on this server.
     I can do the check in the function by querrying bambooDht as well
   */
-  void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const CraqEntry& new_server_id)
+  void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const OSegEntry& new_server_id)
   {
     if (mReceivedStopRequest)
       return;
@@ -579,7 +579,7 @@ void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerI
     InTransitMap::const_iterator transIter = mInTransitOrLookup.find(obj_id);
 
     TransLookup tmpTransLookup;
-    tmpTransLookup.sID = new_server_id;
+    tmpTransLookup.sID = CraqEntry(new_server_id);
 
     //    Duration tmpDurer= mTimer.elapsed();
     Duration tmpDurer = Time::local() - Time::epoch();

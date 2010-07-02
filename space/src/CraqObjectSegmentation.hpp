@@ -33,9 +33,13 @@
 #ifndef _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 #define _SIRIKATA_DHT_OBJECT_SEGMENTATION_HPP_
 
+namespace Sirikata {
+class CraqObjectSegmentation;
+}
+
 #include <sirikata/core/trace/Trace.hpp>
-#include "ServerMessage.hpp"
-#include "ObjectSegmentation.hpp"
+#include <sirikata/space/ServerMessage.hpp>
+#include <sirikata/space/ObjectSegmentation.hpp>
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
@@ -196,9 +200,9 @@ namespace Sirikata
 
 
     virtual ~CraqObjectSegmentation();
-    virtual CraqEntry lookup(const UUID& obj_id);
-    virtual CraqEntry cacheLookup(const UUID& obj_id);
-    virtual void migrateObject(const UUID& obj_id, const CraqEntry& new_server_id);
+    virtual OSegEntry lookup(const UUID& obj_id);
+    virtual OSegEntry cacheLookup(const UUID& obj_id);
+    virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
     virtual void addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool);
     virtual void receiveMessage(Message* msg);
     virtual bool clearToMigrate(const UUID& obj_id);

@@ -34,7 +34,7 @@
 #define _SIRIKATA_LOAD_MONITOR_HPP_
 
 
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
 #include "Protocol_CSeg.pbj.hpp"

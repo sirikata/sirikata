@@ -34,7 +34,7 @@
 #include "SpaceNetwork.hpp"
 #include "Server.hpp"
 #include "CoordinateSegmentation.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 #include <sirikata/core/trace/Trace.hpp>
@@ -42,7 +42,7 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 
 #include "Forwarder.hpp"
-#include "ObjectSegmentation.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
 #include "OSegLookupQueue.hpp"
 
 #include "ObjectConnection.hpp"
@@ -482,7 +482,7 @@ bool Forwarder::tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
     TIMESTAMP_START(tstamp, msg);
 
     TIMESTAMP_END(tstamp, Trace::OSEG_CACHE_CHECK_STARTED);
-    CraqEntry destserver = mOSegLookups->cacheLookup(msg->dest_object());
+    OSegEntry destserver = mOSegLookups->cacheLookup(msg->dest_object());
     TIMESTAMP_END(tstamp, Trace::OSEG_CACHE_CHECK_FINISHED);
     if (destserver.isNull())
         return false;
@@ -495,11 +495,11 @@ bool Forwarder::tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
     return true; // If we got here, the cache was successful, we just dropped it.
 }
 
-void Forwarder::routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom) {
+void Forwarder::routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const OSegEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom) {
     routeObjectMessageToServer(obj_msg, dest_serv, resolved_from, forwardFrom);
 }
 
-bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const CraqEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
+bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const OSegEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
 {
     Trace::MessagePath mp = (resolved_from == OSegLookupQueue::ResolvedFromCache)
         ? Trace::OSEG_CACHE_LOOKUP_FINISHED
@@ -542,9 +542,9 @@ bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMes
       }
   }
 
-  CraqEntry source_object_data(CraqEntry::null());//FIXME: do we want mandatory lookup for nonlocal guys?! = mOSegLookups->cacheLookup(obj_msg->source_object());
+  OSegEntry source_object_data(OSegEntry::null());//FIXME: do we want mandatory lookup for nonlocal guys?! = mOSegLookups->cacheLookup(obj_msg->source_object());
   if (source_object_data.isNull()) {
-      source_object_data=CraqEntry(mContext->id(),1.0);//FIXME dumb default: RADIUS of reforwarded messages are 1.0
+      source_object_data=OSegEntry(mContext->id(),1.0);//FIXME dumb default: RADIUS of reforwarded messages are 1.0
   }
   bool send_success = flow_sched->push(obj_msg,source_object_data,dest_serv);
   if (!send_success) {

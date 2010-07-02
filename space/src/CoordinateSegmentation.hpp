@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 #include "LoadMonitor.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
 namespace Sirikata {

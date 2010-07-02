@@ -34,29 +34,24 @@
 #define _CRAQ_ENTRY_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 namespace Sirikata {
 enum {
     CRAQ_SERVER_SIZE             =    10
 };
-class CraqEntry {
-    uint32 mServer;
-    float mRadius;
+class CraqEntry : public OSegEntry {
 public:
-    CraqEntry(uint32 server, float radius) {
-        mServer=server;
-        mRadius=radius;
+    CraqEntry(const OSegEntry& rhs)
+     : OSegEntry(rhs) {}
+    CraqEntry(uint32 server, float radius)
+     : OSegEntry(server, radius) {
     }
     static CraqEntry null() {
         return CraqEntry(NullServerID,0);
     }
-    bool isNull()const {
-        return mServer==NullServerID&&mRadius==0;
-    }
-    bool notNull()const {
-        return !isNull();
-    }
-    explicit CraqEntry(unsigned char input[CRAQ_SERVER_SIZE]){
+    explicit CraqEntry(unsigned char input[CRAQ_SERVER_SIZE])
+     : OSegEntry(NullServerID, 0) {
         deserialize(input);
     }
     void serialize(unsigned char output[CRAQ_SERVER_SIZE])const;
@@ -66,22 +61,6 @@ public:
         return std::string(output,CRAQ_SERVER_SIZE);
     }
     void deserialize(unsigned char input[CRAQ_SERVER_SIZE]);
-
-    uint32 server() const{
-        return mServer;
-    }
-    float radius () const{
-        return mRadius;
-    }
-  void setServer(uint32 server)
-  {
-    mServer = server;
-  }
-  void setRadius(float radius)
-  {
-    mRadius = radius;
-  }
-
 };
 }
 #endif

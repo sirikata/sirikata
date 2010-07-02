@@ -32,7 +32,7 @@
 
 #include "FairServerMessageQueue.hpp"
 #include "SpaceNetwork.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 

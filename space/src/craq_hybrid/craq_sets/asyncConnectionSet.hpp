@@ -38,7 +38,6 @@
 #include "../asyncCraqUtil.hpp"
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include "../../ObjectSegmentation.hpp"
 #include "../asyncCraqScheduler.hpp"
 #include <sirikata/core/network/Asio.hpp>
 
@@ -47,6 +46,8 @@
 
 namespace Sirikata
 {
+
+class CraqObjectSegmentation;
 
 class AsyncConnectionSet
 {
@@ -63,7 +64,7 @@ public:
   void set(const CraqDataKey& dataToSet, const CraqEntry& dataToSetTo, const bool&  track, const int& trackNum);
 
   ~AsyncConnectionSet();
-  AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readySetChanged);
+  AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, CraqObjectSegmentation* oseg, const std::tr1::function<void()>& readySetChanged);
 
   int numStillProcessing();
   void stop();
@@ -92,7 +93,7 @@ private:
   Network::IOStrand*                 mErrorStrand;
   Network::IOStrand*               mResultsStrand;
   AsyncCraqScheduler*   mSchedulerMaster;
-  ObjectSegmentation*              mOSeg;
+  CraqObjectSegmentation*              mOSeg;
 
   volatile ConnectionState mReady;
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.

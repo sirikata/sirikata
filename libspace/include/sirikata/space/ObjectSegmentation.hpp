@@ -34,16 +34,50 @@
 #define _SIRIKATA_OBJECT_SEGMENTATION_HPP_
 
 #include <sirikata/space/SpaceContext.hpp>
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <iostream>
 #include <iomanip>
-#include "craq_oseg/asyncUtil.hpp"
+//#include "craq_oseg/asyncUtil.hpp"
 #include <queue>
 //object segmenter h file
 
 namespace Sirikata
 {
+
+class OSegEntry {
+protected:
+    uint32 mServer;
+    float mRadius;
+public:
+    OSegEntry(uint32 server, float radius) {
+        mServer=server;
+        mRadius=radius;
+    }
+    static OSegEntry null() {
+        return OSegEntry(NullServerID,0);
+    }
+    bool isNull() const {
+        return mServer==NullServerID&&mRadius==0;
+    }
+    bool notNull() const {
+        return !isNull();
+    }
+    uint32 server() const{
+        return mServer;
+    }
+    float radius () const{
+        return mRadius;
+    }
+    void setServer(uint32 server)
+    {
+        mServer = server;
+    }
+    void setRadius(float radius)
+    {
+        mRadius = radius;
+    }
+};
 
 /* Listener interface for OSeg events.
  *
@@ -54,7 +88,7 @@ class OSegLookupListener {
 public:
     virtual ~OSegLookupListener() {}
 
-    virtual void osegLookupCompleted(const UUID& id, const CraqEntry& dest) = 0;
+    virtual void osegLookupCompleted(const UUID& id, const OSegEntry& dest) = 0;
 }; // class OSegLookupListener
 
 
@@ -103,16 +137,12 @@ class ObjectSegmentation : public MessageRecipient, public Service
           mWriteListener = listener;
       }
 
-    virtual CraqEntry lookup(const UUID& obj_id) = 0;
-    virtual CraqEntry cacheLookup(const UUID& obj_id) = 0;
-    virtual void migrateObject(const UUID& obj_id, const CraqEntry& new_server_id) = 0;
+    virtual OSegEntry lookup(const UUID& obj_id) = 0;
+    virtual OSegEntry cacheLookup(const UUID& obj_id) = 0;
+    virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id) = 0;
       virtual void addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) = 0;
     virtual void newObjectAdd(const UUID& obj_id, float radius) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
-    virtual void craqGetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
-    virtual void craqSetResult(CraqOperationResult* cor) = 0; //also responsible for destroying
-
-
   };
 }
 #endif

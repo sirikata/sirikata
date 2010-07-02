@@ -60,7 +60,7 @@ public:
     virtual uint32 size() const { return mQueue.getResourceMonitor().filledSize(); }
 
     // ODP push interface
-    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&, const CraqEntry&);
+    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry&, const OSegEntry&);
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight();
     // Get the total used weight of active queues.  If all flows are saturating,
@@ -141,7 +141,7 @@ private:
         int32 _size;
     };
 
-    FlowInfo* getFlow(const ObjectPair& new_packet_pair, const CraqEntry&src_info,const CraqEntry&dst_info, const Time& t);
+    FlowInfo* getFlow(const ObjectPair& new_packet_pair, const OSegEntry&src_info, const OSegEntry&dst_info, const Time& t);
     void removeFlow(const ObjectPair& packet_pair);
     int flowCount() const;
     float normalizedFlowWeight(float unnorm_weight);
@@ -151,7 +151,7 @@ private:
     double minCongestedAlpha() const { return mCapacityRate.get() / std::max(1, flowCount()); }
 
     // Helper to get the region we compute weight over
-    BoundingBox3f getObjectWeightRegion(const UUID& objid, const CraqEntry& sid) const;
+    BoundingBox3f getObjectWeightRegion(const UUID& objid, const OSegEntry& sid) const;
 
 
     boost::mutex mPushMutex;

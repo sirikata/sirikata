@@ -44,10 +44,12 @@
 namespace Sirikata
 {
 
+class CraqObjectSegmentation;
+
   class AsyncCraqHybrid
 {
 public:
-  AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* oseg);
+  AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* oseg);
   ~AsyncCraqHybrid();
 
   void initialize(std::vector<CraqInitializeArgs>);

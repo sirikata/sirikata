@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_SERVER_MESSAGE_HPP_
 #define _SIRIKATA_SERVER_MESSAGE_HPP_
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 
 #include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -62,7 +62,7 @@ typedef uint16 ServerMessagePort;
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
  */
-class Message {
+class SIRIKATA_SPACE_EXPORT Message {
 public:
     Message(const ServerID& origin);
     Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port);
@@ -126,7 +126,7 @@ private:
 
 
 /** Interface for classes that need to receive messages. */
-class MessageRecipient {
+class SIRIKATA_SPACE_EXPORT MessageRecipient {
 public:
     virtual ~MessageRecipient() {}
 
@@ -135,7 +135,7 @@ public:
 
 
 /** Base class for a message dispatcher. */
-class ServerMessageDispatcher {
+class SIRIKATA_SPACE_EXPORT ServerMessageDispatcher {
 public:
     virtual ~ServerMessageDispatcher() {}
 
@@ -162,7 +162,7 @@ class Router {
 }; // class Router
 
 /** Base class for an object that can route messages to their destination. */
-class ServerMessageRouter {
+class SIRIKATA_SPACE_EXPORT ServerMessageRouter {
 public:
     virtual ~ServerMessageRouter() {}
 

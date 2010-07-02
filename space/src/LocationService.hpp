@@ -35,7 +35,7 @@
 
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
 #include <sirikata/core/network/SSTImpl.hpp>

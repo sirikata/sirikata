@@ -31,7 +31,7 @@
  */
 
 #include "OSegLookupQueue.hpp"
-#include "ObjectSegmentation.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
@@ -77,7 +77,7 @@ OSegLookupQueue::OSegLookupQueue(Network::IOStrand* net_strand, ObjectSegmentati
     mOSeg->setLookupListener(this);
 }
 
-CraqEntry OSegLookupQueue::cacheLookup(const UUID& destid) const {
+OSegEntry OSegLookupQueue::cacheLookup(const UUID& destid) const {
     //if get a cache hit from oseg, do not return;
     return mOSeg->cacheLookup(destid);
 }
@@ -103,7 +103,7 @@ bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, con
   }
 
   //if get a cache hit from oseg, do not return;
-  CraqEntry destServer= mOSeg->cacheLookup(dest_obj);
+  OSegEntry destServer= mOSeg->cacheLookup(dest_obj);
   if (destServer.notNull())
   {
     cb(msg, destServer, ResolvedFromCache);
@@ -132,13 +132,13 @@ bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, con
   return true;
 }
 
-void OSegLookupQueue::osegLookupCompleted(const UUID& id, const CraqEntry& dest) {
+void OSegLookupQueue::osegLookupCompleted(const UUID& id, const OSegEntry& dest) {
     mNetworkStrand->post(
         std::tr1::bind(&OSegLookupQueue::handleLookupCompleted, this, id, dest)
     );
 }
 
-void OSegLookupQueue::handleLookupCompleted(const UUID& id, const CraqEntry& dest) {
+void OSegLookupQueue::handleLookupCompleted(const UUID& id, const OSegEntry& dest) {
     //Now sending messages that we had saved up from oseg lookup calls.
     LookupMap::iterator iterQueueMap = mLookups.find(id);
     if (iterQueueMap == mLookups.end())

@@ -31,7 +31,7 @@
  */
 
 #include "AlwaysLocationUpdatePolicy.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 
 namespace Sirikata {
 

@@ -34,14 +34,14 @@
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include "CoordinateSegmentation.hpp"
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include "Forwarder.hpp"
 #include "LocalForwarder.hpp"
 #include "MigrationMonitor.hpp"
 
-#include "ObjectSegmentation.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 #include "ObjectConnection.hpp"
 #include "ObjectHostConnectionManager.hpp"
@@ -673,7 +673,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             // Sent directly via object host connection manager because ObjectConnection is disappearing
             sendSessionMessageWithRetry(obj_conn->connID(), init_migr_obj_msg, Duration::seconds(0.05));
             BoundingSphere3f obj_bounds=mLocationService->bounds(obj_id);
-            mOSeg->migrateObject(obj_id,CraqEntry(new_server_id,obj_bounds.radius()));
+            mOSeg->migrateObject(obj_id,OSegEntry(new_server_id,obj_bounds.radius()));
 
             // Send out the migrate message
             Sirikata::Protocol::Migration::MigrationMessage migrate_msg;
@@ -817,7 +817,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
 
     //update our oseg to show that we know that we have this object now.
-    CraqEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());
+    OSegEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());
     mOSeg->addObject(obj_id, idOSegAckTo.radius(), idOSegAckTo.server(), true);//true states to send an ack message to idOSegAckTo
 
 

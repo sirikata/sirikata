@@ -35,7 +35,7 @@
 #include <map>
 #include <utility>
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include "../../ObjectSegmentation.hpp"
+#include "../../CraqObjectSegmentation.hpp"
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <sirikata/core/util/Timer.hpp>
@@ -47,7 +47,7 @@ namespace Sirikata
 {
 
   //constructor
-AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, ObjectSegmentation* oseg, const std::tr1::function<void()>& readyStateChangedCb)
+AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, CraqObjectSegmentation* oseg, const std::tr1::function<void()>& readyStateChangedCb)
   : mSocket(NULL),
     ctx(con),
     mStrand(str),
@@ -360,7 +360,7 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mResultsStrand->post(std::tr1::bind(&ObjectSegmentation::craqSetResult,mOSeg,cor));
+      mResultsStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqSetResult,mOSeg,cor));
 
 
 

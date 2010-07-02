@@ -38,9 +38,10 @@
 #include "ForwarderServiceQueue.hpp"
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 namespace Sirikata {
-class CraqEntry;
+
 /** An ODPFlowScheduler acts as a filter and queue for ODP messages for a single
  *  server. It has 2 primary roles. First, it acts as an ODP input queue for
  *  ForwarderServiceQueue; i.e. queues ODP messages, converts them to server
@@ -90,7 +91,7 @@ public:
     virtual uint32 size() const = 0;
 
     // ODP push interface. Note: Must be thread safe!
-    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&sourceObjectData, const CraqEntry&dstObjectData) = 0;
+    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& sourceObjectData, const OSegEntry& dstObjectData) = 0;
 
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight() = 0;

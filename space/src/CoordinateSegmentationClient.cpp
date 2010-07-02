@@ -40,7 +40,7 @@
 #include <boost/bind.hpp>
 
 #include <sirikata/core/options/CommonOptions.hpp>
-#include "ServerMessage.hpp"
+#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
 
 namespace Sirikata {

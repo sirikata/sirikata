@@ -46,7 +46,7 @@
 #include "Protocol_Session.pbj.hpp"
 #include "Protocol_Migration.pbj.hpp"
 
-#include "ObjectSegmentation.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 namespace Sirikata
 {

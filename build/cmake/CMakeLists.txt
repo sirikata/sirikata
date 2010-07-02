@@ -1110,6 +1110,7 @@ ENDIF()
 
 SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${LIBSPACE_SOURCE_DIR}/ServerMessage.cpp
   ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   )
@@ -1259,7 +1260,6 @@ ${GFX}/WebViewManager.cpp
         )
 
 SET(SPACE_SOURCES
-  ${SPACE_SOURCE_DIR}/ServerMessage.cpp
   ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${SPACE_SOURCE_DIR}/CoordinateSegmentation.cpp

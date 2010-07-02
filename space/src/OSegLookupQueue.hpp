@@ -34,8 +34,8 @@
 #define _OSEG_LOOKUP_QUEUE_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include "ServerMessage.hpp"
-#include "ObjectSegmentation.hpp"
+#include <sirikata/space/ServerMessage.hpp>
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 namespace Sirikata {
 
@@ -56,7 +56,7 @@ public:
      *  ServerID the OSeg returned, and an enum indicating how the lookup was resolved.
      *  If you need additional information it must be curried via bind().
      */
-    typedef std::tr1::function<void(Sirikata::Protocol::Object::ObjectMessage*, CraqEntry, ResolvedFrom)> LookupCallback;
+    typedef std::tr1::function<void(Sirikata::Protocol::Object::ObjectMessage*, const OSegEntry&, ResolvedFrom)> LookupCallback;
 
 private:
     struct OSegLookup {
@@ -92,9 +92,9 @@ private:
                         // UUIDs, not number of requests).
 
     /* OSegLookupListener Interface */
-    virtual void osegLookupCompleted(const UUID& id, const CraqEntry& dest);
+    virtual void osegLookupCompleted(const UUID& id, const OSegEntry& dest);
     /* Main thread handler for lookups. */
-    void handleLookupCompleted(const UUID& id, const CraqEntry& dest);
+    void handleLookupCompleted(const UUID& id, const OSegEntry& dest);
 public:
     /** Create an OSegLookupQueue which uses the specified ObjectSegmentation to resolve queries and
      *  the specified predicate to determine if new lookups are accepted.
@@ -109,7 +109,7 @@ public:
     /** Perform an OSeg cache lookup, returning the ServerID or NullServerID if
      *  the cache doesn't contain an entry for the object.
      */
-    CraqEntry cacheLookup(const UUID& destid) const;
+    OSegEntry cacheLookup(const UUID& destid) const;
     /** Perform an OSeg lookup, calling the specified callback when the result is available.
      *  If the result is available immediately, the callback may be triggered during this
      *  call.  Otherwise, it will be triggered when a service() call produces a result.

@@ -37,7 +37,7 @@
 #include <vector>
 #include <queue>
 #include "../asyncCraqUtil.hpp"
-#include "asyncConnectionGet.hpp"
+#include "../asyncCraqScheduler.hpp"
 
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
@@ -50,6 +50,8 @@
 namespace Sirikata
 {
 
+class AsyncConnectionGet;
+class CraqObjectSegmentation;
 
 class AsyncCraqGet : public AsyncCraqScheduler
   {
@@ -63,7 +65,7 @@ class AsyncCraqGet : public AsyncCraqScheduler
 
 
   public:
-    AsyncCraqGet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called);
+    AsyncCraqGet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* parent_oseg_called);
     ~AsyncCraqGet();
 
     int runReQuery();
@@ -100,7 +102,7 @@ class AsyncCraqGet : public AsyncCraqScheduler
     SpaceContext* ctx;
     Network::IOStrand* mStrand;        //strand that the asyncCraqGet is running on.
     Network::IOStrand* mResultsStrand; //strand that we post our results to.
-    ObjectSegmentation* mOSeg;
+    CraqObjectSegmentation* mOSeg;
 
   };
 

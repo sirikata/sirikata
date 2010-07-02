@@ -56,7 +56,7 @@ public:
     virtual uint32 size() const { return mQueue.getResourceMonitor().filledSize(); }
 
     // ODP push interface
-    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&,const CraqEntry&);
+    virtual bool push(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry&, const OSegEntry&);
     // Get the sum of the weights of active queues.
     virtual float totalActiveWeight();
     // Get the total used weight of active queues.  If all flows are saturating,

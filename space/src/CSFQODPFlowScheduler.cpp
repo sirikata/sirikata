@@ -34,7 +34,6 @@
 #include "LocationService.hpp"
 #include "CoordinateSegmentation.hpp"
 #include <sirikata/core/util/Random.hpp>
-#include "craq_oseg/CraqEntry.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 
 #define _Kf (Duration::milliseconds((int64)10000))
@@ -91,7 +90,7 @@ CSFQODPFlowScheduler::~CSFQODPFlowScheduler() {
 }
 
 // ODP push interface
-bool CSFQODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, const CraqEntry&source_entry, const CraqEntry& dest_entry) {
+bool CSFQODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry&source_entry, const OSegEntry& dest_entry) {
     boost::lock_guard<boost::mutex> lck(mPushMutex); // FIXME
 
     ObjectPair op(msg->source_object(), msg->dest_object());
@@ -347,7 +346,7 @@ float CSFQODPFlowScheduler::totalReceiverUsedWeight() {
     return mTotalUsedWeight[RECEIVER];
 }
 
-BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, const CraqEntry& info) const {
+BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, const OSegEntry& info) const {
     // We might have exact info
     if (mLoc->contains(objid)) {
         Vector3f pos = mLoc->currentPosition(objid);
@@ -370,7 +369,7 @@ BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, con
     return BoundingBox3f(server_bbox.center(), info.radius());
 }
 
-CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair, const CraqEntry&source_info, const CraqEntry&dst_info, const Time& t) {
+CSFQODPFlowScheduler::FlowInfo* CSFQODPFlowScheduler::getFlow(const ObjectPair& new_packet_pair, const OSegEntry&source_info, const OSegEntry&dst_info, const Time& t) {
     FlowMap::iterator where = mFlows.find(new_packet_pair);
     if (where==mFlows.end()) {
         BoundingBox3f source_bbox = getObjectWeightRegion(new_packet_pair.source, source_info);

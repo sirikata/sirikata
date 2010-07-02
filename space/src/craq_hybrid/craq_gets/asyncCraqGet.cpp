@@ -82,7 +82,7 @@ namespace Sirikata
 
 
   //nothing to initialize
-  AsyncCraqGet::AsyncCraqGet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, ObjectSegmentation* parent_oseg_called)
+  AsyncCraqGet::AsyncCraqGet(SpaceContext* con, Network::IOStrand* strand_this_runs_on, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* parent_oseg_called)
    : ctx(con),
       mStrand(strand_this_runs_on),
       mResultsStrand(strand_to_post_results_to),
