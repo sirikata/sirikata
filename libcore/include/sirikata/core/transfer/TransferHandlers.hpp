@@ -69,6 +69,25 @@ public:
 };
 
 /*
+ * Base class for an implementation that satisfies chunk downloads
+ * The input is a RemoteFileMetadata and a Chunk, output is DenseData
+ */
+class ChunkHandler {
+
+public:
+    typedef std::tr1::function<void(
+                std::tr1::shared_ptr<DenseData> response
+            )> ChunkCallback;
+
+    virtual void get(std::tr1::shared_ptr<RemoteFileMetadata> file,
+            std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) = 0;
+
+    virtual ~ChunkHandler() {
+    }
+
+};
+
+/*
  * Implements name lookups via HTTP
  */
 class SIRIKATA_EXPORT HttpNameHandler
@@ -98,7 +117,40 @@ public:
 
     static HttpNameHandler& getSingleton();
     static void destroy();
+};
 
+/*
+ * Implements chunk downloading via HTTP
+ */
+class SIRIKATA_EXPORT HttpChunkHandler
+    : public ChunkHandler, public AutoSingleton<HttpChunkHandler> {
+
+private:
+    //TODO: should get these from settings
+    static const char CDN_HOST_NAME [];
+    static const char CDN_SERVICE [];
+    const Network::Address mCdnAddr;
+
+public:
+    HttpChunkHandler();
+    ~HttpChunkHandler();
+
+    /*
+     * Downloads the chunk referenced and calls callback when completed
+     */
+    void get(std::tr1::shared_ptr<RemoteFileMetadata> file,
+            std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
+
+    /*
+     * Callback from HttpManager when an http request finishes
+     */
+    void request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+            HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+            std::tr1::shared_ptr<RemoteFileMetadata> file, std::tr1::shared_ptr<Chunk> chunk,
+            bool chunkReq, ChunkCallback callback);
+
+    static HttpChunkHandler& getSingleton();
+    static void destroy();
 };
 
 }
