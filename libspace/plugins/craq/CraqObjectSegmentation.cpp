@@ -43,13 +43,6 @@
 #include "craq_oseg/asyncUtil.hpp"
 #include "craq_oseg/asyncConnection.hpp"
 
-#include "caches/Cache.hpp"
-#include "caches/CommunicationCache.hpp"
-#include "caches/CacheLRUOriginal.hpp"
-
-#include "Options.hpp"
-#include <sirikata/core/options/CommonOptions.hpp>
-
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sstream>
 #include <string.h>
@@ -65,7 +58,7 @@ namespace Sirikata
   /*
     Basic constructor
   */
-CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg)
+CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, char unique)
    : ObjectSegmentation(con, o_strand),
    mCSeg (cseg),
    craqDhtGet(con, o_strand, this),
@@ -73,6 +66,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
    postingStrand(con->mainStrand),
    mStrand(o_strand),
    mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
+     mCraqCache(cache),
    mFrontMigAck(NULL),
    ctx(con),
    mReceivedStopRequest(false)
@@ -91,31 +85,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
       cInitArgs2.port  =     "10499";
       setInitArgs.push_back(cInitArgs2);
 
-
-
-      std::string cacheSelector     =  GetOptionValue<String>(CACHE_SELECTOR);
-      uint32  cacheSize             =  GetOptionValue<uint32>(OSEG_CACHE_SIZE);
-      uint32  cacheCleanGroupSize   =  GetOptionValue<uint32>(OSEG_CACHE_CLEAN_GROUP_SIZE);
-      double  cacheCommScaling      =  GetOptionValue<double>(CACHE_COMM_SCALING);
-      Duration entryLifetime        =  GetOptionValue<Duration>(OSEG_CACHE_ENTRY_LIFETIME);
-
-
-    if (cacheSelector == CACHE_TYPE_COMMUNICATION)
-    {
-      std::cout<<"\n\n\nRunning communication cache\n\n";
-
-      mCraqCache = new CommunicationCache(ctx,cacheCommScaling,mCSeg,cacheSize);
-    }
-    else if (cacheSelector == CACHE_TYPE_ORIGINAL_LRU)
-      mCraqCache = new CacheLRUOriginal(ctx, cacheSize,cacheCleanGroupSize,entryLifetime);
-    else
-    {
-      std::cout<<"\n\nUNKNOWN CACHE TYPE SELECTED.  Please re-try.\n\n";
-      std::cout.flush();
-      assert(false);
-    }
-
-
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
@@ -127,14 +96,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
     craqDhtGet.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
 
-    std::string oseg_craq_prefix = GetOptionValue<String>(OSEG_UNIQUE_CRAQ_PREFIX);
-
-    if (oseg_craq_prefix.size() ==0)
-    {
-        std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
-        assert(false);
-    }
-    myUniquePrefixKey = oseg_craq_prefix[0];
+    myUniquePrefixKey = unique;
 
     numCacheHits     = 0;
     numOnThisServer  = 0;

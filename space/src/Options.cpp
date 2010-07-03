@@ -56,10 +56,8 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(NETWORK_TYPE, "tcp", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
 
-        .addOption(new OptionValue(OSEG,OSEG_OPTION_CRAQ,Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
-
-        .addOption(new OptionValue(OSEG_UNIQUE_CRAQ_PREFIX,"G",Sirikata::OptionValueType<String>(),"Specifies a unique character prepended to Craq lookup calls.  Note: takes in type string.  Will only select the first character in the string.  Also note that it acceptable values range from g to z, and are case sensitive."))
-
+        .addOption(new OptionValue(OSEG,"",Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
+        .addOption(new OptionValue(OSEG_OPTIONS,"",Sirikata::OptionValueType<String>(),"Specifies arguments to OSeg."))
 
         .addOption(new OptionValue(OSEG_LOOKUP_QUEUE_SIZE, "2000", Sirikata::OptionValueType<uint32>(), "Number of new lookups you can have on oseg lookup queue."))
 

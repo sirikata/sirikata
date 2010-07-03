@@ -672,6 +672,7 @@ SET(LIBCORE_PLUGIN_DIR ${LIBCORE_DIR}/plugins)
 SET(LIBPROXIMITY_PLUGIN_DIR ${LIBPROXIMITY_DIR}/plugins)
 SET(LIBPROXYOBJECT_PLUGIN_DIR ${LIBPROXYOBJECT_DIR}/plugins)
 SET(LIBOH_PLUGIN_DIR ${LIBOH_DIR}/plugins)
+SET(LIBSPACE_PLUGIN_DIR ${LIBSPACE_DIR}/plugins)
 
 #generated source files
 SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
@@ -1262,27 +1263,32 @@ ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp
         )
 
+SET(LIBSPACE_PLUGIN_CRAQ_DIR ${LIBSPACE_PLUGIN_DIR}/craq)
+SET(LIBSPACE_PLUGIN_CRAQ_SOURCES
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/CraqObjectSegmentation.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/asyncCraqHybrid.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/asyncCraqUtil.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/asyncCraq.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/CraqEntry.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/Base64.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/asyncConnection.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/asyncUtil.cpp
+  )
+
 SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
-  ${SPACE_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
   ${SPACE_SOURCE_DIR}/caches/CacheRecords.cpp
   ${SPACE_SOURCE_DIR}/caches/FCache.cpp
   ${SPACE_SOURCE_DIR}/caches/CommunicationCache.cpp
   ${SPACE_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
-  ${SPACE_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
-  ${SPACE_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
-  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
-  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
-  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
-  ${SPACE_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
-  ${SPACE_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
-  ${SPACE_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
-  ${SPACE_SOURCE_DIR}/craq_oseg/Base64.cpp
-  ${SPACE_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
-  ${SPACE_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
   ${SPACE_SOURCE_DIR}/RegionODPFlowScheduler.cpp
   ${SPACE_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
   ${SPACE_SOURCE_DIR}/ServerMessageReceiver.cpp
@@ -1574,6 +1580,15 @@ ADD_PLUGIN_TARGET(servermap-tabular
                     LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} servermap-tabular)
+
+
+SET(LIBSPACE_PLUGIN_CRAQ_DIR ${LIBSPACE_PLUGIN_DIR}/craq)
+ADD_PLUGIN_TARGET(space-craq
+                    SOURCES ${LIBSPACE_PLUGIN_CRAQ_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-craq)
 
 
 IF(OGRE_FOUND AND sdl_FOUND )

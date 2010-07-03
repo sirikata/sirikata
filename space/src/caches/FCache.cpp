@@ -47,7 +47,6 @@
 #include <string>
 #include <cmath>
 #include "CacheRecords.hpp"
-#include "../craq_oseg/CraqEntry.hpp"
 
 //#define FCACHE_LOG_REMOVALS
 
@@ -197,7 +196,7 @@ namespace Sirikata
   }
 
 
-  const CraqEntry& FCache::lookup(const UUID& lookingFor)
+  const OSegEntry& FCache::lookup(const UUID& lookingFor)
   {
     FCacheRecord* rec = cacheProper.getRecord(lookingFor);
 
@@ -211,7 +210,7 @@ namespace Sirikata
       return mCraqEntry;
     }
 
-    static CraqEntry justnothin(CraqEntry::null());
+    static OSegEntry justnothin(OSegEntry::null());
     return justnothin;
   }
 
@@ -256,7 +255,7 @@ namespace Sirikata
       ctx(spctx),
       MAX_SIZE_CACHE_PROPER (CACHE_MAX_SIZE),
       cacheProper(spctx, MAX_SIZE_CACHE_PROPER),
-      mCraqEntry(CraqEntry::null())
+      mCraqEntry(OSegEntry::null())
   {
   }
 
@@ -268,7 +267,7 @@ namespace Sirikata
       ctx(spctx),
       MAX_SIZE_CACHE_PROPER (CACHE_SIZE),
       cacheProper(spctx, CACHE_SIZE),
-      mCraqEntry(CraqEntry::null())
+      mCraqEntry(OSegEntry::null())
   {
   }
 

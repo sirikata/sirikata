@@ -48,8 +48,7 @@
 #define LOC_MAX_PER_RESULT         "loc.max-per-result"
 
 #define OSEG                       "oseg"
-#define OSEG_OPTION_CRAQ           "oseg_craq"
-#define OSEG_UNIQUE_CRAQ_PREFIX    "oseg_unique_craq_prefix"
+#define OSEG_OPTIONS               "oseg-options"
 #define OSEG_CACHE_SIZE              "oseg-cache-size"
 #define OSEG_CACHE_CLEAN_GROUP_SIZE  "oseg-cache-clean-group-size"
 #define OSEG_CACHE_ENTRY_LIFETIME    "oseg-cache-entry-lifetime"

@@ -42,7 +42,6 @@
 #include <cassert>
 #include <string>
 #include "CacheRecords.hpp"
-#include "../craq_oseg/CraqEntry.hpp"
 
 
 namespace Sirikata
@@ -57,7 +56,7 @@ namespace Sirikata
       ctx(spctx),
       mPrevTime((spctx->simTime() - Time::null()).toMilliseconds()),
       mInsideRadiusInsert(insideRadiusInsert),
-      mCraqEntry(CraqEntry::null())
+      mCraqEntry(OSegEntry::null())
   {
   }
 
@@ -70,7 +69,7 @@ namespace Sirikata
       ctx(spctx),
       mPrevTime((spctx->simTime() - Time::null()).toMilliseconds()),
       mInsideRadiusInsert(insideRadiusInsert),
-      mCraqEntry(CraqEntry::null())
+      mCraqEntry(OSegEntry::null())
   {
   }
 
@@ -217,7 +216,7 @@ namespace Sirikata
 
 
   //static lookup function: looking something up does not change its rank
-  const CraqEntry& Complete_Cache::lookup(const UUID& uuid)
+  const OSegEntry& Complete_Cache::lookup(const UUID& uuid)
   {
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
     if (idRecMapIter != idRecMap.end())
@@ -227,7 +226,7 @@ namespace Sirikata
       return mCraqEntry;
     }
 
-    static CraqEntry justnothin(CraqEntry::null());
+    static OSegEntry justnothin(OSegEntry::null());
     return justnothin;
   }
 

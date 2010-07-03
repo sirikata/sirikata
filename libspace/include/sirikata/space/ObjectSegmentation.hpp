@@ -42,6 +42,8 @@
 namespace Sirikata
 {
 
+class OSegCache;
+
 class OSegEntry {
 protected:
     uint32 mServer;
@@ -141,9 +143,9 @@ public:
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
   };
 
-class SIRIKATA_EXPORT OSegFactory
+class SIRIKATA_SPACE_EXPORT OSegFactory
     : public AutoSingleton<OSegFactory>,
-      public Factory4<ObjectSegmentation*, SpaceContext*, Network::IOStrand*, CoordinateSegmentation*, const String &>
+      public Factory5<ObjectSegmentation*, SpaceContext*, Network::IOStrand*, CoordinateSegmentation*, OSegCache*, const String &>
 {
   public:
     static OSegFactory& getSingleton();
@@ -151,5 +153,7 @@ class SIRIKATA_EXPORT OSegFactory
 }; // class OSegFactory
 
 } // namespace Sirikata
+
+#include <sirikata/space/OSegCache.hpp>
 
 #endif

@@ -103,9 +103,11 @@ class ClusterSimSettings:
             self.num_cseg_servers = 0
 
         # Space: OSeg settings
-        self.oseg = 'oseg_craq'
-        self.oseg_lookup_queue_size = 2000;
+        self.oseg = 'craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
+        self.oseg_options = ""
+
+        self.oseg_lookup_queue_size = 2000;
         self.oseg_analyze_after = '40' #Will perform oseg analysis after this many seconds of the run.
 
         self.oseg_cache_size = 200
@@ -221,7 +223,7 @@ class ClusterSim:
             'cseg-service-host' : "--cseg-service-host=" + self.settings.cseg_service_host,
             'cseg-service-tcp-port' : "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
             'oseg' : "--oseg=" + self.settings.oseg,
-            'oseg_unique_craq_prefix' : "--oseg_unique_craq_prefix=" + self.settings.unique(),
+            'oseg-options' : '--oseg-options=' + "--oseg_unique_craq_prefix=" + self.settings.unique(),
             'oseg-cache-selector' : "--oseg-cache-selector=" + self.settings.oseg_cache_selector,
             'oseg-cache-scaling' : "--oseg-cache-scaling=" + self.settings.oseg_cache_comm_scaling,
             'oseg_lookup_queue_size' : "--oseg_lookup_queue_size=" + str(self.settings.oseg_lookup_queue_size),

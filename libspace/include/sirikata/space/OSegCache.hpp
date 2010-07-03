@@ -1,5 +1,5 @@
 /*  Sirikata
- *  CraqCache.hpp
+ *  OSegCache.hpp
  *
  *  Copyright (c) 2010, Behram Mistree
  *  All rights reserved.
@@ -33,20 +33,20 @@
 #ifndef __CRAQ_CACHE_HPP__
 #define __CRAQ_CACHE_HPP__
 
-#include "../craq_oseg/CraqEntry.hpp"
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/util/UUID.hpp>
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 namespace Sirikata
 {
 
-  class CraqCache
+  class OSegCache
   {
     public:
-      virtual ~CraqCache() {}
+      virtual ~OSegCache() {}
 
-      virtual void insert(const UUID& uuid, const CraqEntry& sID) = 0;
-      virtual const CraqEntry& get(const UUID& uuid)              = 0;
+      virtual void insert(const UUID& uuid, const OSegEntry& sID) = 0;
+      virtual const OSegEntry& get(const UUID& uuid)              = 0;
       virtual void remove(const UUID& uuid)                       = 0;
   };
 

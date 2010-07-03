@@ -37,7 +37,6 @@
 #include <vector>
 #include <string>
 #include "CacheRecords.hpp"
-#include "../craq_oseg/CraqEntry.hpp"
 
 #ifndef __FCACHE_HPP__
 #define __FCACHE_HPP__
@@ -108,7 +107,7 @@ namespace Sirikata
 
   public:
     SpaceContext* ctx;
-    CraqEntry mCraqEntry;
+    OSegEntry mCraqEntry;
 
   private:
     unsigned int MAX_SIZE_CACHE_PROPER;
@@ -149,7 +148,7 @@ namespace Sirikata
 
     virtual void    insert(const UUID& toInsert, ServerID bid, CacheTimeMS tms, double vMag, double weight, double distance, double radius,double lookupWeight,double unitsScaling);
 
-    virtual const CraqEntry& lookup(const UUID& lookingFor);
+    virtual const OSegEntry& lookup(const UUID& lookingFor);
     virtual std::string getCacheName();
     virtual void remove(const UUID& toRemove);
 

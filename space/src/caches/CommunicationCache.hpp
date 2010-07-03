@@ -31,9 +31,8 @@
  */
 
 #include "Complete_Cache.hpp"
-#include "../craq_oseg/CraqEntry.hpp"
 #include <boost/thread/mutex.hpp>
-#include "CraqCache.hpp"
+#include <sirikata/space/OSegCache.hpp>
 
 
 #ifndef __COMMUNICATION_CACHE_HPP__
@@ -46,7 +45,7 @@ namespace Sirikata
   double commCacheScoreFunctionPrint(const FCacheRecord* a,bool toPrint);
 
 
-  class CommunicationCache : public CraqCache
+  class CommunicationCache : public OSegCache
   {
   private:
     Complete_Cache mCompleteCache;
@@ -63,8 +62,8 @@ namespace Sirikata
     CommunicationCache(SpaceContext* spctx, float scalingUnits, CoordinateSegmentation* cseg,uint32 cacheSize);
       virtual ~CommunicationCache() {}
 
-    virtual void insert(const UUID& uuid, const CraqEntry& sID);
-    virtual const CraqEntry& get(const UUID& uuid);
+    virtual void insert(const UUID& uuid, const OSegEntry& sID);
+    virtual const OSegEntry& get(const UUID& uuid);
     virtual void remove(const UUID& oid);
 
   };

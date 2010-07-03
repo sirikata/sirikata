@@ -47,10 +47,6 @@ class CraqObjectSegmentation;
 #include <string.h>
 #include <vector>
 
-#include "caches/Cache.hpp"
-#include "caches/CommunicationCache.hpp"
-#include "caches/CacheLRUOriginal.hpp"
-
 #include <sirikata/space/OSegLookupTraceToken.hpp>
 #include "craq_hybrid/asyncCraqHybrid.hpp"
 #include "craq_hybrid/asyncCraqUtil.hpp"
@@ -179,7 +175,7 @@ namespace Sirikata
 
     //building for the cache
     CraqEntry satisfiesCache(const UUID& obj_id);
-    CraqCache* mCraqCache;
+    OSegCache* mCraqCache;
     //end building for the cache
 
 
@@ -196,7 +192,7 @@ namespace Sirikata
     bool mReceivedStopRequest;
 
   public:
-      CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg);
+      CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, char unique);
 
 
     virtual ~CraqObjectSegmentation();

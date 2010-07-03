@@ -39,7 +39,6 @@
 #include <string>
 #include "CacheRecords.hpp"
 #include <float.h>
-#include "../craq_oseg/CraqEntry.hpp"
 
 
 #ifndef __COMPLETE_CACHE_HPP__
@@ -79,7 +78,7 @@ namespace Sirikata
 
 
   public:
-    CraqEntry mCraqEntry;
+    OSegEntry mCraqEntry;
     Complete_Cache(double avgPopPar,std::string complete_name, CompleteCacheScoreFunc ccScorer,CompleteCacheScoreFuncPrint ccScorerPrint, SpaceContext* spctx, float insideRadiusInsert= FLT_MAX);
     Complete_Cache(double avgPopPar,std::string complete_name,CompleteCacheScoreFunc ccScorer,CompleteCacheScoreFuncPrint ccScorerPrint,SpaceContext* spctx,int complete_size, float insideRadiusInsert = FLT_MAX);
 
@@ -88,7 +87,7 @@ namespace Sirikata
     //    void insert(UUID toInsert, ServerID bid, CacheTimeMS tms, double vMag);
     virtual void insert(const UUID& toInsert, ServerID bid, CacheTimeMS tms, double vMag, double weight, double distance, double radius,double lookupWeight,double scaler);
 
-    virtual const CraqEntry& lookup (const UUID& lookingFor);
+    virtual const OSegEntry& lookup (const UUID& lookingFor);
     ServerID lookup_dynamic(UUID uuid);
     virtual std::string getCacheName();
     virtual void remove(const UUID& oid);

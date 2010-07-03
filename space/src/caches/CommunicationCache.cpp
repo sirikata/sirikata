@@ -33,7 +33,6 @@
 #include "CommunicationCache.hpp"
 #include <float.h>
 #include <cmath>
-#include "../craq_oseg/CraqEntry.hpp"
 #include <sirikata/space/CoordinateSegmentation.hpp>
 
 namespace Sirikata
@@ -72,7 +71,7 @@ namespace Sirikata
 
   }
 
-  void CommunicationCache::insert(const UUID& uuid, const CraqEntry& sID)
+  void CommunicationCache::insert(const UUID& uuid, const OSegEntry& sID)
   {
     BoundingBoxList bboxes = mCSeg->serverRegion(sID.server());
     BoundingBox3f bbox = bboxes[0];
@@ -91,7 +90,7 @@ namespace Sirikata
     mCompleteCache.insert(uuid,sID.server(),0,0,0,0,sID.radius(),lookupWeight,1);
   }
 
-  const CraqEntry& CommunicationCache::get(const UUID& uuid)
+  const OSegEntry& CommunicationCache::get(const UUID& uuid)
   {
     boost::lock_guard<boost::mutex> lck(mMutex);
     return mCompleteCache.lookup(uuid);

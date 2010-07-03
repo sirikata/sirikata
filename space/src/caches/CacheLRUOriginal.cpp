@@ -108,7 +108,7 @@ namespace Sirikata
   }
 
 
-  void CacheLRUOriginal::insert(const UUID& uuid, const CraqEntry& sID)
+  void CacheLRUOriginal::insert(const UUID& uuid, const OSegEntry& sID)
   {
       boost::lock_guard<boost::mutex> lck(mMutex);
 
@@ -189,7 +189,7 @@ namespace Sirikata
   }
 
 
-  const CraqEntry& CacheLRUOriginal::get(const UUID& uuid)
+  const OSegEntry& CacheLRUOriginal::get(const UUID& uuid)
   {
       boost::lock_guard<boost::mutex> lck(mMutex);
 
@@ -203,7 +203,7 @@ namespace Sirikata
         return idRecMapIter->second->sID;
       }
     }
-    static CraqEntry justnothin(CraqEntry::null());
+    static OSegEntry justnothin(OSegEntry::null());
     return justnothin;
   }
 

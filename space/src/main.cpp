@@ -58,7 +58,9 @@
 #include "UniformCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 #include <sirikata/space/LoadMonitor.hpp>
-#include "CraqObjectSegmentation.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
+#include "caches/CommunicationCache.hpp"
+#include "caches/CacheLRUOriginal.hpp"
 
 #include <sirikata/space/SpaceContext.hpp>
 
@@ -186,13 +188,31 @@ int main(int argc, char** argv) {
     LoadMonitor* loadMonitor = new LoadMonitor(space_context, cseg);
 
 
-    //Create OSeg
-    std::string oseg_type=GetOptionValue<String>(OSEG);
-    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
-    ObjectSegmentation* oseg = NULL;
-    if (oseg_type == OSEG_OPTION_CRAQ)
-        oseg = new CraqObjectSegmentation (space_context, osegStrand, cseg);
+    // OSeg Cache
+    OSegCache* oseg_cache = NULL;
+    std::string cacheSelector = GetOptionValue<String>(CACHE_SELECTOR);
+    uint32 cacheSize = GetOptionValue<uint32>(OSEG_CACHE_SIZE);
+    if (cacheSelector == CACHE_TYPE_COMMUNICATION) {
+        double cacheCommScaling = GetOptionValue<double>(CACHE_COMM_SCALING);
+        oseg_cache = new CommunicationCache(space_context, cacheCommScaling, cseg, cacheSize);
+    }
+    else if (cacheSelector == CACHE_TYPE_ORIGINAL_LRU) {
+        uint32 cacheCleanGroupSize = GetOptionValue<uint32>(OSEG_CACHE_CLEAN_GROUP_SIZE);
+        Duration entryLifetime = GetOptionValue<Duration>(OSEG_CACHE_ENTRY_LIFETIME);
+        oseg_cache = new CacheLRUOriginal(space_context, cacheSize, cacheCleanGroupSize, entryLifetime);
+    }
+    else {
+        std::cout<<"\n\nUNKNOWN CACHE TYPE SELECTED.  Please re-try.\n\n";
+        std::cout.flush();
+        assert(false);
+    }
 
+    //Create OSeg
+    std::string oseg_type = GetOptionValue<String>(OSEG);
+    std::string oseg_options = GetOptionValue<String>(OSEG_OPTIONS);
+    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
+    ObjectSegmentation* oseg =
+        OSegFactory::getSingleton().getConstructor(oseg_type)(space_context, osegStrand, cseg, oseg_cache, oseg_options);
     //end create oseg
 
 

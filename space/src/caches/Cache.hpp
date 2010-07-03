@@ -35,7 +35,7 @@
 #include "Utility.hpp"
 #include <string>
 #include <sirikata/space/SpaceContext.hpp>
-#include "../craq_oseg/CraqEntry.hpp"
+#include <sirikata/space/ObjectSegmentation.hpp>
 
 #ifndef __CACHE_HPP__
 #define __CACHE_HPP__
@@ -59,7 +59,7 @@ namespace Sirikata
       virtual ~Cache() {}
 
     virtual void insert(const UUID& toInsert, ServerID bid, CacheTimeMS tms, double vMag, double weight, double distance, double radius,double lookupWeight,double unitsScaling) = 0;
-    virtual const CraqEntry& lookup(const UUID& lookingFor)                     = 0;
+    virtual const OSegEntry& lookup(const UUID& lookingFor)                     = 0;
     virtual void  remove(const UUID& toRemove)                         = 0;
     virtual std::string getCacheName()                           = 0;
   };

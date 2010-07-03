@@ -43,9 +43,8 @@
 #include <boost/bind.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <boost/thread/mutex.hpp>
-#include "../craq_oseg/CraqEntry.hpp"
 #include <sirikata/core/service/Context.hpp>
-#include "CraqCache.hpp"
+#include <sirikata/space/OSegCache.hpp>
 #include <sirikata/core/util/UUID.hpp>
 
 namespace Sirikata
@@ -54,12 +53,12 @@ namespace Sirikata
   {
     UUID obj_id;
     int age;
-    CraqEntry sID;
-    CraqCacheRecordLRUOriginal():sID(CraqEntry::null()){}
+    OSegEntry sID;
+    CraqCacheRecordLRUOriginal():sID(OSegEntry::null()){}
   };
 
 
-  class CacheLRUOriginal : public CraqCache
+  class CacheLRUOriginal : public OSegCache
   {
   private:
     Context* mContext;
@@ -91,8 +90,8 @@ namespace Sirikata
     CacheLRUOriginal(Context* ctx, uint32 maxSize,uint32 cleanGroupSize,Duration entryLifetime);
     virtual ~CacheLRUOriginal();
 
-    virtual void insert(const UUID& uuid, const CraqEntry& sID);
-    virtual const CraqEntry& get(const UUID& uuid);
+    virtual void insert(const UUID& uuid, const OSegEntry& sID);
+    virtual const OSegEntry& get(const UUID& uuid);
     virtual void remove(const UUID& uuid);
   };
 }
