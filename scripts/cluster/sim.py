@@ -277,7 +277,6 @@ class ClusterSim:
             'cseg.plugins' : '--cseg.plugins=' + self.config.cseg_plugins,
             'cseg-id' : lambda index : '--cseg-id=' + str(index),
             'num-cseg-servers' : '--num-cseg-servers=' + str(self.settings.num_cseg_servers),
-            'cseg-servermap' : '--servermap=' + 'tabular',
             'cseg-server-options' : '--cseg-servermap-options=' + '--filename=' + self.settings.cseg_ip_file,
             'max-servers' : '--max-servers=' + str(self.settings.space_server_pool),
             }

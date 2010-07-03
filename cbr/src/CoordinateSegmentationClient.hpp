@@ -84,10 +84,16 @@ private:
 
     ServerIDMap *  mSidMap;
 
+    boost::mutex mMutex;
+    boost::shared_ptr<Network::TCPSocket> mLeasedSocket;
+    Time mLeaseExpiryTime;
+
     void startAccepting();
     void accept_handler();
 
     void sendSegmentationListenMessage();
+
+    boost::shared_ptr<Network::TCPSocket> getLeasedSocket();
 
 }; // class CoordinateSegmentation
 
