@@ -57,13 +57,15 @@ public:
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
+    v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     void testPrint();
     
 private:
 
-    void bftm_createAddressableTemplate();
+    void createAddressableTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();
+	void createPresenceTemplate();
     
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.

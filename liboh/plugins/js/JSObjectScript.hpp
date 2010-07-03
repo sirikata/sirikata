@@ -142,12 +142,17 @@ private:
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
 
-    //bftm
     typedef std::vector<ObjectReference*> AddressableList;
     AddressableList mAddressableList;
+
+
     Handle<Object> getSystemObject();
-    void bftm_populateAddressable(Handle<Object>& system_obj );
+    Handle<Object> getGlobalObject();
+
+    void populateAddressable(Handle<Object>& system_obj );
     void printAllHandlerLocations();
+    void populatePresences(Handle<Object>& system_obj );
+    void populateSystemObject(Handle<Object>& system_obj );
     
 
     ODP::Port* mScriptingPort;

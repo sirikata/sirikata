@@ -87,12 +87,11 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
     Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
-    system_obj->SetInternalField(0, External::New(this));
+    populateSystemObject(system_obj);
 
-    //takes care of the addressable array in sys.
-	bftm_populateAddressable(system_obj);
 
-    mHandlingEvent = false;
+
+        mHandlingEvent = false;
 
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
@@ -166,7 +165,7 @@ void JSObjectScript::reboot()
   global_proto->SetInternalField(0, External::New(this));
   Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
   system_obj->SetInternalField(0, External::New(this));
-  bftm_populateAddressable(system_obj);
+  populateAddressable(system_obj);
 
 
   for (int s=0; s < (int) mEventHandlers.size(); ++s)
@@ -252,7 +251,7 @@ void JSObjectScript::test() const {
 
 //bftm
 //populates the internal addressable object references vector
-void JSObjectScript::bftm_populateAddressable(Handle<Object>& system_obj )
+void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 {
     //loading the vector
     mAddressableList.clear();
@@ -751,6 +750,16 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
 
 
 
+
+
+Handle<Object> JSObjectScript::getGlobalObject()
+{
+  // we really don't need a persistent handle
+  //Local handles should work
+  return mContext->Global();
+}
+
+
 Handle<Object> JSObjectScript::getSystemObject()
 {
   HandleScope handle_scope;
@@ -771,7 +780,63 @@ void JSObjectScript::updateAddressable()
 {
   HandleScope handle_scope;
   Handle<Object> system_obj = getSystemObject();
-  bftm_populateAddressable(system_obj);
+  populateAddressable(system_obj);
+}
+
+
+void JSObjectScript::populatePresences(Handle<Object>& system_obj)
+
+{
+
+  HandleScope handle_scope;
+  HostedObject::SpaceSet spaces = mParent->spaces();
+  HostedObject::SpaceSet::const_iterator it = spaces.begin();
+  v8::Context::Scope context_scope(mContext);
+  v8::Local<v8::Array> arrayObj= v8::Array::New();
+
+  for (int s=0; it != spaces.end(); ++s, ++it)
+  {
+    Local<Object> tmpObj = mManager->mPresenceTemplate->NewInstance();
+    SpaceID* space_id = new SpaceID(*it); 
+	tmpObj->SetInternalField(PRESENCE_SPACE_ID_FIELD,External::New(space_id));
+    tmpObj->SetInternalField(PRESENCE_JSOBJSCRIPT_FIELD,External::New(this));
+    arrayObj->Set(v8::Number::New(s),tmpObj);
+
+  }
+
+
+  system_obj->Set(v8::String::New("presences"),arrayObj);
+
+ 
+   
+ }
+
+void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
+{
+   HandleScope handle_scope;
+   //takes care of the addressable array in sys.
+
+	system_obj->SetInternalField(0, External::New(this));
+	populateAddressable(system_obj);
+
+
+  // get the prototype for the system obj
+  // we will need to stick in properties into the system object
+
+
+  // we need to add a presences array property in the system object
+  // Presences are of hte following types
+  // 1. Presence of other entities
+  // 2. Presence of this entity
+
+  // Self presences ( of type 2 ) can provide more functionality
+  // then of the type 1 because we have a proxyentity keeping cached information. So that we don't have to go to space to get trivial information
+  // We have already captured the presences of other entities in the 
+  // addressable array.
+
+  
+    populatePresences(system_obj);  
+
 }
 
 

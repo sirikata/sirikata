@@ -46,6 +46,7 @@
 #include "JS_JSMessage.pbj.hpp"
 
 #include "JSObjects/Addressable.hpp"
+#include "JSObjects/JSPresence.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -61,8 +62,9 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
     createSystemTemplate();
-    bftm_createAddressableTemplate();
+    createAddressableTemplate();
     createHandlerTemplate();
+	createPresenceTemplate();
 	
 }
 
@@ -124,7 +126,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
 
 //creating the addressable template.  addressable is an array within system that 
-void JSObjectScriptManager::bftm_createAddressableTemplate()
+void JSObjectScriptManager::createAddressableTemplate()
 {
     v8::HandleScope handle_scope;
     mAddressableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
@@ -135,6 +137,32 @@ void JSObjectScriptManager::bftm_createAddressableTemplate()
     mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
     mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
     mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
+}
+
+void JSObjectScriptManager::createPresenceTemplate()
+{
+  v8::HandleScope handle_scope;
+  
+  // Ideally we want the addressable template to be a prototype of presencetemplate
+  //All that can be done to presences can be done to the addressble too
+  /*
+  if(mAddressableTemplate.IsEmpty())
+  {
+    createAddressableTemplate();  
+  }
+  */
+  
+  mPresenceTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New()); 
+  
+  mPresenceTemplate->SetInternalFieldCount(2);
+
+  // add stuff to the presence template
+  // something like setMesh
+
+  mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
+  mPresenceTemplate->Set(v8::String::New("setMesh"), v8::FunctionTemplate::New(JSPresence::setMesh));
+ 
+
 }
 
 
