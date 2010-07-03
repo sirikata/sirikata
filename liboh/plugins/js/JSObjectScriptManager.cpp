@@ -161,6 +161,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
   mPresenceTemplate->Set(v8::String::New("setMesh"), v8::FunctionTemplate::New(JSPresence::setMesh));
+  mPresenceTemplate->SetAccessor(JS_STRING(position), JSPresence::ScriptGetPosition, JSPresence::ScriptSetPosition);
  
 
 }

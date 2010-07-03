@@ -463,6 +463,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     return protectedEval(contents);
 }
 
+
 #define FIXME_GET_SPACE() \
     const HostedObject::SpaceSet& spaces = mParent->spaces(); \
     assert(spaces.size() == 1);                               \
@@ -504,6 +505,34 @@ void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
     mParent->setVisualScale(space, native_scale);
 }
 
+#define CreateLocationAccessorHandlersWithSpace(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
+    v8::Handle<v8::Value> JSObjectScript::get##PropName(SpaceID& space) {             \
+        /*FIXME_GET_SPACE(); */                                             \
+        return CreateJSResult(mContext, mParent->getLocation(space).get##PropName()); \
+    }                                                                   \
+                                                                        \
+    void JSObjectScript::set##PropName(SpaceID& space, v8::Local<v8::Value>& newval) {  \
+        Handle<SubType> val_obj = SubTypeCast(newval);                  \
+        if (!Validator(val_obj))                                        \
+            return;                                                     \
+                                                                        \
+        PropType native_val(Extractor(val_obj));                        \
+                                                                        \
+        /* FIXME_GET_SPACE(); */                                           \
+        Location loc = mParent->getLocation(space);                     \
+        loc.set##PropName( native_val);                                  \
+        mParent->setLocation(space, loc);                               \
+    } \
+
+
+
+//presence version of the access handlers
+
+CreateLocationAccessorHandlersWithSpace(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
+CreateLocationAccessorHandlersWithSpace(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
+
+
+
 #define CreateLocationAccessorHandlers(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
     v8::Handle<v8::Value> JSObjectScript::get##PropName() {             \
         FIXME_GET_SPACE();                                              \
@@ -517,7 +546,7 @@ void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
                                                                         \
         PropType native_val(Extractor(val_obj));                        \
                                                                         \
-        FIXME_GET_SPACE();                                              \
+        FIXME_GET_SPACE();                                            \
         Location loc = mParent->getLocation(space);                     \
         loc.set##PropName(native_val);                                  \
         mParent->setLocation(space, loc);                               \

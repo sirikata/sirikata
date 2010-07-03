@@ -114,6 +114,13 @@ public:
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
 
     void deleteHandler(JSEventHandler* toDelete);    
+
+    // Presence version of the access handlers
+    v8::Handle<v8::Value> getPosition(SpaceID&);
+    void setPosition(SpaceID&, v8::Local<v8::Value>& newval);
+
+    v8::Handle<v8::Value> getVelocity(SpaceID&);
+    void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
     
 private:
 
