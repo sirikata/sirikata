@@ -193,15 +193,8 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
     std::size_t num_packets=toSend.size();
     if (num_packets==0) {
         //if there are no packets in the queue, some other send() operation will need to take the torch to send further packets
-        mOutstandingDataParent.reset();
-        if (!mSendQueue.probablyEmpty()){
-            mOutstandingDataParent=parentMultiSocket;//something just got pushed on, and we still have the check lock
-        }
         mSendingStatus-=(ASYNCHRONOUS_SEND_FLAG+QUEUE_CHECK_FLAG);
     }else {
-        if (!mOutstandingDataParent) {
-            mOutstandingDataParent=parentMultiSocket;//keep alive until send finishes
-        }
         //there are packets in the queue, now is the chance to send them out, so get rid of the queue check flag since further items *will* be checked from the queue as soon as the
         //send finishes
         mSendingStatus-=QUEUE_CHECK_FLAG;
@@ -216,6 +209,8 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
 
 void ASIOSocketWrapper::sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedSocket>&weakParentMultiSocket, const ErrorCode &error, std::size_t bytes_sent) {
     MultiplexedSocketPtr parentMultiSocket(weakParentMultiSocket.lock());
+    mOutstandingDataParent.reset();
+	
     if (parentMultiSocket) {
         std::deque<TimestampedChunk> local_toSend;
         local_toSend.swap(mToSend);
@@ -248,6 +243,8 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
     mToSend.resize(0);
     mToSend.push_back(toSend);
     BufferPrint(this,".buw",&*toSend.chunk->begin(),toSend.size());
+    mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes
+
     boost::asio::async_write(*mSocket,
                              boost::asio::buffer(&*toSend.chunk->begin(),toSend.size()),
                              boost::asio::transfer_at_least(toSend.size()),
@@ -262,7 +259,6 @@ void ASIOSocketWrapper::bindFunctions(const MultiplexedSocketPtr&parent) {
                                        _2);
 }
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, std::deque<TimestampedChunk>&input_toSend){
-
     std::vector<boost::asio::mutable_buffer> bufs;
     size_t total_size=0;
     for (std::deque<TimestampedChunk>::const_iterator i=input_toSend.begin(),ie=input_toSend.end();i!=ie;++i) {
@@ -274,6 +270,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
         }
     }
     mToSend.swap(input_toSend);
+    mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes	
     boost::asio::async_write(*mSocket,
                             bufs,
                             boost::asio::transfer_at_least(total_size),
@@ -369,7 +366,6 @@ bool ASIOSocketWrapper::rawSend(const MultiplexedSocketPtr&parentMultiSocket, Ch
     uint32 current_status=++mSendingStatus;
     if (current_status==1) {//we are teh chosen thread
         mSendingStatus+=(ASYNCHRONOUS_SEND_FLAG-1);//committed to be the sender thread
-        mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes
         sendToWire(parentMultiSocket, chunk);
     }else {//if someone else is possibly sending a packet
         //push the packet on the queue

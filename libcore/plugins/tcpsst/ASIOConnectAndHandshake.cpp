@@ -41,12 +41,12 @@
 #include "ASIOConnectAndHandshake.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
-void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay,
+    void ASIOConnectAndHandshake::checkHeaderContents(const std::tr1::shared_ptr<MultiplexedSocket>&connection,
+						      bool noDelay,
                                                   unsigned int whichSocket,
                                                   Array<uint8,TCPStream::MaxWebSocketHeaderSize>* buffer,
                                                   const ErrorCode&error,
                                                   std::size_t bytes_received) {
-    MultiplexedSocketPtr connection=mConnection.lock();
     if (connection) {
         char normalMode[]={0x48, 0x54, 0x54, 0x50, 0x2F, 0x31, 0x2E, 0x31, 0x20, 0x31, 0x30, 0x31, 0x20, 0x57, 0x65, 0x62,
                            0x20, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x20, 0x50, 0x72, 0x6F, 0x74, 0x6F, 0x63, 0x6F, 0x6C,
@@ -89,12 +89,13 @@ void ASIOConnectAndHandshake::checkHeaderContents(bool noDelay,
     delete buffer;
 }
 void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
+						 const MultiplexedSocketPtr&connection,
                                                  const Address& address,
                                                  bool no_delay,
                                                  unsigned int whichSocket,
                                                  const tcp::resolver::iterator &it,
                                                  const ErrorCode &error) {
-    MultiplexedSocketPtr connection=thus->mConnection.lock();
+    
     if (!connection) {
         return;
     }
@@ -117,6 +118,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                 .async_connect(*it,
                                boost::bind(&ASIOConnectAndHandshake::connectToIPAddress,
                                            thus,
+					   connection,
                                            address,
                                            no_delay,
                                            whichSocket,
@@ -136,6 +138,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                                 headerCheck,
                                 boost::bind(&ASIOConnectAndHandshake::checkHeader,
                                             thus,
+					    connection,
                                             no_delay,
                                             whichSocket,
                                             header,
@@ -145,11 +148,11 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
 }
 
 void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& thus,
+					    const std::tr1::shared_ptr<MultiplexedSocket>&connection,
                                             const Address&address,
                                             bool no_delay,
                                             const boost::system::error_code &error,
                                             tcp::resolver::iterator it) {
-    MultiplexedSocketPtr connection=thus->mConnection.lock();
     if (!connection) {
         return;
     }
@@ -159,6 +162,7 @@ void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& th
         unsigned int numSockets=connection->numSockets();
         for (unsigned int whichSocket=0;whichSocket<numSockets;++whichSocket) {
             connectToIPAddress(thus,
+			       connection,
                                address,
                                no_delay,
                                whichSocket,
@@ -170,12 +174,14 @@ void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& th
 }
 
 void ASIOConnectAndHandshake::connect(const ASIOConnectAndHandshakePtr &thus,
+				      const std::tr1::shared_ptr<MultiplexedSocket>&connection,
                                       const Address&address,
                                       bool no_delay){
     tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
     thus->mResolver.async_resolve(query,
                                   boost::bind(&ASIOConnectAndHandshake::handleResolve,
                                               thus,
+					      connection,
                                               address,
                                               no_delay,
                                               boost::asio::placeholders::error,
