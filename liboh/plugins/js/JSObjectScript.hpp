@@ -64,6 +64,8 @@ public:
 
 	void updateAddressable();
 
+	void attachScript(const String&);
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
@@ -88,7 +90,7 @@ public:
 	void reboot();
 
 	/** create a new entity at the run time */
-	void create_entity(Vector3d&);
+	void create_entity(Vector3d&, String&);
 
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);

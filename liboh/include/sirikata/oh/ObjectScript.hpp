@@ -56,7 +56,7 @@ class SIRIKATA_OH_EXPORT ObjectScript : public MessageService{
 	//Different presences have different spaces
 
      virtual void updateAddressable() = 0;
-
+     virtual void attachScript(const String& ) = 0;
 };
 
 }

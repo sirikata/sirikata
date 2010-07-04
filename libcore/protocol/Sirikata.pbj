@@ -322,7 +322,9 @@ message CreateObject {
     optional PhysicalParameters physical=8;
 
     optional string script = 9;
-    optional StringMapProperty script_args = 10;
+    optional string script_name = 10;
+    optional StringMapProperty script_args = 11;
+	
 }
 
 

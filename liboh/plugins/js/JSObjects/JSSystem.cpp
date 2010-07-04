@@ -27,8 +27,12 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 
   Vector3d pos(Vec3Extract(val_obj));
   
-
-  target_script->create_entity(pos);
+  // get the script to attach from the args
+  //script is a string args
+  v8::String::Utf8Value str(args[1]);
+  const char* cstr = ToCString(str);
+  String script(cstr);
+  target_script->create_entity(pos, script);
 
   return v8::Undefined();
 }

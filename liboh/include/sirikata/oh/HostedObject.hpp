@@ -198,6 +198,7 @@ public:
 	bool mHasScript;
 	String mScriptType;
 	ObjectScriptManager::Arguments mScriptArgs;
+	String mScriptName;
 
 
 	bool hasScript()
@@ -221,6 +222,16 @@ public:
 	   mScriptArgs = args;
 	}
 
+    String getScriptName()
+	{
+	  return mScriptName;
+	}
+	void setScriptName(String s)
+	{
+	  mScriptName = s;
+	}
+
+    void attachScript(const String& );
 protected:
 
     /// Checks for a public cached property named propName.

@@ -158,6 +158,9 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 	void updateAddressable() const;
+
+	/** Attach and run this script after the entity is initialized */
+	void attachScript(String&) const;
 }; // class ObjectHost
 
 } // namespace Sirikata

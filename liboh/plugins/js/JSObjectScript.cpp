@@ -117,7 +117,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 }
 
 
-void JSObjectScript::create_entity(Vector3d& vec)
+void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
 {
 
 
@@ -138,6 +138,7 @@ void JSObjectScript::create_entity(Vector3d& vec)
   creator.set_mesh("http://www.sirikata.com/content/assets/cube.dae");
   creator.set_scale(Vector3f(1,1,1));
   creator.set_script(script_type);
+  creator.set_script_name(script_name);
   //Sirikata::Protocol::IStringMapProperty script_args = creator.mutable_script_args();
   std::string serializedCreate;
   creator.SerializeToString(&serializedCreate);
@@ -866,6 +867,12 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
   
     populatePresences(system_obj);  
 
+}
+
+
+void JSObjectScript::attachScript(const String& script_name)
+{
+  import(script_name);  
 }
 
 

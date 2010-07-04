@@ -860,6 +860,23 @@ bool myisalphanum(char c) {
     return false;
 }
 }
+
+
+// attaches a script to the entity. This is like running 
+// the script after the entity is initialized
+// the entity should have been intialized
+void HostedObject::attachScript(const String& script_name)
+{
+  if(!mObjectScript)
+  {
+    SILOG(oh,warn,"[OH] Ignored attachScript because script is not initialized for " << getUUID().toString() << "(internal id)");
+        return;
+  }
+  
+  mObjectScript->attachScript(script_name);
+
+}
+
 void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
     if (mObjectScript) {
         SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
@@ -1055,26 +1072,37 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     obj->initializeDefault(mesh,pLight,weburl,co.scale(),phys);
                 }
                 
-				
+			// We check if the new entity is scripted. Also
+			//note down the details of the script env given 
+			//while creating this entity
+			//These details are retrieved when the RetObj 
+			//confirmation is sent by the space and we
+			//initialize the script for the entity
+
                 if (co.has_script()) {
+
+                    obj->setHasScript(true); 
                     String script_type = co.script();
+
+                    obj->setScriptType(script_type);
+
                     ObjectScriptManager::Arguments script_args;
                     if (co.has_script_args()) {
                         Protocol::StringMapProperty args_map = co.script_args();
                         assert(args_map.keys_size() == args_map.values_size());
                         for (int i = 0; i < args_map.keys_size(); ++i)
                             script_args[ args_map.keys(i) ] = args_map.values(i);
-                    }
+                    
+					}
 
-					//make an entry of the uuid, script_type and script_args
-					//this will be used to initialize the script later
-                    obj->setHasScript(true); 
-                    obj->setScriptType(script_type);
 					obj->setScriptArgs(script_args);
 
-					//when the confirmation from the 
-                    //obj->initializeScript(script_type, script_args);
-                }
+                    if(co.has_script_name())
+					{
+					    obj->setScriptName(co.script_name());
+					}
+
+			    }
 
 
 
@@ -1294,6 +1322,10 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
 			{
 			  // do something to initialize the object script
 			  initializeScript(mScriptType, mScriptArgs);
+			  if(!mScriptName.empty())
+			  {
+			    attachScript(mScriptName);
+			  }
 		    } 	  
 			//update all the entities on this object host
             mObjectHost->updateAddressable();  
