@@ -157,6 +157,10 @@ class ClusterSimSettings:
             return self.oseg_unique_craq_prefix
         return self.config.unique
 
+    def oseg_options_param(self):
+        if (self.oseg == 'craq'):
+            return '--oseg-options=' + "--oseg_unique_craq_prefix=" + self.unique(),
+        return ''
 
 class ClusterSim:
     def __init__(self, config, settings, io=util.stdio.StdIO()):
@@ -223,7 +227,7 @@ class ClusterSim:
             'cseg-service-host' : "--cseg-service-host=" + self.settings.cseg_service_host,
             'cseg-service-tcp-port' : "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
             'oseg' : "--oseg=" + self.settings.oseg,
-            'oseg-options' : '--oseg-options=' + "--oseg_unique_craq_prefix=" + self.settings.unique(),
+            'oseg-options' : self.settings.oseg_options_param(),
             'oseg-cache-selector' : "--oseg-cache-selector=" + self.settings.oseg_cache_selector,
             'oseg-cache-scaling' : "--oseg-cache-scaling=" + self.settings.oseg_cache_comm_scaling,
             'oseg_lookup_queue_size' : "--oseg_lookup_queue_size=" + str(self.settings.oseg_lookup_queue_size),

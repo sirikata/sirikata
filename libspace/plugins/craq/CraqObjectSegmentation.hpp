@@ -74,7 +74,7 @@ namespace Sirikata
 
   static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
 
-  class CraqObjectSegmentation : public ObjectSegmentation
+class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipient
   {
   private:
       typedef std::tr1::unordered_map<UUID, CraqEntry, UUID::Hasher> ObjectSet;

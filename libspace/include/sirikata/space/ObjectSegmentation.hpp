@@ -49,6 +49,9 @@ protected:
     uint32 mServer;
     float mRadius;
 public:
+    explicit OSegEntry()
+     : mServer(NullServerID), mRadius(0)
+    {}
     OSegEntry(uint32 server, float radius) {
         mServer=server;
         mRadius=radius;
@@ -103,7 +106,7 @@ public:
 
 
 
-class ObjectSegmentation : public MessageRecipient, public Service
+class ObjectSegmentation : public Service
 {
 protected:
     SpaceContext* mContext;
@@ -125,6 +128,9 @@ public:
     virtual ~ObjectSegmentation() {}
 
       virtual void start() {
+      }
+
+      virtual void stop() {
       }
 
       void setLookupListener(OSegLookupListener* listener) {

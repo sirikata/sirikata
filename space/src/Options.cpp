@@ -56,7 +56,7 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(NETWORK_TYPE, "tcp", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
 
-        .addOption(new OptionValue(OSEG,"",Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
+        .addOption(new OptionValue(OSEG,"local",Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
         .addOption(new OptionValue(OSEG_OPTIONS,"",Sirikata::OptionValueType<String>(),"Specifies arguments to OSeg."))
 
         .addOption(new OptionValue(OSEG_LOOKUP_QUEUE_SIZE, "2000", Sirikata::OptionValueType<uint32>(), "Number of new lookups you can have on oseg lookup queue."))
