@@ -56,8 +56,8 @@ void InitOptions() {
         .addOption(new OptionValue("max-servers", "0", Sirikata::OptionValueType<uint32>(), "Maximum number of servers available for the simulation; if set to 0, use the number of servers specified in the layout option"))
         .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
 
-        .addOption(new OptionValue("servermap", "tabular", Sirikata::OptionValueType<String>(), "The type of ServerIDMap to instantiate."))
-        .addOption(new OptionValue("servermap-options", "--filename=serverip.txt", Sirikata::OptionValueType<String>(), "Options to pass to the ServerIDMap constructor."))
+        .addOption(new OptionValue("servermap", "local", Sirikata::OptionValueType<String>(), "The type of ServerIDMap to instantiate."))
+        .addOption(new OptionValue("servermap-options", "", Sirikata::OptionValueType<String>(), "Options to pass to the ServerIDMap constructor."))
 
         .addOption(new OptionValue("capexcessbandwidth", "false", Sirikata::OptionValueType<bool>(), "Total bandwidth for this server in bytes per second"))
 
