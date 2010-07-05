@@ -42,7 +42,7 @@ class ObjectHost;
 
 class ObjectHostContext : public Context {
 public:
-    ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen);
+    ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
 
     ObjectHostID id;
     ObjectHost* objectHost;

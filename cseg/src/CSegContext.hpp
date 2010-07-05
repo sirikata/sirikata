@@ -40,7 +40,7 @@ namespace Sirikata {
 class CSegContext : public Context {
 public:
 
-    CSegContext(const ServerID& _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
+    CSegContext(const ServerID& _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero())
      : Context("CSeg", ios, strand, _trace, epoch, simlen),
        mID(_id)
     {}

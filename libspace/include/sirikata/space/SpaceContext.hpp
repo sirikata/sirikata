@@ -60,7 +60,7 @@ class CoordinateSegmentation;
  */
 class SIRIKATA_SPACE_EXPORT SpaceContext : public Context {
 public:
-    SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration);
+    SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
     ~SpaceContext();
 
     ServerID id() const {
