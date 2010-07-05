@@ -92,6 +92,10 @@ public:
 	/** create a new entity at the run time */
 	void create_entity(Vector3d&, String&);
 
+	/** create a new presence of this entity */
+
+	void create_presence(const SpaceID&);
+
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);
 
@@ -162,7 +166,7 @@ private:
     void printAllHandlerLocations();
     void populatePresences(Handle<Object>& system_obj );
     void populateSystemObject(Handle<Object>& system_obj );
-    
+        
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;

@@ -227,6 +227,8 @@ bool JSObjectScript::valid() const {
     return (mParent);
 }
 
+
+
 void JSObjectScript::test() const {
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     assert(spaces.size() == 1);
@@ -874,6 +876,18 @@ void JSObjectScript::attachScript(const String& script_name)
 {
   import(script_name);  
 }
+
+void JSObjectScript::create_presence(const SpaceID& new_space)
+{
+ 
+  const HostedObject::SpaceSet& spaces = mParent->spaces();
+  
+  SpaceID spaceider = *(spaces.begin());
+  const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
+
+  mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
+}
+
 
 
 } // namespace JS

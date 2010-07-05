@@ -32,6 +32,8 @@
 #ifndef _OBJECT_SCRIPT_HPP_
 #define _OBJECT_SCRIPT_HPP_
 
+#include <sirikata/core/util/Logging.hpp>
+
 namespace Sirikata {
 
 /** Script running in a plugin. Can be in C++, or this interface
@@ -55,8 +57,8 @@ class SIRIKATA_OH_EXPORT ObjectScript : public MessageService{
 	//Addressables depend upon the space the presence is
 	//Different presences have different spaces
 
-     virtual void updateAddressable() = 0;
-     virtual void attachScript(const String& ) = 0;
+     virtual void updateAddressable() { NOT_IMPLEMENTED(ObjectScript); }
+     virtual void attachScript(const String& ) { NOT_IMPLEMENTED(ObjectScript);} 
 };
 
 }

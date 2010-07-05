@@ -92,6 +92,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
 
 	system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
+	system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
     
 
 

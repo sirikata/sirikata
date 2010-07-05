@@ -12,6 +12,12 @@ namespace JS{
 namespace JSSystem{
 
 
+v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
+{
+  JSObjectScript* target_script = GetTargetJSObjectScript(args);
+  
+  
+}
 
 v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 {
