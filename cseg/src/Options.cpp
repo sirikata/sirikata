@@ -39,7 +39,7 @@ namespace Sirikata {
 
 void InitCSegOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(new OptionValue(OPT_CSEG_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_CSEG_PLUGINS,"weight-exp",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("random-splits-merges", "false", Sirikata::OptionValueType<bool>(), "Whether to enable random splits and merges in DistributedCoordinateSegmentation."))
         .addOption(new OptionValue("cseg-server-ll-port", "3234", Sirikata::OptionValueType<uint16>(), "Port where CSEG servers can be contacted for lower-tree requests."))
