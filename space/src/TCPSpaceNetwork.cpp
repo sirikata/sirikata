@@ -593,7 +593,10 @@ TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& 
     using std::tr1::placeholders::_2;
 
     Address4* addr = mServerIDMap->lookupInternal(dest);
-    assert(addr != NULL);
+    if (addr == NULL) {
+        TCPNET_LOG(error,"Tried to open connection to non-existent server. Probably running in single-server mode.");
+        return NULL;
+    }
 
     TCPNET_LOG(info,"Initiating new connection to " << dest);
     TCPSendStream* send_stream = getNewSendStream(dest);
@@ -743,7 +746,11 @@ void TCPSpaceNetwork::listen(const ServerID& as_server, ReceiveListener* receive
     TCPNET_LOG(info,"Listening for remote space servers.");
 
     Address4* listen_addr = mServerIDMap->lookupInternal(as_server);
-    assert(listen_addr != NULL);
+    if (listen_addr == NULL) {
+        // No listen address is available for this server.  Probably just means
+        // we're only running one server so no listening address has been specified.
+        return;
+    }
     mListenAddress = *listen_addr;
 
     Address listenAddress(convertAddress4ToSirikata(mListenAddress));
