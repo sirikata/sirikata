@@ -107,20 +107,6 @@ int main(int argc, char** argv) {
     if (network_type == "tcp")
       gNetwork = new TCPSpaceNetwork(space_context);
 
-    /*
-    String test_mode = GetOptionValue<String>("test");
-    if (test_mode != "none") {
-        String server_port = GetOptionValue<String>("server-port");
-        String client_port = GetOptionValue<String>("client-port");
-        String host = GetOptionValue<String>("host");
-        if (test_mode == "server")
-            CBR::testServer(server_port.c_str(), host.c_str(), client_port.c_str());
-        else if (test_mode == "client")
-            CBR::testClient(client_port.c_str(), host.c_str(), server_port.c_str());
-        return 0;
-    }
-    */
-
     BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
     Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
