@@ -36,11 +36,12 @@
 #include <iostream>
 #include <sirikata/proxyobject/Meshdata.hpp>
 
-/// FIXME: need a culling strategy for this mom
-std::map<std::string, Meshdata*> meshstore;
 long Meshdata_counter=1000;
 
 namespace Sirikata { namespace Models {
+
+/// FIXME: need a culling strategy for this mom
+std::map<std::string, Meshdata*> meshstore;
 
 ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp )
     :   mDocument ( new ColladaDocument ( uri ) ),
@@ -251,9 +252,7 @@ bool ColladaDocumentImporter::writeCamera ( COLLADAFW::Camera const* camera )
 bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << image << ") entered" << std::endl,true));
-    // This sucks, but we currently handle only one texture.  Prefer the first one.
-    if (meshstore[mDocument->getURI().toString()]->texture.size() == 0)
-        meshstore[mDocument->getURI().toString()]->texture = image->getImageURI().getURIString();  /// not really -- among other sins, lowercase!
+    meshstore[mDocument->getURI().toString()]->textures.push_back(image->getImageURI().getURIString());  /// not really -- among other sins, lowercase!
     return true;
 }
 

@@ -34,6 +34,8 @@
 
 extern long Meshdata_counter;
 
+namespace Sirikata {
+
 struct SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
@@ -44,10 +46,11 @@ struct SubMeshGeometry {
     std::vector<int> texUV_indices;
 };
 typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
+typedef std::vector<std::string> TextureList;
 
 struct Meshdata {
     SubMeshGeometryList geometry;
-    std::string texture;
+    TextureList textures;
     std::string uri;
     int up_axis;
     long id;
@@ -56,6 +59,8 @@ struct Meshdata {
         id=Meshdata_counter++;
     }
 };
+
+} // namespace Sirikata
 
 #define _MESHDATA_HPP_ true
 #endif
