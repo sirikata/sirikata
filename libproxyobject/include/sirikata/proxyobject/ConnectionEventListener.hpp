@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Listener Pattern
- *  TimeSteppedSimulation.hpp
+/*  Sirikata Object Host
+ *  ConnectionEvent.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,22 +29,35 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
-#define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
-
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+#ifndef _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
+#define _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 
 namespace Sirikata {
 
-class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener {
+/** ConnectionEventListener listens for events relating to object host
+ * connections. This is useful for monitoring the health of the underlying
+ * system without directly exposing the details.
+ *
+ * FIXME This should be in liboh, but it is primarily useful to display plugins,
+ * e.g. Ogre, which currently only use libproxyobject.
+ */
+class SIRIKATA_PROXYOBJECT_EXPORT ConnectionEventListener {
 public:
-    virtual Duration desiredTickRate()const=0;
-    ///returns true if simulation should continue (false quits app)
-    virtual bool tick()=0;
+    virtual ~ConnectionEventListener(){}
+
+    /** Invoked upon connection.
+     *  \param addr the address connected to
+     */
+    virtual void onConnected(const Network::Address& addr) {};
+    /** Invoked upon disconnection.
+     *  \param addr the address disconnected from
+     *  \param requested indicates whether the user requested the disconnection
+     *  \param reason if requested is false, gives a textual description of the
+     *  reason for the disconnection
+     */
+    virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason) {};
 };
 
-}
+} // namespace Sirikata
 
-#endif
+#endif //_SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
