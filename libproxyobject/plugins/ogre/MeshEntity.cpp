@@ -314,62 +314,70 @@ void MeshEntity::createMesh(const Meshdata& md) {
     String hash = sha.convertToHexString();
     int up = md.up_axis;
 
-    const SubMeshGeometry& submesh = *(md.geometry[0]);
-    int vertcount = submesh.positions.size();
-    int normcount = submesh.normals.size();
-    int indexcount = submesh.position_indices.size();
+    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+    Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
+    for(TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
+        std::string matname = hash + "_texture_" + *tex_it;
+        Ogre::MaterialPtr mat = base_mat->clone(matname);
+        String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
+        mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
+    }
+
 
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
     /// FIXME: set bounds, bounding radius here
     Ogre::ManualObject mo(hash);
     mo.clear();
 
-    /// FIXME: only support one texture!
-    /// create a material & give it the texture
-    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-    Ogre::MaterialPtr mat = matm.getByName("baseogremat");
-    std::string matname = hash + "_texture";
-    mat = mat->clone(matname);
-    if (md.textures.size() > 0) { // fixme
-        String texURI = mURI.substr(0, mURI.rfind("/")+1) + md.textures[0];
-        mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
-    }
-    mo.begin(matname);
+    for(SubMeshGeometryList::const_iterator submesh_it = md.geometry.begin(); submesh_it != md.geometry.end(); submesh_it++) {
+        const SubMeshGeometry& submesh = *(*submesh_it);
+        int vertcount = submesh.positions.size();
+        int normcount = submesh.normals.size();
+        int indexcount = submesh.position_indices.size();
 
-    float tu, tv;
-    for (int i=0; i<indexcount; i++) {
-        int j = submesh.position_indices[i];
-        Vector3f v = fixUp(up, submesh.positions[j]);
-        mo.position(v[0], v[1], v[2]);
+        // FIXME select proper texture/material
+        std::string matname = md.textures.size() > 0 ?
+            hash + "_texture_" + md.textures[0] :
+            base_mat->getName();
+        mo.begin(matname);
 
-        j = submesh.normal_indices[i];
-        v = fixUp(up, submesh.normals[j]);
+        float tu, tv;
+        for (int i=0; i<indexcount; i++) {
+            int j = submesh.position_indices[i];
+            Vector3f v = fixUp(up, submesh.positions[j]);
+            mo.position(v[0], v[1], v[2]);
 
-        mo.normal(v[0], v[1], v[2]);
-        mo.colour(1.0,1.0,1.0,1.0);
-        if (submesh.texUVs.size()==0) {
-            /// bogus texture for textureless models
-            if (i%3==0) {
-                tu=0.0;
-                tv=0.0;
+            j = submesh.normal_indices[i];
+            v = fixUp(up, submesh.normals[j]);
+
+            mo.normal(v[0], v[1], v[2]);
+            mo.colour(1.0,1.0,1.0,1.0);
+            if (submesh.texUVs.size()==0) {
+                /// bogus texture for textureless models
+                if (i%3==0) {
+                    tu=0.0;
+                    tv=0.0;
+                }
+                if (i%3==1) {
+                    tu=0.0;
+                    tv=1.0;
+                }
+                if (i%3==2) {
+                    tu=1.0;
+                    tv=1.0;
+                }
             }
-            if (i%3==1) {
-                tu=0.0;
-                tv=1.0;
+            else {
+                Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
+                tu=uv[0];
+                tv=1.0-uv[1];           //  why you gotta be like that?
             }
-            if (i%3==2) {
-                tu=1.0;
-                tv=1.0;
-            }
+            mo.textureCoord(tu, tv);
         }
-        else {
-            Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
-            tu=uv[0];
-            tv=1.0-uv[1];           //  why you gotta be like that?
-        }
-        mo.textureCoord(tu, tv);
-    }
-    mo.end();
+
+        mo.end();
+    } // submesh
+
     mo.setVisible(true);
     Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     bool check = mm.resourceExists(hash);
