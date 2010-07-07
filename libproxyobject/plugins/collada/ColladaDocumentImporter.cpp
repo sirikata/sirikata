@@ -247,7 +247,9 @@ bool ColladaDocumentImporter::writeCamera ( COLLADAFW::Camera const* camera )
 bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << image << ") entered" << std::endl,true));
-    meshstore[mDocument->getURI().toString()]->texture = image->getImageURI().getURIString();  /// not really -- among other sins, lowercase!
+    // This sucks, but we currently handle only one texture.  Prefer the first one.
+    if (meshstore[mDocument->getURI().toString()]->texture.size() == 0)
+        meshstore[mDocument->getURI().toString()]->texture = image->getImageURI().getURIString();  /// not really -- among other sins, lowercase!
     return true;
 }
 
