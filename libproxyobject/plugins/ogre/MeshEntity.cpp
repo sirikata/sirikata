@@ -302,6 +302,7 @@ void MeshEntity::onSetMesh ( URI const& meshFile )
 }
 
 Vector3f fixUp(int up, Vector3f v) {
+    return v;
     if (up==3) return Vector3f(v[0],v[2], -v[1]);
     else if (up==2) return v;
     std::cerr << "ERROR: X up? You gotta be frakkin' kiddin'\n";
@@ -379,7 +380,7 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
             }
         }
         else {
-            Sirikata::Vector2f uv = md.texUVs[i];
+            Sirikata::Vector2f uv = md.texUVs[ md.texUV_indices[i] ];
 //            std::cout << " tex: " << uv;
             tu=uv[0];
             tv=1.0-uv[1];           //  why you gotta be like that?

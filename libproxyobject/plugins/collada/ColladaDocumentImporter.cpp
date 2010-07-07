@@ -159,11 +159,18 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     }
     COLLADAFW::UIntValuesArray const* pi(&((*primitives)[0]->getPositionIndices()));
     COLLADAFW::UIntValuesArray const* ni(&((*primitives)[0]->getNormalIndices()));
+    COLLADAFW::IndexList const* uv_ilist((*primitives)[0]->getUVCoordIndices(0)); // FIXME 0
+    assert(uv_ilist->getStride() == 2);
+    COLLADAFW::UIntValuesArray const* uvi(&(uv_ilist->getIndices()));
     int vcnt = verts->getValuesCount();
     int ncnt = norms->getValuesCount();
     unsigned int icnt = pi->getCount();
     int uvcnt = UVs->getValuesCount();
     if (icnt != ni->getCount()) {
+        std::cerr << "ERROR: position indices and normal indices differ in length!\n";
+        assert(false);
+    }
+    if (icnt != uvi->getCount()) {
         std::cerr << "ERROR: position indices and normal indices differ in length!\n";
         assert(false);
     }
@@ -187,9 +194,11 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         }
         unsigned int const* praw = pi->getData();
         unsigned int const* nraw = ni->getData();
+        unsigned int const* uvraw = uvi->getData();
         for (unsigned int i=0; i<icnt; i++) {
             meshstore[uri]->position_indices.push_back(praw[i]);
             meshstore[uri]->normal_indices.push_back(nraw[i]);
+            meshstore[uri]->texUV_indices.push_back(uvraw[i]);
         }
     }
     else {
