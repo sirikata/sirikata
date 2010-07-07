@@ -1854,7 +1854,7 @@ IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can 
 
     ADD_CUSTOM_COMMAND(OUTPUT ${GENERATED_SCENE_DB}
       COMMAND ${PYTHON_EXECUTABLE} ${CSV_CONVERTER_BINARY} ${INPUT_SCENE_CSV} ${GENERATED_SCENE_DB}
-      DEPENDS ${AdditionalProtoDepends}
+      DEPENDS ${AdditionalProtoDepends} ${INPUT_SCENE_CSV}
       COMMENT "Making example scene database from  ${GENERATED_SCENE_DB}")
     INSTALL(FILES ${GENERATED_SCENE_DB} DESTINATION bin)
     MESSAGE(STATUS "Added ${GENERATED_SCENE_DB} target.")
