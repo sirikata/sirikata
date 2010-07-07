@@ -324,17 +324,19 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
     int up = md.up_axis;
-    int vertcount = md.positions.size();
-    int normcount = md.normals.size();
-    int indexcount = md.position_indices.size();
+
+    const SubMeshGeometry& submesh = *(md.geometry[0]);
+    int vertcount = submesh.positions.size();
+    int normcount = submesh.normals.size();
+    int indexcount = submesh.position_indices.size();
     /*
     std::cout << "dbm debug vertex data:\n";
     for (int i=0; i<vertcount; i++) {
-        std::cout << "  dbm debug vertex (ogre): " << md.positions[i] << std::endl;
+        std::cout << "  dbm debug vertex (ogre): " << submesh.positions[i] << std::endl;
     }
     std::cout << "dbm debug normal data:\n";
     for (int i=0; i<normcount; i++) {
-        std::cout << "  dbm debug normal (ogre): " << md.normals[i] << std::endl;
+        std::cout << "  dbm debug normal (ogre): " << submesh.normals[i] << std::endl;
     }
     */
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
@@ -355,16 +357,16 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
     float tu, tv;
     for (int i=0; i<indexcount; i++) {
 //        std::cout << "  dbm debug triangle (ogre): ";
-        int j = md.position_indices[i];
-        Vector3f v = fixUp(up, md.positions[j]);
+        int j = submesh.position_indices[i];
+        Vector3f v = fixUp(up, submesh.positions[j]);
         mo.position(v[0], v[1], v[2]);
 //        std::cout << " pos: " << v;
-        j = md.normal_indices[i];
-        v = fixUp(up, md.normals[j]);
+        j = submesh.normal_indices[i];
+        v = fixUp(up, submesh.normals[j]);
 //        std::cout << " norm: " << v;
         mo.normal(v[0], v[1], v[2]);
         mo.colour(1.0,1.0,1.0,1.0);
-        if (md.texUVs.size()==0) {
+        if (submesh.texUVs.size()==0) {
             /// bogus texture for textureless models
             if (i%3==0) {
                 tu=0.0;
@@ -380,7 +382,7 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
             }
         }
         else {
-            Sirikata::Vector2f uv = md.texUVs[ md.texUV_indices[i] ];
+            Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
 //            std::cout << " tex: " << uv;
             tu=uv[0];
             tv=1.0-uv[1];           //  why you gotta be like that?

@@ -34,12 +34,19 @@
 
 extern long Meshdata_counter;
 
-struct Meshdata {
+struct SubMeshGeometry {
+    std::string name;
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
     std::vector<Sirikata::Vector2f> texUVs;
     std::vector<int> position_indices;
     std::vector<int> normal_indices;
+    std::vector<int> texUV_indices;
+};
+typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
+
+struct Meshdata {
+    SubMeshGeometryList geometry;
     std::string texture;
     std::string uri;
     int up_axis;
