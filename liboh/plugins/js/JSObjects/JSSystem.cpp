@@ -15,7 +15,14 @@ namespace JSSystem{
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
   JSObjectScript* target_script = GetTargetJSObjectScript(args);
-  
+
+  v8::String::Utf8Value str(args[0]);
+  const char* cstr = ToCString(str);
+  const String s(cstr); 
+  const SpaceID new_space(s);
+  target_script->create_presence(new_space); 
+
+  return v8::Undefined();
   
 }
 
