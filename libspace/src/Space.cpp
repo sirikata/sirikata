@@ -169,6 +169,26 @@ void Space::processMessage(const RoutableMessageHeader&header,MemoryReference me
         std::tr1::unordered_map<unsigned int,MessageService*>::iterator where=mServices.find(port);
         if (where!=mServices.end()) {
             where->second->processMessage(header,message_body);
+        }
+        else if (port == 0) {
+            // FIXME handleRPC only need this currently because we get prox
+            // callbacks, which is kind of odd
+            RoutableMessageBody msg;
+            msg.ParseFromArray(message_body.data(), message_body.length());
+
+            for (int i = 0; i < msg.message_size(); ++i) {
+                std::string name = msg.message_names(i);
+                MemoryReference args(msg.message_arguments(i));
+
+                RoutableMessageHeader new_header = header;
+                if (!new_header.has_source_space())
+                    new_header.set_source_space(mID);
+                if (!new_header.has_destination_space())
+                    new_header.set_destination_space(mID);
+
+                // FIXME responses?
+                dynamic_cast<SpaceProxyManager*>(mPhysicsProxyObjects)->processRPC(new_header, name, args, NULL);
+            }
         }else {
             SILOG(space,warning,"Do not know where to forward space-destined message to "<<header.destination_port()<< " aka "<<port);
         }

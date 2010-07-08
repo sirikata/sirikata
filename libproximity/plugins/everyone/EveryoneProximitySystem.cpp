@@ -172,16 +172,31 @@ ProximitySystem::OpaqueMessageReturnValue EveryoneProximitySystem::processOpaque
         size_t serializedMessageBodySize)
 {
     RoutableMessageBody body;
+    ProximitySystem::OpaqueMessageReturnValue retval = OBJECT_NOT_DESTROYED;
     if (body.ParseFromArray(serializedMessageBody, serializedMessageBodySize)) {
         if (source)
-            return processOpaqueProximityMessage(new_objects, *source, msg, body);
+            retval = processOpaqueProximityMessage(new_objects, *source, msg, body);
         else if (msg.has_source_object())
-            return processOpaqueProximityMessage(new_objects, msg.source_object(), msg, body);
+            retval = processOpaqueProximityMessage(new_objects, msg.source_object(), msg, body);
         else if (msg.has_destination_object())
-            return processOpaqueProximityMessage(new_objects, msg.destination_object(), msg, body);
+            retval = processOpaqueProximityMessage(new_objects, msg.destination_object(), msg, body);
+        else
+            retval = processOpaqueProximityMessage(new_objects, ObjectReference::null(), msg, body);
+
+        if (retval == OBJECT_DELETED && source != NULL) {
+            ObjectSet::iterator del_obj_it = mConnectionInfo[stream].queriers.find(*source);
+            if (del_obj_it != mConnectionInfo[stream].queriers.end())
+                mConnectionInfo[stream].queriers.erase(del_obj_it);
+            mObjectConnections.erase(*source);
+        }
+        else if (retval != OBJECT_DELETED && !new_objects.empty()) {
+            mConnectionInfo[stream].queriers.insert(new_objects.begin(), new_objects.end());
+            for(ObjectSet::iterator it = new_objects.begin(); it != new_objects.end(); it++)
+                mObjectConnections[*it] = stream;
+        }
     }
 
-    return OBJECT_NOT_DESTROYED;
+    return retval;
 }
 
 ProximitySystem::OpaqueMessageReturnValue EveryoneProximitySystem::processOpaqueProximityMessage(
@@ -203,30 +218,32 @@ ProximitySystem::OpaqueMessageReturnValue EveryoneProximitySystem::processOpaque
                 new_objects.insert(ref);
             }
         }
-        else if (msg.message_names(i)=="NewProxQuery") {
-            Sirikata::Protocol::NewProxQuery new_query;
-            if (new_query.ParseFromString(msg.message_arguments(i))) {
-                this->newProxQuery(last_obj,hdr.source_port(),new_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+        else if (source != ObjectReference::null()) {
+            if (msg.message_names(i)=="NewProxQuery") {
+                Sirikata::Protocol::NewProxQuery new_query;
+                if (new_query.ParseFromString(msg.message_arguments(i))) {
+                    this->newProxQuery(last_obj,hdr.source_port(),new_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+                }
             }
-        }
-        else if (msg.message_names(i)=="DelProxQuery") {
-            Sirikata::Protocol::DelProxQuery del_query;
-            if (del_query.ParseFromString(msg.message_arguments(i))) {
-                this->delProxQuery(last_obj,hdr.source_port(),del_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+            else if (msg.message_names(i)=="DelProxQuery") {
+                Sirikata::Protocol::DelProxQuery del_query;
+                if (del_query.ParseFromString(msg.message_arguments(i))) {
+                    this->delProxQuery(last_obj,hdr.source_port(),del_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+                }
             }
-        }
-        else if (msg.message_names(i)=="ObjLoc"){
-            Sirikata::Protocol::ObjLoc obj_loc;
-            if (obj_loc.ParseFromString(msg.message_arguments(i))) {
-                this->objLoc(last_obj,obj_loc,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+            else if (msg.message_names(i)=="ObjLoc"){
+                Sirikata::Protocol::ObjLoc obj_loc;
+                if (obj_loc.ParseFromString(msg.message_arguments(i))) {
+                    this->objLoc(last_obj,obj_loc,msg.message_arguments(i).data(),msg.message_arguments(i).size());
+                }
             }
-        }
-        else if (msg.message_names(i)=="DelObj") {
-            Sirikata::Protocol::DelObj del_obj;
-            if (del_obj.ParseFromString(msg.message_arguments(i))) {
-                this->delObj(source);
-                retval=OBJECT_DELETED;
-                return retval;//once an object is deleted, the iterator is invalid
+            else if (msg.message_names(i)=="DelObj") {
+                Sirikata::Protocol::DelObj del_obj;
+                if (del_obj.ParseFromString(msg.message_arguments(i))) {
+                    this->delObj(source);
+                    retval=OBJECT_DELETED;
+                    return retval;//once an object is deleted, the iterator is invalid
+                }
             }
         }
     }

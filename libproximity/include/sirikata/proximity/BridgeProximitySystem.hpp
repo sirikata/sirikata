@@ -58,12 +58,12 @@ class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageSer
             RoutableMessageHeader alteredHeader(hdr);
             alteredHeader.set_source_port(Services::GEOM);
             alteredHeader.set_source_object(ObjectReference::spaceServiceID());
-            
+
             for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
                 (*i)->processMessage(alteredHeader,message_body);
             }
         }
-        
+
     }mMulticast;
 protected:
     virtual bool forwardThisName(bool disconnection, const std::string&name) {
@@ -80,13 +80,11 @@ protected:
     virtual ObjectSpaceBridgeProximitySystem<MessageService*>::DidAlterMessage addressMessage(RoutableMessageHeader&output,
                                 const ObjectReference*source,
                                 const ObjectReference*destination) {
-        //if (source) //proximity management will have source through 
-        //    output.set_source_object(source->getObjectUUID());
-        if (destination) {
+        if (source)
+            output.set_source_object(*source);
+        if (destination)
             output.set_destination_object(*destination);
-            return ObjectSpaceBridgeProximitySystem<MessageService*>::ALTERED_MESSAGE;
-        }
-        return ObjectSpaceBridgeProximitySystem<MessageService*>::UNSPOILED_MESSAGE;
+        return ObjectSpaceBridgeProximitySystem<MessageService*>::ALTERED_MESSAGE;
     }
     virtual void sendMessage(const ObjectReference&source,
                              const RoutableMessage&opaqueMessage,
@@ -146,12 +144,12 @@ public:
         DELIVER_TO_OBJECT,
         DELIVER_TO_PROX,
         DELIVER_TO_BOTH
-        
+
     };
 
     /**
-     * Pass the ReturnedObjectConnection info, 
-     * containing an Object UUID to the proximity manager, 
+     * Pass the ReturnedObjectConnection info,
+     * containing an Object UUID to the proximity manager,
      * so the proximity system knows about a new object
      */
     virtual ObjectReference newObj(const Sirikata::Protocol::IRetObj& newObjMsg,
@@ -196,7 +194,7 @@ public:
                 this->mProximityConnection->deleteObjectStream(mesg.source_object());
         }
     }
-   
+
 };
 
 } }
