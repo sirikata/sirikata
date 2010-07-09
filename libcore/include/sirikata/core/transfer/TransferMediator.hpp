@@ -98,7 +98,7 @@ class SIRIKATA_EXPORT TransferMediator : public AutoSingleton<TransferMediator>{
 		}
 
 		void setClientPriority(std::tr1::shared_ptr<TransferRequest> req) {
-		    const std::string& clientID = req->getClientID();http://www.facebook.com/
+		    const std::string& clientID = req->getClientID();
 		    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findClient = mTransferReqs.find(clientID);
 			if(findClient == mTransferReqs.end()) {
 			    mTransferReqs[clientID] = req;
@@ -226,7 +226,7 @@ public:
 	static void destroy();
 
 	Thread *thread;
-    
+
 	/*
 	 * Initializes the transfer mediator with the components it needs to fulfill requests
 	 */
