@@ -103,7 +103,9 @@ public:
         TS_ASSERT(mHttpResponse);
         if(mHttpResponse) {
             it = mHttpResponse->getHeaders().find("Content-Length");
-            TS_ASSERT(it == mHttpResponse->getHeaders().end());
+            Transfer::TransferMediator * mTransferMediator;
+	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+	TS_ASSERT(it == mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             it = mHttpResponse->getHeaders().find("File-Size");
@@ -398,9 +400,14 @@ public:
 			&TransferTest::sleep_processEventQueue, this));
 
 		//Create a transfer mediator to use for client transfer requests
-		mTransferMediator = new Transfer::TransferMediator(mEventSystem, NULL /*mServicePool->service()*/);
+		//mTransferMediator = new Transfer::TransferMediator(mEventSystem, NULL /*mServicePool->service()*/);
 
-		mMediatorThread = new Thread(std::tr1::bind(&Transfer::TransferMediator::mediatorThread, mTransferMediator));
+		mTransferMediator = &Transfer::TransferMediator::getSingleton();
+		
+		mTransferMediator->initialize(mEventSystem, NULL);
+		
+		
+		mMediatorThread = mTransferMediator->thread;
 
 		//5 urls
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list1;

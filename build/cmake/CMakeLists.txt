@@ -988,6 +988,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${Protocol_PBJ_CPP_FILES}
         ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/TransferMediator.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
