@@ -46,6 +46,7 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/proxyobject/ConnectionEventListener.hpp>
 
 namespace Sirikata {
 
@@ -289,6 +290,7 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
             }
         }
     }
+    ConnectionEventProvider::notify(&ConnectionEventListener::onDisconnected, addy, false, "Unknown.");
 }
 
 void ObjectHost::tick() {

@@ -34,10 +34,11 @@
 #define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
+#include <sirikata/proxyobject/ConnectionEventListener.hpp>
 
 namespace Sirikata {
 
-class TimeSteppedSimulation: public ProxyCreationListener {
+class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener {
 public:
     virtual Duration desiredTickRate()const=0;
     ///returns true if simulation should continue (false quits app)

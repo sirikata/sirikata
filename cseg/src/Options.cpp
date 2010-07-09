@@ -38,7 +38,7 @@
 namespace Sirikata {
 
 void InitCSegOptions() {
-    InitializeClassOptions::module(GLOBAL_OPTIONS_MODULE)
+    InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(new OptionValue(OPT_CSEG_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("random-splits-merges", "false", Sirikata::OptionValueType<bool>(), "Whether to enable random splits and merges in DistributedCoordinateSegmentation."))
@@ -52,7 +52,9 @@ void InitCSegOptions() {
       .addOption(new OptionValue("cseg-population-density-file", "glds00ag.asc", Sirikata::OptionValueType<String>(), "The file containing the population density numbers."))
       .addOption(new OptionValue("cseg-servermap-options", "--filename=cseg_serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list for cseg servers."))
       .addOption(new OptionValue("cseg-id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this CSEG server"))
-      .addOption(new OptionValue("additional-cseg-duration", "5s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
+      .addOption(new OptionValue("additional-cseg-duration", "60s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
+      .addOption(new OptionValue("cseg-service-tcp-port", "6234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
+
       ;
 }
 

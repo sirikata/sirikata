@@ -59,6 +59,9 @@
 #include <boost/asio.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/util/Singleton.hpp>
+#include <sirikata/core/task/EventManager.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -68,7 +71,7 @@ using namespace boost::multi_index;
 /*
  * Mediates requests for files
  */
-class TransferMediator {
+class SIRIKATA_EXPORT TransferMediator : public AutoSingleton<TransferMediator>{
 
 	class AggregateRequest {
 	public:
@@ -95,7 +98,7 @@ class TransferMediator {
 		}
 
 		void setClientPriority(std::tr1::shared_ptr<TransferRequest> req) {
-		    const std::string& clientID = req->getClientID();
+		    const std::string& clientID = req->getClientID();http://www.facebook.com/
 		    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findClient = mTransferReqs.find(clientID);
 			if(findClient == mTransferReqs.end()) {
 			    mTransferReqs[clientID] = req;
@@ -219,12 +222,20 @@ class TransferMediator {
 	uint32 mNumOutstanding;
 
 public:
+	static TransferMediator& getSingleton();
+	static void destroy();
 
+	Thread *thread;
+    
 	/*
 	 * Initializes the transfer mediator with the components it needs to fulfill requests
 	 */
-	TransferMediator(Task::GenEventManager* eventSystem, Network::IOService* io)
-		: mEventSystem(eventSystem), mIOService(io), mCleanup(false), mNumOutstanding(0) {
+	void initialize(Task::GenEventManager* eventSystem, Network::IOService* io) {
+	    mEventSystem = eventSystem;
+	    mIOService = io;
+	    mCleanup = false;
+	    mNumOutstanding = 0;
+	    thread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
 	}
 
 	/*

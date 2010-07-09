@@ -1017,6 +1017,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${Protocol_PBJ_CPP_FILES}
         ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/TransferMediator.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
@@ -1900,19 +1901,27 @@ ENDIF()
 
 IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can generate pbj.py files)
   SET(CSV_CONVERTER_BINARY ${OH_TOOLS_DIR}/csv_converter.py)
+  SET(INPUT_BLANK_CSV ${DEMO_SCENES_DIR}/blank.csv)
   SET(INPUT_SCENE_CSV ${DEMO_SCENES_DIR}/collada.csv)
 
   IF(EXISTS ${CSV_CONVERTER_BINARY} AND EXISTS ${INPUT_SCENE_CSV})
+    SET(GENERATED_BLANK_DB ${CMAKE_CURRENT_BINARY_DIR}/blank.db)
     SET(GENERATED_SCENE_DB ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
     ADD_CUSTOM_TARGET(SCENEDB ALL
-      DEPENDS ${AdditionalProtoDepends} ${GENERATED_SCENE_DB}
-      COMMENT "Checking ${GENERATED_SCENE_DB}")
+      DEPENDS ${AdditionalProtoDepends} ${GENERATED_BLANK_DB} ${GENERATED_SCENE_DB}
+      COMMENT "Checking databases...")
 
     ADD_CUSTOM_COMMAND(OUTPUT ${GENERATED_SCENE_DB}
       COMMAND ${PYTHON_EXECUTABLE} ${CSV_CONVERTER_BINARY} ${INPUT_SCENE_CSV} ${GENERATED_SCENE_DB}
-      DEPENDS ${AdditionalProtoDepends}
-      COMMENT "Making example scene database from  ${GENERATED_SCENE_DB}")
+      DEPENDS ${AdditionalProtoDepends} ${INPUT_SCENE_CSV}
+      COMMENT "Making example scene database from  ${GENERATED_SCENE_DB}"
+      )
+    ADD_CUSTOM_COMMAND(OUTPUT ${GENERATED_BLANK_DB}
+      COMMAND ${PYTHON_EXECUTABLE} ${CSV_CONVERTER_BINARY} ${INPUT_BLANK_CSV} ${GENERATED_BLANK_DB}
+      DEPENDS ${AdditionalProtoDepends} ${INPUT_BLANK_CSV}
+      COMMENT "Making example scene database from  ${GENERATED_BLANK_DB}"
+      )
     INSTALL(FILES ${GENERATED_SCENE_DB} DESTINATION bin)
     MESSAGE(STATUS "Added ${GENERATED_SCENE_DB} target.")
   ENDIF()

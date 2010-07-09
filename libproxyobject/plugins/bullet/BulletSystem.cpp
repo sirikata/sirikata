@@ -259,14 +259,15 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         if (meshbytes || is_collada) {
             mVertices.clear();
             mIndices.clear();
-            if (is_collada) {
-                for (i=0; i<mMeshdata->positions.size();i++) {
-                    mVertices.push_back((double)mMeshdata->positions[i][0]);
-                    mVertices.push_back((double)mMeshdata->positions[i][1]);
-                    mVertices.push_back((double)mMeshdata->positions[i][2]);
+            if (is_collada && mMeshdata->geometry.size() > 0) {
+                const SubMeshGeometry& subm = *(mMeshdata->geometry[0]);
+                for (i=0; i<subm.positions.size();i++) {
+                    mVertices.push_back((double)subm.positions[i][0]);
+                    mVertices.push_back((double)subm.positions[i][1]);
+                    mVertices.push_back((double)subm.positions[i][2]);
                 }
-                for (i=0; i<mMeshdata->position_indices.size();i++) {
-                    mIndices.push_back((double)mMeshdata->position_indices[i]);
+                for (i=0; i<subm.position_indices.size();i++) {
+                    mIndices.push_back((double)subm.position_indices[i]);
                 }
             }
             else {

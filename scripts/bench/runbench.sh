@@ -7,7 +7,7 @@ git checkout origin/master
 git branch -D master
 git checkout -b master origin/master
 cd ..
-./install-deps.sh update
+make depends
 cd $HEREPLACE/../build/cmake&&cmake .&&make&&cd ../../scripts
 cluster/build.py reset_origin update update_dependencies
 cluster/build.py deploy Release

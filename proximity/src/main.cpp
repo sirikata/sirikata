@@ -55,13 +55,19 @@ namespace Sirikata {
 
 int main(int argc,const char**argv) {
     using namespace Sirikata;
+
+    OptionValue *proxOptions;
+    InitializeGlobalOptions gbo("",
+        proxOptions = new OptionValue("options","",OptionValueType<String>(),"Options to be passed to the proximity system."),
+        NULL);
+
     OptionSet::getOptions("")->parse(argc,argv);
     PluginManager plugins;
     plugins.load( "tcpsst" );
     plugins.load( "prox-everyone" );
 
     Network::IOService*io=Network::IOServiceFactory::makeIOService();
-    Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,"",&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);
+    Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,proxOptions->as<String>(),&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);
     io->run();
     return 0;
 }

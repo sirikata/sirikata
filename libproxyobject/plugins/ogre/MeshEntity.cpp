@@ -293,10 +293,86 @@ void MeshEntity::onSetMesh ( URI const& meshFile )
 }
 
 Vector3f fixUp(int up, Vector3f v) {
+    return v;
     if (up==3) return Vector3f(v[0],v[2], -v[1]);
     else if (up==2) return v;
     std::cerr << "ERROR: X up? You gotta be frakkin' kiddin'\n";
     assert(false);
+}
+
+void MeshEntity::createMesh(const Meshdata& md) {
+    SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
+    String hash = sha.convertToHexString();
+    int up = md.up_axis;
+
+    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+    Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
+    for(TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
+        std::string matname = hash + "_texture_" + *tex_it;
+        Ogre::MaterialPtr mat = base_mat->clone(matname);
+        String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
+        mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
+    }
+
+
+    Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
+    /// FIXME: set bounds, bounding radius here
+    Ogre::ManualObject mo(hash);
+    mo.clear();
+
+    for(SubMeshGeometryList::const_iterator submesh_it = md.geometry.begin(); submesh_it != md.geometry.end(); submesh_it++) {
+        const SubMeshGeometry& submesh = *(*submesh_it);
+        int vertcount = submesh.positions.size();
+        int normcount = submesh.normals.size();
+        int indexcount = submesh.position_indices.size();
+
+        // FIXME select proper texture/material
+        std::string matname = md.textures.size() > 0 ?
+            hash + "_texture_" + md.textures[0] :
+            base_mat->getName();
+        mo.begin(matname);
+
+        float tu, tv;
+        for (int i=0; i<indexcount; i++) {
+            int j = submesh.position_indices[i];
+            Vector3f v = fixUp(up, submesh.positions[j]);
+            mo.position(v[0], v[1], v[2]);
+
+            j = submesh.normal_indices[i];
+            v = fixUp(up, submesh.normals[j]);
+
+            mo.normal(v[0], v[1], v[2]);
+            mo.colour(1.0,1.0,1.0,1.0);
+            if (submesh.texUVs.size()==0) {
+                /// bogus texture for textureless models
+                if (i%3==0) {
+                    tu=0.0;
+                    tv=0.0;
+                }
+                if (i%3==1) {
+                    tu=0.0;
+                    tv=1.0;
+                }
+                if (i%3==2) {
+                    tu=1.0;
+                    tv=1.0;
+                }
+            }
+            else {
+                Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
+                tu=uv[0];
+                tv=1.0-uv[1];           //  why you gotta be like that?
+            }
+            mo.textureCoord(tu, tv);
+        }
+
+        mo.end();
+    } // submesh
+
+    mo.setVisible(true);
+    Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    bool check = mm.resourceExists(hash);
+    loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
 }
 
 Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata& md) {
@@ -306,94 +382,44 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
         std::cerr << "dbm debug ERROR MeshEntity::downloadFinished for: " << md.uri
         << " status: " << (int)ev->getStatus()
         << " == " << (int)Transfer::TransferManager::SUCCESS
-        << " texture: " << md.texture
+        << " textures: " << md.textures.size()
         << " fingerprint: " << ev->fingerprint()
         << " length: " << (int)ev->data().length()
         << std::endl;
     }
-    SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
-    String hash = sha.convertToHexString();
-    int up = md.up_axis;
-    int vertcount = md.positions.size();
-    int normcount = md.normals.size();
-    int indexcount = md.position_indices.size();
-    /*
-    std::cout << "dbm debug vertex data:\n";
-    for (int i=0; i<vertcount; i++) {
-        std::cout << "  dbm debug vertex (ogre): " << md.positions[i] << std::endl;
-    }
-    std::cout << "dbm debug normal data:\n";
-    for (int i=0; i<normcount; i++) {
-        std::cout << "  dbm debug normal (ogre): " << md.normals[i] << std::endl;
-    }
-    */
-    Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-    /// FIXME: set bounds, bounding radius here
-    Ogre::ManualObject mo(hash);
-    mo.clear();
 
-    /// create a material & give it the texture
-    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-    Ogre::MaterialPtr mat = matm.getByName("baseogremat");
-    std::string matname = hash + "_texture";
-    mat = mat->clone(matname);
+    SILOG(ogre,fatal,ev->uri().toString() << " -> " << ev->fingerprint().convertToHexString());
+    mTextureFingerprints[ev->uri().toString()] = ev->fingerprint().convertToHexString();
 
-    /// FIXME: only support one texture!
-    mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + ev->fingerprint().convertToHexString(), 0);
-    mo.begin(matname);
-//    std::cout << "dbm debug triangle data:\n";
-    float tu, tv;
-    for (int i=0; i<indexcount; i++) {
-//        std::cout << "  dbm debug triangle (ogre): ";
-        int j = md.position_indices[i];
-        Vector3f v = fixUp(up, md.positions[j]);
-        mo.position(v[0], v[1], v[2]);
-//        std::cout << " pos: " << v;
-        j = md.normal_indices[i];
-        v = fixUp(up, md.normals[j]);
-//        std::cout << " norm: " << v;
-        mo.normal(v[0], v[1], v[2]);
-        mo.colour(1.0,1.0,1.0,1.0);
-        if (md.texUVs.size()==0) {
-            /// bogus texture for textureless models
-            if (i%3==0) {
-                tu=0.0;
-                tv=0.0;
-            }
-            if (i%3==1) {
-                tu=0.0;
-                tv=1.0;
-            }
-            if (i%3==2) {
-                tu=1.0;
-                tv=1.0;
-            }
-        }
-        else {
-            Sirikata::Vector2f uv = md.texUVs[i];
-//            std::cout << " tex: " << uv;
-            tu=uv[0];
-            tv=1.0-uv[1];           //  why you gotta be like that?
-        }
-        mo.textureCoord(tu, tv);
-//        std::cout << std::endl;
-    }
-    mo.end();
-    mo.setVisible(true);
-    Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    bool check = mm.resourceExists(hash);
-    loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
+    mRemainingDownloads--;
+    if (mRemainingDownloads == 0)
+        createMesh(md);
+
     return Task::EventResponse::del();
 }
 
 void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
-    if (md.texture=="") {
-        md.texture="BumpyMetal.jpg";
+    mURI = uri;
+
+    mRemainingDownloads = md.textures.size();
+
+    // Special case for no dependent downloads
+    if (mRemainingDownloads == 0) {
+        createMesh(md);
+        return;
     }
-    /// attempt download of texture FIXME: only covers single texture case
-    String texURI=uri.substr(0, uri.rfind("/")+1) + md.texture;
-    mScene->mTransferManager->download(Transfer::URI(texURI), std::tr1::bind(&MeshEntity::downloadFinished,
-                                       this,_1,md), Transfer::Range(true));
+
+    for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
+        String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
+        mScene->mTransferManager->download(
+            Transfer::URI(texURI),
+            std::tr1::bind(
+                &MeshEntity::downloadFinished,
+                this,_1,md
+            ),
+            Transfer::Range(true)
+        );
+    }
 }
 
 void MeshEntity::onSetScale ( Vector3f const& scale )

@@ -321,6 +321,7 @@ int main ( int argc,const char**argv ) {
             }
         }
         else {
+            oh->addListener(sim);
             SILOG(cppoh,info,String("Successfully initialized ") + simName);
             sims.push_back(sim);
         }

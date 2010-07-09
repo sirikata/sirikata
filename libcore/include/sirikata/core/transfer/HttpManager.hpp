@@ -155,7 +155,7 @@ private:
     void handle_connect(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
             const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator);
     void handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
-            const boost::system::error_code& err);
+            const boost::system::error_code& err, std::tr1::shared_ptr<boost::asio::streambuf> request_stream);
     void handle_read(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
             std::tr1::shared_ptr<boost::asio::streambuf> response, const boost::system::error_code& err,
             std::size_t bytes_transferred);

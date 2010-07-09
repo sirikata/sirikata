@@ -33,6 +33,10 @@
 #ifndef _SIRIKATA_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
 #define _SIRIKATA_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
 
+
+
+
+
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 
@@ -82,7 +86,7 @@ private:
     void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector);
-
+ 
     void serializeBSPTree(SerializedBSPTree* serializedBSPTree);
 
 
@@ -107,6 +111,7 @@ private:
 
     boost::shared_ptr<tcp::acceptor> mAcceptor;
     boost::shared_ptr<tcp::socket> mSocket;
+    
 
     boost::shared_ptr<tcp::acceptor> mLLTreeAcceptor;
     boost::shared_ptr<tcp::socket> mLLTreeAcceptorSocket;
@@ -147,9 +152,15 @@ private:
     bool fullMessageReceived(uint8* dataReceived, uint32 bytesReceived);
 
     uint32 readFromSocket(boost::shared_ptr<tcp::socket> socket,
-			  uint8** dataReceived, bool readTillEOF);
+			  uint8** dataReceived, bool readTillEOF,
+			  uint8 bytesReceivedAlready=0);
 
     boost::shared_ptr<tcp::socket> getSocketToCSEGServer(ServerID server_id);
+
+    void asyncRead(boost::shared_ptr<tcp::socket> socket, 
+		   uint8* asyncBufferArray,
+		   const boost::system::error_code& ec,
+		   std::size_t bytes_transferred);
 
 
     ServerIDMap *  mSidMap;

@@ -514,7 +514,10 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
         int immedIndex = 0;
 
         SpaceID space = header.destination_space();
-        QueryTracker* space_query_tracker = getTracker(space);
+        // FIXME this should use: getTracker(space); but that makes things break
+        // because the space identifiers are getting removed when sending to
+        // Persistence, causing the replies to just get lost.
+        QueryTracker* space_query_tracker = mDefaultTracker;
 
         SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(space_query_tracker,std::tr1::bind(&PrivateCallbacks::handlePersistenceResponse, realThis, header, _1, _2, _3));
         int outIndex = 0;
@@ -948,6 +951,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
 
 void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
     {
+/*
         SILOG(cppoh,debug,
               '['<<(mInternalObjectReference.toString())<<']'
               << "** Message from: " << header.source_object()
@@ -956,6 +960,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
                           ?  header.destination_object().toString()
                           :  ("[Temporary UUID " + mInternalObjectReference.toString() +"]"))
               << " port " << header.destination_port());
+*/
     }
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {

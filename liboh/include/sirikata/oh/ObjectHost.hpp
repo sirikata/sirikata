@@ -37,12 +37,14 @@
 #include <sirikata/core/util/MessageService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;
 class SpaceIDMap;
 class TopLevelSpaceConnection;
 class SpaceConnection;
+class ConnectionEventListener;
 class ObjectScriptManager;
 namespace Task {
 class WorkQueue;
@@ -51,7 +53,9 @@ class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
-class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
+typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
+
+class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider {
     SpaceIDMap *mSpaceIDMap;
     typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
     typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap;

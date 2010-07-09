@@ -103,7 +103,9 @@ public:
         TS_ASSERT(mHttpResponse);
         if(mHttpResponse) {
             it = mHttpResponse->getHeaders().find("Content-Length");
-            TS_ASSERT(it == mHttpResponse->getHeaders().end());
+            Transfer::TransferMediator * mTransferMediator;
+	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+	TS_ASSERT(it == mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             it = mHttpResponse->getHeaders().find("File-Size");
@@ -241,18 +243,20 @@ public:
 
 class MetadataVerifier
     : public RequestVerifier {
-private:
+protected:
     uint64 mFileSize;
     Transfer::Fingerprint mHash;
     Transfer::URI mURI;
+    std::tr1::shared_ptr<Transfer::RemoteFileMetadata> mMetadata;
 
     void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response, VerifyFinished cb) {
-        SILOG(transfer, debug, "verifying");
+        SILOG(transfer, debug, "verifying metadata");
         TS_ASSERT(response);
         TS_ASSERT(response->getSize() == mFileSize);
         TS_ASSERT(response->getFingerprint() == mHash);
         TS_ASSERT(response->getURI() == mURI);
+        mMetadata = response;
         cb();
     }
 
@@ -266,6 +270,55 @@ public:
                 new Transfer::MetadataRequest(mURI, priority, std::tr1::bind(
                 &MetadataVerifier::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
         pool->addRequest(req);
+    }
+};
+
+
+class ChunkVerifier
+    : public MetadataVerifier {
+private:
+    uint64 mChunkSize;
+    Transfer::Fingerprint mChunkHash;
+
+public:
+    ChunkVerifier(Transfer::URI uri, uint64 file_size, const char * file_hash,
+            uint64 chunk_size, const char * chunk_hash)
+        : MetadataVerifier(uri, file_size, file_hash), mChunkSize(chunk_size),
+          mChunkHash(Transfer::Fingerprint::convertFromHex(chunk_hash)) {
+    }
+    void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
+            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+        MetadataVerifier::addToPool(pool, std::tr1::bind(&ChunkVerifier::metadataFinished, this, pool, cb, priority), priority);
+    }
+    void metadataFinished(std::tr1::shared_ptr<Transfer::TransferPool> pool,
+            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+
+        //Make sure chunk given is part of file
+        std::tr1::shared_ptr<Transfer::Chunk> chunk;
+        const Transfer::ChunkList & chunks = mMetadata->getChunkList();
+        for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
+            if(it->getHash() == mChunkHash) {
+                std::tr1::shared_ptr<Transfer::Chunk> found(new Transfer::Chunk(*it));
+                chunk = found;
+            }
+        }
+        TS_ASSERT(chunk);
+
+        std::tr1::shared_ptr<Transfer::TransferRequest> req(
+                new Transfer::ChunkRequest(mURI, *mMetadata, *chunk, priority, std::tr1::bind(
+                &ChunkVerifier::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
+        pool->addRequest(req);
+    }
+    void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response, VerifyFinished cb) {
+        SILOG(transfer, debug, "verifying chunk");
+        TS_ASSERT(request);
+        TS_ASSERT(response);
+        SILOG(transfer, debug, "response size = " << response->size() << ", req size = " << request->getChunk().getRange().size() );
+        TS_ASSERT(response->size() == request->getChunk().getRange().size());
+        TS_ASSERT(Transfer::Fingerprint::computeDigest(response->data(), response->length()) ==
+                request->getChunk().getHash());
+        cb();
     }
 };
 
@@ -347,9 +400,14 @@ public:
 			&TransferTest::sleep_processEventQueue, this));
 
 		//Create a transfer mediator to use for client transfer requests
-		mTransferMediator = new Transfer::TransferMediator(mEventSystem, NULL /*mServicePool->service()*/);
+		//mTransferMediator = new Transfer::TransferMediator(mEventSystem, NULL /*mServicePool->service()*/);
 
-		mMediatorThread = new Thread(std::tr1::bind(&Transfer::TransferMediator::mediatorThread, mTransferMediator));
+		mTransferMediator = &Transfer::TransferMediator::getSingleton();
+		
+		mTransferMediator->initialize(mEventSystem, NULL);
+		
+		
+		mMediatorThread = mTransferMediator->thread;
 
 		//5 urls
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list1;
@@ -367,10 +425,16 @@ public:
 
 		//3 new urls, 1 overlap from list1, 1 overlap from list2
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list3;
-        list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+        /*list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
                 Transfer::URI("meerkat:///test/arcade.os"),
                 6246,
-                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
+                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));*/
+		list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new ChunkVerifier(
+		                Transfer::URI("meerkat:///test/arcade.os"),
+		                6246,
+		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea",
+		                6246,
+		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
 
 		mSampleClient1 = new SampleClient(mTransferMediator, "sample1", list1);
 		mSampleClient2 = new SampleClient(mTransferMediator, "sample2", list2);
