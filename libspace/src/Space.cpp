@@ -71,6 +71,21 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     unsigned char randomKey[SHA256::static_size]={3,2,1,4,5,6,3,8,235,124,24,15,26,165,123,95,
                                                   53,2,111,114,125,166,123,158,232,144,4,152,221,161,122,96};
 
+    OptionValue*host;
+    OptionValue*port;
+    OptionValue*streamlib;
+    OptionValue*streamoptions;
+    OptionValue* proxoptions;
+    InitializeClassOptions("space",this,
+                           host=new OptionValue("host","0.0.0.0",OptionValueType<String>(),"sets the hostname that runs the space."),
+                           port=new OptionValue("port","5943",OptionValueType<String>(),"sets the port that runs the space."),
+                           streamlib=new OptionValue("protocol","",OptionValueType<String>(),"Sets the stream library to listen upon"),
+                           streamoptions=new OptionValue("options","",OptionValueType<String>(),"Options for the created listener"),
+                           proxoptions=new OptionValue("proxoptions","",OptionValueType<String>(),"Options to pass to proximity connection"),
+						   NULL);
+    OptionSet::getOptions("space",this)->parse(options);
+
+
     Protocol::SpaceServices spaceServices;
     spaceServices.set_registration_port(rsi);
     spaceServices.set_loc_port(lsi);//UUID(lsi,sizeof(lsi)));
@@ -84,7 +99,7 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
 
     mRegistration = new Registration(SHA256::convertFromBinary(randomKey));
     mLoc=new Loc;
-    Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
+    Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,proxoptions->as<String>());
     mGeom=new Proximity::BridgeProximitySystem(proxCon,spaceServices.registration_port());
     mPhysics =Physics::construct<Physics>(this,mIO,SpaceObjectReference(mID,mNodeID),spaceServices.physics_port());
     mPhysicsProxyObjects=mPhysics->getProxyManager();
@@ -92,21 +107,9 @@ Space::Space(const SpaceID&id, const String&options):mID(id),mNodeID(UUID::rando
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
     mObjectSegmentation=NULL;
-    OptionValue*host;
-    OptionValue*port;
 
     String spaceServicesString;
     spaceServices.SerializeToString(&spaceServicesString);
-
-    OptionValue*streamlib;
-    OptionValue*streamoptions;
-    InitializeClassOptions("space",this,
-                           host=new OptionValue("host","0.0.0.0",OptionValueType<String>(),"sets the hostname that runs the space."),
-                           port=new OptionValue("port","5943",OptionValueType<String>(),"sets the port that runs the space."),
-                           streamlib=new OptionValue("protocol","",OptionValueType<String>(),"Sets the stream library to listen upon"),
-                           streamoptions=new OptionValue("options","",OptionValueType<String>(),"Options for the created listener"),
-						   NULL);
-    OptionSet::getOptions("space",this)->parse(options);
 
     mObjectConnections=new ObjectConnections(Network::StreamListenerFactory::getSingleton()
                                                 .getConstructor(streamlib->as<String>())(mIO,
