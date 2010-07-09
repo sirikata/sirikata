@@ -910,6 +910,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
 
 void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
     {
+/*
         SILOG(cppoh,debug,
               '['<<(mInternalObjectReference.toString())<<']'
               << "** Message from: " << header.source_object()
@@ -918,6 +919,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
                           ?  header.destination_object().toString()
                           :  ("[Temporary UUID " + mInternalObjectReference.toString() +"]"))
               << " port " << header.destination_port());
+*/
     }
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {

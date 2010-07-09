@@ -232,9 +232,11 @@ void VWObject::applyPositionUpdate(
     if (force_reset) {
         proxy->resetLocation(objLoc.timestamp(), currentLoc);
     } else {
+/*
         std::ostringstream os;
         os << "Received position update to "<<currentLoc;
         SILOG(cppoh,debug,os.str());
+*/
         proxy->setLocation(objLoc.timestamp(), currentLoc);
     }
 }
