@@ -292,6 +292,7 @@ void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,
 }
 ///erase all sockets and callbacks since the refcount is now zero;
 MultiplexedSocket::~MultiplexedSocket() {
+  SILOG(tcpsst,error,"DELETING STREAM "<<(size_t)this);
     Stream::SubstreamCallback callbackToBeDeleted=mNewSubstreamCallback;
     mNewSubstreamCallback=&Stream::ignoreSubstreamCallback;
     TCPSetCallbacks setCallbackFunctor(this,NULL);
@@ -468,7 +469,7 @@ void MultiplexedSocket::connect(const Address&address, unsigned int numSockets, 
         headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
                                                 UUID::random()));
     //will notify connectionFailureOrSuccessCallback when resolved
-    ASIOConnectAndHandshake::connect(headerCheck,address,noDelay);
+    ASIOConnectAndHandshake::connect(headerCheck,getSharedPtr(),address,noDelay);
 }
 
 void MultiplexedSocket::ioReactorThreadResumeRead(const MultiplexedSocketWPtr& weak_thus, Stream::StreamID sid){

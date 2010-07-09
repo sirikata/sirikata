@@ -209,6 +209,8 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
 
 void ASIOSocketWrapper::sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedSocket>&weakParentMultiSocket, const ErrorCode &error, std::size_t bytes_sent) {
     MultiplexedSocketPtr parentMultiSocket(weakParentMultiSocket.lock());
+    mOutstandingDataParent.reset();
+	
     if (parentMultiSocket) {
         std::deque<TimestampedChunk> local_toSend;
         local_toSend.swap(mToSend);
@@ -241,6 +243,8 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
     mToSend.resize(0);
     mToSend.push_back(toSend);
     BufferPrint(this,".buw",&*toSend.chunk->begin(),toSend.size());
+    mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes
+
     boost::asio::async_write(*mSocket,
                              boost::asio::buffer(&*toSend.chunk->begin(),toSend.size()),
                              boost::asio::transfer_at_least(toSend.size()),
@@ -255,7 +259,6 @@ void ASIOSocketWrapper::bindFunctions(const MultiplexedSocketPtr&parent) {
                                        _2);
 }
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, std::deque<TimestampedChunk>&input_toSend){
-
     std::vector<boost::asio::mutable_buffer> bufs;
     size_t total_size=0;
     for (std::deque<TimestampedChunk>::const_iterator i=input_toSend.begin(),ie=input_toSend.end();i!=ie;++i) {
@@ -267,6 +270,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
         }
     }
     mToSend.swap(input_toSend);
+    mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes	
     boost::asio::async_write(*mSocket,
                             bufs,
                             boost::asio::transfer_at_least(total_size),

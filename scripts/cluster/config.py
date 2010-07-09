@@ -53,7 +53,7 @@ class ClusterConfig:
 
         self.plugins = 'tcpsst,servermap-tabular'
         self.space_plugins = 'weight-exp,weight-sqr'
-        self.cseg_plugins = ''
+        self.cseg_plugins = 'weight-exp'
         self.simoh_plugins = 'weight-exp,weight-sqr'
         self.analysis_plugins = 'weight-exp,weight-sqr'
 

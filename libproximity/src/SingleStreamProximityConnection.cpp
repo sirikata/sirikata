@@ -123,6 +123,8 @@ void SingleStreamProximityConnection::processMessage(const RoutableMessageHeader
     } else {
         std::string data;
         RoutableMessageHeader rmh;
+        if (hdr.has_source_object())
+            rmh.set_source_object(hdr.source_object());
         rmh.set_source_port(hdr.source_port());
         rmh.SerializeToString(&data);
         where->second->send(MemoryReference(data),message_body,Network::ReliableOrdered);

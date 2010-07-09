@@ -64,12 +64,18 @@ private:
     ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
+    uint32 mRemainingDownloads; // Downloads remaining before loading can occur
+    TextureBindingsMap mTextureFingerprints;
+
+    String mURI;
+
     Ogre::Entity *getOgreEntity() const {
         return static_cast<Ogre::Entity*const>(mOgreObject);
     }
 
     void fixTextures();
 
+    void createMesh(const Meshdata& md);
 public:
     ProxyMeshObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
