@@ -37,6 +37,7 @@
 #include <sirikata/core/util/MessageService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;
