@@ -69,68 +69,64 @@ namespace Transfer {
 using namespace boost::multi_index;
 
 /*
- * Mediates requests for files
+ * Mediates requests for name lookups and chunk downloads
  */
-class SIRIKATA_EXPORT TransferMediator : public AutoSingleton<TransferMediator>{
+class SIRIKATA_EXPORT TransferMediator
+    : public AutoSingleton<TransferMediator> {
 
+    /*
+     * Used to aggregate requests from different clients. If multiple clients request
+     * the same file, this object keeps track of the original separate requests so that
+     * each client's callback can be called when the request finishes. It also uses the
+     * PriorityAggregation interface to aggregate multiple client priorities into a single
+     * aggregated priority.
+     */
 	class AggregateRequest {
 	public:
+	    //Stores the aggregated priority
 		TransferRequest::PriorityType mPriority;
 
 	private:
+		//Maps each client's string ID to the original TransferRequest object
 		std::map<std::string, std::tr1::shared_ptr<TransferRequest> > mTransferReqs;
+
+		//Aggregated request unique identifier
 		const std::string mIdentifier;
 
-		void updateAggregatePriority() {
-			TransferRequest::PriorityType newPriority = SimplePriorityAggregation::aggregate(mTransferReqs);
-			mPriority = newPriority;
-		}
+		//Updates the aggregated priority from each client's priority when needed
+		void updateAggregatePriority();
 
 	public:
+		//Returns a map from each client ID to their original TransferRequest object
+		const std::map<std::string, std::tr1::shared_ptr<TransferRequest> > & getTransferRequests() const;
 
-		const std::map<std::string, std::tr1::shared_ptr<TransferRequest> > & getTransferRequests() const {
-			return mTransferReqs;
-		}
+		//Since there is overlap between requests here, this returns a single TransferRequest from the list of clients
+		std::tr1::shared_ptr<TransferRequest> getSingleRequest();
 
-		std::tr1::shared_ptr<TransferRequest> getSingleRequest() {
-		    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator it = mTransferReqs.begin();
-		    return it->second;
-		}
+		//Adds an additional client's request
+		void setClientPriority(std::tr1::shared_ptr<TransferRequest> req);
 
-		void setClientPriority(std::tr1::shared_ptr<TransferRequest> req) {
-		    const std::string& clientID = req->getClientID();
-		    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findClient = mTransferReqs.find(clientID);
-			if(findClient == mTransferReqs.end()) {
-			    mTransferReqs[clientID] = req;
-			    updateAggregatePriority();
-			} else if(findClient->second->getPriority() != req->getPriority()) {
-				findClient->second = req;
-				updateAggregatePriority();
-			} else {
-			    findClient->second = req;
-			}
-		}
+		//Returns a unique identifier for this aggregated request
+		const std::string& getIdentifier() const;
 
-		const std::string & getIdentifier() const {
-			return mIdentifier;
-		}
+		//Returns the aggregated priority value
+		TransferRequest::PriorityType getPriority() const;
 
-		TransferRequest::PriorityType getPriority() const {
-			return mPriority;
-		}
-
-		AggregateRequest(std::tr1::shared_ptr<TransferRequest> req)
-			: mIdentifier(req->getIdentifier()) {
-			setClientPriority(req);
-		}
+		//Pass in the first client's request
+		AggregateRequest(std::tr1::shared_ptr<TransferRequest> req);
 	};
 
-	boost::mutex mAggMutex; //lock this to access mAggregatedList
+	//lock this to access mAggregatedList
+	boost::mutex mAggMutex;
 
-	//tags
+	//tags used to index AggregateList (see boost::multi_index)
 	struct tagID{};
 	struct tagPriority{};
 
+	/*
+	 * This multi_index_container allows the efficient retrieval of an AggregateRequest
+	 * either by its identifier or sorted by its priority
+	 */
 	typedef multi_index_container<
 		std::tr1::shared_ptr<AggregateRequest>,
 		indexed_by<
@@ -140,208 +136,83 @@ class SIRIKATA_EXPORT TransferMediator : public AutoSingleton<TransferMediator>{
 	> AggregateList;
 	AggregateList mAggregateList;
 
-	//access iterators
+	//access iterators for AggregateList for convenience (see boost::multi_index)
 	typedef AggregateList::index<tagID>::type AggregateListByID;
 	typedef AggregateList::index<tagPriority>::type AggregateListByPriority;
 
+	/*
+	 * Used to process the queue of requests coming from a single client.
+	 * There is one PoolWorker for each client, and this makes it so that the client's
+	 * thread doesn't have to block when inserting a request. Instead, the PoolWorkers
+	 * block against each other when inserting the request into the aggregated list.
+	 */
 	class PoolWorker {
+	private:
+	    //The TransferPool associated with this worker
 		std::tr1::shared_ptr<TransferPool> mTransferPool;
+
+		//The worker's thread
 		Thread * mWorkerThread;
+
+		//Set to true when worker should shut down
 		bool mCleanup;
-		TransferMediator * mParent;
+
+		//Runs the worker thread
+	    void run();
 
 	public:
-		PoolWorker(std::tr1::shared_ptr<TransferPool> transferPool, TransferMediator * parent)
-			: mTransferPool(transferPool), mCleanup(false), mParent(parent) {
-			mWorkerThread = new Thread(std::tr1::bind(&PoolWorker::run, this));
-		}
+		//Initialize with the associated TransferPool
+		PoolWorker(std::tr1::shared_ptr<TransferPool> transferPool);
 
-		PoolWorker(const PoolWorker & other)
-			: mTransferPool(other.mTransferPool), mWorkerThread(other.mWorkerThread), mCleanup(other.mCleanup), mParent(other.mParent) {
-		}
+		//Returns the TransferPool this was initialized with
+		std::tr1::shared_ptr<TransferPool> getTransferPool() const;
 
-		std::tr1::shared_ptr<TransferPool> getTransferPool() const {
-			return mTransferPool;
-		}
+		//Returns the worker's thread
+		Thread * getThread() const;
 
-		Thread * getThread() const {
-			return mWorkerThread;
-		}
-
-		void cleanup() {
-			mCleanup = true;
-		}
-
-		void run() {
-			while(!mCleanup) {
-				std::tr1::shared_ptr<TransferRequest> req = mTransferPool->getRequest();
-				if(req == NULL) {
-					continue;
-				}
-				//SILOG(transfer, debug, "worker got one!");
-
-				boost::unique_lock<boost::mutex> lock(mParent->mAggMutex);
-				AggregateListByID::iterator findID = mParent->mAggregateList.get<tagID>().find(req->getIdentifier());
-
-				//Check if this request already exists
-				if(findID != mParent->mAggregateList.end()) {
-					//store original aggregated priority for later
-					TransferRequest::PriorityType oldAggPriority = (*findID)->getPriority();
-
-					//Update the priority of this client
-					(*findID)->setClientPriority(req);
-
-					//And check if it's changed, we need to update the index
-					TransferRequest::PriorityType newAggPriority = (*findID)->getPriority();
-					if(oldAggPriority != newAggPriority) {
-						using boost::lambda::_1;
-						//Convert the iterator to the priority one and update
-						AggregateListByPriority::iterator byPriority = mParent->mAggregateList.project<tagPriority>(findID);
-						AggregateListByPriority & priorityIndex = mParent->mAggregateList.get<tagPriority>();
-						priorityIndex.modify_key(byPriority, _1=newAggPriority);
-					}
-				} else {
-					//Make a new one and insert it
-					//SILOG(transfer, debug, "worker id " << mTransferPool->getClientID() << " adding url " << req->getIdentifier());
-					std::tr1::shared_ptr<AggregateRequest> newAggReq(new AggregateRequest(req));
-					mParent->mAggregateList.insert(newAggReq);
-				}
-
-			}
-		}
+		//Signal to shut down
+		void cleanup();
 	};
 
-	Task::GenEventManager* mEventSystem;
-	Network::IOService* mIOService;
-
+	//Maps a client ID string to the PoolWorker class
 	typedef std::map<std::string, std::tr1::shared_ptr<PoolWorker> > PoolType;
+	//Stores the list of pools
 	PoolType mPools;
-	boost::shared_mutex mPoolMutex; //lock this to access mPools
+	//lock this to access mPools
+	boost::shared_mutex mPoolMutex;
 
+	//Set to true to signal shutdown
 	bool mCleanup;
+	//Number of outstanding requests
 	uint32 mNumOutstanding;
+
+	//TransferMediator's worker thread
+	Thread* mThread;
+
+    //Main thread that handles the input pools
+    void mediatorThread();
+
+    //Callback for when an executed request finishes
+    void execute_finished(std::tr1::shared_ptr<TransferRequest> req, std::string id);
+
+    //Check our internal queue to see what request to process next
+    void checkQueue();
 
 public:
 	static TransferMediator& getSingleton();
 	static void destroy();
 
-	Thread *thread;
-
-	/*
-	 * Initializes the transfer mediator with the components it needs to fulfill requests
-	 */
-	void initialize(Task::GenEventManager* eventSystem, Network::IOService* io) {
-	    mEventSystem = eventSystem;
-	    mIOService = io;
-	    mCleanup = false;
-	    mNumOutstanding = 0;
-	    thread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
-	}
+	TransferMediator();
 
 	/*
 	 * Used to register a client that has a pool of requests it needs serviced by the transfer mediator
 	 * @param clientID	Should be a string that uniquely identifies the client
 	 * @param listener	An EventListener to receive a TransferEventPtr with the retrieved data.
 	 */
-	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID) {
-		std::tr1::shared_ptr<TransferPool> ret(new TransferPool(clientID));
+	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID);
 
-		//Lock exclusive to access map
-		boost::upgrade_lock<boost::shared_mutex> lock(mPoolMutex);
-		boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
-
-		//ensure client id doesnt already exist, they should be unique
-		PoolType::iterator findClientId = mPools.find(clientID);
-		assert(findClientId == mPools.end());
-
-		std::tr1::shared_ptr<PoolWorker> worker(new PoolWorker(ret, this));
-		mPools.insert(PoolType::value_type(clientID, worker));
-
-		return ret;
-	}
-
-	/*
-	 * Call when system should be shut down
-	 */
-	void cleanup() {
-		mCleanup = true;
-	}
-
-	void execute_finished(std::tr1::shared_ptr<TransferRequest> req, std::string id) {
-        boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
-        lock.lock();
-
-        AggregateListByID& idIndex = mAggregateList.get<tagID>();
-        AggregateListByID::iterator findID = idIndex.find(id);
-        if(findID == idIndex.end()) {
-            SILOG(transfer, error, "Got a callback in TransferMediator from a TransferRequest with no associated ID");
-            mNumOutstanding--;
-            lock.unlock();
-            return;
-        }
-
-        const std::map<std::string, std::tr1::shared_ptr<TransferRequest> >&
-            allReqs = (*findID)->getTransferRequests();
-
-        for(std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::const_iterator
-                it = allReqs.begin(); it != allReqs.end(); it++) {
-            SILOG(transfer, debug, "Notifying a caller that TransferRequest is complete");
-            it->second->notifyCaller(req);
-        }
-
-        mAggregateList.erase(findID);
-
-        mNumOutstanding--;
-        lock.unlock();
-        SILOG(transfer, debug, "done transfer mediator execute_finished");
-        checkQueue();
-	}
-
-	void checkQueue() {
-	    boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
-
-        lock.lock();
-
-        AggregateListByPriority & priorityIndex = mAggregateList.get<tagPriority>();
-        AggregateListByPriority::iterator findTop = priorityIndex.begin();
-
-        if(findTop != priorityIndex.end()) {
-            std::string topId = (*findTop)->getIdentifier();
-
-            SILOG(transfer, debug, priorityIndex.size() << " length agg list, top priority "
-                    << (*findTop)->getPriority() << " id " << topId);
-
-            std::tr1::shared_ptr<TransferRequest> req = (*findTop)->getSingleRequest();
-
-            if(mNumOutstanding == 0) {
-                mNumOutstanding++;
-                req->execute(req, std::tr1::bind(&TransferMediator::execute_finished, this, req, topId));
-            }
-
-        } else {
-            //SILOG(transfer, debug, priorityIndex.size() << " length agg list");
-        }
-
-        lock.unlock();
-	}
-
-	/*
-	 * Main thread that handles the input pools
-	 */
-	void mediatorThread() {
-		while(!mCleanup) {
-		    checkQueue();
-			boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-		}
-		for(PoolType::iterator pool = mPools.begin(); pool != mPools.end(); pool++) {
-			pool->second->cleanup();
-			pool->second->getTransferPool()->addRequest(std::tr1::shared_ptr<TransferRequest>());
-		}
-		for(PoolType::iterator pool = mPools.begin(); pool != mPools.end(); pool++) {
-			pool->second->getThread()->join();
-		}
-	}
-
+	//Call when system should be shut down
+	void cleanup();
 };
 
 }
