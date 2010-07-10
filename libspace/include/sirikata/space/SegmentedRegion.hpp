@@ -50,6 +50,9 @@ namespace Sirikata {
 #define LL_LOOKUP_REQUEST 11
 #define LL_SERVER_REGION_REQUEST 12
 
+#define LOAD_REPORT 13
+#define LL_LOAD_REPORT 14
+
 #define MAX_BBOX_LIST_SIZE 50000
 #define MAX_SERVER_REGIONS_CHANGED 2
 
@@ -244,12 +247,24 @@ typedef struct SegmentationListenMessage {
   }
 } PACKED_STRUCT SegmentationListenMessage;
 
+typedef struct LoadReportMessage {
+  uint8 type;
+  ServerID server;
+  uint32 loadValue;
+  SerializedBBox bbox;
+
+  LoadReportMessage() {
+    type = LOAD_REPORT;
+  }
+} PACKED_STRUCT LoadReportMessage;
+
 typedef struct SegmentedRegion {
 
   SegmentedRegion() {
     mLeafCount = 0;
     mLeftChild  = mRightChild = NULL;
     mServer = 0;
+    mLoadValue = 0;
   }
 
   void destroy() {
@@ -369,15 +384,15 @@ typedef struct SegmentedRegion {
     return NULL;
   }
 
-  const SegmentedRegion* lookup(const Vector3f& pos) const {
+  SegmentedRegion* lookup(const Vector3f& pos) const {
     if (mRightChild == NULL && mLeftChild == NULL) {
       //std::cout << "Left and right child is null: boundingbox = " << mBoundingBox<<"\n";
       if (mBoundingBox.contains(pos)) {
-	return this;
+	return ((SegmentedRegion*)this);
       }
     }
 
-    const SegmentedRegion* region = NULL;
+    SegmentedRegion* region = NULL;
     /*if (mLeftChild != NULL) {
       std::cout << "Left child: boundingbox = " << mLeftChild->mBoundingBox<<"\n";
     }*/
@@ -391,7 +406,7 @@ typedef struct SegmentedRegion {
       std::cout << "Right child: boundingbox = " << mRightChild->mBoundingBox<<"\n";
     }*/
 
-    if (mRightChild!=NULL && region == NULL && mRightChild->mBoundingBox.contains(pos)){
+    if (region == NULL && mRightChild!=NULL && mRightChild->mBoundingBox.contains(pos)){
       //std::cout << "Contained in right child " << mRightChild->mBoundingBox << "\n";
       region= mRightChild->lookup(pos);
     }
@@ -423,6 +438,7 @@ typedef struct SegmentedRegion {
   SegmentedRegion* mRightChild;
   uint32 mLeafCount;
   BoundingBox3f mBoundingBox;
+  uint32 mLoadValue;
 
 } SegmentedRegion;
 

@@ -164,6 +164,4 @@ uint32 LoadBalancer::numAvailableServers() {
   return mAvailableServers.size();
 }
 
-
-
 }

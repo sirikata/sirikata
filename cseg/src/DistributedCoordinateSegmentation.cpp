@@ -44,13 +44,14 @@
 #include "WorldPopulationBSPTree.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
+
 namespace Sirikata {
 
 template<typename T>
 T clamp(T val, T minval, T maxval) {
-    if (val < minval) return minval;
-    if (val > maxval) return maxval;
-    return val;
+  if (val < minval) return minval;
+  if (val > maxval) return maxval;
+  return val;
 }
 
 void memdump(uint8* buffer, int len) {
@@ -115,7 +116,6 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
   region->mLeftChild = new SegmentedRegion();
   region->mRightChild = new SegmentedRegion();
 
-
   if (perdim.x > 1) {
     region->mLeftChild->mBoundingBox = BoundingBox3f( region->mBoundingBox.min(),
 						      Vector3f( (minX+maxX)/2, maxY, maxZ) );
@@ -161,16 +161,16 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
 			    numServersAssigned
 			   );
   }
-
 }
 
 DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
- : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
+ : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)),
    mContext(ctx),
    mLastUpdateTime(Time::null()),
+   mLoadBalancer(this, nservers, perdim),
    mSidMap(sidmap)
 {
-    mAvailableCSEGServers = GetOptionValue<uint16>("num-cseg-servers");
+  mAvailableCSEGServers = GetOptionValue<uint16>("num-cseg-servers");
 
   assert (nservers >= (int)(perdim.x * perdim.y * perdim.z));
 
@@ -187,14 +187,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
 
   int numLLTreesSoFar = 0;
   generateHierarchicalTrees(&mTopLevelRegion, 1, numLLTreesSoFar);
-
-  for (int i=0; i<nservers;i++) {
-    ServerAvailability sa;
-    sa.mServer = i+1;
-    (i < (int)(perdim.x*perdim.y*perdim.z)) ? (sa.mAvailable = 0) : (sa.mAvailable = 1);
-
-    mAvailableServers.push_back(sa);
-  }
+  
 
   if (ctx->id() == 1) {
       mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
@@ -207,13 +200,23 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
 
   startAcceptingLLRequests();
 
+  mMessageSizes[LOOKUP_REQUEST] = sizeof(LookupRequestMessage);
+  mMessageSizes[NUM_SERVERS_REQUEST] = sizeof(NumServersRequestMessage);
+  mMessageSizes[SERVER_REGION_REQUEST] = sizeof(ServerRegionRequestMessage);
+  mMessageSizes[REGION_REQUEST] = sizeof(RegionRequestMessage);
+  mMessageSizes[SEGMENTATION_LISTEN] = sizeof(SegmentationListenMessage);
+  mMessageSizes[LL_SERVER_REGION_REQUEST] = 1+sizeof(ServerID);
+  mMessageSizes[LL_LOOKUP_REQUEST] = 1+sizeof(SerializedVector)+sizeof(SerializedBBox);
+  mMessageSizes[LOAD_REPORT] = sizeof(LoadReportMessage);
+  mMessageSizes[LL_LOAD_REPORT] = 1 + sizeof(SerializedBBox) + sizeof(LoadReportMessage);
+
   Thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
   Thread thrd2(boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
-    //delete all the SegmentedRegion objects created with 'new'
-    mTopLevelRegion.destroy();
+  //delete all the SegmentedRegion objects created with 'new'
+  mTopLevelRegion.destroy();
 }
 
 void DistributedCoordinateSegmentation::ioServicingLoop() {
@@ -285,7 +288,6 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
     return sid;
   }
 
-
   return sid;
 }
 
@@ -329,23 +331,64 @@ BoundingBox3f DistributedCoordinateSegmentation::region()  {
   return mTopLevelRegion.mBoundingBox;
 }
 
-uint32 DistributedCoordinateSegmentation::numServers() {
-  int count = mTopLevelRegion.countServers();
-  return mAvailableServers.size();
+uint32 DistributedCoordinateSegmentation::numServers() {  
+  return mLoadBalancer.numAvailableServers();
+
+  //int count = mTopLevelRegion.countServers();
   //return count;
 }
 
-uint32 DistributedCoordinateSegmentation::getAvailableServerIndex() {
-  uint32 availableSvrIndex = INT_MAX;
+void DistributedCoordinateSegmentation::handleLoadReport(LoadReportMessage* message) {    
+  ServerID sid = message->server;
+  BoundingBox3f bbox ;
+  message->bbox.deserialize(bbox);
 
-  for (uint32 i=0; i<mAvailableServers.size(); i++) {
-    if (mAvailableServers[i].mAvailable == true) {
-      availableSvrIndex = i;
-      break;
+  Vector3f searchVec = Vector3f( (bbox.min().x+bbox.max().x)/2.0, (bbox.min().y+bbox.max().y)/2,
+                                 (bbox.min().z+bbox.max().z)/2.0 );  
+
+  SegmentedRegion* segRegion = mTopLevelRegion.lookup(searchVec);
+  ServerID topLevelIdx = segRegion->mServer;
+  
+  if (topLevelIdx == mContext->id())
+  {
+    SerializedBBox serializedBBox;
+    serializedBBox.serialize(segRegion->mBoundingBox);   
+    String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
+
+    std::map<String, SegmentedRegion*>::iterator it=  mHigherLevelTrees.find(bbox_hash);
+
+    if (it != mHigherLevelTrees.end()) {
+      segRegion = (*it).second->lookup(searchVec);      
+
+      // deal with the value for this region's load; 
+      if (sid == segRegion->mServer && bbox == segRegion->mBoundingBox) {
+        segRegion->mLoadValue = message->loadValue;
+
+        mLoadBalancer.reportRegionLoad(segRegion, sid, segRegion->mLoadValue);
+      }
     }
-  }
+    else {
+      it =  mLowerLevelTrees.find(bbox_hash);
 
-  return availableSvrIndex;
+      if (it != mLowerLevelTrees.end()) {
+        segRegion = (*it).second->lookup(searchVec);
+
+        // deal with the value for this region's load.
+        if (sid == segRegion->mServer && bbox == segRegion->mBoundingBox) {
+          segRegion->mLoadValue = message->loadValue;
+          mLoadBalancer.reportRegionLoad(segRegion, sid, segRegion->mLoadValue);
+        }
+      }
+      else {
+        // you should never be here.
+        assert(false);
+      }
+    }    
+  }
+  else {
+    //remote function call to the relevant server
+    sendLoadReportToLowerLevelCSEGServer(topLevelIdx, searchVec, segRegion->mBoundingBox, message);
+  }
 }
 
 void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegion** randomLeaf,
@@ -357,18 +400,18 @@ void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegi
     int i=0;
 
     for (std::map<String, SegmentedRegion*>::iterator it=mHigherLevelTrees.begin();
-	 it != mHigherLevelTrees.end();
-	 it++, i++)
+	        it != mHigherLevelTrees.end();
+	        it++, i++)
       {
-	if (i == numHigherLevelTrees) {
+      	if (i == numHigherLevelTrees) {
 
-	  *randomLeaf = it->second->getRandomLeaf();
+	       *randomLeaf = it->second->getRandomLeaf();
 
-	  *sibling = it->second->getSibling(*randomLeaf);
-	  *parent = it->second->getParent(*randomLeaf);
+	       *sibling = it->second->getSibling(*randomLeaf);
+	       *parent = it->second->getParent(*randomLeaf);
 
-	  break;
-	}
+	        break;
+	      }
       }
   }
   else {
@@ -402,121 +445,10 @@ void DistributedCoordinateSegmentation::poll() {
     service();
 }
 
-void DistributedCoordinateSegmentation::service() {
- 
-  
+void DistributedCoordinateSegmentation::service() {  
+  boost::unique_lock<boost::shared_mutex> lock(mCSEGReadWriteMutex);
 
-  static bool random_splits_merges = GetOptionValue<bool>("random-splits-merges");
-
-  if (!random_splits_merges) {
-    return;
-  }
-
-  Time t = mContext->simTime();
-  uint32 availableSvrIndex = getAvailableServerIndex();
-
-  if (availableSvrIndex == INT_MAX)
-    return;
-
-  ServerID availableServer = mAvailableServers[availableSvrIndex].mServer;
-
-  static bool splitAlready = false;
-
-  /* Do splits and merges every 15 seconds, except the first time, when its done
-     15 seconds after startup.
-   */
-  static int duration = 15;
-  if (t - mLastUpdateTime > Duration::seconds(duration)) {
-    mLastUpdateTime = t;
-    duration = 15;
-
-    SegmentedRegion* randomLeaf = NULL;
-    SegmentedRegion* sibling = NULL;
-    SegmentedRegion* parent = NULL;
-    getRandomLeafParentSibling(&randomLeaf, &sibling, &parent);
-
-    bool okToMerge = false;
-    if ( sibling != NULL) {
-      if (sibling->mLeftChild == NULL && sibling->mRightChild == NULL) {
-        okToMerge = true;
-      }
-    }
-
-    std::vector<SegmentationInfo> segInfoVector;
-    if (okToMerge && rand() % 2 == 0 && false) {
-      if (parent == NULL) {
-	return;
-      }
-
-      SegmentedRegion* leftChild = parent->mLeftChild;
-      SegmentedRegion* rightChild = parent->mRightChild;
-
-      parent->mServer = leftChild->mServer;
-      parent->mRightChild = parent->mLeftChild = NULL;
-
-      for (uint32 i=0; i<mAvailableServers.size(); i++) {
-	if (mAvailableServers[i].mServer == rightChild->mServer) {
-	  mAvailableServers[i].mAvailable = true;
-	  break;
-	}
-      }
-
-      std::cout << "Merged! " << leftChild->mServer << " : " << rightChild->mServer << "\n";
-
-      mWholeTreeServerRegionMap.erase(parent->mServer);
-      mLowerTreeServerRegionMap.erase(rightChild->mServer);
-
-      SegmentationInfo segInfo, segInfo2;
-      segInfo.server = parent->mServer;
-      segInfo.region = serverRegion(parent->mServer);
-      segInfoVector.push_back( segInfo );
-
-      segInfo2.server = rightChild->mServer;
-      segInfo2.region = serverRegion(rightChild->mServer);
-      segInfoVector.push_back(segInfo2);
-
-      delete rightChild;
-      delete leftChild;
-    }
-    else if (!splitAlready) {
-
-      splitAlready = true;
-      std::cout << "split\n";
-      randomLeaf->mLeftChild = new SegmentedRegion();
-      randomLeaf->mRightChild = new SegmentedRegion();
-
-      BoundingBox3f region = randomLeaf->mBoundingBox;
-      float minX = region.min().x; float minY = region.min().y;
-      float maxX = region.max().x; float maxY = region.max().y;
-      float minZ = region.min().z; float maxZ = region.max().z;
-
-      randomLeaf->mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
-							    Vector3f( (minX+maxX)/2, maxY, maxZ) );
-      randomLeaf->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( (minX+maxX)/2,minY,minZ),
-                                                             region.max() );
-      randomLeaf->mLeftChild->mServer = randomLeaf->mServer;
-      randomLeaf->mRightChild->mServer = availableServer;
-
-      std::cout << randomLeaf->mServer << " : " << randomLeaf->mLeftChild->mBoundingBox << "\n";
-      std::cout << availableServer << " : " << randomLeaf->mRightChild->mBoundingBox << "\n";
-
-      mAvailableServers[availableSvrIndex].mAvailable = false;
-
-      mWholeTreeServerRegionMap.erase(randomLeaf->mServer);
-      mLowerTreeServerRegionMap.erase(availableServer);
-
-      SegmentationInfo segInfo, segInfo2;
-      segInfo.server = randomLeaf->mServer;
-      segInfo.region = serverRegion(randomLeaf->mServer);
-      segInfoVector.push_back( segInfo );
-
-      segInfo2.server = availableServer;
-      segInfo2.region = serverRegion(availableServer);
-      segInfoVector.push_back(segInfo2);
-    }
-
-    Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,this,segInfoVector));
-  }
+  mLoadBalancer.service();
 }
 
 void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector)
@@ -572,6 +504,8 @@ void DistributedCoordinateSegmentation::csegChangeMessage(Sirikata::Protocol::CS
 }
 
 void DistributedCoordinateSegmentation::serializeBSPTree(SerializedBSPTree* serializedBSPTree) {
+  boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex);
+
   uint32 idx = 0;
   traverseAndStoreTree(&mTopLevelRegion, idx, serializedBSPTree);
 }
@@ -602,17 +536,22 @@ uint32 DistributedCoordinateSegmentation::readFromSocket(boost::shared_ptr<tcp::
 							 bool readTillEOF,
 							 uint8 bytesReceivedAlready)
 {
-  uint32 bytesReceived = bytesReceivedAlready;
-
+  uint32 bytesReceived = bytesReceivedAlready; 
+  
   /* Read in the data from the socket. */
   for (;;)
   {
-      boost::array<uint8, 65536> buf;
+      if ( !readTillEOF && bytesReceived > 0 &&
+	   fullMessageReceived((*dataReceived), bytesReceived) ) 
+      {
+      	break;
+      }
+
+      boost::array<uint8, 65536> buf;      
       boost::system::error_code error;
 
       // Reading from socket
-
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
+      size_t len = socket->read_some(boost::asio::buffer(buf), error);      
 
       if (dataReceived == NULL) {
 	      *dataReceived = (uint8*) malloc (len);
@@ -623,10 +562,6 @@ uint32 DistributedCoordinateSegmentation::readFromSocket(boost::shared_ptr<tcp::
       memcpy((*dataReceived)+bytesReceived, buf.c_array(), len);
 
       bytesReceived += len;
-
-      if ( !readTillEOF && fullMessageReceived((*dataReceived), bytesReceived) ) {
-      	break;
-      }
 
       if (error == boost::asio::error::eof)
         break; // Connection closed cleanly by peer.
@@ -643,80 +578,11 @@ uint32 DistributedCoordinateSegmentation::readFromSocket(boost::shared_ptr<tcp::
 
 void DistributedCoordinateSegmentation::accept_handler()
 {
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = readFromSocket(mSocket, &dataReceived, false);
-
-  /* Deal with the request included in the received data */
-  if ( dataReceived != NULL) {
-    GenericMessage* genericMessage = (GenericMessage*) dataReceived;
-
-    if (genericMessage->type == LOOKUP_REQUEST) {
-      LookupRequestMessage* lookupMessage = (LookupRequestMessage*) dataReceived;
-
-      LookupResponseMessage lookupResponseMessage;
-      lookupResponseMessage.serverID =
-	      lookup(Vector3f(lookupMessage->x, lookupMessage->y, lookupMessage->z));
-
-      boost::asio::write(*mSocket,
-			 boost::asio::buffer( &lookupResponseMessage, sizeof(lookupResponseMessage)),
-			 boost::asio::transfer_all() );
-
-    }
-    else if (genericMessage->type == NUM_SERVERS_REQUEST) {
-      NumServersResponseMessage responseMessage;
-      responseMessage.numServers = numServers();
-
-      boost::asio::write(*mSocket,
-			 boost::asio::buffer( &responseMessage, sizeof(responseMessage)),
-			 boost::asio::transfer_all() );
-    }
-    else if (genericMessage->type == REGION_REQUEST) {
-      RegionResponseMessage responseMessage;
-      BoundingBox3f bbox = region();
-
-      responseMessage.bbox.serialize(bbox);
-
-      boost::asio::write(*mSocket,
-			  boost::asio::buffer((void*) &responseMessage, sizeof(responseMessage)),
-			  boost::asio::transfer_all() );
-    }
-    else if (genericMessage->type == SERVER_REGION_REQUEST) {
-      ServerRegionRequestMessage* message = (ServerRegionRequestMessage*) dataReceived;
-
-      BoundingBoxList bboxList = serverRegion(message->serverID);
-
-      ServerRegionResponseMessage* responseMessage = new ServerRegionResponseMessage();
-      uint32 i=0;
-      for (i=0; i<MAX_BBOX_LIST_SIZE && i < bboxList.size() ; i++) {
-	      BoundingBox3f bbox = bboxList[i];
-      	responseMessage->bboxList[i].serialize(bbox);
-      }
-
-      responseMessage->listLength = bboxList.size();
-
-      boost::asio::write(*mSocket,
-			 boost::asio::buffer((void*) responseMessage, 1+4+bboxList.size()*sizeof(SerializedBBox)),
-			 boost::asio::transfer_all() );
-      delete responseMessage;
-    }
-    else if (genericMessage->type == SEGMENTATION_LISTEN) {
-      SegmentationListenMessage* message = (SegmentationListenMessage*) dataReceived;
-      SegmentationChangeListener sl;
-      memcpy(sl.host, message->host, 255);
-      printf("subscribing hostname=%s\n", message->host);
-      sl.port = message->port;
-
-      mSpacePeers.push_back(sl);
-    }
-            
-    uint8* asyncBufferArray = new uint8[1];
+  uint8* asyncBufferArray = new uint8[1];
     
-    mSocket->async_read_some( boost::asio::buffer(asyncBufferArray, 1) , 
-			      std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this, 
-					     mSocket, asyncBufferArray, _1, _2)  );
-    
-    free(dataReceived);
-  }
+  mSocket->async_read_some( boost::asio::buffer(asyncBufferArray, 1) , 
+			    std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this, 
+					   mSocket, asyncBufferArray, _1, _2)  );
 
   startAccepting();
 }
@@ -727,100 +593,107 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
 						  std::size_t bytes_transferred)
 {
   if (ec == boost::asio::error::eof) {
-    std::cout << "EOF RECEIVEd; CLOSING CONNECTION AT SERVER\n"; fflush(stdout);
-
+    // EOF RECEIVED; CLOSING CONNECTION AT SERVER
     delete asyncBufferArray;
     socket->close();    
     return;
-  }
+  }  
 
   uint8* dataReceived = (uint8*) malloc(1);
   dataReceived[0] = asyncBufferArray[0];
   uint32 bytesReceived = readFromSocket(socket, &dataReceived, false, 1);
 
-  /* Deal with the request included in the received data */
-  if ( dataReceived != NULL) {
-    GenericMessage* genericMessage = (GenericMessage*) dataReceived;
+  boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex);
 
-    if (genericMessage->type == LOOKUP_REQUEST) {
-      LookupRequestMessage* lookupMessage = (LookupRequestMessage*) dataReceived;
+  /* Deal with the request included in the received data */  
+  GenericMessage* genericMessage = (GenericMessage*) dataReceived;
+  
+  if (genericMessage->type == LOOKUP_REQUEST) {
+    LookupRequestMessage* lookupMessage = (LookupRequestMessage*) dataReceived;
 
-      LookupResponseMessage lookupResponseMessage;
-      lookupResponseMessage.serverID =
-	      lookup(Vector3f(lookupMessage->x, lookupMessage->y, lookupMessage->z));
+    LookupResponseMessage lookupResponseMessage;
+    lookupResponseMessage.serverID =
+      lookup(Vector3f(lookupMessage->x, lookupMessage->y, lookupMessage->z));
 
-      boost::asio::write(*socket,
-			 boost::asio::buffer( &lookupResponseMessage, sizeof(lookupResponseMessage)),
-			 boost::asio::transfer_all() );
-
-    }
-    else if (genericMessage->type == NUM_SERVERS_REQUEST) {
-      NumServersResponseMessage responseMessage;
-      responseMessage.numServers = numServers();
-
-      boost::asio::write(*socket,
-			 boost::asio::buffer( &responseMessage, sizeof(responseMessage)),
-			 boost::asio::transfer_all() );
-    }
-    else if (genericMessage->type == REGION_REQUEST) {
-      RegionResponseMessage responseMessage;
-      BoundingBox3f bbox = region();
-
-      responseMessage.bbox.serialize(bbox);
-
-      boost::asio::write(*socket,
-			  boost::asio::buffer((void*) &responseMessage, sizeof(responseMessage)),
-			  boost::asio::transfer_all() );
-    }
-    else if (genericMessage->type == SERVER_REGION_REQUEST) {
-      ServerRegionRequestMessage* message = (ServerRegionRequestMessage*) dataReceived;
-
-      BoundingBoxList bboxList = serverRegion(message->serverID);
-
-      ServerRegionResponseMessage* responseMessage = new ServerRegionResponseMessage();
-      uint32 i=0;
-      for (i=0; i<MAX_BBOX_LIST_SIZE && i < bboxList.size() ; i++) {
-	      BoundingBox3f bbox = bboxList[i];
-      	responseMessage->bboxList[i].serialize(bbox);
-      }
-
-      responseMessage->listLength = bboxList.size();
-
-      boost::asio::write(*socket,
-			 boost::asio::buffer((void*) responseMessage, 1+4+bboxList.size()*sizeof(SerializedBBox)),
-			 boost::asio::transfer_all() );
-      delete responseMessage;
-    }
-    else if (genericMessage->type == SEGMENTATION_LISTEN) {
-      SegmentationListenMessage* message = (SegmentationListenMessage*) dataReceived;
-      SegmentationChangeListener sl;
-      memcpy(sl.host, message->host, 255);
-      printf("subscribing hostname=%s\n", message->host);
-      sl.port = message->port;
-
-      mSpacePeers.push_back(sl);
-    }
-
-
-    delete asyncBufferArray;
-
-    asyncBufferArray = new uint8[1];
-    socket->async_read_some( boost::asio::buffer(asyncBufferArray, 1) , 
-			      std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this, 
-					     socket, asyncBufferArray, _1, _2)  );
-
-    //mSocket->close();
-    free(dataReceived);
+    boost::asio::write(*socket,
+		       boost::asio::buffer( &lookupResponseMessage, sizeof(lookupResponseMessage)),
+		       boost::asio::transfer_all() );
   }
+  else if (genericMessage->type == NUM_SERVERS_REQUEST) {
+    NumServersResponseMessage responseMessage;
+    responseMessage.numServers = numServers();
+
+    boost::asio::write(*socket,
+		       boost::asio::buffer( &responseMessage, sizeof(responseMessage)),
+		       boost::asio::transfer_all() );
+  }
+  else if (genericMessage->type == REGION_REQUEST) {
+    RegionResponseMessage responseMessage;
+    BoundingBox3f bbox = region();
+
+    responseMessage.bbox.serialize(bbox);
+
+    boost::asio::write(*socket,
+		       boost::asio::buffer((void*) &responseMessage, sizeof(responseMessage)),
+		       boost::asio::transfer_all() );
+  }
+  else if (genericMessage->type == SERVER_REGION_REQUEST) {
+    ServerRegionRequestMessage* message = (ServerRegionRequestMessage*) dataReceived;
+
+    BoundingBoxList bboxList = serverRegion(message->serverID);
+
+    ServerRegionResponseMessage* responseMessage = new ServerRegionResponseMessage();
+    uint32 i=0;
+    for (i=0; i<MAX_BBOX_LIST_SIZE && i < bboxList.size() ; i++) {
+      BoundingBox3f bbox = bboxList[i];
+      responseMessage->bboxList[i].serialize(bbox);
+    }
+
+    responseMessage->listLength = bboxList.size();
+
+    boost::asio::write(*socket,
+		       boost::asio::buffer((void*) responseMessage, 1+4+bboxList.size()*sizeof(SerializedBBox)),
+		       boost::asio::transfer_all() );
+    delete responseMessage;
+  }
+  else if (genericMessage->type == SEGMENTATION_LISTEN) {
+    SegmentationListenMessage* message = (SegmentationListenMessage*) dataReceived;
+    SegmentationChangeListener sl;
+    memcpy(sl.host, message->host, 255);
+    printf("subscribing hostname=%s\n", message->host);
+    sl.port = message->port;
+
+    mSpacePeers.push_back(sl);
+  }
+  else if (genericMessage->type == LOAD_REPORT) {
+    LoadReportMessage* message = (LoadReportMessage*) dataReceived;
+
+    handleLoadReport(message);
+
+    uint8 val=0;
+    boost::asio::write(*socket,
+		       boost::asio::buffer((void*) &val, 1),
+		       boost::asio::transfer_all() );    
+  }
+
+  delete asyncBufferArray;
+
+  asyncBufferArray = new uint8[1];
+  socket->async_read_some( boost::asio::buffer(asyncBufferArray, 1) , 
+			   std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this, 
+					  socket, asyncBufferArray, _1, _2)  );
+
+  free(dataReceived);
 
   
 }
 
 void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
   Time start = Timer::now();
-  uint8* dataReceived = NULL;
-
+  uint8* dataReceived = NULL;  
   uint32 bytesReceived = readFromSocket(mLLTreeAcceptorSocket, &dataReceived, false);
+
+  boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex);
 
   // Now decode the packet from the received buffer
   uint8 packetType = dataReceived[0];
@@ -864,10 +737,10 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
     }
     else {
       for(std::map<String, SegmentedRegion*>::const_iterator it = mLowerLevelTrees.begin();
-	  it != mLowerLevelTrees.end(); ++it)
-	{
-	  //printf("serverRegion being called on ll tree with server id=%d\n", serverID);
-	  it->second->serverRegion(serverID, boundingBoxList);
+          it != mLowerLevelTrees.end(); ++it)
+    	{
+          //printf("serverRegion being called on ll tree with server id=%d\n", serverID);
+          it->second->serverRegion(serverID, boundingBoxList);
 	}
     }
 
@@ -902,29 +775,37 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
 
     SegmentationChangeMessage* segChangeMessage = (SegmentationChangeMessage*) dataReceived;
 
-    int offset = 2;
-
-    for (int i=0; i<segChangeMessage->numEntries; i++) {
-      SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);
-      BoundingBox3f bbox;
-      segChange->bboxList[0].deserialize(bbox);
-      std::cout << "segchange: serverID "<<segChange->serverID
-		<< " bbox: " << bbox << "\n";
-
-      for (uint32 i=0; i<mAvailableServers.size(); i++) {
-	if (mAvailableServers[i].mServer == segChange->serverID &&
-	    segChange->listLength>=1 &&
-	    segChange->bboxList[0].minX != segChange->bboxList[0].maxX)
-          {
-	    mAvailableServers[i].mAvailable = false;
-	    break;
-	  }
-      }
-
-      offset += (4 + 4 + sizeof(SerializedBBox)*segChange->listLength);
-    }
+    mLoadBalancer.handleSegmentationChange(segChangeMessage);
 
     sendToAllSpaceServers(dataReceived, bytesReceived);
+  }
+  else if (packetType == LL_LOAD_REPORT) {
+    SerializedBBox lowerTreeRootBox;
+    memcpy(&lowerTreeRootBox, dataReceived+1, sizeof(lowerTreeRootBox));
+    String bbox_hash = sha1(&lowerTreeRootBox, sizeof(lowerTreeRootBox));
+    std::map<String, SegmentedRegion*>::iterator it=  mLowerLevelTrees.find(bbox_hash);
+
+    LoadReportMessage* loadReportMessage = (LoadReportMessage*) (dataReceived + 1 + sizeof(SerializedBBox));
+    BoundingBox3f leafBBox;
+    SerializedBBox serializedLeafBBox;
+    memcpy(&serializedLeafBBox, &loadReportMessage->bbox, sizeof(serializedLeafBBox));
+    serializedLeafBBox.deserialize(leafBBox);
+    Vector3f vect( (leafBBox.min().x+leafBBox.max().x)/2.0, (leafBBox.min().y+leafBBox.max().y)/2,
+                   (leafBBox.min().z+leafBBox.max().z)/2.0 );
+
+    if (it != mLowerLevelTrees.end()) {
+      SegmentedRegion* segRegion = (*it).second->lookup(vect);
+
+      if (segRegion->mServer == loadReportMessage->server && segRegion->mBoundingBox == leafBBox) {
+        //deal with the load from the space server
+        segRegion->mLoadValue = loadReportMessage->loadValue;
+
+        mLoadBalancer.reportRegionLoad(segRegion, segRegion->mServer, segRegion->mLoadValue);
+      }
+    }
+    else {
+      assert(false);
+    }
   }
 
   mLLTreeAcceptorSocket->close();
@@ -949,22 +830,21 @@ void DistributedCoordinateSegmentation::startAcceptingLLRequests() {
   mLLTreeAcceptor->async_accept(*mLLTreeAcceptorSocket, boost::bind(&DistributedCoordinateSegmentation::acceptLLTreeRequestHandler,this));
 }
 
-
 void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar) {
-  int cutOffDepth = 20;
+  int cutOffDepth = 10;
 
   if (depth>=cutOffDepth) {
     region->mServer =  (numLLTreesSoFar % mAvailableCSEGServers)+1;
 
     if ( region->mServer == mContext->id()) {
-      //std::cout << " Assigned to me, bbox : " << region->mBoundingBox<<"\n";
+      // Assigned region->mBoundingBox to me.
       SegmentedRegion* segRegion = new SegmentedRegion();
       segRegion->mBoundingBox = region->mBoundingBox;
       segRegion->mLeftChild = region->mLeftChild;
       segRegion->mRightChild = region->mRightChild;
 
       if (region->mLeftChild == NULL && region->mRightChild == NULL) {
-	segRegion->mServer = region->mServer;
+	      segRegion->mServer = region->mServer;
       }
 
       SerializedBBox serializedBBox;
@@ -990,7 +870,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
 
     SerializedBBox serializedBBox;
     serializedBBox.serialize(segRegion->mBoundingBox);
-    //std::cout << segRegion->mServer << " : " << segRegion->mBoundingBox << "\n";
+
     String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
     mHigherLevelTrees[bbox_hash] = segRegion;
     return;
@@ -1001,6 +881,8 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
 }
 
 boost::shared_ptr<tcp::socket> DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerID server_id) {
+  //TODO: Should replace with longer-lived, leased sockets too.
+
   tcp::resolver resolver(mIOService);
 
   Address4* addy = mSidMap->lookupInternal(server_id);
@@ -1016,8 +898,7 @@ boost::shared_ptr<tcp::socket> DistributedCoordinateSegmentation::getSocketToCSE
   tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
   tcp::resolver::iterator end;
-
-  //std::cout << "Calling " << addr << "@" << port_str << "!\n";
+  
   boost::shared_ptr<tcp::socket> socket = boost::shared_ptr<tcp::socket>(new tcp::socket (mIOService));
   boost::system::error_code error = boost::asio::error::host_not_found;
   while (error && endpoint_iterator != end)
@@ -1059,8 +940,7 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
   memcpy(buffer+1, &serialVector , sizeof(serialVector));
   memcpy(buffer+1+sizeof(serialVector), &serialBox, sizeof(serialBox));
 
-
-  //std::cout << "Sending to server id: " << server_id << "\n";
+  //Sending to server with ID 'server_id'
 
   boost::asio::write(*socket,
                      boost::asio::buffer((const void*)buffer,dataSize),
@@ -1069,7 +949,7 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
   uint8* dataReceived = NULL;
   uint32 bytesReceived = readFromSocket(socket, &dataReceived, true);
 
-  //std::cout << "Received reply from " << server_id << "\n";
+  //Received reply from 'server_id'
 
   ServerID retval = *dataReceived;
 
@@ -1104,8 +984,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 		       boost::asio::buffer((const void*)buffer,dataSize),
 		       boost::asio::transfer_all() );
 
-    socketList.push_back(socket);
-    //std::cout << "Sent over serverRegion request to " << addr << "@" << port_str  <<"\n";
+    socketList.push_back(socket);    
   }
 
 
@@ -1137,6 +1016,28 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 
   socketList.clear();
 }
+
+void DistributedCoordinateSegmentation::sendLoadReportToLowerLevelCSEGServer(ServerID cseg_server_id, const Vector3f& searchVec, const BoundingBox3f& boundingBox, LoadReportMessage* message)
+{
+  boost::shared_ptr<tcp::socket> socket = getSocketToCSEGServer(cseg_server_id);
+  if (socket.get() == 0) {
+    assert(false);
+  }
+
+  SerializedBBox serialBox;
+  serialBox.serialize(boundingBox);
+
+  uint16 dataSize = 1 + sizeof(serialBox) + sizeof(LoadReportMessage);
+  uint8* buffer = new uint8[dataSize];
+  buffer[0] = LL_LOAD_REPORT;
+  memcpy(buffer+1, &serialBox , sizeof(serialBox));
+  memcpy( buffer+1+sizeof(serialBox), &message, sizeof(LoadReportMessage) );
+
+  boost::asio::write(*socket,
+                     boost::asio::buffer((const void*)buffer,dataSize),
+                     boost::asio::transfer_all() );
+}
+
 
 void DistributedCoordinateSegmentation::sendToAllCSEGServers(uint8* buffer, int buflen) {
   /* Send to other CSEG servers so they can forward the segmentation change message to
@@ -1203,35 +1104,11 @@ bool DistributedCoordinateSegmentation::fullMessageReceived(uint8* dataReceived,
 
   uint8 type = dataReceived[0];
 
-  switch (type) {
-  case LOOKUP_REQUEST:
-    return (bytesReceived >= sizeof(LookupRequestMessage));
-
-  case NUM_SERVERS_REQUEST:
-    return (bytesReceived >= sizeof(NumServersRequestMessage));
-
-  case SERVER_REGION_REQUEST:
-    return (bytesReceived >= sizeof(ServerRegionRequestMessage));
-
-  case REGION_REQUEST:
-    return (bytesReceived >= sizeof(RegionRequestMessage));
-
-  case SEGMENTATION_LISTEN:
-    return (bytesReceived >= sizeof(SegmentationListenMessage));
-
-  case SEGMENTATION_CHANGE:
+  if ( mMessageSizes.find(type) == mMessageSizes.end()) {
     return false;
-
-  case LL_SERVER_REGION_REQUEST:
-    return (bytesReceived >= 1+sizeof(ServerID));
-
-  case LL_LOOKUP_REQUEST:
-    return (bytesReceived >= 1+sizeof(SerializedVector)+sizeof(SerializedBBox));
-
-  default: return false;
   }
 
-  return false;
+  return ( bytesReceived >= mMessageSizes[type] );
 }
 
 

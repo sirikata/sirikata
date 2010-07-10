@@ -416,7 +416,12 @@ void Server::finishAddObject(const UUID& obj_id)
 
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
-    mObjects[obj_id] = conn;
+    mObjects[obj_id] = conn; 
+
+    //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
+    //for cleaner semantics?
+    mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
+
     mLocalForwarder->addActiveConnection(conn);
 
     // Add object as local object to LocationService
@@ -575,7 +580,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Move from list waiting for migration message to active objects
-    mObjects[obj_id] = obj_conn;
+    mObjects[obj_id] = obj_conn; 
     mLocalForwarder->addActiveConnection(obj_conn);
 
 

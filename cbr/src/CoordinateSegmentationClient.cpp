@@ -118,7 +118,7 @@ void CoordinateSegmentationClient::accept_handler() {
   if ( dataReceived != NULL) {
     SegmentationChangeMessage* segChangeMessage = (SegmentationChangeMessage*) dataReceived;
 
-    std::cout << "\n\nReceived segmentation change message with numEntries=" << segChangeMessage->numEntries << " at time " << mContext->simTime().raw() << "\n";
+    std::cout << "\n\nReceived segmentation change message with numEntries=" << ((int)segChangeMessage->numEntries) << " at time " << mContext->simTime().raw() << "\n";
 
     mTopLevelRegion.destroy();
     mServerRegionCache.clear();
@@ -163,14 +163,16 @@ CoordinateSegmentationClient::~CoordinateSegmentationClient() {
 void CoordinateSegmentationClient::sendSegmentationListenMessage() {
   SegmentationListenMessage requestMessage;
   Address4* addy = mSidMap->lookupInternal(mContext->id());
-
-  gethostname(requestMessage.host, 255);
-  printf("host=%s\n", requestMessage.host);
+    
   requestMessage.port = addy->port+10000;
 
   struct in_addr ip_addr;
   ip_addr.s_addr = addy->ip;
   char* addr = inet_ntoa(ip_addr);
+
+  strncpy(requestMessage.host, addr, 128);
+  printf("host=%s, port=%d\n", requestMessage.host, requestMessage.port);
+
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -184,6 +186,32 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
                      boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
                      boost::asio::transfer_all() );
 
+}
+
+void CoordinateSegmentationClient::reportLoad(ServerID sid, const BoundingBox3f& bbox, uint32 load) {
+
+  LoadReportMessage requestMessage;
+
+  requestMessage.loadValue = load;
+  requestMessage.bbox.serialize(bbox);
+  requestMessage.server = sid;
+
+  boost::mutex::scoped_lock scopedLock(mMutex);
+  boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
+
+  if (socket == boost::shared_ptr<TCPSocket>()) {
+    std::cout << "Error connecting to CSEG server for load reporting\n";
+    return ;
+  }
+
+  boost::asio::write(*socket,
+                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
+                     boost::asio::transfer_all() );
+
+  boost::system::error_code error;
+  boost::array<uint8, 1> buf;
+
+  socket->read_some(boost::asio::buffer(buf), error);
 }
 
 boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
@@ -206,8 +234,8 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
     
     while (error && endpoint_iterator != end)
       {
-	mLeasedSocket->close();      
-	mLeasedSocket->connect(*endpoint_iterator++, error);      
+	      mLeasedSocket->close();      
+	      mLeasedSocket->connect(*endpoint_iterator++, error);      
       }
     
     if (error) {
@@ -237,7 +265,6 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   if (socket == boost::shared_ptr<TCPSocket>()) {
     return 0;
   }
-
   
   boost::asio::write(*socket,
                      boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
@@ -254,10 +281,10 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
       size_t len = socket->read_some(boost::asio::buffer(buf), error);
 
       if (dataReceived == NULL) {
-	dataReceived = (uint8*) malloc (len);
+      	dataReceived = (uint8*) malloc (len);
       }
       else if (len > 0){
-	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+	      dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
       }
       memcpy(dataReceived+bytesReceived, buf.c_array(), len);
 
@@ -271,6 +298,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   }
 
   LookupResponseMessage* response = (LookupResponseMessage*)dataReceived;
+  
   assert(response->type == LOOKUP_RESPONSE);
 
   ServerID retval = response->serverID;

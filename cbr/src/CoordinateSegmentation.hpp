@@ -70,6 +70,8 @@ public:
     // Callback from MessageDispatcher
     virtual void receiveMessage(Message* msg) = 0;
 
+    virtual void reportLoad(ServerID sid, const BoundingBox3f& bbox, uint32 load) {  }
+
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {  }
 
     // FIXME this should be private but vis needs it for now

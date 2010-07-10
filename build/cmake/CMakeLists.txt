@@ -1349,6 +1349,8 @@ SET(CSEG_SOURCES
   ${CSEG_SOURCE_DIR}/Options.cpp
   ${CSEG_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CSEG_SOURCE_DIR}/main.cpp
+  ${CSEG_SOURCE_DIR}/LoadBalancer.cpp
+
   )
 
 SET(ANALYSIS_SOURCES

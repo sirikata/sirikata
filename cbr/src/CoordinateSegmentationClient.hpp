@@ -59,6 +59,8 @@ public:
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);
 
+    virtual void reportLoad(ServerID, const BoundingBox3f& bbox, uint32 loadValue);
+
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
