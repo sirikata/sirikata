@@ -970,9 +970,9 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
         (*iter++)->preFrame(curFrameTime, deltaTime);
     }
     Ogre::WindowEventUtilities::messagePump();
-    if (mPrimaryCamera) {
+//    if (mPrimaryCamera) {
         Ogre::Root::getSingleton().renderOneFrame();
-    }
+//    }
     Task::LocalTime postFrameTime = Task::LocalTime::now();
     Duration postFrameDelta = postFrameTime-mLastFrameTime;
     bool continueRendering=mInputManager->tick(postFrameTime,postFrameDelta);
@@ -1048,6 +1048,19 @@ void OgreSystem::postFrame(Task::LocalTime current, Duration frameTime) {
         mCubeMap->frameEnded(evt);
     }
 
+}
+
+// ConnectionEventListener Interface
+void OgreSystem::onConnected(const Network::Address& addr) {
+}
+
+void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, const String& reason) {
+    if (!requested) {
+        SILOG(ogre,fatal,"Got disconnected from space server: " << reason);
+        quit(); // FIXME
+    }
+    else
+        SILOG(ogre,warn,"Disconnected from space server.");
 }
 
 }

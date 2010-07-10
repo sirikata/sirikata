@@ -1,7 +1,7 @@
-/*  Sirikata
- *  Meshdata.hpp
+/*  Sirikata Object Host
+ *  ConnectionEvent.hpp
  *
- *  Copyright (c) 2010, Daniel B. Miller
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,38 +29,35 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef _MESHDATA_HPP_
-
-extern long Meshdata_counter;
+#ifndef _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
+#define _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 
 namespace Sirikata {
 
-struct SubMeshGeometry {
-    std::string name;
-    std::vector<Sirikata::Vector3f> positions;
-    std::vector<Sirikata::Vector3f> normals;
-    std::vector<Sirikata::Vector2f> texUVs;
-    std::vector<int> position_indices;
-    std::vector<int> normal_indices;
-    std::vector<int> texUV_indices;
-};
-typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
-typedef std::vector<std::string> TextureList;
+/** ConnectionEventListener listens for events relating to object host
+ * connections. This is useful for monitoring the health of the underlying
+ * system without directly exposing the details.
+ *
+ * FIXME This should be in liboh, but it is primarily useful to display plugins,
+ * e.g. Ogre, which currently only use libproxyobject.
+ */
+class SIRIKATA_PROXYOBJECT_EXPORT ConnectionEventListener {
+public:
+    virtual ~ConnectionEventListener(){}
 
-struct Meshdata {
-    SubMeshGeometryList geometry;
-    TextureList textures;
-    std::string uri;
-    int up_axis;
-    long id;
-
-    Meshdata() {
-        id=Meshdata_counter++;
-    }
+    /** Invoked upon connection.
+     *  \param addr the address connected to
+     */
+    virtual void onConnected(const Network::Address& addr) {};
+    /** Invoked upon disconnection.
+     *  \param addr the address disconnected from
+     *  \param requested indicates whether the user requested the disconnection
+     *  \param reason if requested is false, gives a textual description of the
+     *  reason for the disconnection
+     */
+    virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason) {};
 };
 
 } // namespace Sirikata
 
-#define _MESHDATA_HPP_ true
-#endif
+#endif //_SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_

@@ -77,6 +77,9 @@ class SIRIKATA_SPACE_EXPORT SpaceProxyManager : public VWObject, public ProxyMan
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
     virtual ODP::Port* bindODPPort(SpaceID space);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+
+    using VWObject::processRPC; // FIXME this shouldn't be exposed, but needs to
+                                // be for prox
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

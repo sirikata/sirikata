@@ -60,6 +60,9 @@ void VWObject::receivedProxObjectLocation(
     MemoryReference bodyData,
     int32 queryId) {
 
+    if (hdr.return_status() == RoutableMessageHeader::TIMEOUT_FAILURE)
+        return; // Any cleanup needed?
+
     SpaceID space = hdr.destination_space();
 
         std::auto_ptr<RPCMessage> destructor(static_cast<RPCMessage*>(sentMessage));
@@ -229,9 +232,11 @@ void VWObject::applyPositionUpdate(
     if (force_reset) {
         proxy->resetLocation(objLoc.timestamp(), currentLoc);
     } else {
+/*
         std::ostringstream os;
         os << "Received position update to "<<currentLoc;
         SILOG(cppoh,debug,os.str());
+*/
         proxy->setLocation(objLoc.timestamp(), currentLoc);
     }
 }

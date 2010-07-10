@@ -103,7 +103,9 @@ public:
         TS_ASSERT(mHttpResponse);
         if(mHttpResponse) {
             it = mHttpResponse->getHeaders().find("Content-Length");
-            TS_ASSERT(it == mHttpResponse->getHeaders().end());
+            Transfer::TransferMediator * mTransferMediator;
+	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+	TS_ASSERT(it == mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             it = mHttpResponse->getHeaders().find("File-Size");
@@ -322,14 +324,14 @@ public:
 
 class SampleClient {
 
-	Transfer::TransferMediator * mTransferMediator;
+	Transfer::TransferMediator& mTransferMediator;
 	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
 	const std::string mClientID;
 	std::vector<std::tr1::shared_ptr<RequestVerifier> > mReqList;
 
 public:
 
-	SampleClient(Transfer::TransferMediator * transferMediator, const std::string & clientID,
+	SampleClient(Transfer::TransferMediator& transferMediator, const std::string & clientID,
 	        std::vector<std::tr1::shared_ptr<RequestVerifier> > reqList) :
 		mTransferMediator(transferMediator), mClientID(clientID), mReqList(reqList) {
 		boost::unique_lock<boost::mutex> lock(mut);
@@ -340,7 +342,7 @@ public:
 		using std::tr1::placeholders::_1;
 
 		//Register with the transfer mediator!
-		mTransferPool = mTransferMediator->registerClient(mClientID);
+		mTransferPool = mTransferMediator.registerClient(mClientID);
 
         for(std::vector<std::tr1::shared_ptr<RequestVerifier> >::iterator it = mReqList.begin(); it != mReqList.end(); it++) {
             float pri = rand()/(float(RAND_MAX)+1);
@@ -374,19 +376,23 @@ class TransferTest : public CxxTest::TestSuite {
 	volatile bool mDestroyEventManager;
 
 	//Mediates transfers between subsystems (graphics, physics, etc)
-	Transfer::TransferMediator *mTransferMediator;
+	Transfer::TransferMediator& mTransferMediator;
 
 	SampleClient* mSampleClient1;
 	SampleClient* mSampleClient2;
 	SampleClient* mSampleClient3;
 
-	Thread* mMediatorThread;
 	Thread* mClientThread1;
 	Thread* mClientThread2;
 	Thread* mClientThread3;
 	ThreadSafeQueue<int> mTestQueue;
 
 public:
+
+	TransferTest()
+        : mTransferMediator(Transfer::TransferMediator::getSingleton()) {
+	    CxxTest::TestSuite();
+	}
 
 	void setUp() {
 		mDestroyEventManager = false;
@@ -396,11 +402,6 @@ public:
 		mEventSystem = new Task::GenEventManager(mWorkQueue);
 		mEventProcessThread = new Thread(std::tr1::bind(
 			&TransferTest::sleep_processEventQueue, this));
-
-		//Create a transfer mediator to use for client transfer requests
-		mTransferMediator = new Transfer::TransferMediator(mEventSystem, NULL /*mServicePool->service()*/);
-
-		mMediatorThread = new Thread(std::tr1::bind(&Transfer::TransferMediator::mediatorThread, mTransferMediator));
 
 		//5 urls
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list1;
@@ -454,7 +455,7 @@ public:
         mClientThread3->join();
 
         //Wait for transfer mediator thread to exit
-        mMediatorThread->join();
+        mTransferMediator.cleanup();
 	}
 
 	void sleep_processEventQueue() {
@@ -467,7 +468,6 @@ public:
 		srand ( time(NULL) );
 		boost::unique_lock<boost::mutex> lock(mut);
 		done.wait(lock);
-		mTransferMediator->cleanup();
 	}
 
 };

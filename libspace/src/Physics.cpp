@@ -117,7 +117,7 @@ void Physics::processMessage(const RoutableMessageHeader&underspecifiedHeader, M
     RoutableMessageHeader header(underspecifiedHeader);
     header.set_source_space(mSpace->id());
     header.set_destination_space(mSpace->id());
-    SILOG(cppoh,debug,"** Message from: " << header.source_object() << " port " << header.source_port() << " to "<<header.destination_object()<<" port " << header.destination_port());
+    //SILOG(cppoh,debug,"** Message from: " << header.source_object() << " port " << header.source_port() << " to "<<header.destination_object()<<" port " << header.destination_port());
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {
         mQueryTracker->processMessage(header, bodyData);
