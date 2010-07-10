@@ -329,8 +329,16 @@ void MeshEntity::createMesh(const Meshdata& md) {
     Ogre::ManualObject mo(hash);
     mo.clear();
 
-    for(SubMeshGeometryList::const_iterator submesh_it = md.geometry.begin(); submesh_it != md.geometry.end(); submesh_it++) {
-        const SubMeshGeometry& submesh = *(*submesh_it);
+    for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+        const GeometryInstance& geoinst = *geoinst_it;
+
+        Matrix4x4f pos_xform = geoinst.transform;
+        Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
+
+        // Get the instanced submesh
+        assert(geoinst.geometryIndex < md.geometry.size());
+        const SubMeshGeometry& submesh = *md.geometry[geoinst.geometryIndex];
+
         int vertcount = submesh.positions.size();
         int normcount = submesh.normals.size();
         int indexcount = submesh.position_indices.size();
@@ -345,12 +353,15 @@ void MeshEntity::createMesh(const Meshdata& md) {
         for (int i=0; i<indexcount; i++) {
             int j = submesh.position_indices[i];
             Vector3f v = fixUp(up, submesh.positions[j]);
+            Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
+            v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
             mo.position(v[0], v[1], v[2]);
 
             j = submesh.normal_indices[i];
-            v = fixUp(up, submesh.normals[j]);
+            Vector3f normal = fixUp(up, submesh.normals[j]);
+            normal = normal_xform * normal;
+            mo.normal(normal[0], normal[1], normal[2]);
 
-            mo.normal(v[0], v[1], v[2]);
             mo.colour(1.0,1.0,1.0,1.0);
             if (submesh.texUVs.size()==0) {
                 /// bogus texture for textureless models
