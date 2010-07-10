@@ -45,15 +45,24 @@ struct SubMeshGeometry {
     std::vector<int> normal_indices;
     std::vector<int> texUV_indices;
 };
+struct GeometryInstance {
+    int geometryIndex; // Index in SubMeshGeometryList
+    Matrix4x4f transform;
+};
+
 typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
 typedef std::vector<std::string> TextureList;
+typedef std::vector<GeometryInstance> GeometryInstanceList;
 
 struct Meshdata {
     SubMeshGeometryList geometry;
     TextureList textures;
+
     std::string uri;
     int up_axis;
     long id;
+
+    GeometryInstanceList instances;
 
     Meshdata() {
         id=Meshdata_counter++;

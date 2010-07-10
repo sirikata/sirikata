@@ -218,6 +218,17 @@ public:
                       getCol(3),
                       ROWS());
     }
+    Matrix3x3<scalar> extract3x3() const {
+        Vector4x c1 = getCol(0);
+        Vector4x c2 = getCol(1);
+        Vector4x c3 = getCol(2);
+        return Matrix3x3<scalar>(
+            Vector3<scalar>(c1[0], c1[1], c1[2]),
+            Vector3<scalar>(c2[0], c2[1], c2[2]),
+            Vector3<scalar>(c3[0], c3[1], c3[2]),
+            Sirikata::COLUMNS()
+        );
+    }
     std::string toString() const {
         std::ostringstream os;
         os<<"{ col1:"<<mCol[0]<<" col2:"<<mCol[1]<<" col3:"<<mCol[2]<<" col4:"<<mCol[3]<<'}';
@@ -245,7 +256,7 @@ template <typename T> Matrix4x4<T> operator /(T other, const Matrix4x4<T>&mat) {
 }
 
 typedef Matrix4x4<float32> Matrix4x4f;
-typedef Matrix4x4<float32> Matrix4x4d;
+typedef Matrix4x4<float64> Matrix4x4d;
 
 }
 #endif // _SIRIKATA_MATRIX4x4_HPP_
