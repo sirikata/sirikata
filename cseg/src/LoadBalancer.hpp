@@ -75,6 +75,7 @@ private:
   std::vector<SegmentedRegion*> mOverloadedRegionsList;
   std::vector<SegmentedRegion*> mUnderloadedRegionsList;    
   boost::mutex mOverloadedRegionsListMutex;
+  boost::mutex mUnderloadedRegionsListMutex;
 
   std::vector<ServerAvailability> mAvailableServers;
 

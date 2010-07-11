@@ -66,9 +66,9 @@ using Sirikata::Network::TCPSocket;
 using Sirikata::Network::TCPListener;
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, ServerIDMap* sidmap)
-                               : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false),
-                                 mAvailableServersCount(0), mIOService(Network::IOServiceFactory::makeIOService()),
-                                 mSidMap(sidmap), mLeaseExpiryTime(Timer::now() + Duration::milliseconds(60000.0))
+  : CoordinateSegmentation(ctx),  mRegion(region), mTopLevelRegion(NULL),  mBSPTreeValid(false),
+    mAvailableServersCount(0), mIOService(Network::IOServiceFactory::makeIOService()),
+    mSidMap(sidmap), mLeaseExpiryTime(Timer::now() + Duration::milliseconds(60000.0))
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 

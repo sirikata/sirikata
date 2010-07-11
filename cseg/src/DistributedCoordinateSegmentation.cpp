@@ -113,8 +113,8 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
   float minY = region->mBoundingBox.min().y; float maxY = region->mBoundingBox.max().y;
   float minZ = region->mBoundingBox.min().z; float maxZ = region->mBoundingBox.max().z;
 
-  region->mLeftChild = new SegmentedRegion();
-  region->mRightChild = new SegmentedRegion();
+  region->mLeftChild = new SegmentedRegion(region);
+  region->mRightChild = new SegmentedRegion(region);
 
   if (perdim.x > 1) {
     region->mLeftChild->mBoundingBox = BoundingBox3f( region->mBoundingBox.min(),
@@ -166,6 +166,7 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
 DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)),
    mContext(ctx),
+   mTopLevelRegion(NULL),
    mLastUpdateTime(Time::null()),
    mLoadBalancer(this, nservers, perdim),
    mSidMap(sidmap)
@@ -597,7 +598,8 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
     delete asyncBufferArray;
     socket->close();    
     return;
-  }  
+  }
+  
 
   uint8* dataReceived = (uint8*) malloc(1);
   dataReceived[0] = asyncBufferArray[0];
@@ -838,7 +840,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
 
     if ( region->mServer == mContext->id()) {
       // Assigned region->mBoundingBox to me.
-      SegmentedRegion* segRegion = new SegmentedRegion();
+      SegmentedRegion* segRegion = new SegmentedRegion(NULL);
       segRegion->mBoundingBox = region->mBoundingBox;
       segRegion->mLeftChild = region->mLeftChild;
       segRegion->mRightChild = region->mRightChild;
@@ -863,7 +865,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
 
   if (region->mLeftChild == NULL && region->mRightChild == NULL) {
 
-    SegmentedRegion* segRegion = new SegmentedRegion();
+    SegmentedRegion* segRegion = new SegmentedRegion(NULL);
     segRegion->mBoundingBox = region->mBoundingBox;
     segRegion->mServer = region->mServer;
     region->mServer = mContext->id();

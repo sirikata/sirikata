@@ -91,8 +91,8 @@ void WorldPopulationBSPTree::setupRegionBoundaries(WorldRegion* regionList) {
 
 void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldRegion* regionList, int listLength, bool makeHorizontalCut, int depth)
 {
-  SegmentedRegion* bspTree1 = new SegmentedRegion();
-  SegmentedRegion* bspTree2 = new SegmentedRegion();
+  SegmentedRegion* bspTree1 = new SegmentedRegion(bspTree);
+  SegmentedRegion* bspTree2 = new SegmentedRegion(bspTree);
 
   if (depth > mBiggestDepth) {
     mBiggestDepth = depth;

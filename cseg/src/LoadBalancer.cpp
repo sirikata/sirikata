@@ -34,6 +34,7 @@
 #include "DistributedCoordinateSegmentation.hpp"
 
 #define OVERLOAD_THRESHOLD 1000
+#define UNDERLOAD_THRESHOLD 800
 
 namespace Sirikata {
 
@@ -67,19 +68,40 @@ uint32 LoadBalancer::getAvailableServerIndex() {
 }
 
 void LoadBalancer::reportRegionLoad(SegmentedRegion* segRegion, ServerID sid, uint32 loadValue) {
-  if (segRegion->mLoadValue > OVERLOAD_THRESHOLD) {
-    std::cout << "Adding to overloaded regions list\n"; fflush(stdout);
-    boost::mutex::scoped_lock overloadedRegionsListLock(mOverloadedRegionsListMutex);
-    
-    bool found = false;
-    for (uint i = 0; i < mOverloadedRegionsList.size(); i++) {
-      if (mOverloadedRegionsList[i]->mServer == sid) {
-        found = true;
-      }
-    }
-    
-    if (!found) {
+  boost::mutex::scoped_lock overloadedRegionsListLock(mOverloadedRegionsListMutex);
+  boost::mutex::scoped_lock underloadedRegionsListLock(mUnderloadedRegionsListMutex);
+
+  if (segRegion->mLoadValue > OVERLOAD_THRESHOLD) {    
+    std::vector<SegmentedRegion*>::iterator it = std::find(mOverloadedRegionsList.begin(),
+                                                           mOverloadedRegionsList.end(), segRegion);
+    if (it == mOverloadedRegionsList.end()) {
+      std::cout << "Adding to overloaded: " << sid << "\n";
+
       mOverloadedRegionsList.push_back(segRegion);
+    }
+
+
+    it = std::find(mUnderloadedRegionsList.begin(),
+                   mUnderloadedRegionsList.end(), segRegion);
+    if (it != mUnderloadedRegionsList.end()) {
+      mUnderloadedRegionsList.erase(it);
+    }
+  }
+  else if (segRegion->mLoadValue < UNDERLOAD_THRESHOLD) {
+    std::vector<SegmentedRegion*>::iterator it = std::find(mUnderloadedRegionsList.begin(),
+                                                           mUnderloadedRegionsList.end(), segRegion);
+    if (it == mUnderloadedRegionsList.end()) {
+      mUnderloadedRegionsList.push_back(segRegion);
+      std::cout << "Adding to underloaded: " << sid << "\n";
+    }
+
+  }
+  else {
+    std::vector<SegmentedRegion*>::iterator it = std::find(mUnderloadedRegionsList.begin(),
+                                                           mUnderloadedRegionsList.end(), segRegion);
+    if (it != mUnderloadedRegionsList.end()) {
+      mUnderloadedRegionsList.erase(it);
+      std::cout << "Removing from underloaded: " << sid << "\n";
     }
   }
 }
@@ -102,7 +124,9 @@ void LoadBalancer::handleSegmentationChange(SegmentationChangeMessage* segChange
 
 void LoadBalancer::service() {
   boost::mutex::scoped_lock overloadedRegionsListLock(mOverloadedRegionsListMutex);
+  boost::mutex::scoped_lock underloadedRegionsListLock(mUnderloadedRegionsListMutex);
 
+  //splitting overloaded regions
   for (std::vector<SegmentedRegion*>::iterator it = mOverloadedRegionsList.begin();
        it != mOverloadedRegionsList.end(); 
        it++)
@@ -115,14 +139,15 @@ void LoadBalancer::service() {
       mAvailableServers[availableSvrIndex].mAvailable = false;
 
       SegmentedRegion* overloadedRegion = *it;
-      overloadedRegion->mLeftChild = new SegmentedRegion();
-      overloadedRegion->mRightChild = new SegmentedRegion();
+      overloadedRegion->mLeftChild = new SegmentedRegion(overloadedRegion);
+      overloadedRegion->mRightChild = new SegmentedRegion(overloadedRegion);
 
       BoundingBox3f region = overloadedRegion->mBoundingBox;
       float minX = region.min().x; float minY = region.min().y;
       float maxX = region.max().x; float maxY = region.max().y;
       float minZ = region.min().z; float maxZ = region.max().z;
 
+      //TODO: alternate splitting between x and y axes.
       overloadedRegion->mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
 							    Vector3f( (minX+maxX)/2, maxY, maxZ) );
       overloadedRegion->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( (minX+maxX)/2,minY,minZ),
@@ -132,10 +157,12 @@ void LoadBalancer::service() {
 
       std::cout << overloadedRegion->mServer << " : " << overloadedRegion->mLeftChild->mBoundingBox << "\n";
       std::cout << availableServer << " : " << overloadedRegion->mRightChild->mBoundingBox << "\n";
-      fflush(stdout);
       
       mCSeg->mWholeTreeServerRegionMap.erase(overloadedRegion->mServer);
       mCSeg->mLowerTreeServerRegionMap.erase(availableServer);
+      mCSeg->mWholeTreeServerRegionMap.erase(availableServer);
+      mCSeg->mLowerTreeServerRegionMap.erase(overloadedRegion->mServer);
+
 
       std::vector<SegmentationInfo> segInfoVector;
       SegmentationInfo segInfo, segInfo2;
@@ -151,12 +178,81 @@ void LoadBalancer::service() {
       
       mOverloadedRegionsList.erase(it);
       
-      break;
+      return; //enough work for this iteration. No further splitting or merging.
     }
     else {
       //No idle servers are available at this time...
       break;
     }
+  }
+
+  //merging underloaded regions
+  for (std::vector<SegmentedRegion*>::iterator it = mUnderloadedRegionsList.begin();
+       it != mUnderloadedRegionsList.end();
+       it++)
+  {
+    SegmentedRegion* underloadedRegion = *it;
+    if (underloadedRegion->mParent == NULL) {
+      mUnderloadedRegionsList.erase(it);
+      break;
+    }
+
+    bool isRightChild = (underloadedRegion->mParent->mRightChild == underloadedRegion);
+    SegmentedRegion* sibling = NULL;
+    if (isRightChild) {
+      sibling = underloadedRegion->mParent->mLeftChild;
+    }
+    else {
+      sibling = underloadedRegion->mParent->mRightChild;
+    }
+
+    std::vector<SegmentedRegion*>::iterator sibling_it = 
+               std::find(mUnderloadedRegionsList.begin(), mUnderloadedRegionsList.end(), sibling);
+    if (sibling_it == mUnderloadedRegionsList.end()) 
+    {
+      mUnderloadedRegionsList.erase(it);
+      break;
+    }
+
+    SegmentedRegion* parent = underloadedRegion->mParent;
+    parent->mServer = parent->mLeftChild->mServer;
+    for (uint32 i=0; i<mAvailableServers.size(); i++) {
+      if (mAvailableServers[i].mServer == parent->mRightChild->mServer) {
+        mAvailableServers[i].mAvailable = true;
+        break;
+      }
+    }
+
+    mCSeg->mWholeTreeServerRegionMap.erase(parent->mRightChild->mServer);
+    mCSeg->mLowerTreeServerRegionMap.erase(parent->mRightChild->mServer);
+    mCSeg->mWholeTreeServerRegionMap.erase(parent->mLeftChild->mServer);
+    mCSeg->mLowerTreeServerRegionMap.erase(parent->mLeftChild->mServer);
+
+    std::vector<SegmentationInfo> segInfoVector;
+    SegmentationInfo segInfo, segInfo2;
+    segInfo.server = parent->mRightChild->mServer;
+    segInfo.region = mCSeg->serverRegion(parent->mRightChild->mServer);
+    segInfoVector.push_back( segInfo );
+
+    segInfo2.server = parent->mLeftChild->mServer;
+    segInfo2.region = mCSeg->serverRegion(parent->mLeftChild->mServer);
+    segInfoVector.push_back(segInfo2);
+
+    Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
+
+    mUnderloadedRegionsList.erase(it);
+    sibling_it = std::find(mUnderloadedRegionsList.begin(), mUnderloadedRegionsList.end(), sibling);   
+    mUnderloadedRegionsList.erase(sibling_it);
+
+    std::cout << "Merged " << parent->mLeftChild->mServer << " : " << parent->mRightChild->mServer << "!\n";
+
+    delete parent->mLeftChild;
+    delete parent->mRightChild;
+    parent->mLeftChild = NULL;
+    parent->mRightChild = NULL;
+
+
+    break;
   }
 }
 

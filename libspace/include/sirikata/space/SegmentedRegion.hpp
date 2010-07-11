@@ -260,9 +260,10 @@ typedef struct LoadReportMessage {
 
 typedef struct SegmentedRegion {
 
-  SegmentedRegion() {
+  SegmentedRegion(SegmentedRegion* parent) {
     mLeafCount = 0;
     mLeftChild  = mRightChild = NULL;
+    mParent = parent;
     mServer = 0;
     mLoadValue = 0;
   }
@@ -385,29 +386,19 @@ typedef struct SegmentedRegion {
   }
 
   SegmentedRegion* lookup(const Vector3f& pos) const {
-    if (mRightChild == NULL && mLeftChild == NULL) {
-      //std::cout << "Left and right child is null: boundingbox = " << mBoundingBox<<"\n";
+    if (mRightChild == NULL && mLeftChild == NULL) {      
       if (mBoundingBox.contains(pos)) {
 	return ((SegmentedRegion*)this);
       }
     }
 
     SegmentedRegion* region = NULL;
-    /*if (mLeftChild != NULL) {
-      std::cout << "Left child: boundingbox = " << mLeftChild->mBoundingBox<<"\n";
-    }*/
-
-    if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {
-      //std::cout << "Contained in left child "  << mLeftChild->mBoundingBox << "\n";
+    
+    if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {      
       region = mLeftChild->lookup(pos);
-    }
+    }    
 
-    /*if (mRightChild != NULL) {
-      std::cout << "Right child: boundingbox = " << mRightChild->mBoundingBox<<"\n";
-    }*/
-
-    if (region == NULL && mRightChild!=NULL && mRightChild->mBoundingBox.contains(pos)){
-      //std::cout << "Contained in right child " << mRightChild->mBoundingBox << "\n";
+    if (region == NULL && mRightChild!=NULL && mRightChild->mBoundingBox.contains(pos)){ 
       region= mRightChild->lookup(pos);
     }
 
@@ -417,7 +408,6 @@ typedef struct SegmentedRegion {
 
   void serverRegion(const ServerID& server, BoundingBoxList& boundingBoxList) const {
     if (mServer == server && mRightChild==NULL && mLeftChild==NULL) {
-      //std::cout << "Adding to bblist : " << mBoundingBox << "\n";
       boundingBoxList.push_back(mBoundingBox);
       return;
     }
@@ -436,6 +426,7 @@ typedef struct SegmentedRegion {
   ServerID  mServer;
   SegmentedRegion* mLeftChild;
   SegmentedRegion* mRightChild;
+  SegmentedRegion* mParent;
   uint32 mLeafCount;
   BoundingBox3f mBoundingBox;
   uint32 mLoadValue;
@@ -494,12 +485,12 @@ typedef struct SerializedBSPTree {
     //std::cout << "right " <<  serializedTree->mSegmentedRegions[idx].mRightChildIdx << "\n";
 
     if (serializedTree->mSegmentedRegions[idx].mLeftChildIdx != 0) {
-      region->mLeftChild = new SegmentedRegion();
+      region->mLeftChild = new SegmentedRegion(region);
       deserializeBSPTree(region->mLeftChild, serializedTree->mSegmentedRegions[idx].mLeftChildIdx, serializedTree);
     }
 
     if (serializedTree->mSegmentedRegions[idx].mRightChildIdx != 0) {
-      region->mRightChild = new SegmentedRegion();
+      region->mRightChild = new SegmentedRegion(region);
       deserializeBSPTree(region->mRightChild,serializedTree->mSegmentedRegions[idx].mRightChildIdx, serializedTree);
     }
   }
