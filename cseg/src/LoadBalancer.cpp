@@ -34,7 +34,7 @@
 #include "DistributedCoordinateSegmentation.hpp"
 
 #define OVERLOAD_THRESHOLD 1000
-#define UNDERLOAD_THRESHOLD 800
+#define UNDERLOAD_THRESHOLD 50
 
 namespace Sirikata {
 

@@ -46,6 +46,7 @@ class ClusterConfig:
         self.repository = 'git://github.com/sirikata/sirikata.git'
         self.branch = "master"
         self.code_dir = "cbr"
+        self.pack_dir = ""
         self.oseg_code_dir = "oseg.git"
         self.port_base = 6666
         self.unique = None
@@ -110,6 +111,8 @@ class ClusterConfig:
                 self.headnode = opt_value.strip()
             elif (opt_name == "timeserver"):
                 self.timeserver = opt_value.strip()
+            elif (opt_name == "pack_dir"):
+                self.pack_dir = opt_value.strip()
             elif (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "repository"):

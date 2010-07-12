@@ -23,6 +23,7 @@ from graph.windowed_jfi import GraphWindowedJFI
 from graph.windowed_queues import GraphWindowedQueues
 
 import socket
+import os
 
 CBR_WRAPPER = "util/cbr_wrapper.sh"
 
@@ -58,7 +59,11 @@ class ClusterSimSettings:
         self.object_query_frac = 0.0
 
         # OH: pack object generation settings
-        self.pack_dir = '/home/meru/data/'
+        if config.pack_dir=="":
+          self.pack_dir = '/home/meru/data/'
+        else:
+          self.pack_dir = config.pack_dir
+
         self.object_pack = 'objects.pack'
         self.num_pack_objects = 0
         self.pack_dump = ''
