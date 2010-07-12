@@ -33,11 +33,11 @@
 #include "Object.hpp"
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/Random.hpp>
-#include "ObjectHostContext.hpp"
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include <sirikata/core/trace/Trace.hpp>
-#include "Trace.hpp"
+#include <sirikata/oh/Trace.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 

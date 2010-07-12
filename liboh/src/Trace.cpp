@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Trace.hpp"
+#include <sirikata/oh/Trace.hpp>
 #include "Protocol_ObjectTrace.pbj.hpp"
 #include "Protocol_PingTrace.pbj.hpp"
 #include <sirikata/core/options/Options.hpp>

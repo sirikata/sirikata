@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_HOST_HPP_
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
-#include "ObjectHostContext.hpp"
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include "ObjectHostListener.hpp"
 #include "QueueRouterElement.hpp"
 #include <sirikata/core/service/Service.hpp>

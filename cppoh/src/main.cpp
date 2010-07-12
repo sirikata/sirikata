@@ -57,25 +57,16 @@
 #include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
+
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "Options.hpp"
+#include <sirikata/oh/Trace.hpp>
+
 namespace Sirikata {
 
 using Task::GenEventManager;
 using Transfer::TransferManager;
-
-OptionValue *cdnConfigFile;
-OptionValue *floatExcept;
-OptionValue *dbFile;
-OptionValue *host;
-OptionValue *frameRate;
-InitializeGlobalOptions main_options("",
-//    simulationPlugins=new OptionValue("simulationPlugins","ogregraphics",OptionValueType<String>(),"List of plugins that handle simulation."),
-    cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
-    floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
-    dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
-    frameRate=new OptionValue("framerate","60",OptionValueType<double>(),"The desired framerate at which to run the object host"),
-    NULL
-);
 
 class UUIDLister : public MessageService {
     ObjectHost *mObjectHost;
@@ -152,26 +143,21 @@ public:
 #include <fenv.h>
 #endif
 
-int main ( int argc,const char**argv ) {
+int main (int argc, char** argv) {
+    using namespace Sirikata;
+
+    InitOptions();
+    Trace::Trace::InitOptions();
+    OHTrace::InitOptions();
+    InitCPPOHOptions();
+
+    ParseOptions(argc, argv);
 
     int myargc = argc+2;
     const char **myargv = new const char*[myargc];
     memcpy(myargv, argv, argc*sizeof(const char*));
     myargv[argc] = "--moduleloglevel";
     myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
-
-    using namespace Sirikata;
-    OptionValue *ohOption;
-    OptionValue *spaceIdMapOption;
-    OptionValue *mainSpaceOption;
-    InitializeGlobalOptions gbo("",
-                                ohOption=new OptionValue("objecthost","",OptionValueType<String>(),"Options passed to the object host"),
-                                mainSpaceOption=new OptionValue("mainspace","12345678-1111-1111-1111-DEFA01759ACE",OptionValueType<UUID>(),"space which to connect default objects to"),
-                                spaceIdMapOption=new OptionValue("spaceidmap",
-                                                                 "12345678-1111-1111-1111-DEFA01759ACE:{127.0.0.1:5943}",
-                                                                 OptionValueType<std::map<std::string,std::string> >(),
-                                                                 "Map between space ID's and tcpsst ip's"),
-                                NULL);
 
     PluginManager plugins;
     const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics",
@@ -182,11 +168,9 @@ int main ( int argc,const char**argv ) {
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
         plugins.load( *plugin_name );
 
-    OptionSet::getOptions ( "" )->parse ( myargc,myargv );
-
 #ifdef __GNUC__
 #ifndef __APPLE__
-    if (floatExcept->as<bool>()) {
+    if (GetOptionValue<bool>(OPT_SIGFPE)) {
         feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
     }
 #endif
@@ -194,7 +178,7 @@ int main ( int argc,const char**argv ) {
 
     OptionMapPtr transferOptions (new OptionMap);
     {
-        std::string contents(cdnConfigFile->as<String>());
+        std::string contents( GetOptionValue<String>(OPT_CDN_CONFIG) );
         std::string::size_type pos(0);
         parseConfig(contents, transferOptions, transferOptions, pos);
         std::cout << *transferOptions;
@@ -206,15 +190,17 @@ int main ( int argc,const char**argv ) {
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     SpaceIDMap *spaceMap = new SpaceIDMap;
-    SpaceID mainSpace(mainSpaceOption->as<UUID>());
-    for (std::map<std::string,std::string>::iterator i=spaceIdMapOption->as<std::map<std::string,std::string> >().begin(),
-             ie=spaceIdMapOption->as<std::map<std::string,std::string> >().end();
+    SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
+    typedef std::map<std::string,std::string> SimpleSpaceIDMap;
+    SimpleSpaceIDMap spaceIdMap(GetOptionValue<SimpleSpaceIDMap>(OPT_SPACEID_MAP));
+    for (SimpleSpaceIDMap::iterator i = spaceIdMap.begin(),
+             ie=spaceIdMap.end();
          i!=ie;
          ++i) {
         SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
         spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
     }
-    String localDbFile=dbFile->as<String>();
+    String localDbFile = GetOptionValue<String>(OPT_DB);
     if (localDbFile.length()&&localDbFile[0]!='/'&&localDbFile[0]!='\\') {
         FILE * fp=fopen(localDbFile.c_str(),"rb");
         for (int i=0;i<4&&fp==NULL;++i) {
@@ -222,7 +208,7 @@ int main ( int argc,const char**argv ) {
             fp=fopen(localDbFile.c_str(),"rb");
         }
         if (fp) fclose(fp);
-        else localDbFile=dbFile->as<String>();
+        else localDbFile = GetOptionValue<String>(OPT_DB);
     }
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
         .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
@@ -237,7 +223,7 @@ int main ( int argc,const char**argv ) {
 
     std::tr1::shared_ptr<ProxyManager> provider = oh->connectToSpace(mainSpace);
     if (!provider) {
-        SILOG(cppoh,error,String("Unable to load database in ") + String(dbFile->as<String>()));
+        SILOG(cppoh,error,String("Unable to load database in ") + GetOptionValue<String>(OPT_DB));
         std::cout << "Press enter to continue" << std::endl;
         std::cerr << "Press enter to continue" << std::endl;
         fgetc(stdin);
@@ -254,7 +240,6 @@ int main ( int argc,const char**argv ) {
         fgetc(stdin);
         return 1;
     }
-    OptionSet::getOptions("")->parse(myargc,myargv);
 
     String graphicsCommandArguments;
     {
@@ -319,7 +304,7 @@ int main ( int argc,const char**argv ) {
             sims.push_back(sim);
         }
     }
-    Duration frameTime = Duration::seconds(1.0/frameRate->as<double>());
+    Duration frameTime = Duration::seconds(1.0/GetOptionValue<double>(OPT_FRAMERATE));
     Task::LocalTime curTickTime(Task::LocalTime::now());
     Task::LocalTime lastTickTime=curTickTime;
     while ( continue_simulation ) {

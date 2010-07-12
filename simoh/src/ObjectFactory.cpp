@@ -31,7 +31,7 @@
  */
 
 #include "ObjectFactory.hpp"
-#include "ObjectHostContext.hpp"
+#include <sirikata/oh/ObjectHostContext.hpp>
 
 #include "Object.hpp"
 #include <sirikata/core/util/Random.hpp>

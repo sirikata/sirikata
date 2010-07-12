@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 #define _SIRIKATA_OBJECT_HOST_CONTEXT_HPP_
 
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include "Trace.hpp"
 
@@ -40,7 +41,7 @@ namespace Sirikata {
 
 class ObjectHost;
 
-class ObjectHostContext : public Context {
+class SIRIKATA_OH_EXPORT ObjectHostContext : public Context {
 public:
     ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
 

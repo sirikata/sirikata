@@ -30,15 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SIMOH_TRACE_HPP_
-#define _SIRIKATA_SIMOH_TRACE_HPP_
+#ifndef _SIRIKATA_LIBOH_TRACE_HPP_
+#define _SIRIKATA_LIBOH_TRACE_HPP_
 
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 
 namespace Sirikata {
 
-class OHTrace {
+class SIRIKATA_OH_EXPORT OHTrace {
 public:
     OHTrace(Trace::Trace* _trace)
      : mTrace(_trace)
@@ -76,4 +77,4 @@ private:
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_SIMOH_TRACE_HPP_
+#endif //_SIRIKATA_LIBOH_TRACE_HPP_

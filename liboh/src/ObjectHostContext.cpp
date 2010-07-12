@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Scenario.hpp
+ *  ObjectHostContext.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,20 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SCENARIO_HPP_
-#define _SCENARIO_HPP_
 #include <sirikata/oh/ObjectHostContext.hpp>
-#include <sirikata/core/service/Service.hpp>
-#include <sirikata/core/network/ObjectMessage.hpp>
-
-#include <sirikata/core/util/SerializationCheck.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace Sirikata {
-class Scenario : public Service{
-public:
-    Scenario(){}
-    ~Scenario(){}
-    virtual void initialize(ObjectHostContext* context)=0;
-};
+
+ObjectHostContext::ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
+ : Context("Object Host", ios, strand, _trace, epoch, simlen),
+   id(_id),
+   objectHost(NULL),
+   mOHTrace(new OHTrace(_trace))
+{
 }
-#endif
+
+} // namespace Sirikata

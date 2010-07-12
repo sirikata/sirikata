@@ -1133,9 +1133,13 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
+                  ${LIBOH_SOURCE_DIR}/Trace.cpp
                    )
 
-SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
+SET(CPPOH_SOURCES
+  ${CPPOH_SOURCE_DIR}/main.cpp
+  ${CPPOH_SOURCE_DIR}/Options.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1309,7 +1313,6 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
   ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp
@@ -1322,7 +1325,6 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
-  ${SIMOH_SOURCE_DIR}/Trace.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 
@@ -1704,6 +1706,7 @@ SET_TARGET_PROPERTIES(simoh PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(simoh
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_OH_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ObjectHostContext.cpp
+ *  Options.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,17 +30,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectHostContext.hpp"
-#include <sirikata/core/network/IOStrandImpl.hpp>
+#ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
+#define _SIRIKATA_CPPOH_OPTIONS_HPP_
+
+#define OPT_OH_PLUGINS           "oh.plugins"
+
+#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
+#define STATS_SAMPLE_RATE    "stats.sample-rate"
+
+#define OPT_OH_OPTIONS           "objecthost"
+#define OPT_MAIN_SPACE           "mainspace"
+#define OPT_SPACEID_MAP          "spaceidmap"
+
+#define OPT_CDN_CONFIG           "cdnConfig"
+#define OPT_SIGFPE               "sigfpe"
+#define OPT_DB                   "db"
+#define OPT_FRAMERATE            "framerate"
 
 namespace Sirikata {
 
-ObjectHostContext::ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
- : Context("Object Host", ios, strand, _trace, epoch, simlen),
-   id(_id),
-   objectHost(NULL),
-   mOHTrace(new OHTrace(_trace))
-{
-}
+void InitCPPOHOptions();
 
 } // namespace Sirikata
+
+
+#endif //_SIRIKATA_CPPOH_OPTIONS_HPP_
