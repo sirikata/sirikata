@@ -58,10 +58,20 @@
 #include <time.h>
 #include <boost/thread.hpp>
 
+
+
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include "Options.hpp"
 #include <sirikata/oh/Trace.hpp>
+
+#include <sirikata/core/network/ServerIDMap.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
+
+#include <sirikata/core/network/SSTImpl.hpp>
+
+#include <sirikata/oh/ObjectHostContext.hpp>
+
 
 namespace Sirikata {
 
@@ -126,7 +136,7 @@ public:
         rws.SerializeToString(&body);
         mObjectHost->processMessage(hdr, MemoryReference(body));
     }
-    void goWait(Network::IOService *ioServ, Task::WorkQueue *queue) {
+    void goWait(Task::WorkQueue *queue) {
         mSuccess = false;
         go();
         while (!mSuccess) {
@@ -153,20 +163,14 @@ int main (int argc, char** argv) {
 
     ParseOptions(argc, argv);
 
-    int myargc = argc+2;
-    const char **myargv = new const char*[myargc];
-    memcpy(myargv, argv, argc*sizeof(const char*));
-    myargv[argc] = "--moduleloglevel";
-    myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
-
     PluginManager plugins;
-    const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics",
-#ifdef WANT_CRASH
-                                  "bulletphysics",
-#endif
-                                  "colladamodels", NULL};
-    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
-        plugins.load( *plugin_name );
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
+
+    String time_server = GetOptionValue<String>("time-server");
+    NTPTimeSync sync;
+    if (time_server.size() > 0)
+        sync.start(time_server);
 
 #ifdef __GNUC__
 #ifndef __APPLE__
@@ -184,9 +188,33 @@ int main (int argc, char** argv) {
         std::cout << *transferOptions;
     }
 
+    // FIXME: Initializes protocol handlers (http, rest, file, x-shasumofuri,
+    // x-hashed) in the Transfer system.  This seems like it should be handled
+    // automatically with plugins.
     initializeProtocols();
 
-    Network::IOService *ioServ = Network::IOServiceFactory::makeIOService();
+
+    ObjectHostID oh_id = GetOptionValue<ObjectHostID>("ohid");
+    String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
+    Trace::Trace* trace = new Trace::Trace(trace_file);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+
+    srand( GetOptionValue<uint32>("rand-seed") );
+
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
+
+    Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
+    Duration duration = Duration::zero(); // Indicates to run forever.
+    ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, trace, start_time, duration);
+
+
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
+
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     SpaceIDMap *spaceMap = new SpaceIDMap;
@@ -213,12 +241,12 @@ int main (int argc, char** argv) {
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
         .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
 
-    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ, "");
+    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ios, "");
     oh->registerService(Services::PERSISTENCE, database);
 
     {
         UUIDLister lister(oh, mainSpace);
-        lister.goWait(ioServ, workQueue);
+        lister.goWait(workQueue);
     }
 
     std::tr1::shared_ptr<ProxyManager> provider = oh->connectToSpace(mainSpace);
@@ -318,18 +346,27 @@ int main (int argc, char** argv) {
         if (frameSeconds<frameTime) {
             //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
 
-            ioServ->post(
+            ios->post(
                                                               (frameTime-frameSeconds),
                                                               std::tr1::bind(&Network::IOService::stop,
-                                                                             ioServ)
+                                                                             ios)
                                                               );
-            ioServ->run();
-            ioServ->reset();
+            ios->run();
+            ios->reset();
         }else {
-            ioServ->poll();
+            ios->poll();
         }
         lastTickTime=curTickTime;
     }
+
+    ///////////Go go go!! start of simulation/////////////////////
+    ctx->add(ctx);
+    //ctx->add(obj_host);
+    ctx->add(sstConnMgr);
+    //ctx->run(2);
+
+    ctx->cleanup();
+    trace->prepareShutdown();
 
     provider.reset();
     delete oh;
@@ -340,7 +377,6 @@ int main (int argc, char** argv) {
     destroyTransferManager(tm);
     delete eventManager;
     delete workQueue;
-    Network::IOServiceFactory::destroyIOService(ioServ);
 
     for(SimList::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
         delete *it;
@@ -351,7 +387,16 @@ int main (int argc, char** argv) {
 
     delete spaceMap;
 
-    delete []myargv;
+    delete ctx;
+
+    trace->shutdown();
+    delete trace;
+    trace = NULL;
+
+    delete mainStrand;
+    Network::IOServiceFactory::destroyIOService(ios);
+
+    sync.stop();
 
     return 0;
 }
