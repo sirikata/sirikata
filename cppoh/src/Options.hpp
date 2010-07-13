@@ -45,7 +45,6 @@
 #define OPT_CDN_CONFIG           "cdnConfig"
 #define OPT_SIGFPE               "sigfpe"
 #define OPT_DB                   "db"
-#define OPT_FRAMERATE            "framerate"
 
 namespace Sirikata {
 

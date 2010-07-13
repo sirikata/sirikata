@@ -48,6 +48,8 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>
 
+#include <sirikata/core/service/Context.hpp>
+
 namespace Sirikata {
 
 struct ObjectHost::AtomicInt : public AtomicValue<int> {
@@ -60,7 +62,10 @@ struct ObjectHost::AtomicInt : public AtomicValue<int> {
 };
 
 
-ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options) {
+ObjectHost::ObjectHost(Context* ctx, SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options)
+ : PollingService(ctx->mainStrand, Duration::seconds(1.f/30.f), ctx, "Object Host Poll"),
+   mContext(ctx)
+{
     mScriptPlugins=new PluginManager;
     mSpaceIDMap = spaceMap;
     mMessageQueue = messageQueue;
@@ -293,7 +298,7 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
     ConnectionEventProvider::notify(&ConnectionEventListener::onDisconnected, addy, false, "Unknown.");
 }
 
-void ObjectHost::tick() {
+void ObjectHost::poll() {
     for (HostedObjectMap::iterator iter = mHostedObjects.begin(); iter != mHostedObjects.end(); ++iter) {
         iter->second->tick();
     }

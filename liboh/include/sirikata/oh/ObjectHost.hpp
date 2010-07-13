@@ -38,6 +38,8 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;
@@ -55,7 +57,8 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
-class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider {
+class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public PollingService {
+    Context* mContext;
     SpaceIDMap *mSpaceIDMap;
     typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
     typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap;
@@ -87,7 +90,7 @@ public:
      * @param ioServ IOService to run this object host on
      * @param options a string containing the options to pass to the object host
      */
-    ObjectHost(SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ, const String&options);
+    ObjectHost(Context* ctx, SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ, const String&options);
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
     ///ObjectHost does not forward messages to other services, only to objects it owns
@@ -144,7 +147,8 @@ public:
     ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully, but will allow queueing messages. The stream will be deallocated if the return value is discarded. In most cases, this should not be called directly.
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 
-    void tick();
+    virtual void poll();
+
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
     /** Gets an IO service corresponding to this object host.
         This can be used to schedule timeouts that are guaranteed

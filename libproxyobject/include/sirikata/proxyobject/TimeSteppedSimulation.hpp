@@ -35,14 +35,20 @@
 
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
 
 namespace Sirikata {
 
-class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener {
+class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener, public PollingService {
 public:
-    virtual Duration desiredTickRate()const=0;
+    TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name)
+     : PollingService(ctx->mainStrand, rate, ctx, name)
+    {
+    }
+    virtual Duration desiredTickRate() const = 0;
     ///returns true if simulation should continue (false quits app)
-    virtual bool tick()=0;
+    virtual void poll()=0;
 };
 
 }

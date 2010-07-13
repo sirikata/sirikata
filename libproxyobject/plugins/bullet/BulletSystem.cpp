@@ -465,7 +465,7 @@ float btMagSq(const btVector3& v) {
            + v.z() * v.z();
 }
 
-bool BulletSystem::tick() {
+void BulletSystem::poll() {
     static Task::LocalTime lasttime = mStartTime;
     static Task::DeltaTime waittime = Task::DeltaTime::seconds(0.02);
     static int mode = 0;
@@ -639,7 +639,6 @@ bool BulletSystem::tick() {
         }
     }
     DEBUG_OUTPUT(cout << endl;)
-    return true;
 }
 
 void customDispatch::ActiveCollisionState::collide(BulletObj* first, BulletObj* second, btPersistentManifold *currentCollisionManifold) {
@@ -757,9 +756,12 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     return true;
 }
 
-BulletSystem::BulletSystem() :
-        mGravity(0, GRAVITY, 0),
-        mStartTime(Task::LocalTime::now()) {
+BulletSystem::BulletSystem(Context* ctx)
+ : TimeSteppedQueryableSimulation(ctx, Duration::milliseconds((int64)100), "Bullet Physics"),
+   mContext(ctx),
+   mGravity(0, GRAVITY, 0),
+   mStartTime(Task::LocalTime::now())
+{
     mLocalTimeOffset=NULL;
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }

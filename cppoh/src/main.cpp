@@ -241,7 +241,7 @@ int main (int argc, char** argv) {
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
         .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
 
-    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ios, "");
+    ObjectHost *oh = new ObjectHost(ctx, spaceMap, workQueue, ios, "");
     oh->registerService(Services::PERSISTENCE, database);
 
     {
@@ -303,17 +303,16 @@ int main (int argc, char** argv) {
         const char* name;
         bool required;
     };
-    const uint32 nSimRequests = 2;
+    const uint32 nSimRequests = 1;
     SimulationRequest simRequests[nSimRequests] = {
-        {"ogregraphics", true},
-        {"bulletphysics", false}
+        {"ogregraphics", true}
     };
     for(uint32 ir = 0; ir < nSimRequests && continue_simulation; ir++) {
         String simName = simRequests[ir].name;
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( provider.get(), provider->getTimeOffsetManager(), graphicsCommandArguments );
+            .getConstructor ( simName ) ( ctx, provider.get(), provider->getTimeOffsetManager(), graphicsCommandArguments );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -332,38 +331,14 @@ int main (int argc, char** argv) {
             sims.push_back(sim);
         }
     }
-    Duration frameTime = Duration::seconds(1.0/GetOptionValue<double>(OPT_FRAMERATE));
-    Task::LocalTime curTickTime(Task::LocalTime::now());
-    Task::LocalTime lastTickTime=curTickTime;
-    while ( continue_simulation ) {
-        for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
-            continue_simulation = continue_simulation && (*it)->tick();
-        }
-        oh->tick();
-
-        curTickTime=Task::LocalTime::now();
-        Duration frameSeconds=(curTickTime-lastTickTime);
-        if (frameSeconds<frameTime) {
-            //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
-
-            ios->post(
-                                                              (frameTime-frameSeconds),
-                                                              std::tr1::bind(&Network::IOService::stop,
-                                                                             ios)
-                                                              );
-            ios->run();
-            ios->reset();
-        }else {
-            ios->poll();
-        }
-        lastTickTime=curTickTime;
-    }
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
-    //ctx->add(obj_host);
+    ctx->add(oh);
     ctx->add(sstConnMgr);
-    //ctx->run(2);
+    for(SimList::iterator it = sims.begin(); it != sims.end(); it++)
+        ctx->add(*it);
+    ctx->run(2);
 
     ctx->cleanup();
     trace->prepareShutdown();

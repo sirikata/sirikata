@@ -61,7 +61,6 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_CDN_CONFIG,"cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."))
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
         .addOption(new OptionValue(OPT_DB,"scene.db",OptionValueType<String>(),"Persistence database"))
-        .addOption(new OptionValue(OPT_FRAMERATE,"60",OptionValueType<double>(),"The desired framerate at which to run the object host"))
 
         ;
 }
