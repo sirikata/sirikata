@@ -659,9 +659,7 @@ void SessionManager::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUI
 
   OH_LOG(debug, "SST object-space connect callback for " << obj.toString() << " : " << err << "\n");
 
-  mObjectToSpaceStreams[obj] = s;
-
-  if (err != SUCCESS) {
+  if (err != SST_IMPL_SUCCESS) {
     // retry creating an SST stream from the space server to object 'obj'.
 
       Stream<UUID>::connectStream(mObjectConnectionRouters[obj],
@@ -672,6 +670,8 @@ void SessionManager::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUI
 
     return;
   }
+
+  mObjectToSpaceStreams[obj] = s;
 
   mObjectConnections.handleConnectStream(obj);
 }

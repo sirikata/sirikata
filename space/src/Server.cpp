@@ -104,7 +104,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 }
 
 void Server::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  if (err != SUCCESS){
+  if (err != SST_IMPL_SUCCESS){
     return;
   }
 
@@ -416,7 +416,7 @@ void Server::finishAddObject(const UUID& obj_id)
 
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
-    mObjects[obj_id] = conn; 
+    mObjects[obj_id] = conn;
 
     //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
     //for cleaner semantics?
@@ -580,7 +580,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Move from list waiting for migration message to active objects
-    mObjects[obj_id] = obj_conn; 
+    mObjects[obj_id] = obj_conn;
     mLocalForwarder->addActiveConnection(obj_conn);
 
 
