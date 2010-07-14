@@ -108,10 +108,6 @@ int main(int argc, char** argv) {
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
-
-    String filehandle = GetOptionValue<String>("serverips");
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-
     if ( GetOptionValue<bool>(ANALYSIS_LOC) ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10)));
