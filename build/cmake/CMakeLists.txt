@@ -1124,6 +1124,8 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
+  ${LIBOH_SOURCE_DIR}/RouterElement.cpp
+                  ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
@@ -1309,7 +1311,6 @@ SET(SPACE_SOURCES
 )
 
 SET(SIMOH_SOURCES
-  ${SIMOH_SOURCE_DIR}/RouterElement.cpp
   ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp

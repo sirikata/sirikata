@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "RouterElement.hpp"
+#include <sirikata/oh/RouterElement.hpp>
 
 namespace Sirikata {
 

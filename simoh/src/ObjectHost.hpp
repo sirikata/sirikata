@@ -35,7 +35,6 @@
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include "ObjectHostListener.hpp"
-#include "QueueRouterElement.hpp"
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -45,6 +44,8 @@
 #include <sirikata/core/util/SerializationCheck.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
+
+#include <sirikata/oh/SpaceNodeConnection.hpp>
 
 namespace Sirikata {
 
@@ -121,7 +122,6 @@ private:
     // Note also that this class does *not* handle multithreaded input -- currently all access of public
     // methods should be performed from the main strand.
 
-    struct SpaceNodeConnection;
     struct ConnectingInfo;
 
     // Service Implementation
@@ -157,13 +157,12 @@ private:
 
     // Get an existing space connection or initiate a new one at random
     // which can be used for bootstrapping connections
-    typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
-    void getAnySpaceConnection(GotSpaceConnectionCallback cb);
+    void getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb);
     // Get the connection to the specified space node
-    void getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb);
+    void getSpaceConnection(ServerID sid, SpaceNodeConnection::GotSpaceConnectionCallback cb);
 
     // Set up a space connection to the given server
-    void setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb);
+    void setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -212,42 +211,6 @@ private:
 
     // Main strand only
 
-    // Connections to servers
-    struct SpaceNodeConnection {
-        typedef std::tr1::function<void(SpaceNodeConnection*)> ReceiveCallback;
-
-        SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, OptionSet *streamOptions, ServerID sid, ReceiveCallback rcb);
-        ~SpaceNodeConnection();
-
-        // Thread Safe
-        ObjectHostContext* mContext;
-        ObjectHost* parent;
-        ServerID server;
-        Sirikata::Network::Stream* socket;
-
-        // Push a packet to be sent out
-        bool push(const ObjectMessage& msg);
-
-        // Pull a packet from the receive queue
-        ObjectMessage* pull();
-
-        bool empty();
-        void shutdown();
-
-
-        // Callback for when the connection receives data
-        void handleRead(Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
-
-        // Main Strand
-        std::vector<GotSpaceConnectionCallback> connectCallbacks;
-        bool connecting;
-
-        // IO Strand
-        QueueRouterElement<ObjectMessage> receive_queue;
-
-        ReceiveCallback mReceiveCB;
-    };
-    friend struct SpaceNodeConnection;
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
     typedef std::tr1::unordered_map<ServerID, SpaceNodeConnection*> ServerConnectionMap;

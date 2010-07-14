@@ -53,94 +53,6 @@ using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, OptionSet* streamOptions, ServerID sid, ReceiveCallback rcb)
- : mContext(ctx),
-   parent(ctx->objectHost),
-   server(sid),
-   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(&ioStrand->service(),streamOptions)),
-   connecting(false),
-   receive_queue(GetOptionValue<size_t>("object-host-receive-buffer"), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
-   mReceiveCB(rcb)
-{
-    static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(GetOptionValue<String>("ohstreamlib")),0);
-}
-
-ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
-    delete socket;
-}
-
-bool ObjectHost::SpaceNodeConnection::push(const ObjectMessage& msg) {
-    TIMESTAMP_START(tstamp, (&msg));
-
-    std::string data;
-    msg.serialize(&data);
-
-    // Try to push to the network
-    bool success = socket->send(
-        //Sirikata::MemoryReference(&(data[0]), data.size()),
-        Sirikata::MemoryReference(data),
-        Sirikata::Network::ReliableOrdered
-                                );
-    if (success) {
-        TIMESTAMP_END(tstamp, Trace::OH_HIT_NETWORK);
-    }
-    else {
-        TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_SEND);
-        TRACE_DROP(OH_DROPPED_AT_SEND);
-    }
-
-    return success;
-}
-
-ObjectMessage* ObjectHost::SpaceNodeConnection::pull() {
-    return receive_queue.pull();
-}
-
-bool ObjectHost::SpaceNodeConnection::empty() {
-    return receive_queue.empty();
-}
-
-void ObjectHost::SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
-    parent->mHandleReadProfiler->started();
-
-    // Parse
-    ObjectMessage* msg = new ObjectMessage();
-    bool parse_success = msg->ParseFromArray(&(*chunk.begin()), chunk.size());
-    assert(parse_success == true);
-
-    TIMESTAMP_START(tstamp, msg);
-
-    // Mark as received
-    TIMESTAMP_END(tstamp, Trace::OH_NET_RECEIVED);
-
-    // NOTE: We can't record drops here or we incur a lot of overhead in parsing...
-    bool pushed = receive_queue.push(msg);
-
-    if (pushed) {
-        // handleConnectionRead() could be called from any thread/strand. Everything that is not
-        // thread safe that could result from a new message needs to happen in the main strand,
-        // so just post the whole handler there.
-        if (receive_queue.wentNonEmpty())
-            mReceiveCB(this);
-    }
-    else {
-        TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
-        TRACE_DROP(OH_DROPPED_AT_RECEIVE_QUEUE);
-    }
-
-    parent->mHandleReadProfiler->finished();
-
-    // No matter what, we've "handled" the data, either for real or by dropping.
-}
-
-
-void ObjectHost::SpaceNodeConnection::shutdown() {
-    socket->close();
-}
-
-
-
 // ObjectInfo Implementation
 ObjectHost::ObjectConnections::ObjectInfo::ObjectInfo()
  : object(NULL),
@@ -423,7 +335,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     }
 
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
-    ConnectingInfo ci = mObjectConnections.connectingTo(uuid, conn->server);
+    ConnectingInfo ci = mObjectConnections.connectingTo(uuid, conn->server());
 
     Sirikata::Protocol::Session::Container session_msg;
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
@@ -440,9 +352,9 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     if (!send(uuid, OBJECT_PORT_SESSION,
               UUID::null(), OBJECT_PORT_SESSION,
               serializePBJMessage(session_msg),
-              conn->server
+            conn->server()
             )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&ObjectHost::retryOpenConnection,this,uuid,conn->server));
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&ObjectHost::retryOpenConnection,this,uuid,conn->server()));
     }
 }
 
@@ -619,7 +531,7 @@ bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double di
     return sendPing(t, src, dest, &ping_msg);
 }
 
-void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
+void ObjectHost::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (mShuttingDown) {
@@ -632,12 +544,12 @@ void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
         for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
             SpaceNodeConnection* rand_conn = it->second;
             if (rand_conn == NULL) continue;
-            if (!rand_conn->connecting) {
+            if (!rand_conn->connecting()) {
                 cb(rand_conn);
                 return;
             }
             else {
-                rand_conn->connectCallbacks.push_back(cb);
+                rand_conn->addCallback(cb);
                 return;
             }
         }
@@ -648,7 +560,7 @@ void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     getSpaceConnection(server_id, cb);
 }
 
-void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb) {
+void ObjectHost::getSpaceConnection(ServerID sid, SpaceNodeConnection::GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (mShuttingDown) {
@@ -667,41 +579,37 @@ void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb)
     setupSpaceConnection(sid, cb);
 }
 
-void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb) {
+void ObjectHost::setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    SpaceNodeConnection* conn = new SpaceNodeConnection(
-        mContext,
-        mIOStrand,
-        mStreamOptions,
-        server,
-        std::tr1::bind(&ObjectHost::scheduleHandleServerMessages, this, _1)
-    );
-    conn->connectCallbacks.push_back(cb);
-    mConnections[server] = conn;
-
     // Lookup the server's address
     Address4* addr = mServerIDMap->lookupExternal(server);
     Address addy(convertAddress4ToSirikata(*addr));
-    conn->socket->connect(addy,
-        &Sirikata::Network::Stream::ignoreSubstreamCallback,
+
+    SpaceNodeConnection* conn = new SpaceNodeConnection(
+        mContext,
+        mIOStrand,
+        mHandleReadProfiler,
+        mStreamOptions,
+        server,
+        addy,
         mContext->mainStrand->wrap(
             std::tr1::bind(&ObjectHost::handleSpaceConnection,
                 this,
                 _1, _2, server
             )
         ),
-        std::tr1::bind(&ObjectHost::SpaceNodeConnection::handleRead,
-            conn,
-            _1, _2),
-        &Sirikata::Network::Stream::ignoreReadySendCallback
+        std::tr1::bind(&ObjectHost::scheduleHandleServerMessages, this, _1)
     );
+    conn->addCallback(cb);
+    mConnections[server] = conn;
+
+    conn->connect();
 
     OH_LOG(debug,"Trying to connect to " << addy.toString());
-    conn->connecting = true;
 }
 
 void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -717,21 +625,12 @@ void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::Connecti
     OH_LOG(debug,"Handling space connection...");
     if (status!=Sirikata::Network::Stream::Connected) {
         OH_LOG(error,"Failed to connect to server " << sid << ": " << reason);
-        for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
-            (*it)(NULL);
-        conn->connectCallbacks.clear();
         delete conn;
         mConnections.erase(sid);
         return;
     }
 
     OH_LOG(debug,"Successfully connected to " << sid);
-    conn->connecting = false;
-
-    // Tell all requesters that the connection is available
-    for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
-        (*it)(conn);
-    conn->connectCallbacks.clear();
 }
 
 void ObjectHost::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
