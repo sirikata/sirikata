@@ -1124,7 +1124,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
-  ${LIBOH_SOURCE_DIR}/RouterElement.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SessionManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp

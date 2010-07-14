@@ -38,41 +38,6 @@
 
 namespace Sirikata {
 
-/** Interface for schedulable routing elements.  These elements can request to
- *  be scheduled for events and have a single method which is called when their
- *  task is handled.
- */
-// DEPRECATED
-class SchedulableRouterElement {
-public:
-    /** Create a SchedulableRouterElement which will run its tasks in the specified strand.
-     *  \param strand the IOStrand to run this elements tasks in
-     */
-    SchedulableRouterElement(Sirikata::Network::IOStrand& strand);
-
-    virtual ~SchedulableRouterElement();
-
-    /** Request that this element be scheduled as a task on the event queue.  Note that there
-     *  may only ever be a single outstanding request per element.  This means that it is
-     *  safe to call this multiple times, but that run() should handle any outstanding events
-     *  within the element.
-     */
-    void requestRun();
-
-    /** Run this elements task.  This should be overridden by subclasses to create element
-     *  specific behavior.
-     */
-    virtual void run();
-private:
-    /** Callback which actually handles the event and ensures the element can be rescheduled. */
-    void handleRun();
-
-    Sirikata::Network::IOStrand& mStrand;
-    bool mOutstandingRequest;
-}; // class IRouterElement
-
-
-
 // Forward declarations of classes below since they need to refer to
 // each other
 template<typename PacketType>
