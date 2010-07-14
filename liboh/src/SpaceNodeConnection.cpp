@@ -36,15 +36,17 @@
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 using namespace Sirikata;
 using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, ServerID sid, const Network::Address& addr, ConnectionEventCallback ccb, ReceiveCallback rcb)
+SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, const Network::Address& addr, ConnectionEventCallback ccb, ReceiveCallback rcb)
  : mContext(ctx),
    mHandleReadStage(handle_read_stage),
+   mSpace(spaceid),
    mServer(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(&ioStrand->service(),streamOptions)),
    mAddr(addr),
@@ -133,7 +135,7 @@ void SpaceNodeConnection::connect() {
 
     socket->connect(mAddr,
         &Sirikata::Network::Stream::ignoreSubstreamCallback,
-        std::tr1::bind(&SpaceNodeConnection::handleConnectionEvent, this, _1, _2),
+        mContext->mainStrand->wrap( std::tr1::bind(&SpaceNodeConnection::handleConnectionEvent, this, _1, _2) ),
         std::tr1::bind(&SpaceNodeConnection::handleRead, this, _1, _2),
         &Sirikata::Network::Stream::ignoreReadySendCallback
     );

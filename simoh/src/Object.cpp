@@ -140,29 +140,31 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
     scheduleNextLocUpdate();
 }
 
-bool Object::send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
+bool Object::send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload) {
   bool val = mContext->objectHost->send(
-			     src_port, src,
-			     dest_port, dest,
-			     payload
-			     );
+      this, src_port,
+      dest, dest_port,
+      payload
+  );
 
   return val;
 }
-void Object::sendNoReturn( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
-    send(src_port, src, dest_port, dest, payload);
+void Object::sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload) {
+    send(src_port, dest, dest_port, payload);
 }
+
 bool Object::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-  mContext->mainStrand->post(std::tr1::bind(
-			     &Object::sendNoReturn, this,
-			     msg->source_port(), msg->source_object(),
-			     msg->dest_port(), msg->dest_object(),
-			     msg->payload())
-			    );
+    assert(msg->source_object() == mID);
+    mContext->mainStrand->post(std::tr1::bind(
+            &Object::sendNoReturn, this,
+            msg->source_port(),
+            msg->dest_object(), msg->dest_port(),
+            msg->payload())
+    );
 
-  delete msg;
+    delete msg;
 
-  return true;
+    return true;
 }
 
 const TimedMotionVector3f Object::location() const {

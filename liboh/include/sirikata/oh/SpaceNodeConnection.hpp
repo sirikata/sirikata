@@ -39,6 +39,7 @@
 #include <sirikata/core/network/ObjectMessage.hpp>
 
 #include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
 
 #include "QueueRouterElement.hpp"
 
@@ -52,7 +53,7 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
 
     typedef std::tr1::function<void(const Network::Stream::ConnectionStatus, const std::string&)> ConnectionEventCallback;
 
-    SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, ServerID sid, const Network::Address& addr, ConnectionEventCallback ccb, ReceiveCallback rcb);
+    SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, const Network::Address& addr, ConnectionEventCallback ccb, ReceiveCallback rcb);
     ~SpaceNodeConnection();
 
     // Push a packet to be sent out
@@ -64,6 +65,7 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
     bool empty();
     void shutdown();
 
+    const SpaceID& space() const { return mSpace; }
     const ServerID& server() const { return mServer; }
 
     void connect();
@@ -76,6 +78,7 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
     // Thread Safe
     ObjectHostContext* mContext;
     TimeProfiler::Stage* mHandleReadStage;
+    SpaceID mSpace;
     ServerID mServer;
     Network::Stream* socket;
     Network::Address mAddr;

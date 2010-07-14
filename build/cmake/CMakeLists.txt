@@ -1126,6 +1126,7 @@ SET(LIBPROXYOBJECT_SOURCES
 SET(LIBOH_SOURCES
   ${LIBOH_SOURCE_DIR}/RouterElement.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
+                  ${LIBOH_SOURCE_DIR}/SessionManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
