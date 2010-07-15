@@ -36,9 +36,11 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <string>
+#include <deque>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <boost/thread/mutex.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/Asio.hpp>
@@ -70,12 +72,30 @@ public:
      */
     class HttpResponse {
     protected:
+
+        // This stuff is all used internally for http-parser
+        enum LAST_HEADER_CB {
+            NONE,
+            FIELD,
+            VALUE
+        };
+        std::string mTempHeaderField;
+        std::string mTempHeaderValue;
+        LAST_HEADER_CB mLastCallback;
+        bool mHeaderComplete;
+        bool mMessageComplete;
+        http_parser_settings mHttpSettings;
+        http_parser mHttpParser;
+        //
+
         std::map<std::string, std::string> mHeaders;
         std::tr1::shared_ptr<DenseData> mData;
         unsigned short mContentLength;
         unsigned short mStatusCode;
     public:
-        HttpResponse() : mContentLength(0), mStatusCode(0) {}
+        HttpResponse()
+            : mLastCallback(NONE), mHeaderComplete(false), mMessageComplete(false),
+              mContentLength(0), mStatusCode(0) {}
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
         inline const std::map<std::string, std::string>& getHeaders() { return mHeaders; }
         inline unsigned short getContentLength() { return mContentLength; }
@@ -84,6 +104,7 @@ public:
         friend class HttpManager;
     };
 
+    //Type of errors that can be given to callback
     enum ERR_TYPE {
         SUCCESS,
         REQUEST_PARSING_FAILED,
@@ -106,10 +127,16 @@ public:
     static HttpManager& getSingleton();
     static void destroy();
 
+    //Methods supported
+    enum HTTP_METHOD {
+        HEAD,
+        GET
+    };
+
     /*
      * Makes an HTTP request and calls cb when finished
      */
-    void makeRequest(Sirikata::Network::Address addr, std::string req, HttpCallback cb);
+    void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb);
 
     HttpManager();
     ~HttpManager();
@@ -128,45 +155,72 @@ private:
         Sirikata::Network::Address addr;
         std::string req;
         HttpCallback cb;
-        HttpRequest(Sirikata::Network::Address _addr, std::string _req, HttpCallback _cb)
-            : addr(_addr), req(_req), cb(_cb) {}
+        HTTP_METHOD method;
+        HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, HttpCallback _cb)
+            : addr(_addr), req(_req), cb(_cb), method(meth) {}
     };
 
     //Holds a queue of requests to be made
-    std::queue<HttpRequest> mRequestQueue;
+    std::deque<std::tr1::shared_ptr<HttpRequest> > mRequestQueue;
+    //Lock this to access mRequestQueue
+    boost::mutex mRequestQueueLock;
 
     //TODO: should get these from settings
-    static const uint32 MAX_CONCURRENT_REQUESTS = 1;
-    //Number of requests outstanding
-    uint32 numOutstanding;
+    static const uint32 MAX_CONNECTIONS_PER_ENDPOINT = 2;
+    static const uint32 MAX_TOTAL_CONNECTIONS = 10;
+    static const uint32 SOCKET_BUFFER_SIZE = 10240;
+
+    //Keeps track of the total number of connections currently open
+    uint32 mNumTotalConnections;
+    //Keeps track of the number of connections open per host:port pair
+    std::map<Sirikata::Network::Address, uint32> mNumConnsPerAddr;
+    //Lock this to access mNumTotalConnections or mNumConnsPerAddr
+    boost::mutex mNumConnsLock;
+
+    //Holds connections that are open but not being used
+    typedef std::map<Sirikata::Network::Address, std::queue<std::tr1::shared_ptr<TCPSocket> > > RecycleBinType;
+    RecycleBinType mRecycleBin;
+    //Lock this to access mRecycleBind
+    boost::mutex mRecycleBinLock;
 
     IOServicePool* mServicePool;
     TCPResolver* mResolver;
     IOWork* mIOWork;
 
     http_parser_settings EMPTY_PARSER_SETTINGS;
-    http_parser_settings mHttpSettings;
-    http_parser mHttpParser;
 
     void processQueue();
 
-    void handle_resolve(HttpRequest req, const boost::system::error_code& err,
+    void add_req(std::tr1::shared_ptr<HttpRequest> req);
+    void decrement_connection(Sirikata::Network::Address& addr);
+    void write_request(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req);
+
+    void handle_resolve(std::tr1::shared_ptr<HttpRequest> req, const boost::system::error_code& err,
             TCPResolver::iterator endpoint_iterator);
-    void handle_connect(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
+    void handle_connect(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req,
             const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator);
-    void handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
+    void handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req,
             const boost::system::error_code& err, std::tr1::shared_ptr<boost::asio::streambuf> request_stream);
-    void handle_read(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
-            std::tr1::shared_ptr<boost::asio::streambuf> response, const boost::system::error_code& err,
-            std::size_t bytes_transferred);
+    void handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req,
+            std::tr1::shared_ptr<std::vector<unsigned char> > vecbuf, std::tr1::shared_ptr<HttpResponse> respPtr,
+            const boost::system::error_code& err, std::size_t bytes_transferred);
 
-
-    static std::tr1::shared_ptr<HttpResponse> mTempResponse;
-    static std::string mTempHeaderName;
     static int on_header_field(http_parser *_, const char *at, size_t len);
     static int on_header_value(http_parser *_, const char *at, size_t len);
     static int on_headers_complete(http_parser *_);
     static int on_body(http_parser *_, const char *at, size_t len);
+    static int on_message_complete(http_parser *_);
+
+    enum HTTP_PARSER_FLAGS
+      { F_CHUNKED = 1 << 0
+      , F_CONNECTION_KEEP_ALIVE = 1 << 1
+      , F_CONNECTION_CLOSE = 1 << 2
+      , F_TRAILING = 1 << 3
+      , F_UPGRADE = 1 << 4
+      , F_SKIPBODY = 1 << 5
+      };
+
+    static void print_flags(std::tr1::shared_ptr<HttpResponse> resp);
 
 };
 

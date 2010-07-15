@@ -64,6 +64,9 @@ public:
     boost::mutex mMutex;
     std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> mHttpResponse;
 
+    boost::mutex mNumCbsMutex;
+    int mNumCbs;
+
     void setUp() {
 
     }
@@ -96,7 +99,7 @@ public:
         request_stream << "Connection: close\r\n\r\n";
 
         SILOG(transfer, debug, "Issuing head metadata request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, request_stream.str(),
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
                 std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
         mDone.wait(lock);
 
@@ -104,8 +107,8 @@ public:
         if(mHttpResponse) {
             it = mHttpResponse->getHeaders().find("Content-Length");
             Transfer::TransferMediator * mTransferMediator;
-	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-	TS_ASSERT(it == mHttpResponse->getHeaders().end());
+            std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+            TS_ASSERT(it == mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             it = mHttpResponse->getHeaders().find("File-Size");
@@ -128,7 +131,7 @@ public:
         request_stream << "Connection: close\r\n\r\n";
 
         SILOG(transfer, debug, "Issuing head file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, request_stream.str(),
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
                 std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
         mDone.wait(lock);
 
@@ -156,7 +159,7 @@ public:
         request_stream << "Connection: close\r\n\r\n";
 
         SILOG(transfer, debug, "Issuing get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, request_stream.str(),
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
                 std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
         mDone.wait(lock);
 
@@ -186,7 +189,7 @@ public:
         request_stream << "Connection: close\r\n\r\n";
 
         SILOG(transfer, debug, "Issuing get file range request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, request_stream.str(),
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
                 std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
         mDone.wait(lock);
 
@@ -204,6 +207,91 @@ public:
         }
 
 
+
+
+
+        /*
+         * Do a GET request with no Connection: close to test persistent
+         * connections. check content length is present,
+         * content length = data size, http status code 200,
+         * check content length = correct size of file
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing persistent get file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getData());
+            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+        }
+
+
+
+        /*
+         * Now, let's plug in a bunch of persistent connections (no connection:close)
+         * all at once to stress test
+         */
+        mNumCbs = 20;
+        for(int i=0; i<20; i++) {
+            request_stream.str("");
+            request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+            request_stream << "Host: cdn.sirikata.com\r\n";
+            request_stream << "Accept: */*\r\n\r\n";
+
+            SILOG(transfer, debug, "Issuing persistent get file request #" << i+1);
+            Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                    std::tr1::bind(&HttpTransferTest::multi_request_finished, this, _1, _2, _3));
+        }
+
+        mDone.wait(lock);
+
+
+    }
+
+    void multi_request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+
+        SILOG(transfer, debug, "multi_request_finished callback");
+
+        if (error == Transfer::HttpManager::SUCCESS) {
+            TS_ASSERT(response);
+            if(response) {
+                TS_ASSERT(response->getHeaders().size() != 0);
+                std::map<std::string, std::string>::const_iterator it = response->getHeaders().find("Content-Length");
+                TS_ASSERT(it != response->getHeaders().end());
+                TS_ASSERT(response->getStatusCode() == 200);
+                TS_ASSERT(response->getData());
+                TS_ASSERT(response->getData()->length() == response->getContentLength());
+                TS_ASSERT(response->getContentLength() == 11650);
+            }
+        } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+            TS_FAIL("HTTP Request parsing failed");
+        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+            TS_FAIL("HTTP Response parsing failed");
+        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+        } else {
+            TS_FAIL("Got unknown response code from HttpManager");
+        }
+
+        boost::unique_lock<boost::mutex> lock(mNumCbsMutex);
+        mNumCbs--;
+        SILOG(transfer, debug, "Finished stress test file, still " << mNumCbs << " left");
+        if(mNumCbs == 0) {
+            mDone.notify_all();
+        }
     }
 
     void request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
