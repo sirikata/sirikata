@@ -37,6 +37,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SpaceNodeConnection.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 namespace Sirikata {
 
@@ -49,7 +50,7 @@ class ServerIDMap;
  */
 class SIRIKATA_OH_EXPORT SessionManager : public Service {
   public:
-    typedef std::tr1::function<void(ServerID)> SessionCallback;
+    typedef std::tr1::function<void(const SpaceID&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef SessionCallback ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
@@ -68,7 +69,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service {
     // Returns a message to the object host for handling.
     typedef std::tr1::function<void(Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
 
-    SessionManager(ObjectHostContext* ctx, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback);
+    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback);
     ~SessionManager();
 
     // NOTE: The public interface is only safe to access from the main strand.
@@ -87,6 +88,10 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service {
     bool send(const UUID& objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
     boost::shared_ptr<Stream<UUID> > getSpaceStream(const UUID& objectID);
+
+    // Service Implementation
+    virtual void start();
+    virtual void stop();
 
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
@@ -107,10 +112,6 @@ private:
     // methods should be performed from the main strand.
 
     struct ConnectingInfo;
-
-    // Service Implementation
-    virtual void start();
-    virtual void stop();
 
     // Schedules received server messages for handling
     void scheduleHandleServerMessages(SpaceNodeConnection* conn);
@@ -179,6 +180,7 @@ private:
     // These may be accessed safely by any thread
 
     ObjectHostContext* mContext;
+    SpaceID mSpace;
 
     Network::IOService* mIOService;
     Network::IOStrand* mIOStrand;

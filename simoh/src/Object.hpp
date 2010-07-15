@@ -35,6 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
+#include <sirikata/core/util/SpaceID.hpp>
+
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/MotionPath.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
@@ -133,9 +135,9 @@ private:
     void proximityMessage(uint8* buffer, int len);
 
     // Handle a new connection to a space -- initiate session
-    void handleSpaceConnection(ServerID sid);
+    void handleSpaceConnection(const SpaceID& space, ServerID sid);
     // Handle a migration to a new space server
-    void handleSpaceMigration(ServerID sid);
+    void handleSpaceMigration(const SpaceID& space, ServerID sid);
     void handleSpaceStreamCreated();
 
     bool route(Sirikata::Protocol::Object::ObjectMessage* msg);

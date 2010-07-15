@@ -154,6 +154,8 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
         //) // FIXME can't wrap here yet because of the SetCallbacks parameter -- it requires that we use it immediately
         // and wrapping makes this impossible
     );
+
+    SPACE_LOG(debug,"Listening for object hosts on " << convertAddress4ToSirikata(listen_addr).toString());
 }
 
 void ObjectHostConnectionManager::shutdown() {

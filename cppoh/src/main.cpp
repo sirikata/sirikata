@@ -43,7 +43,8 @@
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
-#include <sirikata/oh/TopLevelSpaceConnection.hpp>
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 #include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/SpaceIDMap.hpp>
@@ -72,82 +73,6 @@
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 
-
-namespace Sirikata {
-
-using Task::GenEventManager;
-using Transfer::TransferManager;
-
-class UUIDLister : public MessageService {
-    ObjectHost *mObjectHost;
-    SpaceID mSpace;
-    MessagePort mPort;
-    volatile bool mSuccess;
-
-public:
-    UUIDLister(ObjectHost*oh, const SpaceID &space)
-        : mObjectHost(oh), mSpace(space), mPort(Services::REGISTRATION) {
-        mObjectHost->registerService(mPort, this);
-    }
-    ~UUIDLister() {
-        mObjectHost->unregisterService(mPort);
-    }
-    bool forwardMessagesTo(MessageService *other) {
-        return false;
-    }
-    bool endForwardingMessagesTo(MessageService *other) {
-        return false;
-    }
-    void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
-        Persistence::Protocol::Response resp;
-        resp.ParseFromArray(body.data(), body.length());
-        if (hdr.has_return_status() || resp.has_return_status()) {
-            SILOG(cppoh,info,"Failed to connect to database: "<<hdr.has_return_status()<<", "<<resp.has_return_status());
-            mSuccess = true;
-            return;
-        }
-        Protocol::UUIDListProperty uuidList;
-        if (resp.reads(0).has_return_status()) {
-            SILOG(cppoh,info,"Failed to find ObjectList in database.");
-            mSuccess = true;
-            return;
-        }
-        uuidList.ParseFromString(resp.reads(0).data());
-        for (int i = 0; i < uuidList.value_size(); i++) {
-            SILOG(cppoh,info,"Loading object "<<ObjectReference(uuidList.value(i)));
-            HostedObjectPtr obj = HostedObject::construct<HostedObject>(mObjectHost, uuidList.value(i));
-            obj->initializeRestoreFromDatabase(mSpace, HostedObjectPtr());
-        }
-        mSuccess = true;
-    }
-    void go() {
-        mSuccess = false;
-        Persistence::Protocol::ReadWriteSet rws;
-        Persistence::Protocol::IStorageElement el = rws.add_reads();
-        el.set_field_name("ObjectList");
-//        el.set_object_uuid(UUID::null());
-//        el.set_field_id(0);
-        RoutableMessageHeader hdr;
-        hdr.set_source_object(ObjectReference::spaceServiceID());
-        hdr.set_source_port(mPort);
-        hdr.set_destination_port(Services::PERSISTENCE);
-        hdr.set_destination_object(ObjectReference::spaceServiceID());
-        std::string body;
-        rws.SerializeToString(&body);
-        mObjectHost->processMessage(hdr, MemoryReference(body));
-    }
-    void goWait(Task::WorkQueue *queue) {
-        mSuccess = false;
-        go();
-        while (!mSuccess) {
-            // needs to happen in one thread for now...
-            queue->dequeuePoll();
-            //Network::IOServiceFactory::pollService(ioServ); // kills ioservice if there's nothing to be processed...
-        }
-    }
-};
-
-}
 
 #ifdef __GNUC__
 #include <fenv.h>
@@ -244,21 +169,24 @@ int main (int argc, char** argv) {
     ObjectHost *oh = new ObjectHost(ctx, spaceMap, workQueue, ios, "");
     oh->registerService(Services::PERSISTENCE, database);
 
-    {
-        UUIDLister lister(oh, mainSpace);
-        lister.goWait(workQueue);
+    // Add all the spaces to the ObjectHost.
+    // FIXME we're adding all spaces and having them use the same ServerIDMap
+    // because its difficult to encode this in the options.
+    // FIXME once this is working, the above SpaceIDMap (spaceMap) shouldn't be
+    // used the same way -- it was only mapping to a single address instead of
+    // an entire ServerIDMap.
+    for (SimpleSpaceIDMap::iterator i = spaceIdMap.begin(),
+             ie=spaceIdMap.end();
+         i!=ie;
+         ++i) {
+        SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
+        oh->addServerIDMap(newSpace, server_id_map);
     }
 
-    std::tr1::shared_ptr<ProxyManager> provider = oh->connectToSpace(mainSpace);
-    if (!provider) {
-        SILOG(cppoh,error,String("Unable to load database in ") + GetOptionValue<String>(OPT_DB));
-        std::cout << "Press enter to continue" << std::endl;
-        std::cerr << "Press enter to continue" << std::endl;
-        fgetc(stdin);
-        return 1;
-    }
 
-    TransferManager *tm;
+    std::tr1::shared_ptr<ProxyManager> provider(new ObjectHostProxyManager());
+
+    Transfer::TransferManager *tm;
     try {
         tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
     } catch (OptionDoesNotExist &err) {
@@ -288,10 +216,6 @@ int main (int argc, char** argv) {
     else
     {
         SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
-    }
-
-    if (!provider) {
-        SILOG(cppoh,error,"Failed to get TopLevelSpaceConnection for main space "<<mainSpace);
     }
 
     bool continue_simulation = true;
@@ -332,6 +256,14 @@ int main (int argc, char** argv) {
         }
     }
 
+    // FIXME simple test example
+    HostedObjectPtr obj = HostedObject::construct<HostedObject>(oh, UUID::random());
+    obj->connect(
+        mainSpace,
+        Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
+        BoundingSphere3f::null(),
+        UUID::null());
+
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
     ctx->add(oh);
@@ -339,6 +271,9 @@ int main (int argc, char** argv) {
     for(SimList::iterator it = sims.begin(); it != sims.end(); it++)
         ctx->add(*it);
     ctx->run(2);
+
+
+    obj.reset();
 
     ctx->cleanup();
     trace->prepareShutdown();

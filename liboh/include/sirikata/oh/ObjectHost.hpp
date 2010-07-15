@@ -34,11 +34,13 @@
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/MessageService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/oh/SessionManager.hpp>
 
 namespace Sirikata {
 class ProxyManager;
@@ -48,6 +50,9 @@ class TopLevelSpaceConnection;
 class SpaceConnection;
 class ConnectionEventListener;
 class ObjectScriptManager;
+
+class ServerIDMap;
+
 namespace Task {
 class WorkQueue;
 }
@@ -58,16 +63,21 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
 class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public PollingService {
-    Context* mContext;
+    ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
-    typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
-    typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap;
+    typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap; //DEPRECATED
+    typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap; // DEPRECATED
+
+    typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
     typedef std::tr1::unordered_map<UUID, HostedObjectPtr, UUID::Hasher> HostedObjectMap;
     typedef std::map<MessagePort, MessageService *> ServicesMap;
 
-    SpaceConnectionMap mSpaceConnections;
+    SpaceConnectionMap mSpaceConnections; // DEPRECATED
     AddressConnectionMap mAddressConnections;
+
+    SpaceSessionManagerMap mSessionManagers;
+
     friend class TopLevelSpaceConnection;
     void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
     void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
@@ -82,6 +92,16 @@ class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEv
     PluginManager *mScriptPlugins;
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
 public:
+    typedef std::tr1::function<void(const SpaceID&, ServerID)> SessionCallback;
+    // Callback indicating that a connection to the server was made and it is available for sessions
+    typedef SessionCallback ConnectedCallback;
+    // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
+    // as the object host starts the transition and no additional notification is given since, for all
+    // intents and purposes this is the point at which the transition happens
+    typedef SessionCallback MigratedCallback;
+    typedef std::tr1::function<void()> StreamCreatedCallback;
+
+    typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     /** Caller is responsible for starting a thread
      *
@@ -90,9 +110,36 @@ public:
      * @param ioServ IOService to run this object host on
      * @param options a string containing the options to pass to the object host
      */
-    ObjectHost(Context* ctx, SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ, const String&options);
+    ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ, const String&options);
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
+
+    // Space API - Provide info for ObjectHost to communicate with spaces
+    void addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap);
+
+    // Primary HostedObject API
+
+    /** Connect the object to the space with the given starting parameters. */
+    void connect(
+        HostedObjectPtr obj, const SpaceID& space,
+        const TimedMotionVector3f& loc, const BoundingSphere3f& bnds,
+        const SolidAngle& init_sa,
+        ConnectedCallback connected_cb,
+        MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
+    void connect(
+        HostedObjectPtr obj, const SpaceID& space,
+        const TimedMotionVector3f& loc, const BoundingSphere3f& bnds,
+        ConnectedCallback connected_cb, MigratedCallback migrated_cb,
+        StreamCreatedCallback stream_created_cb);
+
+    /** Disconnect the object from the space. */
+    void disconnect(HostedObjectPtr obj, const SpaceID& space);
+
+    /** Primary ODP send function. */
+    bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+
+
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool forwardMessagesTo(MessageService*){ assert(false); return false;}
     ///ObjectHost does not forward messages to other services, only to objects it owns
@@ -142,12 +189,9 @@ public:
     ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
-    /// @see connectToSpaceAddress. Looks up the space in the spaceIDMap().
-    std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpace(const SpaceID& space);
-    ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully, but will allow queueing messages. The stream will be deallocated if the return value is discarded. In most cases, this should not be called directly.
-    std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 
     virtual void poll();
+    virtual void stop();
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
     /** Gets an IO service corresponding to this object host.
@@ -164,6 +208,17 @@ public:
     void dequeueAll() const;
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
+
+
+  private:
+    // Session Management Implementation
+    void handleObjectConnected(const UUID& objid, ServerID server);
+    void handleObjectMigrated(const UUID& objid, ServerID from, ServerID to);
+    void handleObjectMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
+
+
+    // Checks serialization of access to SessionManagers
+    Sirikata::SerializationCheck mSessionSerialization;
 }; // class ObjectHost
 
 } // namespace Sirikata

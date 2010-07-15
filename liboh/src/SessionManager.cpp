@@ -107,7 +107,7 @@ void SessionManager::ObjectConnections::startMigration(const UUID& objid, Server
     }
 
     // Notify the object
-    mObjectInfo[objid].migratedCB(migrating_to);
+    mObjectInfo[objid].migratedCB(parent->mSpace, migrating_to);
 }
 
 SessionManager::ConnectedCallback& SessionManager::ObjectConnections::getConnectCallback(const UUID& objid) {
@@ -122,7 +122,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectInfo[obj].connectingTo = NullServerID;
         mObjectServerMap[connectedTo].push_back(obj);
 
-        mObjectInfo[obj].connectedCB(connectedTo);
+        mObjectInfo[obj].connectedCB(parent->mSpace, connectedTo);
         parent->mObjectConnectedCallback(obj, connectedTo);
 
         return connectedTo;
@@ -148,7 +148,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
 
 void SessionManager::ObjectConnections::handleConnectError(const UUID& objid) {
     mObjectInfo[objid].connectingTo = NullServerID;
-    mObjectInfo[objid].connectedCB(NullServerID);
+    mObjectInfo[objid].connectedCB(parent->mSpace, NullServerID);
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const UUID& objid) {
@@ -181,8 +181,9 @@ ServerID SessionManager::ObjectConnections::getConnectedServer(const UUID& obj_i
 
 // SessionManager Implementation
 
-SessionManager::SessionManager(ObjectHostContext* ctx, ServerIDMap* sidmap, ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb, ObjectMessageHandlerCallback msg_cb)
+SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb, ObjectMessageHandlerCallback msg_cb)
  : mContext( ctx ),
+   mSpace(space),
    mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
@@ -292,7 +293,7 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
         // FIXME disconnect? retry?
-        mObjectConnections.getConnectCallback(uuid)(NullServerID);
+        mObjectConnections.getConnectCallback(uuid)(mSpace, NullServerID);
         return;
     }
 
@@ -494,7 +495,7 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
         mIOStrand,
         mHandleReadProfiler,
         mStreamOptions,
-        SpaceID::null(), // FIXME should have a fixed space id for simulation
+        mSpace,
         server,
         addy,
         mContext->mainStrand->wrap(

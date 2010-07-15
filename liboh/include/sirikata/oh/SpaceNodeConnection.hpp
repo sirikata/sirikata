@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_LIBOH_SPACE_NODE_CONNECTION_HPP_
 #define _SIRIKATA_LIBOH_SPACE_NODE_CONNECTION_HPP_
 
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>

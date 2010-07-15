@@ -52,7 +52,7 @@ void InitOptions() {
         .addOption(new OptionValue(OPT_REGION_WEIGHT_ARGS, "--flatness=8 --const-cutoff=64", Sirikata::OptionValueType<String>(), "Arguments to region weight calculator."))
 
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
-        .addOption(new OptionValue("layout", "<2,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
+        .addOption(new OptionValue("layout", "<1,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
         .addOption(new OptionValue("max-servers", "0", Sirikata::OptionValueType<uint32>(), "Maximum number of servers available for the simulation; if set to 0, use the number of servers specified in the layout option"))
         .addOption(new OptionValue("duration", "0s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
 
@@ -103,6 +103,7 @@ DEFINE_UNSAFE_GETOPTIONVALUE(BoundingBox3f)
 DEFINE_UNSAFE_GETOPTIONVALUE(ObjectHostID)
 DEFINE_UNSAFE_GETOPTIONVALUE(Task::DeltaTime)
 DEFINE_UNSAFE_GETOPTIONVALUE(uint32)
+DEFINE_UNSAFE_GETOPTIONVALUE(uint64)
 DEFINE_UNSAFE_GETOPTIONVALUE(bool)
 
 // FIXME method naming

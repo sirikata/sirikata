@@ -55,7 +55,7 @@ using std::tr1::placeholders::_3;
 ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap* sidmap)
  : mContext( ctx ),
    mSessionManager(
-       ctx, sidmap,
+       ctx, SpaceID::null(), sidmap, // FIXME should have non-null SpaceID
        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1)

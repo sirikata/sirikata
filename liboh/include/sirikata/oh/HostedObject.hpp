@@ -125,7 +125,6 @@ public:
 
 private:
 //------- Private member functions:
-    PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
     ///When a message is destined for the RPC port of 0, split it into submessages and process those
     void handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
     ///When a message is destined for the persistence port, handle each persistence object accordingly
@@ -147,7 +146,7 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
     /// Attempt to restore this item from database including script
-    void initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
+    void initializeRestoreFromDatabase(const SpaceID&spaceID);
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
@@ -159,14 +158,6 @@ public:
     const Duration&getSpaceTimeOffset(const SpaceID&space);
     /// Gets the proxy object representing this HostedObject inside space.
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
-
-    ObjectHostProxyManager *getProxyManager(const SpaceID &space) const {
-        ProxyObjectPtr obj = getProxy(space);
-        if (obj) {
-            return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
-        }
-        return 0;
-    }
 
 protected:
 
@@ -188,9 +179,6 @@ protected:
     /** Deletes a public property from this object cache. It may still remain in the database.
      */
     void unsetCachedPropertyAndSubscription(const String &propName);
-
-    //FIXME implement SpaceConnection& connect(const SpaceID&space);
-    //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
 
     struct SendService: public MessageService {
         HostedObject *ho;
@@ -224,6 +212,9 @@ public:
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
     const QueryTracker*getTracker(const SpaceID& space) const;
 
+    // FIXME deprecated
+    virtual ProxyManager*getProxyManager(const SpaceID&space) { return NULL; }
+
     /** Called once per frame, at a certain framerate. */
     void tick();
 
@@ -232,18 +223,22 @@ public:
         message, however any other message must wait until you receive the RetObj
         for that space.
         @param spaceID  The UUID of the space you connect to.
-        @param spaceConnectionHint  Another nearby object; may be set to null HostedObjectPtr().
         @param startingLocation  The initial location of this object. Must be known at connection time?
         @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
         @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
     */
-    void connectToSpace(
+    void connect(
         const SpaceID&spaceID,
-        const HostedObjectPtr&spaceConnectionHint,
         const Location&startingLocation,
         const BoundingSphere3f&meshBounds,
         const UUID&evidence);
 
+  private:
+    void handleConnected(const SpaceID& space, ServerID server);
+    void handleMigrated(const SpaceID& space, ServerID server);
+    void handleStreamCreated();
+
+  public:
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID&id);
 
@@ -282,7 +277,6 @@ public:
 
   public:
 
-    ProxyManager* getProxyManager(const SpaceID&space);
     bool isLocal(const SpaceObjectReference&space)const;
     void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
     void addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId);

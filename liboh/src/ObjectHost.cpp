@@ -62,7 +62,7 @@ struct ObjectHost::AtomicInt : public AtomicValue<int> {
 };
 
 
-ObjectHost::ObjectHost(Context* ctx, SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options)
+ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options)
  : PollingService(ctx->mainStrand, Duration::seconds(1.f/30.f), ctx, "Object Host Poll"),
    mContext(ctx)
 {
@@ -109,6 +109,67 @@ ObjectHost::~ObjectHost() {
     }
     delete mScriptPlugins;
 }
+
+// Space API - Provide info for ObjectHost to communicate with spaces
+void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
+    SessionManager* smgr = new SessionManager(
+        mContext, space_id, sidmap,
+        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
+        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1)
+    );
+    mSessionManagers[space_id] = smgr;
+    smgr->start();
+}
+
+void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
+}
+
+void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
+}
+
+void ObjectHost::handleObjectMessage(Sirikata::Protocol::Object::ObjectMessage* msg) {
+}
+
+// Primary HostedObject API
+
+void ObjectHost::connect(
+    HostedObjectPtr obj, const SpaceID& space,
+    const TimedMotionVector3f& loc, const BoundingSphere3f& bnds,
+    const SolidAngle& init_sa, ConnectedCallback connected_cb,
+    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
+{
+    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+    mSessionManagers[space]->connect(obj->getUUID(), loc, bnds, true, init_sa, connected_cb, migrated_cb, stream_created_cb);
+}
+
+void ObjectHost::connect(
+    HostedObjectPtr obj, const SpaceID& space,
+    const TimedMotionVector3f& loc, const BoundingSphere3f& bnds,
+    ConnectedCallback connected_cb, MigratedCallback migrated_cb,
+    StreamCreatedCallback stream_created_cb)
+{
+    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+    mSessionManagers[space]->connect(obj->getUUID(), loc, bnds, false, SolidAngle::Max, connected_cb, migrated_cb, stream_created_cb);
+}
+
+void ObjectHost::disconnect(HostedObjectPtr obj, const SpaceID& space) {
+    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+    mSessionManagers[space]->disconnect(obj->getUUID());
+}
+
+bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload) {
+    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+
+    std::string payload_str( (char*)payload.begin(), (char*)payload.end() );
+    return send(obj, space, src_port, dest, dest_port, payload_str);
+}
+
+bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+    return mSessionManagers[space]->send(obj->getUUID(), src_port, dest, dest_port, payload);
+}
+
 
 class ObjectHost::MessageProcessor : public Task::WorkItem {
     ObjectHost *parent;
@@ -211,62 +272,6 @@ void ObjectHost::insertAddressMapping(const Network::Address&addy, const std::tr
     boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
     mAddressConnections[addy]=val;
 }
-std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpace(const SpaceID&id){
-    std::tr1::shared_ptr<TopLevelSpaceConnection> retval;
-    {
-        boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
-        SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
-        if ((where==mSpaceConnections.end())||((retval=where->second.lock())==NULL)) {
-            const String &defaultStreamPlugin =Network::StreamFactory::getSingleton().getDefault();
-            OptionSet * defaultOptions=mSpaceConnectionProtocolOptions[defaultStreamPlugin];
-            if (!defaultOptions) {
-                defaultOptions=mSpaceConnectionProtocolOptions[defaultStreamPlugin]
-                    = Network::StreamFactory::getSingleton().getOptionParser(defaultStreamPlugin)(String());
-            }
-            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO,defaultStreamPlugin,defaultOptions));
-            temp->connect(temp,this,id);//inserts into mSpaceConnections and eventuallly mAddressConnections
-            retval = temp;
-            if (where==mSpaceConnections.end()) {
-                mSpaceConnections.insert(SpaceConnectionMap::value_type(id,retval));
-            }else {
-                SILOG(oh,warning,"Null spaceid->connection mapping");
-                where->second=retval;
-            }
-        }
-    }
-    return retval;
-}
-
-
-std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpaceAddress(const SpaceID&id, const Network::Address&addy){
-    std::tr1::shared_ptr<TopLevelSpaceConnection> retval;
-    {
-        boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
-        AddressConnectionMap::iterator where=mAddressConnections.find(addy);
-        if ((where==mAddressConnections.end())||(!(retval=where->second.lock()))) {
-            String protocol(addy.getProtocol());
-            if (protocol.empty()) {
-                protocol=Network::StreamFactory::getSingleton().getDefault();
-            }
-            OptionSet**options=&mSpaceConnectionProtocolOptions[protocol];
-            if (*options==NULL) {
-                *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
-            }
-            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO,protocol,*options));
-            temp->connect(temp,this,id,addy);//inserts into mSpaceConnections and eventuallly mAddressConnections
-            retval = temp;
-            if (where==mAddressConnections.end()) {
-                mAddressConnections[addy]=temp;
-            }else {
-                SILOG(oh,warning,"Null spaceid->connection mapping");
-                where->second=retval;
-            }
-            mSpaceConnections.insert(SpaceConnectionMap::value_type(id,retval));
-        }
-    }
-    return retval;
-}
-
 
 void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::Address& addy,const TopLevelSpaceConnection*example){
     boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
@@ -301,6 +306,15 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
 void ObjectHost::poll() {
     for (HostedObjectMap::iterator iter = mHostedObjects.begin(); iter != mHostedObjects.end(); ++iter) {
         iter->second->tick();
+    }
+}
+
+void ObjectHost::stop() {
+    PollingService::stop();
+
+    for(SpaceSessionManagerMap::iterator it = mSessionManagers.begin(); it != mSessionManagers.end(); it++) {
+        SessionManager* sm = it->second;
+        sm->stop();
     }
 }
 

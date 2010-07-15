@@ -183,35 +183,22 @@ void Object::connect() {
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->simTime());
 
-//     if (mRegisterQuery)
-//         mContext->objectHost->connect(
-//             this,
-//             mQueryAngle,
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
-// 	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this) )
-//         );
-//     else
-//         mContext->objectHost->connect(
-//             this,
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
-// 	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this ) )
-//         );
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
 
     if (mRegisterQuery)
         mContext->objectHost->connect(
             this,
             mQueryAngle,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, std::tr1::placeholders::_1) ),
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, std::tr1::placeholders::_1) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) )
         );
     else
         mContext->objectHost->connect(
             this,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this,std::tr1::placeholders::_1) ),
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, std::tr1::placeholders::_1) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
         );
 
@@ -225,7 +212,7 @@ void Object::disconnect() {
         mContext->objectHost->disconnect(this);
 }
 
-void Object::handleSpaceConnection(ServerID sid) {
+void Object::handleSpaceConnection(const SpaceID& space, ServerID sid) {
     if (sid == 0) {
         OBJ_LOG(error,"Failed to open connection for object " << mID.toString());
         return;
@@ -247,7 +234,7 @@ void Object::handleSpaceConnection(ServerID sid) {
     );
 }
 
-void Object::handleSpaceMigration(ServerID sid) {
+void Object::handleSpaceMigration(const SpaceID& space, ServerID sid) {
     OBJ_LOG(insane,"Migrated to new space server: " << sid);
     mConnectedTo = sid;
 }
