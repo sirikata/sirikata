@@ -163,6 +163,10 @@ public:
   /* This function will also have to be re-implemented to support receiving
      using other kinds of packets. For now, I'll implement only for ODP. */
   virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
+    /*std::cout << "receiveMessage from : " 
+              << msg.source_object().toString() << " : " <<  msg.source_port() 
+              << " to " << msg.dest_object().toString() << " : " <<  msg.dest_port()<< "\n";*/
+
     Connection<EndPointType>::handleReceive(mRouter,
                                   EndPoint<UUID> (msg.source_object(), msg.source_port()),
                                   EndPoint<UUID> (msg.dest_object(), msg.dest_port()),
@@ -522,10 +526,11 @@ private:
     conn->setState(CONNECTION_PENDING_CONNECT);
 
     uint16 payload[1];
-    payload[0] = getAvailableChannel();
+    uint16 availableChannel = getAvailableChannel();
+    payload[0] = htons(availableChannel);
 
-    conn->setLocalChannelID(payload[0]);
-    conn->sendData(payload, sizeof(payload));
+    conn->setLocalChannelID(availableChannel);
+    conn->sendData(payload, sizeof(payload), false);
 
     mConnectionReturnCallbackMap[localEndPoint] = cb;
 
@@ -593,7 +598,7 @@ private:
     mOutgoingSubstreamMap[lsid]=stream;
   }
 
-  uint64 sendData(const void* data, uint32 length) {
+  uint64 sendData(const void* data, uint32 length, bool isAck) {
     boost::lock_guard<boost::mutex> lock(mQueueMutex);
 
     assert(length <= MAX_PAYLOAD_SIZE);
@@ -609,11 +614,11 @@ private:
 
     bool pushedIntoQueue = false;
 
-    if ( stream_msg->type() !=  stream_msg->ACK) {
+    if ( !isAck /* stream_msg->type() !=  stream_msg->ACK*/ ) {
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
-	mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>(
+	      mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>(
                     new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
-	pushedIntoQueue = true;
+	      pushedIntoQueue = true;
       }
     }
     else {
@@ -689,18 +694,18 @@ private:
 
       uint16* received_payload = (uint16*) received_msg->payload().data();
 
-      setRemoteChannelID(received_payload[0]);
-      mRemoteEndPoint.port = received_payload[1];
+      setRemoteChannelID( ntohs(received_payload[0]));
+      mRemoteEndPoint.port = ntohs(received_payload[1]);
 
-      sendData( received_payload, 0 );
+      sendData( received_payload, 0, false );
 
       if (mConnectionReturnCallbackMap.find(mLocalEndPoint) != mConnectionReturnCallbackMap.end())
       {
-	if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
-	  boost::shared_ptr<Connection> conn = mConnectionMap[mLocalEndPoint];
+	      if (mConnectionMap.find(mLocalEndPoint) != mConnectionMap.end()) {
+	        boost::shared_ptr<Connection> conn = mConnectionMap[mLocalEndPoint];
 
-	  mConnectionReturnCallbackMap[mLocalEndPoint] (SUCCESS, conn);
-	}
+	        mConnectionReturnCallbackMap[mLocalEndPoint] (SUCCESS, conn);
+	      }
         mConnectionReturnCallbackMap.erase(mLocalEndPoint);
       }
     }
@@ -709,30 +714,23 @@ private:
     }
     else if (mState == CONNECTION_CONNECTED) {
       if (received_msg->payload().size() > 0) {
-	parsePacket(recv_buff, len);
+	      parsePacket(received_msg);
       }
     }
 
     delete received_msg;
   }
 
-  void parsePacket(void* recv_buff, uint32 len) {
-    uint8* data = (uint8*) recv_buff;
-    std::string str = std::string((char*) data, len);
-
-    Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg =
-                       new Sirikata::Protocol::SST::SSTChannelHeader();
-    bool parsed = parsePBJMessage(received_channel_msg, str);
-
+  void parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg ) 
+  {
     Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg =
                        new Sirikata::Protocol::SST::SSTStreamHeader();
-    parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
-
+    bool parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
 
     if (received_stream_msg->type() == received_stream_msg->INIT) {
       handleInitPacket(received_stream_msg);
     }
-    else if (received_stream_msg->type() == received_stream_msg->REPLY) {
+    else if (received_stream_msg->type() == received_stream_msg->REPLY) {      
       handleReplyPacket(received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATA) {
@@ -744,8 +742,7 @@ private:
     else if (received_stream_msg->type() == received_stream_msg->DATAGRAM) {
       handleDatagram(received_stream_msg);
     }
-
-    delete received_channel_msg;
+    
     delete received_stream_msg ;
   }
 
@@ -972,7 +969,7 @@ public:
       sstMsg.set_payload( ((uint8*)data)+currOffset, buffLen);
 
       std::string buffer = serializePBJMessage(sstMsg);
-      sendData(  buffer.data(), buffer.size() );
+      sendData(  buffer.data(), buffer.size(), false );
 
       currOffset += buffLen;
     }
@@ -1088,6 +1085,10 @@ public:
       }
       boost::shared_ptr<Connection<EndPointType> > conn = mConnectionMap[localEndPoint];
 
+      /*std::cout << "receiveMessage from : " 
+              << remoteEndPoint.endPoint.toString() << " : " <<  remoteEndPoint.port 
+              << " to " << localEndPoint.endPoint.toString() << " : " <<  localEndPoint.port << "\n";*/
+
       conn->receiveMessage(data, len);
     }
     else if (channelID == 0) {
@@ -1095,13 +1096,16 @@ public:
 	 packet ; allocate a new channel.*/
 
       if (mListeningConnectionsCallbackMap.find(localEndPoint) != mListeningConnectionsCallbackMap.end()) {
-        uint8* received_payload = (uint8*) received_msg->payload().data();
+        uint16* received_payload = (uint16*) received_msg->payload().data();
 
         uint16 payload[2];
-        payload[0] = getAvailableChannel();
-        payload[1] = getAvailablePort();
+        
+        uint16 availableChannel = getAvailableChannel();
+        payload[0] = htons(availableChannel);
+        uint16 availablePort = getAvailablePort();
+        payload[1] = htons(availablePort);
 
-        EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, payload[1]);
+        EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, availablePort);
         boost::shared_ptr<Connection>  conn =
                    boost::shared_ptr<Connection>(
 				    new Connection(router, newLocalEndPoint, remoteEndPoint));
@@ -1110,11 +1114,11 @@ public:
         conn->mWeakThis = conn;
         mConnectionMap[newLocalEndPoint] = conn;
 
-        conn->setLocalChannelID(payload[0]);
-        conn->setRemoteChannelID(received_payload[0]);
+        conn->setLocalChannelID(availableChannel);
+        conn->setRemoteChannelID(ntohs(received_payload[0]));
         conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
-        conn->sendData(payload, sizeof(payload));
+        conn->sendData(payload, sizeof(payload), false);
       }
       else {
         std::cout << "No one listening on this connection\n";
@@ -1243,8 +1247,6 @@ public:
 
     boost::lock_guard<boost::mutex> lock(mQueueMutex);
     int count = 0;
-
-
 
     if (len <= MAX_PAYLOAD_SIZE) {
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
@@ -1479,10 +1481,10 @@ private:
     mCurrentQueueLength = 0;
 
     if (remotelyInitiated) {
-      sendReplyPacket(initial_data, mInitialDataLength, remoteLSID);
+      sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID);
     }
     else {
-      sendInitPacket(initial_data, mInitialDataLength);
+      sendInitPacket(mInitialData, mInitialDataLength);
     }
 
     mNumInitRetransmissions = 1;
@@ -1505,21 +1507,14 @@ private:
 
       return;
     }
-
-    int length = 0;
-    uint8* f = new uint8[length];
-    for (int i=0; i<length; i++) {
-      f[i] = i % 255;
-    }
-
+    
     assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
 
-    c->stream(mStreamReturnCallbackMap[c->localEndPoint()], f , length,
+    c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
 	      c->localEndPoint().port, c->remoteEndPoint().port);
 
     mStreamReturnCallbackMap.erase(c->localEndPoint());
   }
-
 
   bool serviceStream(const Time& curTime) {
     if (mState != CONNECTED && mState != DISCONNECTED) {
@@ -1561,9 +1556,9 @@ private:
     }
     else {
       if (mState != DISCONNECTED) {
-	//this should wait for the queue to get occupied... right now it is
-	//just polling...
-
+	
+        //if the stream has been waiting for an ACK for > 2*mStreamRTOMicroseconds,
+        //resend the unacked packets.
         if ( mLastSendTime != Time::null()
              && (curTime - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds)
         {
@@ -1649,7 +1644,7 @@ private:
 
   /* This function sends received data up to the application interface.
      mReceiveBufferMutex must be locked before calling this function. */
-  void sendToApp(uint64 skipLength) {
+  void sendToApp(uint32 skipLength) {
     uint32 readyBufferSize = skipLength;
 
     for (uint32 i=skipLength; i < MAX_RECEIVE_WINDOW; i++) {
@@ -1729,8 +1724,8 @@ private:
 
       //printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected);
 
-      if ( (int)(offset) == mNextByteExpected) {
-        uint32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
+      int64 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
+      if ( (int64)(offset) == mNextByteExpected) {       
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  mReceiveWindowSize -= len;
 
@@ -1748,12 +1743,7 @@ private:
         }
       }
       else {
-
-        int32 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
-
-	//std::cout << offsetInBuffer << "  ,  " << offsetInBuffer+len << "\n";
-
-	if ( (int)(offset+len-1) <= (int)mLastContiguousByteReceived) {
+	if ( (int64)(offset+len-1) <= (int64)mLastContiguousByteReceived) {
 	  //printf("Acking packet which we had already received previously\n");
 	  sendAckPacket();
 	}
@@ -1816,7 +1806,7 @@ private:
     sstMsg.set_payload(data, len);
 
     std::string buffer = serializePBJMessage(sstMsg);
-    mConnection.lock()->sendData( buffer.data(), buffer.size() );
+    mConnection.lock()->sendData( buffer.data(), buffer.size(), false );
   }
 
   void sendAckPacket() {
@@ -1831,7 +1821,7 @@ private:
     //printf("Sending Ack packet with window %d\n", (int)sstMsg.window());
 
     std::string buffer = serializePBJMessage(sstMsg);
-    mConnection.lock()->sendData(  buffer.data(), buffer.size());
+    mConnection.lock()->sendData(  buffer.data(), buffer.size(), true);
   }
 
   uint64 sendDataPacket(const void* data, uint32 len, uint32 offset) {
@@ -1848,7 +1838,7 @@ private:
     sstMsg.set_payload(data, len);
 
     std::string buffer = serializePBJMessage(sstMsg);
-    return mConnection.lock()->sendData(  buffer.data(), buffer.size());
+    return mConnection.lock()->sendData(  buffer.data(), buffer.size(), false);
   }
 
   void sendReplyPacket(void* data, uint32 len, LSID remoteLSID) {
@@ -1868,7 +1858,7 @@ private:
     sstMsg.set_payload(data, len);
 
     std::string buffer = serializePBJMessage(sstMsg);
-    mConnection.lock()->sendData(  buffer.data(), buffer.size());
+    mConnection.lock()->sendData(  buffer.data(), buffer.size(), false);
   }
 
   uint8 mState;
