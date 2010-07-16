@@ -110,9 +110,9 @@ void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localObjectAdded(uuid, loc, bounds);
+        (*it)->localObjectAdded(uuid, loc, bounds, mesh);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
@@ -130,10 +130,15 @@ void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, const BoundingS
         (*it)->localBoundsUpdated(uuid, newval);
 }
 
-
-void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const {
+void LocationService::notifyLocalMeshUpdated(const UUID& uuid, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaObjectAdded(uuid, loc, bounds);
+        (*it)->localMeshUpdated(uuid, newval);
+}
+
+
+void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaObjectAdded(uuid, loc, bounds, mesh);
 }
 
 void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
@@ -149,6 +154,11 @@ void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const Timed
 void LocationService::notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->replicaBoundsUpdated(uuid, newval);
+}
+
+void LocationService::notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaMeshUpdated(uuid, newval);
 }
 
 } // namespace Sirikata

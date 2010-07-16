@@ -61,6 +61,7 @@ message ObjectAddition {
     required uuid object = 1;
     required Sirikata.Protocol.TimedMotionVector location = 2;
     required boundingsphere3f bounds = 3;
+    optional string mesh = 4;
 }
 
 message ObjectRemoval {

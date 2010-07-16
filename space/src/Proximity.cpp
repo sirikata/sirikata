@@ -226,7 +226,8 @@ void Proximity::receiveMessage(Message* msg) {
                     t,
                     addition.object(),
                     TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
-                    addition.bounds()
+                    addition.bounds(),
+                    (addition.has_mesh() ? addition.mesh() : "")
                 );
             }
         }
@@ -366,7 +367,7 @@ void Proximity::poll() {
         if (proxStream != boost::shared_ptr<Stream<UUID> >()) {
           boost::shared_ptr<Connection<UUID> > conn = proxStream->connection().lock();
           assert(conn);
-          
+
           object_sent = conn->datagram( (void*)proxMsg.data(), proxMsg.size(),
                                                          OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY, NULL);
         }
@@ -408,7 +409,7 @@ void Proximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
 }
 void Proximity::localObjectRemoved(const UUID& uuid) {
 }
@@ -418,13 +419,17 @@ void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f
 void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle);
 }
-void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+void Proximity::localMeshUpdated(const UUID& uuid, const String& newval) {
+}
+void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
 }
 void Proximity::replicaObjectRemoved(const UUID& uuid) {
 }
 void Proximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
 }
 void Proximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+}
+void Proximity::replicaMeshUpdated(const UUID& uuid, const String& newval) {
 }
 
 void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
@@ -493,6 +498,9 @@ void Proximity::generateServerQueryEvents() {
                         msg_loc.set_velocity(loc.velocity());
 
                         addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
+                        const String& mesh = mLocalLocCache->mesh(evt.id());
+                        if (mesh.size() > 0)
+                            addition.set_mesh(mesh);
                     }
                 }
                 else {
@@ -558,6 +566,9 @@ void Proximity::generateObjectQueryEvents() {
                         motion.set_velocity(loc.velocity());
 
                         addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
+                        const String& mesh = mGlobalLocCache->mesh(evt.id());
+                        if (mesh.size() > 0)
+                            addition.set_mesh(mesh);
                     }
                 }
                 else {

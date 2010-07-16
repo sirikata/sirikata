@@ -263,6 +263,7 @@ int main (int argc, char** argv) {
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
         BoundingSphere3f(Vector3f::nil(), 1.f),
+        "http://www.sirikata.com/content/assets/cube.dae",
         UUID::null());
 
     HostedObjectPtr obj2 = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
@@ -271,6 +272,7 @@ int main (int argc, char** argv) {
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
         BoundingSphere3f(Vector3f::nil(), 1.f),
+        "http://www.sirikata.com/content/assets/cube.dae",
         UUID::null());
 
     ///////////Go go go!! start of simulation/////////////////////

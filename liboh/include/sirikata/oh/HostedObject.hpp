@@ -233,6 +233,7 @@ public:
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f&meshBounds,
+        const String& mesh,
         const UUID&evidence);
 
   private:

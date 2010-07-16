@@ -53,11 +53,12 @@ public:
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual BoundingSphere3f bounds(const UUID& uuid);
+    virtual const String& mesh(const UUID& uuid);
 
-    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
     virtual void removeLocalObject(const UUID& uuid);
 
-    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
@@ -69,6 +70,7 @@ private:
     struct LocationInfo {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
+        String mesh;
         bool local;
     };
     typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;

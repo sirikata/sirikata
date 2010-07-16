@@ -50,6 +50,7 @@ message Connect {
     optional Sirikata.Protocol.TimedMotionVector loc = 3;
     optional boundingsphere3f bounds = 4;
     optional float query_angle = 5;
+    optional string mesh = 6;
 }
 
 // Response to a connection request

@@ -257,7 +257,7 @@ void SessionManager::stop() {
 
 void SessionManager::connect(
     const UUID& objid,
-    const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa,
+    const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa, const String& init_mesh,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb)
 {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
@@ -269,6 +269,7 @@ void SessionManager::connect(
     ci.bounds = init_bounds;
     ci.regQuery = regQuery;
     ci.queryAngle = init_sa;
+    ci.mesh = init_mesh;
 
     mObjectConnections.add(objid, ci, connect_cb, migrate_cb, stream_created_cb);
 
@@ -329,6 +330,8 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     connect_msg.set_bounds( ci.bounds );
     if (ci.regQuery)
         connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+    if (ci.mesh.size() > 0)
+        connect_msg.set_mesh( ci.mesh );
 
     if (!send(uuid, OBJECT_PORT_SESSION,
               UUID::null(), OBJECT_PORT_SESSION,

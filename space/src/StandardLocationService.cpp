@@ -82,7 +82,15 @@ BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
     return locinfo.bounds;
 }
 
-void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
+const String& StandardLocationService::mesh(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    const LocationInfo& locinfo = it->second;
+    return locinfo.mesh;
+}
+
+void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds, const String& msh) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -100,6 +108,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     LocationInfo& locinfo = it->second;
     locinfo.location = loc;
     locinfo.bounds = bnds;
+    locinfo.mesh = msh;
     locinfo.local = true;
 
     // FIXME: we might want to verify that location(uuid) and bounds(uuid) are
@@ -107,7 +116,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
+    notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid), mesh(uuid));
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
@@ -141,7 +150,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // automatically.
 }
 
-void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
+void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds, const String& msh) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -151,6 +160,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         if (!locinfo.local) {
             locinfo.location = loc;
             locinfo.bounds = bnds;
+            locinfo.mesh = msh;
             //local = false
             // FIXME should we notify location and bounds updated info?
         }
@@ -161,12 +171,13 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         LocationInfo locinfo;
         locinfo.location = loc;
         locinfo.bounds = bnds;
+        locinfo.mesh = msh;
         locinfo.local = false;
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
-        notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
+        notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid), mesh(uuid));
     }
 
 }
@@ -224,6 +235,12 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 loc_it->second.bounds = newbounds;
                 notifyReplicaBoundsUpdated( update.object(), newbounds );
             }
+
+            if (update.has_mesh()) {
+                String newmesh = update.mesh();
+                loc_it->second.mesh = newmesh;
+                notifyReplicaMeshUpdated( update.object(), newmesh );
+            }
         }
     }
 
@@ -261,6 +278,12 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
                 BoundingSphere3f newbounds = request.bounds();
                 loc_it->second.bounds = newbounds;
                 notifyLocalBoundsUpdated( msg.source_object(), newbounds );
+            }
+
+            if (request.has_mesh()) {
+                String newmesh = request.mesh();
+                loc_it->second.mesh = newmesh;
+                notifyLocalMeshUpdated( msg.source_object(), newmesh );
             }
         }
         else {

@@ -47,5 +47,6 @@ message MigrationMessage {
     required Sirikata.Protocol.TimedMotionVector loc = 2;
     required boundingsphere3f bounds = 3;
     repeated MigrationClientData client_data = 4;
+    optional string mesh = 5;
     required uint32 source_server = 6; // FIXME should come from server to server header
 }

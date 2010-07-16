@@ -76,7 +76,12 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service {
     // NOTE: The public interface is only safe to access from the main strand.
 
     /** Connect the object to the space with the given starting parameters. */
-    void connect(const UUID& objid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regquery, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback);
+    void connect(
+        const UUID& objid,
+        const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds,
+        bool regquery, const SolidAngle& init_sa, const String& init_mesh,
+        ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback
+    );
     /** Disconnect the object from the space. */
     void disconnect(const UUID& id);
 
@@ -214,6 +219,7 @@ private:
         BoundingSphere3f bounds;
         bool regQuery;
         SolidAngle queryAngle;
+        String mesh;
     };
 
 

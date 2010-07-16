@@ -425,7 +425,8 @@ void Server::finishAddObject(const UUID& obj_id)
     mLocalForwarder->addActiveConnection(conn);
 
     // Add object as local object to LocationService
-    mLocationService->addLocalObject(obj_id, loc, sc.conn_msg.bounds());
+    String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
+    mLocationService->addLocalObject(obj_id, loc, sc.conn_msg.bounds(), obj_mesh);
 
     // Register proximity query
     if (sc.conn_msg.has_query_angle())
@@ -577,7 +578,7 @@ void Server::handleMigration(const UUID& obj_id)
         MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
     );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
-
+    String obj_mesh ( migrate_msg->has_mesh() ? migrate_msg->mesh() : "");
 
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
@@ -585,7 +586,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds, obj_mesh);
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
@@ -685,6 +686,9 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             migrate_loc.set_position( obj_loc.position() );
             migrate_loc.set_velocity( obj_loc.velocity() );
             migrate_msg.set_bounds( obj_bounds );
+            String obj_mesh = mLocationService->mesh(obj_id);
+            if (obj_mesh.size() > 0)
+                migrate_msg.set_mesh( obj_mesh );
 
             // FIXME we should allow components to package up state here
             // FIXME we should generate these from some map instead of directly
@@ -804,7 +808,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
     );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
-
+    String obj_mesh ( migrate_msg->has_mesh() ? migrate_msg->mesh() : "");
 
     // Remove the previous connection from the local forwarder
     mLocalForwarder->removeActiveConnection( obj_id );
@@ -814,7 +818,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds, obj_mesh);
 
     //update our oseg to show that we know that we have this object now.
     OSegEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());

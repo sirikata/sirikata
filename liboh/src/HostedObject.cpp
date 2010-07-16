@@ -300,7 +300,7 @@ struct HostedObject::PrivateCallbacks {
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?1.0:1.0);
-        realThis->connect(spaceID, location, sphere, realThis->getUUID());
+        realThis->connect(spaceID, location, sphere, "", realThis->getUUID());
         delete msg;
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
@@ -764,6 +764,7 @@ void HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
+        const String& mesh,
         const UUID&object_uuid_evidence)
 {
     if (spaceID == SpaceID::null())
@@ -772,6 +773,7 @@ void HostedObject::connect(
     mObjectHost->connect(
         getSharedPtr(), spaceID,
         TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ), meshBounds,
+        mesh,
         SolidAngle(.00001f),
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2),
@@ -928,7 +930,7 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-        HO_LOG(debug,"Proximity addition."); // Remove when properly handled
+        HO_LOG(debug,"Proximity addition: " << addition.object().toString() << " - mesh: " << (addition.has_mesh() ? addition.mesh() : "")); // Remove when properly handled
 
         CONTEXT_OHTRACE(prox,
             getUUID(),
@@ -1029,7 +1031,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                         if (loc.has_angular_speed()) {
                             location.setAngularSpeed(loc.angular_speed());
                         }
-                        obj->connect(spaceid, location, bs, evidence);
+                        obj->connect(spaceid, location, bs, "", evidence);
                     }
                 }
                 if (co.has_script()) {

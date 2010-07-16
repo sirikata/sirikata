@@ -57,15 +57,17 @@ public:
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
-    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
     virtual void localObjectRemoved(const UUID& uuid);
     virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void localMeshUpdated(const UUID& uuid, const String& newval);
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
 
     virtual void service();
 
@@ -76,6 +78,7 @@ private:
     struct UpdateInfo {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
+        String mesh;
     };
 
     template<typename SubscriberType>
@@ -165,8 +168,11 @@ private:
             // potentially remove in the tick that actually sends updates.
         }
 
-
-        void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
+        typedef std::tr1::function<void(UpdateInfo&)> UpdateFunctor;
+        // Generic version of an update - adds updates per-subscriber as
+        // necessary and calls the UpdateFunctor to trigger the particular
+        // update to values.
+        void propertyUpdated(const UUID& uuid, LocationService* locservice, UpdateFunctor fup) {
             // Add the update to each subscribed object
             typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
             if (obj_sub_it == mObjectSubscribers.end()) return;
@@ -184,39 +190,40 @@ private:
                     UpdateInfo new_ui;
                     new_ui.location = locservice->location(uuid);
                     new_ui.bounds = locservice->bounds(uuid);
+                    new_ui.mesh = locservice->mesh(uuid);
                     sub_info->outstandingUpdates[uuid] = new_ui;
                 }
 
                 UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-                ui.location = newval;
+                fup(ui);
             }
+        }
+
+        static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) { ui.location = newval; }
+        static void setUIBounds(UpdateInfo& ui, const BoundingSphere3f& newval) { ui.bounds = newval; }
+        static void setUIMesh(UpdateInfo& ui, const String& newval) { ui.mesh = newval; }
+
+        void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
+            propertyUpdated(
+                uuid, locservice,
+                std::tr1::bind(&setUILocation, std::tr1::placeholders::_1, newval)
+            );
         }
 
         void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval, LocationService* locservice) {
-            // Add the update to each subscribed object
-            typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
-            if (obj_sub_it == mObjectSubscribers.end()) return;
-
-            SubscriberSet* object_subscribers = obj_sub_it->second;
-
-            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
-                if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
-                assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
-                SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
-                if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
-                assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
-
-                if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
-                    UpdateInfo new_ui;
-                    new_ui.location = locservice->location(uuid);
-                    new_ui.bounds = locservice->bounds(uuid);
-                    sub_info->outstandingUpdates[uuid] = new_ui;
-                }
-
-                UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-                ui.bounds = newval;
-            }
+            propertyUpdated(
+                uuid, locservice,
+                std::tr1::bind(&setUIBounds, std::tr1::placeholders::_1, newval)
+            );
         }
+
+        void meshUpdated(const UUID& uuid, const String& newval, LocationService* locservice) {
+            propertyUpdated(
+                uuid, locservice,
+                std::tr1::bind(&setUIMesh, std::tr1::placeholders::_1, newval)
+            );
+        }
+
 
         void service() {
             uint32 max_updates = GetOptionValue<uint32>(LOC_MAX_PER_RESULT);

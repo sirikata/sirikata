@@ -40,6 +40,7 @@ message LocationUpdate {
     required uuid object = 1;
     required Sirikata.Protocol.TimedMotionVector location = 2;
     required boundingsphere3f bounds = 3;
+    optional string mesh = 4;
 }
 
 message BulkLocationUpdate {
@@ -53,6 +54,7 @@ message BulkLocationUpdate {
 message LocationUpdateRequest {
     optional Sirikata.Protocol.TimedMotionVector location = 1;
     optional boundingsphere3f bounds = 2;
+    optional string mesh = 3;
 }
 
 message Container {

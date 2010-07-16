@@ -91,6 +91,13 @@ const BoundingSphere3f& CBRLocationServiceCache::bounds(const UUID& id) const {
     return it->second.bounds;
 }
 
+const String& CBRLocationServiceCache::mesh(const UUID& id) const {
+    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    ObjectDataMap::const_iterator it = mObjects.find(id);
+    assert(it != mObjects.end());
+    return it->second.mesh;
+}
+
 void CBRLocationServiceCache::addUpdateListener(LocationUpdateListener* listener) {
     assert( mListeners.find(listener) == mListeners.end() );
     mListeners.insert(listener);
@@ -102,8 +109,8 @@ void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* liste
     mListeners.erase(it);
 }
 
-void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    objectAdded(uuid, loc, bounds);
+void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+    objectAdded(uuid, loc, bounds, mesh);
 }
 
 void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid) {
@@ -118,9 +125,13 @@ void CBRLocationServiceCache::localBoundsUpdated(const UUID& uuid, const Boundin
     boundsUpdated(uuid, newval);
 }
 
-void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+void CBRLocationServiceCache::localMeshUpdated(const UUID& uuid, const String& newval) {
+    meshUpdated(uuid, newval);
+}
+
+void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
     if (mWithReplicas)
-        objectAdded(uuid, loc, bounds);
+        objectAdded(uuid, loc, bounds, mesh);
 }
 
 void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
@@ -138,24 +149,29 @@ void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const Bound
         boundsUpdated(uuid, newval);
 }
 
+void CBRLocationServiceCache::replicaMeshUpdated(const UUID& uuid, const String& newval) {
+    if (mWithReplicas)
+        meshUpdated(uuid, newval);
+}
 
 
-void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
-            uuid, loc, bounds
+            uuid, loc, bounds, mesh
         )
     );
 }
 
-void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
     if (mObjects.find(uuid) != mObjects.end())
         return;
 
     ObjectData data;
     data.location = loc;
     data.bounds = bounds;
+    data.mesh = mesh;
     data.tracking = false;
     mObjects[uuid] = data;
 
@@ -221,6 +237,22 @@ void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const Bound
 
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationBoundsUpdated(uuid, oldval, newval);
+}
+
+void CBRLocationServiceCache::meshUpdated(const UUID& uuid, const String& newval) {
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processMeshUpdated, this,
+            uuid, newval
+        )
+    );
+}
+
+void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, const String& newval) {
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    if (it == mObjects.end()) return;
+    String oldval = it->second.mesh;
+    it->second.mesh = newval;
 }
 
 } // namespace Sirikata
