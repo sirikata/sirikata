@@ -46,8 +46,8 @@
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/oh/SpaceConnection.hpp>
-#include <sirikata/oh/TopLevelSpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/SentMessage.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 
@@ -156,7 +156,7 @@ public:
         persistencePort = parent->bindODPPort(space, ODP::PortID((uint32)Services::PERSISTENCE));
 
         // Use any port for tracker
-        tracker = new QueryTracker(parent->bindODPPort(space), parent->mObjectHost->getSpaceIO());
+        tracker = new QueryTracker(parent->bindODPPort(space), parent->mContext->ioService);
         tracker->forwardMessagesTo(&parent->mSendService);
     }
 
@@ -173,8 +173,9 @@ public:
 
 
 
-HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
-    : mInternalObjectReference(objectName)
+HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName)
+ : mContext(ctx),
+   mInternalObjectReference(objectName)
 {
     mSpaceData = new SpaceDataMap;
     mNextSubscriptionID = 0;
@@ -292,32 +293,6 @@ struct HostedObject::PrivateCallbacks {
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
         }
-    }
-
-    static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk, const Network::Stream::PauseReceiveCallback& pauseReceive) {
-        HostedObjectPtr realThis (thus.lock());
-
-        RoutableMessageHeader header;
-        MemoryReference bodyData = header.ParseFromArray(&(msgChunk[0]),msgChunk.size());
-        header.set_source_space(sid);
-        header.set_destination_space(sid);
-
-        if (!realThis) {
-            SILOG(objecthost,error,"Received message for dead HostedObject. SpaceID = "<<sid<<"; DestObject = <deleted>");
-            return;
-        }
-
-        {
-            ProxyObjectPtr destinationObject = realThis->getProxy(header.source_space());
-            if (destinationObject) {
-                header.set_destination_object(destinationObject->getObjectReference().object());
-            }
-            if (!header.has_source_object()) {
-                header.set_source_object(ObjectReference::spaceServiceID());
-            }
-        }
-
-        realThis->processRoutableMessage(header, bodyData);
     }
 
     static void handlePersistenceResponse(
@@ -828,20 +803,8 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     }
 }
 
-
-void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
-    {
 /*
-        SILOG(cppoh,debug,
-              '['<<(mInternalObjectReference.toString())<<']'
-              << "** Message from: " << header.source_object()
-              << " port " << header.source_port()
-              << " to "<<(header.has_destination_object()
-                          ?  header.destination_object().toString()
-                          :  ("[Temporary UUID " + mInternalObjectReference.toString() +"]"))
-              << " port " << header.destination_port());
-*/
-    }
+void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
     /// Handle Return values to queries we sent to someone:
     if (header.has_reply_id()) {
         SpaceID space = header.destination_space();
@@ -857,7 +820,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
      *  *always* be attempted first. RPC already has another path and has been
      *  marked as deprecated.  As other paths are replaced, they should also be
      *  marked.
-     */
+     *//*
     if (mDelegateODPService->deliver(header, bodyData)) {
         // if this was true, it got delivered
     } else if (header.destination_port() == 0) {
@@ -868,7 +831,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
             mObjectScript->processMessage(header, bodyData);
     }
 }
-
+*/
 void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
     //DEPRECATED(HostedObject);
     ///// MessageService::processMessage
@@ -941,7 +904,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     camera=true;
                 }
                 SILOG(cppoh,info,"Creating new object "<<ObjectReference(uuid));
-                VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mObjectHost, uuid);
+                VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mContext, mObjectHost, uuid);
                 std::tr1::shared_ptr<HostedObject>obj=std::tr1::static_pointer_cast<HostedObject>(vwobj);
                 if (camera) {
                     obj->initializeDefault("",NULL,"",co.scale(),phys);

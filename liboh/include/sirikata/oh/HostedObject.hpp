@@ -34,7 +34,6 @@
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
-#include <sirikata/oh/TopLevelSpaceConnection.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
@@ -43,13 +42,13 @@
 #include <sirikata/core/odp/DelegatePort.hpp>
 
 namespace Sirikata {
+class ObjectHostContext;
 class ObjectHost;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
 class PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
 
 class ObjectScript;
@@ -95,6 +94,8 @@ protected:
 
 //------- Members
 
+    ObjectHostContext* mContext;
+
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
@@ -112,7 +113,7 @@ protected:
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    HostedObject(ObjectHost*parent, const UUID &uuid);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
@@ -130,6 +131,9 @@ private:
     void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
 public:
 //------- Public member functions:
+    ObjectHostContext* context() { return mContext; }
+    const ObjectHostContext* context() const { return mContext; }
+
     ///makes a new object that is not in the persistence database.
     void initializeDefault(
             const String&mesh,
@@ -229,7 +233,7 @@ public:
     void disconnectFromSpace(const SpaceID&id);
 
     /** Handles an incoming message, then passes the message to the scripting language. */
-    void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
+    //void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
 
   private:
 

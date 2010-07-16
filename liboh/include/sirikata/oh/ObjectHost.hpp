@@ -46,7 +46,6 @@ namespace Sirikata {
 class ProxyManager;
 class PluginManager;
 class SpaceIDMap;
-class TopLevelSpaceConnection;
 class SpaceConnection;
 class ConnectionEventListener;
 class ObjectScriptManager;
@@ -65,27 +64,13 @@ typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public PollingService {
     ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
-    typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap; //DEPRECATED
-    typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap; // DEPRECATED
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
     typedef std::tr1::unordered_map<UUID, HostedObjectPtr, UUID::Hasher> HostedObjectMap;
     typedef std::map<MessagePort, MessageService *> ServicesMap;
 
-    SpaceConnectionMap mSpaceConnections; // DEPRECATED
-    AddressConnectionMap mAddressConnections;
-
     SpaceSessionManagerMap mSessionManagers;
-
-    friend class TopLevelSpaceConnection;
-    void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
-    void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
-    Network::IOService *mSpaceConnectionIO;
-
-    Task::WorkQueue *volatile mMessageQueue;
-    struct AtomicInt;
-    AtomicInt *mEnqueuers;
 
     HostedObjectMap mHostedObjects;
     ServicesMap mServices;
@@ -185,7 +170,6 @@ public:
     /// Returns the SpaceID -> Network::Address lookup map.
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
 
-    class MessageProcessor;
     ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
@@ -194,19 +178,8 @@ public:
     virtual void stop();
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
-    /** Gets an IO service corresponding to this object host.
-        This can be used to schedule timeouts that are guaranteed
-        to be in the correct thread. */
-    Network::IOService *getSpaceIO() const {
-        return mSpaceConnectionIO;
-    }
-    /** May return null if this object host is in the process of being destructed. */
-    Task::WorkQueue *getWorkQueue() const {
-        return mMessageQueue;
-    }
-    /** Process pending messages immediately. Only call if you are currently in the main thread. */
-    void dequeueAll() const;
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
+    /// DEPRECATED
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 

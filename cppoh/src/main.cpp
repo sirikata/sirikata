@@ -257,7 +257,7 @@ int main (int argc, char** argv) {
     }
 
     // FIXME simple test example
-    HostedObjectPtr obj = HostedObject::construct<HostedObject>(oh, UUID::random());
+    HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
     obj->connect(
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),

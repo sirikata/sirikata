@@ -34,6 +34,7 @@
 #include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -119,7 +120,7 @@ static void Mono_HostedObject_iAsyncWait(Mono::CSharpDuration* mono_duration, Mo
 
     HostedObjectPtr ho = MonoContext::getSingleton().getVWObject();
     HostedObjectWPtr weak_ho = ho;
-    ho->getObjectHost()->getSpaceIO()->post(
+    ho->context()->ioService->post(
         dur,
         std::tr1::bind(
             &HandleAsyncWaitTimeout,

@@ -40,7 +40,6 @@
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
-#include <sirikata/oh/TopLevelSpaceConnection.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
@@ -52,28 +51,12 @@
 
 namespace Sirikata {
 
-struct ObjectHost::AtomicInt : public AtomicValue<int> {
-    ObjectHost::AtomicInt*mNext;
-    AtomicInt(int val, std::auto_ptr<AtomicInt>&genq) : AtomicValue<int>(val) {mNext=genq.release();}
-    ~AtomicInt() {
-        if (mNext)
-            delete mNext;
-    }
-};
-
-
 ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options)
  : PollingService(ctx->mainStrand, Duration::seconds(1.f/30.f), ctx, "Object Host Poll"),
    mContext(ctx)
 {
     mScriptPlugins=new PluginManager;
     mSpaceIDMap = spaceMap;
-    mMessageQueue = messageQueue;
-    mSpaceConnectionIO=ioServ;
-    static std::auto_ptr<AtomicInt> gEnqueuers;
-    mEnqueuers = new AtomicInt(0,gEnqueuers);
-    std::auto_ptr<AtomicInt> tmp(mEnqueuers);
-    gEnqueuers=tmp;
     OptionValue *protocolOptions;
     InitializeClassOptions ico("objecthost",this,
                            protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
@@ -88,15 +71,6 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Task::WorkQ
 }
 
 ObjectHost::~ObjectHost() {
-    Task::WorkQueue *queue = mMessageQueue;
-    mMessageQueue = NULL;
-    int value=0;
-    (*mEnqueuers)-=(1<<29);
-    while ((value=mEnqueuers->read())!=-(1<<29)) {
-        SILOG(objecthost,debug,"%d enqueuers"<<value);
-        // silently wait for everyone to finish adding themselves.
-    }
-    queue->dequeueAll(); // filter through everything that might have an ObjectHost message in it.
     {
         HostedObjectMap objs;
         mHostedObjects.swap(objs);
@@ -170,78 +144,9 @@ bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 sr
     return mSessionManagers[space]->send(obj->getUUID(), src_port, dest, dest_port, payload);
 }
 
-
-class ObjectHost::MessageProcessor : public Task::WorkItem {
-    ObjectHost *parent;
-    RoutableMessageHeader header;
-    std::string body;
-public:
-    MessageProcessor(ObjectHost *parent,
-                     const RoutableMessageHeader&header,
-                     MemoryReference message_body)
-        : parent(parent), header(header), body((char*)message_body.begin(), (char*)message_body.end()) {
-    }
-    ~MessageProcessor() {
-    }
-
-    void operator() () {
-        AutoPtr delete_me(this);
-
-        if (!header.has_destination_space() || header.destination_space() == SpaceID::null()) {
-            header.set_source_space(SpaceID::null());
-            ReturnStatus status = RoutableMessageHeader::SUCCESS;
-            if (header.destination_object() == ObjectReference::spaceServiceID()) {
-                MessageService *destService = parent->getService(header.destination_port());
-                if (destService) {
-                    destService->processMessage(header, MemoryReference(body));
-                    return;
-                }
-                status = RoutableMessageHeader::PORT_FAILURE;
-            } else {
-                HostedObjectPtr dest = parent->getHostedObject(header.destination_object().getAsUUID());
-                if (dest) {
-                    dest->processRoutableMessage(header, MemoryReference(body));
-                    return;
-                }
-                status = RoutableMessageHeader::UNKNOWN_OBJECT;
-            }
-            if (status) {
-                RoutableMessageHeader response(header);
-                response.swap_source_and_destination();
-                response.set_return_status(status);
-                if (header.source_object() == ObjectReference::spaceServiceID()) {
-                    MessageService *srcService = parent->getService(header.destination_port());
-                    if (srcService) {
-                        srcService->processMessage(response, MemoryReference::null());
-                    } else {
-                        // Neither source service nor destination exist.
-                    }
-                } else {
-                    HostedObjectPtr src = parent->getHostedObject(header.source_object().getAsUUID());
-                    if (src) {
-                        src->processRoutableMessage(response, MemoryReference::null());
-                    } else {
-                        // Neither source object nor destination exist.
-                    }
-                }
-            }
-        }
-    }
-};
-
 void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryReference message_body) {
     DEPRECATED(ObjectHost);
-
-    assert(header.has_destination_object());
-    assert(header.has_source_object());
-    assert(!header.has_source_space() || header.source_space() == header.destination_space());
-    if (++*mEnqueuers>0) {
-        Task::WorkQueue *queue = mMessageQueue;
-        if (queue) {
-            queue->enqueue(new MessageProcessor(this, header, message_body));
-        }
-    }
-    --*mEnqueuers;
+    NOT_IMPLEMENTED(oh);
 }
 
 void ObjectHost::registerHostedObject(const HostedObjectPtr &obj) {
@@ -268,40 +173,6 @@ HostedObjectPtr ObjectHost::getHostedObject(const UUID &id) const {
 namespace{
     boost::recursive_mutex gSpaceConnectionMapLock;
 }
-void ObjectHost::insertAddressMapping(const Network::Address&addy, const std::tr1::weak_ptr<TopLevelSpaceConnection>&val){
-    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
-    mAddressConnections[addy]=val;
-}
-
-void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::Address& addy,const TopLevelSpaceConnection*example){
-    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
-    {
-        SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
-        for(;where!=mSpaceConnections.end()&&where->first==id;) {
-            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
-            if (!temp) {
-                where=mSpaceConnections.erase(where);
-            }else if(&*temp==example) {
-                where=mSpaceConnections.erase(where);
-            }else {
-                ++where;
-            }
-        }
-        {
-            AddressConnectionMap::iterator where=mAddressConnections.find(addy);
-            if (where!=mAddressConnections.end()) {
-                assert(!(addy==Network::Address::null()));
-                std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
-                if (!temp) {
-                    mAddressConnections.erase(where);
-                }else if(&*temp==example) {
-                    mAddressConnections.erase(where);
-                }
-            }
-        }
-    }
-    ConnectionEventProvider::notify(&ConnectionEventListener::onDisconnected, addy, false, "Unknown.");
-}
 
 void ObjectHost::poll() {
     for (HostedObjectMap::iterator iter = mHostedObjects.begin(); iter != mHostedObjects.end(); ++iter) {
@@ -319,43 +190,19 @@ void ObjectHost::stop() {
 }
 
 const Duration&ObjectHost::getSpaceTimeOffset(const SpaceID&id)const{
-    SpaceConnectionMap::const_iterator where=mSpaceConnections.find(id);
-    if (where!=mSpaceConnections.end()) {
-        std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection=where->second.lock();
-        if (topLevelConnection) {
-            return topLevelConnection->getServerTimeOffset();
-        }
-    }
+    NOT_IMPLEMENTED(oh);
     static Duration nil(Duration::seconds(0));
     return nil;
 }
 const Duration&ObjectHost::getSpaceTimeOffset(const Network::Address&id)const{
-    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
-    AddressConnectionMap::const_iterator where=mAddressConnections.find(id);
-    if (where!=mAddressConnections.end()) {
-        std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection=where->second.lock();
-        if (topLevelConnection) {
-            return topLevelConnection->getServerTimeOffset();
-        }
-    }
+    NOT_IMPLEMENTED(oh);
     static Duration nil(Duration::seconds(0));
     return nil;
 }
 
-void ObjectHost::dequeueAll() const {
-    if (getWorkQueue()) {
-        getWorkQueue()->dequeueAll();
-    }
-}
-
 ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
-    SpaceConnectionMap::const_iterator iter = mSpaceConnections.find(space);
-    if (iter != mSpaceConnections.end()) {
-        std::tr1::shared_ptr<TopLevelSpaceConnection> spaceConnPtr = iter->second.lock();
-        if (spaceConnPtr) {
-            return spaceConnPtr.get();
-        }
-    }
+    DEPRECATED();
+    NOT_IMPLEMENTED(oh);
     return NULL;
 }
 
