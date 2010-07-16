@@ -238,7 +238,7 @@ public:
   private:
     void handleConnected(const SpaceID& space, ServerID server);
     void handleMigrated(const SpaceID& space, ServerID server);
-    void handleStreamCreated();
+    void handleStreamCreated(const SpaceID& space);
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -300,6 +300,10 @@ public:
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
+
+    // Handlers for core space-managed updates
+    void handleLocationMessage(const SpaceID& space, uint8* buffer, int len);
+    void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

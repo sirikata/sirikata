@@ -182,6 +182,10 @@ HostedObjectPtr ObjectHost::getHostedObject(const UUID &id) const {
     return HostedObjectPtr();
 }
 
+boost::shared_ptr<Stream<UUID> > ObjectHost::getSpaceStream(const SpaceID& space, const UUID& objectID) {
+    return mSessionManagers[space]->getSpaceStream(objectID);
+}
+
 
 namespace{
     boost::recursive_mutex gSpaceConnectionMapLock;

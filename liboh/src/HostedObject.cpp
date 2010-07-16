@@ -61,6 +61,12 @@
 
 #include <sirikata/core/odp/Exceptions.hpp>
 
+
+#include "Protocol_Loc.pbj.hpp"
+#include "Protocol_Prox.pbj.hpp"
+
+#define HO_LOG(lvl,msg) SILOG(ho,lvl,"[HO] " << msg);
+
 namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
@@ -768,7 +774,7 @@ void HostedObject::connect(
         TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ), meshBounds,
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this)
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, spaceID)
     );
 
     mSpaceData->insert(
@@ -784,8 +790,21 @@ void HostedObject::handleMigrated(const SpaceID& space, ServerID server) {
     NOT_IMPLEMENTED(ho);
 }
 
-void HostedObject::handleStreamCreated() {
-    NOT_IMPLEMENTED(ho);
+void HostedObject::handleStreamCreated(const SpaceID& space) {
+    boost::shared_ptr<Stream<UUID> > sstStream = mObjectHost->getSpaceStream(space, getUUID());
+
+    if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
+        boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
+        assert(sstConnection);
+
+        sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
+            std::tr1::bind(&HostedObject::handleLocationMessage, this, space, _1, _2)
+        );
+        sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
+            std::tr1::bind(&HostedObject::handleProximityMessage, this, space, _1, _2)
+        );
+
+    }
 }
 
 void HostedObject::initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy) {
@@ -872,6 +891,62 @@ void HostedObject::tick() {
     for (SpaceDataMap::iterator iter = mSpaceData->begin(); iter != mSpaceData->end(); ++iter) {
         // send update to LOC (2) service in the space, if necessary
         iter->second.updateLocation(this);
+    }
+}
+
+void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, int len) {
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
+    bool parse_success = contents.ParseFromArray(buffer, len);
+    assert(parse_success);
+
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
+
+        Sirikata::Protocol::TimedMotionVector update_loc = update.location();
+        TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
+
+        HO_LOG(debug,"Loc update for " << update.object().toString()); // Remove when properly handled
+
+        CONTEXT_OHTRACE(objectLoc,
+            getUUID(),
+            update.object(),
+            loc
+        );
+
+        // FIXME do something with the data
+    }
+}
+
+void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, int len) {
+    Sirikata::Protocol::Prox::ProximityResults contents;
+    bool parse_success = contents.ParseFromArray(buffer, len);
+    assert(parse_success);
+
+    for(int32 idx = 0; idx < contents.addition_size(); idx++) {
+        Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
+
+        TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
+
+        HO_LOG(debug,"Proximity addition."); // Remove when properly handled
+
+        CONTEXT_OHTRACE(prox,
+            getUUID(),
+            addition.object(),
+            true,
+            loc
+        );
+    }
+
+    for(int32 idx = 0; idx < contents.removal_size(); idx++) {
+        Sirikata::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
+
+        HO_LOG(debug,"Proximity removal."); // Remove when properly handled
+        CONTEXT_OHTRACE(prox,
+            getUUID(),
+            removal.object(),
+            false,
+            TimedMotionVector3f()
+        );
     }
 }
 
