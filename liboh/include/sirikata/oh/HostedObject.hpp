@@ -108,10 +108,6 @@ protected:
 
     ODP::DelegateService* mDelegateODPService;
 
-    QueryTracker* mDefaultTracker; // FIXME this is necessary because we're
-                                   // using messaging outside of spaces in order
-                                   // to communicate with the db, which is
-                                   // required for initialization....
 //------- Constructors/Destructors
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
@@ -128,9 +124,7 @@ private:
     ///When a message is destined for the RPC port of 0, split it into submessages and process those
     void handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
     ///When a message is destined for the persistence port, handle each persistence object accordingly
-    void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
-    ///makes a new object with the bare minimum--assumed that a script or persistence fills in the rest.
-    void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&, const UUID&evidence);
+    //void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
 
     // When a connection to a space is setup, initialize it to handle default behaviors
     void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
@@ -145,8 +139,10 @@ public:
             const PhysicalParameters&physicalParameters);
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
+
     /// Attempt to restore this item from database including script
-    void initializeRestoreFromDatabase(const SpaceID&spaceID);
+    //void initializeRestoreFromDatabase(const SpaceID&spaceID);
+
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
@@ -188,16 +184,6 @@ protected:
         bool forwardMessagesTo(MessageService*) { return false; }
         bool endForwardingMessagesTo(MessageService*) { return false; }
     } mSendService;
-
-    struct ReceiveService: public MessageService {
-        HostedObject *ho;
-        void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
-            assert(hdr.has_source_space());
-            ho->processRoutableMessage(hdr, body);
-        }
-        bool forwardMessagesTo(MessageService*) { return false; }
-        bool endForwardingMessagesTo(MessageService*) { return false; }
-    } mReceiveService;
 
 public:
     /** Returns the internal object reference, which can be used for connecting

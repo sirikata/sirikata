@@ -181,7 +181,6 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     mObjectHost=parent;
     mObjectScript=NULL;
     mSendService.ho = this;
-    mReceiveService.ho = this;
 
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
@@ -189,14 +188,9 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
             _1, _2, _3
         )
     );
-
-    mDefaultTracker = NULL;
 }
 
 HostedObject::~HostedObject() {
-    if (mDefaultTracker != NULL)
-        delete mDefaultTracker;
-
     destroy();
     delete mSpaceData;
 }
@@ -457,7 +451,7 @@ void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryR
     }
 }
 
-
+/* NOTE: Broken because mDefaultTracker no longer exists.
 void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
         using namespace Persistence::Protocol;
         HostedObject *realThis=this;
@@ -618,7 +612,7 @@ void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header,
             delete persistenceMsg;
         }
     }
-
+*/
 
 
 static String nullProperty;
@@ -677,40 +671,6 @@ const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
     return iter->second.mProxyObject;
 }
 
-
-using Sirikata::Protocol::NewObj;
-using Sirikata::Protocol::IObjLoc;
-
-void HostedObject::sendNewObj(
-    const Location&startingLocation,
-    const BoundingSphere3f &meshBounds,
-    const SpaceID&spaceID,
-    const UUID&object_uuid_evidence)
-{
-
-    RoutableMessageHeader messageHeader;
-    messageHeader.set_destination_object(ObjectReference::spaceServiceID());
-    messageHeader.set_destination_space(spaceID);
-    messageHeader.set_destination_port(Services::REGISTRATION);
-    NewObj newObj;
-    newObj.set_object_uuid_evidence(object_uuid_evidence);
-    newObj.set_bounding_sphere(meshBounds);
-    IObjLoc loc = newObj.mutable_requested_object_loc();
-    loc.set_timestamp(Time::now(getSpaceTimeOffset(spaceID)));
-    loc.set_position(startingLocation.getPosition());
-    loc.set_orientation(startingLocation.getOrientation());
-    loc.set_velocity(startingLocation.getVelocity());
-    loc.set_rotational_axis(startingLocation.getAxisOfRotation());
-    loc.set_angular_speed(startingLocation.getAngularSpeed());
-
-    RoutableMessageBody messageBody;
-    newObj.SerializeToString(messageBody.add_message("NewObj"));
-
-    std::string serializedBody;
-    messageBody.SerializeToString(&serializedBody);
-    sendViaSpace(messageHeader, MemoryReference(serializedBody));
-}
-
 void HostedObject::initializeDefault(
     const String&mesh,
     const LightInfo *lightInfo,
@@ -745,6 +705,7 @@ void HostedObject::initializeDefault(
     //connect(spaceID, spaceConnectionHint, startingLocation, meshBounds, getUUID());
 }
 
+/* NOTE: Removed to avoid mDefaultTracker and mSendService, but may want to be rescued
 void HostedObject::initializeRestoreFromDatabase(const SpaceID& spaceID) {
     mObjectHost->registerHostedObject(getSharedPtr());
 
@@ -784,6 +745,7 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID& spaceID) {
     msg->header().set_destination_port(Services::PERSISTENCE);
     msg->serializeSend();
 }
+*/
 namespace {
 bool myisalphanum(char c) {
     if (c>='a'&&c<='z') return true;
@@ -852,7 +814,7 @@ void HostedObject::handleStreamCreated() {
 void HostedObject::initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
     psd.rpcPort->receive( std::tr1::bind(&HostedObject::handleRPCMessage, this, _1, _2) );
-    psd.persistencePort->receive( std::tr1::bind(&HostedObject::handlePersistenceMessage, this, _1, _2) );
+    //psd.persistencePort->receive( std::tr1::bind(&HostedObject::handlePersistenceMessage, this, _1, _2) );
 }
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
@@ -886,8 +848,6 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
         QueryTracker* responsibleTracker = getTracker(space);
         if (responsibleTracker != NULL)
             responsibleTracker->processMessage(header, bodyData);
-        if (mDefaultTracker != NULL)
-            mDefaultTracker->processMessage(header, bodyData);
         return; // Not a message for us to process.
     }
 
