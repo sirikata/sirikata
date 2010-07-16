@@ -189,6 +189,8 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             _1, _2, _3
         )
     );
+
+    mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(getUUID(), this, this);
 }
 
 HostedObject::~HostedObject() {
@@ -801,6 +803,13 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
     }
+}
+
+bool HostedObject::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
+    DEPRECATED(); // We need a SpaceID in here
+    assert( mSpaceData->size() == 1);
+    SpaceID space = mSpaceData->begin()->first;
+    return mObjectHost->send(getSharedPtr(), space, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
 }
 
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {

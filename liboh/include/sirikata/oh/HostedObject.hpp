@@ -42,6 +42,7 @@
 #include <sirikata/core/odp/DelegatePort.hpp>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 namespace Sirikata {
 class ObjectHostContext;
@@ -57,7 +58,7 @@ class ObjectScript;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
+class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRouter, public ObjectMessageDispatcher {
 //------- Private inner classes
     class PerSpaceData;
     struct PrivateCallbacks;
@@ -110,6 +111,7 @@ protected:
     UUID mInternalObjectReference;
 
     ODP::DelegateService* mDelegateODPService;
+    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
 //------- Constructors/Destructors
 private:
@@ -161,6 +163,9 @@ public:
     /// Gets the proxy object representing this HostedObject inside space.
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
 
+    // ObjectMessageRouter Interface
+    WARN_UNUSED
+    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 protected:
 
     /// Checks for a public cached property named propName.
