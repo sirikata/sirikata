@@ -67,7 +67,7 @@ SessionManager::ObjectConnectionRouter::ObjectConnectionRouter(SessionManager* _
 
 bool SessionManager::ObjectConnectionRouter::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
     assert(msg->source_object() == uuid);
-    parent->send(uuid, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
+    return parent->send(uuid, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
 }
 
 // ObjectConnections Implementation

@@ -136,7 +136,7 @@ private:
     void stop();
   protected:
 
-    virtual void dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
+    virtual bool dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
 
   private:
     // Init method: adds an odp routing service to the ForwarderServiceQueue and

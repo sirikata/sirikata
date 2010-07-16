@@ -163,8 +163,8 @@ void Forwarder::handleObjectMessageLoop(Sirikata::Protocol::Object::ObjectMessag
     delete obj_msg;
 }
 
-void Forwarder::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage&msg) const {
-    ObjectMessageDispatcher::dispatchMessage(msg);
+bool Forwarder::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage&msg) const {
+    return ObjectMessageDispatcher::dispatchMessage(msg);
 }
 
 // Service Implementation

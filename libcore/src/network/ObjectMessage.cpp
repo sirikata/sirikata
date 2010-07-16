@@ -58,18 +58,19 @@ void ObjectMessageDispatcher::unregisterObjectMessageRecipient(ObjectMessagePort
     mObjectMessageRecipients.erase(it);
 }
 
-void ObjectMessageDispatcher::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const {
+bool ObjectMessageDispatcher::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const {
     // This is on the space server, so we should only be calling this if the dest is the space
     //assert(msg.dest_object() == UUID::null());
-    ObjectMessageRecipientMap::const_iterator it = mObjectMessageRecipients.find(msg.dest_port());   
-    
+    ObjectMessageRecipientMap::const_iterator it = mObjectMessageRecipients.find(msg.dest_port());
+
     if (it == mObjectMessageRecipients.end()) {
         // FIXME log warning
-        return;
+        return false;
     }
 
     ObjectMessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
+    return true;
 }
 
 
