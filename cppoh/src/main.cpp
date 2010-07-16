@@ -258,7 +258,16 @@ int main (int argc, char** argv) {
 
     // FIXME simple test example
     HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
+    obj->init();
     obj->connect(
+        mainSpace,
+        Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
+        BoundingSphere3f::null(),
+        UUID::null());
+
+    HostedObjectPtr obj2 = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
+    obj2->init();
+    obj2->connect(
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
         BoundingSphere3f::null(),
@@ -273,6 +282,7 @@ int main (int argc, char** argv) {
     ctx->run(2);
 
 
+    obj2.reset();
     obj.reset();
 
     ctx->cleanup();

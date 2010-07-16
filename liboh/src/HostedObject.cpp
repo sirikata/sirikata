@@ -198,6 +198,10 @@ HostedObject::~HostedObject() {
     delete mSpaceData;
 }
 
+void HostedObject::init() {
+    mObjectHost->registerHostedObject(getSharedPtr());
+}
+
 void HostedObject::destroy() {
     if (mObjectScript) {
         delete mObjectScript;
@@ -655,7 +659,6 @@ void HostedObject::initializeDefault(
     const Vector3f&meshScale,
     const PhysicalParameters&physicalParameters)
 {
-    mObjectHost->registerHostedObject(getSharedPtr());
     Duration ttl = defaultTTL->as<Duration>();
     if (!mesh.empty()) {
         Protocol::StringProperty meshprop;
@@ -684,8 +687,6 @@ void HostedObject::initializeDefault(
 
 /* NOTE: Removed to avoid mDefaultTracker and mSendService, but may want to be rescued
 void HostedObject::initializeRestoreFromDatabase(const SpaceID& spaceID) {
-    mObjectHost->registerHostedObject(getSharedPtr());
-
     Persistence::SentReadWriteSet *msg;
     if (mDefaultTracker == NULL) {
         // FIXME this allocation is happening before a real connection to the
@@ -735,7 +736,6 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     assert(!mObjectScript); // Don't want to kill a live script!
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
-    mObjectHost->registerHostedObject(getSharedPtr());
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script)) {
         bool passed=true;
         for (std::string::const_iterator i=script.begin(),ie=script.end();i!=ie;++i) {

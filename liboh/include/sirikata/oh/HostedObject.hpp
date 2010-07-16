@@ -151,6 +151,11 @@ public:
     /// Attempt to restore this item from database including script
     //void initializeRestoreFromDatabase(const SpaceID&spaceID);
 
+    /** Initializes this HostedObject, particularly to get it set up with the
+     *  underlying ObjectHost.
+     */
+    void init();
+
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
