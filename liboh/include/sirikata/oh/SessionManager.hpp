@@ -38,6 +38,7 @@
 #include <sirikata/oh/SpaceNodeConnection.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/ObjectReference.hpp>
 
 namespace Sirikata {
 
@@ -67,7 +68,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service {
     // void(object, migratedFrom, migratedTo)
     typedef std::tr1::function<void(const UUID&,ServerID,ServerID)> ObjectMigratedCallback;
     // Returns a message to the object host for handling.
-    typedef std::tr1::function<void(Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
+    typedef std::tr1::function<void(const UUID&, Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
 
     SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback);
     ~SessionManager();
@@ -248,6 +249,7 @@ private:
         // established
         ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
 
+        UUID getInternalID(const ObjectReference& space_objid) const;
     private:
         SessionManager* parent;
 
@@ -271,6 +273,10 @@ private:
         ObjectServerMap mObjectServerMap;
         typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
         ObjectInfoMap mObjectInfo;
+
+        // A reverse index allows us to lookup an objects internal ID
+        typedef std::tr1::unordered_map<ObjectReference, UUID, ObjectReference::Hasher> InternalIDMap;
+        InternalIDMap mInternalIDs;
     };
     ObjectConnections mObjectConnections;
     friend class ObjectConnections;

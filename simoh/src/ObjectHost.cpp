@@ -58,7 +58,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap*
        ctx, SpaceID::null(), sidmap, // FIXME should have non-null SpaceID
        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-       std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1)
+       std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2)
    )
 {
     mPingId=0;
@@ -169,7 +169,7 @@ void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID migratedFrom, 
     notify(&ObjectHostListener::objectHostMigratedObject, this, objid, migratedFrom, migratedTo);
 }
 
-void ObjectHost::handleObjectMessage(Sirikata::Protocol::Object::ObjectMessage* msg) {
+void ObjectHost::handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // Possibly tag as ping non-destructively
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         Sirikata::Protocol::Object::Ping ping_msg;

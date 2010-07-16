@@ -90,7 +90,7 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1)
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2)
     );
     mSessionManagers[space_id] = smgr;
     smgr->start();
@@ -102,7 +102,7 @@ void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
 void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
 }
 
-void ObjectHost::handleObjectMessage(Sirikata::Protocol::Object::ObjectMessage* msg) {
+void ObjectHost::handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg) {
 }
 
 // Primary HostedObject API

@@ -106,9 +106,9 @@ public:
 private:
     struct ConnectingInfo;
 
-    void handleObjectConnected(const UUID& objid, ServerID server);
-    void handleObjectMigrated(const UUID& objid, ServerID from, ServerID to);
-    void handleObjectMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
+    void handleObjectConnected(const UUID& internalID, ServerID server);
+    void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
+    void handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg);
 
 
     OptionSet* mStreamOptions;

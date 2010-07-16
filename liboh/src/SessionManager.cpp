@@ -89,6 +89,8 @@ void SessionManager::ObjectConnections::add(const UUID& objid, ConnectingInfo ci
     obj_info.connectedCB = connect_cb;
     obj_info.migratedCB = migrate_cb;
     obj_info.streamCreatedCB = stream_created_cb;
+    // Add to reverse index // FIXME we need a real ObjectReference to use here
+    mInternalIDs[ObjectReference(objid)] = objid;
 }
 
 SessionManager::ConnectingInfo& SessionManager::ObjectConnections::connectingTo(const UUID& objid, ServerID connecting_to) {
@@ -123,7 +125,12 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectServerMap[connectedTo].push_back(obj);
 
         mObjectInfo[obj].connectedCB(parent->mSpace, connectedTo);
-        parent->mObjectConnectedCallback(obj, connectedTo);
+
+        // FIXME shoudl be setting internal/external ID maps here
+        // Look up internal ID so the OH can find the right object without
+        // tracking space IDs
+        UUID dest_internal = getInternalID(ObjectReference(obj));
+        parent->mObjectConnectedCallback(dest_internal, connectedTo);
 
         return connectedTo;
     }
@@ -136,7 +143,8 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectInfo[obj].migratingTo = NullServerID;
         mObjectServerMap[migratedTo].push_back(obj);
 
-        parent->mObjectMigratedCallback(obj, migratedFrom, migratedTo);
+        UUID dest_internal = getInternalID(ObjectReference(obj));
+        parent->mObjectMigratedCallback(dest_internal, migratedFrom, migratedTo);
 
         return migratedTo;
     }
@@ -165,6 +173,8 @@ void SessionManager::ObjectConnections::remove(const UUID& objid) {
 
     // Remove from main object set
     mObjectInfo.erase(objid);
+    // Remove from reverse index // FIXME need real object reference
+    mInternalIDs.erase( ObjectReference(objid) );
 }
 
 ServerID SessionManager::ObjectConnections::getConnectedServer(const UUID& obj_id, bool allow_connecting) {
@@ -178,6 +188,14 @@ ServerID SessionManager::ObjectConnections::getConnectedServer(const UUID& obj_i
     return dest_server;
 }
 
+UUID SessionManager::ObjectConnections::getInternalID(const ObjectReference& space_objid) const {
+    InternalIDMap::const_iterator it = mInternalIDs.find(space_objid);
+    if (it == mInternalIDs.end()) {
+        // FIXME?
+        return UUID::null();
+    }
+    return it->second;
+}
 
 // SessionManager Implementation
 
@@ -572,7 +590,10 @@ void SessionManager::handleServerMessage(ObjectMessage* msg) {
         handleSessionMessage(msg);
     }
     else {
-        mObjectMessageHandlerCallback(msg);
+        // Look up internal ID so the OH can find the right object without
+        // tracking space IDs
+        UUID dest_internal = mObjectConnections.getInternalID(ObjectReference(msg->dest_object()));
+        mObjectMessageHandlerCallback(dest_internal, msg);
     }
 
     TIMESTAMP_END(tstamp, Trace::DESTROYED);
