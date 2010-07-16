@@ -262,7 +262,7 @@ int main (int argc, char** argv) {
     obj->connect(
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
-        BoundingSphere3f::null(),
+        BoundingSphere3f(Vector3f::nil(), 1.f),
         UUID::null());
 
     HostedObjectPtr obj2 = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
@@ -270,7 +270,7 @@ int main (int argc, char** argv) {
     obj2->connect(
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
-        BoundingSphere3f::null(),
+        BoundingSphere3f(Vector3f::nil(), 1.f),
         UUID::null());
 
     ///////////Go go go!! start of simulation/////////////////////

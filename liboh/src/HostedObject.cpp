@@ -772,6 +772,7 @@ void HostedObject::connect(
     mObjectHost->connect(
         getSharedPtr(), spaceID,
         TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ), meshBounds,
+        SolidAngle(.00001f),
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, spaceID)
