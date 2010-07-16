@@ -129,6 +129,8 @@ public:
     const ObjectReference& object() const;
     const PortID& port() const;
 
+    String toString() const;
+
     class Hasher {
     public:
         size_t operator()(const Endpoint& p) const {
@@ -146,6 +148,8 @@ private:
     ObjectReference mObject;
     PortID mPort;
 }; // class Endpoint
+
+SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const Sirikata::ODP::Endpoint& ep);
 
 } // namespace ODP
 } // namespace Sirikata

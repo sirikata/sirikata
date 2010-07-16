@@ -810,13 +810,16 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
+    }
+    else {
+        SILOG(cppoh,debug,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
+    }
 //    } else if (header.destination_port() == 0) {
 //        DEPRECATED(HostedObject);
 //        handleRPCMessage(header, bodyData);
 //    } else {
 //        if (mObjectScript)
 //            mObjectScript->processMessage(header, bodyData);
-    }
     delete msg;
 }
 
