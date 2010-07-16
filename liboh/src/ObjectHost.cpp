@@ -49,6 +49,8 @@
 
 #include <sirikata/core/service/Context.hpp>
 
+#define OH_LOG(lvl,msg) SILOG(oh,lvl,"[OH] " << msg)
+
 namespace Sirikata {
 
 ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options)
@@ -90,19 +92,30 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2)
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2)
     );
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
+    NOT_IMPLEMENTED(oh);
 }
 
 void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
+    NOT_IMPLEMENTED(oh);
 }
 
-void ObjectHost::handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg) {
+void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
+    // Either we know the object and deliver, or somethings gone wacky
+    HostedObjectPtr obj = getHostedObject(internalID);
+    if (obj) {
+        obj->receiveMessage(space, msg);
+    }
+    else {
+        OH_LOG(warn, "Got message for " << internalID.toString() << " but no such object exists.");
+        delete msg;
+    }
 }
 
 // Primary HostedObject API

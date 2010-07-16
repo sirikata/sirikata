@@ -41,6 +41,8 @@
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
 
+#include <sirikata/core/network/ObjectMessage.hpp>
+
 namespace Sirikata {
 class ObjectHostContext;
 class ObjectHost;
@@ -232,8 +234,9 @@ public:
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID&id);
 
-    /** Handles an incoming message, then passes the message to the scripting language. */
-    //void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
+    /// Receive an ObjectMessage from the space via the ObjectHost. Translate it
+    /// to our runtime ODP structure and deliver it.
+    void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
 
   private:
 
@@ -283,6 +286,7 @@ public:
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
     virtual ODP::Port* bindODPPort(SpaceID space);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

@@ -187,7 +187,7 @@ public:
     // Session Management Implementation
     void handleObjectConnected(const UUID& internalID, ServerID server);
     void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
-    void handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg);
+    void handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
 
 
     // Checks serialization of access to SessionManagers

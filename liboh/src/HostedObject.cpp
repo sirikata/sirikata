@@ -788,8 +788,8 @@ void HostedObject::handleStreamCreated() {
 
 void HostedObject::initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
-    psd.rpcPort->receive( std::tr1::bind(&HostedObject::handleRPCMessage, this, _1, _2) );
-    //psd.persistencePort->receive( std::tr1::bind(&HostedObject::handlePersistenceMessage, this, _1, _2) );
+    psd.rpcPort->receive( std::tr1::bind(&HostedObject::handleRPCMessage, this, _1, _2), ODP::Port::OLD_HANDLER);
+    //psd.persistencePort->receive( std::tr1::bind(&HostedObject::handlePersistenceMessage, this, _1, _2), ODP::Port::OLD_HANDLER );
 }
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
@@ -803,35 +803,23 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     }
 }
 
-/*
-void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
-    /// Handle Return values to queries we sent to someone:
-    if (header.has_reply_id()) {
-        SpaceID space = header.destination_space();
-        QueryTracker* responsibleTracker = getTracker(space);
-        if (responsibleTracker != NULL)
-            responsibleTracker->processMessage(header, bodyData);
-        return; // Not a message for us to process.
-    }
+void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
+    // Convert to ODP runtime format
+    ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
+    ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
-    /** NOTE: ODP::Service is the way we should be handling these.  In order to
-     *  transition to ODP only at this layer gracefully, we need to leave the
-     *  other delivery mechanisms in place.  However, ODP delivery should
-     *  *always* be attempted first. RPC already has another path and has been
-     *  marked as deprecated.  As other paths are replaced, they should also be
-     *  marked.
-     *//*
-    if (mDelegateODPService->deliver(header, bodyData)) {
+    if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
-    } else if (header.destination_port() == 0) {
-        DEPRECATED(HostedObject);
-        handleRPCMessage(header, bodyData);
-    } else {
-        if (mObjectScript)
-            mObjectScript->processMessage(header, bodyData);
+//    } else if (header.destination_port() == 0) {
+//        DEPRECATED(HostedObject);
+//        handleRPCMessage(header, bodyData);
+//    } else {
+//        if (mObjectScript)
+//            mObjectScript->processMessage(header, bodyData);
     }
+    delete msg;
 }
-*/
+
 void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
     //DEPRECATED(HostedObject);
     ///// MessageService::processMessage
@@ -1196,6 +1184,10 @@ ODP::Port* HostedObject::bindODPPort(SpaceID space) {
 }
 
 void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+    mDelegateODPService->registerDefaultODPHandler(cb);
+}
+
+void HostedObject::registerDefaultODPHandler(const ODP::OldMessageHandler& cb) {
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
 
