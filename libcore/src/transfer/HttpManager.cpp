@@ -112,55 +112,60 @@ void HttpManager::processQueue() {
 
     for (std::deque<std::tr1::shared_ptr<HttpRequest> >::iterator req = mRequestQueue.begin(); req != mRequestQueue.end(); ) {
 
-        //First check the recycle bin to see if there's a connection already open we can use
-        boost::unique_lock<boost::mutex> lockRB(mRecycleBinLock, boost::adopt_lock);
-        RecycleBinType::iterator findRec = mRecycleBin.find((*req)->addr);
-        if (findRec != mRecycleBin.end()) {
-            std::tr1::shared_ptr<TCPSocket> sock = findRec->second.front();
-            findRec->second.pop();
-            if (findRec->second.size() == 0) {
-                mRecycleBin.erase(findRec);
-            }
-            lockRB.unlock();
+        bool foundRecycled = false;
+        std::tr1::shared_ptr<TCPSocket> sock;
 
+        //First check the recycle bin to see if there's a connection already open we can use
+        boost::unique_lock<boost::mutex> lockRB(mRecycleBinLock, boost::adopt_lock); {
+            RecycleBinType::iterator findRec = mRecycleBin.find((*req)->addr);
+            if (findRec != mRecycleBin.end()) {
+                sock = findRec->second.front();
+                findRec->second.pop();
+                if (findRec->second.size() == 0) {
+                    mRecycleBin.erase(findRec);
+                }
+                foundRecycled = true;
+            }
+        }
+        lockRB.unlock();
+
+        if (foundRecycled) {
             //SILOG(transfer, debug, "Reusing a connection for " << (*req)->addr.toString());
             write_request(sock, *req);
             req = mRequestQueue.erase(req);
         }
 
         //If nothing in the recycle bin, let's see if we can open a new connection
-        else if (mNumTotalConnections < MAX_TOTAL_CONNECTIONS) {
-            lockNumConns.lock();
-            std::map<Sirikata::Network::Address, uint32>::iterator findNumC = mNumConnsPerAddr.find((*req)->addr);
-            if (mNumTotalConnections < MAX_TOTAL_CONNECTIONS &&
-                    (findNumC == mNumConnsPerAddr.end() || findNumC->second < MAX_CONNECTIONS_PER_ENDPOINT)) {
+        if (!foundRecycled && mNumTotalConnections < MAX_TOTAL_CONNECTIONS) {
+            lockNumConns.lock(); {
+                std::map<Sirikata::Network::Address, uint32>::iterator findNumC = mNumConnsPerAddr.find((*req)->addr);
+                if (mNumTotalConnections < MAX_TOTAL_CONNECTIONS &&
+                        (findNumC == mNumConnsPerAddr.end() || findNumC->second < MAX_CONNECTIONS_PER_ENDPOINT)) {
 
-                //We are safe to open a new connection, but increase counts first
-                mNumTotalConnections++;
-                if (findNumC == mNumConnsPerAddr.end()) {
-                   mNumConnsPerAddr[(*req)->addr] = 1;
+                    //We are safe to open a new connection, but increase counts first
+                    mNumTotalConnections++;
+                    if (findNumC == mNumConnsPerAddr.end()) {
+                       mNumConnsPerAddr[(*req)->addr] = 1;
+                    } else {
+                        mNumConnsPerAddr[(*req)->addr] = findNumC->second + 1;
+                    }
+
+                    //SILOG(transfer, debug, "Creating a new connection for " << (*req)->addr.toString());
+                    TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService());
+                    mResolver->async_resolve(query, boost::bind(&HttpManager::handle_resolve, this, *req,
+                                            boost::asio::placeholders::error, boost::asio::placeholders::iterator));
+
+                    req = mRequestQueue.erase(req);
                 } else {
-                    mNumConnsPerAddr[(*req)->addr] = findNumC->second + 1;
+                    //No available recycled connections, can't open a new one, so do nothing
+                    req++;
                 }
-
-                //SILOG(transfer, debug, "Creating a new connection for " << (*req)->addr.toString());
-                TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService());
-                mResolver->async_resolve(query, boost::bind(&HttpManager::handle_resolve, this, *req,
-                                        boost::asio::placeholders::error, boost::asio::placeholders::iterator));
-
-                req = mRequestQueue.erase(req);
-            } else {
-                req++;
-            }
-            lockNumConns.unlock();
+            } lockNumConns.unlock();
         }
-
         //No available recycled connections, can't open a new one, so do nothing
-        else {
+        else if(!foundRecycled) {
             req++;
         }
-
-        if(lockRB.owns_lock()) lockRB.unlock();
 
     }
 
@@ -171,14 +176,15 @@ void HttpManager::processQueue() {
 void HttpManager::decrement_connection(Sirikata::Network::Address& addr) {
     //SILOG(transfer, debug, "Reducing number of connections by 1 for " << addr.toString());
 
-    boost::unique_lock<boost::mutex> lockNumConns(mNumConnsLock, boost::adopt_lock);
-    mNumTotalConnections--;
-    std::map<Sirikata::Network::Address, uint32>::iterator findNumC = mNumConnsPerAddr.find(addr);
-    if (findNumC != mNumConnsPerAddr.end()) {
-        if (findNumC->second == 1) {
-            mNumConnsPerAddr.erase(findNumC);
-        } else {
-            mNumConnsPerAddr[addr] = findNumC->second - 1;
+    boost::unique_lock<boost::mutex> lockNumConns(mNumConnsLock, boost::adopt_lock); {
+        mNumTotalConnections--;
+        std::map<Sirikata::Network::Address, uint32>::iterator findNumC = mNumConnsPerAddr.find(addr);
+        if (findNumC != mNumConnsPerAddr.end()) {
+            if (findNumC->second == 1) {
+                mNumConnsPerAddr.erase(findNumC);
+            } else {
+                mNumConnsPerAddr[addr] = findNumC->second - 1;
+            }
         }
     }
     lockNumConns.unlock();
@@ -305,8 +311,8 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         req->cb(std::tr1::shared_ptr<HttpResponse>(), RESPONSE_PARSING_FAILED, ec);
         socket->close();
         decrement_connection(req->addr);
-        add_req(req);
         processQueue();
+        return;
     }
 
     if(err == boost::asio::error::eof && bytes_transferred != 0) {
@@ -318,8 +324,8 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
             req->cb(std::tr1::shared_ptr<HttpResponse>(), RESPONSE_PARSING_FAILED, ec);
             socket->close();
             decrement_connection(req->addr);
-            add_req(req);
             processQueue();
+            return;
         }
 
     }
