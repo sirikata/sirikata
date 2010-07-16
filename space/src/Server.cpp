@@ -394,12 +394,12 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     //update our oseg to show that we know that we have this object now.
     //    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
-    mOSeg->newObjectAdd(obj_id,connect_msg.bounds().radius());
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
-
     mStoredConnectionData[obj_id] = sc;
+
+    mOSeg->newObjectAdd(obj_id,connect_msg.bounds().radius());
 
 }
 

@@ -65,6 +65,7 @@ void LocalObjectSegmentation::addObject(const UUID& obj_id, float radius, Server
 
 void LocalObjectSegmentation::newObjectAdd(const UUID& obj_id, float radius) {
     mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
+    mWriteListener->osegWriteFinished(obj_id);
 }
 
 bool LocalObjectSegmentation::clearToMigrate(const UUID& obj_id) {
