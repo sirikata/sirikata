@@ -53,11 +53,16 @@ SpaceContext::~SpaceContext() {
 }
 
 void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  UUID sourceObject = s->connection().lock()->remoteEndPoint().endPoint;
+  boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
+  assert(conn);
+  UUID sourceObject = conn->remoteEndPoint().endPoint;
 
   if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
     std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";
-    mObjectStreams[sourceObject]->connection().lock()->close(true);
+
+    boost::shared_ptr<Connection<UUID> > sstConnection = mObjectStreams[sourceObject]->connection().lock();
+    assert(sstConnection);
+    sstConnection->close(true);
   }
 
   mObjectStreams[sourceObject] = s;

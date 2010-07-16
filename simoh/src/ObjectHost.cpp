@@ -457,7 +457,11 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
     //forcibly close the SST connection for this object to its current previous space server
     if (mObjectToSpaceStreams.find(obj_id) != mObjectToSpaceStreams.end()) {
       std::cout << "deleting object-space streams  of " << obj_id.toString() << " to " << sid << "\n";
-      mObjectToSpaceStreams[obj_id]->connection().lock()->close(true);
+
+      boost::shared_ptr<Connection<UUID> > conn = mObjectToSpaceStreams[obj_id]->connection().lock();
+
+      assert(conn);
+      conn->close(true);
       mObjectToSpaceStreams.erase(obj_id);
     }
 
@@ -546,7 +550,8 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     // FIXME would be nice not to have to do this alloc/dealloc
     ObjectMessage obj_msg;
     createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload, &obj_msg);
-    TIMESTAMP_CREATED((&obj_msg), Trace::CREATED);
+    TIMESTAMP_CREATED((&obj_msg), Trace::CREATED);        
+
     return conn->push(obj_msg);
 }
 
@@ -762,7 +767,7 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
     TIMESTAMP_END(tstamp, Trace::OH_RECEIVED);
 
     // Possibly tag as ping non-destructively
-    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {              
         Sirikata::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
         CONTEXT_OHTRACE_NO_TIME(ping,
@@ -776,11 +781,12 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
             ping_msg.ByteSize()
         );
     }
-
+    
     if (mRegisteredServices.find(msg->dest_port())!=mRegisteredServices.end()) {
         mRegisteredServices[msg->dest_port()](*msg);
         delete msg;
     }
+
     // As a special case, messages dealing with sessions are handled by the object host
     else if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
         handleSessionMessage(msg);
@@ -788,8 +794,10 @@ void ObjectHost::handleServerMessage(ObjectMessage* msg, SpaceNodeConnection* co
     else {
         // Otherwise, by default, we just ship it to the correct object
         Object* obj = mObjectConnections.object(msg->dest_object());
-        if (obj != NULL)
-            obj->receiveMessage(msg);
+        
+        if (obj != NULL) {           
+           obj->receiveMessage(msg);
+        }
         else
             delete msg;
     }
@@ -831,13 +839,13 @@ void ObjectHost::handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage*
 				);
 
 	    //create an SST stream from the space server to object 'obj'.
-            /*
+            
 	    Stream<UUID>::connectStream(mObjectConnections.object(obj),
                                 EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
 					std::tr1::bind( &ObjectHost::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
-                                );
-            */
+                                        );
+            
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -895,17 +903,18 @@ void ObjectHost::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> >
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-  OH_LOG(debug, "SST object-space connect callback for " << obj.toString() << " : " << err << "\n");
+    OH_LOG(debug, "SST object-space connect callback for " << obj.toString() << " : " << err << "\n");
+    
 
   if (err != SUCCESS) {
     // retry creating an SST stream from the space server to object 'obj'.
-/*
+
     Stream<UUID>::connectStream(mObjectConnections.object(obj),
                                 EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
                                 EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
                                 std::tr1::bind( &ObjectHost::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
                                 );
-*/
+
     return;
   }
 

@@ -151,7 +151,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
   */
 void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc)
   {
-      addODPServerMessageService(loc);
+    addODPServerMessageService(loc);
 
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg);
     mServerMessageQueue = smq;
@@ -359,8 +359,9 @@ void Forwarder::routeObjectHostMessage(Sirikata::Protocol::Object::ObjectMessage
 
 // --- From local space server services
 bool Forwarder::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-    msg->set_unique(GenerateUniqueID(mContext->id()));
-    return forward(msg, NullServerID);
+  msg->set_unique(GenerateUniqueID(mContext->id()));
+  //return forward(msg, NullServerID);
+  return mLocalForwarder->tryForward(msg);
 }
 
 // --- Forwarded from other space servers
@@ -393,6 +394,7 @@ void Forwarder::receiveObjectRoutingMessage(Message* msg) {
         delete obj_msg;
         return;
     }
+
 
     // Otherwise, try to forward it
     bool forward_success = forward(obj_msg, msg->source_server());

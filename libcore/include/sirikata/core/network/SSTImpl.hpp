@@ -264,6 +264,7 @@ private:
   uint64 mTransmitSequenceNumber;
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
 
+  
   std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
   std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
@@ -348,6 +349,8 @@ private:
     for (typename std::map<LSID, boost::shared_ptr< Stream<EndPointType> > >::iterator it=mOutgoingSubstreamMap.begin();
 	 it != mOutgoingSubstreamMap.end(); ++it)
     {
+      
+
       if (it->second->getState() == Stream<EndPointType>::DISCONNECTED) {
         disconnectedStreams.push_back(it->first);
         continue;
@@ -1248,7 +1251,10 @@ public:
            streams.
   */
   void listenSubstream(uint16 port, StreamReturnCallbackFunction scb) {
-    mConnection->listenStream(port, scb);
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
+
+    conn->listenStream(port, scb);
   }
 
 
@@ -1400,7 +1406,7 @@ public:
   /* Returns the top-level connection that created this stream.
      @return a pointer to the connection that created this stream.
   */
-  virtual boost::shared_ptr<Connection<EndPointType> > connection() {
+  virtual boost::weak_ptr<Connection<EndPointType> > connection() {
     return mConnection;
   }
 
@@ -1426,7 +1432,9 @@ public:
   virtual void createChildStream(StreamReturnCallbackFunction cb, void* data, int length,
 				 uint16 local_port, uint16 remote_port)
   {
-    mConnection->stream(cb, data, length, local_port, remote_port, mParentLSID);
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
+    conn->stream(cb, data, length, local_port, remote_port, mParentLSID);
   }
 
   /*
@@ -1435,7 +1443,10 @@ public:
     @return the local endpoint.
   */
   virtual EndPoint <EndPointType> localEndPoint()  {
-    return EndPoint<EndPointType> (mConnection->localEndPoint().endPoint, mLocalPort);
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
+
+    return EndPoint<EndPointType> (conn->localEndPoint().endPoint, mLocalPort);
   }
 
   /*
@@ -1444,7 +1455,10 @@ public:
     @return the remote endpoint.
   */
   virtual EndPoint <EndPointType> remoteEndPoint()  {
-    return EndPoint<EndPointType> (mConnection->remoteEndPoint().endPoint, mRemotePort);
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
+
+    return EndPoint<EndPointType> (conn->remoteEndPoint().endPoint, mRemotePort);
   }
 
   virtual uint8 getState() {
@@ -1563,14 +1577,17 @@ private:
       mInitialDataLength = 0;
 
       if (!mConnected) {
-        mStreamReturnCallbackMap.erase(mConnection->localEndPoint());
+        boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+        assert(conn);
+
+        mStreamReturnCallbackMap.erase(conn->localEndPoint());
 
 
         bool retVal = true;
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
-	   mConnection->close(true);
+	   conn->close(true);
            retVal = false;
 	}
 
@@ -1822,6 +1839,8 @@ private:
 
   void sendInitPacket(void* data, uint32 len) {
     //std::cout <<  mConnection->localEndPoint().endPoint.toString()  << " sending Init packet\n";
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
 
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
@@ -1838,10 +1857,12 @@ private:
     sstMsg.set_payload(data, len);
 
     std::string buffer = serializePBJMessage(sstMsg);
-    mConnection->sendData( buffer.data(), buffer.size(), false );
+    conn->sendData( buffer.data(), buffer.size(), false );
   }
 
   void sendAckPacket() {
+    
+
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
@@ -1849,11 +1870,13 @@ private:
     sstMsg.set_window( log((double)mReceiveWindowSize)/log(2.0)  );
     sstMsg.set_src_port(mLocalPort);
     sstMsg.set_dest_port(mRemotePort);
+    std::string buffer = serializePBJMessage(sstMsg);
 
     //printf("Sending Ack packet with window %d\n", (int)sstMsg.window());
 
-    std::string buffer = serializePBJMessage(sstMsg);
-    mConnection->sendData(  buffer.data(), buffer.size(), true);
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
+    conn->sendData(  buffer.data(), buffer.size(), true);
   }
 
   uint64 sendDataPacket(const void* data, uint32 len, uint32 offset) {
@@ -1870,7 +1893,10 @@ private:
     sstMsg.set_payload(data, len);
 
     std::string buffer = serializePBJMessage(sstMsg);
-    return mConnection->sendData(  buffer.data(), buffer.size(), false);
+
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);    
+    return conn->sendData(  buffer.data(), buffer.size(), false);
   }
 
   void sendReplyPacket(void* data, uint32 len, LSID remoteLSID) {
@@ -1888,9 +1914,12 @@ private:
     sstMsg.set_bsn(0);
 
     sstMsg.set_payload(data, len);
-
     std::string buffer = serializePBJMessage(sstMsg);
-    mConnection->sendData(  buffer.data(), buffer.size(), false);
+
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
+    
+    conn->sendData(  buffer.data(), buffer.size(), false);
   }
 
   uint8 mState;
@@ -1901,7 +1930,9 @@ private:
   uint32 mNumBytesSent;
 
   LSID mParentLSID;
-  boost::shared_ptr<Connection<EndPointType> > mConnection;
+
+  //weak_ptr to avoid circular dependency between Connection and Stream classes
+  boost::weak_ptr<Connection<EndPointType> > mConnection;
 
   std::map<uint64, boost::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
 

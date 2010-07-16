@@ -123,6 +123,7 @@ public:
         using std::tr1::placeholders::_2;
 
       boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
+      assert(conn);
 
       UUID sourceObject = conn->remoteEndPoint().endPoint;
 

@@ -126,9 +126,11 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 
 	boost::shared_ptr<Stream<UUID> > spaceStream = mContext->objectHost->getSpaceStream(mID);
         if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
-          spaceStream->connection().lock()->datagram( (void*)payload.data(),
-								payload.size(), OBJECT_PORT_LOCATION,
-								OBJECT_PORT_LOCATION, NULL);
+          boost::shared_ptr<Connection<UUID> > conn = spaceStream->connection().lock();
+          assert(conn);
+
+          conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
+                          OBJECT_PORT_LOCATION, NULL);
 	}
 
         // XXX FIXME do something on failure
@@ -248,13 +250,12 @@ void Object::handleSpaceMigration(ServerID sid) {
     mConnectedTo = sid;
 }
 
-void Object::handleSpaceStreamCreated() {
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
+void Object::handleSpaceStreamCreated() {  
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
+
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
     boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
+    assert(sstConnection);
 
     sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
 						std::tr1::bind(&Object::locationMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
@@ -274,16 +275,8 @@ bool Object::connected() {
 void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
-    switch( msg->dest_port() ) {
-      //case OBJECT_PORT_PROXIMITY:
-      //  proximityMessage(*msg);
-      //  break;
-      default:
-        dispatchMessage(*msg);
-
-        break;
-    }
-
+    
+    dispatchMessage(*msg);
     delete msg;
 }
 
