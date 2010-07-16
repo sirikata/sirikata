@@ -107,8 +107,9 @@ class ClusterBuild:
     def clean(self):
         cd_code_cmd = self.cd_to_code()
         cd_build_cmd = self.cd_to_build()
-        clean_cmd = "make clean && rm CMakeCache.txt"
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, clean_cmd]))
+        clean_cmd = "make clean "
+        cache_cmd = "rm -f CMakeCache.txt";
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, clean_cmd, cd_build_cmd, cache_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
     # generates a patchset based on changes made to tree locally
