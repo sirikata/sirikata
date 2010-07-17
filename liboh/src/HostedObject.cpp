@@ -61,6 +61,7 @@
 
 #include <sirikata/core/odp/Exceptions.hpp>
 
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
@@ -91,6 +92,7 @@ public:
     ODP::Port* persistencePort;
 
     QueryTracker* tracker;
+    ObjectHostProxyManagerPtr proxyManager;
 
     void locationWasReset(Time timestamp, Location loc) {
         loc.setVelocity(Vector3f::nil());
@@ -146,7 +148,8 @@ public:
             ProxyObject::UpdateNeeded()),
        rpcPort(NULL),
        persistencePort(NULL),
-       tracker(NULL)
+       tracker(NULL),
+       proxyManager(new ObjectHostProxyManager())
     {
     }
 
@@ -179,9 +182,10 @@ public:
 
 
 
-HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName)
+HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName, bool is_camera)
  : mContext(ctx),
-   mInternalObjectReference(objectName)
+   mInternalObjectReference(objectName),
+   mIsCamera(is_camera)
 {
     mSpaceData = new SpaceDataMap;
     mNextSubscriptionID = 0;
@@ -397,6 +401,17 @@ const QueryTracker* HostedObject::getTracker(const SpaceID& space) const {
     if (it == mSpaceData->end()) return NULL;
     return it->second.tracker;
 }
+
+ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
+    SpaceDataMap::const_iterator it = mSpaceData->find(space);
+    if (it == mSpaceData->end()) {
+        it = mSpaceData->insert(
+            SpaceDataMap::value_type( space, PerSpaceData(this, space) )
+        ).first;
+    }
+    return it->second.proxyManager;
+}
+
 
 
 void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
@@ -775,21 +790,26 @@ void HostedObject::connect(
         TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ), meshBounds,
         mesh,
         SolidAngle(.00001f),
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2),
-        std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2),
+        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3) ),
+        std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, spaceID)
     );
 
-    mSpaceData->insert(
-        SpaceDataMap::value_type( spaceID, PerSpaceData(this, spaceID) )
-    );
+    if(mSpaceData->find(spaceID) == mSpaceData->end()) {
+        mSpaceData->insert(
+            SpaceDataMap::value_type( spaceID, PerSpaceData(this, spaceID) )
+        );
+    }
 }
 
-void HostedObject::handleConnected(const SpaceID& space, ServerID server) {
-    NOT_IMPLEMENTED(ho);
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server) {
+    ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), mIsCamera);
+    ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
+    if (cam)
+        cam->attach(String(), 0, 0);
 }
 
-void HostedObject::handleMigrated(const SpaceID& space, ServerID server) {
+void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server) {
     NOT_IMPLEMENTED(ho);
 }
 
@@ -930,6 +950,10 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
+        SpaceObjectReference proximateID(space, ObjectReference(addition.object()));
+        // FIXME use weak_ptr instead of raw
+        ProxyObjectPtr proxy_obj = createProxy(proximateID, false);
+
         HO_LOG(debug,"Proximity addition: " << addition.object().toString() << " - mesh: " << (addition.has_mesh() ? addition.mesh() : "")); // Remove when properly handled
 
         CONTEXT_OHTRACE(prox,
@@ -953,6 +977,17 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
     }
 }
 
+
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, bool is_camera) {
+    ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
+    ProxyObjectPtr proxy_obj;
+    if (is_camera)
+        proxy_obj = ProxyObjectPtr(new ProxyCameraObject(proxy_manager.get(), objref, (ODP::Service*)this));
+    else
+        proxy_obj = ProxyObjectPtr(new ProxyMeshObject(proxy_manager.get(), objref, (ODP::Service*)this));
+    proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
+    return proxy_obj;
+}
 
 static int32 query_id = 0;
 using Protocol::LocRequest;
@@ -992,7 +1027,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     camera=true;
                 }
                 SILOG(cppoh,info,"Creating new object "<<ObjectReference(uuid));
-                VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mContext, mObjectHost, uuid);
+                VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mContext, mObjectHost, uuid, camera);
                 std::tr1::shared_ptr<HostedObject>obj=std::tr1::static_pointer_cast<HostedObject>(vwobj);
                 if (camera) {
                     obj->initializeDefault("",NULL,"",co.scale(),phys);

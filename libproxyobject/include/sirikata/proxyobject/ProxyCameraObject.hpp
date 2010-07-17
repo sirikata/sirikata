@@ -51,5 +51,8 @@ public:
     void detach();
 
 };
+
+typedef std::tr1::shared_ptr<ProxyCameraObject> ProxyCameraObjectPtr;
+
 }
 #endif

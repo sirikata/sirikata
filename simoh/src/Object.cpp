@@ -190,15 +190,15 @@ void Object::connect() {
         mContext->objectHost->connect(
             this,
             mQueryAngle,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2) ),
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) )
         );
     else
         mContext->objectHost->connect(
             this,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2) ),
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
         );
 
@@ -212,7 +212,7 @@ void Object::disconnect() {
         mContext->objectHost->disconnect(this);
 }
 
-void Object::handleSpaceConnection(const SpaceID& space, ServerID sid) {
+void Object::handleSpaceConnection(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
     if (sid == 0) {
         OBJ_LOG(error,"Failed to open connection for object " << mID.toString());
         return;
@@ -234,12 +234,12 @@ void Object::handleSpaceConnection(const SpaceID& space, ServerID sid) {
     );
 }
 
-void Object::handleSpaceMigration(const SpaceID& space, ServerID sid) {
+void Object::handleSpaceMigration(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
     OBJ_LOG(insane,"Migrated to new space server: " << sid);
     mConnectedTo = sid;
 }
 
-void Object::handleSpaceStreamCreated() {  
+void Object::handleSpaceStreamCreated() {
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
 
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
@@ -264,7 +264,7 @@ bool Object::connected() {
 void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
-    
+
     dispatchMessage(*msg);
     delete msg;
 }

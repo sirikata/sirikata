@@ -76,6 +76,9 @@ public:
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };
 
+typedef std::tr1::shared_ptr<ObjectHostProxyManager> ObjectHostProxyManagerPtr;
+typedef std::tr1::weak_ptr<ObjectHostProxyManager> ObjectHostProxyManagerWPtr;
+
 }
 
 #endif

@@ -44,6 +44,8 @@
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
 
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
+
 namespace Sirikata {
 class ObjectHostContext;
 class ObjectHost;
@@ -109,6 +111,8 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
+    bool mIsCamera; // FIXME hack so we can get a camera up and running, need
+                    // more flexible selection of proxy type
 
     ODP::DelegateService* mDelegateODPService;
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
@@ -117,7 +121,7 @@ protected:
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid, bool is_camera);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
@@ -214,8 +218,7 @@ public:
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
     const QueryTracker*getTracker(const SpaceID& space) const;
 
-    // FIXME deprecated
-    virtual ProxyManager*getProxyManager(const SpaceID&space) { return NULL; }
+    virtual ProxyManagerPtr getProxyManager(const SpaceID& space);
 
     /** Called once per frame, at a certain framerate. */
     void tick();
@@ -237,8 +240,8 @@ public:
         const UUID&evidence);
 
   private:
-    void handleConnected(const SpaceID& space, ServerID server);
-    void handleMigrated(const SpaceID& space, ServerID server);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server);
+    void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceID& space);
 
   public:
@@ -305,6 +308,9 @@ public:
     // Handlers for core space-managed updates
     void handleLocationMessage(const SpaceID& space, uint8* buffer, int len);
     void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);
+
+    // Helper for creating the correct type of proxy
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, bool is_camera);
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

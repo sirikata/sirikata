@@ -109,7 +109,7 @@ void SessionManager::ObjectConnections::startMigration(const UUID& objid, Server
     }
 
     // Notify the object
-    mObjectInfo[objid].migratedCB(parent->mSpace, migrating_to);
+    mObjectInfo[objid].migratedCB(parent->mSpace, ObjectReference(objid), migrating_to);
 }
 
 SessionManager::ConnectedCallback& SessionManager::ObjectConnections::getConnectCallback(const UUID& objid) {
@@ -124,7 +124,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectInfo[obj].connectingTo = NullServerID;
         mObjectServerMap[connectedTo].push_back(obj);
 
-        mObjectInfo[obj].connectedCB(parent->mSpace, connectedTo);
+        mObjectInfo[obj].connectedCB(parent->mSpace, ObjectReference(obj), connectedTo);
 
         // FIXME shoudl be setting internal/external ID maps here
         // Look up internal ID so the OH can find the right object without
@@ -156,7 +156,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
 
 void SessionManager::ObjectConnections::handleConnectError(const UUID& objid) {
     mObjectInfo[objid].connectingTo = NullServerID;
-    mObjectInfo[objid].connectedCB(parent->mSpace, NullServerID);
+    mObjectInfo[objid].connectedCB(parent->mSpace, ObjectReference(objid), NullServerID);
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const UUID& objid) {
@@ -312,7 +312,7 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
         // FIXME disconnect? retry?
-        mObjectConnections.getConnectCallback(uuid)(mSpace, NullServerID);
+        mObjectConnections.getConnectCallback(uuid)(mSpace, ObjectReference::null(), NullServerID);
         return;
     }
 

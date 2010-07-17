@@ -111,7 +111,7 @@ void VWObject::receivedProxObjectProperties(
         uint64 returnStatus,//type Persistence::Protocol::Response::ReturnStatus
         int32 queryId,
         const ObjLoc &objLoc) {
-
+/*
     SpaceID space = hdr.destination_space();
 
     using namespace Persistence::Protocol;
@@ -201,6 +201,7 @@ void VWObject::receivedProxObjectProperties(
         request->serializeSend();
     }
     return;
+*/
 }
 void VWObject::applyPositionUpdate(
     const ProxyObjectPtr &proxy,
@@ -327,6 +328,7 @@ void VWObject::receivedPositionUpdateResponse(
         SentMessage* sentMessage,
         const RoutableMessageHeader &hdr,
         MemoryReference bodyData) {
+/*
     RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
     VWObjectPtr thus(weakThus.lock());
     if (!thus) {
@@ -352,7 +354,7 @@ void VWObject::receivedPositionUpdateResponse(
     }else {
         static_cast<RPCMessage*>(sentMessage)->serializeSend(); // Resend position update each time we get one.
     }
-
+*/
 }
 
 void VWObject::parsePhysicalParameters(PhysicalParameters &out, const Protocol::PhysicalParameters &parsedProperty) {
@@ -387,6 +389,7 @@ void VWObject::parsePhysicalParameters(PhysicalParameters &out, const Protocol::
     out.gravity = parsedProperty.gravity();
 }
 void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &name, MemoryReference args, String *response){
+/*
     std::ostringstream printstr;
     printstr<<"\t";
 
@@ -442,6 +445,7 @@ void VWObject::processRPC(const RoutableMessageHeader&msg, const std::string &na
         }
         SILOG(proxyobject,debug,printstr.str());
     }
+*/
 }
 
 }

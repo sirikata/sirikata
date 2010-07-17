@@ -63,7 +63,9 @@ public:
 
     /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
     virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
-
-
 };
+
+typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;
+typedef std::tr1::weak_ptr<ProxyManager> ProxyManagerWPtr;
+
 }

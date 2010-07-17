@@ -55,7 +55,7 @@ class ServerIDMap;
 class ObjectHost : public Sirikata::Provider<ObjectHostListener*> {
 public:
 
-    typedef std::tr1::function<void(const SpaceID&, ServerID)> SessionCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef SessionCallback ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon

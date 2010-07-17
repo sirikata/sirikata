@@ -184,8 +184,6 @@ int main (int argc, char** argv) {
     }
 
 
-    std::tr1::shared_ptr<ProxyManager> provider(new ObjectHostProxyManager());
-
     Transfer::TransferManager *tm;
     try {
         tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
@@ -206,8 +204,17 @@ int main (int argc, char** argv) {
         graphicsCommandArguments = os.str();
     }
 
+    // FIXME simple test example
+    // This is the camera.  We need it early on because other things depend on
+    // having its ObjectHostProxyManager.
+    HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
+    obj->init();
+    // Note: We currently just use the proxy manager for the default space. Not
+    // sure if we should do something about handling multiple spaces.
+    ProxyManagerPtr proxy_manager = obj->getProxyManager( mainSpace );
+
     // MCB: seems like a good place to initialize models system
-    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider.get(), graphicsCommandArguments ) );
+    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( proxy_manager.get(), graphicsCommandArguments ) );
 
     if ( mm )
     {
@@ -236,7 +243,7 @@ int main (int argc, char** argv) {
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( ctx, provider.get(), provider->getTimeOffsetManager(), graphicsCommandArguments );
+            .getConstructor ( simName ) ( ctx, proxy_manager.get(), proxy_manager->getTimeOffsetManager(), graphicsCommandArguments );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -256,9 +263,7 @@ int main (int argc, char** argv) {
         }
     }
 
-    // FIXME simple test example
-    HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
-    obj->init();
+    // FIXME
     obj->connect(
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
@@ -266,7 +271,7 @@ int main (int argc, char** argv) {
         "http://www.sirikata.com/content/assets/cube.dae",
         UUID::null());
 
-    HostedObjectPtr obj2 = HostedObject::construct<HostedObject>(ctx, oh, UUID::random());
+    HostedObjectPtr obj2 = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), false);
     obj2->init();
     obj2->connect(
         mainSpace,
@@ -281,7 +286,7 @@ int main (int argc, char** argv) {
     ctx->add(sstConnMgr);
     for(SimList::iterator it = sims.begin(); it != sims.end(); it++)
         ctx->add(*it);
-    ctx->run(2);
+    ctx->run(1);
 
 
     obj2.reset();
@@ -290,7 +295,7 @@ int main (int argc, char** argv) {
     ctx->cleanup();
     trace->prepareShutdown();
 
-    provider.reset();
+    proxy_manager.reset();
     delete oh;
 
     // delete after OH in case objects want to do last-minute state flushes
