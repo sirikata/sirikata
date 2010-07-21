@@ -170,7 +170,7 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
             TS_ASSERT(mHttpResponse->getContentLength() == 11650);
         }
 
@@ -200,7 +200,7 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
             TS_ASSERT(mHttpResponse->getContentLength() == 11);
             SILOG(transfer, debug, "content length is " << mHttpResponse->getContentLength());
             SILOG(transfer, debug, "data length is " << mHttpResponse->getData()->length());
@@ -233,7 +233,7 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
             TS_ASSERT(mHttpResponse->getContentLength() == 11650);
         }
 
@@ -273,7 +273,7 @@ public:
                 TS_ASSERT(it != response->getHeaders().end());
                 TS_ASSERT(response->getStatusCode() == 200);
                 TS_ASSERT(response->getData());
-                TS_ASSERT(response->getData()->length() == response->getContentLength());
+                TS_ASSERT(response->getData()->length() == (uint64)response->getContentLength());
                 TS_ASSERT(response->getContentLength() == 11650);
             }
         } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
