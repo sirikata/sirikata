@@ -72,7 +72,6 @@ public:
      */
     class HttpResponse {
     protected:
-
         // This stuff is all used internally for http-parser
         enum LAST_HEADER_CB {
             NONE,
@@ -90,15 +89,16 @@ public:
 
         std::map<std::string, std::string> mHeaders;
         std::tr1::shared_ptr<DenseData> mData;
-        unsigned short mContentLength;
+        ssize_t mContentLength;
         unsigned short mStatusCode;
-    public:
+
         HttpResponse()
             : mLastCallback(NONE), mHeaderComplete(false), mMessageComplete(false),
               mContentLength(0), mStatusCode(0) {}
+    public:
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
         inline const std::map<std::string, std::string>& getHeaders() { return mHeaders; }
-        inline unsigned short getContentLength() { return mContentLength; }
+        inline ssize_t getContentLength() { return mContentLength; }
         inline unsigned short getStatusCode() { return mStatusCode; }
 
         friend class HttpManager;
@@ -138,8 +138,17 @@ public:
      */
     void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb);
 
+protected:
+    /*
+     * Protect constructor and destructor so can't make an instance of this class
+     * but allow AutoSingleton<HttpManager> to make a copy, and give access
+     * to the destructor to the auto_ptr used by AutoSingleton
+     */
     HttpManager();
     ~HttpManager();
+    friend class AutoSingleton<HttpManager>;
+    friend std::auto_ptr<HttpManager>::~auto_ptr();
+    friend void std::auto_ptr<HttpManager>::reset(HttpManager*);
 
 private:
     //For convenience
@@ -152,16 +161,17 @@ private:
     //Convenience of storing request parameters together
     class HttpRequest {
     public:
-        Sirikata::Network::Address addr;
-        std::string req;
-        HttpCallback cb;
-        HTTP_METHOD method;
+        const Sirikata::Network::Address addr;
+        const std::string req;
+        const HttpCallback cb;
+        const HTTP_METHOD method;
         HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, HttpCallback _cb)
             : addr(_addr), req(_req), cb(_cb), method(meth) {}
     };
 
     //Holds a queue of requests to be made
-    std::deque<std::tr1::shared_ptr<HttpRequest> > mRequestQueue;
+    typedef std::list<std::tr1::shared_ptr<HttpRequest> > RequestQueueType;
+    RequestQueueType mRequestQueue;
     //Lock this to access mRequestQueue
     boost::mutex mRequestQueueLock;
 
@@ -172,15 +182,18 @@ private:
 
     //Keeps track of the total number of connections currently open
     uint32 mNumTotalConnections;
+
     //Keeps track of the number of connections open per host:port pair
-    std::map<Sirikata::Network::Address, uint32> mNumConnsPerAddr;
+    typedef std::map<Sirikata::Network::Address, uint32> NumConnsType;
+    NumConnsType mNumConnsPerAddr;
     //Lock this to access mNumTotalConnections or mNumConnsPerAddr
     boost::mutex mNumConnsLock;
 
     //Holds connections that are open but not being used
-    typedef std::map<Sirikata::Network::Address, std::queue<std::tr1::shared_ptr<TCPSocket> > > RecycleBinType;
+    typedef std::map<Sirikata::Network::Address,
+        std::queue<std::tr1::shared_ptr<TCPSocket> > > RecycleBinType;
     RecycleBinType mRecycleBin;
-    //Lock this to access mRecycleBind
+    //Lock this to access mRecycleBin
     boost::mutex mRecycleBinLock;
 
     IOServicePool* mServicePool;
@@ -192,7 +205,7 @@ private:
     void processQueue();
 
     void add_req(std::tr1::shared_ptr<HttpRequest> req);
-    void decrement_connection(Sirikata::Network::Address& addr);
+    void decrement_connection(const Sirikata::Network::Address& addr);
     void write_request(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req);
 
     void handle_resolve(std::tr1::shared_ptr<HttpRequest> req, const boost::system::error_code& err,
