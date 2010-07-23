@@ -113,6 +113,7 @@ float GraphicsResourceEntity::calcBenefit()
 
 void GraphicsResourceEntity::doParse()
 {
+  cout<<"doparse in GRE called"<<endl;
   if (mDependencies.size() > 0)
     parsed(true);
 }

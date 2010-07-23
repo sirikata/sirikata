@@ -41,6 +41,9 @@
 #include "WebView.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 namespace Sirikata {
 namespace Graphics {
@@ -313,7 +316,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
     int up = md.up_axis;
-
+    
     Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
     Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
     for(TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
@@ -323,13 +326,13 @@ void MeshEntity::createMesh(const Meshdata& md) {
         mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
     }
 
-
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
     /// FIXME: set bounds, bounding radius here
     Ogre::ManualObject mo(hash);
     mo.clear();
 
     for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+	cout<<"1 cycle"<<endl;
         const GeometryInstance& geoinst = *geoinst_it;
 
         Matrix4x4f pos_xform = geoinst.transform;
@@ -350,7 +353,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
         mo.begin(matname);
 
         float tu, tv;
-        for (int i=0; i<indexcount; i++) {
+	for (int i=0; i<indexcount; i++) {
             int j = submesh.position_indices[i];
             Vector3f v = fixUp(up, submesh.positions[j]);
             Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
@@ -380,12 +383,11 @@ void MeshEntity::createMesh(const Meshdata& md) {
             }
             else {
                 Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
-                tu=uv[0];
-                tv=1.0-uv[1];           //  why you gotta be like that?
+                tu = uv[0];
+                tv = 1.0-uv[1];           //  why you gotta be like that?
             }
             mo.textureCoord(tu, tv);
         }
-
         mo.end();
     } // submesh
 
@@ -431,14 +433,17 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
 
     for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
-        mScene->mTransferManager->download(
+	
+	cout<<endl<<endl<<"something downloaded from transfer manager! "<<texURI<<endl<<endl<<endl;
+	
+        /*mScene->mTransferManager->download(
             Transfer::URI(texURI),
             std::tr1::bind(
                 &MeshEntity::downloadFinished,
                 this,_1,md
             ),
             Transfer::Range(true)
-        );
+        );*/
     }
 }
 
