@@ -162,7 +162,7 @@ public:
 
   /* This function will also have to be re-implemented to support receiving
      using other kinds of packets. For now, I'll implement only for ODP. */
-  virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
+  virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {    
     Connection<EndPointType>::handleReceive(mRouter,
                                   EndPoint<UUID> (msg.source_object(), msg.source_port()),
                                   EndPoint<UUID> (msg.dest_object(), msg.dest_port()),
@@ -300,7 +300,7 @@ private:
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
-      mNumStreams(0), mCwnd(1), mRTOMicroseconds(1000000),
+      mNumStreams(0), mCwnd(1), mRTOMicroseconds(2000000),
       mFirstRTO(true),  MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(300),
       CC_ALPHA(0.8), mLastTransmitTime(Time::null()), inSendingMode(true), numSegmentsSent(0)
@@ -349,9 +349,7 @@ private:
     for (typename std::map<LSID, boost::shared_ptr< Stream<EndPointType> > >::iterator it=mOutgoingSubstreamMap.begin();
 	 it != mOutgoingSubstreamMap.end(); ++it)
     {
-      
-
-      if (it->second->getState() == Stream<EndPointType>::DISCONNECTED) {
+      if (it->second->getState() == Stream<EndPointType>::DISCONNECTED) {        
         disconnectedStreams.push_back(it->first);
         continue;
       }
@@ -363,19 +361,12 @@ private:
       }
     }
 
-    // Remove any streams that have been closed.
-    for (std::vector<LSID>::iterator it = disconnectedStreams.begin();
-         it != disconnectedStreams.end(); it++)
-    {
-      mOutgoingSubstreamMap.erase(*it);
-    }
-
     if (inSendingMode) {
       boost::unique_lock<boost::mutex> lock(mQueueMutex);
 
       numSegmentsSent = 0;
 
-      for (int i = 0; (!mQueuedSegments.empty()) && i < mCwnd; i++) {
+      for (int i = 0; (!mQueuedSegments.empty()) && mOutstandingSegments.size() <= mCwnd; i++) {
 	  boost::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
 
 	  Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
@@ -386,9 +377,10 @@ private:
 
 	  sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
 
-	  /*printf("%s sending packet from data sending loop to %s\n",
+	  /*printf("%s sending packet from data sending loop to %s ",
 	    mLocalEndPoint.endPoint.readableHexData().c_str()
-	    , mRemoteEndPoint.endPoint.readableHexData().c_str());*/
+            , mRemoteEndPoint.endPoint.readableHexData().c_str());*/
+          
 
 	  sendSSTChannelPacket(sstMsg);
 
@@ -401,7 +393,7 @@ private:
 
 	  mLastTransmitTime = curTime;
 
-	  inSendingMode = false;
+          inSendingMode = false;
       }
     }
     else {
@@ -414,55 +406,26 @@ private:
 	return false; //the connection was unable to contact the other endpoint.
       }
 
-      bool all_sent_packets_acked = true;
-      bool no_packets_acked = true;
-      for (uint32 i=0; i < mOutstandingSegments.size(); i++) {
-	boost::shared_ptr<ChannelSegment> segment = mOutstandingSegments[i];
+      if (mOutstandingSegments.size() > 0) {
+        mCwnd /= 2;
 
-	if (mOutstandingSegments[i]->mAckTime == Time::null()) {
-	  all_sent_packets_acked = false;
-	}
-	else {
-	  no_packets_acked = false;
-	  if (mFirstRTO ) {
-	    mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
-	    mFirstRTO = false;
-	  }
-	  else {
-	    mRTOMicroseconds = CC_ALPHA * mRTOMicroseconds +
-	      (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
-	  }
-	}
+        if (mCwnd < 1) {
+          mCwnd = 1;
+        }
+
+        mOutstandingSegments.clear();
       }
-
-      //printf("mRTOMicroseconds=%d\n", (int)mRTOMicroseconds);
-
-      if (numSegmentsSent >= mCwnd) {
-	if (all_sent_packets_acked) {
-	  mCwnd += 1;
-	}
-	else {
-	  mCwnd /= 2;
-	}
-      }
-      else {
-	if (all_sent_packets_acked) {
-	  mCwnd = (mCwnd + numSegmentsSent) / 2;
-	}
-	else {
-	  mCwnd /= 2;
-	}
-      }
-
-      if (mCwnd < 1) {
-	mCwnd = 1;
-      }
-
-      mOutstandingSegments.clear();
 
       inSendingMode = true;
     }
 
+    // Remove any streams that have been closed.
+    for (std::vector<LSID>::iterator it = disconnectedStreams.begin();
+         it != disconnectedStreams.end(); it++)
+    {
+      mOutgoingSubstreamMap.erase(*it);
+    }
+    
     return true;
   }
 
@@ -635,7 +598,7 @@ private:
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
         mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>(
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
-        pushedIntoQueue = true;
+        pushedIntoQueue = true;        
       }
     }
     
@@ -671,15 +634,38 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
-    for (uint32 i = 0; i < mOutstandingSegments.size(); i++) {
-      if (mOutstandingSegments[i]->mChannelSequenceNumber == receivedAckNum) {
-	mOutstandingSegments[i]->mAckTime = Timer::now();
+    for (std::deque< boost::shared_ptr<ChannelSegment> >::iterator it = mOutstandingSegments.begin();
+         it != mOutstandingSegments.end(); it++)
+    {
+      boost::shared_ptr<ChannelSegment> segment = *it;
+
+      if (segment->mChannelSequenceNumber == receivedAckNum) {
+	segment->mAckTime = Timer::now();
+
+        if (mFirstRTO ) {
+	    mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
+	    mFirstRTO = false;
+        }
+        else {
+          mRTOMicroseconds = CC_ALPHA * mRTOMicroseconds +
+            (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
+        }
+
+        inSendingMode = true;
+
+        if (rand() % mCwnd == 0)  {
+          mCwnd += 1;
+        }
+        
+        mOutstandingSegments.erase(it);
+        break;
       }
     }
   }
 
   virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
     boost::mutex::scoped_lock lock(mStaticMembersLock.getMutex());
+
     receiveMessage((void*) msg.payload().data(), msg.payload().size() );
   }
   
@@ -736,8 +722,11 @@ private:
 			    received_stream_msg->payload().size() );
       }
       else {
-	std::cout << "Not listening to streams at: " << received_stream_msg->dest_port() << "\n";
+	std::cout << mLocalEndPoint.endPoint.toString()  << " not listening to streams at: " << received_stream_msg->dest_port() << "\n";
       }
+    }
+    else {
+      mIncomingSubstreamMap[incomingLsid]->sendReplyPacket(NULL, 0, incomingLsid);
     }
   }
 
@@ -863,9 +852,9 @@ private:
     else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
       mState = CONNECTION_CONNECTED;
     }
-    else if (mState == CONNECTION_CONNECTED) {
+    else if (mState == CONNECTION_CONNECTED) {      
       if (received_msg->payload().size() > 0) {
-	      parsePacket(received_msg);
+        parsePacket(received_msg);
       }
     }
 
@@ -1434,7 +1423,7 @@ public:
   {
     boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    conn->stream(cb, data, length, local_port, remote_port, mParentLSID);
+    conn->stream(cb, data, length, local_port, remote_port, mLSID);
   }
 
   /*
@@ -1480,8 +1469,8 @@ private:
     mLSID(lsid),
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
-    MAX_RECEIVE_WINDOW(15000),
-    mStreamRTOMicroseconds(200000),
+    MAX_RECEIVE_WINDOW(10000),
+    mStreamRTOMicroseconds(2000000),
     FL_ALPHA(0.8),
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
@@ -1544,7 +1533,7 @@ private:
 
       return;
     }
-    
+
     assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
 
     c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
@@ -1560,17 +1549,17 @@ private:
   bool serviceStream(const Time& curTime) {
     if (mState != CONNECTED && mState != DISCONNECTED) {
 
-      if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
+      if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {        
 	if ( mLastSendTime != Time::null() && (curTime - mLastSendTime).toMicroseconds() < 2*mStreamRTOMicroseconds) {
 	  return true;
 	}
 
-	sendInitPacket(mInitialData, mInitialDataLength);
+        sendInitPacket(mInitialData, mInitialDataLength);        
 
 	mLastSendTime = curTime;
 
 	mNumInitRetransmissions++;
-	mStreamRTOMicroseconds = (int64) (mStreamRTOMicroseconds * 2);
+
 	return true;
       }
 
@@ -1582,13 +1571,12 @@ private:
 
         mStreamReturnCallbackMap.erase(conn->localEndPoint());
 
-
         bool retVal = true;
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
-	   conn->close(true);
-           retVal = false;
+          conn->close(true);
+          retVal = false;
 	}
 
 	//send back an error to the app by calling mStreamReturnCallback
@@ -1637,11 +1625,11 @@ private:
 					    buffer->mBufferLength,
 					    buffer->mOffset
 					    );
-
-	  buffer->mTransmitTime = curTime;
+          buffer->mTransmitTime = curTime;
 
 	  if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
 	    mChannelToBufferMap[channelID] = buffer;
+            mChannelToStreamOffsetMap[channelID] = buffer->mOffset;
 	  }
 
 	  mQueuedBuffers.pop_front();
@@ -1661,36 +1649,41 @@ private:
   inline void resendUnackedPackets() {
     boost::lock_guard<boost::mutex> lock(mQueueMutex);
 
-    for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::iterator it=mChannelToBufferMap.begin();
-	 it != mChannelToBufferMap.end(); ++it)
+    for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::const_reverse_iterator it=mChannelToBufferMap.rbegin();
+	 it != mChannelToBufferMap.rend(); it++)
      {
-        mQueuedBuffers.push_front(it->second);
-	mCurrentQueueLength += it->second->mBufferLength;
-
-        //printf("On %d, resending unacked packet at offset %d:%d\n", (int)mLSID, (int)it->first, (int)(it->second->mOffset));
-
-	if (mTransmitWindowSize < it->second->mBufferLength){
-	  assert( ((int) it->second->mBufferLength) > 0);
-	  mTransmitWindowSize = it->second->mBufferLength;
-	}
-     }
-
-     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
-       boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
-
-       if (mTransmitWindowSize < buffer->mBufferLength) {
-	 mTransmitWindowSize = buffer->mBufferLength;
+       mQueuedBuffers.push_front(it->second);
+       mCurrentQueueLength += it->second->mBufferLength; 
+       
+       /*printf("On %d, resending unacked packet at offset %d:%d\n", 
+         (int)mLSID, (int)it->first, (int)(it->second->mOffset));fflush(stdout);*/
+       
+       if (mTransmitWindowSize < it->second->mBufferLength){
+         assert( ((int) it->second->mBufferLength) > 0);
+         mTransmitWindowSize = it->second->mBufferLength;
        }
      }
 
-     mNumOutstandingBytes = 0;
-
-     if (!mChannelToBufferMap.empty()) {
-       mStreamRTOMicroseconds *= 2;
-       mChannelToBufferMap.clear();
-     }
+    
+    
+    if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
+      boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
+      
+      if (mTransmitWindowSize < buffer->mBufferLength) {
+        mTransmitWindowSize = buffer->mBufferLength;
+      }
+    }
+    
+    mNumOutstandingBytes = 0;
+    
+    if (!mChannelToBufferMap.empty()) {
+      if (mStreamRTOMicroseconds < 2000000) {
+        mStreamRTOMicroseconds *= 1;
+      }
+      mChannelToBufferMap.clear();
+    }
   }
-
+  
   /* This function sends received data up to the application interface.
      mReceiveBufferMutex must be locked before calling this function. */
   void sendToApp(uint32 skipLength) {
@@ -1714,8 +1707,9 @@ private:
       mLastContiguousByteReceived = mLastContiguousByteReceived + readyBufferSize;
       mNextByteExpected = mLastContiguousByteReceived + 1;
 
-      memset(mReceiveBitmap, 0, readyBufferSize);
       memmove(mReceiveBitmap, mReceiveBitmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
+      memset(mReceiveBitmap + (MAX_RECEIVE_WINDOW - readyBufferSize), 0, readyBufferSize);
+
       memmove(mReceiveBuffer, mReceiveBuffer + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
 
       mReceiveWindowSize += readyBufferSize;
@@ -1727,54 +1721,18 @@ private:
   {
     if (streamMsg->type() == streamMsg->REPLY) {
       mConnected = true;
-    }
-    else if (streamMsg->type() == streamMsg->ACK) {
-      boost::lock_guard<boost::mutex> lock(mQueueMutex);
-
-      if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
-	uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
-	mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
-
-	mChannelToBufferMap[offset]->mAckTime = Timer::now();
-
-	updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
-
-	if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
-	  assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
-	  mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
-	}
-	else {
-	  mTransmitWindowSize = 0;
-	}
-
-	//printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
-
-	mChannelToBufferMap.erase(offset);
-
-	std::vector <uint64> channelOffsets;
-	for(std::map<uint64, boost::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
-	    it != mChannelToBufferMap.end(); ++it)
-	{
-	  if (it->second->mOffset == dataOffset) {
-	    channelOffsets.push_back(it->first);
-	  }
-	}
-
-	for (uint32 i=0; i< channelOffsets.size(); i++) {
-	  mChannelToBufferMap.erase(channelOffsets[i]);
-	}
-      }
-    }
+    }    
     else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
       boost::mutex::scoped_lock lock(mReceiveBufferMutex);
 
       assert ( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
       mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
 
-      //printf("offset=%d,  mLastContiguousByteReceived=%d, mNextByteExpected=%d\n", (int)offset,  (int)mLastContiguousByteReceived, (int)mNextByteExpected);
+      /*std::cout << "offset=" << offset << " , mLastContiguousByteReceived=" << mLastContiguousByteReceived 
+        << " , mNextByteExpected=" << mNextByteExpected <<"\n";*/
 
       int64 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
-      if ( (int64)(offset) == mNextByteExpected) {       
+      if ( len > 0 &&  (int64)(offset) == mNextByteExpected) {
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  mReceiveWindowSize -= len;
 
@@ -1791,7 +1749,7 @@ private:
 	  sendToApp(0);
         }
       }
-      else {
+      else if (len > 0) {
 	if ( (int64)(offset+len-1) <= (int64)mLastContiguousByteReceived) {
 	  //printf("Acking packet which we had already received previously\n");
 	  sendAckPacket();
@@ -1810,6 +1768,64 @@ private:
 	  //dont ack this packet.. its falling outside the receive window.
 	  sendToApp(0);
 	}
+      }
+    }
+
+    
+    //handle any ACKS that might be included in the message...
+    boost::lock_guard<boost::mutex> lock(mQueueMutex);
+
+    if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
+      uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
+      mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
+
+      mChannelToBufferMap[offset]->mAckTime = Timer::now();
+
+      updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
+
+      if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
+        assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
+        mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
+      }
+      else {
+        mTransmitWindowSize = 0;
+      }
+
+      //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
+
+      mChannelToBufferMap.erase(offset);
+
+      std::vector <uint64> channelOffsets;
+      for(std::map<uint64, boost::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
+          it != mChannelToBufferMap.end(); ++it)
+	{
+	  if (it->second->mOffset == dataOffset) {
+	    channelOffsets.push_back(it->first);
+	  }
+	}
+
+      for (uint32 i=0; i< channelOffsets.size(); i++) {
+        mChannelToBufferMap.erase(channelOffsets[i]);
+      }
+    }
+    else {
+      // ACK received but not found in mChannelToBufferMap
+      if (mChannelToStreamOffsetMap.find(offset) == mChannelToStreamOffsetMap.end()) {
+        uint64 dataOffset = mChannelToStreamOffsetMap[offset];
+        mChannelToStreamOffsetMap.erase(offset);
+          
+        std::vector <uint64> channelOffsets;
+        for(std::map<uint64, boost::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
+            it != mChannelToBufferMap.end(); ++it)
+          {
+            if (it->second->mOffset == dataOffset) {
+              channelOffsets.push_back(it->first);
+            }
+          }
+          
+        for (uint32 i=0; i< channelOffsets.size(); i++) {
+          mChannelToBufferMap.erase(channelOffsets[i]);
+        }
       }
     }
   }
@@ -1835,13 +1851,10 @@ private:
       mStreamRTOMicroseconds = FL_ALPHA * mStreamRTOMicroseconds +
 	(1.0-FL_ALPHA) * (sampleEndTime - sampleStartTime).toMicroseconds();
     }
+
   }
 
   void sendInitPacket(void* data, uint32 len) {
-    //std::cout <<  mConnection->localEndPoint().endPoint.toString()  << " sending Init packet\n";
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-    assert(conn);
-
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.INIT);
@@ -1857,12 +1870,13 @@ private:
     sstMsg.set_payload(data, len);
 
     std::string buffer = serializePBJMessage(sstMsg);
+   
+    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    assert(conn);
     conn->sendData( buffer.data(), buffer.size(), false );
   }
 
   void sendAckPacket() {
-    
-
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
@@ -1900,8 +1914,6 @@ private:
   }
 
   void sendReplyPacket(void* data, uint32 len, LSID remoteLSID) {
-    //printf("Sending Reply packet\n");
-
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.REPLY);
@@ -1918,7 +1930,6 @@ private:
 
     boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    
     conn->sendData(  buffer.data(), buffer.size(), false);
   }
 
@@ -1935,6 +1946,7 @@ private:
   boost::weak_ptr<Connection<EndPointType> > mConnection;
 
   std::map<uint64, boost::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
+  std::map<uint64, uint32> mChannelToStreamOffsetMap;
 
   std::deque< boost::shared_ptr<StreamBuffer> > mQueuedBuffers;
   uint32 mCurrentQueueLength;
@@ -1988,7 +2000,7 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
 class SSTConnectionManager : public PollingService {
 public:
     SSTConnectionManager(Context* ctx)
-     : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)), // FIXME
+      : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
        mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
     {
     }
