@@ -223,14 +223,26 @@ public:
  */
 class TransferPool {
 
+    friend class TransferMediator;
+
+private:
+
 	const std::string mClientID;
 	ThreadSafeQueue<std::tr1::shared_ptr<TransferRequest> > mDeltaQueue;
 
-public:
-	TransferPool(const std::string &clientID)
-		: mClientID(clientID) {
+    TransferPool(const std::string &clientID)
+        : mClientID(clientID) {
 
-	}
+    }
+
+    //Returns an item from the pool. Blocks if pool is empty.
+    inline std::tr1::shared_ptr<TransferRequest> getRequest() {
+        std::tr1::shared_ptr<TransferRequest> retval;
+        mDeltaQueue.blockingPop(retval);
+        return retval;
+    }
+
+public:
 
 	//Returns client identifier
 	inline const std::string& getClientID() const {
@@ -241,13 +253,6 @@ public:
 	inline void addRequest(std::tr1::shared_ptr<TransferRequest> req) {
 		if(req != NULL) req->setClientID(mClientID);
 		mDeltaQueue.push(req);
-	}
-
-	//Returns an item from the pool. Blocks if pool is empty.
-	inline std::tr1::shared_ptr<TransferRequest> getRequest() {
-		std::tr1::shared_ptr<TransferRequest> retval;
-		mDeltaQueue.blockingPop(retval);
-		return retval;
 	}
 
 };
