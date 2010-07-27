@@ -993,6 +993,10 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
         }
 
         // Finally, with all of this rounds packets report, prepare for next round
+        if (packetPriorities.empty()) {
+            SILOG(analysis,error,"Empty packet priorities\n");
+            break;
+        }
         round_base_id = packetPriorities.top();
         // We can stop when we had fewer than our max number of packets for the round
         if (packetPriorities.size() < round_max_packets)

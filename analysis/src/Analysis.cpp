@@ -160,7 +160,7 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
         PARSE_PBJ_RECORD(Trace::OSeg::ProcessedRequest);
     }
       else {
-        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)type_hint<<"\n";
+          SILOG(analysis, error,"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)type_hint<<"\n");
       }
 
     return evt;
