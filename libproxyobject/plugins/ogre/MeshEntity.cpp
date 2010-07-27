@@ -42,6 +42,7 @@
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
 #include <stdio.h>
+#include "meruCompat/SequentialWorkQueue.hpp"
 
 using namespace std;
 
@@ -312,11 +313,16 @@ Vector3f fixUp(int up, Vector3f v) {
     assert(false);
 }
 
+bool MeshEntity::createMeshWork(const Meshdata& md) {
+    createMesh(md);
+    return true;
+}
+
 void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
     int up = md.up_axis;
-    
+
     Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
     Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
     for(TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
@@ -415,7 +421,7 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
 
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
-        createMesh(md);
+        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
 
     return Task::EventResponse::del();
 }
@@ -427,15 +433,15 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
 
     // Special case for no dependent downloads
     if (mRemainingDownloads == 0) {
-        createMesh(md);
+        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
         return;
     }
 
     for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
-	
+
 	cout<<endl<<endl<<"something downloaded from transfer manager! "<<texURI<<endl<<endl<<endl;
-	
+
         /*mScene->mTransferManager->download(
             Transfer::URI(texURI),
             std::tr1::bind(
