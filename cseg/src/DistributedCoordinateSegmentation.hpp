@@ -37,6 +37,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/space/SegmentedRegion.hpp>
 #include "CSegContext.hpp"
@@ -50,12 +52,35 @@ namespace Sirikata {
 
 class ServerIDMap;
 
-
 typedef struct SegmentationChangeListener {
   char host[255];
   uint16 port;
 } SegmentationChangeListener;
 
+typedef boost::shared_ptr<tcp::socket> SocketPtr;
+typedef struct SocketContainer {
+  SocketContainer() {
+
+  }
+
+  SocketContainer(SocketPtr socket) {
+    mSocket = socket;
+  }
+  
+  size_t size() {
+    return 1;
+  }
+  
+  SocketPtr socket() {
+    return mSocket;
+  }
+  
+  SocketPtr mSocket;
+
+} SocketContainer;
+  
+typedef boost::shared_ptr<Sirikata::SizedThreadSafeQueue<SocketContainer> > SocketQueuePtr;
+  
 /** Distributed kd-tree based implementation of CoordinateSegmentation. */
 class DistributedCoordinateSegmentation : public PollingService {
 public:
@@ -123,7 +148,7 @@ private:
 
     /* Functions to contact another CSEG server, create sockets to them and/or forward calls to them.
        These should go away later when calls to CSEG no longer remain recursive. */    
-    boost::shared_ptr<tcp::socket> getSocketToCSEGServer(ServerID server_id);
+    
     ServerID callLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, const BoundingBox3f& boundingBox);
     void callLowerLevelCSEGServersForServerRegions(ServerID server_id, BoundingBoxList&);
     void sendLoadReportToLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, 
@@ -154,6 +179,11 @@ private:
 		   uint8* asyncBufferArray,
 		   const boost::system::error_code& ec,
 		   std::size_t bytes_transferred);
+     void asyncLLRead(boost::shared_ptr<tcp::socket> socket,
+              uint8* asyncBufferArray,
+              const boost::system::error_code& ec,
+              std::size_t bytes_transferred);
+
     uint32 readFromSocket(boost::shared_ptr<tcp::socket> socket,
 			  uint8** dataReceived, bool readTillEOF,
 			  uint8 bytesReceivedAlready=0);
@@ -172,8 +202,16 @@ private:
 
     boost::shared_mutex mCSEGReadWriteMutex;
 
+
+    
+
+    boost::shared_mutex _access;
+    std::map<ServerID, SocketQueuePtr > mLeasedSocketsToCSEGServers;
+
     friend class LoadBalancer;
-  
+
+    
+  SocketContainer getSocketToCSEGServer(ServerID server_id);
 }; // class CoordinateSegmentation
 
 } // namespace Sirikata
