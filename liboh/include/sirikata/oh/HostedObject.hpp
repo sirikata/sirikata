@@ -44,6 +44,8 @@
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
 
+#include <sirikata/core/transfer/URI.hpp>
+
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 
 namespace Sirikata {
@@ -310,7 +312,7 @@ public:
     void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, bool is_camera);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera = false);
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

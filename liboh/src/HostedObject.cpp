@@ -803,7 +803,7 @@ void HostedObject::connect(
 }
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server) {
-    ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), mIsCamera);
+    ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), URI(), mIsCamera);
     ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
     if (cam)
         cam->attach(String(), 0, 0);
@@ -952,7 +952,9 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
 
         SpaceObjectReference proximateID(space, ObjectReference(addition.object()));
         // FIXME use weak_ptr instead of raw
-        ProxyObjectPtr proxy_obj = createProxy(proximateID, false);
+        URI meshuri;
+        if (addition.has_mesh()) meshuri = URI(addition.mesh());
+        ProxyObjectPtr proxy_obj = createProxy(proximateID, meshuri, false);
 
         HO_LOG(debug,"Proximity addition: " << addition.object().toString() << " - mesh: " << (addition.has_mesh() ? addition.mesh() : "")); // Remove when properly handled
 
@@ -978,14 +980,22 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, bool is_camera) {
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const URI& meshuri, bool is_camera) {
     ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
     ProxyObjectPtr proxy_obj;
-    if (is_camera)
+    if (is_camera) {
         proxy_obj = ProxyObjectPtr(new ProxyCameraObject(proxy_manager.get(), objref, (ODP::Service*)this));
-    else
-        proxy_obj = ProxyObjectPtr(new ProxyMeshObject(proxy_manager.get(), objref, (ODP::Service*)this));
-    proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
+        proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
+    }
+    else {
+        ProxyMeshObjectPtr mesh_proxy_obj(new ProxyMeshObject(proxy_manager.get(), objref, (ODP::Service*)this));
+        proxy_obj = ProxyObjectPtr(mesh_proxy_obj);
+        // The call to createObject must occur before trying to do any other
+        // operations so that any listeners will be set up.
+        proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
+        if (meshuri)
+            mesh_proxy_obj->setMesh(meshuri);
+    }
     return proxy_obj;
 }
 

@@ -99,6 +99,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 
 };
 
+typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
+
 } // namespace Sirikata
 
 #endif
