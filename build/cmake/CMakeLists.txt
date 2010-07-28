@@ -1127,6 +1127,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SessionManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectFactory.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
@@ -1662,6 +1663,20 @@ ADD_PLUGIN_TARGET(monoscript
                     LIBRARIES ${MONO_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
 ENDIF()
+
+
+SET(LIBOH_PLUGIN_CSVFACTORY_DIR ${LIBOH_PLUGIN_DIR}/csvfactory)
+SET(LIBOH_PLUGIN_CSVFACTORY_SOURCES
+ ${LIBOH_PLUGIN_CSVFACTORY_DIR}/CSVObjectFactory.cpp
+ ${LIBOH_PLUGIN_CSVFACTORY_DIR}/PluginInterface.cpp
+    )
+ADD_PLUGIN_TARGET(csvfactory
+                    SOURCES ${LIBOH_PLUGIN_CSVFACTORY_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} csvfactory)
+
 
 SET(LIBPROXYOBJECT_PLUGIN_COLLADAMODELS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/collada)
 SET(LIBPROXYOBJECT_PLUGIN_COLLADAMODELS_SOURCES

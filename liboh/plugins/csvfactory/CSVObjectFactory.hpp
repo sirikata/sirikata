@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Options.hpp
+ *  CSVObjectFactory.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,29 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
-#define _SIRIKATA_CPPOH_OPTIONS_HPP_
+#ifndef _SIRIKATA_CSV_OBJECT_FACTORY_HPP_
+#define _SIRIKATA_CSV_OBJECT_FACTORY_HPP_
 
-#define OPT_OH_PLUGINS           "oh.plugins"
-
-#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
-#define STATS_SAMPLE_RATE    "stats.sample-rate"
-
-#define OPT_OH_OPTIONS           "objecthost"
-#define OPT_MAIN_SPACE           "mainspace"
-#define OPT_SPACEID_MAP          "spaceidmap"
-
-#define OPT_CDN_CONFIG           "cdnConfig"
-#define OPT_SIGFPE               "sigfpe"
-
-#define OPT_OBJECT_FACTORY       "object-factory"
-#define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
+#include <sirikata/oh/ObjectFactory.hpp>
 
 namespace Sirikata {
 
-void InitCPPOHOptions();
+/** CSVObjectFactory generates objects from an input CSV file. */
+class CSVObjectFactory : public ObjectFactory {
+public:
+    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
+    virtual ~CSVObjectFactory() {}
+
+    virtual void generate();
+private:
+    ObjectHostContext* mContext;
+    ObjectHost* mOH;
+    SpaceID mSpace;
+    String mFilename;
+};
 
 } // namespace Sirikata
 
-
-#endif //_SIRIKATA_CPPOH_OPTIONS_HPP_
+#endif //_SIRIKATA_CSV_OBJECT_FACTORY_HPP_

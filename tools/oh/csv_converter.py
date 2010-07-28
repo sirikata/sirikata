@@ -44,6 +44,7 @@ try:
     import time
     import uuid
     from urllib import unquote_plus
+    import shutil
 except:
     print "Missing library: ", sys.exc_info()[0],", not generating scene.db" 
     sys.exit(0);
@@ -347,13 +348,19 @@ if __name__=='__main__':
     except OSError:
         pass
 
-    print "converting:", csvfiles, "to:", sqlfile
-    conn = sqlite3.connect(sqlfile)
-    converter = CsvToSql(conn)
-    handles = []
-    for fname in csvfiles:
-        handles.append(open(fname))
-    converter.go(handles)
-    for han in handles:
-        han.close()
-    print "Generating scene: SUCCESS!"
+    csvfile = csvfiles[0]
+    print "converting:", csvfile, "to:", sqlfile
+    shutil.copy(csvfile, sqlfile)
+
+    # disabled in favor of using CSV directly
+    if False:
+        # Old SQL format
+        conn = sqlite3.connect(sqlfile)
+        converter = CsvToSql(conn)
+        handles = []
+        for fname in csvfiles:
+            handles.append(open(fname))
+        converter.go(handles)
+        for han in handles:
+            han.close()
+        print "Generating scene: SUCCESS!"

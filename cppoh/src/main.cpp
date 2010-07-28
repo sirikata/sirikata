@@ -52,8 +52,6 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
-#include <sirikata/core/persistence/ObjectStorage.hpp>
-#include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
 #include <Protocol_Persistence.pbj.hpp>
 #include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
@@ -73,6 +71,7 @@
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 
+#include <sirikata/oh/ObjectFactory.hpp>
 
 #ifdef __GNUC__
 #include <fenv.h>
@@ -153,21 +152,8 @@ int main (int argc, char** argv) {
         SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
         spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
     }
-    String localDbFile = GetOptionValue<String>(OPT_DB);
-    if (localDbFile.length()&&localDbFile[0]!='/'&&localDbFile[0]!='\\') {
-        FILE * fp=fopen(localDbFile.c_str(),"rb");
-        for (int i=0;i<4&&fp==NULL;++i) {
-            localDbFile="../"+localDbFile;
-            fp=fopen(localDbFile.c_str(),"rb");
-        }
-        if (fp) fclose(fp);
-        else localDbFile = GetOptionValue<String>(OPT_DB);
-    }
-    Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
-        .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
 
     ObjectHost *oh = new ObjectHost(ctx, spaceMap, workQueue, ios, "");
-    oh->registerService(Services::PERSISTENCE, database);
 
     // Add all the spaces to the ObjectHost.
     // FIXME we're adding all spaces and having them use the same ServerIDMap
@@ -271,14 +257,13 @@ int main (int argc, char** argv) {
         "",
         UUID::null());
 
-    HostedObjectPtr obj2 = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), false);
-    obj2->init();
-    obj2->connect(
-        mainSpace,
-        Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
-        BoundingSphere3f(Vector3f::nil(), 1.f),
-        "http://www.sirikata.com/content/assets/cube.dae",
-        UUID::null());
+    String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
+    String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
+    ObjectFactory* obj_factory = NULL;
+    if (!objfactory_type.empty()) {
+        obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
+        obj_factory->generate();
+    }
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
@@ -289,7 +274,6 @@ int main (int argc, char** argv) {
     ctx->run(1);
 
 
-    obj2.reset();
     obj.reset();
 
     ctx->cleanup();
@@ -297,9 +281,6 @@ int main (int argc, char** argv) {
 
     proxy_manager.reset();
     delete oh;
-
-    // delete after OH in case objects want to do last-minute state flushes
-    delete database;
 
     destroyTransferManager(tm);
     delete eventManager;

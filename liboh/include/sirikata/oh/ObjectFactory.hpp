@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Options.hpp
+ *  ObjectFactory.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,29 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
-#define _SIRIKATA_CPPOH_OPTIONS_HPP_
+#ifndef _SIRIKATA_LIBOH_OBJECT_FACTORY_HPP_
+#define _SIRIKATA_LIBOH_OBJECT_FACTORY_HPP_
 
-#define OPT_OH_PLUGINS           "oh.plugins"
-
-#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
-#define STATS_SAMPLE_RATE    "stats.sample-rate"
-
-#define OPT_OH_OPTIONS           "objecthost"
-#define OPT_MAIN_SPACE           "mainspace"
-#define OPT_SPACEID_MAP          "spaceidmap"
-
-#define OPT_CDN_CONFIG           "cdnConfig"
-#define OPT_SIGFPE               "sigfpe"
-
-#define OPT_OBJECT_FACTORY       "object-factory"
-#define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
+#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/core/util/SpaceID.hpp>
 
 namespace Sirikata {
 
-void InitCPPOHOptions();
+/** ObjectFactories create objects and connect them to a space.  They are a
+ *  convenient way to load or automatically generate scenes.
+ */
+class SIRIKATA_OH_EXPORT ObjectFactory {
+  public:
+    virtual ~ObjectFactory() {}
+
+    /** Generate objects for the scene and connect them to the space. */
+    virtual void generate() = 0;
+};
+
+/** ObjectFactoryFactory creates ObjectFactories.  To create an ObjectFactory,
+ *  the user must provide an ObjectHostContext, the SpaceID of the space to
+ *  generate objects for, and a String containing additional arguments.
+ */
+class SIRIKATA_OH_EXPORT ObjectFactoryFactory
+    : public AutoSingleton<ObjectFactoryFactory>,
+      public Factory4<ObjectFactory*, ObjectHostContext*, ObjectHost*, const SpaceID&, const String&>
+{
+public:
+    static ObjectFactoryFactory& getSingleton();
+    static void destroy();
+};
 
 } // namespace Sirikata
 
-
-#endif //_SIRIKATA_CPPOH_OPTIONS_HPP_
+#endif //_SIRIKATA_LIBOH_OBJECT_FACTORY_HPP_

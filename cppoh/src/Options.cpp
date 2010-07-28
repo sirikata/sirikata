@@ -41,7 +41,7 @@ void InitCPPOHOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         // Note: we load *many* more plugins for cppoh by default since it is
         // also the client.
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,ogregraphics,colladamodels",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,ogregraphics,colladamodels,csvfactory",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
 
@@ -60,7 +60,9 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_CDN_CONFIG,"cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."))
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
-        .addOption(new OptionValue(OPT_DB,"scene.db",OptionValueType<String>(),"Persistence database"))
+
+        .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
+        .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
 
         ;
 }
