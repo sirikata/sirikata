@@ -59,9 +59,7 @@ bool read_record(std::istream& is, uint16* type_hint_out, std::string* payload_o
 }
 
 TimedMotionVector3f extractTimedMotionVector(const Sirikata::Trace::ITimedMotionVector& tmv) {
-    TimedMotionVector3f result;
-    result.update( tmv.t(), tmv.position(), tmv.velocity() );
-    return result;
+    return TimedMotionVector3f( tmv.t(), MotionVector3f(tmv.position(), tmv.velocity()) );
 }
 
 Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID& trace_server_id) {
