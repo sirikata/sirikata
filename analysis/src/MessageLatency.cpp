@@ -923,7 +923,7 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
             while(is) {
                 uint16 type_hint;
                 std::string raw_evt;
-                read_record(is, &type_hint, &raw_evt);
+                if (!read_record(is, &type_hint, &raw_evt)) break;
                 Event* evt = Event::parse(type_hint, raw_evt, server_id);
                 if (evt == NULL)
                     break;
@@ -993,6 +993,10 @@ void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Message
         }
 
         // Finally, with all of this rounds packets report, prepare for next round
+        if (packetPriorities.empty()) {
+            SILOG(analysis,error,"Empty packet priorities\n");
+            break;
+        }
         round_base_id = packetPriorities.top();
         // We can stop when we had fewer than our max number of packets for the round
         if (packetPriorities.size() < round_max_packets)
