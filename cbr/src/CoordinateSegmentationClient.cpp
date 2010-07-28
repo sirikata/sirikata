@@ -304,7 +304,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   
   assert(response->type == LOOKUP_RESPONSE);
 
-  ServerID retval = response->serverID;
+  ServerID retval = response->serverID;  
 
   if (dataReceived != NULL) {
     free(dataReceived);
@@ -364,7 +364,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
       if (serverRegionListLength == INT_MAX && bytesReceived >= sizeof(uint8) + sizeof(uint32)) {
 	ServerRegionResponseMessage* msg = (ServerRegionResponseMessage*) dataReceived;
 	serverRegionListLength = msg->listLength; 
-      }      
+      }
 
       if (error == boost::asio::error::eof ||
 	  bytesReceived >= sizeof(uint8) + sizeof(uint32) + serverRegionListLength*sizeof(SerializedBBox))
@@ -400,11 +400,12 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   free(dataReceived);
   free(response);
 
-  //printf("serverRegion for %d returned %d boxes\n", server, boundingBoxList.size());
-  /*for (int i=0 ; i<boundingBoxList.size(); i++) {
-    //std::cout << server << " has bounding box : " << boundingBoxList[i] << "\n";
-  }*/
-  //memdump1((uint8*) response, bytesReceived);
+  /*printf("serverRegion for %d returned %d boxes\n", server, boundingBoxList.size());
+  for (int i=0 ; i<boundingBoxList.size(); i++) {
+    std::cout << server << " has bounding box : " << boundingBoxList[i] << "\n";
+  }
+  fflush(stdout);
+  memdump1((uint8*) response, bytesReceived);*/
 
   mServerRegionCache[server] = boundingBoxList;
  
@@ -535,7 +536,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
       else if (error) {
       	std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in numservers\n";
 	
-	      return mAvailableServersCount;
+        return mAvailableServersCount;
       }
   }
 
