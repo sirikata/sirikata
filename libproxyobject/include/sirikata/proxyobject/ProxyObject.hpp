@@ -36,13 +36,14 @@
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "ProxyObjectListener.hpp"
-#include "ProxyObject.hpp"
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include "PositionListener.hpp"
 #include <sirikata/core/util/QueryTracker.hpp>
 
 #include <sirikata/core/odp/Service.hpp>
 #include <sirikata/core/odp/Port.hpp>
+
+#include "VWObject.hpp"
 
 namespace Sirikata {
 
@@ -86,7 +87,7 @@ private:
     SpaceObjectReference mParentId;
     LocationAuthority* mLocationAuthority;
 
-    ODP::Service* mODPService;
+    VWObjectPtr mParent;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
                              // this ProxyObject represents
 
@@ -99,10 +100,10 @@ public:
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
         @param man  The ProxyManager controlling this object.
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
-        \param odp_service the ODP::Service this ProxyObject can use to send
-               messages, i.e. its parent for messaging purposes
+        \param vwobj the owning VWObject, allowing the ProxyObject to interact
+                    with the space
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service);
+    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj);
     virtual ~ProxyObject();
 
     // MCB: default to true for legacy proxies. FIX ME when all converted.
@@ -116,7 +117,7 @@ public:
 
     ODP::Service* odp() const {
         DEPRECATED(ProxyObject);
-        return mODPService;
+        return mParent.get();
     }
 
     /// Send a message.  FIXME this is temporary to transition from QueryTracker.

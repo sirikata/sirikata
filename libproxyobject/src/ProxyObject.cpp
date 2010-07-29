@@ -43,7 +43,7 @@
 
 namespace Sirikata {
 
-ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service)
+ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
         : mID(id),
         mManager(man),
         mLocation(Duration::seconds(.1),
@@ -53,11 +53,11 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::
                   UpdateNeeded()),
         mParentId(SpaceObjectReference::null()),
           mLocationAuthority(0),
-          mODPService(odp_service)
+          mParent(vwobj)
 {
-    assert(mODPService != NULL);
+    assert(mParent);
 
-    mDefaultPort = mODPService->bindODPPort(id.space());
+    mDefaultPort = mParent->bindODPPort(id.space());
 }
 
 ProxyObject::~ProxyObject() {

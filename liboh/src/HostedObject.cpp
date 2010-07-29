@@ -984,11 +984,11 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
     ProxyObjectPtr proxy_obj;
     if (is_camera) {
-        proxy_obj = ProxyObjectPtr(new ProxyCameraObject(proxy_manager.get(), objref, (ODP::Service*)this));
+        proxy_obj = ProxyObjectPtr(new ProxyCameraObject(proxy_manager.get(), objref, getSharedPtr()));
         proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
     }
     else {
-        ProxyMeshObjectPtr mesh_proxy_obj(new ProxyMeshObject(proxy_manager.get(), objref, (ODP::Service*)this));
+        ProxyMeshObjectPtr mesh_proxy_obj(new ProxyMeshObject(proxy_manager.get(), objref, getSharedPtr()));
         proxy_obj = ProxyObjectPtr(mesh_proxy_obj);
         // The call to createObject must occur before trying to do any other
         // operations so that any listeners will be set up.
@@ -1311,6 +1311,47 @@ ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* par
 bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
     assert(source_ep.space() == dest_ep.space());
     return mObjectHost->send(getSharedPtr(), source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(), dest_ep.port(), payload);
+}
+
+// Movement Interface
+
+void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) {
+    sendLocUpdateRequest(space, &loc, NULL, NULL);
+}
+
+void HostedObject::requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) {
+    sendLocUpdateRequest(space, NULL, &bounds, NULL);
+}
+
+void HostedObject::requestMeshUpdate(const SpaceID& space, const String& mesh) {
+    sendLocUpdateRequest(space, NULL, NULL, &mesh);
+}
+
+void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const BoundingSphere3f* const bounds, const String* const mesh) {
+    // Generate and send an update to Loc
+    Protocol::Loc::Container container;
+    Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
+    if (loc != NULL) {
+        Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
+        requested_loc.set_t(loc->updateTime());
+        requested_loc.set_position(loc->position());
+        requested_loc.set_velocity(loc->velocity());
+    }
+    if (bounds != NULL)
+        loc_request.set_bounds(*bounds);
+    if (mesh != NULL)
+        loc_request.set_mesh(*mesh);
+
+    std::string payload = serializePBJMessage(container);
+
+    boost::shared_ptr<Stream<UUID> > spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
+        boost::shared_ptr<Connection<UUID> > conn = spaceStream->connection().lock();
+        assert(conn);
+
+        conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
+            OBJECT_PORT_LOCATION, NULL);
+    }
 }
 
 }

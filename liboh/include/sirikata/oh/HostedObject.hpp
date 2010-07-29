@@ -300,6 +300,11 @@ public:
     virtual ODP::Port* bindODPPort(SpaceID space);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
     virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
+
+    // Movement Interface
+    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+    virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
+    virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
@@ -310,6 +315,9 @@ public:
 
     // Helper for creating the correct type of proxy
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera = false);
+
+    // Helper for constructing and sending location update
+    void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const BoundingSphere3f* const bounds, const String* const mesh);
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

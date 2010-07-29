@@ -43,7 +43,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyCameraObject
   : public CameraProvider,
     public ProxyObject {
 public:
-    ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service);
+    ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj);
     virtual void destroy(const TemporalValue<Location>::Time& when);
     void attach(const String&renderTargetName,
                 uint32 width,

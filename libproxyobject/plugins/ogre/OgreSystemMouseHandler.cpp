@@ -401,6 +401,7 @@ private:
     }
 
     Entity *doCloneObject(Entity *ent, const ProxyObjectPtr &parentPtr, Time now) {
+/*
         SpaceObjectReference newId = SpaceObjectReference(ent->id().space(), ObjectReference(UUID::random()));
         Location loc = ent->getProxy().globalLocation(now);
         Location localLoc = ent->getProxy().extrapolateLocation(now);
@@ -456,6 +457,7 @@ private:
             }
         }
         return mParent->getEntity(newId);
+*/
     }
 
     void cloneObjectsAction() {
@@ -516,7 +518,7 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
+        //proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         Entity *newParentEntity = mParent->getEntity(newParentId);
         newParentEntity->getProxy().resetLocation(now, totalLocation);
 
@@ -634,6 +636,7 @@ private:
     }
 
     void LOCAL_createWebviewAction() {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -668,6 +671,7 @@ private:
         if (ent) {
             ent->setSelected(true);
         }
+*/
     }
 
     void createWebviewAction() {
@@ -756,6 +760,7 @@ private:
     }
 
     std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -779,7 +784,7 @@ private:
             li.setLightFalloff(1,0,0.03);
             li.setLightSpotlightCone(30,40,1);
             li.setCastsShadow(true);
-            /* set li according to some sample light in the scene file! */
+            // set li according to some sample light in the scene file!
             newLightObject->update(li);
         }
 
@@ -799,6 +804,8 @@ private:
             ent->setSelected(true);
         }
         return newLightObject;
+    */
+        return std::tr1::shared_ptr<ProxyLightObject>();
     }
     void createLightAction() {
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -813,6 +820,7 @@ private:
 		}
 		return camProxy;
 	}
+
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;

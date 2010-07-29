@@ -33,18 +33,19 @@
 #ifndef _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 #define _SIRIKATA_PROXYOBJECT_VWOBJECT_HPP_
 
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
 namespace Sirikata {
 
 class QueryTracker;
 
-/**
- * An interface that all virtual world objects that wish to relate to ProxyObjects should provide
- * These objects must be able to keep data on outstanding queries using the QueryTracker
- * They must be able to get a ProxyManager per space to which they are connected:
- *   In general any camera-like VWObject will be a ProxyManager for ProxyObjects it makes in a space
- * The HostedObject must be able to track reported interest in a given object based on that object's query id
+/** VWObject is the basic interface that must be provided by virtual world
+ *  objects. This interface gives ProxyObjects, related classes, and
+ *  ProxyObject-based simulations (such as graphical display) the most basic
+ *  access to the functionality of their parent virtual world object, such as
+ *  movement and messaging.
  */
 class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>, public ODP::Service {
 public:
@@ -58,6 +59,12 @@ public:
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port) = 0;
     virtual ODP::Port* bindODPPort(SpaceID space) = 0;
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb) = 0;
+    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb) = 0;
+
+    // Movement Interface
+    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) = 0;
+    virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) = 0;
+    virtual void requestMeshUpdate(const SpaceID& space, const String& mesh) = 0;
 }; // class VWObject
 
 typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
