@@ -824,17 +824,32 @@ private:
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
 
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        SILOG(ogre,fatal,"IDS " << cam_vwobj->id(space) << " -- " << cam->getObjectReference());
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-        Protocol::ObjLoc rloc;
-        rloc.set_velocity((orient * dir) * amount * WORLD_SCALE * .5);
-        rloc.set_angular_speed(0);
-        cam->requestLocation(now, rloc);
+
+        // Request updates from spcae
+        TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
+        SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
+        cam_vwobj->requestLocationUpdate(space, newloc);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setLocation(newloc);
     }
+
     void rotateAction(Vector3f about, float amount) {
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
@@ -848,7 +863,7 @@ private:
         Protocol::ObjLoc rloc;
         rloc.set_rotational_axis(about);
         rloc.set_angular_speed(amount);
-        cam->requestLocation(now, rloc);
+        //cam->requestLocation(now, rloc);
     }
 
     void stableRotateAction(float dir, float amount) {
@@ -871,7 +886,7 @@ private:
         Protocol::ObjLoc rloc;
         rloc.set_rotational_axis(raxis);
         rloc.set_angular_speed(dir*amount);
-        cam->requestLocation(now, rloc);
+        //cam->requestLocation(now, rloc);
     }
 
     void setDragModeAction(const String& modename) {
@@ -1318,7 +1333,7 @@ private:
         loc.setVelocity(Vector3f(0,0,0));
         loc.setAngularSpeed(0);
 
-        cam->setLocation(now, loc);
+        //cam->setLocation(now, loc);
     }
 
     void cameraPathSetToKeyFrame(uint32 idx) {

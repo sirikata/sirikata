@@ -156,7 +156,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
     case PhysicalParameters::Disabled:
         DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: Disabled" << endl);
         mActive = false;
-        mMeshptr->setLocationAuthority(0);
         mDynamic = false;
         break;
     case PhysicalParameters::Static:
@@ -184,7 +183,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         if (mDynamic) {
             DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: disabling dynamic&non-local" << endl);
             mActive = false;
-            mMeshptr->setLocationAuthority(0);
             return;
         }
     }
@@ -195,7 +193,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         po.o = mMeshptr->getOrientation();
         Vector3f size = mMeshptr->getScale();
         system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, pp.hull, size.x, size.y, size.z);
-        mMeshptr->setLocationAuthority(this);
     }
 }
 
@@ -524,7 +521,7 @@ void BulletSystem::poll() {
                     Location loc (objects[i]->mMeshptr->globalLocation(remoteNow));
                     loc.setPosition(po.p);
                     loc.setOrientation(po.o);
-                    objects[i]->mMeshptr->setLocation(remoteNow, loc);
+                    //objects[i]->mMeshptr->setLocation(remoteNow, loc);
                 }
             }
 

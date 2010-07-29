@@ -51,8 +51,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
                   Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                            Vector3f(0,0,0),Vector3f(0,1,0),0),
                   UpdateNeeded()),
-        mParentId(SpaceObjectReference::null()),
-          mLocationAuthority(0),
+          mParentId(id.space(), ObjectReference::null()),
           mParent(vwobj)
 {
     assert(mParent);
@@ -107,45 +106,13 @@ bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference mess
     return mDefaultPort->send(dest, message);
 }
 
-void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,
-                              const Location&location) {
-    mLocation.updateValue(timeStamp,
-                          location);
+void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
+    TemporalValue<Location>::Time timeStamp = reqloc.updateTime();
+    Location location(Vector3d(reqloc.position()), Quaternion::identity(), reqloc.velocity(), Vector3f(0,0,0), 0);
+    mLocation.updateValue(timeStamp, location);
     PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
 }
 
-void ProxyObject::updateLocationWithObjLoc(
-        Location & loc,
-        const Protocol::ObjLoc& reqLoc)
-{
-    if (reqLoc.has_position()) {
-        loc.setPosition(reqLoc.position());
-    }
-    if (reqLoc.has_orientation()) {
-        loc.setOrientation(reqLoc.orientation());
-    }
-    if (reqLoc.has_velocity()) {
-        loc.setVelocity(reqLoc.velocity());
-    }
-    if (reqLoc.has_rotational_axis()) {
-        loc.setAxisOfRotation(reqLoc.rotational_axis());
-    }
-    if (reqLoc.has_angular_speed()) {
-        loc.setAngularSpeed(reqLoc.angular_speed());
-    }
-}
-
-void ProxyObject::requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc) {
-    if (mLocationAuthority) {
-        mLocationAuthority->requestLocation(timeStamp, reqLoc);
-    }
-    else {
-        Location loc;
-        loc = extrapolateLocation(timeStamp);
-        updateLocationWithObjLoc(loc, reqLoc);
-        setLocation(timeStamp, loc);
-    }
-}
 void ProxyObject::resetLocation(TemporalValue<Location>::Time timeStamp,
                                 const Location&location) {
     mLocation.resetValue(timeStamp,
@@ -230,7 +197,7 @@ void ProxyObject::unsetParent(TemporalValue<Location>::Time timeStamp,
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {
-    ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject( mParent->id(mID.space()) ));
+    ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject(mParentId));
     return parentProxy;
 }
 

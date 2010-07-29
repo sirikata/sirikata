@@ -104,7 +104,7 @@ public:
     void locationWasSet(const Protocol::ObjLoc &msg) {
         Time timestamp = msg.timestamp();
         Location loc = mUpdatedLocation.extrapolate(timestamp);
-        ProxyObject::updateLocationWithObjLoc(loc, msg);
+        //ProxyObject::updateLocationWithObjLoc(loc, msg);
         loc.setVelocity(Vector3f::nil());
         loc.setAngularSpeed(0);
         mUpdatedLocation.updateValue(timestamp, loc);
@@ -142,6 +142,7 @@ public:
     PerSpaceData(HostedObject* _parent, const SpaceID& _space)
      : parent(_parent),
        space(_space),
+       object(ObjectReference::null()),
        mUpdatedLocation(
             Duration::seconds(.1),
             TemporalValue<Location>::Time::null(),
@@ -151,16 +152,12 @@ public:
        rpcPort(NULL),
        persistencePort(NULL),
        tracker(NULL),
-       proxyManager(new ObjectHostProxyManager())
+       proxyManager(new ObjectHostProxyManager(_space))
     {
     }
 
-    void setObject(const ObjectReference& obj) {
-        object = obj;
-    }
-
     void initializeAs(ProxyObjectPtr proxyobj) {
-        assert(proxyobj->getObjectReference().object() == object);
+        object = proxyobj->getObjectReference().object();
 
         mProxyObject = proxyobj;
         rpcPort = parent->bindODPPort(space, ODP::PortID((uint32)Services::RPC));
@@ -805,7 +802,15 @@ void HostedObject::connect(
 }
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server) {
+    // Create
     ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), URI(), mIsCamera);
+
+    // Use to initialize PerSpaceData
+    SpaceDataMap::iterator psd_it = mSpaceData->find(space);
+    PerSpaceData& psd = psd_it->second;
+    initializePerSpaceData(psd, self_proxy);
+
+    // Special case for camera
     ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
     if (cam)
         cam->attach(String(), 0, 0);
@@ -930,15 +935,15 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
-        HO_LOG(debug,"Loc update for " << update.object().toString()); // Remove when properly handled
-
         CONTEXT_OHTRACE(objectLoc,
             getUUID(),
             update.object(),
             loc
         );
 
-        // FIXME do something with the data
+        ProxyManagerPtr proxy_manager = getProxyManager(space);
+        ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space, ObjectReference(update.object())));
+        proxy_obj->setLocation(loc);
     }
 }
 

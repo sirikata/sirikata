@@ -228,7 +228,7 @@ public:
                 SILOG(input,debug,"moveSelection: OLD " << toSet.getPosition());
                 toSet.setPosition(mPositions[i] + toMove);
                 SILOG(input,debug,"moveSelection: NEW " << toSet.getPosition());
-                obj->setLocation(now, toSet);
+                //obj->setLocation(now, toSet);
             }
         }
     }

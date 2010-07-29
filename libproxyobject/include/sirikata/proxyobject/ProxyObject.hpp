@@ -85,7 +85,6 @@ private:
 
     Extrapolator mLocation;
     SpaceObjectReference mParentId;
-    LocationAuthority* mLocationAuthority;
 
     VWObjectPtr mParent;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
@@ -165,21 +164,7 @@ public:
 
     /** Sets the location for this update. Note: This does not tell the
         Space that we have moved, but it is the first step in moving a local object. */
-    void setLocation(TemporalValue<Location>::Time timeStamp,
-                             const Location&location);
-
-    static void updateLocationWithObjLoc(
-        Location&location,
-        const Protocol::ObjLoc& reqLoc);
-
-    /** requests a new location for this object.  May involve physics
-    or other authority to actually move object */
-    void requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc);
-
-    /** set current authority */
-    void setLocationAuthority(LocationAuthority* auth) {
-        mLocationAuthority = auth;
-    }
+    void setLocation(const TimedMotionVector3f& reqloc);
 
     /** @see setLocation. This disables interpolation from the last update. */
     void resetLocation(TemporalValue<Location>::Time timeStamp,

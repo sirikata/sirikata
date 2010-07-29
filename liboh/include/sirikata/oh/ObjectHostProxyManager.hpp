@@ -64,7 +64,11 @@ public:
     const TimeOffsetManager* getTimeOffsetManager()const{
         return &mTimeOffsetManager;
     }
-	~ObjectHostProxyManager();
+    ObjectHostProxyManager(const SpaceID& space)
+        : mSpaceID(space)
+    {}
+
+    ~ObjectHostProxyManager();
     void initialize();
     void destroy();
 
