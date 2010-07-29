@@ -90,7 +90,6 @@ private:
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
                              // this ProxyObject represents
 
-    bool mLocal;
 protected:
     /// Notification that the Parent has been destroyed.
     virtual void destroyed(const TemporalValue<Location>::Time& when);
@@ -105,11 +104,6 @@ public:
     */
     ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service);
     virtual ~ProxyObject();
-
-    void setLocal(bool isLocal);
-    bool isLocal() {
-        return mLocal;
-    }
 
     // MCB: default to true for legacy proxies. FIX ME when all converted.
     virtual bool hasModelObject () const { return true; }

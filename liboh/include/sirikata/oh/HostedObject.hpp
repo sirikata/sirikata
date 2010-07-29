@@ -286,9 +286,6 @@ public:
 
   public:
 
-    bool isLocal(const SpaceObjectReference&space)const;
-    void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
-    void addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId);
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }

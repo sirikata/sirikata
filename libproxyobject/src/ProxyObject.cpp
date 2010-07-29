@@ -57,17 +57,11 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, ODP::
 {
     assert(mODPService != NULL);
 
-    mLocal = true;
-
     mDefaultPort = mODPService->bindODPPort(id.space());
 }
 
 ProxyObject::~ProxyObject() {
     delete mDefaultPort;
-}
-
-void ProxyObject::setLocal(bool loc) {
-    mLocal = loc;
 }
 
 void ProxyObject::destroy(const TemporalValue<Location>::Time& when) {

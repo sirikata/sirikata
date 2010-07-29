@@ -181,7 +181,7 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         break;
     }
     if (mMeshptr) {
-        if (mDynamic && (!mMeshptr->isLocal()) ) {      /// for now, physics ignores dynamic objects on other hosts
+        if (mDynamic) {
             DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: disabling dynamic&non-local" << endl);
             mActive = false;
             mMeshptr->setLocationAuthority(0);

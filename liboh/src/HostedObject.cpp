@@ -1027,7 +1027,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     mesh = co.mesh();
                 }
                 if (co.has_physical()) {
-                    parsePhysicalParameters(phys, co.physical());
+                    //parsePhysicalParameters(phys, co.physical());
                 }
                 if (co.has_light_info()) {
                     pLight=&light;
@@ -1109,7 +1109,6 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
     std::ostringstream printstr;
     printstr<<"\t";
     ProxyObjectPtr thisObj = getProxy(msg.source_space());
-    VWObject::processRPC(msg,name,args,response);
     if (name == "LocRequest") {
         LocRequest query;
         printstr<<"LocRequest: ";
@@ -1148,7 +1147,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         setloc.ParseFromArray(args.data(), args.length());
         if (thisObj) {
             printstr<<setloc.position();
-            applyPositionUpdate(thisObj, setloc, false);
+            //applyPositionUpdate(thisObj, setloc, false);
         }
     }
     else if (name == "AddObject") {
@@ -1157,7 +1156,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         setloc.ParseFromArray(args.data(), args.length());
         if (thisObj) {
             printstr<<setloc.position();
-            applyPositionUpdate(thisObj, setloc, false);
+            //applyPositionUpdate(thisObj, setloc, false);
         }
     }
     else if (name == "DelObj") {
@@ -1271,53 +1270,6 @@ const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
     }
     return nil;
 }
-
-bool HostedObject::isLocal(const SpaceObjectReference&objref) const {
-    return false;
-}
-
-
-void HostedObject::removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId) {
-    NOT_IMPLEMENTED(ho);
-/**
-    SpaceID space = proximateObjectId.space();
-    SpaceDataMap::iterator where = mSpaceData->find(space);
-    if (where !=mSpaceData->end()) {
-        ProxyManager* proxyMgr=where->second.mSpaceConnection.getTopLevelStream().get();
-        PerSpaceData::ProxQueryMap::iterator iter = where->second.mProxQueryMap.find(query_id);
-        if (iter != where->second.mProxQueryMap.end()) {
-            std::set<ObjectReference>::iterator proxyiter = iter->second.find(proximateObjectId.object());
-            assert (proxyiter != iter->second.end());
-            if (proxyiter != iter->second.end()) {
-                iter->second.erase(proxyiter);
-                //FIXME slow: iterate through all outstanding queries for this object to see if others still refer to this
-                bool otherCopies=false;
-                for (PerSpaceData::ProxQueryMap::const_iterator i= where->second.mProxQueryMap.begin(),
-                         ie=where->second.mProxQueryMap.end();
-                     i!=ie;
-                     ++i) {
-                    if (i->second.find(proximateObjectId.object())!=i->second.end()) {
-                        otherCopies=true;
-                        break;
-                    }
-                }
-                if (!otherCopies) {
-                    proxyMgr->destroyObject(proxyObj, this->getTracker(space));
-                }
-            }
-        }
-    }
-*/
-}
-
-void HostedObject::addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId) {
-    SpaceDataMap::iterator where = mSpaceData->find(proximateObjectId.space());
-    if (where !=mSpaceData->end()) {
-        where->second.mProxQueryMap[query_id].insert(proximateObjectId.object());
-    }
-}
-
-
 
 // ODP::Service Interface
 ODP::Port* HostedObject::bindODPPort(SpaceID space, ODP::PortID port) {
