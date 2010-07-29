@@ -156,8 +156,6 @@ ModelDependencyTask::~ModelDependencyTask()
 
 void ModelDependencyTask::operator()()
 {
-  cout<<"MODEL DEPENDENCY TASK ()()()()"<<endl<<endl;
-  
   SharedResourcePtr resourcePtr = mResource.lock();
   if (!resourcePtr) {
     finish(false);
@@ -168,7 +166,7 @@ void ModelDependencyTask::operator()()
     GraphicsResourceManager *grm = GraphicsResourceManager::getSingletonPtr();
 
     MemoryBuffer::iterator itr, iend;
-    
+
     for (itr = mBuffer.begin(), iend = mBuffer.end() - 7; itr != iend; ++itr) {
       if (*itr == 'm'
        && (*(itr + 1)) == 'e'
@@ -177,9 +175,8 @@ void ModelDependencyTask::operator()()
        && (*(itr + 4)) == ':'
        && (*(itr + 5)) == '/'
        && (*(itr + 6)) == '/') {
-	cout<<*itr;
         String matDep = "";
-		
+
         while (itr != iend + 4) {
           if (*itr == '.' && (*(itr + 1) == 'o')  && (*(itr + 2) == 's')) {
             matDep += ".os";

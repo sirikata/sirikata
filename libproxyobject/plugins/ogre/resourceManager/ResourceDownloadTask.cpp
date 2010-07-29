@@ -96,7 +96,6 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> requ
 {
   if (response != NULL) {
 
-    cout<<"DOUBLE YAYYYYYYYYYYYYYYYYYYYYYYYYY downloaded chunk from "<<mHash.toString()<<endl<<endl;
 
     SparseData data = SparseData();
     data.addValidData(response);
@@ -106,7 +105,7 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> requ
   }
   else {
     finish(false);
-    cout<<"failed chunk download from "<<mHash.toString()<<endl<<endl;
+    cout<<"Failed chunk download"<<endl;
   }
 }
 
@@ -116,11 +115,6 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
 
   if (response != NULL) {
 
-    cout<<"YAYYYYYYYYYYYYYYYYYYYYYYYYYY downloaded metadata from "<<mHash.toString()<<endl;
-    cout<<"predicted size: "<<response->getSize()<<endl<<endl;
-    cout<<response->getSize()<<endl;
-
-
     const Range *range = new Range(true);
     const Chunk *chunk = new Chunk(mHash.fingerprint(), *range);
     const RemoteFileMetadata metadata = *response;
@@ -128,33 +122,31 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
     TransferRequestPtr req(new Transfer::ChunkRequest(mHash.uri(), metadata, *chunk, 1.0,
 						    std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
-    TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).mTransferPool;
+    TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
     pool->addRequest(req);
 
   }
   else {
     finish(false);
-    cout<<"failed metadata download from "<<mHash.toString()<<endl<<endl;
+    cout<<"failed metadata download"<<endl;
   }
  }
 
 void ResourceDownloadTask::operator()()
 {
-    /* mStarted = true;
-  mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
+ mStarted = true;
+ /* mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
        std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
-       mRange);
+       mRange);*/
 
-       cout<<"about to start downloading something "<<mHash.uri()<<endl<<endl;*/
 
-/* TransferRequestPtr req(
+ TransferRequestPtr req(
                 new MetadataRequest(mHash.uri(), 1, std::tr1::bind(
                 &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
-  TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).mTransferPool;
+  TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
 
   pool->addRequest(req);
 
-  cout<<endl<<"starting meta download from "<<mHash.toString()<<endl<<endl;*/
 }
 }

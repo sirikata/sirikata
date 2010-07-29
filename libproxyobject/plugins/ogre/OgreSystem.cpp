@@ -728,7 +728,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
         }
-        cout<<"If & else if used in ogresystem.cpp!!!"<<endl<<endl;
     }
     if (!created) {
         std::tr1::shared_ptr<ProxyObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyObject>(p);

@@ -170,7 +170,6 @@ public:
 		  mUniqueID(MetadataRequest::mUniqueID + chunk.getHash().convertToHexString()),
 		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
 		  mCallback(cb) {
-	    cout<<"made chunk request?"<<endl;
 	}
 
 	inline const RemoteFileMetadata& getMetadata() {
