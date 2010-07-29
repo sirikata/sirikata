@@ -338,7 +338,6 @@ private:
   static void releaseChannel(uint16 channel) {
     assert(channel > 0);
 
-    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
     sAvailableChannels.set(channel, 0);
   }
 
