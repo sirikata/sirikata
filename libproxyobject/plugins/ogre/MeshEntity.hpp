@@ -75,6 +75,9 @@ private:
 
     void fixTextures();
 
+    // Wrapper for createMesh which allows us to use a WorkQueue
+    bool createMeshWork(const Meshdata& md);
+
     void createMesh(const Meshdata& md);
 public:
     ProxyMeshObject &getProxy() const {

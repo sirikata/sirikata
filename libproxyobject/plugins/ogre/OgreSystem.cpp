@@ -66,6 +66,9 @@ using Meru::SequentialWorkQueue;
 using Meru::MaterialScriptManager;
 
 #include <boost/filesystem.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include "WebView.hpp"
@@ -725,6 +728,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
         }
+        cout<<"If & else if used in ogresystem.cpp!!!"<<endl<<endl;
     }
     if (!created) {
         std::tr1::shared_ptr<ProxyObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyObject>(p);

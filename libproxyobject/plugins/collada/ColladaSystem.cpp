@@ -40,7 +40,6 @@
 
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 //#include <options/Options.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 
 // OpenCOLLADA headers
 
@@ -49,6 +48,12 @@
 
 
 #include <iostream>
+#include <fstream>
+
+
+using namespace std;
+using namespace Sirikata;
+using namespace Sirikata::Transfer;
 
 namespace Sirikata { namespace Models {
 
@@ -57,6 +62,9 @@ ColladaSystem::ColladaSystem ()
 {
     assert((std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl,true));
 
+    mTransferMediator = &(TransferMediator::getSingleton());    
+  
+    mTransferPool = mTransferMediator->registerClient("ColladaGraphics");
 }
 
 ColladaSystem::~ColladaSystem ()
@@ -67,10 +75,61 @@ ColladaSystem::~ColladaSystem ()
 
 /////////////////////////////////////////////////////////////////////
 
+void ColladaSystem::chunkFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<ChunkRequest> request,
+				  std::tr1::shared_ptr<DenseData> response)
+{
+  if (response != NULL) {
+      cout<<"PROXY AGAIN: "<<&realproxy<<endl;
+
+      ColladaDocumentLoader loader(request->getMetadata().getURI(), realproxy);
+      
+      SparseData data = SparseData();
+      data.addValidData(response);
+      
+      Transfer::DenseDataPtr flatData = data.flatten();
+
+      char const* buffer = reinterpret_cast<char const*>(flatData->begin());
+      
+      
+      if (loader.load(buffer, flatData->length())) {
+            // finally we can add the Product to our set of completed documents
+            mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
+      } else {
+            std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
+      }
+  } else std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
+}
+
+void ColladaSystem::metadataFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<MetadataRequest> request, 
+				     std::tr1::shared_ptr<RemoteFileMetadata>response)
+{
+  if (response != NULL) {
+    
+    const Chunk *chunk = new Chunk(response->getFingerprint(), Range(true));
+    const RemoteFileMetadata metadata = *response;
+
+    TransferRequestPtr req(new Transfer::ChunkRequest(response->getURI(), metadata, *chunk, 1.0,
+						    std::tr1::bind(&ColladaSystem::chunkFinished, this, proxy, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+
+    mTransferPool->addRequest(req);
+  }
+}
+
+				     
 void ColladaSystem::loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy )
 {
-    // Use our TransferManager to async download the data into memory.
-    Transfer::TransferManager* transferManager = static_cast< Transfer::TransferManager* > ( mTransferManager->as< void* > () );
+  realproxy = proxy;
+  cout<<"PROXY: "<<&realproxy<<endl;
+  TransferRequestPtr req(new MetadataRequest(what, 1, std::tr1::bind(&ColladaSystem::metadataFinished, this, proxy,
+								    std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+								
+  
+  
+ mTransferPool->addRequest(req);
+  
+  
+  // Use our TransferManager to async download the data into memory.
+   /*Transfer::TransferManager* transferManager = static_cast< Transfer::TransferManager* > ( mTransferManager->as< void* > () );
 
     if ( transferManager )
     {
@@ -79,7 +138,7 @@ void ColladaSystem::loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr
         transferManager->download ( what, listener, Transfer::Range ( true ) );
     }
     else
-        throw std::logic_error ( "ColladaSystem::loadDocument() needs a TransferManager" );
+        throw std::logic_error ( "ColladaSystem::loadDocument() needs a TransferManager" );*/
 }
 
 Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what,
@@ -92,17 +151,20 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
             << " length: " <<  ev->data ().length ()
             << " what: " << what
             << std::endl,true));
-
-    if ( ev->getStatus () == Transfer::TransferManager::SUCCESS )
+	    
+   if ( ev->getStatus () == Transfer::TransferManager::SUCCESS )
     {
         Transfer::DenseDataPtr flatData = ev->data ().flatten ();
 
+	
         // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
         // MCB: Serialized because OpenCOLLADA thread safety is unknown
         ColladaDocumentLoader loader ( what, proxy );
 //        loader.setProxyPtr(proxy);
 
         char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );
+
+	
         if ( loader.load ( buffer , flatData->length () ) )
         {
             // finally we can add the Product to our set of completed documents

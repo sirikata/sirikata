@@ -53,6 +53,8 @@
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
 
+#include <string>
+
 using namespace Sirikata;
 using boost::asio::ip::tcp;
 
@@ -345,7 +347,9 @@ protected:
         TS_ASSERT(response->getFingerprint() == mHash);
         TS_ASSERT(response->getURI() == mURI);
         mMetadata = response;
-        cb();
+	
+	
+	cb();
     }
 
 public:
@@ -373,32 +377,34 @@ public:
             uint64 chunk_size, const char * chunk_hash)
         : MetadataVerifier(uri, file_size, file_hash), mChunkSize(chunk_size),
           mChunkHash(Transfer::Fingerprint::convertFromHex(chunk_hash)) {
-    }
+	        }
     void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
             VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
         MetadataVerifier::addToPool(pool, std::tr1::bind(&ChunkVerifier::metadataFinished, this, pool, cb, priority), priority);
     }
     void metadataFinished(std::tr1::shared_ptr<Transfer::TransferPool> pool,
             VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
-
+      
         //Make sure chunk given is part of file
         std::tr1::shared_ptr<Transfer::Chunk> chunk;
         const Transfer::ChunkList & chunks = mMetadata->getChunkList();
-        for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
+	for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
             if(it->getHash() == mChunkHash) {
                 std::tr1::shared_ptr<Transfer::Chunk> found(new Transfer::Chunk(*it));
                 chunk = found;
             }
-        }
+        } 
         TS_ASSERT(chunk);
 
         std::tr1::shared_ptr<Transfer::TransferRequest> req(
                 new Transfer::ChunkRequest(mURI, *mMetadata, *chunk, priority, std::tr1::bind(
                 &ChunkVerifier::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
+			
         pool->addRequest(req);
     }
     void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<Transfer::DenseData> response, VerifyFinished cb) {
+            std::tr1::shared_ptr<Transfer::DenseData> response, VerifyFinished cb) {      	
+	
         SILOG(transfer, debug, "verifying chunk");
         TS_ASSERT(request);
         TS_ASSERT(response);

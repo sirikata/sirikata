@@ -34,6 +34,10 @@
 
 #include "../meruCompat/MeruDefs.hpp"
 
+#include <stdio.h>
+
+using namespace std;
+
 namespace Meru {
 
 class GraphicsResource;
@@ -101,6 +105,9 @@ public:
   void removeLoadDependencies(unsigned int epoch);
 
   void addDependency(SharedResourcePtr newResource) {
+    
+    cout<<"add dependency called in GR, adding "<<newResource->getType()<<" to type "<<mType<<endl<<endl;
+    
     assert(newResource);
     mDependencies.insert(newResource);
     newResource->addDependent(getWeakPtr());

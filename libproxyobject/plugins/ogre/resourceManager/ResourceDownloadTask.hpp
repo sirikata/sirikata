@@ -35,6 +35,11 @@
 #include "../meruCompat/MeruDefs.hpp"
 #include "../meruCompat/DependencyTask.hpp"
 #include "../meruCompat/Event.hpp"
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 
 namespace Meru {
 
@@ -71,7 +76,13 @@ public:
 protected:
   void requestDownload();
   EventResponse downloadCompleteHandler(const EventPtr &event);
-
+  void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+            std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
+	    
+  void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
+	    
+	    
   bool mStarted;
 
   const RemoteFileId mHash;

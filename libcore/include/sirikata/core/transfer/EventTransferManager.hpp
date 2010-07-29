@@ -44,6 +44,9 @@
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 namespace Sirikata {
 namespace Transfer {
@@ -104,9 +107,12 @@ class EventTransferManager : public TransferManager {
 	}
 
 	void downloadNameLookupSuccess(const EventListener &listener, const Range &range, const RemoteFileId *remoteid) {
-	        doDownloadByHash(listener, range, remoteid, false);
+	  doDownloadByHash(listener, range, remoteid, false);
 	}
+	
+	
     Task::SubscriptionId doDownloadByHash(const EventListener &listener, const Range &range, const RemoteFileId *remoteid, bool requestID) {
+
 		Task::SubscriptionId ret = Task::SubscriptionIdClass::null();
 		if (!remoteid) {
 			listener(DownloadEventPtr(new DownloadEvent(FAIL_NAMELOOKUP, RemoteFileId(), NULL)));
@@ -155,7 +161,7 @@ class EventTransferManager : public TransferManager {
 
 				// FIXME: mFirstTransferLayer may be destroyed if cleanup is called after previous check.
                 //using std::tr1::placeholders::_1;
-				SILOG(transfer,debug,"*** Download data "<<remoteid->uri().toString()<<", hash "<<remoteid->fingerprint().convertToHexString());
+				SILOG(transf``er,debug,"*** Download data "<<remoteid->uri().toString()<<", hash "<<remoteid->fingerprint().convertToHexString());
 				theCacheLayer->getData(*remoteid, range,
 					std::tr1::bind(&EventTransferManager::downloadFinished, this, *remoteid, range, _1));
 
@@ -368,12 +374,13 @@ public:
 
 	virtual SubscriptionId downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
 		// This is the same as if the download() function got a cached name lookup response.
+
 		++mPendingCleanup;
-		return doDownloadByHash(listener, range, &name, true);
+                return doDownloadByHash(listener, range, &name, true);
 	}
 
 	virtual void downloadName(const URI &nameURI,
-			const std::tr1::function<void(const URI &nameURI,const RemoteFileId *fingerprint)> &listener) {
+		const std::tr1::function<void(const URI &nameURI,const RemoteFileId *fingerprint)> &listener) {
 		mNameLookup->lookupHash(nameURI, listener);
 	}
 
