@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
@@ -189,10 +188,6 @@ boost::shared_ptr<Stream<UUID> > ObjectHost::getSpaceStream(const SpaceID& space
     return mSessionManagers[space]->getSpaceStream(objectID);
 }
 
-
-namespace{
-    boost::recursive_mutex gSpaceConnectionMapLock;
-}
 
 void ObjectHost::poll() {
     for (HostedObjectMap::iterator iter = mHostedObjects.begin(); iter != mHostedObjects.end(); ++iter) {

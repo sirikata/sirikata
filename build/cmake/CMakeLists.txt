@@ -1132,7 +1132,6 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceTimeOffsetManager.cpp
-                  ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp

@@ -183,7 +183,6 @@ public:
     virtual void stop();
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
-    /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     /// DEPRECATED
     ProxyManager *getProxyManager(const SpaceID&space) const;
 

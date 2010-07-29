@@ -45,7 +45,6 @@
 #include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
-#include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/SpaceIDMap.hpp>
 #include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>

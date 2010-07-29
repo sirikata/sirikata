@@ -45,7 +45,6 @@
 #include <sirikata/core/persistence/PersistenceSentMessage.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/SentMessage.hpp>
