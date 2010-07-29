@@ -194,7 +194,7 @@ void TransferMediator::PoolWorker::cleanup() {
 
 void TransferMediator::PoolWorker::run() {
     while(!mCleanup) {
-        std::tr1::shared_ptr<TransferRequest> req = mTransferPool->getRequest();
+        std::tr1::shared_ptr<TransferRequest> req = TransferMediator::getRequest(mTransferPool);
         if(req == NULL) {
             continue;
         }
