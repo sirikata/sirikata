@@ -94,6 +94,8 @@ public:
     QueryTracker* tracker;
     ObjectHostProxyManagerPtr proxyManager;
 
+    SpaceObjectReference id() const { return SpaceObjectReference(space, object); }
+
     void locationWasReset(Time timestamp, Location loc) {
         loc.setVelocity(Vector3f::nil());
         loc.setAngularSpeed(0);
@@ -1269,6 +1271,13 @@ const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
         //return where->second.mSpaceConnection.getTopLevelStream()->getServerTimeOffset();
     }
     return nil;
+}
+
+// Identification
+SpaceObjectReference HostedObject::id(const SpaceID& space) const {
+    SpaceDataMap::const_iterator it = mSpaceData->find(space);
+    if (it == mSpaceData->end()) return SpaceObjectReference::null();
+    return it->second.id();
 }
 
 // ODP::Service Interface

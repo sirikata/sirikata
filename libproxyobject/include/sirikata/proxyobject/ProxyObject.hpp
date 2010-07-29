@@ -150,12 +150,15 @@ public:
         return mLocation.lastUpdateTime();
     }
 
-    /// Gets the parent object reference.
-    inline const SpaceObjectReference& getParent() const{
-        return mParentId;
-    }
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
+    /// Gets the owning Proxy
+    // Note: I think parent is being used here in different ways. mParent refers
+    // to the "owner" of this proxy, i.e. the VWObject this proxy was created
+    // for, whereas other uses of Parent presumably refer to the physical
+    // hierarchy, i.e. the hierarchy used to move grouped/connected objects in
+    // virtual space.
+    VWObjectPtr getOwner() const { return mParent; }
 
     /// Returns if this object has a zero velocity and requires no extrapolation.
     bool isStatic(const TemporalValue<Location>::Time& when) const;

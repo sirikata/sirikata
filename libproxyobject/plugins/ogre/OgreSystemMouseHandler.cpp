@@ -161,7 +161,7 @@ class OgreSystem::MouseHandler {
         Entity *mParentEntity;
         OgreSystem *mOgreSys;
         void findNext() {
-            while (!end() && !((*mIter).second->getProxy().getParent() == mParentEntity->id())) {
+            while (!end() && !((*mIter).second->getProxy().getParentProxy()->getObjectReference() == mParentEntity->id())) {
                 ++mIter;
             }
         }
@@ -252,8 +252,8 @@ class OgreSystem::MouseHandler {
             }
         }
         if (mouseOverEntity) {
-            while (!(mouseOverEntity->getProxy().getParent() == mCurrentGroup)) {
-                mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParent());
+            while (!(mouseOverEntity->getProxy().getParentProxy()->getObjectReference() == mCurrentGroup)) {
+                mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParentProxy()->getObjectReference());
                 if (mouseOverEntity == NULL) {
                     return NULL; // FIXME: should try again.
                 }
@@ -503,9 +503,9 @@ private:
                 SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
                 return;
             }
-            if (!(ent->getProxy().getParent() == parentId)) {
+            if (!(ent->getProxy().getParentProxy()->getObjectReference() == parentId)) {
                 SILOG(input,error,"Multiple select "<< ent->id() <<
-                      " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
+                    " has parent  "<<ent->getProxy().getParentProxy()->getObjectReference() << " instead of " << mCurrentGroup);
                 return;
             }
         }
@@ -550,7 +550,7 @@ private:
             }
             ProxyManager *proxyMgr = parentEnt->getProxy().getProxyManager();
             ProxyObjectPtr parentParent (parentEnt->getProxy().getParentProxy());
-            mCurrentGroup = parentEnt->getProxy().getParent(); // parentParent may be NULL.
+            mCurrentGroup = parentEnt->getProxy().getParentProxy()->getObjectReference(); // parentParent may be NULL.
             bool hasSubObjects = false;
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
@@ -618,7 +618,7 @@ private:
         mSelectedObjects.clear();
         Entity *ent = mParent->getEntity(mCurrentGroup);
         if (ent) {
-            mCurrentGroup = ent->getProxy().getParent();
+            mCurrentGroup = ent->getProxy().getParentProxy()->getObjectReference();
             Entity *parentEnt = mParent->getEntity(mCurrentGroup);
             if (parentEnt) {
                 mSelectedObjects.insert(parentEnt->getProxyPtr());
@@ -1681,9 +1681,9 @@ void OgreSystem::destroyMouseHandler() {
 
 void OgreSystem::selectObject(Entity *obj, bool replace) {
     if (replace) {
-        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParent());
+        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParentProxy()->getObjectReference());
     }
-    if (mMouseHandler->getParentGroup() == obj->getProxy().getParent()) {
+    if (mMouseHandler->getParentGroup() == obj->getProxy().getParentProxy()->getObjectReference()) {
         mMouseHandler->addToSelection(obj->getProxyPtr());
         obj->setSelected(true);
     }

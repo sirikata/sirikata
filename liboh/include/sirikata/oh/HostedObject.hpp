@@ -295,6 +295,9 @@ public:
 
 
   public:
+    // Identification
+    virtual SpaceObjectReference id(const SpaceID& space) const;
+
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
     virtual ODP::Port* bindODPPort(SpaceID space);

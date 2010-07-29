@@ -230,10 +230,7 @@ void ProxyObject::unsetParent(TemporalValue<Location>::Time timeStamp,
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {
-    if (getParent() == SpaceObjectReference::null()) {
-        return ProxyObjectPtr();
-    }
-    ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject(getParent()));
+    ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject( mParent->id(mID.space()) ));
     return parentProxy;
 }
 

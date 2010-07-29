@@ -55,6 +55,9 @@ public:
     ///The tracker managing state for outstanding requests this object has made
     virtual QueryTracker*getTracker(const SpaceID& space)=0;
 
+    // Identification
+    virtual SpaceObjectReference id(const SpaceID& space) const = 0;
+
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port) = 0;
     virtual ODP::Port* bindODPPort(SpaceID space) = 0;
