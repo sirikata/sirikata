@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
     cseg_context->add(cseg_context);
     cseg_context->add(cseg);
 
-    cseg_context->run(10);
+    cseg_context->run(2);
 
     std::cout << "CSEG cleaning up\n";
     fflush(stdout);

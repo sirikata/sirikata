@@ -45,7 +45,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
         while(is) {
             uint16 type_hint;
             std::string raw_evt;
-            read_record(is, &type_hint, &raw_evt);
+            if (!read_record(is, &type_hint, &raw_evt)) break;
             Event* evt = Event::parse(type_hint, raw_evt, server_id);
             if (evt == NULL)
                 break;

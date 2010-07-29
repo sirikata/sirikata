@@ -52,7 +52,6 @@ void RecordedMotionPath::add(Event* evt) {
     GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(evt);
     if (gen_loc_evt != NULL)
         addUpdate(extractTimedMotionVector(gen_loc_evt->data.loc()));
-        add(gen_loc_evt);
 }
 
 const TimedMotionVector3f RecordedMotionPath::initial() const {

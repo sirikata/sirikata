@@ -174,6 +174,13 @@ class SIRIKATA_EXPORT TransferMediator
 		void cleanup();
 	};
 
+        friend class PoolWorker;
+        //Helper for compatibility with compilers where TransferPool declaring
+        //TransferMediator as a friend does not give PoolWorker access
+        static inline std::tr1::shared_ptr<TransferRequest> getRequest(std::tr1::shared_ptr<TransferPool> pool) {
+            return pool->getRequest();
+        }
+
 	//Maps a client ID string to the PoolWorker class
 	typedef std::map<std::string, std::tr1::shared_ptr<PoolWorker> > PoolType;
 	//Stores the list of pools

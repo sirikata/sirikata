@@ -173,7 +173,6 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
   strncpy(requestMessage.host, addr, 128);
   printf("host=%s, port=%d\n", requestMessage.host, requestMessage.port);
 
-
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
 
@@ -189,7 +188,6 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
 }
 
 void CoordinateSegmentationClient::reportLoad(ServerID sid, const BoundingBox3f& bbox, uint32 load) {
-
   LoadReportMessage requestMessage;
 
   requestMessage.loadValue = load;
@@ -229,7 +227,6 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
     TCPResolver::iterator end;
     
     mLeasedSocket = boost::shared_ptr<TCPSocket>( new TCPSocket(*mIOService) );    
-    
     boost::system::error_code error = boost::asio::error::host_not_found;
     
     while (error && endpoint_iterator != end)
@@ -263,9 +260,10 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
 
   if (socket == boost::shared_ptr<TCPSocket>()) {
+    assert(false);
     return 0;
   }
-  
+
   boost::asio::write(*socket,
                      boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
                      boost::asio::transfer_all() );
@@ -276,24 +274,29 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   for (;;)
   {
       boost::system::error_code error;
-      boost::array<uint8, 1048576> buf;
+      boost::array<uint8, sizeof(LookupResponseMessage)> buf;
 
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
-
-      if (dataReceived == NULL) {
-      	dataReceived = (uint8*) malloc (len);
+      std::size_t len = boost::asio::read(
+                                        *socket, boost::asio::buffer(buf),
+                                        boost::asio::transfer_all(), error);
+      if (!error)
+       {   
+         if (dataReceived == NULL) {
+           dataReceived = (uint8*) malloc (len);
+         }
+         else if (len > 0){
+           dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+         }
+         memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+         break;
       }
-      else if (len > 0){
-	      dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-      }
-      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
 
-      bytesReceived += len;
       if (error == boost::asio::error::eof || bytesReceived >= sizeof(LookupResponseMessage) )
         break; // Connection closed cleanly by peer.
       else if (error) {
 	       std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string()
 		      <<" in lookup\n\n\n";
+         assert(false);
       }
   }
 
@@ -301,13 +304,12 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   
   assert(response->type == LOOKUP_RESPONSE);
 
-  ServerID retval = response->serverID;
+  ServerID retval = response->serverID;  
 
   if (dataReceived != NULL) {
     free(dataReceived);
-  }
+  }  
   
-
   return retval;
 }
 
@@ -318,10 +320,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   if (mServerRegionCache.find(server) != mServerRegionCache.end()) {
     // Returning cached serverRegion...
     return mServerRegionCache[server];
-  }
-
-
-  // Going to server for serverRegion for 'server'
+  } 
 
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
@@ -331,6 +330,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 
   if (socket == boost::shared_ptr<TCPSocket>()) {
     //TODO: should return some error code instead; assuming no failures for now
+    assert(false);
     return boundingBoxList;
   }
 
@@ -348,7 +348,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   {
       boost::system::error_code error;
       boost::array<uint8, 1048576> buf;
-
+      
       size_t len = socket->read_some(boost::asio::buffer(buf), error);
 
       if (dataReceived == NULL) {
@@ -364,7 +364,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
       if (serverRegionListLength == INT_MAX && bytesReceived >= sizeof(uint8) + sizeof(uint32)) {
 	ServerRegionResponseMessage* msg = (ServerRegionResponseMessage*) dataReceived;
 	serverRegionListLength = msg->listLength; 
-      }      
+      }
 
       if (error == boost::asio::error::eof ||
 	  bytesReceived >= sizeof(uint8) + sizeof(uint32) + serverRegionListLength*sizeof(SerializedBBox))
@@ -372,13 +372,13 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
         break; // Connection closed cleanly by peer.
       }
       else if (error) {
-	      std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in serverRegion\n";
+        std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in serverRegion\n";
+        assert(false);
       }
   }
 
   if (dataReceived == NULL) {
     boundingBoxList.push_back(BoundingBox3f(Vector3f(0,0,0), Vector3f(0,0,0)));
-
     return boundingBoxList;
   }
 
@@ -400,11 +400,12 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   free(dataReceived);
   free(response);
 
-  //printf("serverRegion for %d returned %d boxes\n", server, boundingBoxList.size());
-  /*for (int i=0 ; i<boundingBoxList.size(); i++) {
-    //std::cout << server << " has bounding box : " << boundingBoxList[i] << "\n";
-  }*/
-  //memdump1((uint8*) response, bytesReceived);
+  /*printf("serverRegion for %d returned %d boxes\n", server, boundingBoxList.size());
+  for (int i=0 ; i<boundingBoxList.size(); i++) {
+    std::cout << server << " has bounding box : " << boundingBoxList[i] << "\n";
+  }
+  fflush(stdout);
+  memdump1((uint8*) response, bytesReceived);*/
 
   mServerRegionCache[server] = boundingBoxList;
  
@@ -417,7 +418,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
     return mTopLevelRegion.mBoundingBox;
   }
 
-  std::cout << "Going to server for region\n";fflush(stdout);
+  //Going to server for region
 
   RegionRequestMessage requestMessage;
 
@@ -432,17 +433,17 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
                      boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
                      boost::asio::transfer_all() );
 
-  std::cout << "Sent over region request to cseg server\n";
+  //Sent over region request to cseg server
 
   uint8* dataReceived = NULL;
   uint32 bytesReceived = 0;
   for (;;)
   {
       boost::system::error_code error;
-      boost::array<uint8, 1048576> buf;
+      boost::array<uint8, sizeof(RegionResponseMessage)> buf;
 
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
-      
+      size_t len = boost::asio::read(*socket, boost::asio::buffer(buf),
+                                     boost::asio::transfer_all(), error);
 
       if (dataReceived == NULL) {
       	dataReceived = (uint8*) malloc (len);
@@ -464,7 +465,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
       }
   }
 
-  std::cout << "Received reply from cseg server for region"  << "\n";fflush(stdout);
+  //Received reply from cseg server for region
 
   if (dataReceived == NULL) {
     return mTopLevelRegion.mBoundingBox;
@@ -482,8 +483,6 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
   free(dataReceived);
   free(response);
 
-  std::cout << "Region returned " <<  bbox << "\n";fflush(stdout);
-
   mTopLevelRegion.mBoundingBox = bbox;
 
   return bbox;
@@ -495,7 +494,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
     return mAvailableServersCount;
   }
 
-  // Going to server for numServers
+  //Going to server for numServers
 
   NumServersRequestMessage requestMessage;
 
@@ -518,15 +517,16 @@ uint32 CoordinateSegmentationClient::numServers()  {
   for (;;)
   {
       boost::system::error_code error;
-      boost::array<uint8, 1048576> buf;
+      boost::array<uint8, sizeof(NumServersResponseMessage) > buf;
 
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
+      size_t len = boost::asio::read(*socket, boost::asio::buffer(buf),
+                                     boost::asio::transfer_all(), error);
 
       if (dataReceived == NULL) {
-	dataReceived = (uint8*) malloc (len);
+        dataReceived = (uint8*) malloc (len);
       }
       else if (len > 0){
-	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+        dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
       }
       memcpy(dataReceived+bytesReceived, buf.c_array(), len);
 
@@ -534,9 +534,9 @@ uint32 CoordinateSegmentationClient::numServers()  {
       if (error == boost::asio::error::eof || bytesReceived >= sizeof(NumServersResponseMessage))
         break; // Connection closed cleanly by peer.
       else if (error) {
-	std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in numservers\n";
+      	std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in numservers\n";
 	
-	return mAvailableServersCount;
+        return mAvailableServersCount;
       }
   }
 
@@ -552,16 +552,14 @@ uint32 CoordinateSegmentationClient::numServers()  {
     free(dataReceived);
   }
 
-  std::cout << "numServers returned " <<  retval << "\n";
   return retval;
 }
 
 void CoordinateSegmentationClient::service() {
     mIOService->poll();
 
+
     boost::mutex::scoped_lock scopedLock(mMutex);
-
-
     if (mLeasedSocket.get() != 0 && mLeasedSocket->is_open() && Timer::now() > mLeaseExpiryTime ) {
       std::cout << "EXPIRED LEASE; CLOSED CONNECTION AT CLIENT\n"; fflush(stdout);
 
