@@ -345,6 +345,11 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         // that we should, but it doesn't actually land in our region
         // (i.e. things were probably clamped invalidly)
 
+        if (loc_server == NullServerID)
+            SILOG(cbr,warn,"[SPACE] Connecting object specified location outside of all regions.");
+        else if (loc_server == mContext->id() && !in_server_region)
+            SILOG(cbr,warn,"[SPACE] Connecting object was incorrectly determined to be in our region.");
+
         // Create and send redirect reply
         Sirikata::Protocol::Session::Container response_container;
         Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();

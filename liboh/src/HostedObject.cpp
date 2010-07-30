@@ -803,6 +803,11 @@ void HostedObject::connect(
 }
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server) {
+    if (server == NullServerID) {
+        HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
+        return;
+    }
+
     // Create
     ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), URI(), mIsCamera);
 
