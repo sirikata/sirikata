@@ -834,7 +834,6 @@ private:
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        SILOG(ogre,fatal,"IDS " << cam_vwobj->id(space) << " -- " << cam->getObjectReference());
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
@@ -851,27 +850,49 @@ private:
     }
 
     void rotateAction(Vector3f about, float amount) {
-
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
+
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
-        Protocol::ObjLoc rloc;
-        rloc.set_rotational_axis(about);
-        rloc.set_angular_speed(amount);
-        //cam->requestLocation(now, rloc);
+        // Request updates from spcae
+        TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
+        cam_vwobj->requestOrientationUpdate(space, neworient);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setOrientation(neworient);
     }
 
     void stableRotateAction(float dir, float amount) {
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
+
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
@@ -883,10 +904,11 @@ private:
         raxis.y = std::cos(p*DEG2RAD);
         raxis.z = -std::sin(p*DEG2RAD);
 
-        Protocol::ObjLoc rloc;
-        rloc.set_rotational_axis(raxis);
-        rloc.set_angular_speed(dir*amount);
-        //cam->requestLocation(now, rloc);
+        // Request updates from spcae
+        TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
+        cam_vwobj->requestOrientationUpdate(space, neworient);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setOrientation(neworient);
     }
 
     void setDragModeAction(const String& modename) {

@@ -166,6 +166,10 @@ public:
         Space that we have moved, but it is the first step in moving a local object. */
     void setLocation(const TimedMotionVector3f& reqloc);
 
+    /** Sets the orientation for this update. Note: This does not tell the
+        Space that we have moved, but it is the first step in moving a local object. */
+    void setOrientation(const TimedMotionQuaternion& reqorient);
+
     /** @see setLocation. This disables interpolation from the last update. */
     void resetLocation(TemporalValue<Location>::Time timeStamp,
                                const Location&location);

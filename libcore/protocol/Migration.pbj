@@ -33,6 +33,7 @@
 "pbj-0.0.3"
 
 import "TimedMotionVector.pbj";
+import "TimedMotionQuaternion.pbj";
 
 package Sirikata.Protocol.Migration;
 
@@ -45,8 +46,9 @@ message MigrationClientData {
 message MigrationMessage {
     required uuid object = 1;
     required Sirikata.Protocol.TimedMotionVector loc = 2;
-    required boundingsphere3f bounds = 3;
-    repeated MigrationClientData client_data = 4;
-    optional string mesh = 5;
-    required uint32 source_server = 6; // FIXME should come from server to server header
+    required Sirikata.Protocol.TimedMotionQuaternion orientation = 3;
+    required boundingsphere3f bounds = 4;
+    repeated MigrationClientData client_data = 5;
+    optional string mesh = 6;
+    required uint32 source_server = 7; // FIXME should come from server to server header
 }

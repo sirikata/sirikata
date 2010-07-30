@@ -86,9 +86,10 @@ void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallba
     mObjects[obj->uuid()] = obj;
 
     TimedMotionVector3f init_loc = obj->location();
+    TimedMotionQuaternion init_orient(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity()));
     BoundingSphere3f init_bounds = obj->bounds();
 
-    mSessionManager.connect(obj->uuid(), init_loc, init_bounds, true, init_sa, "", connect_cb, migrate_cb, stream_created_cb);
+    mSessionManager.connect(obj->uuid(), init_loc, init_orient, init_bounds, true, init_sa, "", connect_cb, migrate_cb, stream_created_cb);
 }
 
 void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCallback migrate_cb,
@@ -99,9 +100,10 @@ void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCall
     mObjects[obj->uuid()] = obj;
 
     TimedMotionVector3f init_loc = obj->location();
+    TimedMotionQuaternion init_orient(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity()));
     BoundingSphere3f init_bounds = obj->bounds();
 
-    mSessionManager.connect(obj->uuid(), init_loc, init_bounds, false, SolidAngle::Max, "", connect_cb, migrate_cb, stream_created_cb);
+    mSessionManager.connect(obj->uuid(), init_loc, init_orient, init_bounds, false, SolidAngle::Max, "", connect_cb, migrate_cb, stream_created_cb);
 }
 
 void ObjectHost::disconnect(Object* obj) {

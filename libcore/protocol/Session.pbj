@@ -33,6 +33,7 @@
 "pbj-0.0.3"
 
 import "TimedMotionVector.pbj";
+import "TimedMotionQuaternion.pbj";
 
 package Sirikata.Protocol.Session;
 
@@ -48,9 +49,10 @@ message Connect {
     required ConnectionType type = 1;
     required uuid object = 2;
     optional Sirikata.Protocol.TimedMotionVector loc = 3;
-    optional boundingsphere3f bounds = 4;
-    optional float query_angle = 5;
-    optional string mesh = 6;
+    optional Sirikata.Protocol.TimedMotionQuaternion orientation = 4;
+    optional boundingsphere3f bounds = 5;
+    optional float query_angle = 6;
+    optional string mesh = 7;
 }
 
 // Response to a connection request

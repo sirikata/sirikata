@@ -107,14 +107,18 @@ public:
     /** Connect the object to the space with the given starting parameters. */
     void connect(
         HostedObjectPtr obj, const SpaceID& space,
-        const TimedMotionVector3f& loc, const BoundingSphere3f& bnds,
+        const TimedMotionVector3f& loc,
+        const TimedMotionQuaternion& orient,
+        const BoundingSphere3f& bnds,
         const String& mesh,
         const SolidAngle& init_sa,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
     void connect(
         HostedObjectPtr obj, const SpaceID& space,
-        const TimedMotionVector3f& loc, const BoundingSphere3f& bnds,
+        const TimedMotionVector3f& loc,
+        const TimedMotionQuaternion& orient,
+        const BoundingSphere3f& bnds,
         const String& mesh,
         ConnectedCallback connected_cb, MigratedCallback migrated_cb,
         StreamCreatedCallback stream_created_cb);

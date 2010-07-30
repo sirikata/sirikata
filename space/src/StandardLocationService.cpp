@@ -74,6 +74,19 @@ Vector3f StandardLocationService::currentPosition(const UUID& uuid) {
     return loc.extrapolate(mContext->simTime()).position();
 }
 
+TimedMotionQuaternion StandardLocationService::orientation(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo locinfo = it->second;
+    return locinfo.orientation;
+}
+
+Quaternion StandardLocationService::currentOrientation(const UUID& uuid) {
+    TimedMotionQuaternion orient = orientation(uuid);
+    return orient.extrapolate(mContext->simTime()).position();
+}
+
 BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
@@ -90,7 +103,7 @@ const String& StandardLocationService::mesh(const UUID& uuid) {
     return locinfo.mesh;
 }
 
-void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds, const String& msh) {
+void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -107,6 +120,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     LocationInfo& locinfo = it->second;
     locinfo.location = loc;
+    locinfo.orientation = orient;
     locinfo.bounds = bnds;
     locinfo.mesh = msh;
     locinfo.local = true;
@@ -116,7 +130,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid), mesh(uuid));
+    notifyLocalObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
@@ -150,7 +164,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // automatically.
 }
 
-void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds, const String& msh) {
+void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -159,6 +173,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         LocationInfo& locinfo = it->second;
         if (!locinfo.local) {
             locinfo.location = loc;
+            locinfo.orientation = orient;
             locinfo.bounds = bnds;
             locinfo.mesh = msh;
             //local = false
@@ -170,6 +185,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         // Its a new replica, just insert it
         LocationInfo locinfo;
         locinfo.location = loc;
+        locinfo.orientation = orient;
         locinfo.bounds = bnds;
         locinfo.mesh = msh;
         locinfo.local = false;
@@ -177,7 +193,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
-        notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid), mesh(uuid));
+        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
     }
 
 }
@@ -230,6 +246,15 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), newloc );
             }
 
+            if (update.has_orientation()) {
+                TimedMotionQuaternion neworient(
+                    update.orientation().t(),
+                    MotionQuaternion( update.orientation().position(), update.orientation().velocity() )
+                );
+                loc_it->second.orientation = neworient;
+                notifyReplicaOrientationUpdated( update.object(), neworient );
+            }
+
             if (update.has_bounds()) {
                 BoundingSphere3f newbounds = update.bounds();
                 loc_it->second.bounds = newbounds;
@@ -272,6 +297,15 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
                 notifyLocalLocationUpdated( msg.source_object(), newloc );
 
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), msg.source_object(), newloc );
+            }
+
+            if (request.has_orientation()) {
+                TimedMotionQuaternion neworient(
+                    request.orientation().t(),
+                    MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
+                );
+                loc_it->second.orientation = neworient;
+                notifyLocalOrientationUpdated( msg.source_object(), neworient );
             }
 
             if (request.has_bounds()) {

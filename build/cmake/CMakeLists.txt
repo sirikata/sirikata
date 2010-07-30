@@ -748,6 +748,7 @@ SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(ProtocolBuffersSourcesCore
   TimedMotionVector
+  TimedMotionQuaternion
 )
 SET(ProtocolBuffersSources
   Persistence

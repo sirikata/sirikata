@@ -413,6 +413,10 @@ void Server::finishAddObject(const UUID& obj_id)
     StoredConnection sc = mStoredConnectionData[obj_id];
 
     TimedMotionVector3f loc( sc.conn_msg.loc().t(), MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
+    TimedMotionQuaternion orient(
+        sc.conn_msg.orientation().t(),
+        MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
+    );
 
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
@@ -426,7 +430,7 @@ void Server::finishAddObject(const UUID& obj_id)
 
     // Add object as local object to LocationService
     String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
-    mLocationService->addLocalObject(obj_id, loc, sc.conn_msg.bounds(), obj_mesh);
+    mLocationService->addLocalObject(obj_id, loc, orient, sc.conn_msg.bounds(), obj_mesh);
 
     // Register proximity query
     if (sc.conn_msg.has_query_angle())
@@ -577,6 +581,10 @@ void Server::handleMigration(const UUID& obj_id)
         migrate_msg->loc().t(),
         MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
     );
+    TimedMotionQuaternion obj_orient(
+        migrate_msg->orientation().t(),
+        MotionQuaternion( migrate_msg->orientation().position(), migrate_msg->orientation().velocity() )
+    );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
     String obj_mesh ( migrate_msg->has_mesh() ? migrate_msg->mesh() : "");
 
@@ -586,7 +594,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds, obj_mesh);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh);
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
@@ -685,6 +693,11 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             migrate_loc.set_t( obj_loc.updateTime() );
             migrate_loc.set_position( obj_loc.position() );
             migrate_loc.set_velocity( obj_loc.velocity() );
+            Sirikata::Protocol::ITimedMotionQuaternion migrate_orient = migrate_msg.mutable_orientation();
+            TimedMotionQuaternion obj_orient = mLocationService->orientation(obj_id);
+            migrate_orient.set_t( obj_orient.updateTime() );
+            migrate_orient.set_position( obj_orient.position() );
+            migrate_orient.set_velocity( obj_orient.velocity() );
             migrate_msg.set_bounds( obj_bounds );
             String obj_mesh = mLocationService->mesh(obj_id);
             if (obj_mesh.size() > 0)
@@ -807,6 +820,10 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         migrate_msg->loc().t(),
         MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
     );
+    TimedMotionQuaternion obj_orient(
+        migrate_msg->orientation().t(),
+        MotionQuaternion( migrate_msg->orientation().position(), migrate_msg->orientation().velocity() )
+    );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
     String obj_mesh ( migrate_msg->has_mesh() ? migrate_msg->mesh() : "");
 
@@ -818,7 +835,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds, obj_mesh);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh);
 
     //update our oseg to show that we know that we have this object now.
     OSegEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());

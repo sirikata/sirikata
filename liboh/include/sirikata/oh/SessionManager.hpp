@@ -38,6 +38,7 @@
 #include <sirikata/oh/SpaceNodeConnection.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 
 namespace Sirikata {
@@ -78,7 +79,9 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service {
     /** Connect the object to the space with the given starting parameters. */
     void connect(
         const UUID& objid,
-        const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds,
+        const TimedMotionVector3f& init_loc,
+        const TimedMotionQuaternion& init_orient,
+        const BoundingSphere3f& init_bounds,
         bool regquery, const SolidAngle& init_sa, const String& init_mesh,
         ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback
     );
@@ -216,6 +219,7 @@ private:
     // Info associated with opening connections
     struct ConnectingInfo {
         TimedMotionVector3f loc;
+        TimedMotionQuaternion orient;
         BoundingSphere3f bounds;
         bool regQuery;
         SolidAngle queryAngle;

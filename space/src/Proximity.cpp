@@ -226,6 +226,7 @@ void Proximity::receiveMessage(Message* msg) {
                     t,
                     addition.object(),
                     TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
+                    TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
                     addition.bounds(),
                     (addition.has_mesh() ? addition.mesh() : "")
                 );
@@ -409,23 +410,27 @@ void Proximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
 }
 void Proximity::localObjectRemoved(const UUID& uuid) {
 }
 void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle);
 }
+void Proximity::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+}
 void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle);
 }
 void Proximity::localMeshUpdated(const UUID& uuid, const String& newval) {
 }
-void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
 }
 void Proximity::replicaObjectRemoved(const UUID& uuid) {
 }
 void Proximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+}
+void Proximity::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
 }
 void Proximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
 }
@@ -497,6 +502,12 @@ void Proximity::generateServerQueryEvents() {
                         msg_loc.set_position(loc.position());
                         msg_loc.set_velocity(loc.velocity());
 
+                        TimedMotionQuaternion orient = mLocalLocCache->orientation(evt.id());
+                        Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                        msg_orient.set_t(orient.updateTime());
+                        msg_orient.set_position(orient.position());
+                        msg_orient.set_velocity(orient.velocity());
+
                         addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
                         const String& mesh = mLocalLocCache->mesh(evt.id());
                         if (mesh.size() > 0)
@@ -564,6 +575,12 @@ void Proximity::generateObjectQueryEvents() {
                         motion.set_t(loc.updateTime());
                         motion.set_position(loc.position());
                         motion.set_velocity(loc.velocity());
+
+                        TimedMotionQuaternion orient = mGlobalLocCache->orientation(evt.id());
+                        Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                        msg_orient.set_t(orient.updateTime());
+                        msg_orient.set_position(orient.position());
+                        msg_orient.set_velocity(orient.velocity());
 
                         addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
                         const String& mesh = mGlobalLocCache->mesh(evt.id());

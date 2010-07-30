@@ -110,9 +110,9 @@ void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localObjectAdded(uuid, loc, bounds, mesh);
+        (*it)->localObjectAdded(uuid, loc, orient, bounds, mesh);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
@@ -123,6 +123,11 @@ void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
 void LocationService::notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->localLocationUpdated(uuid, newval);
+}
+
+void LocationService::notifyLocalOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->localOrientationUpdated(uuid, newval);
 }
 
 void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
@@ -136,9 +141,9 @@ void LocationService::notifyLocalMeshUpdated(const UUID& uuid, const String& new
 }
 
 
-void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) const {
+void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaObjectAdded(uuid, loc, bounds, mesh);
+        (*it)->replicaObjectAdded(uuid, loc, orient, bounds, mesh);
 }
 
 void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
@@ -149,6 +154,11 @@ void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
 void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->replicaLocationUpdated(uuid, newval);
+}
+
+void LocationService::notifyReplicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaOrientationUpdated(uuid, newval);
 }
 
 void LocationService::notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {

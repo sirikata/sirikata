@@ -70,7 +70,7 @@ void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
 }
 
 
-void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     // Ignore, initial additions will be handled by a prox update
 }
 
@@ -81,6 +81,11 @@ void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid) {
 void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     mServerSubscriptions.locationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
+}
+
+void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+    mServerSubscriptions.orientationUpdated(uuid, newval, mLocService);
+    mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
@@ -94,7 +99,7 @@ void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, const String
 }
 
 
-void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     // Ignore, initial additions will be handled by a prox update
 }
 
@@ -104,6 +109,10 @@ void AlwaysLocationUpdatePolicy::replicaObjectRemoved(const UUID& uuid) {
 
 void AlwaysLocationUpdatePolicy::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
+}
+
+void AlwaysLocationUpdatePolicy::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+    mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {

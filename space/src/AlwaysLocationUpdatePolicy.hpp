@@ -57,15 +57,17 @@ public:
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
-    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     virtual void localObjectRemoved(const UUID& uuid);
     virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void localMeshUpdated(const UUID& uuid, const String& newval);
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
 
@@ -77,6 +79,7 @@ private:
 
     struct UpdateInfo {
         TimedMotionVector3f location;
+        TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;
         String mesh;
     };
@@ -200,6 +203,7 @@ private:
         }
 
         static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) { ui.location = newval; }
+        static void setUIOrientation(UpdateInfo& ui, const TimedMotionQuaternion& newval) { ui.orientation = newval; }
         static void setUIBounds(UpdateInfo& ui, const BoundingSphere3f& newval) { ui.bounds = newval; }
         static void setUIMesh(UpdateInfo& ui, const String& newval) { ui.mesh = newval; }
 
@@ -207,6 +211,13 @@ private:
             propertyUpdated(
                 uuid, locservice,
                 std::tr1::bind(&setUILocation, std::tr1::placeholders::_1, newval)
+            );
+        }
+
+        void orientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval, LocationService* locservice) {
+            propertyUpdated(
+                uuid, locservice,
+                std::tr1::bind(&setUIOrientation, std::tr1::placeholders::_1, newval)
             );
         }
 
@@ -241,11 +252,20 @@ private:
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
                     Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
                     update.set_object(up_it->first);
+
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
                     location.set_velocity(up_it->second.location.velocity());
+
+                    Sirikata::Protocol::ITimedMotionQuaternion orientation = update.mutable_orientation();
+                    orientation.set_t(up_it->second.orientation.updateTime());
+                    orientation.set_position(up_it->second.orientation.position());
+                    orientation.set_velocity(up_it->second.orientation.velocity());
+
                     update.set_bounds(up_it->second.bounds);
+
+                    update.set_mesh(up_it->second.mesh);
 
                     // If we hit the limit for this update, try to send it out
                     if (bulk_update.update_size() > (int32)max_updates) {

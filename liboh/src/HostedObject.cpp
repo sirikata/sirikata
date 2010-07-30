@@ -785,7 +785,9 @@ void HostedObject::connect(
 
     mObjectHost->connect(
         getSharedPtr(), spaceID,
-        TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ), meshBounds,
+        TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
+        TimedMotionQuaternion(Time::null(), MotionQuaternion( Quaternion::identity(), Quaternion::identity() )),
+        meshBounds,
         mesh,
         SolidAngle(.00001f),
         mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3) ),
@@ -1329,18 +1331,22 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 // Movement Interface
 
 void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) {
-    sendLocUpdateRequest(space, &loc, NULL, NULL);
+    sendLocUpdateRequest(space, &loc, NULL, NULL, NULL);
+}
+
+void HostedObject::requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient) {
+    sendLocUpdateRequest(space, NULL, &orient, NULL, NULL);
 }
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) {
-    sendLocUpdateRequest(space, NULL, &bounds, NULL);
+    sendLocUpdateRequest(space, NULL, NULL, &bounds, NULL);
 }
 
 void HostedObject::requestMeshUpdate(const SpaceID& space, const String& mesh) {
-    sendLocUpdateRequest(space, NULL, NULL, &mesh);
+    sendLocUpdateRequest(space, NULL, NULL, NULL, &mesh);
 }
 
-void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const BoundingSphere3f* const bounds, const String* const mesh) {
+void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh) {
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
@@ -1349,6 +1355,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
         requested_loc.set_t(loc->updateTime());
         requested_loc.set_position(loc->position());
         requested_loc.set_velocity(loc->velocity());
+    }
+    if (orient != NULL) {
+        Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
+        requested_orient.set_t(orient->updateTime());
+        requested_orient.set_position(orient->position());
+        requested_orient.set_velocity(orient->velocity());
     }
     if (bounds != NULL)
         loc_request.set_bounds(*bounds);

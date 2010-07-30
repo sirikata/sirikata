@@ -108,7 +108,22 @@ bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference mess
 
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
     TemporalValue<Location>::Time timeStamp = reqloc.updateTime();
-    Location location(Vector3d(reqloc.position()), Quaternion::identity(), reqloc.velocity(), Vector3f(0,0,0), 0);
+    Location location = extrapolateLocation(timeStamp);
+    location.setPosition( Vector3d(reqloc.position()) );
+    location.setVelocity(reqloc.velocity());
+    mLocation.updateValue(timeStamp, location);
+    PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
+}
+
+void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient) {
+    TemporalValue<Location>::Time timeStamp = reqorient.updateTime();
+    Location location = extrapolateLocation(timeStamp);
+    location.setOrientation(reqorient.position());
+    Vector3f angularaxis;
+    float angularspeed;
+    reqorient.velocity().toAngleAxis(angularspeed, angularaxis);
+    location.setAxisOfRotation(angularaxis);
+    location.setAngularSpeed(angularspeed);
     mLocation.updateValue(timeStamp, location);
     PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
 }

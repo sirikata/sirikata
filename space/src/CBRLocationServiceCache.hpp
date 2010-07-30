@@ -65,6 +65,7 @@ public:
     bool tracking(const ObjectID& id) const;
 
     virtual const TimedMotionVector3f& location(const ObjectID& id) const;
+    virtual const TimedMotionQuaternion& orientation(const ObjectID& id) const;
     virtual const BoundingSphere3f& bounds(const ObjectID& id) const;
     virtual const String& mesh(const ObjectID& id) const;
 
@@ -72,30 +73,34 @@ public:
     virtual void removeUpdateListener(LocationUpdateListener* listener);
 
     /* LocationServiceListener members. */
-    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     virtual void localObjectRemoved(const UUID& uuid);
     virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void localMeshUpdated(const UUID& uuid, const String& newval);
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
 
 private:
     // These generate and queue up updates from the main thread
-    void objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
+    void objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     void objectRemoved(const UUID& uuid);
     void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    void orientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     void meshUpdated(const UUID& uuid, const String& newval);
 
     // These do the actual work for the LocationServiceListener methods.  Local versions always
     // call these, replica versions only call them if replica tracking is on
-    void processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh);
+    void processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     void processObjectRemoved(const UUID& uuid);
     void processLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    void processOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     void processBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     void processMeshUpdated(const UUID& uuid, const String& newval);
 
@@ -112,6 +117,7 @@ private:
     // Therefore, this data does *NOT* need to be locked for access.
     struct ObjectData {
         TimedMotionVector3f location;
+        TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;
         String mesh;
         bool tracking;

@@ -206,7 +206,7 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 /** LocationServiceListener Interface. */
 
-void MigrationMonitor::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+void MigrationMonitor::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds)
     );
@@ -248,6 +248,10 @@ void MigrationMonitor::handleLocalLocationUpdated(const UUID& uuid, const TimedM
     waitForNextEvent();
 }
 
+void MigrationMonitor::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+    // We only care about location, not orientation
+}
+
 void MigrationMonitor::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     // We only care about location, not bounds
 }
@@ -256,7 +260,7 @@ void MigrationMonitor::localMeshUpdated(const UUID& uuid, const String& newval) 
     // We only care about location, not mesh
 }
 
-void MigrationMonitor::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const String& mesh) {
+void MigrationMonitor::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     // We don't care about replicas
 }
 void MigrationMonitor::replicaObjectRemoved(const UUID& uuid) {
@@ -264,6 +268,9 @@ void MigrationMonitor::replicaObjectRemoved(const UUID& uuid) {
 }
 void MigrationMonitor::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     // We don't care about replicas
+}
+void MigrationMonitor::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+    // We only care about location
 }
 void MigrationMonitor::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     // We don't care about replicas

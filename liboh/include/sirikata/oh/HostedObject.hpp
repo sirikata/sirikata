@@ -306,6 +306,7 @@ public:
 
     // Movement Interface
     virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
   private:
@@ -320,7 +321,7 @@ public:
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera = false);
 
     // Helper for constructing and sending location update
-    void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const BoundingSphere3f* const bounds, const String* const mesh);
+    void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
 };
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.
