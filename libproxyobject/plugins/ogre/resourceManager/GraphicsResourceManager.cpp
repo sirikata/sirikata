@@ -67,21 +67,21 @@ InitializeGlobalOptions graphicsresourcemanageropts("ogregraphics",
 
 
 void GraphicsResourceManager::initializeMediator() {
-   
-  mWorkQueue = new Task::ThreadSafeWorkQueue;
-  
-  Task::GenEventManager* mEventSystem = new Task::GenEventManager(mWorkQueue);
-  mTransferMediator = &(TransferMediator::getSingleton());    
-  
+  mTransferMediator = &(TransferMediator::getSingleton());
+
   mTransferPool = mTransferMediator->registerClient("OgreGraphics");
 }
-    
+
+TransferPoolPtr GraphicsResourceManager::transferPool()
+{
+    return mTransferPool;
+}
+
 GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue)
 : mEpoch(0), mEnabled(true)
 {
-
   initializeMediator();
-  
+
   this->mTickListener = EventSource::getSingleton().subscribeId(
     EventID(EventTypes::Tick),
       EVENT_CALLBACK(GraphicsResourceManager, tick, this)
@@ -198,10 +198,9 @@ void GraphicsResourceManager::computeLoadedSet()
     GraphicsResource* resource = *itr;
 
     GraphicsResource::ParseState parseState = resource->getParseState();
-        
+
     if (parseState == GraphicsResource::PARSE_INVALID) {
       resource->parse();
-      cout<<"ACTUALLY CALLING PARSE FROM GRM"<<endl;
     }
     resource->updateValue(mEpoch);
   }

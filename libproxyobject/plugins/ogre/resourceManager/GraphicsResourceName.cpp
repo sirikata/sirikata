@@ -57,8 +57,6 @@ SharedResourcePtr GraphicsResourceName::getReference()
 
 void GraphicsResourceName::doParse()
 {
-  cout<<"do parse called in GRN"<<endl;
-  
   ResourceHash result;
   std::tr1::function<void(const URI &, const ResourceHash *)> callback = std::tr1::bind(&GraphicsResourceName::hashLookupCallback, getWeakPtr(), mReferencedType, _1, _2);
 
@@ -78,13 +76,12 @@ void GraphicsResourceName::doUnload()
 }
 
 void GraphicsResourceName::hashLookupCallback(WeakResourcePtr resourcePtr, Type refType, const URI &id, const ResourceHash *hash)
-{  
+{
 //  assert(id != hash);
 
   // add dependency for hash
-  
-  cout<<"hashlookupcallback called in GRN from doParse"<<endl<<endl;
-  
+
+
   SharedResourcePtr resource = resourcePtr.lock();
   if (resource) {
     if (hash) {

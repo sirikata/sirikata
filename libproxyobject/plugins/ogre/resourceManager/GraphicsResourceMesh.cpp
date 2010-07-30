@@ -130,7 +130,6 @@ ResourceDownloadTask* GraphicsResourceMesh::createDownloadTask(DependencyManager
 
 ResourceDependencyTask* GraphicsResourceMesh::createDependencyTask(DependencyManager *manager)
 {
-  cout<<"new mesh dependency task!"<<endl;
   return new MeshDependencyTask(manager, getWeakPtr(), mResourceID.toString());
 }
 
@@ -159,8 +158,7 @@ MeshDependencyTask::~MeshDependencyTask()
 }
 
 void MeshDependencyTask::operator()()
-{  
-  cout<<"IMPORTANT: mesh dependency task ()"<<endl;
+{
   SharedResourcePtr resourcePtr = mResource.lock();
   if (!resourcePtr) {
     finish(false);
@@ -227,8 +225,6 @@ MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr
 
 void MeshLoadTask::doRun()
 {
-  cout<<"MESH LOAD TASK DO RUN!!!"<<endl<<endl;
-  
   String hash = mHash.convertToHexString(); //CDNArchive::canonicalMhashName(mHash);
   int archive = CDNArchiveFactory::getSingleton().addArchive(mHash, mBuffer);
   Ogre::MeshManager::getSingleton().load(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);

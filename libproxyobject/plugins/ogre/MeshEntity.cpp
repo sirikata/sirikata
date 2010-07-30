@@ -45,6 +45,7 @@
 #include "meruCompat/SequentialWorkQueue.hpp"
 
 using namespace std;
+using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 namespace Graphics {
@@ -338,7 +339,6 @@ void MeshEntity::createMesh(const Meshdata& md) {
     mo.clear();
 
     for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
-	cout<<"1 cycle"<<endl;
         const GeometryInstance& geoinst = *geoinst_it;
 
         Matrix4x4f pos_xform = geoinst.transform;
@@ -426,6 +426,18 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
     return Task::EventResponse::del();
 }
 
+void MeshEntity::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
+    std::tr1::shared_ptr<RemoteFileMetadata>response, Meshdata& md)
+{
+
+}
+
+void MeshEntity::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
+        std::tr1::shared_ptr<DenseData> response, Meshdata& md)
+{
+
+}
+
 void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
     mURI = uri;
 
@@ -436,11 +448,17 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
         Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
         return;
     }
+    TransferMediator *mTransferMediator = &(TransferMediator::getSingleton());
+
+    TransferPoolPtr mTransferPool = mTransferMediator->registerClient("ColladaGraphics");
 
     for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
 
-	cout<<endl<<endl<<"something downloaded from transfer manager! "<<texURI<<endl<<endl<<endl;
+         TransferRequestPtr req(new MetadataRequest(URI(texURI), 1, std::tr1::bind(&MeshEntity::metadataFinished,
+                  this, _1, _2, md)));
+
+        //mTransferPool
 
         /*mScene->mTransferManager->download(
             Transfer::URI(texURI),

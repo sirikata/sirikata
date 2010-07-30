@@ -54,7 +54,7 @@ class DependencyManager;
 
 class GraphicsResourceManager : public ManualSingleton<GraphicsResourceManager>
 {
-    
+
 protected:
   struct GraphicsResourcePriorityLessThanFunctor
   {
@@ -100,17 +100,15 @@ public:
   void setEnabled(bool enabled) {
     mEnabled = enabled;
   }
-
-  std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-
+    std::tr1::shared_ptr<Transfer::TransferPool> transferPool();
 
 
 protected:
-
+  std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Sirikata::Task::WorkQueue* mWorkQueue;
   Transfer::TransferMediator *mTransferMediator;
 
-  
+
   WeakResourcePtr getResource(const String &id);
   EventResponse tick(const EventPtr &evtPtr);
 

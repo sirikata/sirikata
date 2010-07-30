@@ -78,9 +78,6 @@ void GraphicsResourceAsset::unloaded(bool success, unsigned int epoch)
 void GraphicsResourceAsset::doLoad()
 {
 //  assert(mLoadTask == NULL);
-
-  cout<<"YES, DOLOAD IS CALLED!!!"<<endl;
-
   if (mUnloadTask) {
     mUnloadTask->cancel();
     mUnloadTask = NULL;
@@ -113,7 +110,6 @@ void GraphicsResourceAsset::doUnload()
 
 void GraphicsResourceAsset::doParse()
 {
-  cout<<"doparse in GRA called"<<endl;
   assert(mParseTask == NULL);
 
   GraphicsResourceManager* grm = GraphicsResourceManager::getSingletonPtr();

@@ -146,9 +146,6 @@ float GraphicsResource::value() const
 
 void GraphicsResource::parse()
 {
-    cout<<"type "<<mType<<endl;
-
-  cout<<"calling doParse() from parse in GR"<<endl;
   assert(mParseState == PARSE_INVALID);
 
   mParseState = PARSE_PARSING;
@@ -157,8 +154,6 @@ void GraphicsResource::parse()
 
 void GraphicsResource::parsed(bool success)
 {
-    cout<<"type "<<mType<<endl;
-cout<<"parsed in GR called"<<endl<<endl;
   if (success) {
     parseDependencies();
     checkDependenciesParsed();
@@ -168,19 +163,12 @@ cout<<"parsed in GR called"<<endl<<endl;
 }
 
 void GraphicsResource::parseDependencies()
-{  cout<<"type "<<mType<<endl;
-
-  cout<<"parse dependencies called in GR"<<endl;
-  
+{
   set<SharedResourcePtr>::iterator itr;
 
-  cout<<"are there dependencies"<<endl;
-  
   for (itr = mDependencies.begin(); itr != mDependencies.end(); itr++) {
-    cout<<"yes, parse?"<<endl;
     ParseState state = (*itr)->getParseState();
     if (state == PARSE_INVALID) {
-      cout<<"yes"<<endl;
       (*itr)->parse();
     }
   }
@@ -188,8 +176,6 @@ void GraphicsResource::parseDependencies()
 
 void GraphicsResource::checkDependenciesParsed()
 {
-  cout<<"type "<<mType<<endl;
-  cout<<"calling check dependencies parsed from GR"<<endl;
   bool parsed = true;
   set<SharedResourcePtr>::iterator itr;
   for (itr = mDependencies.begin(); itr != mDependencies.end(); itr++) {
