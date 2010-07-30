@@ -41,6 +41,11 @@
 #include "WebView.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
+#include <stdio.h>
+#include "meruCompat/SequentialWorkQueue.hpp"
+
+using namespace std;
+using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 namespace Graphics {
@@ -309,6 +314,11 @@ Vector3f fixUp(int up, Vector3f v) {
     assert(false);
 }
 
+bool MeshEntity::createMeshWork(const Meshdata& md) {
+    createMesh(md);
+    return true;
+}
+
 void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
@@ -322,7 +332,6 @@ void MeshEntity::createMesh(const Meshdata& md) {
         String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
         mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
     }
-
 
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
     /// FIXME: set bounds, bounding radius here
@@ -350,7 +359,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
         mo.begin(matname);
 
         float tu, tv;
-        for (int i=0; i<indexcount; i++) {
+	for (int i=0; i<indexcount; i++) {
             int j = submesh.position_indices[i];
             Vector3f v = fixUp(up, submesh.positions[j]);
             Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
@@ -380,12 +389,11 @@ void MeshEntity::createMesh(const Meshdata& md) {
             }
             else {
                 Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
-                tu=uv[0];
-                tv=1.0-uv[1];           //  why you gotta be like that?
+                tu = uv[0];
+                tv = 1.0-uv[1];           //  why you gotta be like that?
             }
             mo.textureCoord(tu, tv);
         }
-
         mo.end();
     } // submesh
 
@@ -413,9 +421,21 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
 
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
-        createMesh(md);
+        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
 
     return Task::EventResponse::del();
+}
+
+void MeshEntity::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
+    std::tr1::shared_ptr<RemoteFileMetadata>response, Meshdata& md)
+{
+
+}
+
+void MeshEntity::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
+        std::tr1::shared_ptr<DenseData> response, Meshdata& md)
+{
+
 }
 
 void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
@@ -425,20 +445,29 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
 
     // Special case for no dependent downloads
     if (mRemainingDownloads == 0) {
-        createMesh(md);
+        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
         return;
     }
+    TransferMediator *mTransferMediator = &(TransferMediator::getSingleton());
+
+    TransferPoolPtr mTransferPool = mTransferMediator->registerClient("ColladaGraphics");
 
     for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
-        mScene->mTransferManager->download(
+
+         TransferRequestPtr req(new MetadataRequest(URI(texURI), 1, std::tr1::bind(&MeshEntity::metadataFinished,
+                  this, _1, _2, md)));
+
+        //mTransferPool
+
+        /*mScene->mTransferManager->download(
             Transfer::URI(texURI),
             std::tr1::bind(
                 &MeshEntity::downloadFinished,
                 this,_1,md
             ),
             Transfer::Range(true)
-        );
+        );*/
     }
 }
 

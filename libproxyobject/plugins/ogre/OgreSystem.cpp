@@ -66,6 +66,9 @@ using Meru::SequentialWorkQueue;
 using Meru::MaterialScriptManager;
 
 #include <boost/filesystem.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include "WebView.hpp"

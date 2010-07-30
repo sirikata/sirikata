@@ -39,6 +39,9 @@
 #include "RemoteFileMetadata.hpp"
 #include "TransferHandlers.hpp"
 #include "URI.hpp"
+#include <stdio.h>
+
+using namespace std;
 
 namespace Sirikata {
 namespace Transfer {
@@ -82,6 +85,8 @@ protected:
 	std::string mClientID;
 
 };
+
+typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
 
 /*
  * Handles requests for metadata of a file when all you have is the URI
@@ -145,6 +150,9 @@ protected:
 
 };
 
+typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
+
+
 /*
  * Handles requests for the data associated with a file:chunk pair
  */
@@ -162,7 +170,6 @@ public:
 		  mUniqueID(MetadataRequest::mUniqueID + chunk.getHash().convertToHexString()),
 		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
 		  mCallback(cb) {
-
 	}
 
 	inline const RemoteFileMetadata& getMetadata() {
@@ -200,6 +207,8 @@ protected:
     ChunkCallback mCallback;
 
 };
+
+typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 
 /*
  * Abstract class for providing an algorithm for aggregating priorities from
@@ -256,6 +265,8 @@ public:
 	}
 
 };
+
+typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
 
 }
 }

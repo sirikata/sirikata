@@ -36,6 +36,9 @@
 #include "ResourceDownloadTask.hpp"
 #include "ResourceLoadTask.hpp"
 #include "ResourceUnloadTask.hpp"
+#include <stdio.h>
+
+using namespace std;
 
 namespace Meru {
 
@@ -75,7 +78,6 @@ void GraphicsResourceAsset::unloaded(bool success, unsigned int epoch)
 void GraphicsResourceAsset::doLoad()
 {
 //  assert(mLoadTask == NULL);
-
   if (mUnloadTask) {
     mUnloadTask->cancel();
     mUnloadTask = NULL;

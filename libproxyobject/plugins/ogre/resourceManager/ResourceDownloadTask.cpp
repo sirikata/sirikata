@@ -29,11 +29,21 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include <sirikata/core/util/Thread.hpp>
+
 #include "../meruCompat/EventSource.hpp"
 #include "../meruCompat/Event.hpp"
 #include "ResourceDownloadTask.hpp"
 #include "ResourceTransfer.hpp"
 #include "../meruCompat/DependencyManager.hpp"
+#include <stdio.h>
+#include "GraphicsResourceManager.hpp"
+
+using namespace std;
+using namespace Sirikata;
+using namespace Sirikata::Transfer;
+
 
 namespace Meru {
 
@@ -50,7 +60,7 @@ ResourceDownloadTask::~ResourceDownloadTask()
 {
 //FIXME: How do we unsubscribe from an active download?!?!?!
 
-  EventSource::getSingleton().unsubscribe(mCurrentDownload);
+  //EventSource::getSingleton().unsubscribe(mCurrentDownload);
 }
 
 void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
@@ -67,8 +77,7 @@ EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& even
   std::tr1::shared_ptr<DownloadCompleteEvent> transferEvent = DowncastEvent<DownloadCompleteEvent>(event);
   if (transferEvent->success()) {
     Transfer::SparseData finishedData = transferEvent->data();
-    for (Transfer::DenseDataList::const_iterator iter =
-             mMergeData.Transfer::DenseDataList::begin();
+    for (Transfer::DenseDataList::const_iterator iter = mMergeData.Transfer::DenseDataList::begin();
          iter != mMergeData.Transfer::DenseDataList::end();
          ++iter) {
       iter->addToList<Transfer::DenseDataList>(iter.std::list<Transfer::DenseDataPtr>::const_iterator::operator*(), finishedData);
@@ -82,12 +91,62 @@ EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& even
   return EventResponse::del();
 }
 
-void ResourceDownloadTask::operator()()
+void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
+            std::tr1::shared_ptr<DenseData> response)
 {
-  mStarted = true;
-  mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
-      std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
-      mRange);
+  if (response != NULL) {
+
+
+    SparseData data = SparseData();
+    data.addValidData(response);
+
+    mResourceRequestor->setResourceBuffer(data);
+    finish(true);
+  }
+  else {
+    finish(false);
+    cout<<"Failed chunk download"<<endl;
+  }
 }
 
+void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
+            std::tr1::shared_ptr<RemoteFileMetadata> response)
+{
+
+  if (response != NULL) {
+
+    const Range *range = new Range(true);
+    const Chunk *chunk = new Chunk(mHash.fingerprint(), *range);
+    const RemoteFileMetadata metadata = *response;
+
+    TransferRequestPtr req(new Transfer::ChunkRequest(mHash.uri(), metadata, *chunk, 1.0,
+						    std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+
+    TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
+    pool->addRequest(req);
+
+  }
+  else {
+    finish(false);
+    cout<<"failed metadata download"<<endl;
+  }
+ }
+
+void ResourceDownloadTask::operator()()
+{
+ mStarted = true;
+ /* mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
+       std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
+       mRange);*/
+
+
+ TransferRequestPtr req(
+                new MetadataRequest(mHash.uri(), 1, std::tr1::bind(
+                &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+
+  TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
+
+  pool->addRequest(req);
+
+}
 }

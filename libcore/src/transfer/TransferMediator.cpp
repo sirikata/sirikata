@@ -1,6 +1,9 @@
 #include <sirikata/core/util/Standard.hh>
 
 #include <sirikata/core/transfer/TransferMediator.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::TransferMediator);
 
@@ -22,7 +25,7 @@ void TransferMediator::destroy() {
     AutoSingleton<TransferMediator>::destroy();
 }
 
-TransferMediator::TransferMediator() {
+TransferMediator::TransferMediator() {  
     mCleanup = false;
     mNumOutstanding = 0;
     mThread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
@@ -191,7 +194,7 @@ void TransferMediator::PoolWorker::cleanup() {
 
 void TransferMediator::PoolWorker::run() {
     while(!mCleanup) {
-        std::tr1::shared_ptr<TransferRequest> req = mTransferPool->getRequest();
+        std::tr1::shared_ptr<TransferRequest> req = TransferMediator::getRequest(mTransferPool);
         if(req == NULL) {
             continue;
         }

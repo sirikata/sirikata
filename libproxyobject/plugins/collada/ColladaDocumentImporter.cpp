@@ -78,7 +78,7 @@ ColladaDocumentImporter::~ColladaDocumentImporter ()
 
 ColladaDocumentPtr ColladaDocumentImporter::getDocument () const
 {
-    if(!(mState == FINISHED)) {
+    if(mState != FINISHED) {
         SILOG(collada,fatal,"STATE != Finished reached: malformed COLLADA document");
     }
     return mDocument;

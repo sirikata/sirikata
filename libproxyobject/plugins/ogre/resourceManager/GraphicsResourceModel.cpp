@@ -38,6 +38,10 @@
 #include "ResourceUnloadTask.hpp"
 #include <boost/bind.hpp>
 #include <OgreResourceBackgroundQueue.h>
+#include <stdio.h>
+
+using namespace std;
+
 
 namespace Meru {
 
@@ -162,6 +166,7 @@ void ModelDependencyTask::operator()()
     GraphicsResourceManager *grm = GraphicsResourceManager::getSingletonPtr();
 
     MemoryBuffer::iterator itr, iend;
+
     for (itr = mBuffer.begin(), iend = mBuffer.end() - 7; itr != iend; ++itr) {
       if (*itr == 'm'
        && (*(itr + 1)) == 'e'

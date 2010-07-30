@@ -37,11 +37,15 @@
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
-
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
+
 #include "resourceManager/GraphicsResourceEntity.hpp"
 
 namespace Sirikata {
@@ -75,6 +79,9 @@ private:
 
     void fixTextures();
 
+    // Wrapper for createMesh which allows us to use a WorkQueue
+    bool createMeshWork(const Meshdata& md);
+
     void createMesh(const Meshdata& md);
 public:
     ProxyMeshObject &getProxy() const {
@@ -103,6 +110,11 @@ public:
     void loadMesh(const String& meshname);
 
     void unloadMesh();
+
+    void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+        std::tr1::shared_ptr<Transfer::RemoteFileMetadata>response, Meshdata& md);
+    void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     virtual void setSelected(bool selected);
 

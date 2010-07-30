@@ -34,6 +34,10 @@
 
 #include "../meruCompat/MeruDefs.hpp"
 
+#include <stdio.h>
+
+using namespace std;
+
 namespace Meru {
 
 class GraphicsResource;
