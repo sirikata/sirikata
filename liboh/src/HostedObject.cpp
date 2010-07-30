@@ -938,18 +938,26 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-        Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-        TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
-
-        CONTEXT_OHTRACE(objectLoc,
-            getUUID(),
-            update.object(),
-            loc
-        );
-
         ProxyManagerPtr proxy_manager = getProxyManager(space);
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space, ObjectReference(update.object())));
-        proxy_obj->setLocation(loc);
+
+        if (update.has_location()) {
+            Sirikata::Protocol::TimedMotionVector update_loc = update.location();
+            TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
+            proxy_obj->setLocation(loc);
+
+            CONTEXT_OHTRACE(objectLoc,
+                getUUID(),
+                update.object(),
+                loc
+            );
+        }
+
+        if (update.has_orientation()) {
+            Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
+            TimedMotionQuaternion orient(update_orient.t(), MotionQuaternion(update_orient.position(), update_orient.velocity()));
+            proxy_obj->setOrientation(orient);
+        }
     }
 }
 
@@ -962,14 +970,15 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
         Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
+        TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
         SpaceObjectReference proximateID(space, ObjectReference(addition.object()));
         // FIXME use weak_ptr instead of raw
         URI meshuri;
         if (addition.has_mesh()) meshuri = URI(addition.mesh());
         ProxyObjectPtr proxy_obj = createProxy(proximateID, meshuri, false);
-
-        HO_LOG(debug,"Proximity addition: " << addition.object().toString() << " - mesh: " << (addition.has_mesh() ? addition.mesh() : "")); // Remove when properly handled
+        proxy_obj->setLocation(loc);
+        proxy_obj->setOrientation(orient);
 
         CONTEXT_OHTRACE(prox,
             getUUID(),

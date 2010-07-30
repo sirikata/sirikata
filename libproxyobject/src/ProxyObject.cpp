@@ -46,7 +46,7 @@ namespace Sirikata {
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
         : mID(id),
         mManager(man),
-        mLocation(Duration::seconds(.1),
+        mLocation(Duration::seconds(0),
                   TemporalValue<Location>::Time::null(),
                   Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                            Vector3f(0,0,0),Vector3f(0,1,0),0),
