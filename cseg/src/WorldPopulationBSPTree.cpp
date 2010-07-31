@@ -40,6 +40,7 @@ namespace Sirikata {
 
 
 BoundingBox3f intersect(const BoundingBox3f& b1, const BoundingBox3f& b2) {
+
   float x1 = (b1.min().x > b2.min().x) ? b1.min().x : b2.min().x;
   float y1 = (b1.min().y > b2.min().y) ? b1.min().y : b2.min().y;
   float z1 = (b1.min().z > b2.min().z) ? b1.min().z : b2.min().z;
@@ -53,29 +54,7 @@ BoundingBox3f intersect(const BoundingBox3f& b1, const BoundingBox3f& b2) {
 }
 
 bool intersects(const BoundingBox3f& bbox1, const BoundingBox3f& bbox2) {
-  bool b1=false, b2=false;
-
-  b1 =   (bbox2.min().x <= bbox1.min().x && bbox1.min().x <= bbox2.max().x)
-      && (bbox2.min().y <= bbox1.min().y && bbox1.min().y <= bbox2.max().y);
-
-  if (b1) return b1;
-
-  b2 =   (bbox2.min().x <= bbox1.max().x && bbox1.max().x <= bbox2.max().x)
-      && (bbox2.min().y <= bbox1.max().y && bbox1.max().y <= bbox2.max().y);
-
-  if (b2) return b2;
-
-  b1 =   (bbox1.min().x <= bbox2.min().x && bbox2.min().x <= bbox1.max().x)
-      && (bbox1.min().y <= bbox2.min().y && bbox2.min().y <= bbox1.max().y);
-
-  if (b1) return b1;
-
-  b2 =   (bbox1.min().x <= bbox2.max().x && bbox2.max().x <= bbox1.max().x)
-      && (bbox1.min().y <= bbox2.max().y && bbox2.max().y <= bbox1.max().y);
-
-  if (b2) return b2;
-
-  return false;
+  return bbox1.intersects(bbox2);
 }
 
 void WorldPopulationBSPTree::setupRegionBoundaries(WorldRegion* regionList) {

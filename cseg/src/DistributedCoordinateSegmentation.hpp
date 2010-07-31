@@ -91,6 +91,7 @@ public:
     virtual BoundingBoxList serverRegion(const ServerID& server);
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
+    virtual std::vector<ServerID> lookupBoundingBox(const BoundingBox3f& bbox);
 
     virtual void poll();
     virtual void stop();
@@ -154,6 +155,9 @@ private:
     void sendLoadReportToLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, 
                                             const BoundingBox3f& boundingBox,
                                             LoadReportMessage* message);
+    void callLowerLevelCSEGServersForLookupBoundingBoxes(const BoundingBox3f& bbox,
+                                                         const std::map<ServerID, std::vector<SegmentedRegion*> >&,
+                                                         std::vector<ServerID>& );
 
 
     /* Functions run in separate threads to listen for incoming packets */

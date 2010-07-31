@@ -146,6 +146,20 @@ public:
         return v.max(min()).min(max());
     }
 
+    bool intersects(const BoundingBox& bbox2) const {
+      BoundingBox bbox = BoundingBox(min().max(bbox2.min()), 
+                                         max().min(bbox2.max()));
+
+      if (bbox.min().x < bbox.max().x && 
+          bbox.min().y < bbox.max().y && 
+          bbox.min().z < bbox.max().z)
+      {
+        return true;   
+      }
+
+      return false;
+    }
+
     bool operator==(const BoundingBox& rhs) const{
         return (mMin == rhs.mMin && mAcross == rhs.mAcross);
     }

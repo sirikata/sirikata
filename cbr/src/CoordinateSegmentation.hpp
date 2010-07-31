@@ -63,6 +63,7 @@ public:
     virtual BoundingBoxList serverRegion(const ServerID& server)  = 0;
     virtual BoundingBox3f region()  = 0;
     virtual uint32 numServers()  = 0;
+    virtual std::vector<ServerID> lookupBoundingBox(const BoundingBox3f& bbox) = 0;
 
     void addListener(Listener* listener);
     void removeListener(Listener* listener);

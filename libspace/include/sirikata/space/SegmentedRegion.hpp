@@ -56,6 +56,12 @@ namespace Sirikata {
 #define LOAD_REPORT 15
 #define LL_LOAD_REPORT 16
 
+#define LOOKUP_BBOX_REQUEST 17
+#define LOOKUP_BBOX_RESPONSE 18
+
+#define LL_LOOKUP_BBOX_REQUEST 19
+#define LL_LOOKUP_BBOX_RESPONSE 20
+
 #define MAX_BBOX_LIST_SIZE 50000
 #define MAX_SERVER_REGIONS_CHANGED 2
 
@@ -136,6 +142,27 @@ typedef struct LookupResponseMessage {
     type = LOOKUP_RESPONSE;
   }
 } PACKED_STRUCT LookupResponseMessage ;
+
+typedef struct LookupBBoxRequestMessage {
+  uint8 type;
+  SerializedBBox bbox;
+
+  LookupBBoxRequestMessage() {
+    type = LOOKUP_BBOX_REQUEST;
+  }
+} PACKED_STRUCT LookupBBoxRequestMessage ;
+
+
+typedef struct LookupBBoxResponseMessage {
+  uint8 type;
+  
+  uint32 serverListLength;
+  ServerID serverList[1024];
+
+  LookupBBoxResponseMessage() {
+    type = LOOKUP_BBOX_RESPONSE;
+  }
+} PACKED_STRUCT LookupBBoxResponseMessage ;
 
 typedef struct NumServersRequestMessage {
   uint8 type;
@@ -408,6 +435,21 @@ typedef struct SegmentedRegion {
     return region;
   }
 
+  void lookupBoundingBox(const BoundingBox3f& bbox, std::vector<SegmentedRegion*>& intersectingLeaves) {
+    if (mRightChild == NULL && mLeftChild == NULL) {      
+      if (mBoundingBox.intersects(bbox)) {
+	intersectingLeaves.push_back((SegmentedRegion*) this);
+      }
+    }
+
+    if (mLeftChild != NULL && mLeftChild->mBoundingBox.intersects(bbox)) {
+      mLeftChild->lookupBoundingBox(bbox, intersectingLeaves);
+    }
+
+    if ( mRightChild!=NULL && mRightChild->mBoundingBox.intersects(bbox)) {
+      mRightChild->lookupBoundingBox(bbox, intersectingLeaves);
+    }
+  }
 
   void serverRegion(const ServerID& server, BoundingBoxList& boundingBoxList) const {
     if (mServer == server && mRightChild==NULL && mLeftChild==NULL) {

@@ -54,6 +54,7 @@ public:
     virtual BoundingBoxList serverRegion(const ServerID& server) ;
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
+    virtual std::vector<ServerID> lookupBoundingBox(const BoundingBox3f& bbox);
 
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);

@@ -155,6 +155,26 @@ uint32 UniformCoordinateSegmentation::numServers()  {
     return mServersPerDim.x * mServersPerDim.y * mServersPerDim.z;
 }
 
+std::vector<ServerID> UniformCoordinateSegmentation::lookupBoundingBox(const BoundingBox3f& bbox) {
+  //naive implementation
+
+  std::vector<ServerID> serverList;
+  for (ServerID i=1; i <= numServers(); i++) {
+    BoundingBoxList bboxList = serverRegion(i);
+
+    for (uint j=0; j<bboxList.size(); j++) {
+      BoundingBox3f jth_bbox = bboxList[j];
+    
+      if ( jth_bbox.intersects(bbox) ) {
+        serverList.push_back(i);
+        break;
+      }
+    }
+  }
+
+  return serverList;
+}
+
 void UniformCoordinateSegmentation::service() {
   /* Short-circuited the code for changing the layout at run-time for now
      but its been tested and it works.

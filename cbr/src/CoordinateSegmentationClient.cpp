@@ -555,6 +555,79 @@ uint32 CoordinateSegmentationClient::numServers()  {
   return retval;
 }
 
+std::vector<ServerID> CoordinateSegmentationClient::lookupBoundingBox(const BoundingBox3f& bbox) {
+  std::vector<ServerID> serverList;
+
+
+  //Serialize and send out the message.
+  LookupBBoxRequestMessage lookupMessage;
+  lookupMessage.bbox.serialize(bbox);
+  
+  boost::mutex::scoped_lock scopedLock(mMutex);
+  boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
+
+  if (socket == boost::shared_ptr<TCPSocket>()) {
+    assert(false);    
+  }
+
+  
+  boost::asio::write(*socket,
+                     boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
+                     boost::asio::transfer_all() );  
+
+  //Read back the response
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  bool failedOnce=false;
+  uint32 serverListLength = INT_MAX;
+  for (;;)
+  {
+      boost::system::error_code error;
+      boost::array<uint8, 1048576> buf;
+
+      size_t len = socket->read_some(boost::asio::buffer(buf), error);
+
+      if (!error)
+       {   
+         if (dataReceived == NULL) {
+           dataReceived = (uint8*) malloc (len);
+         }
+         else if (len > 0){
+           dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+         }
+         memcpy(dataReceived+bytesReceived, buf.c_array(), len);  
+         bytesReceived += len;
+      }      
+
+      if (bytesReceived >= 1 + sizeof(uint32) ) {
+        LookupBBoxResponseMessage* response = (LookupBBoxResponseMessage*)dataReceived;
+        serverListLength = response->serverListLength;        
+      }      
+
+      if (error == boost::asio::error::eof || bytesReceived >= 1 + sizeof(uint32) + serverListLength*sizeof(ServerID) )
+        break; // Connection closed cleanly by peer.
+      else if (error) {
+        std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string()
+                  <<" in lookup\n\n\n";
+         assert(false);
+      }
+  }
+
+  //Return the response
+  LookupBBoxResponseMessage* response = (LookupBBoxResponseMessage*)dataReceived;
+  assert(response->type == LOOKUP_BBOX_RESPONSE);
+ 
+  for (uint i=0; i<serverListLength; i++) {
+    serverList.push_back(response->serverList[i]);
+  }
+
+  if (dataReceived != NULL) {
+    free(dataReceived);
+  }
+
+  return serverList;
+}
+
 void CoordinateSegmentationClient::service() {
     mIOService->poll();
 
