@@ -475,7 +475,7 @@ private:
             Entity *newEnt = doCloneObject(ent, ent->getProxy().getParentProxy(), objnow);
             Location loc (ent->getProxy().extrapolateLocation(objnow));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
-            newEnt->getProxy().resetLocation(objnow, loc);
+            //newEnt->getProxy().resetLocation(objnow, loc);
             newSelectedObjects.insert(newEnt->getProxyPtr());
             newEnt->setSelected(true);
             ent->setSelected(false);
@@ -520,17 +520,17 @@ private:
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
         //proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         Entity *newParentEntity = mParent->getEntity(newParentId);
-        newParentEntity->getProxy().resetLocation(now, totalLocation);
+        //newParentEntity->getProxy().resetLocation(now, totalLocation);
 
         if (parentEntity) {
-            newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
+            //newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
             ProxyObjectPtr obj(iter->lock());
             Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!ent) continue;
-            ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
+            //ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
             ent->setSelected(false);
         }
         mSelectedObjects.clear();
@@ -555,7 +555,7 @@ private:
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
                 Entity *ent = *subIter;
-                ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
+                //ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
                 newSelectedObjects.insert(ent->getProxyPtr());
                 ent->setSelected(true);
             }

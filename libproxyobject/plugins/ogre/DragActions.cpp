@@ -130,7 +130,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 
     Location location = camera->getProxy().extrapolateLocation(now);
     location.setOrientation((dvorient * dhorient * dragStart).normal());
-    camera->getProxy().resetLocation(now, location);
+    //camera->getProxy().resetLocation(now, location);
 }
 
     void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
@@ -140,7 +140,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 
         Location location (camera->getProxy().extrapolateLocation(now));
         location.setPosition(orient * toPan + oldLocalPosition);
-        camera->getProxy().resetLocation(now, location);
+        //camera->getProxy().resetLocation(now, location);
     }
 
 
@@ -318,7 +318,7 @@ public:
             Vector3d localTrans = mOriginalPosition[i] - avgPos;
             loc.setPosition(avgPos + dragRotation*localTrans);
             loc.setOrientation(dragRotation*mOriginalRotation[i]);
-            ent->resetLocation(now, loc);
+            //ent->resetLocation(now, loc);
         }
     }
 };
@@ -375,7 +375,7 @@ public:
                 Vector3d localTrans = mOriginalPosition[i] - avgPos;
                 loc.setPosition(avgPos + localTrans*mTotalScale);
                 std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
-                ent->resetLocation(now, loc);
+                //ent->resetLocation(now, loc);
                 std::tr1::shared_ptr<ProxyMeshObject> meshptr (
                     std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent));
                 if (meshptr) {
@@ -492,7 +492,7 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     }
     toMove *= value; // up == zoom in
     cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
-    camera->getProxy().resetLocation(now, cameraLoc);
+    //camera->getProxy().resetLocation(now, cameraLoc);
 }
 
 class ZoomCameraDrag : public RelativeDrag {

@@ -132,48 +132,25 @@ void Entity::addToScene(Ogre::SceneNode *newParent) {
 }
 
 void Entity::setOgrePosition(const Vector3d &pos) {
+    SILOG(ogre,debug,"setOgrePosition "<<this<<" to "<<pos);
     Ogre::Vector3 ogrepos = toOgre(pos, getScene()->getOffset());
     const Ogre::Vector3 &scale = mSceneNode->getScale();
     mSceneNode->setPosition(ogrepos);
 }
 void Entity::setOgreOrientation(const Quaternion &orient) {
+    SILOG(ogre,debug,"setOgreOrientation "<<this<<" to "<<orient);
     mSceneNode->setOrientation(toOgre(orient));
 }
 
 
-void Entity::updateLocation(Time ti, const Location &newLocation) {
-    //SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.getPosition()<<"; "<<newLocation.getOrientation());
-    if (!getProxy().isStatic(ti)) {
+void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient) {
+    SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
+    if (!getProxy().isStatic()) {
         setStatic(false);
     } else {
-        setOgrePosition(newLocation.getPosition());
-        setOgreOrientation(newLocation.getOrientation());
+        setOgrePosition(Vector3d(newLocation.position()));
+        setOgreOrientation(newOrient.position());
     }
-}
-
-void Entity::resetLocation(Time ti, const Location &newLocation) {
-    SILOG(ogre,debug,"ResetLocation "<<this<<" to "<<newLocation.getPosition()<<"; "<<newLocation.getOrientation());
-    if (!getProxy().isStatic(ti)) {
-        setStatic(false);
-    } else {
-        setOgrePosition(newLocation.getPosition());
-        setOgreOrientation(newLocation.getOrientation());
-    }
-}
-
-void Entity::setParent(const ProxyObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation)
-{
-    Entity *parentEntity = mScene->getEntity(parent);
-    if (!parentEntity) {
-        SILOG(ogre,fatal,"No Entity has been created for proxy " << parent->getObjectReference() <<
-              " which is to become parent of "<<getProxy().getObjectReference());
-        return;
-    }
-    addToScene(parentEntity->mSceneNode);
-}
-
-void Entity::unsetParent(Time ti, const Location &newLocation) {
-    addToScene(NULL);
 }
 
 void Entity::destroyed(const Time&) {
@@ -183,7 +160,7 @@ void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
     Location loc (getProxy().extrapolateLocation(current));
     setOgrePosition(loc.getPosition());
     setOgreOrientation(loc.getOrientation());
-    setStatic(getProxy().isStatic(current));
+    setStatic(getProxy().isStatic());
 }
 
 }

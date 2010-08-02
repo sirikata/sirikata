@@ -83,8 +83,8 @@ private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
-    Extrapolator mLocation;
-    SpaceObjectReference mParentId;
+    TimedMotionVector3f mLoc;
+    TimedMotionQuaternion mOrientation;
 
     VWObjectPtr mParent;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
@@ -133,20 +133,12 @@ public:
     }
 
     /// Returns the last updated position for this object.
-    inline const Vector3d& getPosition() const{
-        return mLocation.lastValue().getPosition();
+    inline Vector3d getPosition() const{
+        return Vector3d(mLoc.position());
     }
     /// Returns the last updated Quaternion for this object.
     inline const Quaternion& getOrientation() const{
-        return mLocation.lastValue().getOrientation();
-    }
-    /// Returns the full last updated Location for this object.
-    inline const Location& getLastLocation() const{
-        return mLocation.lastValue();
-    }
-    /// Returns the time of the last update (even if partial)
-    inline TemporalValue<Location>::Time getLastUpdated() const {
-        return mLocation.lastUpdateTime();
+        return mOrientation.position();
     }
 
     /// Gets the parent ProxyObject. This may return null!
@@ -160,7 +152,7 @@ public:
     VWObjectPtr getOwner() const { return mParent; }
 
     /// Returns if this object has a zero velocity and requires no extrapolation.
-    bool isStatic(const TemporalValue<Location>::Time& when) const;
+    bool isStatic() const;
 
     /** Sets the location for this update. Note: This does not tell the
         Space that we have moved, but it is the first step in moving a local object. */
@@ -169,28 +161,6 @@ public:
     /** Sets the orientation for this update. Note: This does not tell the
         Space that we have moved, but it is the first step in moving a local object. */
     void setOrientation(const TimedMotionQuaternion& reqorient);
-
-    /** @see setLocation. This disables interpolation from the last update. */
-    void resetLocation(TemporalValue<Location>::Time timeStamp,
-                               const Location&location);
-
-    /** Sets the parent of an object. Note that while this is generally sent
-        in response to a property update, it is possible to set the parent
-        locally only for the purposes of extrapolation. All position updates
-        sent over the network are in global coordinates. */
-    void setParent(const ProxyObjectPtr &parent,
-               TemporalValue<Location>::Time timeStamp,
-               const Location &absLocation,
-               const Location &relLocation);
-    /// Locally unsets a parent, so this object always uses global coords.
-    void unsetParent(TemporalValue<Location>::Time timeStamp,
-               const Location &absLocation);
-
-    /// Locally sets a parent, and recomputes the relative position at this timeStamp.
-    void setParent(const ProxyObjectPtr &parent,
-               TemporalValue<Location>::Time timeStamp);
-    /// Locally unsets a parent, and recomputes the global position at this timeStamp.
-    void unsetParent(TemporalValue<Location>::Time timeStamp);
 
     /// Returns the global location of this object in space coordinates at timeStamp.
     Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
@@ -203,11 +173,12 @@ public:
         }
     }
 
-    /** Retuns the local location of this object at the current timestamp.
-        Should return the same value as lastLocation() if current == getLastUpdated().
-    */
+    /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {
-        return mLocation.extrapolate(current);
+        Vector3f angaxis;
+        float32 angvel;
+        mOrientation.velocity().toAngleAxis(angvel, angaxis);
+        return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
 };
 }

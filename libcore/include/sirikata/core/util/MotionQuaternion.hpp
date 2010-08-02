@@ -62,8 +62,16 @@ public:
         return mDirection;
     }
 
+    Quaternion extrapolatePosition(const Duration& dt) const {
+        return (mStart * (mDirection.exp(dt.toSeconds())));
+    }
+
+    Quaternion extrapolateVelocity(const Duration& dt) const {
+        return mDirection;
+    }
+
     MotionQuaternion extrapolate(const Duration& dt) const {
-        return MotionQuaternion(mStart + mDirection * dt.toSeconds(), mDirection);
+        return MotionQuaternion(extrapolatePosition(dt), extrapolateVelocity(dt));
     }
 
 private:
@@ -93,7 +101,7 @@ public:
     }
 
     PositionType position(const Duration& dt) const {
-        return Base::value().position() + Base::value().velocity() * dt.toSeconds();
+        return Base::value().extrapolatePosition(dt);
     }
 
     PositionType position(const Time& t) const {
@@ -103,10 +111,12 @@ public:
     const VelocityType& velocity() const {
         return Base::value().velocity();
     }
+
     TimedMotionQuaternion& operator+=(const PositionType &offset) {
         update(Base::time(), Base::value().position() * offset, Base::value().velocity());
         return *this;
     }
+
     void update(const Time& t, const PositionType& pos, const VelocityType& vel) {
         assert(t > Base::time());
         Base::updateValue(t, MotionQuaternion(pos, vel));
