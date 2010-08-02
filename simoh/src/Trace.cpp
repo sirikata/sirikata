@@ -130,7 +130,7 @@ CREATE_TRACE_DEF(OHTrace, ping, mLogPing, const Time& t, const UUID&sender, cons
     rec.set_ping_uid(uid);
     rec.set_size(sz);
 
-    mTrace->writeRecord(ObjectPingCreatedTag, rec);
+    mTrace->writeRecord(ObjectPingTag, rec);
 }
 
 
