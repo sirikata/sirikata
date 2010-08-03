@@ -35,6 +35,7 @@
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
+#include "Lights.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
@@ -1060,8 +1061,8 @@ private:
                 typestr = "spotlight";
             }
             float32 ambientPower, shadowPower;
-            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+            ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+            shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
             fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
                     loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);

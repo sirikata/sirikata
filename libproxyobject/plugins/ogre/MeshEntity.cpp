@@ -43,6 +43,7 @@
 #include <sirikata/core/transfer/TransferManager.hpp>
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"
+#include "Lights.hpp"
 
 using namespace std;
 using namespace Sirikata::Transfer;
@@ -400,7 +401,27 @@ void MeshEntity::createMesh(const Meshdata& md) {
     mo.setVisible(true);
     Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     bool check = mm.resourceExists(hash);
-    loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
+    loadMesh(hash);                     /// this is here because we removed
+                                        /// mResource->loaded(true, mEpoch) in
+                                        /// ModelLoadTask::doRun
+
+    // Lights
+    int light_idx = 0;
+    for(LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
+        const LightInstance& lightinst = *lightinst_it;
+
+        Matrix4x4f pos_xform = lightinst.transform;
+
+        // Get the instanced submesh
+        assert(lightinst.lightIndex < md.lights.size());
+        const LightInfo& sublight = *md.lights[lightinst.lightIndex];
+
+        String lightname = hash + "_light_" + boost::lexical_cast<String>(light_idx++);
+        Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
+        mLights.push_back(light);
+        mSceneNode->attachObject(light);
+        light->setDebugDisplayEnabled(true);
+    }
 }
 
 Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata& md) {

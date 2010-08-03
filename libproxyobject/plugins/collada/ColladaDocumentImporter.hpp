@@ -129,6 +129,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         typedef std::map<COLLADAFW::UniqueId, SubMeshGeometry*> GeometryMap;
         GeometryMap mGeometries;
+
+        typedef std::map<COLLADAFW::UniqueId, LightInfo*> LightMap;
+        LightMap mLights;
 };
 
 

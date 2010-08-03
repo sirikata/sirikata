@@ -34,6 +34,7 @@
 #include <sirikata/proxyobject/LightListener.hpp>
 #include "LightEntity.hpp"
 #include <sirikata/proxyobject/ProxyLightObject.hpp>
+#include "Lights.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -53,57 +54,8 @@ LightEntity::~LightEntity() {
     getProxy().LightProvider::removeListener(this);
 }
 
-float LightEntity::computeClosestPower(
-        const Color &source,
-        const Color &target,
-        float32 power) {
-    //minimize sqrt((source.r*power - target.r)^2 + (source.g*power - target.g) + (source.b*power - target.b));
-    if (source.length()) {
-        return power * source.dot(target) / source.length();
-    } else {
-        return 0;
-    }
-}
-
 void LightEntity::notify(const LightInfo& linfo){
-    float32 ambientPower, shadowPower;
-    ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-    shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-    Ogre::ColourValue diffuse_ambient (
-        toOgreRGBA(linfo.mDiffuseColor, ambientPower));
-    getOgreLight()->setDiffuseColour(diffuse_ambient);
-
-    Ogre::ColourValue specular_shadow (
-        toOgreRGBA(linfo.mSpecularColor, shadowPower));
-    getOgreLight()->setSpecularColour(specular_shadow);
-
-    getOgreLight()->setPowerScale(linfo.mPower);
-    switch (linfo.mType) {
-      case LightInfo::POINT:
-        getOgreLight()->setType(Ogre::Light::LT_POINT);
-        break;
-      case LightInfo::SPOTLIGHT:
-        getOgreLight()->setType(Ogre::Light::LT_SPOTLIGHT);
-        break;
-      case LightInfo::DIRECTIONAL:
-        getOgreLight()->setType(Ogre::Light::LT_DIRECTIONAL);
-        break;
-      default:break;
-    }
-    if (linfo.mType!=LightInfo::DIRECTIONAL) {
-        getOgreLight()->setAttenuation(
-            linfo.mLightRange,
-            linfo.mConstantFalloff,
-            linfo.mLinearFalloff,
-            linfo.mQuadraticFalloff);
-    }
-    if (linfo.mType==LightInfo::SPOTLIGHT) {
-        getOgreLight()->setSpotlightRange(
-            Ogre::Radian(linfo.mConeInnerRadians),
-            Ogre::Radian(linfo.mConeOuterRadians),
-            linfo.mConeFalloff);
-    }
-    getOgreLight()->setCastShadows(linfo.mCastsShadow);
+    updateOgreLight(getOgreLight(),linfo);
 }
 std::string LightEntity::ogreLightName(const SpaceObjectReference&ref) {
     return "Light:"+ref.toString();
