@@ -1,7 +1,7 @@
-/*  Sirikata Network Utilities
- *  StreamListener.hpp
+/*  Sirikata
+ *  PintoManager.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,31 +30,48 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SIRIKATA_StreamListener_HPP__
-#define SIRIKATA_StreamListener_HPP__
+#include "PintoManager.hpp"
+#include <sirikata/core/network/StreamListenerFactory.hpp>
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
-#include <sirikata/core/network/Stream.hpp>
+using namespace Sirikata::Network;
 
-namespace Sirikata { namespace Network {
-/**
- * This class waits on a service and listens for incoming connections
- * It calls the callback whenever such connections are encountered
- */
-class SIRIKATA_EXPORT StreamListener {
-protected:
-    StreamListener();
-public:
-    ///subclasses will expose these methods with similar arguments + protocol specific args
-    virtual bool listen(
-        const Address&addy,
-        const Stream::SubstreamCallback&newStreamCallback)=0;
-    ///returns thea name of the computer followed by a colon and then the service being listened on
-    virtual String listenAddressName()const=0;
-    ///returns thea name of the computer followed by a colon and then the service being listened on
-    virtual Address listenAddress()const=0;
-    ///stops listening
-    virtual void close()=0;
-    virtual ~StreamListener();
-};
-} }
-#endif
+#define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,"[PINTO] " << msg)
+
+namespace Sirikata {
+
+PintoManager::PintoManager(PintoContext* ctx)
+ : mContext(ctx)
+{
+    String listener_protocol = GetOptionValue<String>(OPT_PINTO_PROTOCOL);
+    String listener_protocol_options = GetOptionValue<String>(OPT_PINTO_PROTOCOL_OPTIONS);
+
+    OptionSet* listener_protocol_optionset = StreamListenerFactory::getSingleton().getOptionParser(listener_protocol)(listener_protocol_options);
+
+    mListener = StreamListenerFactory::getSingleton().getConstructor(listener_protocol)(mContext->ioService, listener_protocol_optionset);
+}
+
+PintoManager::~PintoManager() {
+    delete mListener;
+}
+
+void PintoManager::start() {
+    String listener_host = GetOptionValue<String>(OPT_PINTO_HOST);
+    String listener_port = GetOptionValue<String>(OPT_PINTO_PORT);
+    Address listenAddress(listener_host, listener_port);
+    mListener->listen(
+        listenAddress,
+        std::tr1::bind(&PintoManager::newStreamCallback,this,_1,_2)
+    );
+}
+
+void PintoManager::stop() {
+    mListener->close();
+}
+
+void PintoManager::newStreamCallback(Stream* newStream, Stream::SetCallbacks& setCallbacks) {
+    PINTO_LOG(debug,"New space server connection.");
+}
+
+} // namespace Sirikata

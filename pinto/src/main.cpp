@@ -41,6 +41,7 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
 #include "PintoContext.hpp"
+#include "PintoManager.hpp"
 
 int main(int argc, char** argv) {
     using namespace Sirikata;
@@ -70,6 +71,8 @@ int main(int argc, char** argv) {
 
     PintoContext* pinto_context = new PintoContext(ios, mainStrand, trace, start_time, duration);
 
+    PintoManager* pinto = new PintoManager(pinto_context);
+
     srand( GetOptionValue<uint32>("rand-seed") );
 
     ///////////Go go go!! start of simulation/////////////////////
@@ -77,6 +80,7 @@ int main(int argc, char** argv) {
     srand(time(NULL));
 
     pinto_context->add(pinto_context);
+    pinto_context->add(pinto);
 
     pinto_context->run(2);
 
@@ -87,6 +91,8 @@ int main(int argc, char** argv) {
     }
 
     trace->prepareShutdown();
+
+    delete pinto;
 
     trace->shutdown();
     delete trace;

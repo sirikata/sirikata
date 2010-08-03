@@ -40,7 +40,10 @@ namespace Sirikata {
 void InitPintoOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(new OptionValue(OPT_PINTO_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
-        .addOption(new OptionValue("cseg-service-tcp-port", "6234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
+        .addOption(new OptionValue(OPT_PINTO_PROTOCOL, "tcpsst", Sirikata::OptionValueType<String>(), "Protocol to use for connections from space servers."))
+        .addOption(new OptionValue(OPT_PINTO_PROTOCOL_OPTIONS, "", Sirikata::OptionValueType<String>(), "Protocol options to use for connections from space servers."))
+        .addOption(new OptionValue(OPT_PINTO_HOST, "0.0.0.0", Sirikata::OptionValueType<String>(), "IP address or host to listen for connections from space servers on."))
+        .addOption(new OptionValue(OPT_PINTO_PORT, "6789", Sirikata::OptionValueType<String>(), "Port to listen for connections from space servers."))
         ;
 }
 

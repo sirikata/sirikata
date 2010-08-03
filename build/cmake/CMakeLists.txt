@@ -1340,6 +1340,7 @@ SET(CSEG_SOURCES
   )
 
 SET(PINTO_SOURCES
+  ${PINTO_SOURCE_DIR}/PintoManager.cpp
   ${PINTO_SOURCE_DIR}/Options.cpp
   ${PINTO_SOURCE_DIR}/main.cpp
   )

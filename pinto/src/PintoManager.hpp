@@ -1,7 +1,7 @@
-/*  Sirikata Network Utilities
- *  StreamListener.hpp
+/*  Sirikata
+ *  PintoManager.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,31 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SIRIKATA_StreamListener_HPP__
-#define SIRIKATA_StreamListener_HPP__
+#ifndef _SIRIKATA_PINTO_MANAGER_HPP_
+#define _SIRIKATA_PINTO_MANAGER_HPP_
 
-#include <sirikata/core/network/Stream.hpp>
+#include "PintoContext.hpp"
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/network/StreamListener.hpp>
 
-namespace Sirikata { namespace Network {
-/**
- * This class waits on a service and listens for incoming connections
- * It calls the callback whenever such connections are encountered
+namespace Sirikata {
+
+/** PintoManager oversees space servers, tracking the regions they cover and
+ *  their largest objects.  It answers standing queries, much like the Pinto
+ *  services in each space server, but answers them for entire servers.  Pinto
+ *  services on each space server use it to determine which other servers they
+ *  may need to query.
  */
-class SIRIKATA_EXPORT StreamListener {
-protected:
-    StreamListener();
+class PintoManager : public Service {
 public:
-    ///subclasses will expose these methods with similar arguments + protocol specific args
-    virtual bool listen(
-        const Address&addy,
-        const Stream::SubstreamCallback&newStreamCallback)=0;
-    ///returns thea name of the computer followed by a colon and then the service being listened on
-    virtual String listenAddressName()const=0;
-    ///returns thea name of the computer followed by a colon and then the service being listened on
-    virtual Address listenAddress()const=0;
-    ///stops listening
-    virtual void close()=0;
-    virtual ~StreamListener();
+    PintoManager(PintoContext* ctx);
+    ~PintoManager();
+
+    virtual void start();
+    virtual void stop();
+
+private:
+    void newStreamCallback(Sirikata::Network::Stream* newStream, Sirikata::Network::Stream::SetCallbacks& setCallbacks);
+
+    PintoContext* mContext;
+    Network::StreamListener* mListener;
 };
-} }
-#endif
+
+} // namespace Sirikata
+
+#endif //_SIRIKATA_PINTO_MANAGER_HPP_

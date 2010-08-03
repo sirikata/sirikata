@@ -35,6 +35,9 @@
 
 #define OPT_PINTO_PLUGINS           "pinto.plugins"
 
+#define OPT_PINTO_PROTOCOL          "protocol"
+#define OPT_PINTO_PROTOCOL_OPTIONS  "protocol-options"
+#define OPT_PINTO_HOST              "host"
 #define OPT_PINTO_PORT              "port"
 
 namespace Sirikata {
