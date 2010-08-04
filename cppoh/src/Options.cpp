@@ -48,8 +48,8 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(STATS_OH_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
         .addOption(new OptionValue(STATS_SAMPLE_RATE, "250ms", Sirikata::OptionValueType<Duration>(), "Frequency to sample non-event statistics such as queue information."))
 
-        .addOption(new OptionValue("object-host-receive-buffer", "32768", Sirikata::OptionValueType<size_t>(), "size of the object host space node connection receive queue"))
-        .addOption(new OptionValue("object-host-send-buffer", "32768", Sirikata::OptionValueType<size_t>(), "size of the object host space node cnonection send queue"))
+        .addOption(new OptionValue("object-host-receive-buffer", "32768", Sirikata::OptionValueType<int32>(), "size of the object host space node connection receive queue"))
+        .addOption(new OptionValue("object-host-send-buffer", "32768", Sirikata::OptionValueType<int32>(), "size of the object host space node cnonection send queue"))
 
         .addOption(new OptionValue(OPT_OH_OPTIONS,"",OptionValueType<String>(),"Options passed to the object host"))
         .addOption(new OptionValue(OPT_MAIN_SPACE,"12345678-1111-1111-1111-DEFA01759ACE",OptionValueType<UUID>(),"space which to connect default objects to"))

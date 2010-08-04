@@ -74,7 +74,11 @@ SIRIKATA_FUNCTION_EXPORT Task::DeltaTime GetOptionValue<Task::DeltaTime>(const c
 template<>
 SIRIKATA_FUNCTION_EXPORT uint32 GetOptionValue<uint32>(const char* name);
 template<>
+SIRIKATA_FUNCTION_EXPORT int32 GetOptionValue<int32>(const char* name);
+template<>
 SIRIKATA_FUNCTION_EXPORT uint64 GetOptionValue<uint64>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT int64 GetOptionValue<int64>(const char* name);
 template<>
 SIRIKATA_FUNCTION_EXPORT bool GetOptionValue<bool>(const char* name);
 
