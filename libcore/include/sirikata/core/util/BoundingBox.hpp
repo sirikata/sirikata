@@ -49,8 +49,8 @@ public:
         mAcross=Vector3f(2.0f*radius,2.0f*radius,2.0f*radius);
     }
     template <typename flt> BoundingBox(const BoundingBox<flt>&input) {
-        mMin=Vector3<real>(input.mMin);
-        mAcross=input.mAcross;
+      mMin=Vector3<real>(input.min());
+      mAcross=input.across();
     }
     BoundingBox(const Vector3<real>&imin,const Vector3<real>&imax){
         mMin=imin;
