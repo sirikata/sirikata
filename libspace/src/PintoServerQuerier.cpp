@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Options.hpp
+ *  PintoServerQuerier.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,52 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SPACE_OPTIONS_HPP_
-#define _SIRIKATA_SPACE_OPTIONS_HPP_
+#include <sirikata/space/PintoServerQuerier.hpp>
 
-#define OPT_SPACE_PLUGINS           "space.plugins"
-
-#define SERVER_QUEUE         "server.queue"
-#define SERVER_QUEUE_LENGTH  "server.queue.length"
-#define SERVER_RECEIVER      "server.receiver"
-#define SERVER_ODP_FLOW_SCHEDULER   "server.odp.flowsched"
-
-#define NETWORK_TYPE         "net"
-
-#define CSEG                "cseg"
-
-#define LOC                        "loc"
-#define LOC_MAX_PER_RESULT         "loc.max-per-result"
-
-#define OSEG                       "oseg"
-#define OSEG_OPTIONS               "oseg-options"
-#define OSEG_CACHE_SIZE              "oseg-cache-size"
-#define OSEG_CACHE_CLEAN_GROUP_SIZE  "oseg-cache-clean-group-size"
-#define OSEG_CACHE_ENTRY_LIFETIME    "oseg-cache-entry-lifetime"
-
-#define CACHE_SELECTOR              "oseg-cache-selector"
-#define CACHE_TYPE_COMMUNICATION    "cache_communication"
-#define CACHE_TYPE_ORIGINAL_LRU     "cache_originallru"
-
-
-#define CACHE_COMM_SCALING          "oseg-cache-scaling"
-
-#define FORWARDER_SEND_QUEUE_SIZE "forwarder.send-queue-size"
-#define FORWARDER_RECEIVE_QUEUE_SIZE "forwarder.receive-queue-size"
-
-#define OSEG_LOOKUP_QUEUE_SIZE     "oseg_lookup_queue_size"
-
-#define OPT_PINTO                  "pinto"
-#define OPT_PINTO_OPTIONS          "pinto-options"
-
-#define PROX_MAX_PER_RESULT        "prox.max-per-result"
-
+AUTO_SINGLETON_INSTANCE(Sirikata::PintoServerQuerierFactory);
 
 namespace Sirikata {
 
-void InitSpaceOptions();
+PintoServerQuerierFactory& PintoServerQuerierFactory::getSingleton() {
+    return AutoSingleton<PintoServerQuerierFactory>::getSingleton();
+}
+
+void PintoServerQuerierFactory::destroy() {
+    AutoSingleton<PintoServerQuerierFactory>::destroy();
+}
 
 } // namespace Sirikata
-
-
-#endif //_SIRIKATA_SPACE_OPTIONS_HPP_

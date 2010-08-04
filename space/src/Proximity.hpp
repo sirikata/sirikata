@@ -49,6 +49,7 @@ namespace Sirikata {
 class LocationService;
 class ProximityInputEvent;
 class ProximityOutputEvent;
+class PintoServerQuerier;
 
 class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient, MigrationDataClient, public PollingService {
 public:
@@ -146,6 +147,8 @@ private:
 
 
     SpaceContext* mContext;
+
+    PintoServerQuerier* mServerQuerier;
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
 

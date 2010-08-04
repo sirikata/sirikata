@@ -45,6 +45,8 @@
 
 #include <float.h>
 
+#include <sirikata/space/PintoServerQuerier.hpp>
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace Sirikata {
@@ -56,6 +58,7 @@ static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
    mContext(ctx),
+   mServerQuerier(NULL),
    mLocService(locservice),
    mCSeg(NULL),
    mMinObjectQueryAngle(SolidAngle::Max),
@@ -73,6 +76,11 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     // objects know about it's strand/service
     mProxService = Network::IOServiceFactory::makeIOService();
     mProxStrand = mProxService->createStrand();
+
+    // Server Querier (discover other servers)
+    String pinto_type = GetOptionValue<String>(OPT_PINTO);
+    String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
+    mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
 
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
@@ -104,6 +112,8 @@ Proximity::~Proximity() {
 
     delete mServerQueryHandler;
     delete mLocalLocCache;
+
+    delete mServerQuerier;
 
     delete mProxStrand;
     Network::IOServiceFactory::destroyIOService(mProxService);

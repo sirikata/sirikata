@@ -34,6 +34,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/space/ObjectSegmentation.hpp>
 #include "LocalObjectSegmentation.hpp"
+#include "LocalPintoServerQuerier.hpp"
 
 static int space_local_plugin_refcount = 0;
 
@@ -51,6 +52,13 @@ static ObjectSegmentation* createLocalOSeg(SpaceContext* ctx, Network::IOStrand*
     return new LocalObjectSegmentation(ctx, oseg_strand, cseg, cache);
 }
 
+static PintoServerQuerier* createLocalPintoServerQuerier(SpaceContext* ctx, const String& args) {
+    OptionSet* optionsSet = OptionSet::getOptions("space_local",NULL);
+    optionsSet->parse(args);
+
+    return new LocalPintoServerQuerier(ctx);
+}
+
 } // namespace Sirikata
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
@@ -65,6 +73,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         OSegFactory::getSingleton()
             .registerConstructor("local",
                 std::tr1::bind(&createLocalOSeg, _1, _2, _3, _4, _5));
+        PintoServerQuerierFactory::getSingleton()
+            .registerConstructor("local",
+                std::tr1::bind(&createLocalPintoServerQuerier, _1, _2));
     }
     space_local_plugin_refcount++;
 }
@@ -84,6 +95,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         assert(space_local_plugin_refcount==0);
         if (space_local_plugin_refcount==0) {
             OSegFactory::getSingleton().unregisterConstructor("local");
+            PintoServerQuerierFactory::getSingleton().unregisterConstructor("local");
         }
     }
 }
