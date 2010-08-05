@@ -1,5 +1,5 @@
 /*  Sirikata
- *  PintoManager.cpp
+ *  MasterPintoServerQuerier.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,50 +30,49 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PintoManager.hpp"
-#include <sirikata/core/network/StreamListenerFactory.hpp>
-#include "Options.hpp"
-#include <sirikata/core/options/CommonOptions.hpp>
+#ifndef _SIRIKATA_LIBSPACE_MASTER_PINTO_SERVER_QUERIER_HPP_
+#define _SIRIKATA_LIBSPACE_MASTER_PINTO_SERVER_QUERIER_HPP_
 
-using namespace Sirikata::Network;
+#include <sirikata/space/PintoServerQuerier.hpp>
+#include <sirikata/core/network/Stream.hpp>
+#include <sirikata/space/SpaceContext.hpp>
 
-#define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,"[PINTO] " << msg)
+#define OPT_MASTER_PINTO_PROTOCOL             "protocol"
+#define OPT_MASTER_PINTO_PROTOCOL_OPTIONS     "protocol-options"
+#define OPT_MASTER_PINTO_HOST                 "host"
+#define OPT_MASTER_PINTO_PORT                 "port"
 
 namespace Sirikata {
 
-PintoManager::PintoManager(PintoContext* ctx)
- : mContext(ctx)
-{
-    String listener_protocol = GetOptionValue<String>(OPT_PINTO_PROTOCOL);
-    String listener_protocol_options = GetOptionValue<String>(OPT_PINTO_PROTOCOL_OPTIONS);
+/** MasterPintoServerQuerier uses a single, centralized master Pinto query
+ *  server to discover which other space servers must be queried.
+ */
+class MasterPintoServerQuerier : public PintoServerQuerier, public Service {
+public:
+    MasterPintoServerQuerier(SpaceContext* ctx, const String& params);
+    virtual ~MasterPintoServerQuerier();
 
-    OptionSet* listener_protocol_optionset = StreamListenerFactory::getSingleton().getOptionParser(listener_protocol)(listener_protocol_options);
+    // Service Interface
+    virtual void start();
+    virtual void stop();
 
-    mListener = StreamListenerFactory::getSingleton().getConstructor(listener_protocol)(mContext->ioService, listener_protocol_optionset);
+    // PintoServerQuerier Interface
+    virtual void update(const BoundingBox3f& region, float max_radius);
+    virtual void updateQuery(const SolidAngle& min_angle);
 
-    String listener_host = GetOptionValue<String>(OPT_PINTO_HOST);
-    String listener_port = GetOptionValue<String>(OPT_PINTO_PORT);
-    Address listenAddress(listener_host, listener_port);
-    PINTO_LOG(debug, "Listening on " << listenAddress.toString());
-    mListener->listen(
-        listenAddress,
-        std::tr1::bind(&PintoManager::newStreamCallback,this,_1,_2)
-    );
-}
+private:
+    // Handlers for mServerStream
+    void handleServerConnection(Network::Stream::ConnectionStatus status, const std::string &reason);
+    void handleServerReceived(Network::Chunk& data, const Network::Stream::PauseReceiveCallback& pause);
+    void handleServerReadySend();
 
-PintoManager::~PintoManager() {
-    delete mListener;
-}
+    SpaceContext* mContext;
+    Network::Stream* mServerStream;
 
-void PintoManager::start() {
-}
-
-void PintoManager::stop() {
-    mListener->close();
-}
-
-void PintoManager::newStreamCallback(Stream* newStream, Stream::SetCallbacks& setCallbacks) {
-    PINTO_LOG(debug,"New space server connection.");
-}
+    String mHost;
+    String mPort;
+}; // MasterPintoServerQuerier
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_LIBSPACE_MASTER_PINTO_SERVER_QUERIER_HPP_
