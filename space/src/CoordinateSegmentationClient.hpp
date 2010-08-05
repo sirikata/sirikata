@@ -40,7 +40,10 @@
 
 #include "Protocol_CSeg.pbj.hpp"
 
+
 namespace Sirikata {
+
+typedef boost::asio::ip::tcp tcp;
 
 class ServerIDMap;
 
@@ -97,6 +100,15 @@ private:
     void sendSegmentationListenMessage();
 
     boost::shared_ptr<Network::TCPSocket> getLeasedSocket();
+
+    void writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+                          Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
+
+
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
+
+
 
 }; // class CoordinateSegmentation
 

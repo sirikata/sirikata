@@ -86,71 +86,37 @@ void CoordinateSegmentationClient::startAccepting() {
   mAcceptor->async_accept(*mSocket, boost::bind(&CoordinateSegmentationClient::accept_handler,this));
 }
 
-void CoordinateSegmentationClient::accept_handler() {
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  for (;;)
-    {
-      boost::array<uint8, 1024> buf;
-      boost::system::error_code error;
+void CoordinateSegmentationClient::accept_handler() { 
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
 
-      size_t len = mSocket->read_some(boost::asio::buffer(buf), error);
+  readCSEGMessage(mSocket, csegMessage);
 
-      if (dataReceived == NULL) {
-	      dataReceived = (uint8*) malloc (len);
-      }
-      else if (len > 0){
-      	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-      }
-      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+  mTopLevelRegion.destroy();
+  mServerRegionCache.clear();
+  
+ 
+  std::map<ServerID, SegmentationInfo> segmentationInfoMap;
 
-      bytesReceived += len;
+  for (int i=0; i < csegMessage.change_message().region_size(); i++) {  
+    ServerID id = csegMessage.change_message().region(i).id();
 
-      if (error == boost::asio::error::eof)
-        break; // Connection closed cleanly by peer.
-      else if (error) {
-	std::cout << "Error reading request from " << mSocket->remote_endpoint().address().to_string()
-		    <<" in accept_handler\n";
-        throw boost::system::system_error(error); // Some other error.
-      }
-    }
-
-  if ( dataReceived != NULL) {
-    SegmentationChangeMessage* segChangeMessage = (SegmentationChangeMessage*) dataReceived;
-
-    std::cout << "\n\nReceived segmentation change message with numEntries=" << ((int)segChangeMessage->numEntries) << " at time " << mContext->simTime().raw() << "\n";
-
-    mTopLevelRegion.destroy();
-    mServerRegionCache.clear();
-
-    int offset = 2;
-    std::vector<SegmentationInfo> segInfoVector;
-    for (int i=0; i<segChangeMessage->numEntries; i++) {
-      BoundingBoxList bbList;
-      SegmentationInfo segInfo;
-      SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);
-
-      for (unsigned int j=0; j < segChange->listLength; j++) {
-      	BoundingBox3f bbox;
-      	SerializedBBox sbbox= segChange->bboxList[j];
-      	sbbox.deserialize(bbox);
-      	bbList.push_back(bbox);
-      }
-
-      segInfo.server = segChange->serverID;
-      segInfo.region = bbList;
-
-      printf("segInfo.server=%d, segInfo.region.size=%d\n", segInfo.server, (int)segInfo.region.size());
-      fflush(stdout);
-
-      segInfoVector.push_back(segInfo);
-      offset += (4 + 4 + sizeof(SerializedBBox)*segChange->listLength);
-    }
-
-    notifyListeners(segInfoVector);
-
-    free(dataReceived);
+    /* [] will create a new entry in the map if not already there. */
+    segmentationInfoMap[id].server = id;
+    segmentationInfoMap[id].region.push_back(csegMessage.change_message().region(i).bounds());    
   }
+
+
+  std::vector<SegmentationInfo> segInfoVector;
+  for (std::map<ServerID, SegmentationInfo>::iterator it = segmentationInfoMap.begin();
+       it != segmentationInfoMap.end(); it++)
+  {
+    printf("segInfo.server=%d, segInfo.region.size=%d\n", it->second.server, (int)it->second.region.size());
+    fflush(stdout);
+
+    segInfoVector.push_back(it->second);
+  }
+
+  notifyListeners(segInfoVector);
 
   mSocket->close();
   startAccepting();
@@ -161,17 +127,19 @@ CoordinateSegmentationClient::~CoordinateSegmentationClient() {
 }
 
 void CoordinateSegmentationClient::sendSegmentationListenMessage() {
-  SegmentationListenMessage requestMessage;
+  
   Address4* addy = mSidMap->lookupInternal(mContext->id());
-    
-  requestMessage.port = addy->port+10000;
+
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
+
+  csegMessage.mutable_segmentation_listen_message().set_port(addy->port+10000);
 
   struct in_addr ip_addr;
   ip_addr.s_addr = addy->ip;
   char* addr = inet_ntoa(ip_addr);
 
-  strncpy(requestMessage.host, addr, 128);
-  printf("host=%s, port=%d\n", requestMessage.host, requestMessage.port);
+  csegMessage.mutable_segmentation_listen_message().set_host(std::string(addr));
+  printf("host=%s, port=%d\n", addr, addy->port+10000);
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -181,18 +149,15 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage() {
     return ;
   }
 
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
-                     boost::asio::transfer_all() );
-
+  writeCSEGMessage(socket, csegMessage);
 }
 
 void CoordinateSegmentationClient::reportLoad(ServerID sid, const BoundingBox3f& bbox, uint32 load) {
-  LoadReportMessage requestMessage;
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;  
 
-  requestMessage.loadValue = load;
-  requestMessage.bbox.serialize(bbox);
-  requestMessage.server = sid;
+  csegMessage.mutable_load_report_message().set_load_value(load);
+  csegMessage.mutable_load_report_message().set_bbox(bbox);
+  csegMessage.mutable_load_report_message().set_server(sid);
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -202,21 +167,16 @@ void CoordinateSegmentationClient::reportLoad(ServerID sid, const BoundingBox3f&
     return ;
   }
 
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
-                     boost::asio::transfer_all() );
-
-  boost::system::error_code error;
-  boost::array<uint8, 1> buf;
-
-  socket->read_some(boost::asio::buffer(buf), error);
+  writeCSEGMessage(socket, csegMessage);
+  
+  readCSEGMessage(socket, csegMessage);
 }
 
 boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
   if (mLeasedSocket.get() != 0 && mLeasedSocket->is_open()) {
     return mLeasedSocket;
   }
-  else {        
+  else {
     TCPResolver resolver(*mIOService);
 
     TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
@@ -250,11 +210,12 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
   return mLeasedSocket;
 }
 
-ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {  
-  LookupRequestMessage lookupMessage;
-  lookupMessage.x = pos.x;
-  lookupMessage.y = pos.y;
-  lookupMessage.z = pos.z;  
+ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;  
+
+  csegMessage.mutable_lookup_request_message().set_x(pos.x);
+  csegMessage.mutable_lookup_request_message().set_y(pos.y);
+  csegMessage.mutable_lookup_request_message().set_z(pos.z);
   
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -263,52 +224,12 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
     assert(false);
     return 0;
   }
-
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
-                     boost::asio::transfer_all() );
-
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  bool failedOnce=false;
-  for (;;)
-  {
-      boost::system::error_code error;
-      boost::array<uint8, sizeof(LookupResponseMessage)> buf;
-
-      std::size_t len = boost::asio::read(
-                                        *socket, boost::asio::buffer(buf),
-                                        boost::asio::transfer_all(), error);
-      if (!error)
-       {   
-         if (dataReceived == NULL) {
-           dataReceived = (uint8*) malloc (len);
-         }
-         else if (len > 0){
-           dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-         }
-         memcpy(dataReceived+bytesReceived, buf.c_array(), len);
-         break;
-      }
-
-      if (error == boost::asio::error::eof || bytesReceived >= sizeof(LookupResponseMessage) )
-        break; // Connection closed cleanly by peer.
-      else if (error) {
-	       std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string()
-		      <<" in lookup\n\n\n";
-         assert(false);
-      }
-  }
-
-  LookupResponseMessage* response = (LookupResponseMessage*)dataReceived;
   
-  assert(response->type == LOOKUP_RESPONSE);
+  writeCSEGMessage(socket, csegMessage);  
 
-  ServerID retval = response->serverID;  
+  readCSEGMessage(socket, csegMessage);  
 
-  if (dataReceived != NULL) {
-    free(dataReceived);
-  }  
+  ServerID retval = csegMessage.lookup_response_message().server_id();
   
   return retval;
 }
@@ -322,90 +243,31 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
     return mServerRegionCache[server];
   } 
 
-  ServerRegionRequestMessage requestMessage;
-  requestMessage.serverID = server;
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
+  csegMessage.mutable_server_region_request_message().set_server_id(server);
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
 
   if (socket == boost::shared_ptr<TCPSocket>()) {
-    //TODO: should return some error code instead; assuming no failures for now
     assert(false);
     return boundingBoxList;
   }
 
   
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
-                     boost::asio::transfer_all() );
+  writeCSEGMessage(socket, csegMessage);
   //Sent over serverRegion request to cseg server;
-
-
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  uint32 serverRegionListLength = INT_MAX;
-  for (;;)
-  {
-      boost::system::error_code error;
-      boost::array<uint8, 1048576> buf;
-      
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
-
-      if (dataReceived == NULL) {
-      	dataReceived = (uint8*) malloc (len);
-      }
-      else if (len > 0){
-      	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-      }
-      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
-
-      bytesReceived += len;
-
-      if (serverRegionListLength == INT_MAX && bytesReceived >= sizeof(uint8) + sizeof(uint32)) {
-	ServerRegionResponseMessage* msg = (ServerRegionResponseMessage*) dataReceived;
-	serverRegionListLength = msg->listLength; 
-      }
-
-      if (error == boost::asio::error::eof ||
-	  bytesReceived >= sizeof(uint8) + sizeof(uint32) + serverRegionListLength*sizeof(SerializedBBox))
-      {
-        break; // Connection closed cleanly by peer.
-      }
-      else if (error) {
-        std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in serverRegion\n";
-        assert(false);
-      }
-  }
-
-  if (dataReceived == NULL) {
-    boundingBoxList.push_back(BoundingBox3f(Vector3f(0,0,0), Vector3f(0,0,0)));
-    return boundingBoxList;
-  }
-
+  
+  readCSEGMessage(socket, csegMessage);
   //Received reply from cseg server for server region
 
-  ServerRegionResponseMessage* response = (ServerRegionResponseMessage*) malloc(bytesReceived);
-  memcpy(response, dataReceived, bytesReceived);
-
-  assert(response->type == SERVER_REGION_RESPONSE);
-
-  for (uint32 i=0; i < response->listLength; i++) {
-    BoundingBox3f bbox;
-    SerializedBBox* sbbox = &(response->bboxList[i]);
-    sbbox->deserialize(bbox);
+  
+  for (int i=0; i < csegMessage.server_region_response_message().bbox_list_size(); i++) {
+    BoundingBox3f bbox = csegMessage.server_region_response_message().bbox_list(i);
 
     boundingBoxList.push_back(bbox);
   }
-
-  free(dataReceived);
-  free(response);
-
-  /*printf("serverRegion for %d returned %d boxes\n", server, boundingBoxList.size());
-  for (int i=0 ; i<boundingBoxList.size(); i++) {
-    std::cout << server << " has bounding box : " << boundingBoxList[i] << "\n";
-  }
-  fflush(stdout);
-  memdump1((uint8*) response, bytesReceived);*/
+  
 
   mServerRegionCache[server] = boundingBoxList;
  
@@ -413,6 +275,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 }
 
 BoundingBox3f CoordinateSegmentationClient::region()  {
+
   if ( mTopLevelRegion.mBoundingBox.min().x  != mTopLevelRegion.mBoundingBox.max().x ) {
     //Returning cached region
     return mTopLevelRegion.mBoundingBox;
@@ -420,7 +283,9 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   //Going to server for region
 
-  RegionRequestMessage requestMessage;
+
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
+  csegMessage.mutable_region_request_message().set_filler(1);
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -429,59 +294,16 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
     return mTopLevelRegion.mBoundingBox;
   }
 
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
-                     boost::asio::transfer_all() );
+  writeCSEGMessage(socket, csegMessage);
 
   //Sent over region request to cseg server
 
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  for (;;)
-  {
-      boost::system::error_code error;
-      boost::array<uint8, sizeof(RegionResponseMessage)> buf;
-
-      size_t len = boost::asio::read(*socket, boost::asio::buffer(buf),
-                                     boost::asio::transfer_all(), error);
-
-      if (dataReceived == NULL) {
-      	dataReceived = (uint8*) malloc (len);
-      }
-      else if (len > 0){
-      	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-      }
-      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
-
-      bytesReceived += len;
-      if (error == boost::asio::error::eof || bytesReceived >= sizeof(RegionResponseMessage) ) {       
-        break; // Connection closed cleanly by peer.
-      }
-      else if (error) {
-	std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string()<<" in region\n";
-        fflush(stdout);
-        
-      	return mTopLevelRegion.mBoundingBox;
-      }
-  }
-
+  
+  readCSEGMessage(socket, csegMessage);
   //Received reply from cseg server for region
+  
 
-  if (dataReceived == NULL) {
-    return mTopLevelRegion.mBoundingBox;
-  }
-
-  RegionResponseMessage* response = (RegionResponseMessage*) malloc(bytesReceived);
-  memcpy(response, dataReceived, bytesReceived);
-  assert(response->type == REGION_RESPONSE);
-
-
-  BoundingBox3f bbox;
-  SerializedBBox* sbbox = &response->bbox;
-  sbbox->deserialize(bbox);
-
-  free(dataReceived);
-  free(response);
+  BoundingBox3f bbox = csegMessage.region_response_message().bbox();
 
   mTopLevelRegion.mBoundingBox = bbox;
 
@@ -495,8 +317,9 @@ uint32 CoordinateSegmentationClient::numServers()  {
   }
 
   //Going to server for numServers
-
-  NumServersRequestMessage requestMessage;
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
+  csegMessage.mutable_num_servers_request_message().set_filler(1);
+  
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -505,52 +328,16 @@ uint32 CoordinateSegmentationClient::numServers()  {
     return 0;
   }
 
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
-                     boost::asio::transfer_all() );
+  writeCSEGMessage(socket, csegMessage);
 
   // Sent over numservers request to cseg server
 
-
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  for (;;)
-  {
-      boost::system::error_code error;
-      boost::array<uint8, sizeof(NumServersResponseMessage) > buf;
-
-      size_t len = boost::asio::read(*socket, boost::asio::buffer(buf),
-                                     boost::asio::transfer_all(), error);
-
-      if (dataReceived == NULL) {
-        dataReceived = (uint8*) malloc (len);
-      }
-      else if (len > 0){
-        dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-      }
-      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
-
-      bytesReceived += len;
-      if (error == boost::asio::error::eof || bytesReceived >= sizeof(NumServersResponseMessage))
-        break; // Connection closed cleanly by peer.
-      else if (error) {
-      	std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string() <<" in numservers\n";
-	
-        return mAvailableServersCount;
-      }
-  }
+  readCSEGMessage(socket, csegMessage);
 
   // Received reply from cseg server for numservers
 
-  NumServersResponseMessage* response = (NumServersResponseMessage*)dataReceived;
-  assert(response->type == NUM_SERVERS_RESPONSE);
-
-  uint32 retval = response->numServers;
+  uint32 retval = csegMessage.num_servers_response_message().num_servers();
   mAvailableServersCount = retval;
-
-  if (dataReceived != NULL) {
-    free(dataReceived);
-  }
 
   return retval;
 }
@@ -558,10 +345,9 @@ uint32 CoordinateSegmentationClient::numServers()  {
 std::vector<ServerID> CoordinateSegmentationClient::lookupBoundingBox(const BoundingBox3f& bbox) {
   std::vector<ServerID> serverList;
 
-
   //Serialize and send out the message.
-  LookupBBoxRequestMessage lookupMessage;
-  lookupMessage.bbox.serialize(bbox);
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
+  csegMessage.mutable_lookup_bbox_request_message().set_bbox(bbox);
   
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
@@ -569,68 +355,23 @@ std::vector<ServerID> CoordinateSegmentationClient::lookupBoundingBox(const Boun
   if (socket == boost::shared_ptr<TCPSocket>()) {
     assert(false);    
   }
-
   
-  boost::asio::write(*socket,
-                     boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
-                     boost::asio::transfer_all() );  
+  writeCSEGMessage(socket, csegMessage);
 
   //Read back the response
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  bool failedOnce=false;
-  uint32 serverListLength = INT_MAX;
-  for (;;)
-  {
-      boost::system::error_code error;
-      boost::array<uint8, 1048576> buf;
+  readCSEGMessage(socket, csegMessage);
 
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
-
-      if (!error)
-       {   
-         if (dataReceived == NULL) {
-           dataReceived = (uint8*) malloc (len);
-         }
-         else if (len > 0){
-           dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-         }
-         memcpy(dataReceived+bytesReceived, buf.c_array(), len);  
-         bytesReceived += len;
-      }      
-
-      if (bytesReceived >= 1 + sizeof(uint32) ) {
-        LookupBBoxResponseMessage* response = (LookupBBoxResponseMessage*)dataReceived;
-        serverListLength = response->serverListLength;        
-      }      
-
-      if (error == boost::asio::error::eof || bytesReceived >= 1 + sizeof(uint32) + serverListLength*sizeof(ServerID) )
-        break; // Connection closed cleanly by peer.
-      else if (error) {
-        std::cout << "Error reading response from " << socket->remote_endpoint().address().to_string()
-                  <<" in lookup\n\n\n";
-         assert(false);
-      }
-  }
-
-  //Return the response
-  LookupBBoxResponseMessage* response = (LookupBBoxResponseMessage*)dataReceived;
-  assert(response->type == LOOKUP_BBOX_RESPONSE);
+  //Return the response  
  
-  for (uint i=0; i<serverListLength; i++) {
-    serverList.push_back(response->serverList[i]);
-  }
-
-  if (dataReceived != NULL) {
-    free(dataReceived);
-  }
+  for (int i=0; i<csegMessage.lookup_bbox_response_message().server_list_size(); i++) {
+    serverList.push_back(csegMessage.lookup_bbox_response_message().server_list(i) );
+  }  
 
   return serverList;
 }
 
 void CoordinateSegmentationClient::service() {
     mIOService->poll();
-
 
     boost::mutex::scoped_lock scopedLock(mMutex);
     if (mLeasedSocket.get() != 0 && mLeasedSocket->is_open() && Timer::now() > mLeaseExpiryTime ) {
@@ -652,6 +393,42 @@ void CoordinateSegmentationClient::migrationHint( std::vector<ServerLoadInfo>& s
 
 void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
 }
+
+void CoordinateSegmentationClient::writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+                                                    Sirikata::Protocol::CSeg::CSegMessage& csegMessage)
+{
+  std::string buffer = serializePBJMessage(csegMessage);
+
+  uint32 length = htonl(buffer.size());
+
+  buffer = std::string( (char*)&length, sizeof(uint32)) + buffer;
+
+  boost::asio::write(*socket,
+                     boost::asio::buffer((void*) buffer.data(), buffer.size()),
+                     boost::asio::transfer_all() );
+}
+
+void CoordinateSegmentationClient::readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+                                                        Sirikata::Protocol::CSeg::CSegMessage& csegMessage)
+{
+  //should have a timeout in case of cseg server failure, but
+  //assuming no failures for now...
+  uint32 length;
+  boost::asio::read(*socket, boost::asio::buffer( (void*)(&length), sizeof(uint32) ), boost::asio::transfer_all());
+  length = ntohl(length);
+  
+  uint8* buf = new uint8[length];
+  boost::asio::read(*socket, boost::asio::buffer(buf, length), boost::asio::transfer_all());
+
+  std::string str = std::string((char*) buf, length);
+
+  bool val = parsePBJMessage(&csegMessage, str);
+
+  assert(val);
+
+  delete buf;
+}
+
 
 
 } // namespace Sirikata

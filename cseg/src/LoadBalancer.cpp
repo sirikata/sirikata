@@ -94,7 +94,6 @@ void LoadBalancer::reportRegionLoad(SegmentedRegion* segRegion, ServerID sid, ui
       mUnderloadedRegionsList.push_back(segRegion);
       std::cout << "Adding to underloaded: " << sid << "\n";
     }
-
   }
   else {
     std::vector<SegmentedRegion*>::iterator it = std::find(mUnderloadedRegionsList.begin(),
@@ -106,14 +105,13 @@ void LoadBalancer::reportRegionLoad(SegmentedRegion* segRegion, ServerID sid, ui
   }
 }
 
-void LoadBalancer::handleSegmentationChange(SegmentationChangeMessage* segChangeMessage) {  
-  for (int i=0; i<segChangeMessage->numEntries; i++) {
-    SerializedSegmentChange* segChange = (SerializedSegmentChange*) (&(segChangeMessage->changedSegments[i]));
+void LoadBalancer::handleSegmentationChange(Sirikata::Protocol::CSeg::ChangeMessage segChangeMessage) {  
+  for (int i=0; i < segChangeMessage.region_size(); i++) {
+    Sirikata::Protocol::CSeg::SplitRegion region = segChangeMessage.region(i); 
 
     for (uint32 i=0; i<mAvailableServers.size(); i++) {
-      if (mAvailableServers[i].mServer == segChange->serverID &&
-          segChange->listLength>=1 &&
-          segChange->bboxList[0].minX != segChange->bboxList[0].maxX)
+      if (mAvailableServers[i].mServer == region.id() &&
+          region.bounds().min().x != region.bounds().max().x)
         {
           mAvailableServers[i].mAvailable = false;
           break;
@@ -155,6 +153,7 @@ void LoadBalancer::service() {
       overloadedRegion->mLeftChild->mServer = overloadedRegion->mServer;
       overloadedRegion->mRightChild->mServer = availableServer;
 
+      std::cout << "Split\n";
       std::cout << overloadedRegion->mServer << " : " << overloadedRegion->mLeftChild->mBoundingBox << "\n";
       std::cout << availableServer << " : " << overloadedRegion->mRightChild->mBoundingBox << "\n";
       
