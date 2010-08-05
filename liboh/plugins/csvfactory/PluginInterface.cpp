@@ -63,7 +63,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         using std::tr1::placeholders::_1;
         ObjectFactoryFactory::getSingleton()
             .registerConstructor("csv",
-                std::tr1::bind(&createCSVObjectFactory, _1, _2, _3, _4));
+                                 std::tr1::bind(&createCSVObjectFactory, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3, std::tr1::placeholders::_4));
     }
     csvfactory_plugin_refcount++;
 }
