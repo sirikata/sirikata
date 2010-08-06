@@ -86,7 +86,6 @@ String sha1(void* data, size_t len) {
   char *p = out;
   for ( uint32 i = 0; i < hash_len_quad; i++, p += 8 ) {
     snprintf ( p, 9, "%08x", digest[i] );
-    fflush(stdout);
   }
 
   String retval = out;
@@ -122,6 +121,8 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
     region->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( (minX+maxX)/2, minY, minZ),
 						       region->mBoundingBox.max() );
 
+    region->mLeftChild->mSplitAxis = region->mRightChild->mSplitAxis = SegmentedRegion::X;
+
     subdivideTopLevelRegion(region->mLeftChild,
 			    Vector3ui32(perdim.x/2, perdim.y, perdim.z),
 			    numServersAssigned
@@ -137,6 +138,8 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
     region->mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX,(minY+maxY)/2,minZ),
 						       region->mBoundingBox.max() );
 
+    region->mLeftChild->mSplitAxis = region->mRightChild->mSplitAxis = SegmentedRegion::Y;
+
     subdivideTopLevelRegion(region->mLeftChild,
 			    Vector3ui32(perdim.x, perdim.y/2, perdim.z),
 			    numServersAssigned
@@ -151,6 +154,8 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
 						      Vector3f( maxX, maxY, (minZ+maxZ)/2) );
     region->mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX, minY , (minZ+maxZ)/2),
 						       region->mBoundingBox.max() );
+
+    region->mLeftChild->mSplitAxis = region->mRightChild->mSplitAxis = SegmentedRegion::Z;
 
     subdivideTopLevelRegion(region->mLeftChild,
 			    Vector3ui32(perdim.x, perdim.y, perdim.z/2),
@@ -560,6 +565,7 @@ void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* re
   serializedTree->mSegmentedRegions[localIdx].mLeafCount = region->mLeafCount;
   serializedTree->mSegmentedRegions[localIdx].mBoundingBox.serialize(region->mBoundingBox);
 
+
   // std::cout << "at index " << localIdx  <<" bbox=" << region->mBoundingBox << "\n";
 
   if (region->mLeftChild != NULL) {
@@ -852,8 +858,12 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
       segRegion->mLeftChild = region->mLeftChild;
       segRegion->mRightChild = region->mRightChild;
 
+      assert(region->mSplitAxis != SegmentedRegion::UNDEFINED);
+
+      segRegion->mSplitAxis = region->mSplitAxis;
+
       if (region->mLeftChild == NULL && region->mRightChild == NULL) {
-	      segRegion->mServer = region->mServer;
+        segRegion->mServer = region->mServer;
       }
 
       SerializedBBox serializedBBox;
@@ -876,6 +886,9 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
     segRegion->mBoundingBox = region->mBoundingBox;
     segRegion->mServer = region->mServer;
     region->mServer = mContext->id();
+
+    assert(region->mSplitAxis != SegmentedRegion::UNDEFINED);
+    segRegion->mSplitAxis = region->mSplitAxis;
 
     SerializedBBox serializedBBox;
     serializedBBox.serialize(segRegion->mBoundingBox);

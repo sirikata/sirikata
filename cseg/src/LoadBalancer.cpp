@@ -145,11 +145,24 @@ void LoadBalancer::service() {
       float maxX = region.max().x; float maxY = region.max().y;
       float minZ = region.min().z; float maxZ = region.max().z;
 
-      //TODO: alternate splitting between x and y axes.
-      overloadedRegion->mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
-							    Vector3f( (minX+maxX)/2, maxY, maxZ) );
-      overloadedRegion->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( (minX+maxX)/2,minY,minZ),
+      assert(overloadedRegion->mSplitAxis != SegmentedRegion::UNDEFINED);
+
+      if (overloadedRegion->mSplitAxis == SegmentedRegion::Y) {
+        overloadedRegion->mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
+							    Vector3f( (minX+maxX)/2.0, maxY, maxZ) );
+        overloadedRegion->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( (minX+maxX)/2.0,minY,minZ),
                                                              region.max() );
+
+        overloadedRegion->mLeftChild->mSplitAxis = overloadedRegion->mRightChild->mSplitAxis = SegmentedRegion::X;
+      }
+      else {
+        overloadedRegion->mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
+                                                                    Vector3f( maxX, (minY+maxY)/2.0, maxZ) );
+        overloadedRegion->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( minX,(minY+maxY)/2.0,minZ),
+                                                             region.max() );
+
+        overloadedRegion->mLeftChild->mSplitAxis = overloadedRegion->mRightChild->mSplitAxis = SegmentedRegion::Y;
+      }
       overloadedRegion->mLeftChild->mServer = overloadedRegion->mServer;
       overloadedRegion->mRightChild->mServer = availableServer;
 

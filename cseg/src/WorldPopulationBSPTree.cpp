@@ -86,6 +86,8 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
     bspTree2->mBoundingBox =
       BoundingBox3f(Vector3f(bspTree.mBoundingBox.min().x, (bspTree.mBoundingBox.min().y+bspTree.mBoundingBox.max().y)/2.0, 0),
 		    Vector3f(bspTree.mBoundingBox.max().x, bspTree.mBoundingBox.max().y, 0));
+
+    bspTree1->mSplitAxis = bspTree2->mSplitAxis = SegmentedRegion::Y;
   }
   else {
     bspTree1->mBoundingBox =
@@ -95,6 +97,8 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
     bspTree2->mBoundingBox =
       BoundingBox3f(Vector3f((bspTree.mBoundingBox.min().x+bspTree.mBoundingBox.max().x)/2.0, bspTree.mBoundingBox.min().y, 0),
 		    Vector3f(bspTree.mBoundingBox.max().x, bspTree.mBoundingBox.max().y, 0));
+
+    bspTree1->mSplitAxis = bspTree2->mSplitAxis = SegmentedRegion::X;
   }
 
   bool split1 =false, split2 = false;
@@ -157,8 +161,6 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
     ++mTotalLeaves;
     mHistogram[depth]++;
   }
-
-
 
   delete regionList1;
   delete regionList2;

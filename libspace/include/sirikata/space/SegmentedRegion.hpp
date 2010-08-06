@@ -36,34 +36,7 @@
 
 namespace Sirikata {
 
-#define LOOKUP_REQUEST 1
-#define LOOKUP_RESPONSE 2
-#define  NUM_SERVERS_REQUEST 3
-#define  NUM_SERVERS_RESPONSE 4
-#define SERVER_REGION_REQUEST 5
-#define SERVER_REGION_RESPONSE 6
-#define REGION_REQUEST 7
-#define REGION_RESPONSE 8
-#define SEGMENTATION_CHANGE 9
-#define SEGMENTATION_LISTEN 10
 
-#define LL_LOOKUP_REQUEST 11
-#define LL_LOOKUP_RESPONSE 12
-
-#define LL_SERVER_REGION_REQUEST 13
-#define LL_SERVER_REGION_RESPONSE 14
-
-#define LOAD_REPORT 15
-#define LL_LOAD_REPORT 16
-
-#define LOOKUP_BBOX_REQUEST 17
-#define LOOKUP_BBOX_RESPONSE 18
-
-#define LL_LOOKUP_BBOX_REQUEST 19
-#define LL_LOOKUP_BBOX_RESPONSE 20
-
-#define MAX_BBOX_LIST_SIZE 50000
-#define MAX_SERVER_REGIONS_CHANGED 2
 
 #if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
 // FIXME #93
@@ -113,181 +86,6 @@ typedef struct SerializedBBox{
 
 } PACKED_STRUCT SerializedBBox ;
 
-typedef struct SerializedSegmentChange{
-  ServerID serverID;
-  uint32 listLength;
-  SerializedBBox bboxList[MAX_BBOX_LIST_SIZE];
-
-} PACKED_STRUCT SerializedSegmentChange ;
-
-typedef struct GenericMessage {
-  uint8 type;
-} GenericMessage;
-
-typedef struct LookupRequestMessage {
-  uint8 type;
-  float32 x, y, z;
-
-  LookupRequestMessage() {
-    type = LOOKUP_REQUEST;
-  }
-} PACKED_STRUCT LookupRequestMessage ;
-
-
-typedef struct LookupResponseMessage {
-  uint8 type;
-  ServerID serverID;
-
-  LookupResponseMessage() {
-    type = LOOKUP_RESPONSE;
-  }
-} PACKED_STRUCT LookupResponseMessage ;
-
-typedef struct LookupBBoxRequestMessage {
-  uint8 type;
-  SerializedBBox bbox;
-
-  LookupBBoxRequestMessage() {
-    type = LOOKUP_BBOX_REQUEST;
-  }
-} PACKED_STRUCT LookupBBoxRequestMessage ;
-
-
-typedef struct LookupBBoxResponseMessage {
-  uint8 type;
-  
-  uint32 serverListLength;
-  ServerID serverList[1024];
-
-  LookupBBoxResponseMessage() {
-    type = LOOKUP_BBOX_RESPONSE;
-  }
-} PACKED_STRUCT LookupBBoxResponseMessage ;
-
-typedef struct NumServersRequestMessage {
-  uint8 type;
-
-  NumServersRequestMessage() {
-    type = NUM_SERVERS_REQUEST;
-  }
-} PACKED_STRUCT NumServersRequestMessage;
-
-typedef struct NumServersResponseMessage {
-  uint8 type;
-  uint32 numServers;
-
-  NumServersResponseMessage() {
-    type = NUM_SERVERS_RESPONSE;
-  }
-} PACKED_STRUCT NumServersResponseMessage;
-
-typedef struct ServerRegionRequestMessage {
-  uint8 type;
-  ServerID serverID;
-
-  ServerRegionRequestMessage() {
-    type = SERVER_REGION_REQUEST;
-  }
-} PACKED_STRUCT ServerRegionRequestMessage;
-
-typedef struct ServerRegionResponseMessage {
-  uint8 type;
-
-  uint32 listLength;
-  SerializedBBox bboxList[MAX_BBOX_LIST_SIZE];
-
-  ServerRegionResponseMessage() {
-    type = SERVER_REGION_RESPONSE;
-
-    listLength = 0;
-  }
-} PACKED_STRUCT ServerRegionResponseMessage;
-
-typedef struct RegionRequestMessage {
-  uint8 type;
-
-  RegionRequestMessage() {
-    type = REGION_REQUEST;
-  }
-} PACKED_STRUCT RegionRequestMessage;
-
-typedef struct RegionResponseMessage {
-  uint8 type;
-  SerializedBBox bbox;
-
-  RegionResponseMessage() {
-    type = REGION_RESPONSE;
-  }
-} PACKED_STRUCT RegionResponseMessage;
-
-typedef struct SegmentationChangeMessage {
-  uint8 type;
-  uint8 numEntries;
-  SerializedSegmentChange changedSegments[MAX_SERVER_REGIONS_CHANGED];
-
-  SegmentationChangeMessage() {
-    type = SEGMENTATION_CHANGE;
-    numEntries =0;
-  }
-
-  uint32 serialize(uint8** buff) {
-
-    int bufSize = sizeof(uint8) + sizeof(uint8);
-
-    for (int i=0; i<numEntries; i++) {
-      bufSize += sizeof(ServerID) + sizeof(uint32);
-      bufSize += changedSegments[i].listLength * sizeof(SerializedBBox);
-    }
-
-    *buff = new uint8[bufSize];
-
-    uint8 offset = 0;
-
-    memcpy((*buff)+offset, &type, sizeof(uint8));
-    offset+=sizeof(uint8);
-
-    memcpy((*buff)+offset, &numEntries, sizeof(uint8));
-    offset+=sizeof(uint8);
-
-    for (int i=0; i<numEntries; i++) {
-      memcpy((*buff)+offset, &changedSegments[i].serverID, sizeof(ServerID));
-      offset += sizeof(ServerID);
-
-      memcpy((*buff)+offset, &changedSegments[i].listLength, sizeof(uint32));
-      offset += sizeof(uint32);
-
-      memcpy((*buff)+offset, &changedSegments[i].bboxList,
-	     changedSegments[i].listLength * sizeof(SerializedBBox));
-      offset += changedSegments[i].listLength * sizeof(SerializedBBox);
-    }
-
-    return bufSize;
-  }
-
-} PACKED_STRUCT SegmentationChangeMessage;
-
-typedef struct SegmentationListenMessage {
-  uint8 type;
-
-  char host[128];
-  uint16 port;
-
-  SegmentationListenMessage() {
-    type = SEGMENTATION_LISTEN;
-  }
-} PACKED_STRUCT SegmentationListenMessage;
-
-typedef struct LoadReportMessage {
-  uint8 type;
-  ServerID server;
-  uint32 loadValue;
-  SerializedBBox bbox;
-
-  LoadReportMessage() {
-    type = LOAD_REPORT;
-  }
-} PACKED_STRUCT LoadReportMessage;
-
 typedef struct SegmentedRegion {
 
   SegmentedRegion(SegmentedRegion* parent) {
@@ -296,6 +94,7 @@ typedef struct SegmentedRegion {
     mParent = parent;
     mServer = 0;
     mLoadValue = 0;
+    mSplitAxis = UNDEFINED;
   }
 
   void destroy() {
@@ -468,10 +267,15 @@ typedef struct SegmentedRegion {
     return;
   }
 
-  ServerID  mServer;
+  ServerID mServer;
   SegmentedRegion* mLeftChild;
   SegmentedRegion* mRightChild;
   SegmentedRegion* mParent;
+
+  enum SplitAxis{ X, Y, Z, UNDEFINED  };
+  
+  SplitAxis mSplitAxis;
+
   uint32 mLeafCount;
   BoundingBox3f mBoundingBox;
   uint32 mLoadValue;
