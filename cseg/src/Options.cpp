@@ -46,14 +46,24 @@ void InitCSegOptions() {
         .addOption(new OptionValue("num-cseg-servers", "1", Sirikata::OptionValueType<uint16>(), "Number of CSEG servers for the distributed implementation."))
 
         .addOption(new OptionValue("cseg-uses-world-pop", "false", Sirikata::OptionValueType<bool>(), "If true, CSEG uses the world population data to create the BSP tree."))
+
         .addOption(new OptionValue("cseg-world-width", "8640", Sirikata::OptionValueType<uint32>(), "The number of cells across the width of the world population dataset."))
+
         .addOption(new OptionValue("cseg-world-height", "3432", Sirikata::OptionValueType<uint32>(), "The number of cells across the height of the world population dataset."))
+
         .addOption(new OptionValue("cseg-max-leaf-population", "800", Sirikata::OptionValueType<uint32>(), "The maximum number of avatars/people at the leaf of the BSP tree."))
+
       .addOption(new OptionValue("cseg-population-density-file", "glds00ag.asc", Sirikata::OptionValueType<String>(), "The file containing the population density numbers."))
+
       .addOption(new OptionValue("cseg-servermap-options", "--filename=cseg_serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list for cseg servers."))
+
       .addOption(new OptionValue("cseg-id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this CSEG server"))
+
       .addOption(new OptionValue("additional-cseg-duration", "60s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
+
       .addOption(new OptionValue("cseg-service-tcp-port", "6234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
+
+      .addOption(new OptionValue("num-upper-tree-cseg-servers", "1", Sirikata::OptionValueType<uint16>(), "Number of CSEG servers that solely maintain the upper tree"))
 
       ;
 }

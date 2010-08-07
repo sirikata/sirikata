@@ -124,6 +124,7 @@ private:
     std::map<String, SegmentedRegion*> mLowerLevelTrees;
 
     int mAvailableCSEGServers;
+    int mUpperTreeCSEGServers;
 
     void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
     void handleLoadReport(Sirikata::Protocol::CSeg::LoadReportMessage* message);
@@ -191,7 +192,7 @@ private:
     
     void writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
 
-     void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
                           Sirikata::Protocol::CSeg::CSegMessage& csegMessage,
                           uint8* bufferSoFar,
                           uint bufferSoFarSize 
@@ -220,7 +221,7 @@ private:
     friend class LoadBalancer;
 
     
-  SocketContainer getSocketToCSEGServer(ServerID server_id);
+    SocketContainer getSocketToCSEGServer(ServerID server_id);
 }; // class CoordinateSegmentation
 
 } // namespace Sirikata

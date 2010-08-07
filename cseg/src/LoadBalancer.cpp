@@ -145,7 +145,7 @@ void LoadBalancer::service() {
       float maxX = region.max().x; float maxY = region.max().y;
       float minZ = region.min().z; float maxZ = region.max().z;
 
-      assert(overloadedRegion->mSplitAxis != SegmentedRegion::UNDEFINED);
+      assert(overloadedRegion->mParent == NULL || overloadedRegion->mSplitAxis != SegmentedRegion::UNDEFINED);
 
       if (overloadedRegion->mSplitAxis == SegmentedRegion::Y) {
         overloadedRegion->mLeftChild->mBoundingBox = BoundingBox3f( region.min(),

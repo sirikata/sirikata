@@ -175,9 +175,13 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
    mTopLevelRegion(NULL),
    mLastUpdateTime(Time::null()),
    mLoadBalancer(this, nservers, perdim),
-   mSidMap(sidmap)  
+   mSidMap(sidmap),
+   mAvailableCSEGServers(GetOptionValue<uint16>("num-cseg-servers")),
+   mUpperTreeCSEGServers(GetOptionValue<uint16>("num-upper-tree-cseg-servers"))
 {
-  mAvailableCSEGServers = GetOptionValue<uint16>("num-cseg-servers");
+  std::cout << mAvailableCSEGServers << " : " << mUpperTreeCSEGServers  << "\n";
+ 
+  assert(mAvailableCSEGServers >= mUpperTreeCSEGServers);
 
   assert (nservers >= (int)(perdim.x * perdim.y * perdim.z));
 
@@ -196,7 +200,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
   generateHierarchicalTrees(&mTopLevelRegion, 1, numLLTreesSoFar);
   
 
-  if (ctx->id() == 1) {
+  if (ctx->id() <= mUpperTreeCSEGServers) {
       mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
     startAccepting();
   }
@@ -744,6 +748,8 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
     writeCSEGMessage(socket, csegResponseMessage);
   }
   else if (csegMessage.has_change_message() ) {
+    std::cout << "csegChangeMessage received\n"; fflush(stdout);
+
     mWholeTreeServerRegionMap.clear();    
 
     mLoadBalancer.handleSegmentationChange( csegMessage.change_message() );
@@ -849,7 +855,17 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
   int cutOffDepth = 2;
 
   if (depth>=cutOffDepth) {
-    region->mServer =  (numLLTreesSoFar % mAvailableCSEGServers)+1;
+    if (mAvailableCSEGServers > mUpperTreeCSEGServers) {
+      //if we have lower-tree servers available, then the lower-trees
+      //should be divided amongst them.
+
+      region->mServer =  1+(numLLTreesSoFar % (mAvailableCSEGServers-mUpperTreeCSEGServers))+mUpperTreeCSEGServers;
+    }
+    else {
+      //if we only have upper-tree servers available, then they should
+      //all keep a copy of the whole tree.
+      region->mServer = mContext->id();
+    }
 
     if ( region->mServer == mContext->id()) {
       // Assigned region->mBoundingBox to me.
@@ -858,7 +874,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
       segRegion->mLeftChild = region->mLeftChild;
       segRegion->mRightChild = region->mRightChild;
 
-      assert(region->mSplitAxis != SegmentedRegion::UNDEFINED);
+      assert(region->mParent == NULL || region->mSplitAxis != SegmentedRegion::UNDEFINED);
 
       segRegion->mSplitAxis = region->mSplitAxis;
 
@@ -887,7 +903,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
     segRegion->mServer = region->mServer;
     region->mServer = mContext->id();
 
-    assert(region->mSplitAxis != SegmentedRegion::UNDEFINED);
+    assert(region->mParent == NULL || region->mSplitAxis != SegmentedRegion::UNDEFINED);
     segRegion->mSplitAxis = region->mSplitAxis;
 
     SerializedBBox serializedBBox;
@@ -958,7 +974,7 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
   it = mLeasedSocketsToCSEGServers.find(server_id);
 
   if (it == mLeasedSocketsToCSEGServers.end()) {
-    SocketQueuePtr socketList( new Sirikata::SizedThreadSafeQueue<SocketContainer>(Sirikata::SizedResourceMonitor(32)) );    
+    SocketQueuePtr socketList( new Sirikata::SizedThreadSafeQueue<SocketContainer>(Sirikata::SizedResourceMonitor(32)) );
     mLeasedSocketsToCSEGServers[server_id] = socketList;
   }
   else {
@@ -1071,7 +1087,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 {
   std::map< ServerID, SocketContainer > socketList;
   
-  for (uint32 i = 1; i <= (uint32)mAvailableCSEGServers; i++) {
+  for (uint32 i = mUpperTreeCSEGServers+1; i <= (uint32)mAvailableCSEGServers; i++) {
     if (i == mContext->id()) continue;
 
     SocketContainer socketContainer = getSocketToCSEGServer(i);
@@ -1142,7 +1158,7 @@ void DistributedCoordinateSegmentation::sendLoadReportToLowerLevelCSEGServer(Ser
 }
 
 
-void DistributedCoordinateSegmentation::sendToAllCSEGServers(Sirikata::Protocol::CSeg::CSegMessage& csegMessage) {
+void DistributedCoordinateSegmentation::sendToAllCSEGServers(Sirikata::Protocol::CSeg::CSegMessage& csegMessage){
   /* Send to other CSEG servers so they can forward the segmentation change message to
      space servers connected to them. */
   for (int i = 1; i <= mAvailableCSEGServers; i++) {
