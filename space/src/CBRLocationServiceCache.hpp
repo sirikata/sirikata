@@ -39,6 +39,8 @@
 
 namespace Sirikata {
 
+typedef Prox::LocationServiceCache<ProxSimulationTraits> LocationServiceCache;
+
 /* Implementation of LocationServiceCache which serves Prox libraries;
  * works by listening for updates from our LocationService.  Note that
  * CBR should only be using the LocationServiceListener methods in normal
@@ -59,18 +61,26 @@ public:
     virtual ~CBRLocationServiceCache();
 
     /* LocationServiceCache members. */
-    virtual void startTracking(const ObjectID& id);
-    virtual void stopTracking(const ObjectID& id);
+    virtual Iterator startTracking(const ObjectID& id);
+    virtual void stopTracking(const Iterator& id);
 
     bool tracking(const ObjectID& id) const;
 
-    virtual const TimedMotionVector3f& location(const ObjectID& id) const;
-    virtual const TimedMotionQuaternion& orientation(const ObjectID& id) const;
-    virtual const BoundingSphere3f& bounds(const ObjectID& id) const;
-    virtual const String& mesh(const ObjectID& id) const;
+    virtual const TimedMotionVector3f& location(const Iterator& id) const;
+    virtual const BoundingSphere3f& bounds(const Iterator& id) const;
+    virtual float32 radius(const Iterator& id) const;
+
+    virtual const UUID& iteratorID(const Iterator& id) const;
 
     virtual void addUpdateListener(LocationUpdateListener* listener);
     virtual void removeUpdateListener(LocationUpdateListener* listener);
+
+    // We also provide accessors by ID for Proximity generate results.
+    const TimedMotionVector3f& location(const ObjectID& id) const;
+    const TimedMotionQuaternion& orientation(const ObjectID& id) const;
+    const BoundingSphere3f& bounds(const ObjectID& id) const;
+    float32 radius(const ObjectID& id) const;
+    const String& mesh(const ObjectID& id) const;
 
     /* LocationServiceListener members. */
     virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
@@ -87,6 +97,7 @@ public:
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
 
 private:
+
     // These generate and queue up updates from the main thread
     void objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     void objectRemoved(const UUID& uuid);
@@ -122,9 +133,21 @@ private:
         String mesh;
         bool tracking;
     };
-    typedef std::map<UUID, ObjectData> ObjectDataMap;
+    typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
+
+    // Data contained in our Iterators. We maintain both the UUID and the
+    // iterator because the iterator can become invalidated due to ordering of
+    // events in the prox thread.
+    struct IteratorData {
+        IteratorData(const UUID& _objid, ObjectDataMap::iterator _it)
+         : objid(_objid), it(_it) {}
+
+        const UUID objid;
+        ObjectDataMap::iterator it;
+    };
+
 };
 
 } // namespace Sirikata

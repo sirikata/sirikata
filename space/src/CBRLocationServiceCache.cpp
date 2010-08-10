@@ -35,7 +35,7 @@
 namespace Sirikata {
 
 CBRLocationServiceCache::CBRLocationServiceCache(Network::IOStrand* strand, LocationService* locservice, bool replicas)
- : Prox::LocationServiceCache<ProxSimulationTraits>(),
+ : LocationServiceCache(),
    LocationServiceListener(),
    mStrand(strand),
    mLoc(locservice),
@@ -54,17 +54,24 @@ CBRLocationServiceCache::~CBRLocationServiceCache() {
     mObjects.clear();
 }
 
-void CBRLocationServiceCache::startTracking(const UUID& id) {
+LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const UUID& id) {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
     ObjectDataMap::iterator it = mObjects.find(id);
     assert(it != mObjects.end());
 
     it->second.tracking = true;
+
+    return Iterator( new IteratorData(id, it) );
 }
 
-void CBRLocationServiceCache::stopTracking(const UUID& id) {
+void CBRLocationServiceCache::stopTracking(const Iterator& id) {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
-    ObjectDataMap::iterator it = mObjects.find(id);
+    // In this special case, we ignore the true iterator and do the lookup.
+    // This is necessary because ordering problems can cause the iterator to
+    // become invalidated.
+    IteratorData* itdat = (IteratorData*)id.data;
+
+    ObjectDataMap::iterator it = mObjects.find(itdat->objid);
     if (it == mObjects.end() || it->second.tracking == false) {
         printf("Warning: stopped tracking unknown object\n");
         return;
@@ -77,32 +84,34 @@ bool CBRLocationServiceCache::tracking(const UUID& id) const {
 }
 
 
-const TimedMotionVector3f& CBRLocationServiceCache::location(const UUID& id) const {
+const TimedMotionVector3f& CBRLocationServiceCache::location(const Iterator& id) const {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
-    ObjectDataMap::const_iterator it = mObjects.find(id);
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
     return it->second.location;
 }
 
-const TimedMotionQuaternion& CBRLocationServiceCache::orientation(const UUID& id) const {
+const BoundingSphere3f& CBRLocationServiceCache::bounds(const Iterator& id) const {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
-    ObjectDataMap::const_iterator it = mObjects.find(id);
-    assert(it != mObjects.end());
-    return it->second.orientation;
-}
-
-const BoundingSphere3f& CBRLocationServiceCache::bounds(const UUID& id) const {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
-    ObjectDataMap::const_iterator it = mObjects.find(id);
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
     return it->second.bounds;
 }
 
-const String& CBRLocationServiceCache::mesh(const UUID& id) const {
+float32 CBRLocationServiceCache::radius(const Iterator& id) const {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
-    ObjectDataMap::const_iterator it = mObjects.find(id);
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.mesh;
+    return it->second.bounds.radius();
+}
+
+const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) const {
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
+    return it->first;
 }
 
 void CBRLocationServiceCache::addUpdateListener(LocationUpdateListener* listener) {
@@ -114,6 +123,35 @@ void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* liste
     ListenerSet::iterator it = mListeners.find(listener);
     assert( it != mListeners.end() );
     mListeners.erase(it);
+}
+
+#define GET_OBJ_ENTRY(objid) \
+    ObjectDataMap::const_iterator it = mObjects.find(id);       \
+    assert(it != mObjects.end())
+
+const TimedMotionVector3f& CBRLocationServiceCache::location(const ObjectID& id) const {
+    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    return it->second.location;
+}
+
+const TimedMotionQuaternion& CBRLocationServiceCache::orientation(const ObjectID& id) const {
+    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    return it->second.orientation;
+}
+
+const BoundingSphere3f& CBRLocationServiceCache::bounds(const ObjectID& id) const {
+    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    return it->second.bounds;
+}
+
+float32 CBRLocationServiceCache::radius(const ObjectID& id) const {
+    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    return it->second.bounds.radius();
+}
+
+const String& CBRLocationServiceCache::mesh(const ObjectID& id) const {
+    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    return it->second.mesh;
 }
 
 void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
