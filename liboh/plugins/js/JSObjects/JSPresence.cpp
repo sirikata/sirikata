@@ -1,5 +1,6 @@
 #include "JSPresence.hpp"
 #include "JSFields.hpp"
+#include "../JSPresenceStruct.hpp"
 
 using namespace v8;
 namespace Sirikata 
@@ -27,81 +28,86 @@ namespace Sirikata
          return static_cast<FieldType*>(ptr); \
         } \
 	    
-     
-	  CreateInternalFieldAccessor(TargetJSObjectScript, PRESENCE_JSOBJSCRIPT_FIELD, JSObjectScript);
-	  CreateInternalFieldAccessor(TargetSpaceID, PRESENCE_SPACE_ID_FIELD, SpaceID);
 
+        CreateInternalFieldAccessor(TargetPresence,PRESENCE_FIELD,JSPresenceStruct);
+        
 	  
-	  
-	  Handle<v8::Value> setMesh(const v8::Arguments& args)
-	  {
+        Handle<v8::Value> setMesh(const v8::Arguments& args)
+        {
 	    return v8::Undefined();
-	  }
-
-	  Handle<v8::Value> toString(const v8::Arguments& args)
-	  {
-	    HandleScope handle_scope;
-	    v8::Local<v8::Object> v8Object = args.This();
-        v8::Local<v8::External> wrapJSObj;
-        if (v8Object->InternalFieldCount() > 0)
-		{
-          wrapJSObj = v8::Local<v8::External>::Cast(
-                  v8Object->GetInternalField(PRESENCE_JSOBJSCRIPT_FIELD));
         }
-        else
-		{
-          wrapJSObj = v8::Local<v8::External>::Cast(
-              v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_JSOBJSCRIPT_FIELD));
-        }			  
-        void* ptr = wrapJSObj->Value();
-        SpaceID* space_id = static_cast<SpaceID*>(ptr);
 
-        // Look up for the per space data
-		//for now just print the space id
-        String s = space_id->toString();
-		return v8::String::New(s.c_str(), s.length());
+        Handle<v8::Value> toString(const v8::Arguments& args)
+        {
+            HandleScope handle_scope;
+            v8::Local<v8::Object> v8Object = args.This();
+            v8::Local<v8::External> wrapJSPresStructObj;
+            if (v8Object->InternalFieldCount() > 0)
+            {
+                wrapJSPresStructObj = v8::Local<v8::External>::Cast(
+                    v8Object->GetInternalField(PRESENCE_FIELD));
+            }
+            else
+            {
+                wrapJSPresStructObj = v8::Local<v8::External>::Cast(
+                    v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD));
+            }			  
+            void* ptr = wrapJSPresStructObj->Value();
+            JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);
 
-	  }
-      
-	  //Position
+            // Look up for the per space data
+            //for now just print the space id
+            String s = jspres_struct->sID->toString();   
+            return v8::String::New(s.c_str(), s.length());
+              
+        }
 
-	  v8::Handle<v8::Value> ScriptGetPosition(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-	  {
-	    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-	    SpaceID* space = GetTargetSpaceID(info);
+        
+        //Position
+        v8::Handle<v8::Value> ScriptGetPosition(v8::Local<v8::String> property, const v8::AccessorInfo &info)
+        {
+	    //JSObjectScript* target_script = GetTargetJSObjectScript(info);
+	    //SpaceID* space = GetTargetSpaceID(info);
 
-		return target_script->getPosition(*space);
-	  }
+            //return target_script->getPosition(*space);
 
-      void ScriptSetPosition(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-      {
+            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
+            return pres_struct->jsObjScript->getPosition(* pres_struct->sID);
+        }
+
+        void ScriptSetPosition(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
+        {
 	    
-        JSObjectScript* target_script = GetTargetJSObjectScript(info);
-	    SpaceID* space = GetTargetSpaceID(info);
-        target_script->setPosition(*space, value);
-		
-      }
-      // Velocity
+//             JSObjectScript* target_script = GetTargetJSObjectScript(info);
+// 	    SpaceID* space = GetTargetSpaceID(info);
+//             target_script->setPosition(*space, value);
 
-      v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-      {
-        JSObjectScript* target_script = GetTargetJSObjectScript(info);
-	    SpaceID* space = GetTargetSpaceID(info);
-        return target_script->getVelocity(*space);
-      }
+            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
+            pres_struct->jsObjScript->setPosition(* (pres_struct->sID), value);
+        }
+        
+        // Velocity
+        v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info)
+        {
+//             JSObjectScript* target_script = GetTargetJSObjectScript(info);
+// 	    SpaceID* space = GetTargetSpaceID(info);
+//             return target_script->getVelocity(*space);
 
-      void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-      {
-        JSObjectScript* target_script = GetTargetJSObjectScript(info);
-		SpaceID* space = GetTargetSpaceID(info);
-        target_script->setVelocity(*space, value);
-      }
+            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
+            return pres_struct->jsObjScript->getVelocity(* (pres_struct->sID));
+        }
 
+        void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
+        {
+//             JSObjectScript* target_script = GetTargetJSObjectScript(info);
+//             SpaceID* space = GetTargetSpaceID(info);
+//             target_script->setVelocity(*space, value);
 
-
-
-
- 
+            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
+            pres_struct->jsObjScript->setVelocity(* (pres_struct->sID),value);
+            
+        }
+        
     }
   }
 }  

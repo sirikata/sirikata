@@ -4,7 +4,7 @@
 #include "../JSSerializer.hpp"
 #include "JSObjectsUtils.hpp"
 #include "JSHandler.hpp"
-#include "JSVec3.hpp";
+#include "JSVec3.hpp"
 #include "../JSUtil.hpp"
 
 namespace Sirikata{

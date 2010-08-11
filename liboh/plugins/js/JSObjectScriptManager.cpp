@@ -47,6 +47,9 @@
 
 #include "JSObjects/Addressable.hpp"
 #include "JSObjects/JSPresence.hpp"
+#include "JSObjects/JSFields.hpp"
+#include "JSSystemNames.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -64,8 +67,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     createSystemTemplate();
     createAddressableTemplate();
     createHandlerTemplate();
-	createPresenceTemplate();
-	
+    createPresenceTemplate();
 }
 
 
@@ -91,8 +93,8 @@ void JSObjectScriptManager::createSystemTemplate()
 
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
 
-	system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
-	system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
+    system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
+    system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
     
 
 
@@ -121,7 +123,7 @@ void JSObjectScriptManager::createSystemTemplate()
        FIXME: need to add way to remove a handler.
      **/
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-    mGlobalTemplate->Set(v8::String::New("system"), system_templ);
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
 }
 
 
@@ -162,6 +164,11 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
   mPresenceTemplate->Set(v8::String::New("setMesh"), v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  //FIXME:
+  //add function to check if presences are equal (point to same underlying object);
+  //add function to see if presence is valid (has been declared null);
+  
   mPresenceTemplate->SetAccessor(JS_STRING(position), JSPresence::ScriptGetPosition, JSPresence::ScriptSetPosition);
  
 
@@ -180,7 +187,7 @@ void JSObjectScriptManager::createHandlerTemplate()
 
     // one field is the JSObjectScript associated with it
     // the other field is a pointer to the associated JSEventHandler.
-    mHandlerTemplate->SetInternalFieldCount(2);
+    mHandlerTemplate->SetInternalFieldCount(JSHANDLER_FIELD_COUNT);
     mHandlerTemplate->Set(v8::String::New("printContents"), v8::FunctionTemplate::New(JSHandler::__printContents));
     mHandlerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSHandler::__suspend));
     mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::__isSuspended));

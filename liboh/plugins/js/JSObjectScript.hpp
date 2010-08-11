@@ -45,6 +45,8 @@
 #include "JSPattern.hpp"
 #include "JSEventHandler.hpp"
 #include "JSObjectScriptManager.hpp"
+#include "JSPresenceStruct.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -86,15 +88,14 @@ public:
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
     
-	/** reboot the state of the script, basically reset the state */
-	void reboot();
+    /** reboot the state of the script, basically reset the state */
+    void reboot();
 
-	/** create a new entity at the run time */
-	void create_entity(Vector3d&, String&);
+    /** create a new entity at the run time */
+    void create_entity(Vector3d&, String&);
 
-	/** create a new presence of this entity */
-
-	void create_presence(const SpaceID&);
+    /** create a new presence of this entity */
+    void create_presence(const SpaceID&);
 
     v8::Handle<v8::String> getVisual();
     void setVisual(v8::Local<v8::Value>& newvis);
@@ -166,13 +167,23 @@ private:
     void printAllHandlerLocations();
     void populatePresences(Handle<Object>& system_obj );
     void populateSystemObject(Handle<Object>& system_obj );
-        
+    void populatePresKeyword(Handle<Object>& system_obj);
+    
+    void initializePresences(Handle<Object>& system_obj);
+    void clearAllPresences(Handle<Object>& system_obj);
+    void setPresKeyword(JSPresenceStruct* jsp,Handle<Object>& system_obj);
 
+    
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
 
     JSObjectScriptManager* mManager;
 
+    typedef std::vector<JSPresenceStruct*> PresenceList;
+    PresenceList mPresenceList;
+
+    JSPresenceStruct* mPres;
+    
 };
 
 } // namespace JS

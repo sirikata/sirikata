@@ -60,8 +60,8 @@
 #include <set>
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
-
-
+#include "JSSystemNames.hpp"
+#include "JSPresenceStruct.hpp"
 
 
 using namespace v8;
@@ -77,6 +77,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     v8::HandleScope handle_scope;
     mContext = Context::New(NULL, mManager->mGlobalTemplate);
 
+    mPres = NULL; //bftm change.
+    
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -86,13 +88,13 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
-    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
+    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
     populateSystemObject(system_obj);
 
+    mHandlingEvent = false;
 
 
-        mHandlingEvent = false;
-
+    
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
@@ -119,7 +121,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
 void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
 {
-
 
   //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
@@ -164,15 +165,16 @@ void JSObjectScript::reboot()
   Local<Object> global_obj = mContext->Global();
   Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
   global_proto->SetInternalField(0, External::New(this));
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
-  system_obj->SetInternalField(0, External::New(this));
-  populateAddressable(system_obj);
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
 
+  populateSystemObject(system_obj);
 
+  //delete all handlers
   for (int s=0; s < (int) mEventHandlers.size(); ++s)
       delete mEventHandlers[s];
 
   mEventHandlers.clear();
+
 }
 
 void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const
@@ -256,6 +258,7 @@ void JSObjectScript::test() const {
 //populates the internal addressable object references vector
 void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 {
+
     //loading the vector
     mAddressableList.clear();
     bftm_getAllMessageable(mAddressableList);
@@ -270,7 +273,6 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
     UUID myUUID = mParent->getObjReference(spaceider).getAsUUID();;
 
 
-
     for (int s=0;s < (int)mAddressableList.size(); ++s)
     {
         Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
@@ -280,15 +282,13 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
         if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
-            system_obj->Set(v8::String::New("Self"), tmpObj);
+            system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), tmpObj);
 
 
     }
-    system_obj->Set(v8::String::New("addressable"),arrayObj);
+    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
 
-    //v8::Context::~Scope mContext;
 }
-
 
 
 
@@ -339,6 +339,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
     v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
 
     // Compile
+    //note, because using compile command, will run in the mContext context
+    //could pre-associate keyword pres with presence that we're in.
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
     if (script.IsEmpty()) {
         v8::String::Utf8Value error(try_catch.Exception());
@@ -776,7 +778,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
 
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
-
+    
     return returner;
 }
 
@@ -803,7 +805,7 @@ Handle<Object> JSObjectScript::getSystemObject()
   // And we add an internal field to the system object as well to make it
   // easier to find the pointer in different calls. Note that in this case we
   // don't use the prototype -- non-global objects work as we would expect.
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New("system")));
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
   
   Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
   return ret_obj;
@@ -816,59 +818,153 @@ void JSObjectScript::updateAddressable()
 }
 
 
-void JSObjectScript::populatePresences(Handle<Object>& system_obj)
-
+//called to build the presences array as well as to build the presence keyword
+void JSObjectScript::initializePresences(Handle<Object>& system_obj)
 {
+    std::cout<<"\n\nAbout to clear all presences\n\n";
+    std::cout.flush();
+    clearAllPresences(system_obj);
 
-  HandleScope handle_scope;
-  HostedObject::SpaceSet spaces = mParent->spaces();
-  HostedObject::SpaceSet::const_iterator it = spaces.begin();
-  v8::Context::Scope context_scope(mContext);
-  v8::Local<v8::Array> arrayObj= v8::Array::New();
+    std::cout<<"\n\nAbout to populate all presences\n\n";
+    std::cout.flush();
+    populatePresences(system_obj);
 
-  for (int s=0; it != spaces.end(); ++s, ++it)
-  {
-    Local<Object> tmpObj = mManager->mPresenceTemplate->NewInstance();
-    SpaceID* space_id = new SpaceID(*it); 
-	tmpObj->SetInternalField(PRESENCE_SPACE_ID_FIELD,External::New(space_id));
-    tmpObj->SetInternalField(PRESENCE_JSOBJSCRIPT_FIELD,External::New(this));
-    arrayObj->Set(v8::Number::New(s),tmpObj);
-
-  }
+    std::cout<<"\n\nAbout to set pres keyword\n\n";
+    std::cout.flush();
+    populatePresKeyword(system_obj);
+}
 
 
-  system_obj->Set(v8::String::New("presences"),arrayObj);
 
- 
-   
- }
+//this function grabs all presence-related data, and frees the memory (that
+//we're responsible for) associated with each.
+void JSObjectScript::clearAllPresences(Handle<Object>& system_obj)
+{
+    system_obj->Delete(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME));
+    system_obj->Delete(v8::String::New(JSSystemNames::PRES_KEYWORD_NAME));
 
+    for (int s=0; s < (int) mPresenceList.size(); ++s)
+    {
+        delete mPresenceList[s]->sID;
+        delete mPresenceList[s];
+    }
+    mPresenceList.clear();
+
+    if (mPres != NULL)
+    {
+        delete mPres->sID;
+        mPres = NULL;
+    }
+}
+
+
+//this function adds the presences array to the system object
+void JSObjectScript::populatePresences(Handle<Object>& system_obj)
+{
+    HandleScope handle_scope;
+    HostedObject::SpaceSet spaces = mParent->spaces();
+    HostedObject::SpaceSet::const_iterator it = spaces.begin();
+    v8::Context::Scope context_scope(mContext);
+    v8::Local<v8::Array> arrayObj= v8::Array::New();
+
+    for (int s=0; it != spaces.end(); ++s, ++it)
+    {
+        Local<Object> tmpObj = mManager->mPresenceTemplate->NewInstance();
+        SpaceID* space_id = new SpaceID(*it);
+
+
+        JSPresenceStruct* presToAdd = new JSPresenceStruct;
+        presToAdd->sID = space_id;
+        presToAdd->jsObjScript = this;
+        mPresenceList.push_back(presToAdd);
+        
+        tmpObj->SetInternalField(PRESENCE_FIELD,External::New(presToAdd));
+        arrayObj->Set(v8::Number::New(s),tmpObj);
+
+    }
+
+    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME),arrayObj);
+}
+
+
+//should be called only after populatePresences
+//takes the first presence in the presence array, and sets system.pres to it.
+void JSObjectScript::populatePresKeyword(Handle<Object>& system_obj)
+{
+    if (mPresenceList.size() == 0)
+    {
+        //no presences, set pres to be null
+        setPresKeyword(NULL,system_obj);
+    }
+    else
+    {
+        //grab the first entry from mPresenceList, and use it as the default
+        //presence
+        setPresKeyword(mPresenceList[0],system_obj);
+    }
+}
+
+
+//sets the presence keyword to a value  (note: also sets mPres internal variable.)
+void JSObjectScript::setPresKeyword(JSPresenceStruct* jsp,Handle<Object>& system_obj)
+{
+    v8::Context::Scope context_scope(mContext);
+    HandleScope handle_scope; //local handle scope.  when this goes out of scope
+                              //(function is over), all data defined here may be
+                              //garbage collected
+
+
+    
+    std::cout<<"\n\nAt top of setPresKeyword\n\n";
+    std::cout.flush();
+    //setting internal field
+    mPres = jsp;
+
+    std::cout<<"\n\nSet mPres\n\n";
+    std::cout.flush();
+    
+    Local<Object> presKeywordObj = mManager->mPresenceTemplate->NewInstance();
+
+    std::cout<<"\n\npresKeywordObj\n\n";
+    std::cout.flush();
+    
+    presKeywordObj->SetInternalField(PRESENCE_FIELD,External::New(mPres));
+
+    std::cout<<"\n\nSetInternalField\n\n";
+    std::cout.flush();
+    
+    system_obj->Set(v8::String::New(JSSystemNames::PRES_KEYWORD_NAME),presKeywordObj);
+
+    std::cout<<"\n\nEnd of setPresKeyword\n\n";
+    std::cout.flush();
+}
+
+
+
+
+//this function can be called to re-initialize the system object's state
 void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
    HandleScope handle_scope;
    //takes care of the addressable array in sys.
 
-	system_obj->SetInternalField(0, External::New(this));
-	populateAddressable(system_obj);
+   std::cout<<"\n\nIn populateSystemObject.  Beginning initialization\n\n";
+   std::cout.flush();
+   
+   system_obj->SetInternalField(0, External::New(this));
 
+   std::cout<<"\n\nIn populateSystemObject.  Internal field set.\n\n";
+   std::cout.flush();
+   
+   //FIXME: May need an initialize addressable
+   populateAddressable(system_obj);
 
-  // get the prototype for the system obj
-  // we will need to stick in properties into the system object
-
-
-  // we need to add a presences array property in the system object
-  // Presences are of hte following types
-  // 1. Presence of other entities
-  // 2. Presence of this entity
-
-  // Self presences ( of type 2 ) can provide more functionality
-  // then of the type 1 because we have a proxyentity keeping cached information. So that we don't have to go to space to get trivial information
-  // We have already captured the presences of other entities in the 
-  // addressable array.
-
-  
-    populatePresences(system_obj);  
-
+   std::cout<<"\n\nIn populateSystemObject.  Finished populateAddressable.\n\n";
+   std::cout.flush();
+   
+   initializePresences(system_obj);
+   std::cout<<"\n\nFinished initializePresences\n\n";
+   std::cout.flush();
 }
 
 
