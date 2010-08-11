@@ -762,6 +762,7 @@ SET(ProtocolBuffersSources
 
   Loc
   Prox
+  MasterPinto
   Session
   CSeg
   ServerMessage
@@ -1112,6 +1113,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
+  ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   )
 
 SET(LIBPROXYOBJECT_SOURCES
@@ -1349,6 +1351,7 @@ SET(CSEG_SOURCES
 
 SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/PintoManager.cpp
+  ${PINTO_SOURCE_DIR}/PintoManagerLocationServiceCache.cpp
   ${PINTO_SOURCE_DIR}/Options.cpp
   ${PINTO_SOURCE_DIR}/main.cpp
   )
@@ -1760,6 +1763,7 @@ SET_TARGET_PROPERTIES(pinto PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(pinto
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_SPACE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 

@@ -1,7 +1,7 @@
-/*  Sirikata
- *  LocalPintoServerQuerier.hpp
+/*  CBR
+ *  Prox.pbj
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,30 +30,54 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_LIBSPACE_LOCAL_PINTO_SERVER_QUERIER_HPP_
-#define _SIRIKATA_LIBSPACE_LOCAL_PINTO_SERVER_QUERIER_HPP_
+"pbj-0.0.3"
 
-#include <sirikata/space/PintoServerQuerier.hpp>
+package Sirikata.Protocol.MasterPinto;
 
-namespace Sirikata {
 
-/** LocalPintoServerQuerier is a dummy implementation of PintoServerQuerier for
- *  single server setups.  Since there are no other space servers, no results
- *  would ever be necessary.  This class just ignores all update requests.
- */
-class LocalPintoServerQuerier : public PintoServerQuerier {
-public:
-    LocalPintoServerQuerier(SpaceContext* ctx) {}
-    virtual ~LocalPintoServerQuerier() {}
+// --- From Space Server to Pinto
 
-    virtual void updateRegion(const BoundingBox3f& region) {
-    }
-    virtual void updateLargestObject(float max_radius) {
-    }
-    virtual void updateQuery(const SolidAngle& min_angle) {
-    }
-}; // PintoServerQuerier
+// RegionID Update - Inform master pinto server of the space server's ID
+message RegionIDUpdate {
+    optional uint32 server = 1;
+}
 
-} // namespace Sirikata
+// Region Update - Inform master pinto server of region your space
+// server covers
+message RegionUpdate {
+    optional boundingsphere3f bounds = 1;
+}
 
-#endif //_SIRIKATA_LIBSPACE_LOCAL_PINTO_SERVER_QUERIER_HPP_
+// Largest Object Update - Inform master pinto server of new value for
+// largest object
+message LargestObjectUpdate {
+    optional float radius = 1;
+}
+
+// Query Update - Inform master pinto server of update (or new)
+// aggregated query information.
+message QueryUpdate {
+    optional float min_angle = 1;
+}
+
+// Message to Pinto - May include Region, Max
+message PintoMessage {
+    optional RegionIDUpdate server = 1;
+    optional RegionUpdate region = 2;
+    optional LargestObjectUpdate largest = 3;
+    optional QueryUpdate query = 4;
+}
+
+
+// --- From Pinto to Space Server
+
+
+// Pinto Result - Specify addition or removal of important
+message PintoResult {
+    optional bool addition = 1;
+    optional uint32 server = 2;
+}
+
+message PintoResponse {
+    repeated PintoResult results = 1;
+}

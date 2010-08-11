@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ProxSimulationTraits.hpp
+ *  ProxSimulationTraits.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,34 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
-#define _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
+#include <sirikata/space/ProxSimulationTraits.hpp>
 
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/UUID.hpp>
-#include <sirikata/core/util/MotionVector.hpp>
+#include <float.h>
 
 namespace Sirikata {
 
-class ProxSimulationTraits {
-public:
-    typedef float32 realType;
-
-    typedef Vector3f Vector3Type;
-    typedef TimedMotionVector3f MotionVector3Type;
-
-    typedef BoundingSphere3f BoundingSphereType;
-
-    typedef SolidAngle SolidAngleType;
-
-    typedef UUID ObjectIDType;
-
-    typedef Time TimeType;
-    typedef Duration DurationType;
-
-    const static realType InfiniteRadius; // Storate in Proximity.cpp
-}; // class ProxSimulationTraits
+const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_MAX;
 
 } // namespace Sirikata
-
-#endif //_SIRIKATA_PROX_SIMULATION_TRAITS_HPP_

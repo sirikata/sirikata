@@ -1,7 +1,7 @@
 /*  Sirikata
- *  LocalPintoServerQuerier.hpp
+ *  ProxSimulationTraits.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,30 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_LIBSPACE_LOCAL_PINTO_SERVER_QUERIER_HPP_
-#define _SIRIKATA_LIBSPACE_LOCAL_PINTO_SERVER_QUERIER_HPP_
+#ifndef _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
+#define _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
 
-#include <sirikata/space/PintoServerQuerier.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
+
+#include <sirikata/space/Platform.hpp>
 
 namespace Sirikata {
 
-/** LocalPintoServerQuerier is a dummy implementation of PintoServerQuerier for
- *  single server setups.  Since there are no other space servers, no results
- *  would ever be necessary.  This class just ignores all update requests.
- */
-class LocalPintoServerQuerier : public PintoServerQuerier {
+class SIRIKATA_SPACE_EXPORT ProxSimulationTraits {
 public:
-    LocalPintoServerQuerier(SpaceContext* ctx) {}
-    virtual ~LocalPintoServerQuerier() {}
+    typedef float32 realType;
 
-    virtual void updateRegion(const BoundingBox3f& region) {
-    }
-    virtual void updateLargestObject(float max_radius) {
-    }
-    virtual void updateQuery(const SolidAngle& min_angle) {
-    }
-}; // PintoServerQuerier
+    typedef Vector3f Vector3Type;
+    typedef TimedMotionVector3f MotionVector3Type;
+
+    typedef BoundingSphere3f BoundingSphereType;
+
+    typedef SolidAngle SolidAngleType;
+
+    typedef Time TimeType;
+    typedef Duration DurationType;
+
+    const static realType InfiniteRadius;
+}; // class ProxSimulationTraits
+
+class SIRIKATA_SPACE_EXPORT ObjectProxSimulationTraits : public ProxSimulationTraits {
+public:
+    typedef UUID ObjectIDType;
+    typedef UUID::Hasher ObjectIDHasherType;
+};
+
+class SIRIKATA_SPACE_EXPORT ServerProxSimulationTraits : public ProxSimulationTraits {
+public:
+    typedef ServerID ObjectIDType;
+    typedef std::tr1::hash<ServerID> ObjectIDHasherType;
+};
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_LIBSPACE_LOCAL_PINTO_SERVER_QUERIER_HPP_
+#endif //_SIRIKATA_PROX_SIMULATION_TRAITS_HPP_

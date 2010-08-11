@@ -33,13 +33,11 @@
 #ifndef _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 #define _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 
-#include "ProxSimulationTraits.hpp"
+#include <sirikata/space/ProxSimulationTraits.hpp>
 #include "LocationService.hpp"
 #include <prox/LocationServiceCache.hpp>
 
 namespace Sirikata {
-
-typedef Prox::LocationServiceCache<ProxSimulationTraits> LocationServiceCache;
 
 /* Implementation of LocationServiceCache which serves Prox libraries;
  * works by listening for updates from our LocationService.  Note that
@@ -49,9 +47,9 @@ typedef Prox::LocationServiceCache<ProxSimulationTraits> LocationServiceCache;
  * work happens in the proximity thread, with the callbacks just storing
  * information to be picked up in the next iteration.
  */
-class CBRLocationServiceCache : public Prox::LocationServiceCache<ProxSimulationTraits>, public LocationServiceListener {
+class CBRLocationServiceCache : public Prox::LocationServiceCache<ObjectProxSimulationTraits>, public LocationServiceListener {
 public:
-    typedef Prox::LocationUpdateListener<ProxSimulationTraits> LocationUpdateListener;
+    typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
     /** Constructs a CBRLocationServiceCache which caches entries from locservice.  If
      *  replicas is true, then it caches replica entries from locservice, in addition

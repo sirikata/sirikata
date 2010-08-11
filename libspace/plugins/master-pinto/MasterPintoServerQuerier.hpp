@@ -34,6 +34,8 @@
 #define _SIRIKATA_LIBSPACE_MASTER_PINTO_SERVER_QUERIER_HPP_
 
 #include <sirikata/space/PintoServerQuerier.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 
@@ -57,7 +59,8 @@ public:
     virtual void stop();
 
     // PintoServerQuerier Interface
-    virtual void update(const BoundingBox3f& region, float max_radius);
+    virtual void updateRegion(const BoundingBox3f& region);
+    virtual void updateLargestObject(float max_radius);
     virtual void updateQuery(const SolidAngle& min_angle);
 
 private:
@@ -66,11 +69,34 @@ private:
     void handleServerReceived(Network::Chunk& data, const Network::Stream::PauseReceiveCallback& pause);
     void handleServerReadySend();
 
+    // If connected and any properties are marked as dirty, tries to
+    // send an update to the server
+    void tryServerUpdate();
+
     SpaceContext* mContext;
+
+    // FIXME we should be able to use main IOService, but need underlying connections to be stranded
+    // This is getting absurd. We have extra threads all over the place because
+    // tcpsst isn't thread safe and doesn't use strands
+    Network::IOService* mIOService;
+    Network::IOWork* mIOWork;
+    Thread* mIOThread;
+
     Network::Stream* mServerStream;
 
     String mHost;
     String mPort;
+
+    bool mConnected;
+    bool mGaveID;
+
+    BoundingBox3f mRegion;
+    bool mRegionDirty;
+    float32 mMaxRadius;
+    bool mMaxRadiusDirty;
+    SolidAngle mAggregateQuery;
+    bool mAggregateQueryDirty;
+
 }; // MasterPintoServerQuerier
 
 } // namespace Sirikata
