@@ -206,6 +206,16 @@ const PortID& Endpoint::port() const {
     return mPort;
 }
 
+String Endpoint::toString() const {
+    std::ostringstream ss;
+    ss << (*this);
+    return ss.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const Sirikata::ODP::Endpoint& ep) {
+    os << ep.space() << ":" << ep.object() << ":" << ep.port();
+    return os;
+}
 
 } // namespace ODP
 } // namespace Sirikata

@@ -63,6 +63,10 @@ void DelegatePort::receiveFrom(const Endpoint& from, const MessageHandler& cb) {
     mFromHandlers[from] = cb;
 }
 
+void DelegatePort::receiveFrom(const Endpoint& from, const OldMessageHandler& cb) {
+    mFromOldHandlers[from] = cb;
+}
+
 bool DelegatePort::deliver(const RoutableMessageHeader& header, MemoryReference data) const {
     Endpoint ep(header.source_space(), header.source_object(), header.source_port());
 
@@ -77,13 +81,35 @@ bool DelegatePort::deliver(const RoutableMessageHeader& header, MemoryReference 
     return false;
 }
 
+bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const {
+    // See ODP::Port documentation for details on this ordering.
+    if (tryDeliver(src, dst, data)) return true;
+    if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), src.port()), dst, data)) return true;
+    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), src.port()), dst, data)) return true;
+    if (tryDeliver(Endpoint(src.space(), src.object(), PortID::any()), dst, data)) return true;
+    if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), PortID::any()), dst, data)) return true;
+    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), PortID::any()), dst, data)) return true;
+
+    return false;
+}
+
 bool DelegatePort::tryDeliver(const Endpoint& ep, const RoutableMessageHeader& header, MemoryReference data) const {
-    ReceiveFromHandlers::const_iterator rit = mFromHandlers.find(ep);
+    ReceiveFromOldHandlers::const_iterator rit = mFromOldHandlers.find(ep);
+    if (rit == mFromOldHandlers.end())
+        return false;
+
+    const OldMessageHandler& handler = rit->second;
+    handler(header, data);
+    return true;
+}
+
+bool DelegatePort::tryDeliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
+    ReceiveFromHandlers::const_iterator rit = mFromHandlers.find(src);
     if (rit == mFromHandlers.end())
         return false;
 
     const MessageHandler& handler = rit->second;
-    handler(header, data);
+    handler(src, dst, data);
     return true;
 }
 

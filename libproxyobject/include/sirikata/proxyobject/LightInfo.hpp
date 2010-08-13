@@ -63,13 +63,13 @@ struct SIRIKATA_PROXYOBJECT_EXPORT LightInfo {
         mWhichFields(0),
         mDiffuseColor(1.0f,1.0f,1.0f),
         mSpecularColor(1.0f,1.0f,1.0f),
-        mPower(1.0f),
+        mPower(1000.0f),
         mAmbientColor(.05f,.05f,.05f),
         mShadowColor(.02f,.02f,.02f),
-        mLightRange(256.0f),
-        mConstantFalloff(1.0f),
-        mLinearFalloff(.01f),
-        mQuadraticFalloff(.02f),
+        mLightRange(1000.0f),
+        mConstantFalloff(0.0f),
+        mLinearFalloff(0.0f),
+        mQuadraticFalloff(0.0f),
         mConeInnerRadians(0.0f),
         mConeOuterRadians(3.1415926536f),
         mConeFalloff(0.0f),
@@ -97,12 +97,12 @@ struct SIRIKATA_PROXYOBJECT_EXPORT LightInfo {
     }
     LightInfo& setLightSpecularColor(const Color&c) {
         mWhichFields|=SPECULAR_COLOR;
-        mSpecularColor=c;        
+        mSpecularColor=c;
         return *this;
     }
     LightInfo& setLightPower(float32 c){
         mWhichFields|=POWER;
-        mPower=c;        
+        mPower=c;
         return *this;
     }
     ///ogre only looks at the absolute value of this

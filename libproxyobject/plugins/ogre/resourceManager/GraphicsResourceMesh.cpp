@@ -38,6 +38,9 @@
 #include "ResourceUnloadTask.hpp"
 #include <boost/bind.hpp>
 #include <OgreResourceBackgroundQueue.h>
+#include <stdio.h>
+
+using namespace std;
 
 namespace Meru {
 
@@ -132,6 +135,7 @@ ResourceDependencyTask* GraphicsResourceMesh::createDependencyTask(DependencyMan
 
 ResourceLoadTask* GraphicsResourceMesh::createLoadTask(DependencyManager *manager)
 {
+
   return new MeshLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
 }
 

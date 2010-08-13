@@ -35,6 +35,9 @@
 #include "../meruCompat/DependencyTask.hpp"
 #include "GraphicsResource.hpp"
 #include "ResourceDownloadTask.hpp"
+#include <stdio.h>
+
+using namespace std;
 
 namespace Meru {
 

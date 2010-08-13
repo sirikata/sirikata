@@ -34,6 +34,7 @@
 #define _SIRIKATA_BULLET_PHYSICS_
 
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
@@ -462,6 +463,7 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const TimeOffsetManager*offset,
                     const String&options);
+    Context* mContext;
     Vector3f mGravity;
     double groundlevel;
     OptionValue* mTempTferManager;
@@ -479,7 +481,7 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
 
 
 public:
-    BulletSystem();
+    BulletSystem(Context* ctx);
     Vector3f getGravity() { return mGravity; };
     std::tr1::unordered_map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
@@ -490,10 +492,12 @@ public:
                            float density, float friction, float bounce, Vector3f hull,
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(BulletObj*);
-    static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
-                                                  const TimeOffsetManager *offset,
+
+    static TimeSteppedQueryableSimulation* create(Context* ctx,
+        Provider<ProxyCreationListener*>*proxyManager,
+        const TimeOffsetManager *offset,
             const String&options) {
-        BulletSystem*os= new BulletSystem;
+        BulletSystem*os= new BulletSystem(ctx);
         if (os->initialize(proxyManager,offset,options))
             return os;
         delete os;
@@ -529,8 +533,9 @@ public:
         return Duration::seconds(0.1);
     };
     Task::EventResponse downloadFinished(Task::EventPtr evbase, BulletObj* bullobj);
-    ///returns if rendering should continue
-    virtual bool tick();
+
+    virtual void poll();
+
     ~BulletSystem();
 };
 }

@@ -96,11 +96,31 @@ public:
         receiveFrom(Endpoint::any(), cb);
     }
 
+    enum {
+        OLD_HANDLER
+    };
+    /** Register a default handler for messages received on this port. This is
+     *  a utility method that is a shorthand for receiveFrom(Endpoint::any(),
+     *  cb).
+     *  \deprecated Call with second parameter as OLD_HANDLER
+     *  \param cb handler to invoke when messages are receive
+     */
+    void receive(const OldMessageHandler& cb, int bogus) {
+        receiveFrom(Endpoint::any(), cb);
+    }
+
     /** Register a handler for messages from the specified endpoint.
      *  \param from endpoint to dispatch messages from
      *  \param cb handler to invoke when messages are received
      */
     virtual void receiveFrom(const Endpoint& from, const MessageHandler& cb) = 0;
+
+    /** Register a handler for messages from the specified endpoint.
+     *  \deprecated
+     *  \param from endpoint to dispatch messages from
+     *  \param cb handler to invoke when messages are received
+     */
+    virtual void receiveFrom(const Endpoint& from, const OldMessageHandler& cb) = 0;
 }; // class Port
 
 } // namespace ODP

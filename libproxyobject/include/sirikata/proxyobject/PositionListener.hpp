@@ -32,6 +32,9 @@
 #ifndef _SIRIKATA_POSITION_LISTENER_HPP_
 #define _SIRIKATA_POSITION_LISTENER_HPP_
 
+#include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/MotionQuaternion.hpp>
+
 namespace Sirikata {
 namespace Protocol{class ObjLoc;}
 
@@ -42,18 +45,7 @@ typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class SIRIKATA_PROXYOBJECT_EXPORT PositionListener {
 public:
     virtual ~PositionListener() {}
-    virtual void resetLocation  (Time timestamp, const Location &newLocation) = 0;
-    virtual void updateLocation (Time timestamp, const Location &newLocation) = 0;
-    virtual void setParent (
-        const ProxyObjectPtr &parent,
-        TemporalValue<Location>::Time timeStamp,
-        const Location &absLocation,
-        const Location &relLocation) = 0;
-
-    virtual void unsetParent (
-        TemporalValue<Location>::Time timeStamp,
-        const Location &absLocation) = 0;
-
+    virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient) = 0;
 };
 
 class SIRIKATA_PROXYOBJECT_EXPORT LocationAuthority {

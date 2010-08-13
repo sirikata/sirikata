@@ -225,7 +225,7 @@ public:
         scalar fTxz = fTz*x;
         scalar fTyy = fTy*y;
         scalar fTzz = fTz*z;
-        
+
         return Vector3<scalar>(1.0f-(fTyy+fTzz), fTxy+fTwz, fTxz-fTwy);
     }
 
@@ -239,7 +239,7 @@ public:
         scalar fTxy = fTy*x;
         scalar fTyz = fTz*y;
         scalar fTzz = fTz*z;
-        
+
         return Vector3<scalar>(fTxy-fTwz, 1.0f-(fTxx+fTzz), fTyz+fTwx);
 
     }
@@ -263,6 +263,17 @@ public:
         xAxis=rot.getCol(0);
         yAxis=rot.getCol(1);
         zAxis=rot.getCol(2);
+    }
+
+    /** Raise the quaternion to a power (i.e. apply the rotation n times).
+     *  \param n the exponent
+     */
+    Quaternion exp(float32 n) const {
+        // FIXME there's probably a much more efficient way to do this
+        float angle;
+        Vector3<float32> axis;
+        toAngleAxis(angle, axis);
+        return Quaternion(axis, angle*n);
     }
 };
 inline Quaternion operator *(Quaternion::scalar s,const Quaternion&q) {

@@ -66,6 +66,9 @@ using Meru::SequentialWorkQueue;
 using Meru::MaterialScriptManager;
 
 #include <boost/filesystem.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include "WebView.hpp"
@@ -135,8 +138,10 @@ Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
-OgreSystem::OgreSystem()
-    : mLastFrameTime(Task::LocalTime::now()),
+OgreSystem::OgreSystem(Context* ctx)
+ : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
+   mContext(ctx),
+   mLastFrameTime(Task::LocalTime::now()),
      mQuitRequested(false),
      mFloatingPointOffset(0,0,0),
      mPrimaryCamera(NULL)
@@ -1002,17 +1007,18 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
     return continueRendering;
 }
 //static Task::LocalTime debugStartTime = Task::LocalTime::now();
-bool OgreSystem::tick(){
+void OgreSystem::poll(){
     GraphicsResourceManager::getSingleton().computeLoadedSet();
     Task::LocalTime curFrameTime(Task::LocalTime::now());
     Task::LocalTime finishTime(curFrameTime + desiredTickRate()); // arbitrary
 
     tickInputHandler(curFrameTime);
 
-    bool continueRendering=true;
     Duration frameTime=curFrameTime-mLastFrameTime;
-    if (mRenderTarget==sRenderTarget)
-        continueRendering=renderOneFrame(curFrameTime, frameTime);
+    if (mRenderTarget==sRenderTarget) {
+        if (!renderOneFrame(curFrameTime, frameTime))
+            quit();
+    }
     else if (sRenderTarget==NULL) {
         SILOG(ogre,warning,"No window set to render: skipping render phase");
     }
@@ -1022,9 +1028,7 @@ bool OgreSystem::tick(){
     Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
 
     if (mQuitRequested)
-        continueRendering = false;
-
-    return continueRendering;
+        mContext->shutdown();
 }
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;

@@ -42,6 +42,13 @@
 #include "ResourceManager.hpp"
 #include "../meruCompat/Event.hpp"
 #include "../meruCompat/EventSource.hpp"
+#include <sirikata/core/util/Thread.hpp>
+#include <stdio.h>
+
+using namespace std;
+
+using namespace Sirikata;
+using namespace Sirikata::Transfer;
 
 using std::map;
 using std::set;
@@ -59,9 +66,22 @@ InitializeGlobalOptions graphicsresourcemanageropts("ogregraphics",
     NULL);
 
 
+void GraphicsResourceManager::initializeMediator() {
+  mTransferMediator = &(TransferMediator::getSingleton());
+
+  mTransferPool = mTransferMediator->registerClient("OgreGraphics");
+}
+
+TransferPoolPtr GraphicsResourceManager::transferPool()
+{
+    return mTransferPool;
+}
+
 GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue)
 : mEpoch(0), mEnabled(true)
 {
+  initializeMediator();
+
   this->mTickListener = EventSource::getSingleton().subscribeId(
     EventID(EventTypes::Tick),
       EVENT_CALLBACK(GraphicsResourceManager, tick, this)
@@ -178,9 +198,10 @@ void GraphicsResourceManager::computeLoadedSet()
     GraphicsResource* resource = *itr;
 
     GraphicsResource::ParseState parseState = resource->getParseState();
-    if (parseState == GraphicsResource::PARSE_INVALID)
-      resource->parse();
 
+    if (parseState == GraphicsResource::PARSE_INVALID) {
+      resource->parse();
+    }
     resource->updateValue(mEpoch);
   }
 

@@ -33,7 +33,6 @@
 #include <sirikata/oh/Platform.hpp>
 #include "MonoObject.hpp"
 class MonoContextData;
-#include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include "MonoDomain.hpp"
 #include "MonoDelegate.hpp"

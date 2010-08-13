@@ -23,6 +23,7 @@ from graph.windowed_jfi import GraphWindowedJFI
 from graph.windowed_queues import GraphWindowedQueues
 
 import socket
+import os
 
 CBR_WRAPPER = "util/cbr_wrapper.sh"
 
@@ -58,7 +59,11 @@ class ClusterSimSettings:
         self.object_query_frac = 0.0
 
         # OH: pack object generation settings
-        self.pack_dir = '/home/meru/data/'
+        if config.pack_dir=="":
+          self.pack_dir = '/home/meru/data/'
+        else:
+          self.pack_dir = config.pack_dir
+
         self.object_pack = 'objects.pack'
         self.num_pack_objects = 0
         self.pack_dump = ''
@@ -71,7 +76,7 @@ class ClusterSimSettings:
         # OH: message trace data loading
         self.message_trace_file = ''
 
-        
+
         # OH: scenario / ping settings
         self.scenario = 'ping'
         self.scenario_options = '--num-pings-per-second=1000'
@@ -98,9 +103,11 @@ class ClusterSimSettings:
             self.num_cseg_servers = 0
 
         # Space: OSeg settings
-        self.oseg = 'oseg_craq'
-        self.oseg_lookup_queue_size = 2000;
+        self.oseg = 'craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
+        self.oseg_options = ""
+
+        self.oseg_lookup_queue_size = 2000;
         self.oseg_analyze_after = '40' #Will perform oseg analysis after this many seconds of the run.
 
         self.oseg_cache_size = 200
@@ -109,9 +116,13 @@ class ClusterSimSettings:
         self.oseg_cache_selector = "cache_originallru"
         self.oseg_cache_comm_scaling = "1.0"
 
+        # Space: PINTO settings
+        self.pinto_type = 'master'
+        self.pinto_opts = ''
+
         self.vis_mode = 'object'
         self.vis_seed = 1
-        
+
 
         # Trace:
         # list of trace types to enable, e.g. ['object', 'oseg'] will
@@ -121,6 +132,7 @@ class ClusterSimSettings:
             'space' : [],
             'simoh' : [],
             'cseg' : [],
+            'pinto' : [],
             'analysis' : []
             }
 
@@ -150,6 +162,18 @@ class ClusterSimSettings:
             return self.oseg_unique_craq_prefix
         return self.config.unique
 
+    def oseg_options_param(self):
+        if (self.oseg == 'craq'):
+            return '--oseg-options=' + "--oseg_unique_craq_prefix=" + self.unique(),
+        return ''
+
+    def pinto_options_param(self):
+        if (self.pinto_type == 'master'):
+            assert(self.pinto_ip)
+            assert(self.pinto_port)
+            return '--pinto-options=' + '--host=' + str(self.pinto_ip) + ' --port=' + str(self.pinto_port)
+
+        return ''
 
 class ClusterSim:
     def __init__(self, config, settings, io=util.stdio.StdIO()):
@@ -158,10 +182,15 @@ class ClusterSim:
         self.io = io
 
     def num_servers(self):
-        return self.settings.space_server_pool + self.settings.num_oh + self.settings.num_cseg_servers
+        return self.settings.space_server_pool + self.settings.num_oh + self.settings.num_cseg_servers + self.num_pinto_servers()
 
     def max_space_servers(self):
         return self.settings.space_server_pool
+
+    def num_pinto_servers(self):
+        if self.settings.pinto_type == 'master':
+            return 1
+        return 0
 
     def ip_file(self):
         return "serverip.txt"
@@ -216,13 +245,15 @@ class ClusterSim:
             'cseg-service-host' : "--cseg-service-host=" + self.settings.cseg_service_host,
             'cseg-service-tcp-port' : "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
             'oseg' : "--oseg=" + self.settings.oseg,
-            'oseg_unique_craq_prefix' : "--oseg_unique_craq_prefix=" + self.settings.unique(),
+            'oseg-options' : self.settings.oseg_options_param(),
             'oseg-cache-selector' : "--oseg-cache-selector=" + self.settings.oseg_cache_selector,
             'oseg-cache-scaling' : "--oseg-cache-scaling=" + self.settings.oseg_cache_comm_scaling,
             'oseg_lookup_queue_size' : "--oseg_lookup_queue_size=" + str(self.settings.oseg_lookup_queue_size),
             'oseg-cache-size' : "--oseg-cache-size=" + str(self.settings.oseg_cache_size),
             'oseg-cache-clean-group-size' : "--oseg-cache-clean-group-size=" + str(self.settings.oseg_cache_clean_group),
             'oseg-cache-entry-lifetime' : "--oseg-cache-entry-lifetime=" + str(self.settings.oseg_cache_entry_lifetime),
+            'pinto' : '--pinto=' + str(self.settings.pinto_type),
+            'pinto-options' : self.settings.pinto_options_param(),
             }
         for tracetype in self.settings.traces['space']:
             class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
@@ -287,6 +318,20 @@ class ClusterSim:
 
         return (params, class_params)
 
+    def pinto_parameters(self):
+        class_params = {
+            'port' : '--port=' + str(self.settings.pinto_port)
+            }
+
+        if self.config.pinto_plugins != '':
+            class_params['pinto.plugins'] = '--pinto.plugins=' + self.config.pinto_plugins
+
+        for tracetype in self.settings.traces['pinto']:
+            class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
+
+        params = ['%(' + x + ')s' for x in class_params.keys()]
+
+        return (params, class_params)
 
     def analysis_parameters(self):
         params = [
@@ -385,6 +430,14 @@ class ClusterSim:
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()], io=self.io)
 
+        # Generate pinto "ip file", aka the local list we use to create parameter lists
+        if self.num_pinto_servers() > 0:
+            assert(self.num_pinto_servers() == 1)
+            self.settings.pinto_ip = self.config.deploy_nodes[server_index].node
+            self.settings.pinto_port = port
+            port += 2
+            server_index += 1
+
         # note: we do this here since we added push_init_data after a
         # bunch of things were already setup to use the old sequence
         # of initialization
@@ -427,12 +480,14 @@ class ClusterSim:
         oh_params, oh_param_functor_dict = self.oh_parameters()
         vis_params, vis_param_functor_dict = self.vis_parameters()
         cseg_params, cseg_param_functor_dict = self.cseg_parameters()
+        pinto_params, pinto_param_functor_dict = self.pinto_parameters()
 
         # Construct the node-specific parameter lists
         node_params = {}
         node_params['binary'] = []
 
         num_cseg_instances = 0
+        num_pinto_instances = 0
 
         for node_class in instance_types:
             node_type = node_class[0]
@@ -441,7 +496,7 @@ class ClusterSim:
             for x in range(0, node_count):
                 # FIXME should just map directly to binaries
                 if (node_type == 'space'):
-                    node_params['binary'].append('cbr')
+                    node_params['binary'].append('space')
                 elif (node_type == 'simoh'):
                     node_params['binary'].append('simoh')
                 elif (node_type == 'vis'):
@@ -449,10 +504,14 @@ class ClusterSim:
                 elif (node_type == 'cseg'):
                     node_params['binary'].append('cseg')
                     num_cseg_instances += 1
+                elif (node_type == 'pinto'):
+                    node_params['binary'].append('pinto')
+                    num_pinto_instances += 1
                 else:
                     node_params['binary'].append('')
                 self.fill_parameters(node_params, vis_param_functor_dict, node_type == 'analysis', x)
                 self.fill_parameters(node_params, cseg_param_functor_dict, node_type == 'cseg', num_cseg_instances)
+                self.fill_parameters(node_params, pinto_param_functor_dict, node_type == 'pinto', num_pinto_instances)
                 self.fill_parameters(node_params, oh_param_functor_dict, node_type == 'simoh', x)
                 self.fill_parameters(node_params, cbr_param_functor_dict, node_type == 'space', x)
 
@@ -486,6 +545,7 @@ class ClusterSim:
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
         cmd_seq.extend(cseg_params)
+        cmd_seq.extend(pinto_params)
 
         # Add a param for loglevel if necessary
         if len(self.settings.loglevels) > 0:
@@ -519,6 +579,7 @@ class ClusterSim:
         instances = [
             ('space', self.settings.space_server_pool),
             ('cseg', self.settings.num_cseg_servers),
+            ('pinto', self.num_pinto_servers()),
             ('simoh', self.settings.num_oh)
             ]
         self.run_instances(instances, False)
@@ -644,7 +705,7 @@ if __name__ == "__main__":
 
     cs.oseg_cache_selector = "cache_communication";
     cs.oseg_cache_comm_scaling = "1.0";
-    
+
     cluster_sim = ClusterSim(cc, cs)
 
     if len(sys.argv) < 2:

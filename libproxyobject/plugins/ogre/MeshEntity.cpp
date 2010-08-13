@@ -41,6 +41,12 @@
 #include "WebView.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
+#include <stdio.h>
+#include "meruCompat/SequentialWorkQueue.hpp"
+#include "Lights.hpp"
+
+using namespace std;
+using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 namespace Graphics {
@@ -300,6 +306,11 @@ Vector3f fixUp(int up, Vector3f v) {
     assert(false);
 }
 
+bool MeshEntity::createMeshWork(const Meshdata& md) {
+    createMesh(md);
+    return true;
+}
+
 void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
@@ -314,14 +325,21 @@ void MeshEntity::createMesh(const Meshdata& md) {
         mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
     }
 
-
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
     /// FIXME: set bounds, bounding radius here
     Ogre::ManualObject mo(hash);
     mo.clear();
 
-    for(SubMeshGeometryList::const_iterator submesh_it = md.geometry.begin(); submesh_it != md.geometry.end(); submesh_it++) {
-        const SubMeshGeometry& submesh = *(*submesh_it);
+    for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+        const GeometryInstance& geoinst = *geoinst_it;
+
+        Matrix4x4f pos_xform = geoinst.transform;
+        Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
+
+        // Get the instanced submesh
+        assert(geoinst.geometryIndex < md.geometry.size());
+        const SubMeshGeometry& submesh = *md.geometry[geoinst.geometryIndex];
+
         int vertcount = submesh.positions.size();
         int normcount = submesh.normals.size();
         int indexcount = submesh.position_indices.size();
@@ -333,15 +351,18 @@ void MeshEntity::createMesh(const Meshdata& md) {
         mo.begin(matname);
 
         float tu, tv;
-        for (int i=0; i<indexcount; i++) {
+	for (int i=0; i<indexcount; i++) {
             int j = submesh.position_indices[i];
             Vector3f v = fixUp(up, submesh.positions[j]);
+            Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
+            v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
             mo.position(v[0], v[1], v[2]);
 
             j = submesh.normal_indices[i];
-            v = fixUp(up, submesh.normals[j]);
+            Vector3f normal = fixUp(up, submesh.normals[j]);
+            normal = normal_xform * normal;
+            mo.normal(normal[0], normal[1], normal[2]);
 
-            mo.normal(v[0], v[1], v[2]);
             mo.colour(1.0,1.0,1.0,1.0);
             if (submesh.texUVs.size()==0) {
                 /// bogus texture for textureless models
@@ -360,19 +381,38 @@ void MeshEntity::createMesh(const Meshdata& md) {
             }
             else {
                 Sirikata::Vector2f uv = submesh.texUVs[ submesh.texUV_indices[i] ];
-                tu=uv[0];
-                tv=1.0-uv[1];           //  why you gotta be like that?
+                tu = uv[0];
+                tv = 1.0-uv[1];           //  why you gotta be like that?
             }
             mo.textureCoord(tu, tv);
         }
-
         mo.end();
     } // submesh
 
     mo.setVisible(true);
     Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     bool check = mm.resourceExists(hash);
-    loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
+    loadMesh(hash);                     /// this is here because we removed
+                                        /// mResource->loaded(true, mEpoch) in
+                                        /// ModelLoadTask::doRun
+
+    // Lights
+    int light_idx = 0;
+    for(LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
+        const LightInstance& lightinst = *lightinst_it;
+
+        Matrix4x4f pos_xform = lightinst.transform;
+
+        // Get the instanced submesh
+        assert(lightinst.lightIndex < md.lights.size());
+        const LightInfo& sublight = *md.lights[lightinst.lightIndex];
+
+        String lightname = hash + "_light_" + boost::lexical_cast<String>(light_idx++);
+        Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
+        mLights.push_back(light);
+        mSceneNode->attachObject(light);
+        light->setDebugDisplayEnabled(true);
+    }
 }
 
 Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata& md) {
@@ -393,9 +433,21 @@ Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata
 
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
-        createMesh(md);
+        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
 
     return Task::EventResponse::del();
+}
+
+void MeshEntity::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
+    std::tr1::shared_ptr<RemoteFileMetadata>response, Meshdata& md)
+{
+
+}
+
+void MeshEntity::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
+        std::tr1::shared_ptr<DenseData> response, Meshdata& md)
+{
+
 }
 
 void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
@@ -405,20 +457,29 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
 
     // Special case for no dependent downloads
     if (mRemainingDownloads == 0) {
-        createMesh(md);
+        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
         return;
     }
+    TransferMediator *mTransferMediator = &(TransferMediator::getSingleton());
+
+    TransferPoolPtr mTransferPool = mTransferMediator->registerClient("ColladaGraphics");
 
     for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
-        mScene->mTransferManager->download(
+
+         TransferRequestPtr req(new MetadataRequest(URI(texURI), 1, std::tr1::bind(&MeshEntity::metadataFinished,
+                  this, _1, _2, md)));
+
+        //mTransferPool
+
+        /*mScene->mTransferManager->download(
             Transfer::URI(texURI),
             std::tr1::bind(
                 &MeshEntity::downloadFinished,
                 this,_1,md
             ),
             Transfer::Range(true)
-        );
+        );*/
     }
 }
 

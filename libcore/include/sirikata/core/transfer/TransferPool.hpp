@@ -39,6 +39,9 @@
 #include "RemoteFileMetadata.hpp"
 #include "TransferHandlers.hpp"
 #include "URI.hpp"
+#include <stdio.h>
+
+using namespace std;
 
 namespace Sirikata {
 namespace Transfer {
@@ -82,6 +85,8 @@ protected:
 	std::string mClientID;
 
 };
+
+typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
 
 /*
  * Handles requests for metadata of a file when all you have is the URI
@@ -145,6 +150,9 @@ protected:
 
 };
 
+typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
+
+
 /*
  * Handles requests for the data associated with a file:chunk pair
  */
@@ -162,7 +170,6 @@ public:
 		  mUniqueID(MetadataRequest::mUniqueID + chunk.getHash().convertToHexString()),
 		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
 		  mCallback(cb) {
-
 	}
 
 	inline const RemoteFileMetadata& getMetadata() {
@@ -201,6 +208,8 @@ protected:
 
 };
 
+typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
+
 /*
  * Abstract class for providing an algorithm for aggregating priorities from
  * one or more clients for a request
@@ -223,14 +232,26 @@ public:
  */
 class TransferPool {
 
+    friend class TransferMediator;
+
+private:
+
 	const std::string mClientID;
 	ThreadSafeQueue<std::tr1::shared_ptr<TransferRequest> > mDeltaQueue;
 
-public:
-	TransferPool(const std::string &clientID)
-		: mClientID(clientID) {
+    TransferPool(const std::string &clientID)
+        : mClientID(clientID) {
 
-	}
+    }
+
+    //Returns an item from the pool. Blocks if pool is empty.
+    inline std::tr1::shared_ptr<TransferRequest> getRequest() {
+        std::tr1::shared_ptr<TransferRequest> retval;
+        mDeltaQueue.blockingPop(retval);
+        return retval;
+    }
+
+public:
 
 	//Returns client identifier
 	inline const std::string& getClientID() const {
@@ -243,14 +264,9 @@ public:
 		mDeltaQueue.push(req);
 	}
 
-	//Returns an item from the pool. Blocks if pool is empty.
-	inline std::tr1::shared_ptr<TransferRequest> getRequest() {
-		std::tr1::shared_ptr<TransferRequest> retval;
-		mDeltaQueue.blockingPop(retval);
-		return retval;
-	}
-
 };
+
+typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
 
 }
 }

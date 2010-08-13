@@ -156,7 +156,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
     case PhysicalParameters::Disabled:
         DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: Disabled" << endl);
         mActive = false;
-        mMeshptr->setLocationAuthority(0);
         mDynamic = false;
         break;
     case PhysicalParameters::Static:
@@ -181,10 +180,9 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         break;
     }
     if (mMeshptr) {
-        if (mDynamic && (!mMeshptr->isLocal()) ) {      /// for now, physics ignores dynamic objects on other hosts
+        if (mDynamic) {
             DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: disabling dynamic&non-local" << endl);
             mActive = false;
-            mMeshptr->setLocationAuthority(0);
             return;
         }
     }
@@ -195,7 +193,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         po.o = mMeshptr->getOrientation();
         Vector3f size = mMeshptr->getScale();
         system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, pp.hull, size.x, size.y, size.z);
-        mMeshptr->setLocationAuthority(this);
     }
 }
 
@@ -465,7 +462,7 @@ float btMagSq(const btVector3& v) {
            + v.z() * v.z();
 }
 
-bool BulletSystem::tick() {
+void BulletSystem::poll() {
     static Task::LocalTime lasttime = mStartTime;
     static Task::DeltaTime waittime = Task::DeltaTime::seconds(0.02);
     static int mode = 0;
@@ -524,7 +521,7 @@ bool BulletSystem::tick() {
                     Location loc (objects[i]->mMeshptr->globalLocation(remoteNow));
                     loc.setPosition(po.p);
                     loc.setOrientation(po.o);
-                    objects[i]->mMeshptr->setLocation(remoteNow, loc);
+                    //objects[i]->mMeshptr->setLocation(remoteNow, loc);
                 }
             }
 
@@ -639,7 +636,6 @@ bool BulletSystem::tick() {
         }
     }
     DEBUG_OUTPUT(cout << endl;)
-    return true;
 }
 
 void customDispatch::ActiveCollisionState::collide(BulletObj* first, BulletObj* second, btPersistentManifold *currentCollisionManifold) {
@@ -757,9 +753,12 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     return true;
 }
 
-BulletSystem::BulletSystem() :
-        mGravity(0, GRAVITY, 0),
-        mStartTime(Task::LocalTime::now()) {
+BulletSystem::BulletSystem(Context* ctx)
+ : TimeSteppedQueryableSimulation(ctx, Duration::milliseconds((int64)100), "Bullet Physics"),
+   mContext(ctx),
+   mGravity(0, GRAVITY, 0),
+   mStartTime(Task::LocalTime::now())
+{
     mLocalTimeOffset=NULL;
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }

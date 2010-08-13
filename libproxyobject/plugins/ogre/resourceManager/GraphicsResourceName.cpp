@@ -34,7 +34,9 @@
 #include "GraphicsResourceName.hpp"
 #include "ResourceManager.hpp"
 #include <boost/bind.hpp>
+#include <stdio.h>
 
+using namespace std;
 namespace Meru {
 
 GraphicsResourceName::GraphicsResourceName(const URI &resourceID, GraphicsResource::Type referencedType)
@@ -78,6 +80,8 @@ void GraphicsResourceName::hashLookupCallback(WeakResourcePtr resourcePtr, Type 
 //  assert(id != hash);
 
   // add dependency for hash
+
+
   SharedResourcePtr resource = resourcePtr.lock();
   if (resource) {
     if (hash) {
@@ -92,7 +96,7 @@ void GraphicsResourceName::hashLookupCallback(WeakResourcePtr resourcePtr, Type 
       }
     } else {
       resource->parsed(false);
-    }
+   }
   }
 }
 

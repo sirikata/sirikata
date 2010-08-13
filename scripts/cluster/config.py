@@ -46,14 +46,16 @@ class ClusterConfig:
         self.repository = 'git://github.com/sirikata/sirikata.git'
         self.branch = "master"
         self.code_dir = "cbr"
+        self.pack_dir = ""
         self.oseg_code_dir = "oseg.git"
         self.port_base = 6666
         self.unique = None
         self.ccache = False
 
-        self.plugins = 'tcpsst,servermap-tabular'
-        self.space_plugins = 'weight-exp,weight-sqr'
+        self.plugins = 'tcpsst,servermap-tabular,core-local'
+        self.space_plugins = 'weight-exp,weight-sqr,space-craq,space-local,space-master-pinto'
         self.cseg_plugins = 'weight-exp'
+        self.pinto_plugins = ''
         self.simoh_plugins = 'weight-exp,weight-sqr'
         self.analysis_plugins = 'weight-exp,weight-sqr'
 
@@ -110,6 +112,8 @@ class ClusterConfig:
                 self.headnode = opt_value.strip()
             elif (opt_name == "timeserver"):
                 self.timeserver = opt_value.strip()
+            elif (opt_name == "pack_dir"):
+                self.pack_dir = opt_value.strip()
             elif (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "repository"):

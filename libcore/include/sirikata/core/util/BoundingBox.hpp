@@ -49,8 +49,8 @@ public:
         mAcross=Vector3f(2.0f*radius,2.0f*radius,2.0f*radius);
     }
     template <typename flt> BoundingBox(const BoundingBox<flt>&input) {
-        mMin=Vector3<real>(input.mMin);
-        mAcross=input.mAcross;
+      mMin=Vector3<real>(input.min());
+      mAcross=input.across();
     }
     BoundingBox(const Vector3<real>&imin,const Vector3<real>&imax){
         mMin=imin;
@@ -144,6 +144,20 @@ public:
 
     Vector3<real> clamp(const Vector3<real>& v) const {
         return v.max(min()).min(max());
+    }
+
+    bool intersects(const BoundingBox& bbox2) const {
+      BoundingBox bbox = BoundingBox(min().max(bbox2.min()), 
+                                         max().min(bbox2.max()));
+
+      if (bbox.min().x < bbox.max().x && 
+          bbox.min().y < bbox.max().y && 
+          bbox.min().z < bbox.max().z)
+      {
+        return true;   
+      }
+
+      return false;
     }
 
     bool operator==(const BoundingBox& rhs) const{

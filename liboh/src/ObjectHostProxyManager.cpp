@@ -93,12 +93,12 @@ QueryTracker *ObjectHostProxyManager::getQueryTracker(const SpaceObjectReference
 }
 
 ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {
-    if (id.space() == mSpaceID) {
-        ProxyMap::const_iterator iter = mProxyMap.find(id.object());
-        if (iter != mProxyMap.end()) {
-            return (*iter).second.obj;
-        }
-    }
+    assert(id.space() == mSpaceID);
+
+    ProxyMap::const_iterator iter = mProxyMap.find(id.object());
+    if (iter != mProxyMap.end())
+        return (*iter).second.obj;
+
     return ProxyObjectPtr();
 }
 

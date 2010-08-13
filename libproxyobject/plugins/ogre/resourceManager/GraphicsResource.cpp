@@ -165,10 +165,12 @@ void GraphicsResource::parsed(bool success)
 void GraphicsResource::parseDependencies()
 {
   set<SharedResourcePtr>::iterator itr;
+
   for (itr = mDependencies.begin(); itr != mDependencies.end(); itr++) {
     ParseState state = (*itr)->getParseState();
-    if (state == PARSE_INVALID)
+    if (state == PARSE_INVALID) {
       (*itr)->parse();
+    }
   }
 }
 

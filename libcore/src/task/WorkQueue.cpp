@@ -37,6 +37,9 @@
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/queue/LockFreeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 namespace Sirikata {
 namespace Task {
@@ -105,6 +108,7 @@ void WorkQueue::destroyWorkerThreads(WorkQueueThread *th) {
 
 template <class QueueType>
 void WorkQueueImpl<QueueType>::enqueue(WorkItem *element) {
+  
     if (element) {
         element->enqueued();
     }
@@ -125,6 +129,7 @@ bool WorkQueueImpl<QueueType>::dequeueBlocking() {
 
 template <class QueueType>
 bool WorkQueueImpl<QueueType>::dequeuePoll() {
+
 	WorkItem *element;
 	if (mQueue.pop(element)) {
 		if (element) {
@@ -137,6 +142,7 @@ bool WorkQueueImpl<QueueType>::dequeuePoll() {
 
 template <class QueueType>
 unsigned int WorkQueueImpl<QueueType>::dequeueAll() {
+
 	typename Queue::NodeIterator queueIter (mQueue);
 	WorkItem** workPtr;
 	unsigned int numProcessed = 0;

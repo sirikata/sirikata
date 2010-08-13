@@ -30,7 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MESHDATA_HPP_
+#ifndef _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
+#define _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
+
+#include "LightInfo.hpp"
 
 extern long Meshdata_counter;
 
@@ -45,15 +48,33 @@ struct SubMeshGeometry {
     std::vector<int> normal_indices;
     std::vector<int> texUV_indices;
 };
+struct GeometryInstance {
+    int geometryIndex; // Index in SubMeshGeometryList
+    Matrix4x4f transform;
+};
+
+struct LightInstance {
+    int lightIndex; // Index in LightInfoList
+    Matrix4x4f transform;
+};
+
 typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
+typedef std::vector<LightInfo*> LightInfoList;
 typedef std::vector<std::string> TextureList;
+typedef std::vector<GeometryInstance> GeometryInstanceList;
+typedef std::vector<LightInstance> LightInstanceList;
 
 struct Meshdata {
     SubMeshGeometryList geometry;
     TextureList textures;
+    LightInfoList lights;
+
     std::string uri;
     int up_axis;
     long id;
+
+    GeometryInstanceList instances;
+    LightInstanceList lightInstances;
 
     Meshdata() {
         id=Meshdata_counter++;
@@ -62,5 +83,4 @@ struct Meshdata {
 
 } // namespace Sirikata
 
-#define _MESHDATA_HPP_ true
-#endif
+#endif //_SIRIKATA_PROXYOBJECT_MESHDATA_HPP_

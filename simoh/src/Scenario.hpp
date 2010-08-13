@@ -32,7 +32,7 @@
 
 #ifndef _SCENARIO_HPP_
 #define _SCENARIO_HPP_
-#include "ObjectHostContext.hpp"
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
 

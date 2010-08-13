@@ -35,6 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
+#include <sirikata/core/util/SpaceID.hpp>
+
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/MotionPath.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
@@ -133,15 +135,15 @@ private:
     void proximityMessage(uint8* buffer, int len);
 
     // Handle a new connection to a space -- initiate session
-    void handleSpaceConnection(ServerID sid);
+    void handleSpaceConnection(const SpaceID& space, const ObjectReference&, ServerID sid);
     // Handle a migration to a new space server
-    void handleSpaceMigration(ServerID sid);
+    void handleSpaceMigration(const SpaceID& space, const ObjectReference&, ServerID sid);
     void handleSpaceStreamCreated();
 
     bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
-    bool send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
-    void sendNoReturn( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload);
+    bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
+    void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)

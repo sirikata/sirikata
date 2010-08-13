@@ -82,7 +82,7 @@ void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
     request_stream << "Accept: * /*\r\n";
     request_stream << "Connection: close\r\n\r\n";
 
-    HttpManager::getSingleton().makeRequest(mCdnAddr, request_stream.str(), std::tr1::bind(
+    HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::HEAD, request_stream.str(), std::tr1::bind(
             &HttpNameHandler::request_finished, this, _1, _2, _3, request, callback));
 }
 
@@ -233,7 +233,7 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     request_stream << "Accept: * /*\r\n";
     request_stream << "Connection: close\r\n\r\n";
 
-    HttpManager::getSingleton().makeRequest(mCdnAddr, request_stream.str(), std::tr1::bind(
+    HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
             &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));
 }
 

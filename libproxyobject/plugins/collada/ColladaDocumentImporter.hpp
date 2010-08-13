@@ -43,7 +43,9 @@
 #include "COLLADAFWImage.h"
 #include "COLLADAFWMaterial.h"
 #include "COLLADAFWFileInfo.h"
+#include "COLLADAFWNode.h"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 /////////////////////////////////////////////////////////////////////
 
@@ -111,7 +113,25 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         virtual bool writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene );
 
     protected:
+        String documentURI() const;
 
+        // The following keep track of the components of the scene, as
+        // identified by COLLADAFW::UniqueIds.  We use these to chase indirect
+        // references within the file.
+        COLLADAFW::UniqueId mVisualSceneId; // Currently support loading only a
+                                            // single scene
+
+        typedef std::map<COLLADAFW::UniqueId, const COLLADAFW::VisualScene*> VisualSceneMap;
+        VisualSceneMap mVisualScenes;
+
+        typedef std::map<COLLADAFW::UniqueId, const COLLADAFW::Node*> NodeMap;
+        NodeMap mLibraryNodes;
+
+        typedef std::map<COLLADAFW::UniqueId, SubMeshGeometry*> GeometryMap;
+        GeometryMap mGeometries;
+
+        typedef std::map<COLLADAFW::UniqueId, LightInfo*> LightMap;
+        LightMap mLights;
 };
 
 

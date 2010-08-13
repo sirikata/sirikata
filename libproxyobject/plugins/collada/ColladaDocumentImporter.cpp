@@ -34,7 +34,16 @@
 
 #include <cassert>
 #include <iostream>
+#include <stack>
 #include <sirikata/proxyobject/Meshdata.hpp>
+
+#include "COLLADAFWScene.h"
+#include "COLLADAFWVisualScene.h"
+#include "COLLADAFWInstanceVisualScene.h"
+#include "COLLADAFWLibraryNodes.h"
+#include "COLLADAFWLight.h"
+
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
 
 long Meshdata_counter=1000;
 
@@ -72,10 +81,14 @@ ColladaDocumentImporter::~ColladaDocumentImporter ()
 
 ColladaDocumentPtr ColladaDocumentImporter::getDocument () const
 {
-    if(!(mState == FINISHED)) {
+    if(mState != FINISHED) {
         SILOG(collada,fatal,"STATE != Finished reached: malformed COLLADA document");
     }
     return mDocument;
+}
+
+String ColladaDocumentImporter::documentURI() const {
+    return mDocument->getURI().toString();
 }
 
 void ColladaDocumentImporter::postProcess ()
@@ -101,12 +114,141 @@ void ColladaDocumentImporter::start ()
     mState = STARTED;
 }
 
+// We need this to be a non-local definition, so hide it in a namespace
+namespace Collada {
+struct NodeState {
+    enum Modes {
+        Geo = 1, // Geometry (and lights, cameras, etc)
+        InstNodes = 2, // Instance nodes (requires indirection)
+        Nodes = 3 // Normal child nodes
+    };
+
+    NodeState(const COLLADAFW::Node* _node, COLLADABU::Math::Matrix4 _matrix, int _child = -1, Modes _mode = Geo)
+     : node(_node), matrix(_matrix), child(_child), mode(_mode)
+    {}
+
+    const COLLADAFW::Node* node;
+    COLLADABU::Math::Matrix4 matrix;
+    int child;
+    Modes mode;
+};
+} // namespace Collada
+
 void ColladaDocumentImporter::finish ()
 {
+    using namespace Sirikata::Models::Collada;
+
     assert((std::cout << "MCB: ColladaDocumentImporter::finish() entered" << std::endl,true));
 
     postProcess ();
-    if (meshstore[mDocument->getURI().toString()]->geometry.size() > 0) {
+
+    // Generate the Meshdata from all our parsed data
+
+    // Add geometries
+    // FIXME only store the geometries we need
+    typedef std::map<COLLADAFW::UniqueId, int> IndicesMap;
+    // Geometry indices
+    IndicesMap geometry_indices;
+    int idx = 0;
+    for(GeometryMap::const_iterator geo_it = mGeometries.begin(); geo_it != mGeometries.end(); geo_it++, idx++) {
+        geometry_indices[geo_it->first] = idx;
+        meshstore[documentURI()]->geometry.push_back( geo_it->second );
+    }
+    // Light indices
+    IndicesMap light_indices;
+    idx = 0;
+    for(LightMap::const_iterator light_it = mLights.begin(); light_it != mLights.end(); light_it++, idx++) {
+        light_indices[light_it->first] = idx;
+        meshstore[documentURI()]->lights.push_back( light_it->second );
+    }
+
+    // Try to find the instanciated VisualScene
+    VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
+    assert(vis_scene_it != mVisualScenes.end()); // FIXME
+    const COLLADAFW::VisualScene* vis_scene = vis_scene_it->second;
+    // Iterate through nodes. Currently we'll only output anything for nodes
+    // with <instance_node> elements.
+    for(int i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
+        const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
+
+        std::stack<NodeState> node_stack;
+        node_stack.push( NodeState(rn, COLLADABU::Math::Matrix4::IDENTITY) );
+
+        while(!node_stack.empty()) {
+            NodeState curnode = node_stack.top();
+            node_stack.pop();
+
+            if (curnode.mode == NodeState::Geo) {
+                // Transformation
+                COLLADABU::Math::Matrix4 additional_xform = curnode.node->getTransformationMatrix();
+                curnode.matrix = curnode.matrix * additional_xform;
+
+                // Instance Geometries
+                for(int geo_idx = 0; geo_idx < curnode.node->getInstanceGeometries().getCount(); geo_idx++) {
+                    const COLLADAFW::InstanceGeometry* geo_inst = curnode.node->getInstanceGeometries()[geo_idx];
+                    // FIXME handle child nodes, such as materials
+                    IndicesMap::const_iterator geo_it = geometry_indices.find(geo_inst->getInstanciatedObjectId());
+                    assert(geo_it != geometry_indices.end());
+                    GeometryInstance new_geo_inst;
+                    new_geo_inst.geometryIndex = geo_it->second;
+                    new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    meshstore[documentURI()]->instances.push_back(new_geo_inst);
+                }
+
+                // Instance Lights
+                for(int light_idx = 0; light_idx < curnode.node->getInstanceLights().getCount(); light_idx++) {
+                    const COLLADAFW::InstanceLight* light_inst = curnode.node->getInstanceLights()[light_idx];
+                    // FIXME handle child nodes, such as materials
+                    IndicesMap::const_iterator light_it = light_indices.find(light_inst->getInstanciatedObjectId());
+                    if (light_it == light_indices.end()) {
+                        COLLADA_LOG(warn, "Couldn't find original of instantiated light; was probably ambient.");
+                        continue;
+                    }
+                    LightInstance new_light_inst;
+                    new_light_inst.lightIndex = light_it->second;
+                    new_light_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    meshstore[documentURI()]->lightInstances.push_back(new_light_inst);
+                }
+
+                // Instance Cameras
+
+                // Tell the remaining code to start processing children nodes
+                curnode.child = 0;
+                curnode.mode = NodeState::InstNodes;
+            }
+            if (curnode.mode == NodeState::InstNodes) {
+                // Instance Nodes
+                if (curnode.child >= curnode.node->getInstanceNodes().getCount()) {
+                    curnode.child = 0;
+                    curnode.mode = NodeState::Nodes;
+                }
+                else {
+                    // Lookup the instanced node
+                    COLLADAFW::UniqueId node_uniq_id = curnode.node->getInstanceNodes()[curnode.child]->getInstanciatedObjectId();
+                    NodeMap::const_iterator node_it = mLibraryNodes.find(node_uniq_id);
+                    assert(node_it != mLibraryNodes.end());
+                    const COLLADAFW::Node* instanced_node = node_it->second;
+                    // updated version of this node
+                    node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
+                    // And the child node
+                    node_stack.push( NodeState(instanced_node, curnode.matrix) );
+                }
+            }
+            if (curnode.mode == NodeState::Nodes) {
+                // Process the next child if there are more
+                if (curnode.child < curnode.node->getChildNodes().getCount()) {
+                    // updated version of this node
+                    node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
+                    // And the child node
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.matrix) );
+                }
+            }
+        }
+    }
+
+
+    // Finally, if we actually have anything for the user, ship the parsed mesh
+    if (meshstore[mDocument->getURI().toString()]->instances.size() > 0) {
     //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
     //                                          meshstore[mDocument->getURI().toString()] );
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
@@ -125,21 +267,26 @@ bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asse
 
 bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeScene(" << scene << ") entered" << std::endl,true));
+    const COLLADAFW::InstanceVisualScene* inst_vis_scene = scene->getInstanceVisualScene();
+    mVisualSceneId = inst_vis_scene->getInstanciatedObjectId();
+
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeVisualScene ( COLLADAFW::VisualScene const* visualScene )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeVisualScene(" << visualScene << ") entered" << std::endl,true));
+    mVisualScenes[visualScene->getUniqueId()] = visualScene;
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeLibraryNodes ( COLLADAFW::LibraryNodes const* libraryNodes )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeLibraryNodes(" << libraryNodes << ") entered" << std::endl,true));
+    for(int idx = 0; idx < libraryNodes->getNodes().getCount(); idx++) {
+        const COLLADAFW::Node* node = libraryNodes->getNodes()[idx];
+        mLibraryNodes[node->getUniqueId()] = node;
+    }
     return true;
 }
 
@@ -220,7 +367,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         assert(false);
     }
 
-    meshstore[uri]->geometry.push_back(submesh);
+    mGeometries[geometry->getUniqueId()] = submesh;
 
     bool ok = mDocument->import ( *this, *geometry );
 
@@ -260,6 +407,40 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
+
+    String uri = mDocument->getURI().toString();
+
+    LightInfo* sublight = new LightInfo();
+
+    Color lcol( light->getColor().getRed(), light->getColor().getGreen(), light->getColor().getBlue() );
+    sublight->setLightDiffuseColor(lcol);
+    sublight->setLightSpecularColor(lcol);
+
+    double const_att = light->getConstantAttenuation();
+    double lin_att = light->getLinearAttenuation();
+    double quad_att = light->getQuadraticAttenuation();
+    sublight->setLightFalloff((float)const_att, (float)lin_att, (float)quad_att);
+
+    // Type
+    switch (light->getLightType()) {
+      case COLLADAFW::Light::AMBIENT_LIGHT:
+        COLLADA_LOG(error,"Ambient lights are not supported.");
+        delete sublight;
+        return true;
+        break;
+      case COLLADAFW::Light::DIRECTIONAL_LIGHT:
+        sublight->setLightType(LightInfo::DIRECTIONAL);
+        break;
+      case COLLADAFW::Light::POINT_LIGHT:
+        sublight->setLightType(LightInfo::POINT);
+        break;
+      case COLLADAFW::Light::SPOT_LIGHT:
+        sublight->setLightType(LightInfo::SPOTLIGHT);
+        break;
+    }
+
+    mLights[light->getUniqueId()] = sublight;
+
     return true;
 }
 

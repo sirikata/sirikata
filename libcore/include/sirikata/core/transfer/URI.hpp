@@ -372,6 +372,14 @@ public:
 		// We can ignore the hash if it references the same URL.
 		return !((*this) == other);
 	}
+
+    operator bool() const {
+        return
+            !mDirectory.empty() ||
+            !mUser.empty() ||
+            !mHost.empty() ||
+            !mProto.empty();
+    }
 };
 
 /// Display both the URI string and the corresponding Fingerprint.
@@ -524,6 +532,9 @@ public:
 		return !((*this) == other);
 	}
 
+    operator bool() const {
+        return ((bool)mContext) || !mPath.empty();
+    }
 };
 
 /// Display both the URI string (including its context).
