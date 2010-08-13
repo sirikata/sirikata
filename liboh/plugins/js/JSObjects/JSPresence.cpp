@@ -64,6 +64,7 @@ namespace Sirikata
         {
             //get the jspresencestruct object from arguments
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getMesh function.  Invalid presence struct.")) );
                     
@@ -81,11 +82,13 @@ namespace Sirikata
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
 
             //get first args
-            Handle<Object> posArg = Handle<Object>::Cast(args[0]);
+            //Handle<Object> posArg = Handle<Object>::Cast(args[0]);
+            Handle<Object> posArg = ObjectCast(args[0]);
 
-            if (Vec3Validate(posArg))
+            if ( ! Vec3Validate(posArg))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Wrong argument: require a vector for new positions.")) );
 
+            
             Vector3d newPos (Vec3Extract(posArg));
 
                         
@@ -93,31 +96,15 @@ namespace Sirikata
             return v8::Undefined();
             
         }
-
-
+        
         
         Handle<v8::Value>      getPosition(const v8::Arguments& args)
         {
-            std::cout<<"\n\n";
-            std::cout<<"Got into getPosition";
-            std::cout<<"\n\n";
-            std::cout.flush();
-            
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
 
-            std::cout<<"\n\n";
-            std::cout<<"Got mStruct";
-            std::cout<<"\n\n";
-            std::cout.flush();
-
-            mStruct->jsObjScript->bftm_debugPrintString("\n\n*****************************\ntestFunction\n\n");
-            
-            //void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const;
-            //return mStruct->jsObjScript->getPositionFunction(mStruct->sID);
-
-            return v8::Undefined();
+            return mStruct->jsObjScript->getPositionFunction(mStruct->sID);
         }
 
         

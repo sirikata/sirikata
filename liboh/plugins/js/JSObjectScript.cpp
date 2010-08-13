@@ -587,6 +587,7 @@ void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec
 {
     Location loc = mParent->getLocation(*sID);
     loc.setPosition(vec3d);
+    mParent->setLocation(*sID,loc);
 }
 
 
