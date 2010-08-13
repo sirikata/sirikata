@@ -67,14 +67,24 @@ public:
     virtual Port* bindODPPort(SpaceID space, PortID port);
     virtual Port* bindODPPort(SpaceID space);
     virtual void registerDefaultODPHandler(const MessageHandler& cb);
+    virtual void registerDefaultODPHandler(const OldMessageHandler& cb);
 
     // Delegate delivery duties
     /** Deliver a message to this subsystem.
+     *  \deprecated
      *  \param header message header for the received data
      *  \param data the payload of the message
      *  \returns true if the message was handled, false otherwise.
      */
     bool deliver(const RoutableMessageHeader& header, MemoryReference data) const;
+
+    /** Deliver a message to this subsystem.
+     *  \param src source endpoint
+     *  \param dst destination endpoint
+     *  \param data the payload of the message
+     *  \returns true if the message was handled, false otherwise.
+     */
+    bool deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const;
 private:
     typedef std::tr1::unordered_map<PortID, DelegatePort*, PortID::Hasher> PortMap;
     typedef std::tr1::unordered_map<SpaceID, PortMap*, SpaceID::Hasher> SpacePortMap;
@@ -94,6 +104,7 @@ private:
     PortCreateFunction mCreator;
     SpacePortMap mSpacePortMap;
     MessageHandler mDefaultHandler;
+    OldMessageHandler mDefaultOldHandler;
 }; // class DelegateService
 
 } // namespace ODP

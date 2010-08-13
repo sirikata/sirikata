@@ -89,10 +89,7 @@ public:
         return mScene;
     }
 
-    virtual void updateLocation(Time ti, const Location &newLocation);
-    virtual void resetLocation(Time ti, const Location &newLocation);
-    virtual void setParent(const ProxyObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation);
-    virtual void unsetParent(Time ti, const Location &newLocation);
+    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient);
 
     virtual void destroyed(const Time&);
 

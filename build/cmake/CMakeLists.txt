@@ -118,10 +118,10 @@ MARK_AS_ADVANCED(
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
 
 # Profile build target
-SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
-SET( CMAKE_C_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET( CMAKE_C_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
     "Built cflags with default settings."
     FORCE )
 SET( CMAKE_EXE_LINKER_FLAGS_PROFILE
@@ -139,10 +139,10 @@ MARK_AS_ADVANCED(
     CMAKE_SHARED_LINKER_FLAGS_PROFILE )
 
 # Coverage build target
-SET(CMAKE_CXX_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET(CMAKE_CXX_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
-SET( CMAKE_C_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+SET( CMAKE_C_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage" CACHE STRING
     "Built cflags with default settings."
     FORCE )
 SET( CMAKE_EXE_LINKER_FLAGS_COVERAGE
@@ -636,17 +636,14 @@ SET(PLUGIN_INSTALL_LIST)
 #project directory locations
 SET(LIBCORE_DIR ${TOP_LEVEL}/libcore)
 SET(LIBSPACE_DIR ${TOP_LEVEL}/libspace)
-SET(LIBPROXIMITY_DIR ${TOP_LEVEL}/libproximity)
 SET(LIBOH_DIR ${TOP_LEVEL}/liboh)
 SET(LIBPROXYOBJECT_DIR ${TOP_LEVEL}/libproxyobject)
 SET(SPACE_DIR ${TOP_LEVEL}/space)
-SET(PROXIMITY_DIR ${TOP_LEVEL}/proximity)
 SET(CPPOH_DIR ${TOP_LEVEL}/cppoh)
 
 #include locations
 SET(LIBCORE_INCLUDE_DIR ${LIBCORE_DIR}/include)
 SET(LIBSPACE_INCLUDE_DIR ${LIBSPACE_DIR}/include)
-SET(LIBPROXIMITY_INCLUDE_DIR ${LIBPROXIMITY_DIR}/include)
 SET(LIBOH_INCLUDE_DIR ${LIBOH_DIR}/include)
 SET(LIBPROXYOBJECT_INCLUDE_DIR ${LIBPROXYOBJECT_DIR}/include)
 SET(HTTP_PARSER_INCLUDE_DIR ${TOP_LEVEL}/externals/http-parser)
@@ -654,25 +651,23 @@ SET(HTTP_PARSER_INCLUDE_DIR ${TOP_LEVEL}/externals/http-parser)
 #source file locations
 SET(LIBCORE_SOURCE_DIR ${LIBCORE_DIR}/src)
 SET(LIBSPACE_SOURCE_DIR ${LIBSPACE_DIR}/src)
-SET(LIBPROXIMITY_SOURCE_DIR ${LIBPROXIMITY_DIR}/src)
 SET(LIBOH_SOURCE_DIR ${LIBOH_DIR}/src)
 SET(LIBPROXYOBJECT_SOURCE_DIR ${LIBPROXYOBJECT_DIR}/src)
 SET(SPACE_SOURCE_DIR ${SPACE_DIR}/src)
-SET(PROXIMITY_SOURCE_DIR ${PROXIMITY_DIR}/src)
 SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
 #source file location (cbr)
 SET(SIMOH_SOURCE_DIR ${TOP_LEVEL}/simoh/src)
-SET(CBR_SOURCE_DIR ${TOP_LEVEL}/cbr/src)
 SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
+SET(PINTO_SOURCE_DIR ${TOP_LEVEL}/pinto/src)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
 
 #plugins locations
 SET(LIBCORE_PLUGIN_DIR ${LIBCORE_DIR}/plugins)
-SET(LIBPROXIMITY_PLUGIN_DIR ${LIBPROXIMITY_DIR}/plugins)
 SET(LIBPROXYOBJECT_PLUGIN_DIR ${LIBPROXYOBJECT_DIR}/plugins)
 SET(LIBOH_PLUGIN_DIR ${LIBOH_DIR}/plugins)
+SET(LIBSPACE_PLUGIN_DIR ${LIBSPACE_DIR}/plugins)
 
 #generated source files
 SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
@@ -684,12 +679,9 @@ SET(INCLUDE_DIRECTORIES
   ${LIBCORE_INCLUDE_DIR}
   ${LIBCORE_SOURCE_DIR} #FIXME
   ${LIBSPACE_INCLUDE_DIR}
-  ${LIBPROXIMITY_INCLUDE_DIR}
   ${LIBOH_INCLUDE_DIR}
   ${LIBPROXYOBJECT_INCLUDE_DIR}/models
   ${LIBPROXYOBJECT_INCLUDE_DIR}
-  ${SPACE_SOURCE_DIR}
-  ${PROXIMITY_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
 
   ${SirikataProtocolDirectory}
@@ -757,6 +749,7 @@ SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(ProtocolBuffersSourcesCore
   TimedMotionVector
+  TimedMotionQuaternion
 )
 SET(ProtocolBuffersSources
   Persistence
@@ -1111,25 +1104,17 @@ ELSE()
 ENDIF()
 
 SET(LIBSPACE_SOURCES
-  ${Space_PBJ_CPP_FILES}
-                     ${LIBSPACE_SOURCE_DIR}/Space.cpp
-                     ${LIBSPACE_SOURCE_DIR}/SpaceProxyManager.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Physics.cpp
-                     ${LIBSPACE_SOURCE_DIR}/ObjectConnections.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Subscription.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Loc.cpp
-                     ${LIBSPACE_SOURCE_DIR}/Registration.cpp
-                      )
-
-SET(LIBPROXIMITY_SOURCES
-  ${Proximity_PBJ_CPP_FILES}
-                  ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp
-                  ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystem.cpp
-                  ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystemFactory.cpp
-                  ${LIBPROXIMITY_SOURCE_DIR}/SingleStreamProximityConnection.cpp )
+  ${LIBSPACE_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${LIBSPACE_SOURCE_DIR}/LoadMonitor.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectSegmentation.cpp
+  ${LIBSPACE_SOURCE_DIR}/OSegLookupTraceToken.cpp
+  ${LIBSPACE_SOURCE_DIR}/ServerMessage.cpp
+  ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
+  ${LIBSPACE_SOURCE_DIR}/Trace.cpp
+  ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
+  )
 
 SET(LIBPROXYOBJECT_SOURCES
-  ${ProxyObject_PBJ_CPP_FILES}
   ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
@@ -1143,33 +1128,27 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES
-  ${ObjectHost_PBJ_CPP_FILES}
+                  ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
+                  ${LIBOH_SOURCE_DIR}/SessionManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectFactory.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
-                  ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceTimeOffsetManager.cpp
-                  ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostTimeOffsetManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
+                  ${LIBOH_SOURCE_DIR}/Trace.cpp
                    )
 
-SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp)
-SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
-SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
+SET(CPPOH_SOURCES
+  ${CPPOH_SOURCE_DIR}/main.cpp
+  ${CPPOH_SOURCE_DIR}/Options.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
 # plugins sources
-
-SET(LIBPROXIMITY_PLUGIN_EVERYONE_DIR ${LIBPROXIMITY_PLUGIN_DIR}/everyone)
-SET(LIBPROXIMITY_PLUGIN_EVERYONE_SOURCES
-  ${ProxEveryone_PBJ_CPP_FILES}
-  ${LIBPROXIMITY_PLUGIN_EVERYONE_DIR}/ProxPlugin.cpp
-  ${LIBPROXIMITY_PLUGIN_EVERYONE_DIR}/EveryoneProximitySystem.cpp
-  )
-
 
 SET(LIBCORE_PLUGIN_SKELETON_DIR ${LIBCORE_PLUGIN_DIR}/skeleton)
 SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterface.cpp)
@@ -1209,6 +1188,12 @@ SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR ${LIBCORE_PLUGIN_DIR}/servermap_tabular
 SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES
   ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/PluginInterface.cpp
   ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/TabularServerIDMap.cpp
+  )
+
+SET(LIBCORE_PLUGIN_LOCAL_DIR ${LIBCORE_PLUGIN_DIR}/local)
+SET(LIBCORE_PLUGIN_LOCAL_SOURCES
+  ${LIBCORE_PLUGIN_LOCAL_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_LOCAL_DIR}/LocalServerIDMap.cpp
   )
 
 
@@ -1270,65 +1255,74 @@ ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp
         )
 
-SET(CBR_SOURCES
-  ${CBR_SOURCE_DIR}/ServerMessage.cpp
-  ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
-  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
-  ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
-  ${CBR_SOURCE_DIR}/caches/Complete_Cache.cpp
-  ${CBR_SOURCE_DIR}/caches/CacheRecords.cpp
-  ${CBR_SOURCE_DIR}/caches/FCache.cpp
-  ${CBR_SOURCE_DIR}/caches/CommunicationCache.cpp
-  ${CBR_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
-  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/CraqEntry.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/Base64.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
-  ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
-  ${CBR_SOURCE_DIR}/RegionODPFlowScheduler.cpp
-  ${CBR_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
-  ${CBR_SOURCE_DIR}/ServerMessageReceiver.cpp
-  ${CBR_SOURCE_DIR}/FairServerMessageReceiver.cpp
-  ${CBR_SOURCE_DIR}/ServerMessageQueue.cpp
-  ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
-  ${CBR_SOURCE_DIR}/Forwarder.cpp
-  ${CBR_SOURCE_DIR}/ForwarderServiceQueue.cpp
-  ${CBR_SOURCE_DIR}/LoadMonitor.cpp
-  ${CBR_SOURCE_DIR}/LocalForwarder.cpp
-  ${CBR_SOURCE_DIR}/LocationService.cpp
-  ${CBR_SOURCE_DIR}/MigrationMonitor.cpp
-  ${CBR_SOURCE_DIR}/ObjectConnection.cpp
-  ${CBR_SOURCE_DIR}/ObjectHostConnectionManager.cpp
-  ${CBR_SOURCE_DIR}/Options.cpp
-  ${CBR_SOURCE_DIR}/OSegLookupTraceToken.cpp
-  ${CBR_SOURCE_DIR}/Trace.cpp
-  ${CBR_SOURCE_DIR}/OSegHasher.cpp
-  ${CBR_SOURCE_DIR}/OSegLookupQueue.cpp
-  ${CBR_SOURCE_DIR}/SpaceContext.cpp
-  ${CBR_SOURCE_DIR}/SpaceNetwork.cpp
-  ${CBR_SOURCE_DIR}/Proximity.cpp
-  ${CBR_SOURCE_DIR}/Server.cpp
-  ${CBR_SOURCE_DIR}/StandardLocationService.cpp
-  ${CBR_SOURCE_DIR}/TCPSpaceNetwork.cpp
-#  ${CBR_SOURCE_DIR}/Test.cpp
-  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/main.cpp
+SET(LIBSPACE_PLUGIN_CRAQ_DIR ${LIBSPACE_PLUGIN_DIR}/craq)
+SET(LIBSPACE_PLUGIN_CRAQ_SOURCES
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/CraqObjectSegmentation.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/asyncCraqHybrid.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/asyncCraqUtil.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/asyncCraq.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/CraqEntry.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/Base64.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/asyncConnection.cpp
+  ${LIBSPACE_PLUGIN_CRAQ_DIR}/craq_oseg/asyncUtil.cpp
+  )
+
+SET(LIBSPACE_PLUGIN_LOCAL_DIR ${LIBSPACE_PLUGIN_DIR}/local)
+SET(LIBSPACE_PLUGIN_LOCAL_SOURCES
+  ${LIBSPACE_PLUGIN_LOCAL_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_LOCAL_DIR}/LocalObjectSegmentation.cpp
+)
+
+SET(LIBSPACE_PLUGIN_MASTER_PINTO_DIR ${LIBSPACE_PLUGIN_DIR}/master-pinto)
+SET(LIBSPACE_PLUGIN_MASTER_PINTO_SOURCES
+  ${LIBSPACE_PLUGIN_MASTER_PINTO_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_MASTER_PINTO_DIR}/MasterPintoServerQuerier.cpp
+)
+
+SET(SPACE_SOURCES
+  ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
+  ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
+  ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
+  ${SPACE_SOURCE_DIR}/caches/CacheRecords.cpp
+  ${SPACE_SOURCE_DIR}/caches/FCache.cpp
+  ${SPACE_SOURCE_DIR}/caches/CommunicationCache.cpp
+  ${SPACE_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
+  ${SPACE_SOURCE_DIR}/RegionODPFlowScheduler.cpp
+  ${SPACE_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
+  ${SPACE_SOURCE_DIR}/ServerMessageReceiver.cpp
+  ${SPACE_SOURCE_DIR}/FairServerMessageReceiver.cpp
+  ${SPACE_SOURCE_DIR}/ServerMessageQueue.cpp
+  ${SPACE_SOURCE_DIR}/FairServerMessageQueue.cpp
+  ${SPACE_SOURCE_DIR}/Forwarder.cpp
+  ${SPACE_SOURCE_DIR}/ForwarderServiceQueue.cpp
+  ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
+  ${SPACE_SOURCE_DIR}/LocationService.cpp
+  ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp
+  ${SPACE_SOURCE_DIR}/ObjectConnection.cpp
+  ${SPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
+  ${SPACE_SOURCE_DIR}/Options.cpp
+  ${SPACE_SOURCE_DIR}/OSegHasher.cpp
+  ${SPACE_SOURCE_DIR}/OSegLookupQueue.cpp
+  ${SPACE_SOURCE_DIR}/SpaceNetwork.cpp
+  ${SPACE_SOURCE_DIR}/Proximity.cpp
+  ${SPACE_SOURCE_DIR}/Server.cpp
+  ${SPACE_SOURCE_DIR}/StandardLocationService.cpp
+  ${SPACE_SOURCE_DIR}/TCPSpaceNetwork.cpp
+#  ${SPACE_SOURCE_DIR}/Test.cpp
+  ${SPACE_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${SPACE_SOURCE_DIR}/main.cpp
 )
 
 SET(SIMOH_SOURCES
-  ${SIMOH_SOURCE_DIR}/RouterElement.cpp
   ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHostContext.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
   ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp
@@ -1341,7 +1335,6 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
-  ${SIMOH_SOURCE_DIR}/Trace.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 
@@ -1352,6 +1345,12 @@ SET(CSEG_SOURCES
   ${CSEG_SOURCE_DIR}/main.cpp
   ${CSEG_SOURCE_DIR}/LoadBalancer.cpp
 
+  )
+
+SET(PINTO_SOURCES
+  ${PINTO_SOURCE_DIR}/PintoManager.cpp
+  ${PINTO_SOURCE_DIR}/Options.cpp
+  ${PINTO_SOURCE_DIR}/main.cpp
   )
 
 SET(ANALYSIS_SOURCES
@@ -1473,11 +1472,9 @@ LINK_DIRECTORIES(${FINAL_LINK_DIRS})
 
 SET(SIRIKATA_CORE_LIB sirikata-core)
 SET(SIRIKATA_SPACE_LIB sirikata-space)
-SET(SIRIKATA_PROXIMITY_LIB sirikata-proximity)
 SET(SIRIKATA_OH_LIB sirikata-oh)
 SET(SIRIKATA_PROXYOBJECT_LIB sirikata-proxyobject)
 SET(SPACE_BINARY space)
-SET(PROXIMITY_BINARY proximity)
 SET(CPPOH_BINARY cppoh)
 SET(TEST_BINARY tests)
 SET(BENCH_BINARY bench)
@@ -1512,21 +1509,13 @@ IF(sirikata_core_LDFLAGS OR sirikata_LDFLAGS)
 ENDIF()
 #ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB})
 
-ADD_LIBRARY(${SIRIKATA_PROXIMITY_LIB} SHARED ${LIBPROXIMITY_SOURCES})
-SET_TARGET_PROPERTIES(${SIRIKATA_PROXIMITY_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_PROXIMITY_BUILD)
-ADD_DEPENDENCIES(${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB})
-IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
-  SET_TARGET_PROPERTIES(${SIRIKATA_PROXIMITY_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
-ENDIF()
-TARGET_LINK_LIBRARIES(${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_LIBRARIES})
-
 ADD_LIBRARY(${SIRIKATA_SPACE_LIB} SHARED ${LIBSPACE_SOURCES})
 SET_TARGET_PROPERTIES(${SIRIKATA_SPACE_LIB} PROPERTIES ${COMPILE_DEFS_OPT} COMPILE_DEFINITIONS SIRIKATA_SPACE_BUILD)
-ADD_DEPENDENCIES(${SIRIKATA_SPACE_LIB} ${SIRIKATA_PROXYOBJECT_LIB}  ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXIMITY_LIB})
+ADD_DEPENDENCIES(${SIRIKATA_SPACE_LIB} ${SIRIKATA_PROXYOBJECT_LIB}  ${SIRIKATA_CORE_LIB})
 IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
   SET_TARGET_PROPERTIES(${SIRIKATA_SPACE_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
 ENDIF()
-TARGET_LINK_LIBRARIES(${SIRIKATA_SPACE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXIMITY_LIB} ${PROTOCOLBUFFERS_LIBRARIES})
+TARGET_LINK_LIBRARIES(${SIRIKATA_SPACE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_LIBRARIES})
 
 
 ADD_LIBRARY(${SIRIKATA_PROXYOBJECT_LIB} SHARED ${LIBPROXYOBJECT_SOURCES})
@@ -1589,6 +1578,33 @@ ADD_PLUGIN_TARGET(servermap-tabular
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} servermap-tabular)
 
+ADD_PLUGIN_TARGET(core-local
+                    SOURCES ${LIBCORE_PLUGIN_LOCAL_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} core-local)
+
+ADD_PLUGIN_TARGET(space-craq
+                    SOURCES ${LIBSPACE_PLUGIN_CRAQ_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-craq)
+
+ADD_PLUGIN_TARGET(space-local
+                    SOURCES ${LIBSPACE_PLUGIN_LOCAL_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-local)
+
+ADD_PLUGIN_TARGET(space-master-pinto
+                    SOURCES ${LIBSPACE_PLUGIN_MASTER_PINTO_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-master-pinto)
 
 IF(OGRE_FOUND AND sdl_FOUND )
   IF(WIN32)#not sure why this needs to happen again
@@ -1619,14 +1635,6 @@ IF(OGRE_FOUND AND sdl_FOUND )
 
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} ogregraphics)
 ENDIF(OGRE_FOUND AND sdl_FOUND)
-
-
-ADD_PLUGIN_TARGET(prox-everyone
-                    SOURCES ${LIBPROXIMITY_PLUGIN_EVERYONE_SOURCES}
-                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_LIBRARIES})
-SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox-everyone)
 
 
 SET(LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/bullet)
@@ -1678,6 +1686,20 @@ ADD_PLUGIN_TARGET(monoscript
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
 ENDIF()
 
+
+SET(LIBOH_PLUGIN_CSVFACTORY_DIR ${LIBOH_PLUGIN_DIR}/csvfactory)
+SET(LIBOH_PLUGIN_CSVFACTORY_SOURCES
+ ${LIBOH_PLUGIN_CSVFACTORY_DIR}/CSVObjectFactory.cpp
+ ${LIBOH_PLUGIN_CSVFACTORY_DIR}/PluginInterface.cpp
+    )
+ADD_PLUGIN_TARGET(csvfactory
+                    SOURCES ${LIBOH_PLUGIN_CSVFACTORY_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} csvfactory)
+
+
 SET(LIBPROXYOBJECT_PLUGIN_COLLADAMODELS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/collada)
 SET(LIBPROXYOBJECT_PLUGIN_COLLADAMODELS_SOURCES
  ${LIBPROXYOBJECT_PLUGIN_COLLADAMODELS_DIR}/ColladaPlugin.cpp
@@ -1706,32 +1728,36 @@ SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 
 ADD_EXECUTABLE(${SPACE_BINARY} ${SPACE_SOURCES})
 SET_TARGET_PROPERTIES(${SPACE_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
-
-ADD_EXECUTABLE(${PROXIMITY_BINARY} ${PROXIMITY_SOURCES})
-SET_TARGET_PROPERTIES(${PROXIMITY_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(${SPACE_BINARY}
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_SPACE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
 
 ADD_EXECUTABLE(${CPPOH_BINARY} ${CPPOH_SOURCES})
 SET_TARGET_PROPERTIES(${CPPOH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
-
-ADD_EXECUTABLE(cbr ${CBR_SOURCES})
-SET_TARGET_PROPERTIES(cbr PROPERTIES ${COMPILE_DEFS_OPT})
-TARGET_LINK_LIBRARIES(cbr
-        ${Boost_LIBRARIES}
-        ${SIRIKATA_CORE_LIB}
-        ${PROTOCOLBUFFERS_LIBRARIES}
-        )
 
 ADD_EXECUTABLE(simoh ${SIMOH_SOURCES})
 SET_TARGET_PROPERTIES(simoh PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(simoh
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_OH_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES})
 SET_TARGET_PROPERTIES(cseg PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cseg
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+
+ADD_EXECUTABLE(pinto ${PINTO_SOURCES})
+SET_TARGET_PROPERTIES(pinto PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(pinto
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
@@ -1797,16 +1823,14 @@ ENDIF()
 
 ADD_DEPENDENCIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB})
 ADD_DEPENDENCIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
-ADD_DEPENDENCIES(${PROXIMITY_BINARY} ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB})
 ADD_DEPENDENCIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_OH_LIB})
 
-SET_TARGET_PROPERTIES(${SPACE_BINARY} ${PROXIMITY_BINARY} ${CPPOH_BINARY} ${TEST_BINARY}
+SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh cseg pinto analysis ${BENCH_BINARY}
                       PROPERTIES
                       DEBUG_POSTFIX "_d" )
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB}
-                      ${TEST_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES} ${SIRIKATA_PROXIMITY_LIB})
+                      ${TEST_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 TARGET_LINK_LIBRARIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
-TARGET_LINK_LIBRARIES(${PROXIMITY_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXIMITY_LIB})
 SET(CPPOH_LINK_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_OH_LIB})
 IF(OGRE_FOUND AND sdl_FOUND)
   SET(CPPOH_LINK_LIBRARIES ${CPPOH_LINK_LIBRARIES} ogregraphics)
@@ -1822,7 +1846,6 @@ TARGET_LINK_LIBRARIES(${CPPOH_BINARY} ${CPPOH_LINK_LIBRARIES})
 IF(sirikata_LDFLAGS)
   SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
   SET_TARGET_PROPERTIES(${SPACE_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
-  SET_TARGET_PROPERTIES(${PROXIMITY_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
   SET_TARGET_PROPERTIES(${CPPOH_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
   SET_TARGET_PROPERTIES(${BINARY_TO_CPP_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
   SET_TARGET_PROPERTIES(${PBJ_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
@@ -1879,13 +1902,10 @@ INSTALL(TARGETS
           ${PBJ_BINARY}
           ${SIRIKATA_CORE_LIB}
           ${SIRIKATA_SPACE_LIB}
-          ${SIRIKATA_PROXIMITY_LIB}
           ${SIRIKATA_PROXYOBJECT_LIB}
           ${SIRIKATA_OH_LIB}
-          ${PROXIMITY_LIB}
           ${PLUGIN_INSTALL_LIST}
           ${SPACE_BINARY}
-          ${PROXIMITY_BINARY}
           ${CPPOH_BINARY}
         PERMISSIONS ${EXEC_PERMS}
         RUNTIME
@@ -2180,7 +2200,6 @@ INSTALL(DIRECTORY
           # itself to the installed files
           ${LIBCORE_INCLUDE_DIR}/
           ${LIBSPACE_INCLUDE_DIR}/
-          ${LIBPROXIMITY_INCLUDE_DIR}/
           ${LIBOH_INCLUDE_DIR}/
           ${LIBPROXYOBJECT_INCLUDE_DIR}/
         DESTINATION include

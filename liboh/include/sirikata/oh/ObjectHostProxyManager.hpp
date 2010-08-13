@@ -64,7 +64,11 @@ public:
     const TimeOffsetManager* getTimeOffsetManager()const{
         return &mTimeOffsetManager;
     }
-	~ObjectHostProxyManager();
+    ObjectHostProxyManager(const SpaceID& space)
+        : mSpaceID(space)
+    {}
+
+    ~ObjectHostProxyManager();
     void initialize();
     void destroy();
 
@@ -75,6 +79,9 @@ public:
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };
+
+typedef std::tr1::shared_ptr<ObjectHostProxyManager> ObjectHostProxyManagerPtr;
+typedef std::tr1::weak_ptr<ObjectHostProxyManager> ObjectHostProxyManagerWPtr;
 
 }
 

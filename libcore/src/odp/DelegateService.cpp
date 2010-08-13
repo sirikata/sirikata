@@ -95,6 +95,10 @@ void DelegateService::registerDefaultODPHandler(const MessageHandler& cb) {
     mDefaultHandler = cb;
 }
 
+void DelegateService::registerDefaultODPHandler(const OldMessageHandler& cb) {
+    mDefaultOldHandler = cb;
+}
+
 bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReference data) const {
     // Check from most to least specific
     PortMap const* pm = getPortMap(header.destination_space());
@@ -109,8 +113,30 @@ bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReferen
     }
 
     // And finally, the default handler
+    if (mDefaultOldHandler != 0) {
+        mDefaultOldHandler(header, data);
+        return true;
+    }
+
+    return false;
+}
+
+bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
+    // Check from most to least specific
+    PortMap const* pm = getPortMap(dst.space());
+    if (pm != NULL) {
+        PortMap::const_iterator it = pm->find(dst.port());
+        if (it != pm->end()) {
+            DelegatePort* port = it->second;
+            bool delivered = port->deliver(src, dst, data);
+            if (delivered)
+                return true;
+        }
+    }
+
+    // And finally, the default handler
     if (mDefaultHandler != 0) {
-        mDefaultHandler(header, data);
+        mDefaultHandler(src, dst, data);
         return true;
     }
 

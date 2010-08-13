@@ -35,6 +35,7 @@
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
+#include "Lights.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
@@ -161,7 +162,7 @@ class OgreSystem::MouseHandler {
         Entity *mParentEntity;
         OgreSystem *mOgreSys;
         void findNext() {
-            while (!end() && !((*mIter).second->getProxy().getParent() == mParentEntity->id())) {
+            while (!end() && !((*mIter).second->getProxy().getParentProxy()->getObjectReference() == mParentEntity->id())) {
                 ++mIter;
             }
         }
@@ -252,8 +253,8 @@ class OgreSystem::MouseHandler {
             }
         }
         if (mouseOverEntity) {
-            while (!(mouseOverEntity->getProxy().getParent() == mCurrentGroup)) {
-                mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParent());
+            while (!(mouseOverEntity->getProxy().getParentProxy()->getObjectReference() == mCurrentGroup)) {
+                mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParentProxy()->getObjectReference());
                 if (mouseOverEntity == NULL) {
                     return NULL; // FIXME: should try again.
                 }
@@ -401,6 +402,7 @@ private:
     }
 
     Entity *doCloneObject(Entity *ent, const ProxyObjectPtr &parentPtr, Time now) {
+/*
         SpaceObjectReference newId = SpaceObjectReference(ent->id().space(), ObjectReference(UUID::random()));
         Location loc = ent->getProxy().globalLocation(now);
         Location localLoc = ent->getProxy().extrapolateLocation(now);
@@ -456,6 +458,7 @@ private:
             }
         }
         return mParent->getEntity(newId);
+*/
     }
 
     void cloneObjectsAction() {
@@ -473,7 +476,7 @@ private:
             Entity *newEnt = doCloneObject(ent, ent->getProxy().getParentProxy(), objnow);
             Location loc (ent->getProxy().extrapolateLocation(objnow));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
-            newEnt->getProxy().resetLocation(objnow, loc);
+            //newEnt->getProxy().resetLocation(objnow, loc);
             newSelectedObjects.insert(newEnt->getProxyPtr());
             newEnt->setSelected(true);
             ent->setSelected(false);
@@ -501,9 +504,9 @@ private:
                 SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
                 return;
             }
-            if (!(ent->getProxy().getParent() == parentId)) {
+            if (!(ent->getProxy().getParentProxy()->getObjectReference() == parentId)) {
                 SILOG(input,error,"Multiple select "<< ent->id() <<
-                      " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
+                    " has parent  "<<ent->getProxy().getParentProxy()->getObjectReference() << " instead of " << mCurrentGroup);
                 return;
             }
         }
@@ -516,19 +519,19 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
+        //proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         Entity *newParentEntity = mParent->getEntity(newParentId);
-        newParentEntity->getProxy().resetLocation(now, totalLocation);
+        //newParentEntity->getProxy().resetLocation(now, totalLocation);
 
         if (parentEntity) {
-            newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
+            //newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
             ProxyObjectPtr obj(iter->lock());
             Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!ent) continue;
-            ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
+            //ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
             ent->setSelected(false);
         }
         mSelectedObjects.clear();
@@ -548,12 +551,12 @@ private:
             }
             ProxyManager *proxyMgr = parentEnt->getProxy().getProxyManager();
             ProxyObjectPtr parentParent (parentEnt->getProxy().getParentProxy());
-            mCurrentGroup = parentEnt->getProxy().getParent(); // parentParent may be NULL.
+            mCurrentGroup = parentEnt->getProxy().getParentProxy()->getObjectReference(); // parentParent may be NULL.
             bool hasSubObjects = false;
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
                 Entity *ent = *subIter;
-                ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
+                //ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
                 newSelectedObjects.insert(ent->getProxyPtr());
                 ent->setSelected(true);
             }
@@ -616,7 +619,7 @@ private:
         mSelectedObjects.clear();
         Entity *ent = mParent->getEntity(mCurrentGroup);
         if (ent) {
-            mCurrentGroup = ent->getProxy().getParent();
+            mCurrentGroup = ent->getProxy().getParentProxy()->getObjectReference();
             Entity *parentEnt = mParent->getEntity(mCurrentGroup);
             if (parentEnt) {
                 mSelectedObjects.insert(parentEnt->getProxyPtr());
@@ -634,6 +637,7 @@ private:
     }
 
     void LOCAL_createWebviewAction() {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -668,6 +672,7 @@ private:
         if (ent) {
             ent->setSelected(true);
         }
+*/
     }
 
     void createWebviewAction() {
@@ -756,6 +761,7 @@ private:
     }
 
     std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -779,7 +785,7 @@ private:
             li.setLightFalloff(1,0,0.03);
             li.setLightSpotlightCone(30,40,1);
             li.setCastsShadow(true);
-            /* set li according to some sample light in the scene file! */
+            // set li according to some sample light in the scene file!
             newLightObject->update(li);
         }
 
@@ -799,6 +805,8 @@ private:
             ent->setSelected(true);
         }
         return newLightObject;
+    */
+        return std::tr1::shared_ptr<ProxyLightObject>();
     }
     void createLightAction() {
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -813,42 +821,79 @@ private:
 		}
 		return camProxy;
 	}
+
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
 
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-        Protocol::ObjLoc rloc;
-        rloc.set_velocity((orient * dir) * amount * WORLD_SCALE * .5);
-        rloc.set_angular_speed(0);
-        cam->requestLocation(now, rloc);
-    }
-    void rotateAction(Vector3f about, float amount) {
 
+        // Request updates from spcae
+        TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
+        SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
+        cam_vwobj->requestLocationUpdate(space, newloc);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setLocation(newloc);
+    }
+
+    void rotateAction(Vector3f about, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
+
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
-        Protocol::ObjLoc rloc;
-        rloc.set_rotational_axis(about);
-        rloc.set_angular_speed(amount);
-        cam->requestLocation(now, rloc);
+        // Request updates from spcae
+        TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
+        cam_vwobj->requestOrientationUpdate(space, neworient);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setOrientation(neworient);
     }
 
     void stableRotateAction(float dir, float amount) {
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
+
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
@@ -860,10 +905,11 @@ private:
         raxis.y = std::cos(p*DEG2RAD);
         raxis.z = -std::sin(p*DEG2RAD);
 
-        Protocol::ObjLoc rloc;
-        rloc.set_rotational_axis(raxis);
-        rloc.set_angular_speed(dir*amount);
-        cam->requestLocation(now, rloc);
+        // Request updates from spcae
+        TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
+        cam_vwobj->requestOrientationUpdate(space, neworient);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setOrientation(neworient);
     }
 
     void setDragModeAction(const String& modename) {
@@ -1015,8 +1061,8 @@ private:
                 typestr = "spotlight";
             }
             float32 ambientPower, shadowPower;
-            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+            ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+            shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
             fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
                     loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
@@ -1310,7 +1356,7 @@ private:
         loc.setVelocity(Vector3f(0,0,0));
         loc.setAngularSpeed(0);
 
-        cam->setLocation(now, loc);
+        //cam->setLocation(now, loc);
     }
 
     void cameraPathSetToKeyFrame(uint32 idx) {
@@ -1673,9 +1719,9 @@ void OgreSystem::destroyMouseHandler() {
 
 void OgreSystem::selectObject(Entity *obj, bool replace) {
     if (replace) {
-        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParent());
+        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParentProxy()->getObjectReference());
     }
-    if (mMouseHandler->getParentGroup() == obj->getProxy().getParent()) {
+    if (mMouseHandler->getParentGroup() == obj->getProxy().getParentProxy()->getObjectReference()) {
         mMouseHandler->addToSelection(obj->getProxyPtr());
         obj->setSelected(true);
     }

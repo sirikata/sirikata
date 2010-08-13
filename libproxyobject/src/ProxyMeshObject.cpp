@@ -40,10 +40,10 @@ using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, ODP::Service* odp_service )
+ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr vwobj )
     :   MeshObject (),
         MeshProvider (),
-        ProxyObject ( man, id, odp_service ),
+        ProxyObject ( man, id, vwobj ),
         mModelObject ()
 {
 

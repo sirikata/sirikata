@@ -54,7 +54,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
     public:
         typedef std::tr1::shared_ptr< MeshObject > ModelObjectPtr;
 
-        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, ODP::Service* odp_service );
+        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr ptr);
 
         void setModelObject ( ModelObjectPtr const& model );
         ModelObjectPtr const& getModelObject () const { return mModelObject; }
@@ -104,6 +104,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 //        virtual void destroyed ();
 
 };
+
+typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 
 } // namespace Sirikata
 

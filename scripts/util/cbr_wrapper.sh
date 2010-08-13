@@ -10,7 +10,7 @@
 
 DIR=`pwd`
 APPOFFSET=build/cmake
-APPNAME=cbr
+APPNAME=space
 GDB=/usr/bin/gdb
 
 APPDIR=""
@@ -21,19 +21,34 @@ for reldir in . .. ../.. ../../.. ; do
         APPDIR=${reldir}/${APPOFFSET}
         break
     fi
+    if [ -f ${reldir}/${APPOFFSET}/${APPNAME}_d ] ; then
+        APPDIR=${reldir}/${APPOFFSET}
+        break
+    fi
+
     if [ -f ${script_dir}/${reldir}/${APPOFFSET}/${APPNAME} ] ; then
+        APPDIR=${script_dir}/${reldir}/${APPOFFSET}
+        break
+    fi
+    if [ -f ${script_dir}/${reldir}/${APPOFFSET}/${APPNAME}_d ] ; then
         APPDIR=${script_dir}/${reldir}/${APPOFFSET}
         break
     fi
 done
 if [ -z "${APPDIR}" ] ; then
-    echo "Coudn't find cbr binary."
+    echo "Couldn't find binary."
     echo "Trying to run ${0+"$@"}"
     exit 1
 fi
 
+BUILD_POST="_d"
+build_config=`grep BUILD_TYPE ${APPDIR}/CMakeCache.txt | grep Debug`
+if [ -z "${build_config}" ] ; then
+    BUILD_POST=""
+fi
+
 usage () {
-  echo "$APPNAME [cbr|simoh|cseg|analysis|bench] [-h|--help] [-g|--debug] [options]"
+  echo "[space|simoh|cseg|pinto|analysis|bench] [-h|--help] [-g|--debug] [options]"
   echo
   echo "        -g or --debug           Start within $GDB"
   echo "        -h or --help            This help screen"
@@ -51,8 +66,8 @@ want_interactive=0
 want_oprofile=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    cbr | simoh | cseg | analysis | bench)
-      APPNAME="$1"
+    space | simoh | cseg | pinto | analysis | bench)
+      APPNAME="${1}${BUILD_POST}"
       shift;;
     -h | --help | -help )
       usage

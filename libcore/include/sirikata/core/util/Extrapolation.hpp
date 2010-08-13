@@ -77,8 +77,8 @@ public:
         return (*mNeedsUpdate)(actualValue, extrapolate(now));
     }
     Value extrapolate(const TimeType&t) const {
-        DurationType timeSinceUpdate=t-lastUpdateTime();
-        if (mFadeTime<timeSinceUpdate) {
+        DurationType timeSinceUpdate = std::max(DurationType::zero(),t-lastUpdateTime());
+        if (mFadeTime<=timeSinceUpdate) {
             return mValuePresent.extrapolate(t);
         }else{
             return mValuePast.extrapolate(t)

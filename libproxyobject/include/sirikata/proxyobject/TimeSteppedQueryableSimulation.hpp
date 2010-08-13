@@ -43,6 +43,11 @@ class SpaceObjectReference;
 
 class TimeSteppedQueryableSimulation: public TimeSteppedSimulation {
 public:
+    TimeSteppedQueryableSimulation(Context* ctx, const Duration& rate, const String& name)
+     : TimeSteppedSimulation(ctx, rate, name)
+    {
+    }
+
     /**
      * Query the scene to look for the first active simulation object that intersects the ray
      * @param position the starting point for the ray query
@@ -64,7 +69,7 @@ public:
                           SpaceObjectReference &returnName)=0;
     virtual Duration desiredTickRate()const=0;
     ///returns true if simulation should continue (false quits app)
-    virtual bool tick()=0;
+    virtual void poll()=0;
 };
 
 }

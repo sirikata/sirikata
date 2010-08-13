@@ -71,6 +71,9 @@ private:
     uint32 mRemainingDownloads; // Downloads remaining before loading can occur
     TextureBindingsMap mTextureFingerprints;
 
+    typedef std::vector<Ogre::Light*> LightList;
+    LightList mLights;
+
     String mURI;
 
     Ogre::Entity *getOgreEntity() const {

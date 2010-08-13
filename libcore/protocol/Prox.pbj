@@ -33,6 +33,7 @@
 "pbj-0.0.3"
 
 import "TimedMotionVector.pbj";
+import "TimedMotionQuaternion.pbj";
 
 package Sirikata.Protocol.Prox;
 
@@ -60,7 +61,9 @@ message ObjectMigrationData {
 message ObjectAddition {
     required uuid object = 1;
     required Sirikata.Protocol.TimedMotionVector location = 2;
-    required boundingsphere3f bounds = 3;
+    required Sirikata.Protocol.TimedMotionQuaternion orientation = 3;
+    required boundingsphere3f bounds = 4;
+    optional string mesh = 5;
 }
 
 message ObjectRemoval {

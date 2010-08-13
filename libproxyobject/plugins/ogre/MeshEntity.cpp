@@ -44,8 +44,12 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"
+<<<<<<< HEAD
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
+=======
+#include "Lights.hpp"
+>>>>>>> 2064be5b9423786f2ca5dfc24cf0192636a9c4a0
 
 using namespace std;
 using namespace Sirikata::Transfer;
@@ -422,7 +426,27 @@ void MeshEntity::createMesh(const Meshdata& md) {
     mo.setVisible(true);
     Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     bool check = mm.resourceExists(hash);
-    loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
+    loadMesh(hash);                     /// this is here because we removed
+                                        /// mResource->loaded(true, mEpoch) in
+                                        /// ModelLoadTask::doRun
+
+    // Lights
+    int light_idx = 0;
+    for(LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
+        const LightInstance& lightinst = *lightinst_it;
+
+        Matrix4x4f pos_xform = lightinst.transform;
+
+        // Get the instanced submesh
+        assert(lightinst.lightIndex < md.lights.size());
+        const LightInfo& sublight = *md.lights[lightinst.lightIndex];
+
+        String lightname = hash + "_light_" + boost::lexical_cast<String>(light_idx++);
+        Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
+        mLights.push_back(light);
+        mSceneNode->attachObject(light);
+        light->setDebugDisplayEnabled(true);
+    }
 }
 
 void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,

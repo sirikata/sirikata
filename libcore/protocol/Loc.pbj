@@ -33,13 +33,16 @@
 "pbj-0.0.3"
 
 import "TimedMotionVector.pbj";
+import "TimedMotionQuaternion.pbj";
 
 package Sirikata.Protocol.Loc;
 
 message LocationUpdate {
     required uuid object = 1;
-    required Sirikata.Protocol.TimedMotionVector location = 2;
-    required boundingsphere3f bounds = 3;
+    optional Sirikata.Protocol.TimedMotionVector location = 2;
+    optional Sirikata.Protocol.TimedMotionQuaternion orientation = 3;
+    optional boundingsphere3f bounds = 4;
+    optional string mesh = 5;
 }
 
 message BulkLocationUpdate {
@@ -52,7 +55,9 @@ message BulkLocationUpdate {
 // ObjectMessage.
 message LocationUpdateRequest {
     optional Sirikata.Protocol.TimedMotionVector location = 1;
-    optional boundingsphere3f bounds = 2;
+    optional Sirikata.Protocol.TimedMotionQuaternion orientation = 2;
+    optional boundingsphere3f bounds = 3;
+    optional string mesh = 4;
 }
 
 message Container {

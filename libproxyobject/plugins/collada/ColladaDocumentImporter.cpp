@@ -41,6 +41,9 @@
 #include "COLLADAFWVisualScene.h"
 #include "COLLADAFWInstanceVisualScene.h"
 #include "COLLADAFWLibraryNodes.h"
+#include "COLLADAFWLight.h"
+
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
 
 long Meshdata_counter=1000;
 
@@ -144,11 +147,19 @@ void ColladaDocumentImporter::finish ()
     // Add geometries
     // FIXME only store the geometries we need
     typedef std::map<COLLADAFW::UniqueId, int> IndicesMap;
+    // Geometry indices
     IndicesMap geometry_indices;
     int idx = 0;
     for(GeometryMap::const_iterator geo_it = mGeometries.begin(); geo_it != mGeometries.end(); geo_it++, idx++) {
         geometry_indices[geo_it->first] = idx;
         meshstore[documentURI()]->geometry.push_back( geo_it->second );
+    }
+    // Light indices
+    IndicesMap light_indices;
+    idx = 0;
+    for(LightMap::const_iterator light_it = mLights.begin(); light_it != mLights.end(); light_it++, idx++) {
+        light_indices[light_it->first] = idx;
+        meshstore[documentURI()]->lights.push_back( light_it->second );
     }
 
     // Try to find the instanciated VisualScene
@@ -185,6 +196,19 @@ void ColladaDocumentImporter::finish ()
                 }
 
                 // Instance Lights
+                for(int light_idx = 0; light_idx < curnode.node->getInstanceLights().getCount(); light_idx++) {
+                    const COLLADAFW::InstanceLight* light_inst = curnode.node->getInstanceLights()[light_idx];
+                    // FIXME handle child nodes, such as materials
+                    IndicesMap::const_iterator light_it = light_indices.find(light_inst->getInstanciatedObjectId());
+                    if (light_it == light_indices.end()) {
+                        COLLADA_LOG(warn, "Couldn't find original of instantiated light; was probably ambient.");
+                        continue;
+                    }
+                    LightInstance new_light_inst;
+                    new_light_inst.lightIndex = light_it->second;
+                    new_light_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    meshstore[documentURI()]->lightInstances.push_back(new_light_inst);
+                }
 
                 // Instance Cameras
 
@@ -383,6 +407,40 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
+
+    String uri = mDocument->getURI().toString();
+
+    LightInfo* sublight = new LightInfo();
+
+    Color lcol( light->getColor().getRed(), light->getColor().getGreen(), light->getColor().getBlue() );
+    sublight->setLightDiffuseColor(lcol);
+    sublight->setLightSpecularColor(lcol);
+
+    double const_att = light->getConstantAttenuation();
+    double lin_att = light->getLinearAttenuation();
+    double quad_att = light->getQuadraticAttenuation();
+    sublight->setLightFalloff((float)const_att, (float)lin_att, (float)quad_att);
+
+    // Type
+    switch (light->getLightType()) {
+      case COLLADAFW::Light::AMBIENT_LIGHT:
+        COLLADA_LOG(error,"Ambient lights are not supported.");
+        delete sublight;
+        return true;
+        break;
+      case COLLADAFW::Light::DIRECTIONAL_LIGHT:
+        sublight->setLightType(LightInfo::DIRECTIONAL);
+        break;
+      case COLLADAFW::Light::POINT_LIGHT:
+        sublight->setLightType(LightInfo::POINT);
+        break;
+      case COLLADAFW::Light::SPOT_LIGHT:
+        sublight->setLightType(LightInfo::SPOTLIGHT);
+        break;
+    }
+
+    mLights[light->getUniqueId()] = sublight;
+
     return true;
 }
 

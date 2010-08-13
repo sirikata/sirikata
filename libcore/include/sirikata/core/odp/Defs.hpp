@@ -39,6 +39,9 @@
 namespace Sirikata {
 namespace ODP {
 
+class PortID;
+class Endpoint;
+
 /** Identifier for an ODP port. Under the hood this is simply a uint32, but this
  *  class provides additional features: null and any values, matching (which
  *  differs from equality), etc.  Because the format of PortID is fixed to
@@ -88,7 +91,9 @@ private:
  *  containing the ODP routing information, and a MemoryReference containing the
  *  payload.
  */
-typedef std::tr1::function<void(const RoutableMessageHeader&, MemoryReference)> MessageHandler;
+typedef std::tr1::function<void(const Endpoint& src, const Endpoint& dst, MemoryReference)> MessageHandler;
+typedef std::tr1::function<void(const RoutableMessageHeader&, MemoryReference)> OldMessageHandler;
+
 
 /** A fully qualified ODP endpoint: SpaceID, ObjectReference, and PortID.
  *  Note that this does not have to be bound to unique values.  For instance,
@@ -124,6 +129,8 @@ public:
     const ObjectReference& object() const;
     const PortID& port() const;
 
+    String toString() const;
+
     class Hasher {
     public:
         size_t operator()(const Endpoint& p) const {
@@ -141,6 +148,8 @@ private:
     ObjectReference mObject;
     PortID mPort;
 }; // class Endpoint
+
+SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const Sirikata::ODP::Endpoint& ep);
 
 } // namespace ODP
 } // namespace Sirikata

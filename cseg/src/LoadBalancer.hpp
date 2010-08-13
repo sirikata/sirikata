@@ -59,7 +59,7 @@ public:
   ~LoadBalancer();
 
   void reportRegionLoad(SegmentedRegion* region, ServerID sid, uint32 loadValue);
-  void handleSegmentationChange(SegmentationChangeMessage* segChangeMessage);
+  void handleSegmentationChange(Sirikata::Protocol::CSeg::ChangeMessage segChangeMessage);
 
   void service();
 

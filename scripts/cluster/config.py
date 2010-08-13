@@ -52,9 +52,10 @@ class ClusterConfig:
         self.unique = None
         self.ccache = False
 
-        self.plugins = 'tcpsst,servermap-tabular'
-        self.space_plugins = 'weight-exp,weight-sqr'
+        self.plugins = 'tcpsst,servermap-tabular,core-local'
+        self.space_plugins = 'weight-exp,weight-sqr,space-craq,space-local,space-master-pinto'
         self.cseg_plugins = 'weight-exp'
+        self.pinto_plugins = ''
         self.simoh_plugins = 'weight-exp,weight-sqr'
         self.analysis_plugins = 'weight-exp,weight-sqr'
 

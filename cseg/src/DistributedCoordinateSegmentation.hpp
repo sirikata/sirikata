@@ -91,6 +91,7 @@ public:
     virtual BoundingBoxList serverRegion(const ServerID& server);
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
+    virtual std::vector<ServerID> lookupBoundingBox(const BoundingBox3f& bbox);
 
     virtual void poll();
     virtual void stop();
@@ -123,9 +124,10 @@ private:
     std::map<String, SegmentedRegion*> mLowerLevelTrees;
 
     int mAvailableCSEGServers;
+    int mUpperTreeCSEGServers;
 
     void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
-    void handleLoadReport(LoadReportMessage *message);
+    void handleLoadReport(Sirikata::Protocol::CSeg::LoadReportMessage* message);
     void notifySpaceServersOfChange(const std::vector<SegmentationInfo> segInfoVector);
 
     /* Start listening for and accepting incoming connections.  */
@@ -152,8 +154,11 @@ private:
     ServerID callLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, const BoundingBox3f& boundingBox);
     void callLowerLevelCSEGServersForServerRegions(ServerID server_id, BoundingBoxList&);
     void sendLoadReportToLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, 
-                                            const BoundingBox3f& boundingBox,
-                                            LoadReportMessage* message);
+                                              const BoundingBox3f& boundingBox,
+                                              Sirikata::Protocol::CSeg::LoadReportMessage* message);
+    void callLowerLevelCSEGServersForLookupBoundingBoxes(const BoundingBox3f& bbox,
+                                                         const std::map<ServerID, std::vector<SegmentedRegion*> >&,
+                                                         std::vector<ServerID>& );
 
 
     /* Functions run in separate threads to listen for incoming packets */
@@ -161,8 +166,8 @@ private:
     void llIOServicingLoop();
 
     /* Functions to send buffers to all CSEG or all space servers  */
-    void sendToAllCSEGServers(uint8* buffer, int buflen);
-    void sendToAllSpaceServers(uint8* buffer, int buflen);
+    void sendToAllCSEGServers( Sirikata::Protocol::CSeg::CSegMessage&  );
+    void sendToAllSpaceServers( Sirikata::Protocol::CSeg::CSegMessage& );
 
     uint32 getAvailableServerIndex();
 
@@ -174,7 +179,7 @@ private:
 
     
     /* Functions to read from a socket.  */
-    bool fullMessageReceived(uint8* dataReceived, uint32 bytesReceived);
+    
     void asyncRead(boost::shared_ptr<tcp::socket> socket, 
 		   uint8* asyncBufferArray,
 		   const boost::system::error_code& ec,
@@ -184,9 +189,17 @@ private:
               const boost::system::error_code& ec,
               std::size_t bytes_transferred);
 
-    uint32 readFromSocket(boost::shared_ptr<tcp::socket> socket,
-			  uint8** dataReceived, bool readTillEOF,
-			  uint8 bytesReceivedAlready=0);
+    
+    void writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
+
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+                          Sirikata::Protocol::CSeg::CSegMessage& csegMessage,
+                          uint8* bufferSoFar,
+                          uint bufferSoFarSize 
+                         );
+
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
 
     /* Functions to serialize the whole CSEG tree. */
     void serializeBSPTree(SerializedBSPTree* serializedBSPTree);
@@ -200,18 +213,15 @@ private:
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;
     std::map<ServerID, BoundingBoxList > mLowerTreeServerRegionMap;
 
-    boost::shared_mutex mCSEGReadWriteMutex;
+    boost::shared_mutex mCSEGReadWriteMutex;    
 
-
-    
-
-    boost::shared_mutex _access;
+    boost::shared_mutex mSocketsToCSEGServersMutex;
     std::map<ServerID, SocketQueuePtr > mLeasedSocketsToCSEGServers;
 
     friend class LoadBalancer;
 
     
-  SocketContainer getSocketToCSEGServer(ServerID server_id);
+    SocketContainer getSocketToCSEGServer(ServerID server_id);
 }; // class CoordinateSegmentation
 
 } // namespace Sirikata

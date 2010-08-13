@@ -33,11 +33,11 @@
 #include "Object.hpp"
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/Random.hpp>
-#include "ObjectHostContext.hpp"
+#include <sirikata/oh/ObjectHostContext.hpp>
 #include "ObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include <sirikata/core/trace/Trace.hpp>
-#include "Trace.hpp"
+#include <sirikata/oh/Trace.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
@@ -140,29 +140,31 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
     scheduleNextLocUpdate();
 }
 
-bool Object::send( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
+bool Object::send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload) {
   bool val = mContext->objectHost->send(
-			     src_port, src,
-			     dest_port, dest,
-			     payload
-			     );
+      this, src_port,
+      dest, dest_port,
+      payload
+  );
 
   return val;
 }
-void Object::sendNoReturn( uint16 src_port,  UUID src,  uint16 dest_port,  UUID dest, std::string payload) {
-    send(src_port, src, dest_port, dest, payload);
+void Object::sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload) {
+    send(src_port, dest, dest_port, payload);
 }
+
 bool Object::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-  mContext->mainStrand->post(std::tr1::bind(
-			     &Object::sendNoReturn, this,
-			     msg->source_port(), msg->source_object(),
-			     msg->dest_port(), msg->dest_object(),
-			     msg->payload())
-			    );
+    assert(msg->source_object() == mID);
+    mContext->mainStrand->post(std::tr1::bind(
+            &Object::sendNoReturn, this,
+            msg->source_port(),
+            msg->dest_object(), msg->dest_port(),
+            msg->payload())
+    );
 
-  delete msg;
+    delete msg;
 
-  return true;
+    return true;
 }
 
 const TimedMotionVector3f Object::location() const {
@@ -181,35 +183,22 @@ void Object::connect() {
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->simTime());
 
-//     if (mRegisterQuery)
-//         mContext->objectHost->connect(
-//             this,
-//             mQueryAngle,
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
-// 	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this) )
-//         );
-//     else
-//         mContext->objectHost->connect(
-//             this,
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceConnection, this, _1) ),
-//             mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceMigration, this, _1) ),
-// 	    mContext->mainStrand->wrap( boost::bind(&Object::handleSpaceStreamCreated, this ) )
-//         );
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
 
     if (mRegisterQuery)
         mContext->objectHost->connect(
             this,
             mQueryAngle,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, std::tr1::placeholders::_1) ),
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, std::tr1::placeholders::_1) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) )
         );
     else
         mContext->objectHost->connect(
             this,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this,std::tr1::placeholders::_1) ),
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, std::tr1::placeholders::_1) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
         );
 
@@ -223,7 +212,7 @@ void Object::disconnect() {
         mContext->objectHost->disconnect(this);
 }
 
-void Object::handleSpaceConnection(ServerID sid) {
+void Object::handleSpaceConnection(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
     if (sid == 0) {
         OBJ_LOG(error,"Failed to open connection for object " << mID.toString());
         return;
@@ -245,12 +234,12 @@ void Object::handleSpaceConnection(ServerID sid) {
     );
 }
 
-void Object::handleSpaceMigration(ServerID sid) {
+void Object::handleSpaceMigration(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
     OBJ_LOG(insane,"Migrated to new space server: " << sid);
     mConnectedTo = sid;
 }
 
-void Object::handleSpaceStreamCreated() {  
+void Object::handleSpaceStreamCreated() {
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
 
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
@@ -275,7 +264,7 @@ bool Object::connected() {
 void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
-    
+
     dispatchMessage(*msg);
     delete msg;
 }

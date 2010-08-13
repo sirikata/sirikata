@@ -201,8 +201,8 @@ typedef UUID USID;
 
 typedef uint16 LSID;
 
-#define SUCCESS 0
-#define FAILURE -1
+#define SST_IMPL_SUCCESS 0
+#define SST_IMPL_FAILURE -1
 
 class ChannelSegment {
 public:
@@ -338,7 +338,6 @@ private:
   static void releaseChannel(uint16 channel) {
     assert(channel > 0);
 
-    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
     sAvailableChannels.set(channel, 0);
   }
 
@@ -754,7 +753,7 @@ private:
 	mIncomingSubstreamMap[incomingLsid] = stream;
 
 	if (stream->mStreamReturnCallback != NULL){
-	  stream->mStreamReturnCallback(SUCCESS, stream);
+	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
 	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
@@ -859,7 +858,7 @@ private:
         if (sConnectionMap.find(mLocalEndPoint) != sConnectionMap.end()) {
           boost::shared_ptr<Connection> conn = sConnectionMap[mLocalEndPoint];
 
-          sConnectionReturnCallbackMap[mLocalEndPoint] (SUCCESS, conn);
+          sConnectionReturnCallbackMap[mLocalEndPoint] (SST_IMPL_SUCCESS, conn);
         }
         sConnectionReturnCallbackMap.erase(mLocalEndPoint);
       }
@@ -904,7 +903,6 @@ private:
       bool keepConnection = conn->serviceConnection(curTime);
 
       if (!keepConnection) {
-
         if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
           //Deal with the connection not getting connected with the remote endpoint.
           //This is in contrast to the case where the connection got connected, but
@@ -920,7 +918,7 @@ private:
           lock.unlock();
 
           if (connState == CONNECTION_PENDING_CONNECT)
-            cb(FAILURE, failed_conn);
+            cb(SST_IMPL_FAILURE, failed_conn);
         }
       }
     }
@@ -1024,7 +1022,7 @@ public:
                                      void (int errCode, void*)
                                      which is called when queuing
                                      the datagram failed or succeeded.
-                                     'errCode' contains SUCCESS or FAILURE
+                                     'errCode' contains SST_IMPL_SUCCESS or SST_IMPL_FAILURE
                                      while the 'void*' argument is a pointer
                                      to the buffer that was being sent.
 
@@ -1038,7 +1036,7 @@ public:
      || mState == CONNECTION_PENDING_DISCONNECT)
     {
       if (cb != NULL) {
-        cb(FAILURE, data);
+        cb(SST_IMPL_FAILURE, data);
       }
       return false;
     }
@@ -1068,7 +1066,7 @@ public:
 
     if (cb != NULL) {
       //invoke the callback function
-      cb(SUCCESS, data);
+      cb(SST_IMPL_SUCCESS, data);
     }
 
     return true;
@@ -1535,12 +1533,12 @@ private:
   }
 
   static void connectionCreated( int errCode, boost::shared_ptr<Connection<EndPointType> > c) {
-    if (errCode != SUCCESS) {
+    if (errCode != SST_IMPL_SUCCESS) {
 
       StreamReturnCallbackFunction cb = mStreamReturnCallbackMap[c->localEndPoint()];
       mStreamReturnCallbackMap.erase(c->localEndPoint());
 
-      cb(FAILURE, boost::shared_ptr<Stream<EndPointType> >() );
+      cb(SST_IMPL_FAILURE, boost::shared_ptr<Stream<EndPointType> >() );
 
       return;
     }
@@ -1592,7 +1590,7 @@ private:
 
 	//send back an error to the app by calling mStreamReturnCallback
 	//with an error code.
-	mStreamReturnCallback(FAILURE, boost::shared_ptr<Stream<UUID> >() );
+	mStreamReturnCallback(SST_IMPL_FAILURE, boost::shared_ptr<Stream<UUID> >() );
         mStreamReturnCallback = NULL;
 
         mState = DISCONNECTED;
