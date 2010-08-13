@@ -93,14 +93,31 @@ namespace Sirikata
             return v8::Undefined();
             
         }
+
+
         
         Handle<v8::Value>      getPosition(const v8::Arguments& args)
         {
+            std::cout<<"\n\n";
+            std::cout<<"Got into getPosition";
+            std::cout<<"\n\n";
+            std::cout.flush();
+            
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
 
-            return mStruct->jsObjScript->getPositionFunction(mStruct->sID);
+            std::cout<<"\n\n";
+            std::cout<<"Got mStruct";
+            std::cout<<"\n\n";
+            std::cout.flush();
+
+            mStruct->jsObjScript->bftm_debugPrintString("\n\n*****************************\ntestFunction\n\n");
+            
+            //void JSObjectScript::bftm_debugPrintString(std::string cStrMsgBody) const;
+            //return mStruct->jsObjScript->getPositionFunction(mStruct->sID);
+
+            return v8::Undefined();
         }
 
         

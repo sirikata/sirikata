@@ -592,7 +592,19 @@ void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec
 
 v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID)
 {
+    std::cout<<"\n\n";
+    std::cout<<"Got into the getPositionFunction";
+    std::cout<<"\n\n";
+    std::cout.flush();
+    
     Location loc = mParent->getLocation(*sID);
+
+
+    std::cout<<"\n\n";
+    std::cout<<"Got location the getPositionFunction";
+    std::cout<<"\n\n";
+    std::cout.flush();
+    
     //FIXME: note that CreateJSResult may not work with vec3, which is what
     //second arg returns
     return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
