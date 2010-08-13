@@ -67,6 +67,9 @@ double NumericExtract(const Handle<Value>& val) {
     assert(false);
 }
 
+//FIXME: may need to add a vec3 versioin of CreateJSResult so that can return
+//positions and velocities
+
 Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src) {
     return Number::New(src);
 }

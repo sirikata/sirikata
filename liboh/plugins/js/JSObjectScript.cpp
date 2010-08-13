@@ -244,7 +244,7 @@ void JSObjectScript::test() const {
     loc.setAngularSpeed(3.14159/10.0);
     mParent->setLocation( space, loc );
 
-    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
+//    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
     mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
 
     printf("\n\n\n\n\nI GOT HERE\n\n\n");
@@ -330,6 +330,7 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
 
 
 
+
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
 {
     Context::Scope context_scope(mContext);
@@ -340,7 +341,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
 
     // Compile
     //note, because using compile command, will run in the mContext context
-    //could pre-associate keyword pres with presence that we're in.
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
     if (script.IsEmpty()) {
         v8::String::Utf8Value error(try_catch.Exception());
@@ -389,6 +389,7 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAva
         return;
     }
 }
+
 
 
 
@@ -474,27 +475,44 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     assert(spaces.size() == 1);                               \
     SpaceID space = *(spaces.begin());
 
-v8::Handle<v8::String> JSObjectScript::getVisual() {
-    FIXME_GET_SPACE();
+// v8::Handle<v8::String> JSObjectScript::getVisual() {
+//     FIXME_GET_SPACE();
 
-    String url_string = mParent->getVisual(space).toString();
+//     String url_string = mParent->getVisual(space).toString();
+//     return v8::String::New( url_string.c_str(), url_string.size() );
+// }
+
+// void JSObjectScript::setVisual(v8::Local<v8::Value>& newvis) {
+//     // Can/should we do anything about a failure here?
+//     if (!newvis->IsString())
+//         return;
+
+//     v8::String::Utf8Value newvis_str(newvis);
+//     if (! *newvis_str)
+//         return; // FIXME failure?
+//     Transfer::URI vis_uri(*newvis_str);
+
+//     FIXME_GET_SPACE();
+//     mParent->setVisual(space, vis_uri);
+// }
+
+
+v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceID* sID)
+{
+
+    String url_string = mParent->getVisual(*sID).toString();
     return v8::String::New( url_string.c_str(), url_string.size() );
 }
 
-void JSObjectScript::setVisual(v8::Local<v8::Value>& newvis) {
-    // Can/should we do anything about a failure here?
-    if (!newvis->IsString())
-        return;
-
-    v8::String::Utf8Value newvis_str(newvis);
-    if (! *newvis_str)
-        return; // FIXME failure?
-    Transfer::URI vis_uri(*newvis_str);
-
-    FIXME_GET_SPACE();
-    mParent->setVisual(space, vis_uri);
+//FIXME: May want to have an error handler for this function.
+void  JSObjectScript::setVisual(const SpaceID* sID, const Transfer::URI* newMesh)
+{
+    mParent->setVisual(*sID,*newMesh);
 }
 
+
+//FIXME: need to return the right space here.
+//lkjs; need to return the visuals for a particular space.;
 v8::Handle<v8::Value> JSObjectScript::getVisualScale() {
     FIXME_GET_SPACE();
     return CreateJSResult(mContext, mParent->getVisualScale(space));
@@ -564,6 +582,21 @@ CreateLocationAccessorHandlers(Vector3f, Velocity, Object, ObjectCast, Vec3Valid
 CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, QuaternionValidate, QuaternionExtract)
 CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
+
+void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec3d)
+{
+    Location loc = mParent->getLocation(*sID);
+    loc.setPosition(vec3d);
+}
+
+
+v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID)
+{
+    Location loc = mParent->getLocation(*sID);
+    //FIXME: note that CreateJSResult may not work with vec3, which is what
+    //second arg returns
+    return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
+}
 
 
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
@@ -662,7 +695,6 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
 
     mHandlingEvent = false;
     flushQueuedHandlerEvents();
-
 
 
     /*
@@ -810,6 +842,8 @@ Handle<Object> JSObjectScript::getSystemObject()
   Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
   return ret_obj;
 }
+
+
 void JSObjectScript::updateAddressable()
 {
   HandleScope handle_scope;
@@ -821,17 +855,8 @@ void JSObjectScript::updateAddressable()
 //called to build the presences array as well as to build the presence keyword
 void JSObjectScript::initializePresences(Handle<Object>& system_obj)
 {
-    std::cout<<"\n\nAbout to clear all presences\n\n";
-    std::cout.flush();
     clearAllPresences(system_obj);
-
-    std::cout<<"\n\nAbout to populate all presences\n\n";
-    std::cout.flush();
     populatePresences(system_obj);
-
-    std::cout<<"\n\nAbout to set pres keyword\n\n";
-    std::cout.flush();
-    populatePresKeyword(system_obj);
 }
 
 
@@ -841,7 +866,6 @@ void JSObjectScript::initializePresences(Handle<Object>& system_obj)
 void JSObjectScript::clearAllPresences(Handle<Object>& system_obj)
 {
     system_obj->Delete(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME));
-    system_obj->Delete(v8::String::New(JSSystemNames::PRES_KEYWORD_NAME));
 
     for (int s=0; s < (int) mPresenceList.size(); ++s)
     {
@@ -887,58 +911,6 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
 }
 
 
-//should be called only after populatePresences
-//takes the first presence in the presence array, and sets system.pres to it.
-void JSObjectScript::populatePresKeyword(Handle<Object>& system_obj)
-{
-    if (mPresenceList.size() == 0)
-    {
-        //no presences, set pres to be null
-        setPresKeyword(NULL,system_obj);
-    }
-    else
-    {
-        //grab the first entry from mPresenceList, and use it as the default
-        //presence
-        setPresKeyword(mPresenceList[0],system_obj);
-    }
-}
-
-
-//sets the presence keyword to a value  (note: also sets mPres internal variable.)
-void JSObjectScript::setPresKeyword(JSPresenceStruct* jsp,Handle<Object>& system_obj)
-{
-    v8::Context::Scope context_scope(mContext);
-    HandleScope handle_scope; //local handle scope.  when this goes out of scope
-                              //(function is over), all data defined here may be
-                              //garbage collected
-
-
-    
-    std::cout<<"\n\nAt top of setPresKeyword\n\n";
-    std::cout.flush();
-    //setting internal field
-    mPres = jsp;
-
-    std::cout<<"\n\nSet mPres\n\n";
-    std::cout.flush();
-    
-    Local<Object> presKeywordObj = mManager->mPresenceTemplate->NewInstance();
-
-    std::cout<<"\n\npresKeywordObj\n\n";
-    std::cout.flush();
-    
-    presKeywordObj->SetInternalField(PRESENCE_FIELD,External::New(mPres));
-
-    std::cout<<"\n\nSetInternalField\n\n";
-    std::cout.flush();
-    
-    system_obj->Set(v8::String::New(JSSystemNames::PRES_KEYWORD_NAME),presKeywordObj);
-
-    std::cout<<"\n\nEnd of setPresKeyword\n\n";
-    std::cout.flush();
-}
-
 
 
 
@@ -947,24 +919,14 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
    HandleScope handle_scope;
    //takes care of the addressable array in sys.
-
-   std::cout<<"\n\nIn populateSystemObject.  Beginning initialization\n\n";
-   std::cout.flush();
    
    system_obj->SetInternalField(0, External::New(this));
 
-   std::cout<<"\n\nIn populateSystemObject.  Internal field set.\n\n";
-   std::cout.flush();
    
    //FIXME: May need an initialize addressable
    populateAddressable(system_obj);
-
-   std::cout<<"\n\nIn populateSystemObject.  Finished populateAddressable.\n\n";
-   std::cout.flush();
    
    initializePresences(system_obj);
-   std::cout<<"\n\nFinished initializePresences\n\n";
-   std::cout.flush();
 }
 
 
@@ -982,6 +944,10 @@ void JSObjectScript::create_presence(const SpaceID& new_space)
   const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
 
   mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
+
+  //FIXME: will need to add this presence to the presences vector.
+  //but only want to do so when the function has succeeded.
+  
 }
 
 

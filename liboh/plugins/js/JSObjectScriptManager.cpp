@@ -100,11 +100,12 @@ void JSObjectScriptManager::createSystemTemplate()
 
     //these are mutable fields
 	
-    system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
-    system_templ->SetAccessor(JS_STRING(scale), JSSystem::ScriptGetScale, JSSystem::ScriptSetScale);
+//    system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
+//    system_templ->SetAccessor(JS_STRING(scale), JSSystem::ScriptGetScale, JSSystem::ScriptSetScale);
 
-    system_templ->SetAccessor(JS_STRING(position), JSSystem::ScriptGetPosition, JSSystem::ScriptSetPosition);
-    system_templ->SetAccessor(JS_STRING(velocity), JSSystem::ScriptGetVelocity, JSSystem::ScriptSetVelocity);
+//    system_templ->SetAccessor(JS_STRING(position), JSSystem::ScriptGetPosition, JSSystem::ScriptSetPosition);
+//    system_templ->SetAccessor(JS_STRING(velocity), JSSystem::ScriptGetVelocity, JSSystem::ScriptSetVelocity);
+
     system_templ->SetAccessor(JS_STRING(orientation), JSSystem::ScriptGetOrientation, JSSystem::ScriptSetOrientation);
     system_templ->SetAccessor(JS_STRING(angularAxis), JSSystem::ScriptGetAxisOfRotation, JSSystem::ScriptSetAxisOfRotation);
     system_templ->SetAccessor(JS_STRING(angularVelocity), JSSystem::ScriptGetAngularSpeed, JSSystem::ScriptSetAngularSpeed);
@@ -148,30 +149,29 @@ void JSObjectScriptManager::createPresenceTemplate()
   
   // Ideally we want the addressable template to be a prototype of presencetemplate
   //All that can be done to presences can be done to the addressble too
-  /*
-  if(mAddressableTemplate.IsEmpty())
-  {
-    createAddressableTemplate();  
-  }
-  */
   
   mPresenceTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New()); 
-  
-  mPresenceTemplate->SetInternalFieldCount(2);
+  mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
 
   // add stuff to the presence template
   // something like setMesh
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
-  mPresenceTemplate->Set(v8::String::New("setMesh"), v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  
+  mPresenceTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
+  mPresenceTemplate->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  mPresenceTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
+  mPresenceTemplate->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
+
+//    system_templ->SetAccessor(JS_STRING(position), JSSystem::ScriptGetPosition, JSSystem::ScriptSetPosition);
+//    system_templ->SetAccessor(JS_STRING(velocity), JSSystem::ScriptGetVelocity, JSSystem::ScriptSetVelocity);
+
 
   //FIXME:
   //add function to check if presences are equal (point to same underlying object);
   //add function to see if presence is valid (has been declared null);
-  
-  mPresenceTemplate->SetAccessor(JS_STRING(position), JSPresence::ScriptGetPosition, JSPresence::ScriptSetPosition);
- 
-
 }
 
 

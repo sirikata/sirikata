@@ -204,15 +204,15 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 // Visual
 
-v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    return target_script->getVisual();
-}
+// v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
+//     JSObjectScript* target_script = GetTargetJSObjectScript(info);
+//     return target_script->getVisual();
+// }
 
-void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    target_script->setVisual(value);
-}
+// void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
+//     JSObjectScript* target_script = GetTargetJSObjectScript(info);
+//     target_script->setVisual(value);
+// }
 
 
 

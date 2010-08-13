@@ -64,9 +64,9 @@ public:
     bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
     void processMessage(const RoutableMessageHeader& header, MemoryReference body);
 
-	void updateAddressable();
+    void updateAddressable();
 
-	void attachScript(const String&);
+    void attachScript(const String&);
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -97,9 +97,17 @@ public:
     /** create a new presence of this entity */
     void create_presence(const SpaceID&);
 
-    v8::Handle<v8::String> getVisual();
-    void setVisual(v8::Local<v8::Value>& newvis);
 
+    //v8::Handle<v8::String> getVisual();
+    //void setVisual(v8::Local<v8::Value>& newvis);
+    
+    v8::Handle<v8::String> getVisual(const SpaceID* sID);
+    void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
+    
+    void  setPositionFunction(const SpaceID* sID, const Vector3d& vec3d);
+    v8::Handle<v8::Value> getPositionFunction(const SpaceID* sID);
+
+    
     v8::Handle<v8::Value> getVisualScale();
     void setVisualScale(v8::Local<v8::Value>& newvis);
 
@@ -113,6 +121,8 @@ public:
     void setAxisOfRotation(v8::Local<v8::Value>& newval);
     v8::Handle<v8::Value> getAngularSpeed();
     void setAngularSpeed(v8::Local<v8::Value>& newval);
+
+
 
 
     /** Register an event pattern matcher and handler. */
@@ -167,11 +177,11 @@ private:
     void printAllHandlerLocations();
     void populatePresences(Handle<Object>& system_obj );
     void populateSystemObject(Handle<Object>& system_obj );
-    void populatePresKeyword(Handle<Object>& system_obj);
+
     
     void initializePresences(Handle<Object>& system_obj);
     void clearAllPresences(Handle<Object>& system_obj);
-    void setPresKeyword(JSPresenceStruct* jsp,Handle<Object>& system_obj);
+
 
     
     ODP::Port* mScriptingPort;

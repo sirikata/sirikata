@@ -103,6 +103,7 @@ v8::Handle<v8::Value> __clear(const v8::Arguments& args)
     //set the internal field of the vector to be null
     setNullHandler(args);
     
+    return v8::Undefined();
 }
 
 void setNullHandler(const v8::Arguments& args)
