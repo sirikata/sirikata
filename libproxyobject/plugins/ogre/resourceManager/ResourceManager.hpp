@@ -40,12 +40,11 @@
 #include <vector>
 #include "../meruCompat/Factory.hpp"
 #include "../meruCompat/Event.hpp"
-//#include <sirikata/core/transfer/TransferManager.hpp>
 
 #define INSTRUMENT_RESOURCE_LOADING
 
 namespace Sirikata{namespace Transfer{
-  class TransferManager;
+
 }}
 
 namespace Meru {
@@ -56,28 +55,17 @@ class ResourceManagerLookup;
  */
 class ResourceManager:public ManualSingleton<ResourceManager> {
 
-  ::Sirikata::Transfer::TransferManager *mTransferManager;
 
 public:
     /** Initializes the ResourceManager and starts CacheLevel threads if necessary
      *  \param transfermanager parent TransferManager to use
      */
-    ResourceManager(::Sirikata::Transfer::TransferManager *transfermanager);
+    ResourceManager();
 
     /** Destroys the resource manager and all its cache levels
      */
     ~ResourceManager();
 
-    /**
-     * Requests a lookup on the name of a resource.
-     * \param resource_id is the string with a URI for the resource
-     * In the event that the name is already in a cache or contained in the URI
-     * \param result is where it will return the ResourceHash to be downloaded.
-     * \param callback callback to invoke when the lookup is complete
-     * \returns true if result is in memory
-     */
-    bool nameLookup(const URI &resource_id, ResourceHash&result, std::tr1::function<void(const URI&,const ResourceHash*)> callback);
-    void nameLookup(const URI &resource_id, std::tr1::function<void(const URI&,const ResourceHash*)> callback);
     /**
      * Adds a username/password pair to the list of eligable identities for this resource manager
      * \param username indicates which username should be added to authentication for urls like meru://username@/blah
@@ -93,19 +81,7 @@ public:
     void cdnLogout (const String&username);
 
     bool cdnIsAuthenticated(const String&username)const;
-    /** Request that a resource be downloaded.  This will start
-     *  the resource loading in the resource loading thread and
-     *  will return immediately.  If the resource already exists
-     *  locally this does nothing.
-     *
-     *  \param rid the ResourceID of the resource to be downloaded
-     *  \param cb Callback containing the Download Event.
-     *  \param range subset of resource to request
-     */
-    SubscriptionId request (
-        const RemoteFileId &rid,
-        const std::tr1::function<EventResponse(const EventPtr&)>&cb,
-        Transfer::Range range=Transfer::Range(true));
+
 
 
     /** Create a new resource from in-memory data.

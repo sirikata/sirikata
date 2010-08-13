@@ -39,10 +39,10 @@ namespace Meru {
 
 class GraphicsResourceMesh : public GraphicsResourceAsset {
 public:
-  GraphicsResourceMesh(const RemoteFileId &resourceID);
+  GraphicsResourceMesh(const URI &uri);
   virtual ~GraphicsResourceMesh();
 
-  virtual void resolveName(const URI& id, const ResourceHash& hash);
+  virtual void resolveName(const URI& id);
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);

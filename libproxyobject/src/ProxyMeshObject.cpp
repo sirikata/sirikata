@@ -33,7 +33,10 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 
+
 //#include <util/ListenerProvider.hpp>
+
+using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 
@@ -63,8 +66,8 @@ void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )
 
 void ProxyMeshObject::setMesh ( URI const& mesh )
 {
-    if (hasModelObject())
-        mModelObject->setMesh ( mesh );
+    //if (hasModelObject())
+    //mModelObject->setMesh ( mesh );
 
     /// dbm: this is what triggers Ogre mesh download [and Model for now]
 
@@ -78,6 +81,14 @@ URI const& ProxyMeshObject::getMesh () const
         return defaultReturn;
 
     return mModelObject->getMesh ();
+}
+
+void ProxyMeshObject::meshDownloaded(std::tr1::shared_ptr<ChunkRequest>request,
+    std::tr1::shared_ptr<DenseData> response)
+{
+    if (hasModelObject()){
+        mModelObject->parseFile(request, response);
+    }
 }
 
 void ProxyMeshObject::setScale ( Vector3f const& scale )

@@ -1,5 +1,5 @@
 /*  Meru
- *  GraphicsResourceTexture.hpp
+ *  ResourceDownloadTask.hpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -29,25 +29,67 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _GRAPHICS_RESOURCE_TEXTURE_HPP
-#define _GRAPHICS_RESOURCE_TEXTURE_HPP
+#ifndef _RESOURCE_DOWNLOAD_TASK_HPP
+#define _RESOURCE_DOWNLOAD_TASK_HPP
 
 #include "../meruCompat/MeruDefs.hpp"
-#include "GraphicsResourceAsset.hpp"
+#include "../meruCompat/DependencyTask.hpp"
+#include "../meruCompat/Event.hpp"
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 
 namespace Meru {
 
-class GraphicsResourceTexture : public GraphicsResourceAsset {
+class ResourceRequestor {
 public:
-  GraphicsResourceTexture(const URI &uri);
-  virtual ~GraphicsResourceTexture();
+    virtual ~ResourceRequestor();
 
-  virtual DependencyTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
-  virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
-  virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
-  virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);
+  virtual void setResourceBuffer(const SparseData& buffer) = 0;
+};
 
-  int maxDimension() const;
+class ResourceDownloadQueue {
+
+};
+
+class ResourceDownloadTask : public DependencyTask
+{
+public:
+
+  ResourceDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, ResourceRequestor* resourceRequestor);
+  virtual ~ResourceDownloadTask();
+
+  void setRange(const Transfer::Range &r) {
+    mRange = r;
+  }
+
+  void mergeData(const Transfer::SparseData &dataToMerge);
+
+  virtual void operator()();
+
+  bool isStarted() {
+    return mStarted;
+  }
+
+protected:
+  void requestDownload();
+  EventResponse downloadCompleteHandler(const EventPtr &event);
+  void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+            std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
+	    
+  void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response)
+	    
+	    
+  bool mStarted;
+
+  const RemoteFileId mHash;
+  SubscriptionId mCurrentDownload;
+  Transfer::Range mRange;
+  ResourceRequestor* mResourceRequestor;
+  Transfer::SparseData mMergeData;
 };
 
 }

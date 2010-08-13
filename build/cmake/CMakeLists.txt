@@ -1134,6 +1134,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/models/MeshObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp

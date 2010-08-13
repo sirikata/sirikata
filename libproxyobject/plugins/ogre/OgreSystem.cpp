@@ -416,7 +416,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             Meru::EventSource::sSingleton = ((Task::GenEventManager*)eventManager->as<void*>());
             new SequentialWorkQueue ((Task::WorkQueue*)workQueue->as<void*>());
-            new ResourceManager(mTransferManager);
+            new ResourceManager();
             new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
 

@@ -1,0 +1,5 @@
+"objtype","subtype","name","parent","script","scriptparams","pos_x","pos_y","pos_z","orient_x","orient_y","orient_z","orient_w","vel_x","vel_y","vel_z","rot_axis_x","rot_axis_y","rot_axis_z","rot_speed","scale_x","scale_y","scale_z","hull_x","hull_y","hull_z","density","friction","bounce","colMask","colMsg","gravity","meshURI","diffuse_x","diffuse_y","diffuse_z","ambient","specular_x","specular_y","specular_z","shadowpower","range","constantfall","linearfall","quadfall","cone_in","cone_out","power","cone_fall","shadow"
+"camera",,,,,,745,3050,990,0,0,0,,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"light","directional",,,,,735.23,3046.96,966.99,30,160,45,,0,0,0,1,0,0,0,,,,,,,,,,,,,,0.98,0.99,0.73,0.32,0,0,0,0,1000,1,0,0,30,40,0.5,1,1
+"light","directional",,,,,735.23,3046.96,966.99,0,-30,0,,0,0,0,1,0,0,0,,,,,,,,,,,,,,0.98,0.99,0.73,0.32,0,0,0,0,1000,1,0,0,30,40,0.5,1,1
+"mesh","graphiconly","milk_truck",,,,750,3050,975,0,0,0,,0,0,0,0,1,0,0.3,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///lily/milktruck.dae",,,,,,,,,,,,,,,,,

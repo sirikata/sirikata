@@ -103,6 +103,8 @@ public:
 
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
+void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -110,11 +112,6 @@ public:
     void loadMesh(const String& meshname);
 
     void unloadMesh();
-
-    void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-        std::tr1::shared_ptr<Transfer::RemoteFileMetadata>response, Meshdata& md);
-    void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     virtual void setSelected(bool selected);
 
@@ -129,8 +126,7 @@ public:
         mResource = resourcePtr;
     }
 
-    Task::EventResponse downloadFinished(Task::EventPtr evbase, Meshdata& md);
-
+    void downloadMeshFile(URI const& uri);
 /*
     virtual bool loadMesh(const String&name){
         return false;
@@ -146,6 +142,7 @@ public:
 
     protected:
 
+    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<Transfer::DenseData> response);
 };
 
 }

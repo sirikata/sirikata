@@ -1,0 +1,568 @@
+/*  Sirikata Transfer -- Content Distribution Network
+ *  TransferTest.hpp
+ *
+ *  Copyright (c) 2010, Jeff Terrace
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/*  Created on: Jan 18, 2010 */
+
+#include <cxxtest/TestSuite.h>
+
+#include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/CachedServiceLookup.hpp>
+
+#include <sirikata/core/transfer/ServiceManager.hpp>
+#include <sirikata/core/transfer/NameLookupManager.hpp>
+#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
+
+#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
+
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
+
+#include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/transfer/HttpManager.hpp>
+
+#include <string>
+
+using namespace Sirikata;
+using boost::asio::ip::tcp;
+
+class HttpTransferTest : public CxxTest::TestSuite {
+
+public:
+
+    boost::condition_variable mDone;
+    boost::mutex mMutex;
+    std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> mHttpResponse;
+
+    boost::mutex mNumCbsMutex;
+    int mNumCbs;
+
+    void setUp() {
+
+    }
+
+    void tearDown() {
+
+    }
+
+    void testRawHttp() {
+
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        using std::tr1::placeholders::_3;
+
+        Network::Address addr("cdn.sirikata.com", "http");
+        std::map<std::string, std::string>::const_iterator it;
+        std::ostringstream request_stream;
+        boost::unique_lock<boost::mutex> lock(mMutex);
+
+
+        /*
+         * For HEAD name request, check for File-Size and Hash headers
+         * and make sure body is null, content length is not present,
+         * http status is 200
+         */
+        request_stream.str("");
+        request_stream << "HEAD /dns/global/jkusnerz/Boulder_Spire_01.mesh HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing head metadata request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            Transfer::TransferMediator * mTransferMediator;
+            std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+            TS_ASSERT(it == mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("File-Size");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            it = mHttpResponse->getHeaders().find("Hash");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT( !(mHttpResponse->getData()) );
+        }
+
+
+
+        /*
+         * For HEAD file request, make sure body is null,
+         * content length is present and correct, status code is 200
+         */
+        request_stream.str("");
+        request_stream << "HEAD /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing head file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            TS_ASSERT( !(mHttpResponse->getData()) );
+        }
+
+
+
+        /*
+         * For GET file request, check content length is present,
+         * content length = data size, http status code 200,
+         * check content length = correct size of file
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing get file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getData());
+            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+        }
+
+
+
+
+        /*
+         * For GET file range request, check content length is present,
+         * content length = range size, http status code 200
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Range: bytes=10-20\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing get file range request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getData());
+            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11);
+            SILOG(transfer, debug, "content length is " << mHttpResponse->getContentLength());
+            SILOG(transfer, debug, "data length is " << mHttpResponse->getData()->length());
+        }
+
+
+
+
+
+        /*
+         * Do a GET request with no Connection: close to test persistent
+         * connections. check content length is present,
+         * content length = data size, http status code 200,
+         * check content length = correct size of file
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing persistent get file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getData());
+            TS_ASSERT(mHttpResponse->getData()->length() == mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+        }
+
+
+
+        /*
+         * Now, let's plug in a bunch of persistent connections (no connection:close)
+         * all at once to stress test
+         */
+        mNumCbs = 20;
+        for(int i=0; i<20; i++) {
+            request_stream.str("");
+            request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+            request_stream << "Host: cdn.sirikata.com\r\n";
+            request_stream << "Accept: */*\r\n\r\n";
+
+            SILOG(transfer, debug, "Issuing persistent get file request #" << i+1);
+            Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                    std::tr1::bind(&HttpTransferTest::multi_request_finished, this, _1, _2, _3));
+        }
+
+        mDone.wait(lock);
+
+
+    }
+
+    void multi_request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+
+        SILOG(transfer, debug, "multi_request_finished callback");
+
+        if (error == Transfer::HttpManager::SUCCESS) {
+            TS_ASSERT(response);
+            if(response) {
+                TS_ASSERT(response->getHeaders().size() != 0);
+                std::map<std::string, std::string>::const_iterator it = response->getHeaders().find("Content-Length");
+                TS_ASSERT(it != response->getHeaders().end());
+                TS_ASSERT(response->getStatusCode() == 200);
+                TS_ASSERT(response->getData());
+                TS_ASSERT(response->getData()->length() == response->getContentLength());
+                TS_ASSERT(response->getContentLength() == 11650);
+            }
+        } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+            TS_FAIL("HTTP Request parsing failed");
+        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+            TS_FAIL("HTTP Response parsing failed");
+        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+        } else {
+            TS_FAIL("Got unknown response code from HttpManager");
+        }
+
+        boost::unique_lock<boost::mutex> lock(mNumCbsMutex);
+        mNumCbs--;
+        SILOG(transfer, debug, "Finished stress test file, still " << mNumCbs << " left");
+        if(mNumCbs == 0) {
+            mDone.notify_all();
+        }
+    }
+
+    void request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+
+        std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> bad;
+        mHttpResponse = bad;
+
+        if (error == Transfer::HttpManager::SUCCESS) {
+            mHttpResponse = response;
+        } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+            TS_FAIL("HTTP Request parsing failed");
+        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+            TS_FAIL("HTTP Response parsing failed");
+        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+        } else {
+            TS_FAIL("Got unknown response code from HttpManager");
+        }
+
+        mDone.notify_all();
+    }
+
+};
+
+boost::condition_variable done;
+boost::mutex mut;
+int numClis = 0;
+
+class RequestVerifier {
+public:
+    typedef std::tr1::function<void()> VerifyFinished;
+    virtual void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
+            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) = 0;
+    virtual ~RequestVerifier() {}
+};
+
+class MetadataVerifier
+    : public RequestVerifier {
+protected:
+    uint64 mFileSize;
+    Transfer::Fingerprint mHash;
+    Transfer::URI mURI;
+    std::tr1::shared_ptr<Transfer::RemoteFileMetadata> mMetadata;
+
+    void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+            std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response, VerifyFinished cb) {
+        SILOG(transfer, debug, "verifying metadata");
+        TS_ASSERT(response);
+        TS_ASSERT(response->getSize() == mFileSize);
+        TS_ASSERT(response->getFingerprint() == mHash);
+        TS_ASSERT(response->getURI() == mURI);
+        mMetadata = response;
+	
+	
+	cb();
+    }
+
+public:
+    MetadataVerifier(Transfer::URI uri, uint64 file_size, const char * hash)
+        : mFileSize(file_size), mHash(Transfer::Fingerprint::convertFromHex(hash)), mURI(uri) {
+    }
+    void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
+            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+        std::tr1::shared_ptr<Transfer::TransferRequest> req(
+                new Transfer::MetadataRequest(mURI, priority, std::tr1::bind(
+                &MetadataVerifier::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
+        pool->addRequest(req);
+    }
+};
+
+
+class ChunkVerifier
+    : public MetadataVerifier {
+private:
+    uint64 mChunkSize;
+    Transfer::Fingerprint mChunkHash;
+
+public:
+    ChunkVerifier(Transfer::URI uri, uint64 file_size, const char * file_hash,
+            uint64 chunk_size, const char * chunk_hash)
+        : MetadataVerifier(uri, file_size, file_hash), mChunkSize(chunk_size),
+          mChunkHash(Transfer::Fingerprint::convertFromHex(chunk_hash)) {
+	        }
+    void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
+            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+        MetadataVerifier::addToPool(pool, std::tr1::bind(&ChunkVerifier::metadataFinished, this, pool, cb, priority), priority);
+    }
+    void metadataFinished(std::tr1::shared_ptr<Transfer::TransferPool> pool,
+            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+      
+        //Make sure chunk given is part of file
+        std::tr1::shared_ptr<Transfer::Chunk> chunk;
+        const Transfer::ChunkList & chunks = mMetadata->getChunkList();
+	for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
+            if(it->getHash() == mChunkHash) {
+                std::tr1::shared_ptr<Transfer::Chunk> found(new Transfer::Chunk(*it));
+                chunk = found;
+            }
+        } 
+        TS_ASSERT(chunk);
+
+        std::tr1::shared_ptr<Transfer::TransferRequest> req(
+                new Transfer::ChunkRequest(mURI, *mMetadata, *chunk, priority, std::tr1::bind(
+                &ChunkVerifier::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
+			
+        pool->addRequest(req);
+    }
+    void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response, VerifyFinished cb) {      	
+	
+        SILOG(transfer, debug, "verifying chunk");
+        TS_ASSERT(request);
+        TS_ASSERT(response);
+        SILOG(transfer, debug, "response size = " << response->size() << ", req size = " << request->getChunk().getRange().size() );
+        TS_ASSERT(response->size() == request->getChunk().getRange().size());
+        TS_ASSERT(Transfer::Fingerprint::computeDigest(response->data(), response->length()) ==
+                request->getChunk().getHash());
+        cb();
+    }
+};
+
+class SampleClient {
+
+	Transfer::TransferMediator& mTransferMediator;
+	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+	const std::string mClientID;
+	std::vector<std::tr1::shared_ptr<RequestVerifier> > mReqList;
+
+public:
+
+	SampleClient(Transfer::TransferMediator& transferMediator, const std::string & clientID,
+	        std::vector<std::tr1::shared_ptr<RequestVerifier> > reqList) :
+		mTransferMediator(transferMediator), mClientID(clientID), mReqList(reqList) {
+		boost::unique_lock<boost::mutex> lock(mut);
+		numClis++;
+	}
+
+	void run() {
+		using std::tr1::placeholders::_1;
+
+		//Register with the transfer mediator!
+		mTransferPool = mTransferMediator.registerClient(mClientID);
+
+        for(std::vector<std::tr1::shared_ptr<RequestVerifier> >::iterator it = mReqList.begin(); it != mReqList.end(); it++) {
+            float pri = rand()/(float(RAND_MAX)+1);
+            (*it)->addToPool(mTransferPool, std::tr1::bind(&SampleClient::request_finished, this), pri);
+        }
+
+	}
+
+	void request_finished() {
+	    SILOG(transfer, debug, "request finished!");
+        boost::unique_lock<boost::mutex> lock(mut);
+        numClis--;
+        if(numClis <= 0) {
+            done.notify_all();
+        }
+	}
+
+};
+
+class TransferTest : public CxxTest::TestSuite {
+
+	//for ease of use
+	typedef Transfer::URIContext URIContext;
+
+	//Event-based / Thread stuff
+	Task::WorkQueue* mWorkQueue;
+	Task::GenEventManager* mEventSystem;
+	Thread* mEventProcessThread;
+
+	//Set to true when event manager should shut down
+	volatile bool mDestroyEventManager;
+
+	//Mediates transfers between subsystems (graphics, physics, etc)
+	Transfer::TransferMediator& mTransferMediator;
+
+	SampleClient* mSampleClient1;
+	SampleClient* mSampleClient2;
+	SampleClient* mSampleClient3;
+
+	Thread* mClientThread1;
+	Thread* mClientThread2;
+	Thread* mClientThread3;
+	ThreadSafeQueue<int> mTestQueue;
+
+public:
+
+	TransferTest()
+        : mTransferMediator(Transfer::TransferMediator::getSingleton()) {
+	    CxxTest::TestSuite();
+	}
+
+	void setUp() {
+		mDestroyEventManager = false;
+
+		//Initialize main worker thread for event-based stuff
+		mWorkQueue = new Task::ThreadSafeWorkQueue;
+		mEventSystem = new Task::GenEventManager(mWorkQueue);
+		mEventProcessThread = new Thread(std::tr1::bind(
+			&TransferTest::sleep_processEventQueue, this));
+
+		//5 urls
+		std::vector<std::tr1::shared_ptr<RequestVerifier> > list1;
+		list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+		        Transfer::URI("meerkat:///test/polySurface01.mesh"),
+		        156125,
+		        "85dbb7af4eed5c4e01eb64c70fc299946a2c19080173ea648948cca2039e30b4")));
+
+		//4 new urls, 1 overlap from list1
+		std::vector<std::tr1::shared_ptr<RequestVerifier> > list2;
+        list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/blackclear.png"),
+                167,
+                "b18db4fb7971117be7124c7a05e2afb265fb26d0181f15f038a4628e2ae9b571")));
+
+		//3 new urls, 1 overlap from list1, 1 overlap from list2
+		std::vector<std::tr1::shared_ptr<RequestVerifier> > list3;
+        /*list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/arcade.os"),
+                6246,
+                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));*/
+		list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new ChunkVerifier(
+		                Transfer::URI("meerkat:///test/arcade.os"),
+		                6246,
+		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea",
+		                6246,http://cdn.sirikata.com/dns/global/test/polySurface01.mesh
+		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
+
+		mSampleClient1 = new SampleClient(mTransferMediator, "sample1", list1);
+		mSampleClient2 = new SampleClient(mTransferMediator, "sample2", list2);
+		mSampleClient3 = new SampleClient(mTransferMediator, "sample3", list3);
+
+		mClientThread1 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient1));
+		mClientThread2 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient2));
+		mClientThread3 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient3));
+	}
+
+	void tearDown() {
+	    //Bring down the event manager thread
+	    mDestroyEventManager = true;
+	    mWorkQueue->enqueue(NULL);
+        mEventProcessThread->join();
+
+        delete mEventProcessThread;
+        delete mEventSystem;
+        delete mWorkQueue;
+
+        //Make sure clients have exited
+	    mClientThread1->join();
+        mClientThread2->join();
+        mClientThread3->join();
+
+        //Wait for transfer mediator thread to exit
+        mTransferMediator.cleanup();
+	}
+
+	void sleep_processEventQueue() {
+		while (!mDestroyEventManager) {
+			mWorkQueue->dequeueBlocking();
+		}
+	}
+
+	void testTransferRequests() {
+		srand ( time(NULL) );
+		boost::unique_lock<boost::mutex> lock(mut);
+		done.wait(lock);
+	}
+
+};
+

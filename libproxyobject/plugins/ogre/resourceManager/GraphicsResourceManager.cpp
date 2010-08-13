@@ -133,6 +133,7 @@ SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const Resource
     curSharedPtr = curWeakPtr.lock();
   }
   */
+/*
   if (curSharedPtr) {
     return curSharedPtr;
   }
@@ -157,7 +158,7 @@ SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const Resource
 
   mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
   mResources.insert(curSharedPtr.get());
-
+*/
   return curSharedPtr;
 }
 SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, GraphicsResource::Type resourceType)
@@ -169,7 +170,27 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
   if (curSharedPtr) {
     return curSharedPtr;
   }
-  curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType);
+  if (resourceType == GraphicsResource::NAME) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType);
+  }
+  else if (resourceType == GraphicsResource::MESH) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(id);
+  }
+  else if (resourceType == GraphicsResource::MODEL) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceModel>(id);
+  }
+  else if (resourceType == GraphicsResource::MATERIAL) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceMaterial>(id);
+  }
+  else if (resourceType == GraphicsResource::TEXTURE) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceTexture>(id);
+  }
+  else if (resourceType == GraphicsResource::SHADER) {
+    curSharedPtr = GraphicsResource::construct<GraphicsResourceShader>(id);
+  }
+  else {
+    assert(false);
+  }
 
   mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
   mResources.insert(curSharedPtr.get());

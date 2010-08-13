@@ -50,10 +50,14 @@ namespace Meru {
 ResourceRequestor::~ResourceRequestor() {
 }
 
-ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const RemoteFileId &hash, ResourceRequestor* resourceRequestor)
-: DependencyTask(mgr->getQueue()), mHash(hash), mRange(true), mResourceRequestor(resourceRequestor)
+ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const URI &uri, ResourceRequestor* resourceRequestor, DownloadCallback cb)
+ : DependencyTask(mgr == NULL ? NULL : mgr->getQueue()), mURI(uri), mRange(true), mResourceRequestor(resourceRequestor), cb(cb)
 {
   mStarted = false;
+  if (mgr == NULL) {
+      customCb = true;
+  }
+   else customCb = false;
 }
 
 ResourceDownloadTask::~ResourceDownloadTask()
@@ -63,15 +67,9 @@ ResourceDownloadTask::~ResourceDownloadTask()
   //EventSource::getSingleton().unsubscribe(mCurrentDownload);
 }
 
-void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
-  for (Transfer::DenseDataList::const_iterator iter =
-           dataToMerge.Transfer::DenseDataList::begin();
-       iter != dataToMerge.Transfer::DenseDataList::end();
-       ++iter) {
-    iter->addToList<Transfer::DenseDataList>(iter.std::list<Transfer::DenseDataPtr>::const_iterator::operator*(), mMergeData);
-  }
-}
-
+//Old Download completion callback, used with the TransferManager, no longer
+//necessary if all downloads go through the TransferMediator
+/*
 EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& event)
 {
   std::tr1::shared_ptr<DownloadCompleteEvent> transferEvent = DowncastEvent<DownloadCompleteEvent>(event);
@@ -90,18 +88,31 @@ EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& even
   finish(transferEvent->success());
   return EventResponse::del();
 }
+*/
+
+void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
+  for (Transfer::DenseDataList::const_iterator iter =
+           dataToMerge.Transfer::DenseDataList::begin();
+       iter != dataToMerge.Transfer::DenseDataList::end();
+       ++iter) {
+    iter->addToList<Transfer::DenseDataList>(iter.std::list<Transfer::DenseDataPtr>::const_iterator::operator*(), mMergeData);
+  }
+}
+
 
 void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
             std::tr1::shared_ptr<DenseData> response)
 {
-  if (response != NULL) {
+    if (response != NULL) {
+      if (customCb == false) {
+          SparseData data = SparseData();
+          data.addValidData(response);
 
-
-    SparseData data = SparseData();
-    data.addValidData(response);
-
-    mResourceRequestor->setResourceBuffer(data);
-    finish(true);
+          mResourceRequestor->setResourceBuffer(data);
+      } else {
+          cb(request, response);
+      }
+      finish(true);
   }
   else {
     finish(false);
@@ -112,14 +123,13 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> requ
 void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
             std::tr1::shared_ptr<RemoteFileMetadata> response)
 {
-
   if (response != NULL) {
 
     const Range *range = new Range(true);
-    const Chunk *chunk = new Chunk(mHash.fingerprint(), *range);
+    const Chunk *chunk = new Chunk(response->getFingerprint(), *range);
     const RemoteFileMetadata metadata = *response;
 
-    TransferRequestPtr req(new Transfer::ChunkRequest(mHash.uri(), metadata, *chunk, 1.0,
+    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, metadata, *chunk, 1.0,
 						    std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
     TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
@@ -128,25 +138,27 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
   }
   else {
     finish(false);
-    cout<<"failed metadata download"<<endl;
+    cout<<"Failed metadata download"<<endl;
   }
  }
 
 void ResourceDownloadTask::operator()()
 {
- mStarted = true;
- /* mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
-       std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
-       mRange);*/
 
+ mStarted = true;
 
  TransferRequestPtr req(
-                new MetadataRequest(mHash.uri(), 1, std::tr1::bind(
+                new MetadataRequest(mURI, 1, std::tr1::bind(
                 &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
   TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
+   pool->addRequest(req);
 
-  pool->addRequest(req);
+  //Old code that launches a download through the TransferManager, no longer
+  //necessary if download is triggered through the TransferMediator
+ /* mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
+       std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
+       mRange);*/
 
 }
 }

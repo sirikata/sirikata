@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- MeshObject Model Interface (Bridge Pattern)
- *  MeshObject.cpp
+/*  Meru
+ *  ResourceDownloadTask.cpp
  *
- *  Copyright (c) 2009, Mark C. Barnes
+ *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,17 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/proxyobject/models/MeshObject.hpp>
+using namespace std;
+using namespace Sirikata;
+using namespace Sirikata::Transfer;
+/*
+namespace Meru {
 
-namespace Sirikata {
-namespace Models {
-
-
-void MeshObject::parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-    std::tr1::shared_ptr<Transfer::DenseData> response)
+ResourceDownloadPlanner::ResourceDownloadPlanner()
 {
 
 }
-
-} // namespace Sirikata
 }
+*/

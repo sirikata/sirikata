@@ -77,7 +77,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
         std::tr1::shared_ptr<ProxyMeshObject> mProxyPtr;
 
     public:
-        virtual void setMesh ( URI const& rhs );
+        void parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
+        void setMesh ( URI const& rhs );
         virtual URI const& getMesh () const;
 
         virtual void setScale ( Vector3f const& rhs );

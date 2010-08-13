@@ -34,7 +34,7 @@
 
 namespace Meru {
 
-ResourceDependencyTask::ResourceDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash)
+ResourceDependencyTask::ResourceDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri)
 : DependencyTask(mgr->getQueue()),
   mResource(resource)
 {

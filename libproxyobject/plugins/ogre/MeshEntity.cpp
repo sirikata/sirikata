@@ -41,11 +41,15 @@
 #include "WebView.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferManager.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"
+#include "resourceManager/GraphicsResourceManager.hpp"
+#include "resourceManager/ResourceDownloadTask.hpp"
 
 using namespace std;
 using namespace Sirikata::Transfer;
+using namespace Meru;
 
 namespace Sirikata {
 namespace Graphics {
@@ -283,15 +287,33 @@ void MeshEntity::setSelected(bool selected) {
     }
 }
 
+void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<DenseData> response)
+{
+    ProxyObject *obj = mProxy.get();
+    ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
+    if (meshProxy) {
+        meshProxy->meshDownloaded(request, response);
+    }
+}
+
+void MeshEntity::downloadMeshFile(URI const& uri)
+{
+    ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, uri, NULL, std::tr1::bind(&MeshEntity::MeshDownloaded,
+            this, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
+    (*dl)();
+}
+
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 // MCB: integrate these with the MeshObject model class
 
 void MeshEntity::onSetMesh ( URI const& meshFile )
 {
+    downloadMeshFile(meshFile);
+
     // MCB: responsibility to load model meshes must move to MeshObject plugin
     /// hack to support collada mesh -- eventually this should be smarter
-    String fn=meshFile.filename();
+    String fn = meshFile.filename();
     bool is_collada=false;
     if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
     if (is_collada) {
@@ -345,7 +367,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
         Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
 
         // Get the instanced submesh
-        assert(geoinst.geometryIndex < md.geometry.size());
+        assert((unsigned int)geoinst.geometryIndex < md.geometry.size());
         const SubMeshGeometry& submesh = *md.geometry[geoinst.geometryIndex];
 
         int vertcount = submesh.positions.size();
@@ -403,39 +425,14 @@ void MeshEntity::createMesh(const Meshdata& md) {
     loadMesh(hash);                     /// this is here because we removed  mResource->loaded(true, mEpoch) in  ModelLoadTask::doRun
 }
 
-Task::EventResponse MeshEntity::downloadFinished(Task::EventPtr evbase, Meshdata& md) {
-    Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
-    if ((int)ev->getStatus())
-    {
-        std::cerr << "dbm debug ERROR MeshEntity::downloadFinished for: " << md.uri
-        << " status: " << (int)ev->getStatus()
-        << " == " << (int)Transfer::TransferManager::SUCCESS
-        << " textures: " << md.textures.size()
-        << " fingerprint: " << ev->fingerprint()
-        << " length: " << (int)ev->data().length()
-        << std::endl;
-    }
+void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
+    std::tr1::shared_ptr<DenseData> response, Meshdata& md) {
 
-    SILOG(ogre,fatal,ev->uri().toString() << " -> " << ev->fingerprint().convertToHexString());
-    mTextureFingerprints[ev->uri().toString()] = ev->fingerprint().convertToHexString();
+    mTextureFingerprints[request->getURI().toString()] = request->getIdentifier();
 
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
         Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
-
-    return Task::EventResponse::del();
-}
-
-void MeshEntity::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
-    std::tr1::shared_ptr<RemoteFileMetadata>response, Meshdata& md)
-{
-
-}
-
-void MeshEntity::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
-        std::tr1::shared_ptr<DenseData> response, Meshdata& md)
-{
-
 }
 
 void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
@@ -448,26 +445,13 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
         Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
         return;
     }
-    TransferMediator *mTransferMediator = &(TransferMediator::getSingleton());
-
-    TransferPoolPtr mTransferPool = mTransferMediator->registerClient("ColladaGraphics");
 
     for(TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
 
-         TransferRequestPtr req(new MetadataRequest(URI(texURI), 1, std::tr1::bind(&MeshEntity::metadataFinished,
-                  this, _1, _2, md)));
-
-        //mTransferPool
-
-        /*mScene->mTransferManager->download(
-            Transfer::URI(texURI),
-            std::tr1::bind(
-                &MeshEntity::downloadFinished,
-                this,_1,md
-            ),
-            Transfer::Range(true)
-        );*/
+        ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL,
+           std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));
+        (*dl)();
     }
 }
 

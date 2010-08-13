@@ -51,7 +51,7 @@ namespace Meru {
 class ModelDependencyTask : public ResourceDependencyTask
 {
 public:
-  ModelDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
+  ModelDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
   virtual ~ModelDependencyTask();
 
   virtual void operator()();
@@ -60,7 +60,7 @@ public:
 class ModelLoadTask : public ResourceLoadTask
 {
 public:
-  ModelLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int epoch);
+  ModelLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const URI &uri, unsigned int epoch);
 
   virtual void doRun();
 };
@@ -68,7 +68,7 @@ public:
 class ModelUnloadTask : public ResourceUnloadTask
 {
 public:
-  ModelUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch);
+  ModelUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int epoch);
 
   virtual void doRun();
 
@@ -76,8 +76,8 @@ protected:
   //bool mainThreadUnload(String name);
 };
 
-GraphicsResourceModel::GraphicsResourceModel(const RemoteFileId &resourceID)
-: GraphicsResourceAsset(resourceID, GraphicsResource::MODEL)
+GraphicsResourceModel::GraphicsResourceModel(const URI &uri)
+: GraphicsResourceAsset(uri, GraphicsResource::MODEL)
 {
 
 }
@@ -88,9 +88,8 @@ GraphicsResourceModel::~GraphicsResourceModel()
     doUnload();
 }
 
-void GraphicsResourceModel::resolveName(const URI& id, const ResourceHash& hash)
+void GraphicsResourceModel::resolveName(const URI& id)
 {
-  mMaterialNames[id.toString()] = hash.fingerprint().convertToHexString();
   if (mLoadState == LOAD_LOADED)
     setMaterialNames(this);
 }
@@ -123,28 +122,28 @@ void GraphicsResourceModel::setMaterialNames(GraphicsResourceModel* resourcePtr)
 
 ResourceDownloadTask* GraphicsResourceModel::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-  return new ResourceDownloadTask(manager, mResourceID, resourceRequestor);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceModel::createDependencyTask(DependencyManager *manager)
 {
-  return new ModelDependencyTask(manager, getWeakPtr(), mResourceID.toString());
+  return new ModelDependencyTask(manager, getWeakPtr(), mURI);
 }
 
 ResourceLoadTask* GraphicsResourceModel::createLoadTask(DependencyManager *manager)
 {
-    return new ModelLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
+    return new ModelLoadTask(manager, getSharedPtr(), mURI, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceModel::createUnloadTask(DependencyManager *manager)
 {
-  return new ModelUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mLoadEpoch);
+  return new ModelUnloadTask(manager, getWeakPtr(), mURI, mLoadEpoch);
 }
 
 /***************************** MODEL DEPENDENCY TASK *************************/
 
-ModelDependencyTask::ModelDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash)
-: ResourceDependencyTask(mgr, resource, hash)
+ModelDependencyTask::ModelDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri)
+: ResourceDependencyTask(mgr, resource, uri)
 {
 
 }
@@ -212,8 +211,8 @@ void ModelDependencyTask::operator()()
 
 /***************************** MODEL LOAD TASK *************************/
 
-ModelLoadTask::ModelLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int epoch)
-: ResourceLoadTask(mgr, resourcePtr, hash, epoch)
+ModelLoadTask::ModelLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const URI &uri, unsigned int epoch)
+: ResourceLoadTask(mgr, resourcePtr, uri, epoch)
 {
 }
 
@@ -224,8 +223,8 @@ void ModelLoadTask::doRun() {
 
 /***************************** MODEL UNLOAD TASK *************************/
 
-ModelUnloadTask::ModelUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch)
-: ResourceUnloadTask(mgr, resource, hash, epoch)
+ModelUnloadTask::ModelUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int epoch)
+: ResourceUnloadTask(mgr, resource, uri, epoch)
 {
 
 }
@@ -240,13 +239,13 @@ bool ModelUnloadTask::mainThreadUnload(String name)
 void ModelUnloadTask::doRun()
 {
   /*I REALLY wish this were true*/
-  // SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&ModelUnloadTask::mainThreadUnload, this, mHash));
-
-  String hash = mHash.convertToHexString(); //CDNArchive::canonicalMhashName(mHash);
+  // SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&ModelUnloadTask::mainThreadUnload,
+  // this, mHash));
+    String str = mURI.toString(); //CDNArchive::canonicalMhashName(mHash);
   Ogre::MeshManager* meshManager = Ogre::MeshManager::getSingletonPtr();
-  meshManager->remove(hash);
+  meshManager->remove(str);
 
-  Ogre::ResourcePtr meshResource = meshManager->getByName(hash);
+  Ogre::ResourcePtr meshResource = meshManager->getByName(str);
   assert(meshResource.isNull());
 
   SharedResourcePtr resource = mResource.lock();
