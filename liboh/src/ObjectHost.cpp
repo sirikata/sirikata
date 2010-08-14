@@ -234,18 +234,16 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
   entities.
 */
 
-
 void ObjectHost::updateAddressable() const
 {
-   //std::cout << "\n\n\n\nIN ObjectHost::updateAddressable()" << "\n\n\n\n";
    // Pull out the list of all the entitites
     
     HostedObjectMap::const_iterator it = mHostedObjects.begin();
-	for(  ; it != mHostedObjects.end(); it++)
-	{
-	  HostedObjectPtr objPtr = (*it).second;
-	  objPtr->updateAddressable();
-	}
+    for(  ; it != mHostedObjects.end(); it++)
+    {
+        HostedObjectPtr objPtr = (*it).second;
+        objPtr->updateAddressable();
+    }
 }
 
 

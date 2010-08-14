@@ -1450,6 +1450,26 @@ void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotion
     sendLocUpdateRequest(space, &loc, NULL, NULL, NULL);
 }
 
+//bftm (could be a problem)
+//goes into proxymanager and gets out the current location of the presence
+//associated with
+//BFTM_FIXME: need to decide whether want the extrapolated position or last
+//known position.  (Right now, we're going with last known position.)
+Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const ObjectReference& oref)
+{
+    ProxyManagerPtr proxy_manager = getProxymanager(space);
+    ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+    return proxy_obj->getPosition();
+}
+
+
+Vector3d HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
+{
+    ProxyManagerPtr proxy_manager = getProxymanager(space);
+    ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+    return proxy_obj->getVelocity();
+}
+
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient) {
     sendLocUpdateRequest(space, NULL, &orient, NULL, NULL);
 }
@@ -1494,5 +1514,15 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
             OBJECT_PORT_LOCATION, NULL);
     }
 }
+
+//BFTM_FIXME: need to actually write this function (called by ObjectHost's updateAddressable).
+void HostedObject::updateAddressable()
+{
+    std::cout<<"\n\n\n";
+    std::cout<<"BFTM: need to actually write this function";
+    std::cout<<"\n\n\n";
+    assert(false);
+}
+
 
 }

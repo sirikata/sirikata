@@ -105,8 +105,7 @@ public:
     void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
     
     void  setPositionFunction(const SpaceID* sID, const Vector3d& vec3d);
-    v8::Handle<v8::Value> getPositionFunction(const SpaceID* sID);
-
+    v8::Handle<v8::Value> getPositionFunction(const SpaceID* sID, const ObjectReference* oref);
     
     v8::Handle<v8::Value> getVisualScale();
     void setVisualScale(v8::Local<v8::Value>& newvis);

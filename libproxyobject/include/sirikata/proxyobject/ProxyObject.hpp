@@ -136,6 +136,13 @@ public:
     inline Vector3d getPosition() const{
         return Vector3d(mLoc.position());
     }
+
+    /// bftm returns the last updated velocity for this object
+    inline Vector3d getVelocity() const
+    {
+        return Vector3d(mLoc.velocity());
+    }
+    
     /// Returns the last updated Quaternion for this object.
     inline const Quaternion& getOrientation() const{
         return mOrientation.position();

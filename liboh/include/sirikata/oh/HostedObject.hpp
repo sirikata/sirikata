@@ -105,7 +105,10 @@ protected:
 
 //------- Members
     ObjectHostContext* mContext;
-
+  public:
+    typedef std::set<SpaceID> SpaceSet;
+  private:
+    SpaceSet mSpaces;
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
@@ -200,32 +203,31 @@ public:
 
 	bool hasScript()
 	{
-	  return mHasScript;
+            return mHasScript;
 	}
 
 	void setHasScript(bool t)
 	{
-	  mHasScript = t;
+            mHasScript = t;
 	}
    
-    void setScriptType(String s)
+        void setScriptType(String s)
 	{
-	  mScriptType = s;
-
+            mScriptType = s;
 	}
 
 	void setScriptArgs(ObjectScriptManager::Arguments& args)
 	{
-	   mScriptArgs = args;
+            mScriptArgs = args;
 	}
 
-    String getScriptName()
+        String getScriptName()
 	{
-	  return mScriptName;
+            return mScriptName;
 	}
 	void setScriptName(String s)
 	{
-	  mScriptName = s;
+            mScriptName = s;
 	}
 
     void attachScript(const String& );
@@ -343,7 +345,8 @@ public:
     void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
 
   public:
-
+    //BFTM_FIXME: need to actually write this function.
+    void updateAddressable();
 
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
@@ -364,8 +367,12 @@ public:
     virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
 
     // Movement Interface
-    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+    //note: location update services both position and velocity
+    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);  
+    virtual Vector3d requestCurrentLocation (const SpaceID& space,const ObjectReference& oref);
+    virtual Vector3d requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
     virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
+
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
   private:

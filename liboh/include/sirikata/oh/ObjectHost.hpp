@@ -61,6 +61,7 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
+
 class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public PollingService {
     ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
@@ -193,6 +194,7 @@ public:
 
     void updateAddressable() const;
 
+    
     /** Attach and run this script after the entity is initialized */
     void attachScript(String&) const;
 

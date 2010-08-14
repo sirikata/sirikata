@@ -75,7 +75,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
    mManager(jMan)
 {
     v8::HandleScope handle_scope;
-    mContext = Context::New(NULL, mManager->mGlobalTemplate);
+    mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
     mPres = NULL; //bftm change.
     
@@ -150,7 +150,13 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
 
   const HostedObject::SpaceSet& spaces = mParent->spaces();
   SpaceID spaceider = *(spaces.begin());
-  ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
+
+  //ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
+  //The .object call to SpaceObjectReference gets out the ObjectReference.
+  ODP::Endpoint dest (spaceider,(mParent->id(spaceider)).object(),Services::RPC);
+
+  
+
   mMessagingPort->send(dest, MemoryReference(serialized.data(), serialized.length()));
 
 }
@@ -161,7 +167,7 @@ void JSObjectScript::reboot()
   // Need to delete the existing context? v8 garbage collects?
 
   v8::HandleScope handle_scope;
-  mContext = Context::New(NULL, mManager->mGlobalTemplate);
+  mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
   Local<Object> global_obj = mContext->Global();
   Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
   global_proto->SetInternalField(0, External::New(this));
@@ -238,19 +244,20 @@ void JSObjectScript::test() const {
     SpaceID space = *(spaces.begin());
 
     Location loc = mParent->getLocation( space );
-    loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
+    //loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
     loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
     loc.setAxisOfRotation( Vector3<float32>(0.0f, 0.0f, 1.0f) );
     loc.setAngularSpeed(3.14159/10.0);
     mParent->setLocation( space, loc );
 
-//    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
+    //    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
     mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
 
     printf("\n\n\n\n\nI GOT HERE\n\n\n");
     //doing a simple testSendMessage
     bftm_testSendMessageBroadcast("default message");
 }
+
 
 
 
@@ -333,7 +340,7 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
 {
-    Context::Scope context_scope(mContext);
+    v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
     TryCatch try_catch;
 
@@ -583,33 +590,55 @@ CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, Quat
 CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
 CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
-void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec3d)
+// void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec3d)
+// {
+//     Location loc = mParent->getLocation(*sID);
+//     loc.setPosition(vec3d);
+//     mParent->setLocation(*sID,loc);
+// }
+
+
+//merge rewrite
+//BFTM_FIXME: Unresolved question: should this function zero the velocity as well?  I
+//say yes!!!
+void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& posVec)
 {
-    Location loc = mParent->getLocation(*sID);
-    loc.setPosition(vec3d);
-    mParent->setLocation(*sID,loc);
+    //create a new TimedMotionVector
+    //TimedMotionVector tmv (time_when, TimedMotionVector::PositionType);
+    //TimedMotionVector tmv (time_when, MotionVector3f(  position, veloc ));
+
+    //FIXME: this function zeros out the velocity as well.
+    Vector3d velocVec;
+    velocVec.x = 0;
+    velocVec.y = 0;
+    velocVec.z = 0;
+    TimedMotionVector tmv (Time::local(), MotionVector3f(  posVec, velocVec ));
+    mParent->requestLocationUpdate(*sID,tmv);
+
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID)
-{
-    std::cout<<"\n\n";
-    std::cout<<"Got into the getPositionFunction";
-    std::cout<<"\n\n";
-    std::cout.flush();
+// v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID)
+// {
+//     Location loc = mParent->getLocation(*sID);
     
-    Location loc = mParent->getLocation(*sID);
+//     //FIXME: note that CreateJSResult may not work with vec3, which is what
+//     //second arg returns
+//     return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
+// }
 
-
-    std::cout<<"\n\n";
-    std::cout<<"Got location the getPositionFunction";
-    std::cout<<"\n\n";
-    std::cout.flush();
+//merge rewrite
+v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID, const ObjectReference* oref)
+{
+    Location loc = mParent->getLocation(*sID, *oref);
     
     //FIXME: note that CreateJSResult may not work with vec3, which is what
     //second arg returns
     return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
 }
+
+
+
 
 
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
@@ -913,6 +942,10 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
         JSPresenceStruct* presToAdd = new JSPresenceStruct;
         presToAdd->sID = space_id;
         presToAdd->jsObjScript = this;
+
+        fix me: need to add in a field for the oref;
+
+        
         mPresenceList.push_back(presToAdd);
         
         tmpObj->SetInternalField(PRESENCE_FIELD,External::New(presToAdd));
