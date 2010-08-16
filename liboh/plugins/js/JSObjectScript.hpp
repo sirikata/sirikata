@@ -85,6 +85,10 @@ public:
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
+    
+
+    
+    
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
     
@@ -95,16 +99,19 @@ public:
     void create_entity(Vector3d&, String&);
 
     /** create a new presence of this entity */
-    void create_presence(const SpaceID&);
-
-
+    //void create_presence(const SpaceID&);
+    void create_presence(const SpaceID& new_space,std::string new_mesh);
+    void create_presence(const SpaceID& new_space);
+    
     //v8::Handle<v8::String> getVisual();
     //void setVisual(v8::Local<v8::Value>& newvis);
     
     v8::Handle<v8::String> getVisual(const SpaceID* sID);
-    void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
+    //void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
+    void  setVisual(const SpaceID* sID, const std::string& newMeshString);
     
-    void  setPositionFunction(const SpaceID* sID, const Vector3d& vec3d);
+
+    void  setPositionFunction(const SpaceID* sID, const Vector3f& posVec);
     v8::Handle<v8::Value> getPositionFunction(const SpaceID* sID, const ObjectReference* oref);
     
     v8::Handle<v8::Value> getVisualScale();
@@ -145,6 +152,7 @@ private:
 
     
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
+
     
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);

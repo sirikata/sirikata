@@ -20,6 +20,9 @@ struct JSPresenceStruct
     
     //likely that the jsObjScript won't be owned by JSPresence (don't delete it myself).
     JSObjectScript*        jsObjScript;
+
+    //Object reference
+    ObjectReference* oref;
 };
 
 

@@ -98,6 +98,7 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     target_script->timeout(Duration::seconds(native_dur), target_persist, cb_persist);
 
+    
     return v8::Undefined();
 }
 

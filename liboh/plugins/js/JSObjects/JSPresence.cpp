@@ -46,13 +46,14 @@ namespace Sirikata
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setMesh function.  Invalid presence struct.")) );
             
             //get the uri object from args
-            Transfer::URI* newMesh = getURI(args);
-            if (newMesh == NULL)
+            std::string uriLocation;
+            bool uriArgValid = getURI(args,uriLocation);
+            if (! uriArgValid)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
 
-            mStruct->jsObjScript->setVisual(mStruct->sID, newMesh);
 
-            delete newMesh;
+            mStruct->jsObjScript->setVisual(mStruct->sID, uriLocation);
+
 	    return v8::Undefined();
         }
 
@@ -82,16 +83,14 @@ namespace Sirikata
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
 
             //get first args
-            //Handle<Object> posArg = Handle<Object>::Cast(args[0]);
             Handle<Object> posArg = ObjectCast(args[0]);
 
             if ( ! Vec3Validate(posArg))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Wrong argument: require a vector for new positions.")) );
 
             
-            Vector3d newPos (Vec3Extract(posArg));
+            Vector3f newPos (Vec3Extract(posArg));
 
-                        
             mStruct->jsObjScript->setPositionFunction(mStruct->sID, newPos);
             return v8::Undefined();
             
@@ -104,7 +103,7 @@ namespace Sirikata
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
 
-            return mStruct->jsObjScript->getPositionFunction(mStruct->sID);
+            return mStruct->jsObjScript->getPositionFunction(mStruct->sID,mStruct->oref);
         }
 
         
@@ -114,7 +113,7 @@ namespace Sirikata
         //Takes in args, tries to get out the first argument, which should be a
         //string that we convert to a TransferURI object.  If anything fails,
         //then we just return null
-        Transfer::URI* getURI(const v8::Arguments& args)
+        bool getURI(const v8::Arguments& args,std::string& returner)
         {
             //assumes that the URI object is in the first 0th arg field
             Handle<Object> newVis = Handle<Object>::Cast(args[0]);
@@ -122,14 +121,14 @@ namespace Sirikata
             //means that the argument passed was not a string identifying where
             //we could get the uri
             if (!newVis->IsString()) 
-                return NULL;
+                return false;
 
             v8::String::Utf8Value newvis_str(newVis);
             if (! *newvis_str)
-                return NULL;
-            
-            Transfer::URI* returner = new Transfer::URI(*newvis_str);
-            return returner;
+                return false;
+
+            returner= std::string(*newvis_str);
+            return true;
         }
         
 

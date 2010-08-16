@@ -43,6 +43,8 @@ namespace Sirikata {
 
 typedef Provider< MeshListener* > MeshProvider;
 
+
+
 /** Represents any object with an attached mesh. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 :   public Models::MeshObject,

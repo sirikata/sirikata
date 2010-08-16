@@ -63,6 +63,12 @@
 #include "JSSystemNames.hpp"
 #include "JSPresenceStruct.hpp"
 
+#define FIXME_GET_SPACE() \
+    const HostedObject::SpaceSet& spaces = mParent->spaces(); \
+    assert(spaces.size() == 1);                               \
+    SpaceID space = *(spaces.begin());
+
+
 
 using namespace v8;
 using namespace std;
@@ -104,15 +110,20 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         //register for scripting messages from user
         SpaceID space_id=*space_it;
         mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
+
+        //FIXME: using deprecated version of receive (that's why we added the 1
+        //there).  Change it to the new MessageHandler function when you get a chance.
         if (mScriptingPort)
-            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2) );
+            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2),1 );
 
 
         //register port for messaging
         mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
 
+        //FIXME: using deprecated version of receive (that's why we added the 1
+        //there).  Change it to the new MessageHandler function when you get a chance.
         if (mMessagingPort)
-            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2) );
+            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2),1 );
 
         space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
@@ -243,21 +254,20 @@ void JSObjectScript::test() const {
 
     SpaceID space = *(spaces.begin());
 
-    Location loc = mParent->getLocation( space );
-    //loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
-    loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
-    loc.setAxisOfRotation( Vector3<float32>(0.0f, 0.0f, 1.0f) );
-    loc.setAngularSpeed(3.14159/10.0);
-    mParent->setLocation( space, loc );
+//     Location loc = mParent->getLocation( space );
+//     //loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
+//     loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
+//     loc.setAxisOfRotation( Vector3<float32>(0.0f, 0.0f, 1.0f) );
+//     loc.setAngularSpeed(3.14159/10.0);
+//     mParent->setLocation( space, loc );
 
-    //    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
-    mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
+//     //    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
+//     mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
 
-    printf("\n\n\n\n\nI GOT HERE\n\n\n");
-    //doing a simple testSendMessage
+//     printf("\n\n\n\n\nI GOT HERE\n\n\n");
+//     //doing a simple testSendMessage
     bftm_testSendMessageBroadcast("default message");
 }
-
 
 
 
@@ -381,7 +391,9 @@ void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAva
 
     //get a list of all object references through prox
     //ProxyObjectPtr proxPtr = mParent->getProxyManager(spaceider);
-    ObjectHostProxyManager* proxManagerPtr = mParent->bftm_getProxyManager(spaceider);
+    //ObjectHostProxyManager* proxManagerPtr =
+    //mParent->getProxyManager(spaceider);
+    ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(spaceider);
 
     //FIX ME: May need to check if get back null ptr.
 
@@ -434,9 +446,12 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
     ProtectedJSCallback(ctx, target, cb, argc, argv);
 }
 
-void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb) {
+void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+{
     // FIXME using the raw pointer isn't safe
-    mParent->getObjectHost()->getSpaceIO()->post(
+    FIXME_GET_SPACE();
+    
+    mParent->getTracker(space)->getIOService()->post(
         dur,
         std::tr1::bind(
             &JSObjectScript::handleTimeout,
@@ -445,6 +460,18 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
             cb
         )
     );
+
+        
+    //
+//     mParent->getObjectHost()->getSpaceIO()->post(
+//         dur,
+//         std::tr1::bind(
+//             &JSObjectScript::handleTimeout,
+//             this,
+//             target,
+//             cb
+//         )
+//     );
 }
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
@@ -477,10 +504,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 }
 
 
-#define FIXME_GET_SPACE() \
-    const HostedObject::SpaceSet& spaces = mParent->spaces(); \
-    assert(spaces.size() == 1);                               \
-    SpaceID space = *(spaces.begin());
 
 // v8::Handle<v8::String> JSObjectScript::getVisual() {
 //     FIXME_GET_SPACE();
@@ -506,23 +529,32 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceID* sID)
 {
+    //std::string url_string = mParent->requestMeshUri(*sID, *oref).toString();
+    //return v8::String::New( url_string.c_str(), url_string.size() );
+    assert(false);
+    std::string returner = "Not working yet";
+    return v8::String::New(returner.c_str(), returner.size());
 
-    String url_string = mParent->getVisual(*sID).toString();
-    return v8::String::New( url_string.c_str(), url_string.size() );
+//    return v8::Undefined();
 }
 
 //FIXME: May want to have an error handler for this function.
-void  JSObjectScript::setVisual(const SpaceID* sID, const Transfer::URI* newMesh)
+void  JSObjectScript::setVisual(const SpaceID* sID, const std::string& newMeshString)
 {
-    mParent->setVisual(*sID,*newMesh);
+    mParent->requestMeshUpdate(*sID,newMeshString);
 }
+
 
 
 //FIXME: need to return the right space here.
 //lkjs; need to return the visuals for a particular space.;
 v8::Handle<v8::Value> JSObjectScript::getVisualScale() {
-    FIXME_GET_SPACE();
-    return CreateJSResult(mContext, mParent->getVisualScale(space));
+    //FIXME: actually need to write this function.
+    assert(false);
+    return v8::Undefined();
+    //lkjs;
+    //FIXME_GET_SPACE();
+    //return CreateJSResult(mContext, mParent->getVisualScale(space));
 }
 
 void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
@@ -532,7 +564,10 @@ void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
 
     Vector3f native_scale(Vec3Extract(scale_obj));
     FIXME_GET_SPACE();
-    mParent->setVisualScale(space, native_scale);
+    assert(false);
+    //lkjs;
+    //FIXME: write this function.
+    //mParent->setVisualScale(space, native_scale);
 }
 
 #define CreateLocationAccessorHandlersWithSpace(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
@@ -558,8 +593,9 @@ void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
 
 //presence version of the access handlers
 
-CreateLocationAccessorHandlersWithSpace(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
-CreateLocationAccessorHandlersWithSpace(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
+//bftm just commented out
+// CreateLocationAccessorHandlersWithSpace(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
+// CreateLocationAccessorHandlersWithSpace(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
 
 
 
@@ -584,11 +620,13 @@ CreateLocationAccessorHandlersWithSpace(Vector3f, Velocity, Object, ObjectCast, 
 
 #define NOOP_CAST(X) X
 
-CreateLocationAccessorHandlers(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
-CreateLocationAccessorHandlers(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
-CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, QuaternionValidate, QuaternionExtract)
-CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
-CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
+//bftm FIXME
+// CreateLocationAccessorHandlers(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
+// CreateLocationAccessorHandlers(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
+// CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, QuaternionValidate, QuaternionExtract)
+// CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
+// CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
+
 
 // void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec3d)
 // {
@@ -601,20 +639,20 @@ CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericVa
 //merge rewrite
 //BFTM_FIXME: Unresolved question: should this function zero the velocity as well?  I
 //say yes!!!
-void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& posVec)
+void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3f& posVec)
 {
     //create a new TimedMotionVector
     //TimedMotionVector tmv (time_when, TimedMotionVector::PositionType);
     //TimedMotionVector tmv (time_when, MotionVector3f(  position, veloc ));
 
     //FIXME: this function zeros out the velocity as well.
-    Vector3d velocVec;
+    Vector3f velocVec;
     velocVec.x = 0;
     velocVec.y = 0;
     velocVec.z = 0;
-    TimedMotionVector tmv (Time::local(), MotionVector3f(  posVec, velocVec ));
-    mParent->requestLocationUpdate(*sID,tmv);
 
+    TimedMotionVector3f tmv (Time::local(),MotionVector3f(posVec,velocVec));
+    mParent->requestLocationUpdate(*sID,tmv);
 }
 
 
@@ -630,11 +668,15 @@ void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& pos
 //merge rewrite
 v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID, const ObjectReference* oref)
 {
-    Location loc = mParent->getLocation(*sID, *oref);
+    //Location loc = mParent->getLocation(*sID, *oref);
     
     //FIXME: note that CreateJSResult may not work with vec3, which is what
     //second arg returns
-    return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
+    //return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
+
+    Vector3d vec3 = mParent->requestCurrentLocation(*sID,*oref);
+
+    return CreateJSResult(mContext,vec3);
 }
 
 
@@ -827,16 +869,17 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
     if (!parsed)
     {
         JSLOG(fatal, "Parsing failed.");
-        return;
     }
-
-    // Handle all requests
-    for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
+    else
     {
-        Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
-        String script_str = req.body();
+        // Handle all requests
+        for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
+        {
+            Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
+            String script_str = req.body();
 
-        protectedEval(script_str);
+            protectedEval(script_str);
+        }
     }
 }
 
@@ -942,8 +985,7 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
         JSPresenceStruct* presToAdd = new JSPresenceStruct;
         presToAdd->sID = space_id;
         presToAdd->jsObjScript = this;
-
-        fix me: need to add in a field for the oref;
+        presToAdd->oref = new ObjectReference((mParent->id(*space_id)).object());
 
         
         mPresenceList.push_back(presToAdd);
@@ -981,7 +1023,7 @@ void JSObjectScript::attachScript(const String& script_name)
   import(script_name);  
 }
 
-void JSObjectScript::create_presence(const SpaceID& new_space)
+void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
 {
  
   const HostedObject::SpaceSet& spaces = mParent->spaces();
@@ -989,13 +1031,24 @@ void JSObjectScript::create_presence(const SpaceID& new_space)
   SpaceID spaceider = *(spaces.begin());
   const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
 
-  mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
+  //mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
 
+  //FIXME: may want to start in a different place.
+  Location startingLoc = mParent->getLocation(spaceider);
+
+  mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
+  
   //FIXME: will need to add this presence to the presences vector.
   //but only want to do so when the function has succeeded.
   
 }
 
+
+//FIXME: Hard coded default mesh below
+void JSObjectScript::create_presence(const SpaceID& new_space)
+{
+    create_presence(new_space,"http://www.sirikata.com/content/assets/tetra.dae");
+}
 
 
 } // namespace JS

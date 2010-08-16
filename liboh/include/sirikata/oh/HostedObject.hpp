@@ -267,6 +267,11 @@ protected:
     } mSendService;
 
 public:
+
+
+    ObjectReference getObjReference(const SpaceID& space);
+
+    
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
         persistence messages.
@@ -299,6 +304,8 @@ public:
         const BoundingSphere3f&meshBounds,
         const String& mesh,
         const UUID&evidence);
+    
+    Location getLocation(const SpaceID& space);
 
   private:
     void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server);
@@ -375,6 +382,9 @@ public:
 
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
+    //virtual void requestMeshUpdate(const SpaceID& space);
+    //virtual Transfer::URI const& requestMeshUri(const SpaceID& space, const ObjectReference& oref);
+    
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

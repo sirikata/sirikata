@@ -62,6 +62,8 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+
+
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 
@@ -191,7 +193,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mObjectScript=NULL;
     mSendService.ho = this;
 
-
+    std::cout<<"\n\n\nInitializting hosted object\n\n";
 
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
@@ -386,6 +388,10 @@ struct HostedObject::PrivateCallbacks {
                                 const SpaceID&sid,
                                 Network::Stream::ConnectionStatus ce,
                                 const String&reason) {
+
+        std::cout<<"\n\n\nGot a connection event\n\n\n";
+        std::cout.flush();
+        
         if (ce!=Network::Stream::Connected) {
             disconnectionEvent(thus,sid,reason);
         }
@@ -1450,22 +1456,69 @@ void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotion
     sendLocUpdateRequest(space, &loc, NULL, NULL, NULL);
 }
 
-//bftm (could be a problem)
+
 //goes into proxymanager and gets out the current location of the presence
 //associated with
-//BFTM_FIXME: need to decide whether want the extrapolated position or last
-//known position.  (Right now, we're going with last known position.)
-Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const ObjectReference& oref)
+Vector3d HostedObject::requestCurrentLocation (const SpaceID& space, const ObjectReference& oref)
 {
-    ProxyManagerPtr proxy_manager = getProxymanager(space);
+    ProxyManagerPtr proxy_manager = getProxyManager(space);
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+    //BFTM_FIXME: need to decide whether want the extrapolated position or last
+    //known position.  (Right now, we're going with last known position.)
     return proxy_obj->getPosition();
+}
+
+
+// //BFTM: FIXME: we're assuming that all scripted objects have meshes.
+// Transfer::URI const& HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref)
+// {
+    
+//     ProxyManagerPtr proxy_manager = getProxyManager(space);
+//     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+
+//     ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObjectPtr,ProxyObject> (proxy_obj);
+//     //ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(proxy_obj);
+    
+
+// //     if (proxy_mesh_obj == NULL)
+// //     {
+// //         std::cout<<"\n\nRequesting the mesh uri for an object that shouldn't have a mesh\n\n";
+// //         std::cout.flush();
+// //         assert(false);
+// //     }
+// //     return proxy_mesh_obj->getMesh();
+
+//     // assert(false);
+
+//     Transfer::URI incorrect("incorrect");
+//     return incorrect;
+// }
+
+
+
+//FIXME: may need to do some checking to ensure that actually still connected to
+//this space.
+ObjectReference HostedObject::getObjReference(const SpaceID& space)
+{
+    SpaceDataMap::const_iterator space_data_it = mSpaceData->find(space);
+
+    if (space_data_it == mSpaceData->end())
+    {
+        std::cout<<"\n\n";
+        std::cout<<"Not connected to this space";
+        std::cout<<"\n\n";
+        std::cout.flush();
+        assert(false);
+    }
+   
+    return space_data_it->second.object;
+
 }
 
 
 Vector3d HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
 {
-    ProxyManagerPtr proxy_manager = getProxymanager(space);
+    ProxyManagerPtr proxy_manager = getProxyManager(space);
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj->getVelocity();
 }
@@ -1513,6 +1566,16 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
         conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
             OBJECT_PORT_LOCATION, NULL);
     }
+}
+
+
+Location HostedObject::getLocation(const SpaceID& space)
+{
+    ProxyObjectPtr proxy = getProxy(space);
+    assert(proxy);
+    Time tnow = proxy->getProxyManager()->getTimeOffsetManager()->now(*proxy);
+    Location currentLoc = proxy->globalLocation(tnow);
+    return currentLoc;
 }
 
 //BFTM_FIXME: need to actually write this function (called by ObjectHost's updateAddressable).
