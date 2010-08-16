@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"
 #include "Lights.hpp"
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace Sirikata::Transfer;
