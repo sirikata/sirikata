@@ -256,15 +256,68 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         if (meshbytes || is_collada) {
             mVertices.clear();
             mIndices.clear();
-            if (is_collada && mMeshdata->geometry.size() > 0) {
-                const SubMeshGeometry& subm = *(mMeshdata->geometry[0]);
-                for (i=0; i<subm.positions.size();i++) {
-                    mVertices.push_back((double)subm.positions[i][0]);
-                    mVertices.push_back((double)subm.positions[i][1]);
-                    mVertices.push_back((double)subm.positions[i][2]);
-                }
-                for (i=0; i<subm.position_indices.size();i++) {
-                    mIndices.push_back((double)subm.position_indices[i]);
+            if (is_collada) {
+                size_t offset=0;
+                for (size_t i=0;i<mMeshdata->geometry.size();++i) {
+                    const SubMeshGeometry& subm = mMeshdata->geometry[i];
+                    for (size_t j=0; j<subm.positions.size();j++) {
+                        mVertices.push_back((double)subm.positions[j][0]);
+                        mVertices.push_back((double)subm.positions[j][1]);
+                        mVertices.push_back((double)subm.positions[j][2]);
+                    }
+                    for(size_t j=0;j<subm.primitives.size();++j) {
+                        const SubMeshGeometry::Primitive *prim=&subm.primitives[j];
+                        switch(prim->primitiveType) {
+                          case SubMeshGeometry::Primitive::TRIANGLES:
+                            for (size_t k=0; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k]);
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::LINES:
+                            for (size_t k=0; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k]);          
+                                if (k%2==1) {
+                                    mIndices.push_back(offset+prim->indices[k]);
+                                }
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::POINTS:
+                            for (size_t k=0; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k]);
+                                mIndices.push_back(offset+prim->indices[k]);
+                                mIndices.push_back(offset+prim->indices[k]);//degenerate
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::TRISTRIPS:
+                            for (size_t k=2; k<prim->indices.size(); ++k) {
+                                if (k%2==0) {
+                                    mIndices.push_back(offset+prim->indices[k-2]);          
+                                    mIndices.push_back(offset+prim->indices[k-1]);
+                                    mIndices.push_back(offset+prim->indices[k]);
+                                }else {
+                                    mIndices.push_back(offset+prim->indices[k]);
+                                    mIndices.push_back(offset+prim->indices[k-1]);
+                                    mIndices.push_back(offset+prim->indices[k-2]);          
+                                }
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::TRIFANS:
+                            for (size_t k=2; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[0]);          
+                                mIndices.push_back(offset+prim->indices[k-1]);
+                                mIndices.push_back(offset+prim->indices[k]);
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::LINESTRIPS:
+                            for (size_t k=1; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k-1]);
+                                mIndices.push_back(offset+prim->indices[k]);
+                                mIndices.push_back(offset+prim->indices[k]);//slivers
+                            }
+                            break;
+                        }
+                    }
+                    offset=mVertices.size();
                 }
             }
             else {

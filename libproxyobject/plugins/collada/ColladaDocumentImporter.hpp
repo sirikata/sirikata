@@ -126,12 +126,29 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         typedef std::map<COLLADAFW::UniqueId, const COLLADAFW::Node*> NodeMap;
         NodeMap mLibraryNodes;
+        class UniqueIdHash{public:
+                size_t operator () (const COLLADAFW::UniqueId&id) const {
+                    return std::tr1::hash<std::string>()(std::string(id.toAscii()));
+                }
+        };
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
 
-        typedef std::map<COLLADAFW::UniqueId, SubMeshGeometry*> GeometryMap;
-        GeometryMap mGeometries;
+        Meshdata::SubMeshGeometryList mGeometries;
+        IndicesMap mGeometryMap;
 
-        typedef std::map<COLLADAFW::UniqueId, LightInfo*> LightMap;
-        LightMap mLights;
+
+        IndicesMap mLightMap;
+        Meshdata::LightInfoList mLights;
+        
+        IdMap mMaterialMap;
+        URIMap mTextureMap;
+
+        IndicesMap mEffectMap;
+        Meshdata::MaterialEffectInfoList mEffects;
+        
+        Meshdata * mMesh;
 };
 
 
