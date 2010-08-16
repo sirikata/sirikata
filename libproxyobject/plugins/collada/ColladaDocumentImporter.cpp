@@ -368,24 +368,23 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
             for (size_t j=0;j<faceCount;++j) {
                 size_t whichIndex = offset+j;
                 IndexSet uniqueIndexSet;
-                
+
                 //gather the indices from the previous set
                 uniqueIndexSet.positionIndices=prim->getPositionIndices()[whichIndex];
                 uniqueIndexSet.normalIndices=prim->hasNormalIndices()?prim->getNormalIndices()[whichIndex]:uniqueIndexSet.positionIndices;
 
-                for (size_t uvSet=0;;++uvSet) {
-                    if (!prim->getUVCoordIndices(uvSet)) break;
+                for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
                     uniqueIndexSet.uvIndices.push_back(prim->getUVCoordIndices(uvSet)->getIndex(whichIndex));
                 }
-                
+
                 //now that we know what the indices are, find them in the indexSetMap...if this is the first time we see the indices, we must gather the data and place it
                 //into our output list
-                
+
                 std::tr1::unordered_map<IndexSet,unsigned short>::iterator where =  indexSetMap.find(uniqueIndexSet);
                 int vertStride = 3;//verts.getStride(0);<-- OpenCollada returns bad values for this
                 int normStride = 3;//norms.getStride(0);<-- OpenCollada returns bad values for this
                 if (where==indexSetMap.end()) {
-                    indexSetMap[uniqueIndexSet]=submesh->positions.size();                            
+                    indexSetMap[uniqueIndexSet]=submesh->positions.size();
                     outputPrim->indices.push_back(submesh->positions.size());
                     if (vdata) {
                         submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
@@ -398,7 +397,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                     }else {
                         COLLADA_LOG(error,"SubMesh without position index data\n");
                     }
-                    
+
                     if (ndata) {
                         submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
                                                             ndata->getData()[uniqueIndexSet.normalIndices*normStride+1],
@@ -408,8 +407,8 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                                                             ndatad->getData()[uniqueIndexSet.normalIndices*normStride+1],
                                                             ndatad->getData()[uniqueIndexSet.normalIndices*normStride+2]));
                     }
-                    
-                    
+
+
                     if (submesh->texUVs.size()<uniqueIndexSet.uvIndices.size())
                         submesh->texUVs.resize(uniqueIndexSet.uvIndices.size());
                     if (uvdata) {
@@ -432,13 +431,13 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 }else {
                     outputPrim->indices.push_back(where->second);
                 }
-                
+
             }
             offset+=faceCount;
         }
-        
+
     }
-    
+
     bool ok = mDocument->import ( *this, *geometry );
 
     return ok;
@@ -448,9 +447,9 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
 bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* material )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeMaterial(" << material << ") entered" << std::endl,true));
-    
+
     mMaterialMap[material->getUniqueId()]=material->getInstantiatedEffect();
-    
+
     return true;
 }
 
@@ -461,7 +460,7 @@ bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
     mEffectMap[effect->getUniqueId()]=mEffects.size();
     mEffects.push_back(MaterialEffectInfo());
     //FIXME elaborate on this
-    
+
     assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
     return true;
 }
@@ -502,7 +501,7 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     // Type
     switch (light->getLightType()) {
       case COLLADAFW::Light::AMBIENT_LIGHT:
-        COLLADA_LOG(error,"Ambient lights are not supported.");        
+        COLLADA_LOG(error,"Ambient lights are not supported.");
         mLights.pop_back();
         return true;
         break;
@@ -517,7 +516,7 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
         break;
     }
 
-     
+
 
     return true;
 }
