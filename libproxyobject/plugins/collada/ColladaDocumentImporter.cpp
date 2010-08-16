@@ -363,7 +363,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
             submesh->primitives.push_back(SubMeshGeometry::Primitive());
             outputPrim=&submesh->primitives.back();
             size_t faceCount=prim->getGroupedVerticesVertexCount(i);
-            if (multiPrim)
+            if (!multiPrim)
                 faceCount *= prim->getGroupedVertexElementsCount();
             for (size_t j=0;j<faceCount;++j) {
                 size_t whichIndex = offset+j;
@@ -382,29 +382,31 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 //into our output list
                 
                 std::tr1::unordered_map<IndexSet,unsigned short>::iterator where =  indexSetMap.find(uniqueIndexSet);
+                int vertStride = 3;//verts.getStride(0);<-- OpenCollada returns bad values for this
+                int normStride = 3;//norms.getStride(0);<-- OpenCollada returns bad values for this
                 if (where==indexSetMap.end()) {
                     indexSetMap[uniqueIndexSet]=submesh->positions.size();                            
                     outputPrim->indices.push_back(submesh->positions.size());
                     if (vdata) {
-                        submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*verts.getStride(0)],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*verts.getStride(0)+1],
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*verts.getStride(0)+2]));
+                        submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
                     }else if (vdatad) {
-                        submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*verts.getStride(0)],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*verts.getStride(0)+1],
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*verts.getStride(0)+2]));
+                        submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
                     }else {
                         COLLADA_LOG(error,"SubMesh without position index data\n");
                     }
                     
                     if (ndata) {
-                        submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.positionIndices*norms.getStride(0)],//FIXME: is stride 3 or 3*sizeof(float)
-                                                            ndata->getData()[uniqueIndexSet.positionIndices*norms.getStride(0)+1],
-                                                            ndata->getData()[uniqueIndexSet.positionIndices*norms.getStride(0)+2]));
+                        submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                            ndata->getData()[uniqueIndexSet.normalIndices*normStride+1],
+                                                            ndata->getData()[uniqueIndexSet.normalIndices*normStride+2]));
                     }else if (ndatad) {
-                        submesh->normals.push_back(Vector3f(ndatad->getData()[uniqueIndexSet.normalIndices*norms.getStride(0)],//FIXME: is stride 3 or 3*sizeof(float)
-                                                            ndatad->getData()[uniqueIndexSet.normalIndices*norms.getStride(0)+1],
-                                                            ndatad->getData()[uniqueIndexSet.normalIndices*norms.getStride(0)+2]));
+                        submesh->normals.push_back(Vector3f(ndatad->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                            ndatad->getData()[uniqueIndexSet.normalIndices*normStride+1],
+                                                            ndatad->getData()[uniqueIndexSet.normalIndices*normStride+2]));
                     }
                     
                     

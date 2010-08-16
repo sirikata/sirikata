@@ -360,7 +360,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
                 hash + "_texture_" + md.textures[0] :
                 base_mat->getName();
             mo.begin(matname);
-
+            std::cerr<<"Begin "<<matname<<"\n";
             float tu, tv;
             for (int i=0; i<indexcount; i++) {
                 int j = prim.indices[i];
@@ -368,11 +368,11 @@ void MeshEntity::createMesh(const Meshdata& md) {
                 Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
                 v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
                 mo.position(v[0], v[1], v[2]);
-
+                std::cerr<<"Mo pos "<<v[0]<<","<<v[1]<<","<<v[2]<<"\n";
                 Vector3f normal = fixUp(up, submesh.normals[j]);
                 normal = normal_xform * normal;
                 mo.normal(normal[0], normal[1], normal[2]);
-                
+                std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";                
                 mo.colour(1.0,1.0,1.0,1.0);
                 if (submesh.texUVs.size()==0) {
                     /// bogus texture for textureless models
@@ -395,8 +395,10 @@ void MeshEntity::createMesh(const Meshdata& md) {
                     tu = uv[0];
                     tv = 1.0-uv[1];           //  why you gotta be like that?
                 }
+                std::cerr<<"Mo tex "<<tu<<","<<tv<<"\n";
                 mo.textureCoord(tu, tv);
-            }        
+            }
+            std::cerr<<"Mo end\n";
             mo.end();
         }
     } // submesh
