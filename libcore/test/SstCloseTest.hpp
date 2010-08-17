@@ -44,6 +44,7 @@
 #include <cxxtest/TestSuite.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
+#include <boost/lexical_cast.hpp>
 #include <time.h>
 
 using namespace Sirikata::Network;
