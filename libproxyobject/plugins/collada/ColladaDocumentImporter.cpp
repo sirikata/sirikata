@@ -318,6 +318,8 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     mGeometryMap[geometry->getUniqueId()]=mGeometries.size();
     mGeometries.push_back(SubMeshGeometry());
     SubMeshGeometry* submesh = &mGeometries.back();
+    submesh->radius=0;
+    submesh->aabb=BoundingBox3f3f::null();
     submesh->name = mesh->getName();
 
     COLLADAFW::MeshVertexData const& verts((mesh->getPositions()));
@@ -386,18 +388,27 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 if (where==indexSetMap.end()) {
                     indexSetMap[uniqueIndexSet]=submesh->positions.size();
                     outputPrim->indices.push_back(submesh->positions.size());
-                    if (vdata) {
-                        submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
-                    }else if (vdatad) {
-                        submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                    if (vdata||vdatad) {
+                        if (vdata) {
+                            submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                                  vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                                  vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                        }else if (vdatad) {
+                            submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                                  vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                                  vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                        }
+                        if (submesh->aabb==BoundingBox3f3f::null())
+                            submesh->aabb=BoundingBox3f3f(submesh->positions.back(),0);
+                        else
+                            submesh->aabb=submesh->aabb.merge(submesh->positions.back());
+                        double l2=submesh->positions.back().lengthSquared();
+                        if (l2>submesh->radius)
+                            submesh->radius=l2;
+
                     }else {
                         COLLADA_LOG(error,"SubMesh without position index data\n");
                     }
-
                     if (ndata) {
                         submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
                                                             ndata->getData()[uniqueIndexSet.normalIndices*normStride+1],

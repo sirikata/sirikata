@@ -61,6 +61,8 @@ struct SubMeshGeometry {
         }primitiveType;
         unsigned int MaterialIndex;//FIXME
     };
+    BoundingBox3f3f aabb;
+    double radius;
     std::vector<Primitive> primitives;
 };
 struct GeometryInstance {
