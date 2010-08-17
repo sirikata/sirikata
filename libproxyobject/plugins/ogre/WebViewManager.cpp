@@ -410,16 +410,6 @@ bool WebViewManager::injectMouseDown(int buttonID)
             }
 		}
 	}
-	/*else if(buttonID == RightMouseButton)
-	{
-		if (focusWebView(getTopWebView(mouseXPos, mouseYPos))) {
-            int relX = focusedWebView->getRelativeX(mouseXPos);
-            int relY = focusedWebView->getRelativeY(mouseYPos);
-            if (focusedWebView->inDraggableRegion(relX, relY)) {
-                isDragging = true;
-            }
-		}
-	}*/
 	else if(buttonID == MiddleMouseButton) {
         isResizing = true;
         focusWebView(getTopWebView(mouseXPos, mouseYPos));
@@ -445,10 +435,6 @@ bool WebViewManager::injectMouseUp(int buttonID)
 		    focusedWebView->injectMouseUp(relX, relY);
 		}
 	}
-	/*else if(buttonID == RightMouseButton)
-	{
-		isDragging = false;
-	}*/
 	else if(buttonID == MiddleMouseButton) {
             isResizing = false;
 	}
