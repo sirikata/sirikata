@@ -71,9 +71,9 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
-    mBorderLeft=3;
-    mBorderRight=6;
-    mBorderTop=12;
+    mBorderLeft=2;
+    mBorderRight=2;
+    mBorderTop=25;
     mBorderBottom=2;
 	createMaterial();
 
@@ -89,9 +89,9 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
-    mBorderLeft=3;
-    mBorderRight=6;
-    mBorderTop=12;
+    mBorderLeft=2;
+    mBorderRight=2;
+    mBorderTop=25;
     mBorderBottom=2;
 	viewName = name;
 	viewWidth = width;
@@ -540,6 +540,13 @@ void WebView::createMaterial()
          return 0;
      else
          return overlay->getRelativeY(absY);
+ }
+
+ bool WebView::inDraggableRegion(int relX, int relY) {
+     if(relY <= mBorderTop) {
+         return true;
+     }
+     return false;
  }
 
  bool WebView::isMaterialOnly()

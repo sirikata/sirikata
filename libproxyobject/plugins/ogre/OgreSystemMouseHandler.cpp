@@ -154,6 +154,8 @@ class OgreSystem::MouseHandler {
 
     InputBinding mInputBinding;
 
+    WebView* chromeWebView;
+
     class SubObjectIterator {
         typedef Entity* value_type;
         //typedef ssize_t difference_type;
@@ -710,6 +712,12 @@ private:
         );
     }
 
+    void startUploadObject() {
+        printf("startUploadObject called\n");
+        chromeWebView = WebViewManager::getSingleton().createWebView("jeff", 420, 250, OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
+        chromeWebView->loadFile("upload.html");
+        chromeWebView->setTransparent(true);
+    }
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
         typedef std::tr1::unordered_map<String, String> StringMap;
@@ -1607,6 +1615,8 @@ public:
 
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
+        mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
+
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
 
@@ -1636,6 +1646,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, Input::MOD_CTRL), mInputResponses["cloneObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
 
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
