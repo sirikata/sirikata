@@ -42,15 +42,12 @@
 #include "COLLADAFWInstanceVisualScene.h"
 #include "COLLADAFWLibraryNodes.h"
 #include "COLLADAFWLight.h"
+#include "COLLADAFWEffect.h"
 
 #define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
 
-long Meshdata_counter=1000;
-
 namespace Sirikata { namespace Models {
 
-/// FIXME: need a culling strategy for this mom
-std::map<std::string, Meshdata*> meshstore;
 
 ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp )
     :   mDocument ( new ColladaDocument ( uri ) ),
@@ -63,12 +60,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
 //    lastURIString = hash.convertToHexString();
 
 //    lastURIString = uri.toString();
-
-    if (meshstore.find(mDocument->getURI().toString()) != meshstore.end())
-        SILOG(collada,fatal,"Got duplicate request for collada document import.");
-
-    meshstore[mDocument->getURI().toString()] = new Meshdata();
-    meshstore[mDocument->getURI().toString()]->uri = mDocument->getURI().toString();
+    mMesh = new Meshdata();
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()
@@ -129,7 +121,7 @@ struct NodeState {
 
     const COLLADAFW::Node* node;
     COLLADABU::Math::Matrix4 matrix;
-    int child;
+    unsigned int child;
     Modes mode;
 };
 } // namespace Collada
@@ -146,21 +138,12 @@ void ColladaDocumentImporter::finish ()
 
     // Add geometries
     // FIXME only store the geometries we need
-    typedef std::map<COLLADAFW::UniqueId, int> IndicesMap;
-    // Geometry indices
-    IndicesMap geometry_indices;
-    int idx = 0;
-    for(GeometryMap::const_iterator geo_it = mGeometries.begin(); geo_it != mGeometries.end(); geo_it++, idx++) {
-        geometry_indices[geo_it->first] = idx;
-        meshstore[documentURI()]->geometry.push_back( geo_it->second );
-    }
-    // Light indices
-    IndicesMap light_indices;
-    idx = 0;
-    for(LightMap::const_iterator light_it = mLights.begin(); light_it != mLights.end(); light_it++, idx++) {
-        light_indices[light_it->first] = idx;
-        meshstore[documentURI()]->lights.push_back( light_it->second );
-    }
+
+
+    mMesh->geometry.swap(mGeometries);
+    mMesh->materials.swap(mEffects);
+    mMesh->lights.swap(mLights);
+
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -168,7 +151,7 @@ void ColladaDocumentImporter::finish ()
     const COLLADAFW::VisualScene* vis_scene = vis_scene_it->second;
     // Iterate through nodes. Currently we'll only output anything for nodes
     // with <instance_node> elements.
-    for(int i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
+    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
         std::stack<NodeState> node_stack;
@@ -184,30 +167,32 @@ void ColladaDocumentImporter::finish ()
                 curnode.matrix = curnode.matrix * additional_xform;
 
                 // Instance Geometries
-                for(int geo_idx = 0; geo_idx < curnode.node->getInstanceGeometries().getCount(); geo_idx++) {
+                for(size_t geo_idx = 0; geo_idx < curnode.node->getInstanceGeometries().getCount(); geo_idx++) {
                     const COLLADAFW::InstanceGeometry* geo_inst = curnode.node->getInstanceGeometries()[geo_idx];
                     // FIXME handle child nodes, such as materials
-                    IndicesMap::const_iterator geo_it = geometry_indices.find(geo_inst->getInstanciatedObjectId());
-                    assert(geo_it != geometry_indices.end());
+                    IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst->getInstanciatedObjectId());
+                    if (geo_it == mGeometryMap.end()) {
+                        continue;
+                    }
                     GeometryInstance new_geo_inst;
                     new_geo_inst.geometryIndex = geo_it->second;
                     new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
-                    meshstore[documentURI()]->instances.push_back(new_geo_inst);
+                    mMesh->instances.push_back(new_geo_inst);
                 }
 
                 // Instance Lights
-                for(int light_idx = 0; light_idx < curnode.node->getInstanceLights().getCount(); light_idx++) {
+                for(size_t light_idx = 0; light_idx < curnode.node->getInstanceLights().getCount(); light_idx++) {
                     const COLLADAFW::InstanceLight* light_inst = curnode.node->getInstanceLights()[light_idx];
                     // FIXME handle child nodes, such as materials
-                    IndicesMap::const_iterator light_it = light_indices.find(light_inst->getInstanciatedObjectId());
-                    if (light_it == light_indices.end()) {
+                    IndicesMap::const_iterator light_it = mLightMap.find(light_inst->getInstanciatedObjectId());
+                    if (light_it == mLightMap.end()) {
                         COLLADA_LOG(warn, "Couldn't find original of instantiated light; was probably ambient.");
                         continue;
                     }
                     LightInstance new_light_inst;
                     new_light_inst.lightIndex = light_it->second;
                     new_light_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
-                    meshstore[documentURI()]->lightInstances.push_back(new_light_inst);
+                    mMesh->lightInstances.push_back(new_light_inst);
                 }
 
                 // Instance Cameras
@@ -218,7 +203,7 @@ void ColladaDocumentImporter::finish ()
             }
             if (curnode.mode == NodeState::InstNodes) {
                 // Instance Nodes
-                if (curnode.child >= curnode.node->getInstanceNodes().getCount()) {
+                if ((size_t)curnode.child >= (size_t)curnode.node->getInstanceNodes().getCount()) {
                     curnode.child = 0;
                     curnode.mode = NodeState::Nodes;
                 }
@@ -236,7 +221,7 @@ void ColladaDocumentImporter::finish ()
             }
             if (curnode.mode == NodeState::Nodes) {
                 // Process the next child if there are more
-                if (curnode.child < curnode.node->getChildNodes().getCount()) {
+                if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
                     node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
                     // And the child node
@@ -248,11 +233,11 @@ void ColladaDocumentImporter::finish ()
 
 
     // Finally, if we actually have anything for the user, ship the parsed mesh
-    if (meshstore[mDocument->getURI().toString()]->instances.size() > 0) {
+    if (mMesh->instances.size() > 0) {
     //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
     //                                          meshstore[mDocument->getURI().toString()] );
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
-        spp->meshParsed( mDocument->getURI().toString(), meshstore[mDocument->getURI().toString()] );
+        spp->meshParsed( mDocument->getURI().toString(), mMesh );
     }
     mState = FINISHED;
 }
@@ -261,7 +246,7 @@ bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asse
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered" << std::endl,true));
     bool ok = mDocument->import ( *this, *asset );
-    meshstore[mDocument->getURI().toString()]->up_axis=asset->getUpAxisType();
+    mMesh->up_axis=asset->getUpAxisType();
     return ok;
 }
 
@@ -283,14 +268,42 @@ bool ColladaDocumentImporter::writeVisualScene ( COLLADAFW::VisualScene const* v
 
 bool ColladaDocumentImporter::writeLibraryNodes ( COLLADAFW::LibraryNodes const* libraryNodes )
 {
-    for(int idx = 0; idx < libraryNodes->getNodes().getCount(); idx++) {
+    for(size_t idx = 0; idx < libraryNodes->getNodes().getCount(); idx++) {
         const COLLADAFW::Node* node = libraryNodes->getNodes()[idx];
         mLibraryNodes[node->getUniqueId()] = node;
     }
     return true;
 }
 
-
+struct IndexSet{
+    unsigned int positionIndices;
+    unsigned int normalIndices;
+    unsigned int colorIndices;
+    std::vector<unsigned int> uvIndices;
+    IndexSet() {
+        positionIndices=normalIndices=colorIndices=0;
+    }
+    struct IndexSetHash {
+        size_t operator() (const IndexSet&indset)const{
+            size_t retval=indset.positionIndices;
+            retval^=indset.normalIndices*65535;
+            retval^=indset.colorIndices*16711425;
+            retval^=(indset.uvIndices.size()?indset.uvIndices[0]*255:0);
+            return retval;
+        };
+    };
+    bool operator==(const IndexSet&other)const {
+        bool same= (positionIndices==other.positionIndices&&
+            normalIndices==other.normalIndices&&
+                    colorIndices==other.colorIndices);
+        if (same&&uvIndices.size()==other.uvIndices.size()) {
+            for (size_t i=0;i<uvIndices.size();++i) {
+                if (uvIndices[i]!=other.uvIndices[i]) return false;
+            }
+        }
+        return same;
+    }
+};
 bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometry )
 {
     String uri = mDocument->getURI().toString();
@@ -299,75 +312,131 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     COLLADAFW::Mesh const* mesh = dynamic_cast<COLLADAFW::Mesh const*>(geometry);
     if (!mesh) {
         std::cerr << "ERROR: we only support collada Mesh\n";
+        return true;
         assert(false);
     }
-
-    SubMeshGeometry* submesh = new SubMeshGeometry();
+    mGeometryMap[geometry->getUniqueId()]=mGeometries.size();
+    mGeometries.push_back(SubMeshGeometry());
+    SubMeshGeometry* submesh = &mGeometries.back();
     submesh->name = mesh->getName();
 
-    //COLLADAFW::MeshVertexData const v(mesh->getPositions());            // private data error!
-    COLLADAFW::MeshVertexData const* verts(&(mesh->getPositions()));      // but this works?
-    COLLADAFW::MeshVertexData const* norms(&(mesh->getNormals()));
-    COLLADAFW::MeshVertexData const* UVs(&(mesh->getUVCoords()));
-    COLLADAFW::MeshPrimitiveArray const* primitives(&(mesh->getMeshPrimitives()));
-    if (!(*primitives)[0]->getPrimitiveType()==COLLADAFW::MeshPrimitive::TRIANGLES) {
-        std::cerr << "ERROR: we only support collada MeshPrimitive::TRIANGLES\n";
-        assert(false);
-    }
-    COLLADAFW::UIntValuesArray const* pi(&((*primitives)[0]->getPositionIndices()));
-    COLLADAFW::UIntValuesArray const* ni(&((*primitives)[0]->getNormalIndices()));
-    COLLADAFW::UIntValuesArray const* uvi = NULL;
-    if ( ((*primitives)[0]->getUVCoordIndicesArray()).getCount() > 0 ) {
-        COLLADAFW::IndexList const* uv_ilist = ((*primitives)[0]->getUVCoordIndices(0)); // FIXME 0
-        assert(uv_ilist->getStride() == 2);
-        uvi = (&(uv_ilist->getIndices()));
-    }
-    int vcnt = verts->getValuesCount();
-    int ncnt = norms->getValuesCount();
-    unsigned int icnt = pi->getCount();
-    int uvcnt = UVs->getValuesCount();
-    if (icnt != ni->getCount()) {
-        std::cerr << "ERROR: position indices and normal indices differ in length!\n";
-        assert(false);
-    }
-    if (uvi != NULL && icnt != uvi->getCount()) {
-        std::cerr << "ERROR: position indices and normal indices differ in length!\n";
-        assert(false);
-    }
-    COLLADAFW::FloatArray const* vdata = verts->getFloatValues();
-    COLLADAFW::FloatArray const* ndata = norms->getFloatValues();
-    COLLADAFW::FloatArray const* uvdata = UVs->getFloatValues();
-    if (vdata && ndata) {
-        float const* raw = vdata->getData();
-        for (int i=0; i<vcnt; i+=3) {
-            submesh->positions.push_back(Vector3f(raw[i],raw[i+1],raw[i+2]));
-        }
-        raw = ndata->getData();
-        for (int i=0; i<ncnt; i+=3) {
-            submesh->normals.push_back(Vector3f(raw[i],raw[i+1],raw[i+2]));
-        }
-        if (uvdata) {
-            raw = uvdata->getData();
-            for (int i=0; i<uvcnt; i+=2) {
-                submesh->texUVs.push_back(Vector2f(raw[i],raw[i+1]));
-            }
-        }
-        unsigned int const* praw = pi->getData();
-        unsigned int const* nraw = ni->getData();
-        unsigned int const* uvraw = uvi != NULL ? uvi->getData() : NULL;
-        for (unsigned int i=0; i<icnt; i++) {
-            submesh->position_indices.push_back(praw[i]);
-            submesh->normal_indices.push_back(nraw[i]);
-            if (uvi != NULL)
-                submesh->texUV_indices.push_back(uvraw[i]);
-        }
-    }
-    else {
-        std::cerr << "ERROR: ColladaDocumentImporter::writeGeometry: we only support floats right now\n";
-        assert(false);
-    }
+    COLLADAFW::MeshVertexData const& verts((mesh->getPositions()));
+    COLLADAFW::MeshVertexData const& norms((mesh->getNormals()));
+    COLLADAFW::MeshVertexData const& UVs((mesh->getUVCoords()));
+    std::tr1::unordered_map<IndexSet,unsigned short,IndexSet::IndexSetHash> indexSetMap;
 
-    mGeometries[geometry->getUniqueId()] = submesh;
+    COLLADAFW::FloatArray const* vdata = verts.getFloatValues();
+    COLLADAFW::FloatArray const* ndata = norms.getFloatValues();
+    COLLADAFW::FloatArray const* uvdata = UVs.getFloatValues();
+
+    COLLADAFW::DoubleArray const* vdatad = verts.getDoubleValues();
+    COLLADAFW::DoubleArray const* ndatad = norms.getDoubleValues();
+    COLLADAFW::DoubleArray const* uvdatad = UVs.getDoubleValues();
+
+    COLLADAFW::MeshPrimitiveArray const& primitives((mesh->getMeshPrimitives()));
+    SubMeshGeometry::Primitive *outputPrim=NULL;
+    for(size_t prim_index=0;prim_index<primitives.getCount();++prim_index) {
+        COLLADAFW::MeshPrimitive * prim = primitives[prim_index];
+        if (prim->getPrimitiveType()==COLLADAFW::MeshPrimitive::POLYLIST||
+            prim->getPrimitiveType()==COLLADAFW::MeshPrimitive::POLYGONS) {
+            COLLADA_LOG(error,"ERROR: we do not support COLLADA POLYGONS\n");
+            continue;
+        }
+        size_t groupedVertexElementCount;
+        bool multiPrim;
+        switch (prim->getPrimitiveType()) {
+          case COLLADAFW::MeshPrimitive::POLYLIST:
+          case COLLADAFW::MeshPrimitive::POLYGONS:
+          case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
+          case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
+          case COLLADAFW::MeshPrimitive::LINE_STRIPS:
+            groupedVertexElementCount = prim->getGroupedVertexElementsCount();
+            multiPrim=true;
+            break;
+          default:
+            groupedVertexElementCount = 1;
+            multiPrim=false;
+            break;
+        }
+        size_t offset=0;
+        for (size_t i=0;i<groupedVertexElementCount;++i) {
+            submesh->primitives.push_back(SubMeshGeometry::Primitive());
+            outputPrim=&submesh->primitives.back();
+            size_t faceCount=prim->getGroupedVerticesVertexCount(i);
+            if (!multiPrim)
+                faceCount *= prim->getGroupedVertexElementsCount();
+            for (size_t j=0;j<faceCount;++j) {
+                size_t whichIndex = offset+j;
+                IndexSet uniqueIndexSet;
+
+                //gather the indices from the previous set
+                uniqueIndexSet.positionIndices=prim->getPositionIndices()[whichIndex];
+                uniqueIndexSet.normalIndices=prim->hasNormalIndices()?prim->getNormalIndices()[whichIndex]:uniqueIndexSet.positionIndices;
+
+                for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
+                    uniqueIndexSet.uvIndices.push_back(prim->getUVCoordIndices(uvSet)->getIndex(whichIndex));
+                }
+
+                //now that we know what the indices are, find them in the indexSetMap...if this is the first time we see the indices, we must gather the data and place it
+                //into our output list
+
+                std::tr1::unordered_map<IndexSet,unsigned short>::iterator where =  indexSetMap.find(uniqueIndexSet);
+                int vertStride = 3;//verts.getStride(0);<-- OpenCollada returns bad values for this
+                int normStride = 3;//norms.getStride(0);<-- OpenCollada returns bad values for this
+                if (where==indexSetMap.end()) {
+                    indexSetMap[uniqueIndexSet]=submesh->positions.size();
+                    outputPrim->indices.push_back(submesh->positions.size());
+                    if (vdata) {
+                        submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                    }else if (vdatad) {
+                        submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                    }else {
+                        COLLADA_LOG(error,"SubMesh without position index data\n");
+                    }
+
+                    if (ndata) {
+                        submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                            ndata->getData()[uniqueIndexSet.normalIndices*normStride+1],
+                                                            ndata->getData()[uniqueIndexSet.normalIndices*normStride+2]));
+                    }else if (ndatad) {
+                        submesh->normals.push_back(Vector3f(ndatad->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                            ndatad->getData()[uniqueIndexSet.normalIndices*normStride+1],
+                                                            ndatad->getData()[uniqueIndexSet.normalIndices*normStride+2]));
+                    }
+
+
+                    if (submesh->texUVs.size()<uniqueIndexSet.uvIndices.size())
+                        submesh->texUVs.resize(uniqueIndexSet.uvIndices.size());
+                    if (uvdata) {
+                        for (size_t uvSet=0;uvSet<uniqueIndexSet.uvIndices.size();++uvSet) {
+                            unsigned int stride=UVs.getStride(uvSet);
+                            submesh->texUVs.back().stride=stride;
+                            for (unsigned int s=0;s<stride;++s) {
+                                submesh->texUVs[uvSet].uvs.push_back(uvdata->getData()[uniqueIndexSet.uvIndices[uvSet]*stride+s]);//FIXME: is stride k or k*sizeof(float)
+                            }
+                        }
+                    }else if (uvdatad) {
+                        for (size_t uvSet=0;uvSet<uniqueIndexSet.uvIndices.size();++uvSet) {
+                            unsigned int stride=UVs.getStride(uvSet);
+                            submesh->texUVs.back().stride=stride;
+                            for (unsigned int s=0;s<stride;++s) {
+                                submesh->texUVs[uvSet].uvs.push_back(uvdatad->getData()[uniqueIndexSet.uvIndices[uvSet]*stride+s]);//FIXME: is stride k or k*sizeof(float)
+                            }
+                        }
+                    }
+                }else {
+                    outputPrim->indices.push_back(where->second);
+                }
+
+            }
+            offset+=faceCount;
+        }
+
+    }
 
     bool ok = mDocument->import ( *this, *geometry );
 
@@ -378,12 +447,20 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
 bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* material )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeMaterial(" << material << ") entered" << std::endl,true));
+
+    mMaterialMap[material->getUniqueId()]=material->getInstantiatedEffect();
+
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
 {
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << effect << ") entered" << std::endl,true));
+    mEffectMap[effect->getUniqueId()]=mEffects.size();
+    mEffects.push_back(MaterialEffectInfo());
+    //FIXME elaborate on this
+
     assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
     return true;
 }
@@ -398,8 +475,10 @@ bool ColladaDocumentImporter::writeCamera ( COLLADAFW::Camera const* camera )
 
 bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << image << ") entered" << std::endl,true));
-    meshstore[mDocument->getURI().toString()]->textures.push_back(image->getImageURI().getURIString());  /// not really -- among other sins, lowercase!
+    std::string imageUri = image->getImageURI().getURIString();
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << imageUri << ") entered" << std::endl,true));
+    mTextureMap[image->getUniqueId()]=imageUri;
+    mMesh->textures.push_back(imageUri);
     return true;
 }
 
@@ -407,10 +486,8 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
-
-    String uri = mDocument->getURI().toString();
-
-    LightInfo* sublight = new LightInfo();
+    mLights.push_back(LightInfo());
+    LightInfo *sublight = &mLights.back();
 
     Color lcol( light->getColor().getRed(), light->getColor().getGreen(), light->getColor().getBlue() );
     sublight->setLightDiffuseColor(lcol);
@@ -425,7 +502,7 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     switch (light->getLightType()) {
       case COLLADAFW::Light::AMBIENT_LIGHT:
         COLLADA_LOG(error,"Ambient lights are not supported.");
-        delete sublight;
+        mLights.pop_back();
         return true;
         break;
       case COLLADAFW::Light::DIRECTIONAL_LIGHT:
@@ -439,7 +516,7 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
         break;
     }
 
-    mLights[light->getUniqueId()] = sublight;
+
 
     return true;
 }

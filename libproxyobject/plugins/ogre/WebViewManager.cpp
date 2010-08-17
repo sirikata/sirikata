@@ -38,6 +38,7 @@
 #include "input/InputEvents.hpp"
 #include "SDL_scancode.h"
 #include <algorithm>
+#include <boost/lexical_cast.hpp>
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #include <direct.h>
 #include <stdlib.h>

@@ -35,7 +35,6 @@
 
 #include "LightInfo.hpp"
 
-extern long Meshdata_counter;
 
 namespace Sirikata {
 
@@ -43,13 +42,29 @@ struct SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
-    std::vector<Sirikata::Vector2f> texUVs;
-    std::vector<int> position_indices;
-    std::vector<int> normal_indices;
-    std::vector<int> texUV_indices;
+    std::vector<Sirikata::Vector3f> tangents;
+    std::vector<Sirikata::Vector4f> colors;
+    struct TextureSet {
+        unsigned int stride;
+        std::vector<float> uvs;
+    };
+    std::vector<TextureSet>texUVs;
+    struct Primitive {
+        std::vector<unsigned short> indices;
+        enum PrimitiveType {
+            TRIANGLES,
+            LINES,
+            POINTS,
+            LINESTRIPS,
+            TRISTRIPS,
+            TRIFANS
+        }primitiveType;
+        unsigned int MaterialIndex;//FIXME
+    };
+    std::vector<Primitive> primitives;
 };
 struct GeometryInstance {
-    int geometryIndex; // Index in SubMeshGeometryList
+    unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
 };
 
@@ -58,16 +73,26 @@ struct LightInstance {
     Matrix4x4f transform;
 };
 
-typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
-typedef std::vector<LightInfo*> LightInfoList;
-typedef std::vector<std::string> TextureList;
-typedef std::vector<GeometryInstance> GeometryInstanceList;
-typedef std::vector<LightInstance> LightInstanceList;
+struct MaterialEffectInfo {
+    
+    
+
+};
+
+
+
 
 struct Meshdata {
+    typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
+    typedef std::vector<LightInfo> LightInfoList;
+    typedef std::vector<std::string> TextureList;
+    typedef std::vector<GeometryInstance> GeometryInstanceList;
+    typedef std::vector<LightInstance> LightInstanceList;
+    typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
     SubMeshGeometryList geometry;
     TextureList textures;
     LightInfoList lights;
+    MaterialEffectInfoList materials;
 
     std::string uri;
     int up_axis;
@@ -76,9 +101,6 @@ struct Meshdata {
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
-    Meshdata() {
-        id=Meshdata_counter++;
-    }
 };
 
 } // namespace Sirikata
