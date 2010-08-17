@@ -941,6 +941,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 //    } else {
 //        if (mObjectScript)
 //            mObjectScript->processMessage(header, bodyData);
+
 }
 
 void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
@@ -1394,7 +1395,8 @@ const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
     static Duration nil(Duration::seconds(0));
     SpaceDataMap::iterator where=mSpaceData->find(space);
     if (where!=mSpaceData->end()) {
-        SILOG(ho,warn,"Hit missing time sync in HostedObject.");
+        //bftm FIXME: uncomment the next line (but not the line below it).
+        //SILOG(ho,warn,"Hit missing time sync in HostedObject.");
         //return where->second.mSpaceConnection.getTopLevelStream()->getServerTimeOffset();
     }
     return nil;

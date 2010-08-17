@@ -99,7 +99,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
     mHandlingEvent = false;
 
-
+    std::cout<<"\n\n\n\n";
+    std::cout<<"Got into jsobjectscript";
+    std::cout<<"\n\n\n\n";
+    
     
     const HostedObject::SpaceSet& spaces = mParent->spaces();
     if (spaces.size() > 1)
