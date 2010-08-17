@@ -253,7 +253,9 @@ class OgreSystem::MouseHandler {
             }
         }
         if (mouseOverEntity) {
-            while (!(mouseOverEntity->getProxy().getParentProxy()->getObjectReference() == mCurrentGroup)) {
+            while (
+                mouseOverEntity->getProxy().getParentProxy() &&
+                !(mouseOverEntity->getProxy().getParentProxy()->getObjectReference() == mCurrentGroup)) {
                 mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParentProxy()->getObjectReference());
                 if (mouseOverEntity == NULL) {
                     return NULL; // FIXME: should try again.
