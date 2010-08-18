@@ -477,6 +477,18 @@ public:
                 continue;
             const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
             Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
+            AxisAlignedBox ogresubmeshaabb(Graphics::toOgre(geoinst.aabb.min()),
+                                           Graphics::toOgre(geoinst.aabb.max()));
+            double rad=0;
+            if (geoinst_it != md.instances.begin()) {
+                ogresubmeshaabb.merge(mesh->getBounds());
+                rad=mesh->getBoundingSphereRadius();
+            }
+            if (geoinst.radius>rad) {
+                rad=geoinst.radius;
+            }
+            mesh->_setBounds(ogresubmeshaabb);
+            mesh->_setBoundingSphereRadius(rad);
             int vertcount = submesh.positions.size();
             int normcount = submesh.normals.size();
             for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
@@ -499,12 +511,6 @@ public:
                         Vector3f v = fixUp(up, submesh.positions[i]);
                         Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
                         v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
-/*FIXME: put into loader
-  if (i==0) 
-  aabb=BoundingBox3f3f(v,0);
-  else
-  aabb=aabb.merge(v);
-*/
                         memcpy(pData,&v.x,sizeof(float));
                         memcpy(pData+sizeof(float),&v.y,sizeof(float));
                         memcpy(pData+2*sizeof(float),&v.z,sizeof(float));
@@ -609,6 +615,7 @@ public:
                 }
             }
         }
+        mesh->load();
     }
 };
 
@@ -646,7 +653,10 @@ ch ignores advanced features we may want in a reasonable mesh
         Matrix4x4f pos_xform = lightinst.transform;
 
         // Get the instanced submesh
-        assert(lightinst.lightIndex < md.lights.size());
+        if(lightinst.lightIndex >= (int)md.lights.size()){
+            SILOG(ogre,error, "bad light index %d for lights only sized %d\n"<<lightinst.lightIndex<<"/"<<(int)md.lights.size());
+            continue;
+        }
         const LightInfo& sublight = md.lights[lightinst.lightIndex];
 
         String lightname = hash + "_light_" + boost::lexical_cast<String>(light_idx++);

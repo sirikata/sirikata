@@ -177,7 +177,36 @@ void ColladaDocumentImporter::finish ()
                     GeometryInstance new_geo_inst;
                     new_geo_inst.geometryIndex = geo_it->second;
                     new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
-                    mMesh->instances.push_back(new_geo_inst);
+                    new_geo_inst.radius=0;
+                    new_geo_inst.aabb=BoundingBox3f3f::null();
+                    if (geo_it->second<mMesh->geometry.size()) {
+                        const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
+                        for (size_t i=0;i<geometry.primitives.size();++i) {
+                            const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
+                            size_t indsize=prim.indices.size();
+                            for (size_t j=0;j<indsize;++j) {
+                                Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
+                                Matrix4x4f trans = new_geo_inst.transform;
+                                Vector4f pos4= trans*Vector4f(untransformed_pos.x,
+                                                             untransformed_pos.y,
+                                                             untransformed_pos.z,
+                                                             1.0f);
+                                Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
+                                if (j==0&&i==0) {
+                                    new_geo_inst.aabb=BoundingBox3f3f(pos,0);
+                                    new_geo_inst.radius = pos.lengthSquared();
+                                }else {
+                                    new_geo_inst.aabb=new_geo_inst.aabb.merge(pos);
+                                    double rads=pos.lengthSquared();
+                                    if (rads> new_geo_inst.radius)
+                                        new_geo_inst.radius=rads;
+                                }
+                            }
+                        }
+                        new_geo_inst.radius=sqrt(new_geo_inst.radius);
+                        mMesh->instances.push_back(new_geo_inst);
+                        
+                    }
                 }
 
                 // Instance Lights
@@ -448,7 +477,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         }
 
     }
-
+    submesh->radius=sqrt(submesh->radius);
     bool ok = mDocument->import ( *this, *geometry );
 
     return ok;

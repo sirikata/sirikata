@@ -68,6 +68,9 @@ struct SubMeshGeometry {
 struct GeometryInstance {
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
+    BoundingBox3f3f aabb;//transformed aabb
+    double radius;//transformed radius
+    
 };
 
 struct LightInstance {
