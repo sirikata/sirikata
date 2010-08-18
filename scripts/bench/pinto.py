@@ -25,7 +25,7 @@ def run_trial(cluster_sim):
     cluster_sim.retrieve_data()
 
 class Pinto:
-    def __init__(self, cc, cs):
+    def __init__(self, cc, cs, nobjects, query_frac=.1):
         """
         cc - ClusterConfig
         cs - ClusterSimSettings
@@ -33,11 +33,17 @@ class Pinto:
         self.cc = cc
         self.cs = cs
 
+        self.nobjects = nobjects
+        self.query_frac = query_frac
+
     def _setup_cluster_sim(self, io):
         self.cs.scenario = 'null'
 
         self.cs.object_simple = 'true'
         self.cs.scenario_options = None
+
+        self.cs.num_random_objects = self.nobjects
+        self.cs.object_query_frac = self.query_frac
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim

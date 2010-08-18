@@ -108,14 +108,6 @@ class TestSuite:
 
 if __name__ == "__main__":
 
-    def merge_settings(a, b):
-        c = {}
-        for k,v in a.items():
-            c[k] = v
-        for k,v in b.items():
-            c[k] = v
-        return c
-
     suite = TestSuite()
     #suite.add( ClusterSimTest('default_sim') )
     suite.add( PacketLatencyByLoadTest('default_packet_latency', 10) )
@@ -138,24 +130,30 @@ if __name__ == "__main__":
     suite.add( FlowFairnessTest('flow_fairness_region_4x1_1000', 1000, scheme='region', payload=1000, settings=flow_fairness_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
     suite.add( FlowFairnessTest('flow_fairness_region_4x1_10000', 10000, scheme='region', payload=1000, settings=flow_fairness_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
 
-    pinto_settings = { 'duration' : '300s', 'oseg_cache_entry_lifetime' : '300s', 'num_random_objects': 50 }
+    pinto_settings = { 'duration' : '300s', 'oseg_cache_entry_lifetime' : '300s' }
     suite.add(
         PintoTest('pinto_100', # 100 *per server*
-                  settings=merge_settings(pinto_settings, {'num_random_objects' : 400}),
+                  400,
+                  .1,
+                  settings=pinto_settings,
                   space_layout=(4,1),
                   time_limit=datetime.timedelta(minutes=10)
                   )
         )
     suite.add(
         PintoTest('pinto_1000',
-                  settings=merge_settings(pinto_settings, {'num_random_objects' : 4000}),
+                  4000,
+                  .1,
+                  settings=pinto_settings,
                   space_layout=(4,1),
                   time_limit=datetime.timedelta(minutes=10)
                   )
         )
     suite.add(
         PintoTest('pinto_5000',
-                  settings=merge_settings(pinto_settings, {'num_random_objects' : 20000}),
+                  2000,
+                  .1,
+                  settings=pinto_settings,
                   space_layout=(4,1),
                   time_limit=datetime.timedelta(minutes=10)
                   )

@@ -9,9 +9,11 @@ from sim_test import ClusterSimTest
 from bench.pinto import Pinto
 
 class PintoTest(ClusterSimTest):
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, nobjects, query_frac, **kwargs):
         """
         name: Name of the test
+        nobjects: Number of objects in simulation
+        query_frac: Fraction of objects that register queries
         Others: see ClusterSimTest.__init__
         """
         # pre_sim_func
@@ -36,7 +38,7 @@ class PintoTest(ClusterSimTest):
             post_sim_func = self.__post_sim_func
 
         ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, **kwargs)
-        self.bench = Pinto(self._cc, self._cs)
+        self.bench = Pinto(self._cc, self._cs, nobjects=nobjects, query_frac=query_frac)
 
     def __pre_sim_func(self, cc, cs, io):
         pass
