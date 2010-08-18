@@ -94,20 +94,23 @@ const TimedMotionVector3f& CBRLocationServiceCache::location(const Iterator& id)
     return it->second.location;
 }
 
-const BoundingSphere3f& CBRLocationServiceCache::bounds(const Iterator& id) const {
+const BoundingSphere3f& CBRLocationServiceCache::region(const Iterator& id) const {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
+    // "Region" for individual objects is the degenerate bounding sphere about
+    // their center.
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.bounds;
+    return it->second.region;
 }
 
-float32 CBRLocationServiceCache::radius(const Iterator& id) const {
+float32 CBRLocationServiceCache::maxSize(const Iterator& id) const {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
+    // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.bounds.radius();
+    return it->second.maxSize;
 }
 
 const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) const {
@@ -228,12 +231,14 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMo
     data.location = loc;
     data.orientation = orient;
     data.bounds = bounds;
+    data.region = BoundingSphere3f(bounds.center(), 0.f);
+    data.maxSize = bounds.radius();
     data.mesh = mesh;
     data.tracking = false;
     mObjects[uuid] = data;
 
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationConnected(uuid, loc, bounds);
+        (*it)->locationConnected(uuid, loc, data.region, data.maxSize);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
@@ -309,8 +314,15 @@ void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const Bound
     BoundingSphere3f oldval = it->second.bounds;
     it->second.bounds = newval;
 
-    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationBoundsUpdated(uuid, oldval, newval);
+    BoundingSphere3f old_region = it->second.region;
+    it->second.region = BoundingSphere3f(newval.center(), 0.f);
+    float32 old_maxSize = it->second.maxSize;
+    it->second.maxSize = newval.radius();
+
+    for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
+        (*listen_it)->locationRegionUpdated(uuid, old_region, it->second.region);
+        (*listen_it)->locationMaxSizeUpdated(uuid, old_maxSize, it->second.maxSize);
+    }
 }
 
 void CBRLocationServiceCache::meshUpdated(const UUID& uuid, const String& newval) {

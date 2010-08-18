@@ -46,17 +46,18 @@ public:
     PintoManagerLocationServiceCache();
     virtual ~PintoManagerLocationServiceCache();
 
-    void addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds);
+    void addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& region, float32 maxSize);
     void updateSpaceServerLocation(ServerID sid, const TimedMotionVector3f& loc);
-    void updateSpaceServerBounds(ServerID sid, const BoundingSphere3f& bnds);
+    void updateSpaceServerRegion(ServerID sid, const BoundingSphere3f& region);
+    void updateSpaceServerMaxSize(ServerID sid, float32 ms);
     void removeSpaceServer(ServerID sid);
 
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
 
     virtual const TimedMotionVector3f& location(const Iterator& id) const;
-    virtual const BoundingSphere3f& bounds(const Iterator& id) const;
-    virtual float32 radius(const Iterator& id) const;
+    virtual const BoundingSphere3f& region(const Iterator& id) const;
+    virtual float32 maxSize(const Iterator& id) const;
 
     virtual const ObjectID& iteratorID(const Iterator& id) const;
 
@@ -66,7 +67,8 @@ public:
 private:
     struct SpaceServerData {
         TimedMotionVector3f location;
-        BoundingSphere3f bounds;
+        BoundingSphere3f region;
+        float32 maxSize;
 
         bool tracking;
         bool removable;

@@ -38,6 +38,7 @@
 
 #include <prox/BruteForceQueryHandler.hpp>
 #include <prox/RTreeQueryHandler.hpp>
+#include <prox/RTreeCutQueryHandler.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
 

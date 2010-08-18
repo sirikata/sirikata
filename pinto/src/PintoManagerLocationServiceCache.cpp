@@ -44,16 +44,17 @@ PintoManagerLocationServiceCache::PintoManagerLocationServiceCache() {
 PintoManagerLocationServiceCache::~PintoManagerLocationServiceCache() {
 }
 
-void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
+void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& region, float32 ms) {
     assert(mServers.find(sid) == mServers.end());
 
     mServers[sid].location = loc;
-    mServers[sid].bounds = bnds;
+    mServers[sid].region = region;
+    mServers[sid].maxSize = ms;
     mServers[sid].tracking = false;
     mServers[sid].removable = true;
 
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationConnected(sid, loc, bnds);
+        (*it)->locationConnected(sid, loc, region, ms);
 }
 
 void PintoManagerLocationServiceCache::updateSpaceServerLocation(ServerID sid, const TimedMotionVector3f& loc) {
@@ -67,15 +68,26 @@ void PintoManagerLocationServiceCache::updateSpaceServerLocation(ServerID sid, c
         (*it)->locationPositionUpdated(sid, old_loc, loc);
 }
 
-void PintoManagerLocationServiceCache::updateSpaceServerBounds(ServerID sid, const BoundingSphere3f& bnds) {
+void PintoManagerLocationServiceCache::updateSpaceServerRegion(ServerID sid, const BoundingSphere3f& region) {
     ServerMap::iterator it = mServers.find(sid);
     assert( it != mServers.end() );
     SpaceServerData& dat = it->second;
 
-    BoundingSphere3f old_bounds = dat.bounds;
-    dat.bounds = bnds;
+    BoundingSphere3f old_region = dat.region;
+    dat.region = region;
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationBoundsUpdated(sid, old_bounds, bnds);
+        (*it)->locationRegionUpdated(sid, old_region, region);
+}
+
+void PintoManagerLocationServiceCache::updateSpaceServerMaxSize(ServerID sid, float32 ms) {
+    ServerMap::iterator it = mServers.find(sid);
+    assert( it != mServers.end() );
+    SpaceServerData& dat = it->second;
+
+    float32 old_ms = dat.maxSize;
+    dat.maxSize = ms;
+    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->locationMaxSizeUpdated(sid, old_ms, ms);
 }
 
 void PintoManagerLocationServiceCache::removeSpaceServer(ServerID sid) {
@@ -127,14 +139,14 @@ const TimedMotionVector3f& PintoManagerLocationServiceCache::location(const Iter
     return dat.location;
 }
 
-const BoundingSphere3f& PintoManagerLocationServiceCache::bounds(const Iterator& id) const {
+const BoundingSphere3f& PintoManagerLocationServiceCache::region(const Iterator& id) const {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
-    return dat.bounds;
+    return dat.region;
 }
 
-float32 PintoManagerLocationServiceCache::radius(const Iterator& id) const {
+float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) const {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
-    return dat.bounds.radius();
+    return dat.maxSize;
 }
 
 const ServerID& PintoManagerLocationServiceCache::iteratorID(const Iterator& id) const {
