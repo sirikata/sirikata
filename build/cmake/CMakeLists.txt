@@ -1335,6 +1335,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
+  ${SIMOH_SOURCE_DIR}/NullScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp

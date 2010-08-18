@@ -1,7 +1,7 @@
-/*  Sirikata Network Services - Scenario factory
- *  ScenarioFactory.cpp
+/*  Sirikata
+ *  NullScenario.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,31 +29,29 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <sirikata/core/util/Platform.hpp>
-#include "ScenarioFactory.hpp"
-#include "DistributionPingScenario.hpp"
-#include "DelugePairScenario.hpp"
-#include "PingDelugeScenario.hpp"
-#include "ByteTransferScenario.hpp"
-#include "LoadPacketTrace.hpp"
-#include "NullScenario.hpp"
 
-AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
+#ifndef _NULL_SCENARIO_HPP_
+#define _NULL_SCENARIO_HPP_
+
+#include "Scenario.hpp"
+
 namespace Sirikata {
-ScenarioFactory::ScenarioFactory(){
-    DistributionPingScenario::addConstructorToFactory(this);
-    DelugePairScenario::addConstructorToFactory(this);
-    PingDelugeScenario::addConstructorToFactory(this);
-    LoadPacketTrace::addConstructorToFactory(this);
-    ByteTransferScenario::addConstructorToFactory(this);
-    NullScenario::addConstructorToFactory(this);
-}
-ScenarioFactory::~ScenarioFactory(){}
-ScenarioFactory&ScenarioFactory::getSingleton(){
-    return Sirikata::AutoSingleton<ScenarioFactory>::getSingleton();
-}
-void ScenarioFactory::destroy(){
-    Sirikata::AutoSingleton<ScenarioFactory>::destroy();
-}
 
-}
+class ScenarioFactory;
+
+class NullScenario : public Scenario {
+    ObjectHostContext*mContext;
+
+    static NullScenario* create(const String&options);
+public:
+    NullScenario(const String &options);
+    ~NullScenario();
+    virtual void initialize(ObjectHostContext*);
+    void start();
+    void stop();
+    static void addConstructorToFactory(ScenarioFactory*);
+};
+
+} // namespace Sirikata
+
+#endif //_NULL_SCENARIO_HPP_
