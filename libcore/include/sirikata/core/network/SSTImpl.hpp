@@ -1044,24 +1044,45 @@ public:
     LSID lsid = ++mNumStreams;
 
     while (currOffset < length) {
-      int buffLen = (length-currOffset > MAX_PAYLOAD_SIZE) ?
-	            MAX_PAYLOAD_SIZE :
-           	    (length-currOffset);
+        // Because the header is variable size, we have to have this
+        // somewhat annoying logic to ensure we come in under the
+        // budget.  We start out with an extra 28 bytes as buffer.
+        // Hopefully this is usually enough, and is based on the
+        // current required header fields, their sizes, and overhead
+        // from protocol buffers encoding.  In the worst case, we end
+        // up being too large and have to iterate, working with less
+        // data over time.
+        int header_buffer = 28;
+        while(true) {
+            int buffLen = (length-currOffset > (MAX_PAYLOAD_SIZE-header_buffer)) ?
+                (MAX_PAYLOAD_SIZE-header_buffer) :
+                (length-currOffset);
 
-      Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
-      sstMsg.set_lsid( lsid );
-      sstMsg.set_type(sstMsg.DATAGRAM);
-      sstMsg.set_flags(0);
-      sstMsg.set_window( (unsigned char)10 );
-      sstMsg.set_src_port(local_port);
-      sstMsg.set_dest_port(remote_port);
+            Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
+            sstMsg.set_lsid( lsid );
+            sstMsg.set_type(sstMsg.DATAGRAM);
+            sstMsg.set_flags(0);
+            sstMsg.set_window( (unsigned char)10 );
+            sstMsg.set_src_port(local_port);
+            sstMsg.set_dest_port(remote_port);
 
-      sstMsg.set_payload( ((uint8*)data)+currOffset, buffLen);
+            sstMsg.set_payload( ((uint8*)data)+currOffset, buffLen);
 
-      std::string buffer = serializePBJMessage(sstMsg);
-      sendData(  buffer.data(), buffer.size(), false );
+            std::string buffer = serializePBJMessage(sstMsg);
 
-      currOffset += buffLen;
+            // If we're not within the payload size, we need to
+            // increase our buffer space and try again
+            if (buffer.size() > MAX_PAYLOAD_SIZE) {
+                header_buffer += 10;
+                continue;
+            }
+
+            sendData(  buffer.data(), buffer.size(), false );
+
+            currOffset += buffLen;
+            // If we got to the send, we can break out of the loop
+            break;
+        }
     }
 
     if (cb != NULL) {
