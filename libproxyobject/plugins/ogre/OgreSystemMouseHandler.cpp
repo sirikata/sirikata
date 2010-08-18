@@ -148,6 +148,7 @@ class OgreSystem::MouseHandler {
     uint32 mCameraPathIndex;
     Task::DeltaTime mCameraPathTime;
     Task::LocalTime mLastCameraTime;
+    Task::LocalTime mLastFpsTime;
 
     typedef std::map<String, InputResponse*> InputResponseMap;
     InputResponseMap mInputResponses;
@@ -155,6 +156,7 @@ class OgreSystem::MouseHandler {
     InputBinding mInputBinding;
 
     WebView* chromeWebView;
+    WebView* mFPSWidgetView;
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -713,10 +715,23 @@ private:
     }
 
     void startUploadObject() {
-        printf("startUploadObject called\n");
+        printf("startUploadObject called.\n");
         chromeWebView = WebViewManager::getSingleton().createWebView("jeff", 420, 250, OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
         chromeWebView->loadFile("upload.html");
         chromeWebView->setTransparent(true);
+    }
+
+    void handleFPSWidget() {
+        if(mFPSWidgetView) {
+            printf("closing fps widget\n");
+            WebViewManager::getSingleton().destroyWebView(mFPSWidgetView);
+            mFPSWidgetView = NULL;
+        } else {
+            printf("creating fps widget\n");
+            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 45, OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
+            mFPSWidgetView->loadFile("fps.html");
+            mFPSWidgetView->setTransparent(true);
+        }
     }
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
@@ -1443,6 +1458,19 @@ private:
         }
     }
 
+    void fpsUpdateTick(const Task::LocalTime& t) {
+        if(mFPSWidgetView) {
+            Task::DeltaTime dt = t - mLastFpsTime;
+            if(dt.toSeconds() > 1) {
+                mLastFpsTime = t;
+                Ogre::RenderTarget::FrameStats stats = mParent->getRenderTarget()->getStatistics();
+                ostringstream os;
+                os << stats.avgFPS;
+                mFPSWidgetView->evaluateJS("update_fps(" + os.str() + ")");
+            }
+        }
+    }
+
     /// WebView Actions
     void webViewNavigateAction(WebViewManager::NavigationAction action) {
         WebViewManager::getSingleton().navigate(action);
@@ -1506,6 +1534,9 @@ public:
      : mParent(parent),
        mCurrentGroup(SpaceObjectReference::null()),
        mLastCameraTime(Task::LocalTime::now()),
+       mLastFpsTime(Task::LocalTime::now()),
+       chromeWebView(NULL),
+       mFPSWidgetView(NULL),
        mWhichRayObject(0)
     {
         mLastHitCount=0;
@@ -1616,6 +1647,7 @@ public:
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
+        mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
 
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
@@ -1647,6 +1679,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
 
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
@@ -1718,6 +1751,7 @@ public:
 
     void tick(const Task::LocalTime& t) {
         cameraPathTick(t);
+        fpsUpdateTick(t);
     }
 };
 
