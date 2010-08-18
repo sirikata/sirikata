@@ -82,6 +82,9 @@ public:
             ++mDisconCount;
         }
 
+        if (stat == Stream::Disconnected) {
+            ++mEndCount;
+        }
     }
     void dataRecvCallback(Stream *s,int id, const Chunk&data, const Stream::PauseReceiveCallback& pauseReceive) {
         static bool dopause=false;
@@ -125,22 +128,20 @@ public:
         dataRecvCallback(s,id,data,pauseReceive);
     }
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
-        if (newStream) {
-            static int newid=0;
-            {
-                unique_mutex_lock lck(mMutex);
-                mStreams.push_back(newStream);
-            }
-            using std::tr1::placeholders::_1;
-            using std::tr1::placeholders::_2;
-            setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1,_2),
-                &Stream::ignoreReadySendCallback);
-            ++newid;
-            runRoutine(newStream);
-        }else {
-            ++mEndCount;
+        assert(newStream);
+
+        static int newid=0;
+        {
+            unique_mutex_lock lck(mMutex);
+            mStreams.push_back(newStream);
         }
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
+            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1,_2),
+            &Stream::ignoreReadySendCallback);
+        ++newid;
+        runRoutine(newStream);
     }
     void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
