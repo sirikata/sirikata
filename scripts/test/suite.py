@@ -8,7 +8,9 @@ import os.path
 import traceback
 import datetime
 from test import Test, ShellCommandTest
-from sim_test import ClusterSimTest, PacketLatencyByLoadTest, FlowFairnessTest
+from sim_test import ClusterSimTest
+from packet_latency_test import PacketLatencyByLoadTest
+from flow_fairness_test import FlowFairnessTest
 
 import sys
 # FIXME It would be nice to have a better way of making this script able to find
