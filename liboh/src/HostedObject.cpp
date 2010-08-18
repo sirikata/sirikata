@@ -41,7 +41,7 @@
 #include <Protocol_Persistence.pbj.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
-#include <sirikata/core/util/KnownServices.hpp>
+
 #include <sirikata/core/persistence/PersistenceSentMessage.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
@@ -55,6 +55,8 @@
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/util/KnownMessages.hpp>
+
 #include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 
@@ -193,8 +195,8 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mObjectScript=NULL;
     mSendService.ho = this;
 
-    std::cout<<"\n\n\nInitializting hosted object\n\n";
 
+    
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
             &HostedObject::createDelegateODPPort, this,
@@ -206,6 +208,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mHasScript = false;
     mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(getUUID(), this, this);
 
+    
 }
 
 HostedObject::~HostedObject() {
@@ -413,12 +416,32 @@ const QueryTracker* HostedObject::getTracker(const SpaceID& space) const {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
     SpaceDataMap::const_iterator it = mSpaceData->find(space);
-    if (it == mSpaceData->end()) {
+    if (it == mSpaceData->end())
+    {
+        std::cout<<"\n\n\n";
+        std::cout<<"Got inside of getProxyManager and did not have the space in mSpaceData";
+        std::cout<<"\n\n\n";
+        
         it = mSpaceData->insert(
             SpaceDataMap::value_type( space, PerSpaceData(this, space) )
         ).first;
     }
     return it->second.proxyManager;
+}
+
+
+
+void HostedObject::getSpaces(SpaceSet& ss) const
+{
+    if (mSpaceData == NULL)
+    {
+        std::cout<<"\n\n\nCalling getSpaces when not connected to any spaces.  This really shouldn't happen\n\n\n";
+        assert(false);
+    }
+    
+    SpaceDataMap::const_iterator smapIter;
+    for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
+        ss.insert(smapIter->first);
 }
 
 
@@ -799,6 +822,9 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
         SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
         return;
     }
+
+    SILOG(oh,debug,"[OH] Creating a script object for " << getUUID().toString() << "(internal id)");
+    
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script)) {
@@ -866,6 +892,11 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
     if (cam)
         cam->attach(String(), 0, 0);
+
+    //bind an odp port to listen for the begin scripting signal.  if have
+    //receive the scripting signal for the first time, that means that we create
+    //a JSObjectScript for this hostedobject
+    bindODPPort(space,Services::LISTEN_FOR_SCRIPT_BEGIN);
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server) {
@@ -913,6 +944,87 @@ bool HostedObject::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
     return mObjectHost->send(getSharedPtr(), space, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
 }
 
+
+
+//returns true if this is a script init message.  returns false otherwise
+bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
+{
+    if (dst.port() != Services::LISTEN_FOR_SCRIPT_BEGIN)
+        return false;
+
+    //I don't really know what this segment of code does.  I copied it from processRPC
+    RoutableMessageBody msg;
+    RoutableMessageBody outer_msg;
+    outer_msg.ParseFromArray(bodyData.data(), bodyData.length());
+    if (outer_msg.has_payload())
+    {
+        assert( outer_msg.message_size() == 0 );
+        msg.ParseFromString(outer_msg.payload());
+    }
+    else
+        msg = outer_msg;
+
+
+    int numNames = msg.message_size();
+    if (numNames <= 0)
+    {
+        // Invalid message!
+        //was a poorly formatted message to the listen_for_script_begin port.
+        //send back a protocol error.
+        RoutableMessageHeader replyHeader;
+        replyHeader.set_return_status(RoutableMessageHeader::PROTOCOL_ERROR);
+        sendViaSpace(replyHeader, MemoryReference::null());
+        return true;
+    }
+
+
+    //if any of the names match, then we're going to go ahead an create a script
+    //for it.
+    for (int i = 0; i < numNames; ++i)
+    {
+        std::string name = msg.message_names(i);
+        MemoryReference body(msg.message_arguments(i));
+        
+        //means that we are supposed to create a new scripted object
+        if (name == KnownMessages::INIT_SCRIPT)
+            processInitScriptMessage(body);
+    }
+
+    //it was on the script init port, so it was a scripting init message
+    return true;
+}
+
+
+//The processInitScriptSetup takes in a message body that we know should be an
+//init script message (from checks in handleScriptInitMessage).  
+//Does some additional checking on the message body, and then sets a few global
+//variables and calls the object's initializeScript function
+void HostedObject::processInitScriptMessage(MemoryReference& body)
+{
+    Protocol::ScriptingInit si;
+    si.ParseFromArray(body.data(),body.size());
+    
+    if (si.has_script())
+    {
+        String script_type = si.script();
+        ObjectScriptManager::Arguments script_args;
+        if (si.has_script_args())
+        {
+            
+            Protocol::StringMapProperty args_map = si.script_args();
+            assert(args_map.keys_size() == args_map.values_size());
+            for (int i = 0; i < args_map.keys_size(); ++i)
+                script_args[ args_map.keys(i) ] = args_map.values(i);
+        }
+        mHasScript = true;
+        mScriptType = script_type;
+        mScriptArgs = script_args;
+        initializeScript(script_type, script_args);
+    }
+}
+
+
+
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
     // Convert to ODP runtime format
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
@@ -931,6 +1043,12 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
         // if this was true, it got delivered
         delete msg;
     }
+    else if (handleScriptInitMessage(src_ep,dst_ep,MemoryReference(msg->payload())))
+    {
+        //if this was true, then that means that it was an init script command,
+        //and we dealt with it.
+        delete msg;
+    }
     else {
         SILOG(cppoh,debug,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
         delete msg;
@@ -943,6 +1061,8 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 //            mObjectScript->processMessage(header, bodyData);
 
 }
+
+
 
 void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
     //DEPRECATED(HostedObject);

@@ -61,6 +61,8 @@
 #include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/util/KnownMessages.hpp>
+#include <sirikata/core/util/KnownScriptTypes.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -655,12 +657,13 @@ private:
         ui_wv->loadFile(ui_page);
     }
 
-    /** Create a UI element for interactively scripting an object. */
+    /** Create a UI element for interactively scripting an object.
+        Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
+        HostedObject. 
+     */
     void createScriptingUIAction() {
 
-        static bool bftm_onceInitialized = false;
-
-
+        static bool onceInitialized = false;
 
         // Ask all the objects to initialize scripting
         initScriptOnSelectedObjects();
@@ -684,9 +687,7 @@ private:
                 ui_info.scripting->show();
             }
             else {
-
-                //bftm
-                if (bftm_onceInitialized)
+                if (onceInitialized)
                 {
                     WebView* new_scripting_ui =
                         WebViewManager::getSingleton().createWebView(
@@ -700,7 +701,7 @@ private:
                     return;
                 }
 
-                //bftm
+
                 //name it something else, and put it in a different place
                 WebView* new_scripting_ui =
                     WebViewManager::getSingleton().createWebView(
@@ -711,7 +712,7 @@ private:
 
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
-                bftm_onceInitialized = true;
+                onceInitialized = true;
 
             }
         }
@@ -841,6 +842,12 @@ private:
         );
     }
 
+
+    /**
+       This function sends out a message on KnownServices port
+       LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
+       object receives the message and attaches a JSObjectScript to the HostedObject.
+     */
     void initScriptOnSelectedObjects() {
         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
              selectIter != mSelectedObjects.end(); ++selectIter) {
@@ -849,20 +856,35 @@ private:
             Protocol::ScriptingInit init_script;
 
             // Filter out the script type from rest of args
-            String script_type = "js"; // FIXME how to decide this?
-            init_script.set_script(script_type);
+            //String script_type = "js"; // FIXME how to decide this?
+            init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
 
             std::string serializedInitScript;
             init_script.SerializeToString(&serializedInitScript);
 
+            // RoutableMessageBody body;
+            // body.add_message("InitScript", serializedInitScript);
+            // std::string serialized;
+            // body.SerializeToString(&serialized);
+            
+            // obj->sendMessage(
+            //     Services::RPC,
+            //     MemoryReference(serialized.data(), serialized.length())
+            // );
+
+
             RoutableMessageBody body;
-            body.add_message("InitScript", serializedInitScript);
+            //body.add_message("InitScript", serializedInitScript);
+            body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
             std::string serialized;
             body.SerializeToString(&serialized);
+            
             obj->sendMessage(
-                Services::RPC,
+                Services::LISTEN_FOR_SCRIPT_BEGIN,
                 MemoryReference(serialized.data(), serialized.length())
             );
+
+            
         }
     }
 

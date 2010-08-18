@@ -44,8 +44,17 @@ enum Ports{
     TIMESYNC=7,
     SUBSCRIPTION=9,
     BROADCAST=10,
-    SCRIPTING=11,
-    COMMUNICATION=12,//bftm
+    SCRIPTING=11,               //on this channel, we get messages to execute
+                                //scripts.  (For instance, typing
+                                //system.print("\n\n") into terminal will send
+                                //a message with the system.print text to the JSObjectScript
+    COMMUNICATION=12,           //allows JSObjectScripts to send messages to
+                                //each other.
+    LISTEN_FOR_SCRIPT_BEGIN=13, //a hosted object listens on this channel for
+                                //any begin scriptable events.  if it receives
+                                //any, will instantiate a JSObjectScript
+                                //attached to the HostedObject.  Currently, ogre
+                                //mouse events send this signal to the HostedObject.
     OBJECT_CONNECTIONS=16383
 };
 }

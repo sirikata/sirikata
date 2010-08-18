@@ -41,7 +41,8 @@ void InitCPPOHOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         // Note: we load *many* more plugins for cppoh by default since it is
         // also the client.
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,ogregraphics,colladamodels,csvfactory",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,ogregraphics,colladamodels,csvfactory,scripting-js",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
 

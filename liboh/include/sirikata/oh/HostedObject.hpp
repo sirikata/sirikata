@@ -105,10 +105,13 @@ protected:
 
 //------- Members
     ObjectHostContext* mContext;
-  public:
-    typedef std::set<SpaceID> SpaceSet;
+
+    // public:
+    //   //typedef std::set<SpaceID> SpaceSet;
+    // private:
+    
   private:
-    SpaceSet mSpaces;
+    //SpaceSet mSpaces;
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
@@ -151,9 +154,14 @@ private:
 public:
 
     /** Get a set of spaces the object is currently connected to. */
-    const SpaceSet& spaces() const {
-        return mSpaces;
-    }
+    typedef std::set<SpaceID> SpaceSet;
+    void getSpaces(SpaceSet& ss) const;
+    //bftm re-write
+    // const SpaceSet& spaces() const {
+    //     return mSpaces;
+    // }
+
+    
 
 //------- Public member functions:
     ObjectHostContext* context() { return mContext; }
@@ -169,6 +177,10 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
 
+    bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    void processInitScriptMessage(MemoryReference& body);
+    bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    
     /// Attempt to restore this item from database including script
     //void initializeRestoreFromDatabase(const SpaceID&spaceID);
 
@@ -195,40 +207,40 @@ public:
 		it is a scripted object
 	*/
 	
-	bool mHasScript;
-	String mScriptType;
-	ObjectScriptManager::Arguments mScriptArgs;
-	String mScriptName;
+    bool mHasScript;
+    String mScriptType;
+    ObjectScriptManager::Arguments mScriptArgs;
+    String mScriptName;
 
 
-	bool hasScript()
-	{
-            return mHasScript;
-	}
+    bool hasScript()
+    {
+        return mHasScript;
+    }
 
-	void setHasScript(bool t)
-	{
-            mHasScript = t;
-	}
-   
-        void setScriptType(String s)
-	{
-            mScriptType = s;
-	}
+    void setHasScript(bool t)
+    {
+        mHasScript = t;
+    }
+    
+    void setScriptType(String s)
+    {
+        mScriptType = s;
+    }
 
-	void setScriptArgs(ObjectScriptManager::Arguments& args)
-	{
-            mScriptArgs = args;
-	}
+    void setScriptArgs(ObjectScriptManager::Arguments& args)
+    {
+        mScriptArgs = args;
+    }
 
-        String getScriptName()
-	{
-            return mScriptName;
-	}
-	void setScriptName(String s)
-	{
-            mScriptName = s;
-	}
+    String getScriptName()
+    {
+        return mScriptName;
+    }
+    void setScriptName(String s)
+    {
+        mScriptName = s;
+    }
 
     void attachScript(const String& );
 

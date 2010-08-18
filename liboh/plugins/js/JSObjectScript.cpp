@@ -63,9 +63,16 @@
 #include "JSSystemNames.hpp"
 #include "JSPresenceStruct.hpp"
 
+
+// #define FIXME_GET_SPACE() \
+//     const HostedObject::SpaceSet& spaces = mParent->spaces(); \
+//     assert(spaces.size() == 1);                               \
+//     SpaceID space = *(spaces.begin());
+
 #define FIXME_GET_SPACE() \
-    const HostedObject::SpaceSet& spaces = mParent->spaces(); \
-    assert(spaces.size() == 1);                               \
+    HostedObject::SpaceSet spaces;              \
+    mParent->getSpaces(spaces);                 \
+    assert(spaces.size() == 1);                 \
     SpaceID space = *(spaces.begin());
 
 
@@ -102,14 +109,22 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     std::cout<<"\n\n\n\n";
     std::cout<<"Got into jsobjectscript";
     std::cout<<"\n\n\n\n";
+
     
-    
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
+
+    //const HostedObject::SpaceSet& spaces = mParent->spaces();
+    HostedObject::SpaceSet spaces;
+    mParent->getSpaces(spaces);
     if (spaces.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
 
     for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
+        std::cout<<"\n\n\n";
+        std::cout<<"This is the bindODPPort";
+        std::cout<<"\n\n\n";
+
+        
         //register for scripting messages from user
         SpaceID space_id=*space_it;
         mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
@@ -117,9 +132,14 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
         if (mScriptingPort)
-            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1, _2),1 );
+        {
+            //mScriptingPort->receive(
+            //std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1,
+            //_2),1 );
+            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2,_3));
+        }
 
-
+        
         //register port for messaging
         mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
 
@@ -141,8 +161,8 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
   // get the script type
   String script_type = "js";
   Sirikata::Protocol::CreateObject creator;
-  Sirikata::Protocol::IConnectToSpace space = creator.add_space_properties();
-  Sirikata::Protocol::IObjLoc loc = space.mutable_requested_object_loc();
+  Sirikata::Protocol::IConnectToSpace spacer = creator.add_space_properties();
+  Sirikata::Protocol::IObjLoc loc = spacer.mutable_requested_object_loc();
   //loc.set_position(curLoc.getPosition() + Vector3d(direction(curLoc.getOrientation()))*WORLD_SCALE/3);
   loc.set_position(vec);
   //loc.set_orientation(curLoc.getOrientation());
@@ -162,15 +182,16 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
   std::string serialized;
   body.SerializeToString(&serialized);
 
-  const HostedObject::SpaceSet& spaces = mParent->spaces();
-  SpaceID spaceider = *(spaces.begin());
+
+  FIXME_GET_SPACE();
+  // const HostedObject::SpaceSet& spaces = mParent->spaces();
+  // SpaceID spaceider = *(spaces.begin());
 
   //ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
   //The .object call to SpaceObjectReference gets out the ObjectReference.
-  ODP::Endpoint dest (spaceider,(mParent->id(spaceider)).object(),Services::RPC);
+  ODP::Endpoint dest (space,(mParent->id(space)).object(),Services::RPC);
 
   
-
   mMessagingPort->send(dest, MemoryReference(serialized.data(), serialized.length()));
 
 }
@@ -245,18 +266,19 @@ void JSObjectScript::processMessage(
     NOT_IMPLEMENTED(js);
 }
 
-bool JSObjectScript::valid() const {
+
+bool JSObjectScript::valid() const
+{
     return (mParent);
 }
 
 
 
-void JSObjectScript::test() const {
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    assert(spaces.size() == 1);
+void JSObjectScript::test() const
+{
+    FIXME_GET_SPACE();
 
-    SpaceID space = *(spaces.begin());
-
+    
 //     Location loc = mParent->getLocation( space );
 //     //loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
 //     loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
@@ -287,10 +309,11 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
     v8::Local<v8::Array> arrayObj= v8::Array::New();
 
 
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    SpaceID spaceider = *(spaces.begin());
+    FIXME_GET_SPACE();
+    // const HostedObject::SpaceSet& spaces = mParent->spaces();
+    // SpaceID spaceider = *(spaces.begin());
 
-    UUID myUUID = mParent->getObjReference(spaceider).getAsUUID();;
+    UUID myUUID = mParent->getObjReference(space).getAsUUID();;
 
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
@@ -342,9 +365,12 @@ void JSObjectScript::sendMessageToEntity(int numIndex, const std::string& msgBod
 
 void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::string& msgBody) const
 {
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    SpaceID spaceider = *(spaces.begin());
-    ODP::Endpoint dest (spaceider,*reffer,Services::COMMUNICATION);
+    // const HostedObject::SpaceSet& spaces = mParent->spaces();
+    // SpaceID spaceider = *(spaces.begin());
+
+    FIXME_GET_SPACE();
+    
+    ODP::Endpoint dest (space,*reffer,Services::COMMUNICATION);
     mMessagingPort->send(dest,MemoryReference(msgBody));
 }
 
@@ -388,15 +414,18 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
 //bftm
 void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const
 {
-    const HostedObject::SpaceSet& spaces = mParent->spaces();
-    //which space am I in now
-    SpaceID spaceider = *(spaces.begin());
+    // const HostedObject::SpaceSet& spaces = mParent->spaces();
+    // //which space am I in now
+    // SpaceID spaceider = *(spaces.begin());
 
+    FIXME_GET_SPACE();
+    
+    
     //get a list of all object references through prox
     //ProxyObjectPtr proxPtr = mParent->getProxyManager(spaceider);
     //ObjectHostProxyManager* proxManagerPtr =
     //mParent->getProxyManager(spaceider);
-    ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(spaceider);
+    ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(space);
 
     //FIX ME: May need to check if get back null ptr.
 
@@ -861,6 +890,40 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 
 
 
+//(const RoutableMessageHeader& hdr, MemoryReference payload)
+void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+{
+    // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
+    // in "Header")
+    RoutableMessageBody body;
+    body.ParseFromArray(payload.data(), payload.size());
+    Sirikata::Protocol::ScriptingMessage scripting_msg;
+    bool parsed = scripting_msg.ParseFromString(body.payload());
+    if (!parsed)
+    {
+        JSLOG(fatal, "Parsing failed.");
+    }
+    else
+    {
+        std::cout<<"\n\n\n";
+        std::cout<<"Got into else handleScriptingMessageNewProto";
+        std::cout<<"\n\n\n";
+        std::cout<<"This is the requests_size:  " <<scripting_msg.requests_size();
+        std::cout<<"\n\n\n";
+        
+        // Handle all requests
+        for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
+        {
+            Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
+            String script_str = req.body();
+
+            protectedEval(script_str);
+        }
+    }
+}
+
+
+
 void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
     // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
@@ -974,7 +1037,9 @@ void JSObjectScript::clearAllPresences(Handle<Object>& system_obj)
 void JSObjectScript::populatePresences(Handle<Object>& system_obj)
 {
     HandleScope handle_scope;
-    HostedObject::SpaceSet spaces = mParent->spaces();
+    //HostedObject::SpaceSet spaces = mParent->spaces();
+    HostedObject::SpaceSet spaces;
+    mParent->getSpaces(spaces);
     HostedObject::SpaceSet::const_iterator it = spaces.begin();
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Array> arrayObj= v8::Array::New();
@@ -1028,16 +1093,16 @@ void JSObjectScript::attachScript(const String& script_name)
 
 void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
 {
- 
-  const HostedObject::SpaceSet& spaces = mParent->spaces();
-  
-  SpaceID spaceider = *(spaces.begin());
+  // const HostedObject::SpaceSet& spaces = mParent->spaces();
+  // SpaceID spaceider = *(spaces.begin());
+
+  FIXME_GET_SPACE();
   const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
 
   //mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
 
   //FIXME: may want to start in a different place.
-  Location startingLoc = mParent->getLocation(spaceider);
+  Location startingLoc = mParent->getLocation(space);
 
   mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
   

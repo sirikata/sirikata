@@ -63,7 +63,8 @@ public:
     bool endForwardingMessagesTo(MessageService*);
     bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
     void processMessage(const RoutableMessageHeader& header, MemoryReference body);
-
+    void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    
     void updateAddressable();
 
     void attachScript(const String&);
@@ -155,6 +156,8 @@ private:
 
     
     void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
+    void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
+
     void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload);
     void bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const;

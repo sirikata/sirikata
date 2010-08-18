@@ -35,6 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+
 
 namespace Sirikata {
 namespace ODP {
@@ -65,7 +67,9 @@ public:
     operator uint32() const;
 
     bool operator==(const PortID& rhs) const;
+    bool operator==(const Services::Ports& compareTo) const;
     bool operator!=(const PortID& rhs) const;
+    bool operator!=(const Services::Ports& compareTo) const;
     bool operator>(const PortID& rhs) const;
     bool operator>=(const PortID& rhs) const;
     bool operator<(const PortID& rhs) const;
