@@ -216,9 +216,9 @@ main	(int argc, char *argv[])
 	}
 	else
 	{
-		nodes	= antlr3CommonTreeNodeStreamNew(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE HINT WILL SOON BE DEPRECATED!!
+		nodes	= antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE HINT WILL SOON BE DEPRECATED!!
 
-		printf("Nodes: %s\n", (emersonAST.tree).baseTree->toStringTree(emersonAST.tree.baseTree)->chars);
+		printf("Nodes: %s\n", emersonAST.tree->toStringTree(emersonAST.tree)->chars);
 
 		// Tree parsers are given a common tree node stream (or your override)
 		//

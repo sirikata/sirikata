@@ -13,7 +13,7 @@ options
 	backtrack=true;
 //	memoize=true;
 	rewrite=true;
-	ASTLabelType=pANTRL3_COMMON_TREE;
+	ASTLabelType=pANTRL3_BASE_TREE;
 	tokenVocab=Emerson;
  language = C;
 }

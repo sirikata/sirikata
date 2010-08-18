@@ -12,7 +12,7 @@ options
 	output=AST;
 	backtrack=true;
 	memoize=true;
- ASTLabelType = pANTLR3_COMMON_TREE; 
+ ASTLabelType = pANTLR3_BASE_TREE; 
 	language = C;
 }
 
