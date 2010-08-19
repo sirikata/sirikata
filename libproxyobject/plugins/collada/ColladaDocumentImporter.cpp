@@ -61,6 +61,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
 
 //    lastURIString = uri.toString();
     mMesh = new Meshdata();
+    mMesh->uri = uri.toString();
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()
@@ -542,6 +543,9 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     // Type
     switch (light->getLightType()) {
       case COLLADAFW::Light::AMBIENT_LIGHT:
+        sublight->setLightAmbientColor(lcol);
+        sublight->setLightDiffuseColor(Color(0,0,0));
+        sublight->setLightSpecularColor(Color(0,0,0));
         sublight->setLightType(LightInfo::POINT);//just make it a point light for now
         break;
       case COLLADAFW::Light::DIRECTIONAL_LIGHT:

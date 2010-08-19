@@ -636,101 +636,101 @@ void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
 
-
-    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-    Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
-    for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
-        std::string matname = hash + "_texture_" + *tex_it;
-        Ogre::MaterialPtr mat = base_mat->clone(matname);
-        String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
-        mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
-    }
-    Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-    if (1) {
-        /// FIXME: set bounds, bounding radius here
-        Ogre::ManualResourceLoader *reload;
-        Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=OGRE_NEW MeshdataManualLoader(md))));
-        reload->prepareResource(&*mo);
-        reload->loadResource(&*mo);
-    }else {
-        int up = md.up_axis;
-        /// FIXME: set bounds, bounding radius here
-        Ogre::ManualObject mo(hash);
-        mo.clear();
-        
-        for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
-            const GeometryInstance& geoinst = *geoinst_it;
+    if (!md.instances.empty()) {
+        Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+        Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
+        for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
+            std::string matname = hash + "_texture_" + *tex_it;
+            Ogre::MaterialPtr mat = base_mat->clone(matname);
+            String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
+            mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
+        }
+        Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
+        if (1) {
+            /// FIXME: set bounds, bounding radius here
+            Ogre::ManualResourceLoader *reload;
+            Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=OGRE_NEW MeshdataManualLoader(md))));
+            reload->prepareResource(&*mo);
+            reload->loadResource(&*mo);
+        }else {
+            int up = md.up_axis;
+            /// FIXME: set bounds, bounding radius here
+            Ogre::ManualObject mo(hash);
+            mo.clear();
             
-            Matrix4x4f pos_xform = geoinst.transform;
-            Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
-            
-            // Get the instanced submesh
-            assert(geoinst.geometryIndex < md.geometry.size());
-            const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
-            
-            int vertcount = submesh.positions.size();
-            int normcount = submesh.normals.size();
-            for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
-                const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
-                int indexcount = prim.indices.size();
+            for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+                const GeometryInstance& geoinst = *geoinst_it;
                 
-                // FIXME select proper texture/material
-                std::string matname = md.textures.size() > 0 ?
-                    hash + "_texture_" + md.textures[0] :
-                    base_mat->getName();
-                mo.begin(matname);
-                std::cerr<<"Begin "<<matname<<"\n";
-                float tu, tv;
-                for (int i=0; i<indexcount; i++) {
-                    int j = prim.indices[i];
-                    Vector3f v = fixUp(up, submesh.positions[j]);
-                    Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
-                    v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
-                    mo.position(v[0], v[1], v[2]);
-                    std::cerr<<"Mo pos "<<v[0]<<","<<v[1]<<","<<v[2]<<"\n";
-                    Vector3f normal = fixUp(up, submesh.normals[j]);
-                    normal = normal_xform * normal;
-                    mo.normal(normal[0], normal[1], normal[2]);
-                    std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";                
-                    mo.colour(1.0,1.0,1.0,1.0);
-                    if (submesh.texUVs.size()==0) {
-                        /// bogus texture for textureless models
-                        if (i%3==0) {
-                            tu=0.0;
-                            tv=0.0;
+                Matrix4x4f pos_xform = geoinst.transform;
+                Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
+                
+                // Get the instanced submesh
+                assert(geoinst.geometryIndex < md.geometry.size());
+                const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
+                
+                int vertcount = submesh.positions.size();
+                int normcount = submesh.normals.size();
+                for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
+                    const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
+                    int indexcount = prim.indices.size();
+                    
+                    // FIXME select proper texture/material
+                    std::string matname = md.textures.size() > 0 ?
+                        hash + "_texture_" + md.textures[0] :
+                        base_mat->getName();
+                    mo.begin(matname);
+                    std::cerr<<"Begin "<<matname<<"\n";
+                    float tu, tv;
+                    for (int i=0; i<indexcount; i++) {
+                        int j = prim.indices[i];
+                        Vector3f v = fixUp(up, submesh.positions[j]);
+                        Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
+                        v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
+                        mo.position(v[0], v[1], v[2]);
+                        std::cerr<<"Mo pos "<<v[0]<<","<<v[1]<<","<<v[2]<<"\n";
+                        Vector3f normal = fixUp(up, submesh.normals[j]);
+                        normal = normal_xform * normal;
+                        mo.normal(normal[0], normal[1], normal[2]);
+                        std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";                
+                        mo.colour(1.0,1.0,1.0,1.0);
+                        if (submesh.texUVs.size()==0) {
+                            /// bogus texture for textureless models
+                            if (i%3==0) {
+                                tu=0.0;
+                                tv=0.0;
+                            }
+                            if (i%3==1) {
+                                tu=0.0;
+                                tv=1.0;
+                            }
+                            if (i%3==2) {
+                                tu=1.0;
+                                tv=1.0;
+                            }
                         }
-                        if (i%3==1) {
-                            tu=0.0;
-                            tv=1.0;
+                        else {
+                            Sirikata::Vector2f uv (submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride ],
+                                                   submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride+1]);
+                            tu = uv[0];
+                            tv = 1.0-uv[1];           //  why you gotta be like that?
                         }
-                        if (i%3==2) {
-                            tu=1.0;
-                            tv=1.0;
-                        }
+                        std::cerr<<"Mo tex "<<tu<<","<<tv<<"\n";
+                        mo.textureCoord(tu, tv);
                     }
-                    else {
-                        Sirikata::Vector2f uv (submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride ],
-                                               submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride+1]);
-                        tu = uv[0];
-                        tv = 1.0-uv[1];           //  why you gotta be like that?
-                    }
-                    std::cerr<<"Mo tex "<<tu<<","<<tv<<"\n";
-                    mo.textureCoord(tu, tv);
+                    std::cerr<<"Mo end\n";
+                    mo.end();
                 }
-                std::cerr<<"Mo end\n";
-                mo.end();
-            }
-        } // submesh
+            } // submesh
         
-        mo.setVisible(true);
-        Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-
+            mo.setVisible(true);
+            Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        }
+    
+        bool check = mm.resourceExists(hash);
+        loadMesh(hash);                     /// this is here because we removed
+                                            /// mResource->loaded(true, mEpoch) in
+                                            /// ModelLoadTask::doRun
     }
-    bool check = mm.resourceExists(hash);
-    loadMesh(hash);                     /// this is here because we removed
-                                        /// mResource->loaded(true, mEpoch) in
-                                        /// ModelLoadTask::doRun
-
     // Lights
     int light_idx = 0;
     for(Meshdata::LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
@@ -750,7 +750,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
         if (!light->isAttached()) {
             mLights.push_back(light);
             mSceneNode->attachObject(light);
-            light->setDebugDisplayEnabled(true);
+//            light->setDebugDisplayEnabled(true);
         }
     }
 }
