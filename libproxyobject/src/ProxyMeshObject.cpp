@@ -37,13 +37,15 @@
 
 namespace Sirikata {
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr vwobj )
+ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr vwobj)
     :   MeshObject (),
         MeshProvider (),
-        ProxyObject ( man, id, vwobj ),
+        ProxyObject ( man, id, vwobj),
         mModelObject ()
 {
 
+
+    
 }
 
 void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )

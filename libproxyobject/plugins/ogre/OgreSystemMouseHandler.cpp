@@ -894,9 +894,10 @@ private:
      *  The target of the command is determined implicitly based on
      *  the webview this is coming from.
      */
-    void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args) {
+    void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args)
+    {
         typedef std::tr1::unordered_map<String, String> StringMap;
-
+        
         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
         if (objit == mScriptingUIObjects.end())
             return;
@@ -906,7 +907,7 @@ private:
 
         StringMap::const_iterator command_it = args.find("Command");
         assert(command_it != args.end());
-
+        
         //Get Proxy
         Protocol::ScriptingMessage scripting_msg;
         Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();

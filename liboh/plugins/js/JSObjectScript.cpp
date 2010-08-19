@@ -106,12 +106,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
     mHandlingEvent = false;
 
-    std::cout<<"\n\n\n\n";
-    std::cout<<"Got into jsobjectscript";
-    std::cout<<"\n\n\n\n";
-
-    
-
     //const HostedObject::SpaceSet& spaces = mParent->spaces();
     HostedObject::SpaceSet spaces;
     mParent->getSpaces(spaces);
@@ -120,9 +114,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
     for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
-        std::cout<<"\n\n\n";
-        std::cout<<"This is the bindODPPort";
-        std::cout<<"\n\n\n";
 
         
         //register for scripting messages from user
@@ -132,12 +123,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
         if (mScriptingPort)
-        {
-            //mScriptingPort->receive(
-            //std::tr1::bind(&JSObjectScript::handleScriptingMessage, this, _1,
-            //_2),1 );
-            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2,_3));
-        }
+            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
+
 
         
         //register port for messaging
@@ -146,7 +133,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
         if (mMessagingPort)
-            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::bftm_handleCommunicationMessage, this, _1, _2),1 );
+            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
 
         space_it=spaces.find(space_id);//in case the space_set was munged in the process
     }
@@ -303,7 +290,7 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
     //loading the vector
     mAddressableList.clear();
-    bftm_getAllMessageable(mAddressableList);
+    getAllMessageable(mAddressableList);
 
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Array> arrayObj= v8::Array::New();
@@ -372,6 +359,9 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
     
     ODP::Endpoint dest (space,*reffer,Services::COMMUNICATION);
     mMessagingPort->send(dest,MemoryReference(msgBody));
+    lkjs;
+
+    mMessagingPort send;
 }
 
 
@@ -411,25 +401,21 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
     return result;
 }
 
-//bftm
-void JSObjectScript::bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const
-{
-    // const HostedObject::SpaceSet& spaces = mParent->spaces();
-    // //which space am I in now
-    // SpaceID spaceider = *(spaces.begin());
 
+//this function gets a list of all objects that are messageable
+//FIXME: want to return full id including space instead of just
+//objectreferences: may want to message in other spaces as well.
+void JSObjectScript::getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const
+{
+    //FIXME: likely getAllMessageable in all spaces rather than just first space.
     FIXME_GET_SPACE();
     
-    
     //get a list of all object references through prox
-    //ProxyObjectPtr proxPtr = mParent->getProxyManager(spaceider);
-    //ObjectHostProxyManager* proxManagerPtr =
-    //mParent->getProxyManager(spaceider);
     ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(space);
 
     //FIX ME: May need to check if get back null ptr.
 
-    //proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
+
     proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
 
     std::cout<<"\n\nBFTM:  this is the number of objects that are messageable:  "<<allAvailableObjectReferences.size()<<"\n\n";
@@ -660,65 +646,39 @@ void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
 // CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
-// void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3d& vec3d)
-// {
-//     Location loc = mParent->getLocation(*sID);
-//     loc.setPosition(vec3d);
-//     mParent->setLocation(*sID,loc);
-// }
 
-
-//merge rewrite
-//BFTM_FIXME: Unresolved question: should this function zero the velocity as well?  I
-//say yes!!!
-void JSObjectScript::setPositionFunction(const SpaceID* sID, const Vector3f& posVec)
+void JSObjectScript::setPositionFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& posVec)
 {
-    //create a new TimedMotionVector
-    //TimedMotionVector tmv (time_when, TimedMotionVector::PositionType);
-    //TimedMotionVector tmv (time_when, MotionVector3f(  position, veloc ));
-
-    //FIXME: this function zeros out the velocity as well.
-    Vector3f velocVec;
-    velocVec.x = 0;
-    velocVec.y = 0;
-    velocVec.z = 0;
-
-    TimedMotionVector3f tmv (Time::local(),MotionVector3f(posVec,velocVec));
-    mParent->requestLocationUpdate(*sID,tmv);
+    mParent->requestPositionUpdate(*sID,*oref,posVec);
 }
 
-
-// v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID)
-// {
-//     Location loc = mParent->getLocation(*sID);
-    
-//     //FIXME: note that CreateJSResult may not work with vec3, which is what
-//     //second arg returns
-//     return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
-// }
 
 //merge rewrite
 v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID, const ObjectReference* oref)
 {
-    //Location loc = mParent->getLocation(*sID, *oref);
-    
-    //FIXME: note that CreateJSResult may not work with vec3, which is what
-    //second arg returns
-    //return CreateJSResult(mContext, mParent->getLocation(*sID).getPosition());
-
-    Vector3d vec3 = mParent->requestCurrentLocation(*sID,*oref);
-
+    Vector3d vec3 = mParent->requestCurrentPosition(*sID,*oref);
     return CreateJSResult(mContext,vec3);
 }
 
 
+void JSObjectScript::setVelocityFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& velVec)
+{
+    mParent->requestVelocityUpdate(*sID,*oref,velVec);
+}
+
+v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceID* sID, const ObjectReference* oref)
+{
+    Vector3f vec3f = mParent->requestCurrentVelocity(*sID,*oref);
+    return CreateJSResult(mContext,vec3f);
+}
 
 
 
+lkjs;
+need to ensure that the sender object is an addressable of type spaceobject reference rather than just having an object reference;
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
     JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
-
 
     if ( mHandlingEvent)
     {
@@ -751,25 +711,104 @@ void JSObjectScript::printAllHandlerLocations()
  * Populates the message properties
  */
 
-v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHeader& msgHeader)
+// v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHeader& msgHeader)
+// {
+//     /**
+//        FIXME: may need to declare a scope here?
+//     */
+
+//   ObjectReference* orp = new ObjectReference(msgHeader.source_object());
+
+//   Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
+//   tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(orp));
+//   tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
+
+//   return tmpObj;
+// }
+
+
+
+v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
-    /**
-       FIXME: may need to declare a scope here?
+    SpaceObjectRefernce* sporef = new SpaceObjectReference(src.space(),src.object());
+    
+    Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
+    tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
+    tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sporef));
+    return tmpObj;
+}
+
+
+
+
+void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+{
+    lkjs;
+    std::cout<<"\n\n\n";
+    std::cout<<"Got into handleCommunicationMessageNewProto";
+    std::cout<<"\n\n\n";
+
+    
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+    v8::Local<v8::Object> obj = v8::Object::New();
+
+
+    v8::Local<v8::Object> msgSender = getMessageSender(src);
+    //try deserialization
+    bool deserializeWorks;
+    deserializeWorks = JSSerializer::deserializeObject( payload,obj);
+
+    /*
+      FIXME: perhaps send a message back saying that deserialization failed
     */
-
-  ObjectReference* orp = new ObjectReference(msgHeader.source_object());
-
-  Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
-  tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(orp));
-  tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
+    if (! deserializeWorks)
+        return;
 
 
-  return tmpObj;
+    // Checks if matches some handler.  Try to dispatch the message
+    bool matchesSomeHandler = false;
+
+
+    //cannot affect the event handlers when we are executing event handlers.
+    mHandlingEvent = true;
+
+    for (int s=0; s < (int) mEventHandlers.size(); ++s)
+    {
+        if (mEventHandlers[s]->matches(obj,msgSender))
+        {
+            // Adding support for the knowing the message properties too
+            int argc = 2;
+
+            Handle<Value> argv[2] = { obj, msgSender };
+            ProtectedJSCallback(mContext, mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
+
+            matchesSomeHandler = true;
+        }
+    }
+
+
+    mHandlingEvent = false;
+    flushQueuedHandlerEvents();
+
+
+    /*
+      FIXME: What should I do if the message that I receive does not match any handler?
+     */
+    if (!matchesSomeHandler)
+        std::cout<<"\n\nMessage did not match any files\n\n";
+    
+
 }
 
 //just a handler for receiving any message.  for now, not doing any dispatch.
-void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
+void JSObjectScript::handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
 {
+    std::cout<<"\n\n\n";
+    std::cout<<"Got into handleCommunicationMessage";
+    std::cout<<"\n\n\n";
+
+    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
@@ -778,7 +817,6 @@ void JSObjectScript::bftm_handleCommunicationMessage(const RoutableMessageHeader
     //try deserialization
     bool deserializeWorks;
     deserializeWorks = JSSerializer::deserializeObject( payload,obj);
-
 
     /*
       FIXME: perhaps send a message back saying that deserialization failed
@@ -890,48 +928,13 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 
 
 
-//(const RoutableMessageHeader& hdr, MemoryReference payload)
+//this function is bound to the odp port for scripting messages.  It receives
+//the commands that users type into the command terminal on the visual and
+//parses them.
 void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
-    // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
-    // in "Header")
-    RoutableMessageBody body;
-    body.ParseFromArray(payload.data(), payload.size());
     Sirikata::Protocol::ScriptingMessage scripting_msg;
-    bool parsed = scripting_msg.ParseFromString(body.payload());
-    if (!parsed)
-    {
-        JSLOG(fatal, "Parsing failed.");
-    }
-    else
-    {
-        std::cout<<"\n\n\n";
-        std::cout<<"Got into else handleScriptingMessageNewProto";
-        std::cout<<"\n\n\n";
-        std::cout<<"This is the requests_size:  " <<scripting_msg.requests_size();
-        std::cout<<"\n\n\n";
-        
-        // Handle all requests
-        for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
-        {
-            Sirikata::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
-            String script_str = req.body();
-
-            protectedEval(script_str);
-        }
-    }
-}
-
-
-
-void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
-{
-    // Parse (FIXME we have to parse a RoutableMessageBody here, should just be
-    // in "Header")
-    RoutableMessageBody body;
-    body.ParseFromArray(payload.data(), payload.size());
-    Sirikata::Protocol::ScriptingMessage scripting_msg;
-    bool parsed = scripting_msg.ParseFromString(body.payload());
+    bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
     if (!parsed)
     {
         JSLOG(fatal, "Parsing failed.");
@@ -948,6 +951,8 @@ void JSObjectScript::handleScriptingMessage(const RoutableMessageHeader& hdr, Me
         }
     }
 }
+
+
 
 //This function takes in a jseventhandler, and wraps a javascript object with
 //it.  The function is called by registerEventHandler in JSSystem, which returns

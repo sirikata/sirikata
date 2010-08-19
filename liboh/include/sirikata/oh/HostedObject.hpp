@@ -200,6 +200,7 @@ public:
     const Duration&getSpaceTimeOffset(const SpaceID&space);
     /// Gets the proxy object representing this HostedObject inside space.
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
+    ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
 
     
 	/** These are properties related the object script 
@@ -320,7 +321,8 @@ public:
     Location getLocation(const SpaceID& space);
 
   private:
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server);
+
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceID& space);
 
@@ -387,9 +389,14 @@ public:
 
     // Movement Interface
     //note: location update services both position and velocity
-    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);  
-    virtual Vector3d requestCurrentLocation (const SpaceID& space,const ObjectReference& oref);
-    virtual Vector3d requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
+
+    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+    virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
+    virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
+
+
+    virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
+    virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
     virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
 
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
@@ -406,8 +413,11 @@ public:
     void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera = false);
-
+    //ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera = false);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq);
+    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera);
+    
     // Helper for constructing and sending location update
     void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
 };

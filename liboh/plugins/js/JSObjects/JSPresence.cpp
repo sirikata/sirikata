@@ -91,7 +91,7 @@ namespace Sirikata
             
             Vector3f newPos (Vec3Extract(posArg));
 
-            mStruct->jsObjScript->setPositionFunction(mStruct->sID, newPos);
+            mStruct->jsObjScript->setPositionFunction(mStruct->sID, mStruct->oref, newPos);
             return v8::Undefined();
             
         }
@@ -101,11 +101,46 @@ namespace Sirikata
         {
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getPosition function.  Invalid presence struct.")) );
 
-            return mStruct->jsObjScript->getPositionFunction(mStruct->sID,mStruct->oref);
+            return mStruct->jsObjScript->getPositionFunction(mStruct->sID, mStruct->oref);
         }
 
+
+
+        v8::Handle<v8::Value>  setVelocity(const v8::Arguments& args)
+        {
+            if (args.Length() != 1)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setVelocity function.")) );
+
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setVelocity function.  Invalid presence struct.")) );
+
+            //get first args
+            Handle<Object> velArg = ObjectCast(args[0]);
+
+            if ( ! Vec3Validate(velArg))
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setVelocity function.  Wrong argument: require a vector for new positions.")) );
+
+            
+            Vector3f newVel (Vec3Extract(velArg));
+
+            mStruct->jsObjScript->setVelocityFunction(mStruct->sID, mStruct->oref,newVel);
+            return v8::Undefined();
+        }
+        
+        
+        Handle<v8::Value>      getVelocity(const v8::Arguments& args)
+        {
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getVelocity function.  Invalid presence struct.")) );
+
+            return mStruct->jsObjScript->getVelocityFunction(mStruct->sID,mStruct->oref);
+        }
+
+        
         
 
         

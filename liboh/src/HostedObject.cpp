@@ -862,26 +862,28 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         SolidAngle(.00001f),
-        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3) ),
+        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3,startingLocation) ),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, spaceID)
     );
 
+
     if(mSpaceData->find(spaceID) == mSpaceData->end()) {
         mSpaceData->insert(
-            SpaceDataMap::value_type( spaceID, PerSpaceData(this, spaceID) )
+            SpaceDataMap::value_type( spaceID, PerSpaceData(this, spaceID))
         );
     }
 }
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server) {
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation)
+{
     if (server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
         return;
     }
 
     // Create
-    ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), URI(), mIsCamera);
+    ProxyObjectPtr self_proxy = createProxy(SpaceObjectReference(space, obj), URI(), mIsCamera,startingLocation);
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(space);
@@ -1143,7 +1145,7 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
         // FIXME use weak_ptr instead of raw
         URI meshuri;
         if (addition.has_mesh()) meshuri = URI(addition.mesh());
-        ProxyObjectPtr proxy_obj = createProxy(proximateID, meshuri, false);
+        ProxyObjectPtr proxy_obj = createProxy(proximateID, meshuri, false,loc,orient);
         proxy_obj->setLocation(loc);
         proxy_obj->setOrientation(orient);
 
@@ -1169,7 +1171,39 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const URI& meshuri, bool is_camera) {
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq)
+{
+    ProxyObjectPtr returner = buildProxy(objref,meshuri,is_camera);
+    returner->setLocation(tmv);
+    returner->setOrientation(tmq);
+    return returner;
+}
+
+
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const URI& meshuri, bool is_camera, const Location& startingLoc)
+{
+    ProxyObjectPtr returner = buildProxy(objref,meshuri,is_camera);
+
+    //takes care of starting location/veloc
+    Vector3f startingLocPosVec (startingLoc.getPosition());
+    Vector3f startingLocVelVec (startingLoc.getVelocity());
+    TimedMotionVector3f tmv(Time::local(), MotionVector3f(startingLocPosVec,startingLocVelVec));
+    returner->setLocation(tmv);
+
+    //takes care of starting quaternion/rotation veloc
+    Quaternion quaternionVeloc(startingLoc.getAxisOfRotation(), startingLoc.getAngularSpeed());
+    MotionQuaternion initQuatVec (startingLoc.getOrientation(),quaternionVeloc);
+    TimedMotionQuaternion tmq (Time::local(),initQuatVec);
+    returner->setOrientation(tmq);
+    
+    return returner;
+}
+
+
+//should only be called from within createProxy functions.  Otherwise, will not
+//initilize position and quaternion correctly
+ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const URI& meshuri, bool is_camera)    
+{
     ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
     ProxyObjectPtr proxy_obj;
     if (is_camera) {
@@ -1187,6 +1221,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     }
     return proxy_obj;
 }
+
 
 static int32 query_id = 0;
 using Protocol::LocRequest;
@@ -1574,20 +1609,61 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 
 // Movement Interface
 
-void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) {
+void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc)
+{
     sendLocUpdateRequest(space, &loc, NULL, NULL, NULL);
 }
 
+//only update the position of the object, leave the velocity and orientation unaffected
+void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos)
+{
+    Vector3f curVel = requestCurrentVelocity(space,oref);
+    TimedMotionVector3f tmv (Time::local(),MotionVector3f(pos,curVel));
+    //FIXME: re-write the requestLocationUpdate function so that takes in object
+    //reference as well
+    requestLocationUpdate(space,tmv);
+}
 
-//goes into proxymanager and gets out the current location of the presence
-//associated with
-Vector3d HostedObject::requestCurrentLocation (const SpaceID& space, const ObjectReference& oref)
+//only update the velocity of the object, leave the position and the orientation unaffected
+void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectReference& oref, const Vector3f& vel)
+{
+    Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
+    TimedMotionVector3f tmv (Time::local(),MotionVector3f(curPos,vel));
+    //FIXME: re-write the requestLocationUpdate function so that takes in object
+    //reference as well
+    requestLocationUpdate(space,tmv);
+}
+
+
+
+ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(space);
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+    return proxy_obj;
+}
+
+//goes into proxymanager and gets out the current location of the presence
+//associated with
+Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const ObjectReference& oref)
+{
+    ProxyObjectPtr proxy_obj  = getProxy(space,oref);
+
     //BFTM_FIXME: need to decide whether want the extrapolated position or last
     //known position.  (Right now, we're going with last known position.)
-    return proxy_obj->getPosition();
+
+    Vector3d currentPosition = proxy_obj->getPosition();
+    std::cout<<"\n\n\n\n";
+    std::cout<<"Inside of requestCurrentLocation.";
+    std::cout<<"\n\n";
+    std::cout<<"x:  "<<currentPosition.x;
+    std::cout<<"\n\n";
+    std::cout<<"y:  "<<currentPosition.y;
+    std::cout<<"\n\n";
+    std::cout<<"z:  "<<currentPosition.z;
+    std::cout<<"\n\n\n\n";
+    
+    return currentPosition;
 }
 
 
@@ -1638,11 +1714,13 @@ ObjectReference HostedObject::getObjReference(const SpaceID& space)
 }
 
 
-Vector3d HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
+Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
 {
-    ProxyManagerPtr proxy_manager = getProxyManager(space);
-    ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
-    return proxy_obj->getVelocity();
+    // ProxyManagerPtr proxy_manager = getProxyManager(space);
+    // ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+
+    ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    return (Vector3f)proxy_obj->getVelocity();
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient) {

@@ -13,7 +13,50 @@
 namespace Sirikata {
 namespace JS {
 
+//sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
 bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
+{
+    if (suspended)
+        return false; //cannot match a suspended handler
+    
+    //get sender as obj reference
+    v8::Local<v8::External> wrap;
+    if (sender->InternalFieldCount() > 0)
+        wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
+
+    void* ptr = wrap->Value();
+    ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
+
+    SpaceObjectReference* spref1 = static_cast<SpaceObjectReference*>(ptr);
+    
+    if (! this->sender->IsNull())
+    {
+        //have a sender to match.  see if it does
+        if (this->sender->InternalFieldCount() > 0)
+            wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
+
+        ptr = wrap->Value();
+
+        SpaceObjectReference* spref2 = static_cast<SpaceObjectReference*>(ptr);
+        
+        if ( spref1  != spref2)
+            return false;
+        else
+            std::cout<<"\n\nThe senders match\n\n";
+    }
+        
+
+    //check if the pattern matches the obj
+    for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
+    {
+        if (!pat_it->matches(obj))
+            return false;
+    }
+    return true;
+}
+
+
+bool JSEventHandler::matches_old(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
 {
     if (suspended)
         return false; //cannot match a suspended handler
@@ -24,9 +67,10 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
     if (sender->InternalFieldCount() > 0)
         wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(0));
 
+
+    
     void* ptr = wrap->Value();
     ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
-
     
     if (! this->sender->IsNull())
     {
@@ -53,6 +97,8 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
     }
     return true;
 }
+
+
 
 
 //changes state of handler to suspended

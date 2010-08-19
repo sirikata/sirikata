@@ -162,9 +162,15 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
   mPresenceTemplate->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
 
+  //positions
   mPresenceTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
   mPresenceTemplate->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
 
+  //velocities
+  mPresenceTemplate->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
+  mPresenceTemplate->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
+  
+  
   
 //    system_templ->SetAccessor(JS_STRING(position), JSSystem::ScriptGetPosition, JSSystem::ScriptSetPosition);
 //    system_templ->SetAccessor(JS_STRING(velocity), JSSystem::ScriptGetVelocity, JSSystem::ScriptSetVelocity);

@@ -50,6 +50,9 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
    mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
    mParent(vwobj)
 {
+    Vector3d tmp;
+    Vector3f tmp2 (tmp);
+    
     assert(mParent);
 
     mDefaultPort = mParent->bindODPPort(id.space());
@@ -94,7 +97,9 @@ bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference mess
     return mDefaultPort->send(dest, message);
 }
 
-void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
+void ProxyObject::setLocation(const TimedMotionVector3f& reqloc)
+{
+    
     mLoc = reqloc;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);
 }

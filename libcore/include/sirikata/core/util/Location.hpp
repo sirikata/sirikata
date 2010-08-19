@@ -83,6 +83,8 @@ public:
     const Vector3<float32>&getVelocity()const {
         return mVelocity;
     }
+
+    
     void setVelocity(const Vector3<float32> velocity) {
         mVelocity=velocity;
     }

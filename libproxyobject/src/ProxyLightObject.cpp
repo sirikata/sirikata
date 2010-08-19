@@ -36,7 +36,8 @@
 namespace Sirikata {
 ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
   : LightProvider(LightInfo()),
-    ProxyObject(man, id, vwobj) {
+    ProxyObject ( man, id, vwobj)
+{
 }
 void ProxyLightObject::update(const LightInfo&li) {
     LightProvider::notify(li);

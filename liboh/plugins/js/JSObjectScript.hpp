@@ -112,8 +112,11 @@ public:
     void  setVisual(const SpaceID* sID, const std::string& newMeshString);
     
 
-    void  setPositionFunction(const SpaceID* sID, const Vector3f& posVec);
+    void setPositionFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& posVec);
     v8::Handle<v8::Value> getPositionFunction(const SpaceID* sID, const ObjectReference* oref);
+
+    void setVelocityFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& velVec);
+    v8::Handle<v8::Value> getVelocityFunction(const SpaceID* sID, const ObjectReference* oref);
     
     v8::Handle<v8::Value> getVisualScale();
     void setVisualScale(v8::Local<v8::Value>& newvis);
@@ -154,15 +157,14 @@ private:
     
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
 
-    
-    void handleScriptingMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
-    void bftm_handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
-    void bftm_handleCommunicationMessage_old(const RoutableMessageHeader& hdr, MemoryReference payload);
-    void bftm_getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const;
+    void handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
+    void getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const;
     v8::Handle<v8::Value> protectedEval(const String& script_str);
 
+
+    
 
     v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
 

@@ -56,6 +56,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 
         ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr ptr);
 
+        
         void setModelObject ( ModelObjectPtr const& model );
         ModelObjectPtr const& getModelObject () const { return mModelObject; }
 
