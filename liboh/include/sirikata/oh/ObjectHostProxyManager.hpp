@@ -79,8 +79,8 @@ public:
     void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
 
     //bftm
-    void getAllObjectReferences(std::vector<ObjectReference>& allObjReferences) const;
-    void getAllObjectReferences(std::vector<ObjectReference*>& allObjReferences) const;
+    void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
+    void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
     
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 

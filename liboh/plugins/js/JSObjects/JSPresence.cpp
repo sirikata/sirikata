@@ -51,8 +51,7 @@ namespace Sirikata
             if (! uriArgValid)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
 
-
-            mStruct->jsObjScript->setVisual(mStruct->sID, uriLocation);
+            mStruct->jsObjScript->setVisual(mStruct->sporef, uriLocation);
 
 	    return v8::Undefined();
         }
@@ -69,7 +68,7 @@ namespace Sirikata
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getMesh function.  Invalid presence struct.")) );
                     
-            return mStruct->jsObjScript->getVisual(mStruct->sID);
+            return mStruct->jsObjScript->getVisual(mStruct->sporef);
         }
 
 
@@ -91,7 +90,7 @@ namespace Sirikata
             
             Vector3f newPos (Vec3Extract(posArg));
 
-            mStruct->jsObjScript->setPositionFunction(mStruct->sID, mStruct->oref, newPos);
+            mStruct->jsObjScript->setPositionFunction(mStruct->sporef, newPos);
             return v8::Undefined();
             
         }
@@ -103,7 +102,7 @@ namespace Sirikata
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getPosition function.  Invalid presence struct.")) );
 
-            return mStruct->jsObjScript->getPositionFunction(mStruct->sID, mStruct->oref);
+            return mStruct->jsObjScript->getPositionFunction(mStruct->sporef);
         }
 
 
@@ -126,7 +125,7 @@ namespace Sirikata
             
             Vector3f newVel (Vec3Extract(velArg));
 
-            mStruct->jsObjScript->setVelocityFunction(mStruct->sID, mStruct->oref,newVel);
+            mStruct->jsObjScript->setVelocityFunction(mStruct->sporef,newVel);
             return v8::Undefined();
         }
         
@@ -137,11 +136,8 @@ namespace Sirikata
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getVelocity function.  Invalid presence struct.")) );
 
-            return mStruct->jsObjScript->getVelocityFunction(mStruct->sID,mStruct->oref);
+            return mStruct->jsObjScript->getVelocityFunction(mStruct->sporef);
         }
-
-        
-        
 
         
         
@@ -185,6 +181,10 @@ namespace Sirikata
             }			  
             void* ptr = wrapJSPresStructObj->Value();
             JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);
+
+            if (jspres_struct == NULL)
+                assert(false);
+            
             return jspres_struct;
         }
 
@@ -200,67 +200,10 @@ namespace Sirikata
             
             // Look up for the per space data
             //for now just print the space id
-            String s = jspres_struct->sID->toString();   
+            String s = jspres_struct->sporef->toString();   
             return v8::String::New(s.c_str(), s.length());
               
         }
-
-        
-        //Position
-        v8::Handle<v8::Value> ScriptGetPosition(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-        {
-            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
-            return pres_struct->jsObjScript->getPosition(* pres_struct->sID);
-        }
-
-        void ScriptSetPosition(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-        {
-            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
-            pres_struct->jsObjScript->setPosition(* (pres_struct->sID), value);
-        }
-        
-        // Velocity
-        v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-        {
-            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
-            return pres_struct->jsObjScript->getVelocity(* (pres_struct->sID));
-        }
-
-        void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-        {
-            JSPresenceStruct* pres_struct = GetTargetPresenceStruct(info);
-            pres_struct->jsObjScript->setVelocity(* (pres_struct->sID),value);
-            
-        }
-
-        //decided not to use these because can't take in callback function arguments.
-        // v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-        // {
-        //     JSPresenceStruct* presStruct = GetTargetPresenceStruct(info);
-            
-        //     return presStruct->jsObjScript->getVisual(presStruct->sID);
-        // }
-
-        // void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-        // {
-        //     JSPresenceStruct* presStruct = GetTargetPresenceStruct(info);
-
-        //     if (!value->IsString())
-        //         return;
-        //         //return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
-
-
-        //     v8::String::Utf8Value newvis_str(value);
-        //     if (! *newvis_str)
-        //         return;
-        //         //return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
-
-        //     Transfer::URI* newURI =  new Transfer::URI(*newvis_str);
-        //     presStruct->jsObjScript->setVisual(presStruct->sID, newURI);
-        //     delete newURI;
-        // }
-
-
         
         
     }

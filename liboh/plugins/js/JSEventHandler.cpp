@@ -7,6 +7,7 @@
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/odp/Defs.hpp>
 
+#include "JSObjects/JSFields.hpp"
 
 
 

@@ -78,7 +78,7 @@ public:
     void test() const;
     void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
     void bftm_debugPrintString(std::string cStrMsgBody) const;
-    void sendMessageToEntity(ObjectReference* reffer, const std::string& msgBody) const;
+    void sendMessageToEntity(SpaceObjectReference* reffer, const std::string& msgBody) const;
     void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
     int  getAddressableSize();
     
@@ -107,16 +107,15 @@ public:
     //v8::Handle<v8::String> getVisual();
     //void setVisual(v8::Local<v8::Value>& newvis);
     
-    v8::Handle<v8::String> getVisual(const SpaceID* sID);
+    v8::Handle<v8::String> getVisual(const SpaceObjectReference* sporef);
     //void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
-    void  setVisual(const SpaceID* sID, const std::string& newMeshString);
-    
+    void  setVisual(const SpaceObjectReference* sporef, const std::string& newMeshString);
 
-    void setPositionFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& posVec);
-    v8::Handle<v8::Value> getPositionFunction(const SpaceID* sID, const ObjectReference* oref);
+    void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
+    v8::Handle<v8::Value> getPositionFunction(const SpaceObjectReference* sporef);
 
-    void setVelocityFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& velVec);
-    v8::Handle<v8::Value> getVelocityFunction(const SpaceID* sID, const ObjectReference* oref);
+    void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
+    v8::Handle<v8::Value> getVelocityFunction(const SpaceObjectReference* sporef);
     
     v8::Handle<v8::Value> getVisualScale();
     void setVisualScale(v8::Local<v8::Value>& newvis);
@@ -150,7 +149,9 @@ public:
     void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
     
 private:
-
+    typedef std::vector<SpaceObjectReference*> AddressableList;
+    AddressableList mAddressableList;
+    
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
@@ -158,16 +159,17 @@ private:
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
 
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-
+    void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
-    void getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const;
+    void getAllMessageable(AddressableList&allAvailableObjectReferences) const;
     v8::Handle<v8::Value> protectedEval(const String& script_str);
 
 
     
 
     v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
-
+    v8::Local<v8::Object> getMessageSender(const ODP::Endpoint& src);
+    
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
@@ -178,8 +180,8 @@ private:
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
 
-    typedef std::vector<ObjectReference*> AddressableList;
-    AddressableList mAddressableList;
+
+    
 
 
     Handle<Object> getSystemObject();

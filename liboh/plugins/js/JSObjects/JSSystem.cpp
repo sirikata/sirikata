@@ -6,6 +6,7 @@
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
+#include "Addressable.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -346,14 +347,11 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 
     
    // Sender
-    if (!sender_val->IsObject() && !sender_val->IsNull() && !sender_val->IsUndefined())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Sender is not object or null.")) );
-
-    if (sender_val->getInternalFieldCount() != ADDRESSABLE_FIELD_COUNT)
+    JSObjectScript* dummy_jsscript      = NULL;
+    SpaceObjectReference* dummy_sporef  = NULL;
+    if (! JSAddressable::decodeAddressable(sender_val,dummy_jsscript,dummy_sporef))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Not a valid sender.")) );
 
-    lkjs;
-    may want to ensure that can cast these to jsobjectscript fields and also spaceoref;
     
 
     v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
@@ -373,12 +371,13 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
-
-    lkjs; need to re-write registerHandler so that it creates a handler with a spaceobject reference instead of an object reference;
     
     return target_script->makeEventHandlerObject(evHand);
 }
 
 
 
-}}}
+
+}
+}
+}//sirikata namespace

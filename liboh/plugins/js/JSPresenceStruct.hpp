@@ -9,20 +9,24 @@
 namespace Sirikata {
 namespace JS {
 
-    class JSObjectScript;
+//need to forward-declare this so that can reference this inside
+class JSObjectScript;
 
 struct JSPresenceStruct
 {
     
-    //I'm repsonsible for sID memory.
-    SpaceID*                       sID;
+    // //I'm repsonsible for sID memory.
+    // SpaceID*                       sID;
+    // //Object reference
+    // ObjectReference* oref;
 
+    SpaceObjectReference* sporef;
+    
     
     //likely that the jsObjScript won't be owned by JSPresence (don't delete it myself).
     JSObjectScript*        jsObjScript;
 
-    //Object reference
-    ObjectReference* oref;
+
 };
 
 

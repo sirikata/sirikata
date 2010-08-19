@@ -300,18 +300,25 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
     // const HostedObject::SpaceSet& spaces = mParent->spaces();
     // SpaceID spaceider = *(spaces.begin());
 
-    UUID myUUID = mParent->getObjReference(space).getAsUUID();;
+//    UUID myUUID = mParent->getObjReference(space).getAsUUID();;
+    SpaceObjectReference mSporef = mParent->id(space);
 
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
     {
         Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
-        tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
-        tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
+
+        tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
+        tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(mAddressableList[s]));
+            
+        //lkjs;
+        //tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
+        //tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
 
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
-        if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
+        //if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
+        if((*mAddressableList[s]) == mSporef)
             system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), tmpObj);
 
 
@@ -350,18 +357,19 @@ void JSObjectScript::sendMessageToEntity(int numIndex, const std::string& msgBod
     sendMessageToEntity(mAddressableList[numIndex],msgBody);
 }
 
-void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::string& msgBody) const
+//void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const
+//std::string& msgBody) const
+void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std::string& msgBody) const
 {
     // const HostedObject::SpaceSet& spaces = mParent->spaces();
     // SpaceID spaceider = *(spaces.begin());
 
     FIXME_GET_SPACE();
+    //lkjs;
     
-    ODP::Endpoint dest (space,*reffer,Services::COMMUNICATION);
+    //ODP::Endpoint dest (space,*reffer,Services::COMMUNICATION);
+    ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
     mMessagingPort->send(dest,MemoryReference(msgBody));
-    lkjs;
-
-    mMessagingPort send;
 }
 
 
@@ -405,16 +413,16 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
 //this function gets a list of all objects that are messageable
 //FIXME: want to return full id including space instead of just
 //objectreferences: may want to message in other spaces as well.
-void JSObjectScript::getAllMessageable(std::vector<ObjectReference*>&allAvailableObjectReferences) const
+void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferences) const
 {
     //FIXME: likely getAllMessageable in all spaces rather than just first space.
     FIXME_GET_SPACE();
+    
     
     //get a list of all object references through prox
     ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(space);
 
     //FIX ME: May need to check if get back null ptr.
-
 
     proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
 
@@ -545,7 +553,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 // }
 
 
-v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceID* sID)
+v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceObjectReference* sporef)
 {
     //std::string url_string = mParent->requestMeshUri(*sID, *oref).toString();
     //return v8::String::New( url_string.c_str(), url_string.size() );
@@ -557,9 +565,11 @@ v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceID* sID)
 }
 
 //FIXME: May want to have an error handler for this function.
-void  JSObjectScript::setVisual(const SpaceID* sID, const std::string& newMeshString)
+void  JSObjectScript::setVisual(const SpaceObjectReference* sporef, const std::string& newMeshString)
 {
-    mParent->requestMeshUpdate(*sID,newMeshString);
+    //mParent->requestMeshUpdate(*sID,newMeshString);
+    //FIXME: need to also pass in the object reference
+    mParent->requestMeshUpdate(sporef->space(),newMeshString);
 }
 
 
@@ -646,36 +656,39 @@ void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
 // CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
+//dealing with presence positions etc.
 
-void JSObjectScript::setPositionFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& posVec)
+//position
+void JSObjectScript::setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec)
 {
-    mParent->requestPositionUpdate(*sID,*oref,posVec);
+    mParent->requestPositionUpdate(sporef->space(),sporef->object(),posVec);
 }
 
-
-//merge rewrite
-v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceID* sID, const ObjectReference* oref)
+v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceObjectReference* sporef)
 {
-    Vector3d vec3 = mParent->requestCurrentPosition(*sID,*oref);
+    Vector3d vec3 = mParent->requestCurrentPosition(sporef->space(),sporef->object());
     return CreateJSResult(mContext,vec3);
 }
 
-
-void JSObjectScript::setVelocityFunction(const SpaceID* sID,  const ObjectReference* oref, const Vector3f& velVec)
+//velocity
+void JSObjectScript::setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec)
 {
-    mParent->requestVelocityUpdate(*sID,*oref,velVec);
+    mParent->requestVelocityUpdate(sporef->space(),sporef->object(),velVec);
 }
 
-v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceID* sID, const ObjectReference* oref)
+v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectReference* sporef)
 {
-    Vector3f vec3f = mParent->requestCurrentVelocity(*sID,*oref);
+    Vector3f vec3f = mParent->requestCurrentVelocity(sporef->space(),sporef->object());
     return CreateJSResult(mContext,vec3f);
 }
 
 
 
-lkjs;
-need to ensure that the sender object is an addressable of type spaceobject reference rather than just having an object reference;
+
+
+
+// lkjs;
+// need to ensure that the sender object is an addressable of type spaceobject reference rather than just having an object reference;
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
     JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
@@ -711,26 +724,12 @@ void JSObjectScript::printAllHandlerLocations()
  * Populates the message properties
  */
 
-// v8::Local<v8::Object> JSObjectScript::getMessageSender(const RoutableMessageHeader& msgHeader)
-// {
-//     /**
-//        FIXME: may need to declare a scope here?
-//     */
-
-//   ObjectReference* orp = new ObjectReference(msgHeader.source_object());
-
-//   Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
-//   tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(orp));
-//   tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
-
-//   return tmpObj;
-// }
 
 
 
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
-    SpaceObjectRefernce* sporef = new SpaceObjectReference(src.space(),src.object());
+    SpaceObjectReference* sporef = new SpaceObjectReference(src.space(),src.object());
     
     Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
     tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
@@ -743,7 +742,6 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 
 void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
-    lkjs;
     std::cout<<"\n\n\n";
     std::cout<<"Got into handleCommunicationMessageNewProto";
     std::cout<<"\n\n\n";
@@ -797,8 +795,6 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
      */
     if (!matchesSomeHandler)
         std::cout<<"\n\nMessage did not match any files\n\n";
-    
-
 }
 
 //just a handler for receiving any message.  for now, not doing any dispatch.
@@ -1025,14 +1021,14 @@ void JSObjectScript::clearAllPresences(Handle<Object>& system_obj)
 
     for (int s=0; s < (int) mPresenceList.size(); ++s)
     {
-        delete mPresenceList[s]->sID;
+        delete mPresenceList[s]->sporef;
         delete mPresenceList[s];
     }
     mPresenceList.clear();
 
     if (mPres != NULL)
     {
-        delete mPres->sID;
+        delete mPres->sporef;
         mPres = NULL;
     }
 }
@@ -1052,13 +1048,10 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
     for (int s=0; it != spaces.end(); ++s, ++it)
     {
         Local<Object> tmpObj = mManager->mPresenceTemplate->NewInstance();
-        SpaceID* space_id = new SpaceID(*it);
-
 
         JSPresenceStruct* presToAdd = new JSPresenceStruct;
-        presToAdd->sID = space_id;
         presToAdd->jsObjScript = this;
-        presToAdd->oref = new ObjectReference((mParent->id(*space_id)).object());
+        presToAdd->sporef = new SpaceObjectReference(*it,(mParent->id(*it)).object());
 
         
         mPresenceList.push_back(presToAdd);
