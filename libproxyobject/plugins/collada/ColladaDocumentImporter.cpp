@@ -262,7 +262,7 @@ void ColladaDocumentImporter::finish ()
 
 
     // Finally, if we actually have anything for the user, ship the parsed mesh
-    if (mMesh->instances.size() > 0) {
+    if (mMesh->instances.size() > 0 || mMesh->lightInstances.size()) {
     //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
     //                                          meshstore[mDocument->getURI().toString()] );
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
