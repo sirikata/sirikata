@@ -79,8 +79,8 @@ String sha1(void* data, size_t len) {
   Sirikata::Sha1(data, len, digest);
 
   char *out = (char *) malloc( sizeof(char) * ((hash_len*2)+1) );
-  memset(out, 0, sizeof(char) * ((hash_len*2)+1) ); 
-  
+  memset(out, 0, sizeof(char) * ((hash_len*2)+1) );
+
   /* Convert each byte to its 2 digit ascii
    * hex representation and place in out */
   char *p = out;
@@ -92,6 +92,17 @@ String sha1(void* data, size_t len) {
   free(out);
 
   return retval;
+}
+
+static String sha1_bbox(const BoundingBox3f& bb) {
+    char buf[24];
+    *((float32*)buf) = bb.min().x;
+    *((float32*)buf+4) = bb.min().y;
+    *((float32*)buf+8) = bb.min().z;
+    *((float32*)buf+12) = bb.max().x;
+    *((float32*)buf+16) = bb.max().y;
+    *((float32*)buf+20) = bb.max().z;
+    return sha1(buf, 24);
 }
 
 void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion* region,
@@ -168,7 +179,7 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
   }
 }
 
-DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, 
+DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region,
                                                                      const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)),
    mContext(ctx),
@@ -180,7 +191,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
    mUpperTreeCSEGServers(GetOptionValue<uint16>("num-upper-tree-cseg-servers"))
 {
   std::cout << mAvailableCSEGServers << " : " << mUpperTreeCSEGServers  << "\n";
- 
+
   assert(mAvailableCSEGServers >= mUpperTreeCSEGServers);
 
   assert (nservers >= (int)(perdim.x * perdim.y * perdim.z));
@@ -198,7 +209,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
 
   int numLLTreesSoFar = 0;
   generateHierarchicalTrees(&mTopLevelRegion, 1, numLLTreesSoFar);
-  
+
 
   if (ctx->id() <= mUpperTreeCSEGServers) {
       mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
@@ -253,9 +264,7 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
 
   if (topLevelIdx == mContext->id())
   {
-    SerializedBBox serializedBBox;
-    serializedBBox.serialize(segRegion->mBoundingBox);
-    String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
+    String bbox_hash = sha1_bbox(segRegion->mBoundingBox);
 
     std::map<String, SegmentedRegion*>::iterator it=  mHigherLevelTrees.find(bbox_hash);
 
@@ -297,7 +306,7 @@ std::vector<ServerID> DistributedCoordinateSegmentation::lookupBoundingBox(const
   std::vector<ServerID> serverList;
 
   std::vector<SegmentedRegion*> segmentedRegionsList;
-  mTopLevelRegion.lookupBoundingBox(bbox, segmentedRegionsList);  
+  mTopLevelRegion.lookupBoundingBox(bbox, segmentedRegionsList);
 
   std::map<ServerID, std::vector<SegmentedRegion*> > otherCSEGServers;
 
@@ -308,29 +317,27 @@ std::vector<ServerID> DistributedCoordinateSegmentation::lookupBoundingBox(const
     if (topLevelIdx == mContext->id()) {
       //find servers locally with intersecting bounding boxes
       ServerID sid = 0;
-      
-      SerializedBBox serializedBBox;
-      serializedBBox.serialize(segRegion->mBoundingBox);
-      String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
+
+      String bbox_hash = sha1_bbox(segRegion->mBoundingBox);
 
       std::map<String, SegmentedRegion*>::iterator it=  mHigherLevelTrees.find(bbox_hash);
 
       std::vector<SegmentedRegion*> regionList;
-      
-      if (it != mHigherLevelTrees.end()) {        
-        (*it).second->lookupBoundingBox(bbox, regionList);        
+
+      if (it != mHigherLevelTrees.end()) {
+        (*it).second->lookupBoundingBox(bbox, regionList);
       }
       else {
         it =  mLowerLevelTrees.find(bbox_hash);
 
         if (it != mLowerLevelTrees.end()) {
           (*it).second->lookupBoundingBox(bbox, regionList);
-        }        
+        }
       }
-      
-      for (uint j = 0; j < regionList.size(); j++) { 
+
+      for (uint j = 0; j < regionList.size(); j++) {
         serverList.push_back(regionList[j]->mServer);
-      }            
+      }
     }
     else {
       //add to list of CSEG servers that need to be remotely invoked.
@@ -345,13 +352,13 @@ std::vector<ServerID> DistributedCoordinateSegmentation::lookupBoundingBox(const
     }
   }
 
-  
+
   //call lookupBoundingBox on the other CSeg servers.
   callLowerLevelCSEGServersForLookupBoundingBoxes(bbox, otherCSEGServers, serverList);
-  
+
 
   //remove duplicate Space Server IDs from serverList
-  serverList.erase(std::unique(serverList.begin(), serverList.end()), 
+  serverList.erase(std::unique(serverList.begin(), serverList.end()),
                    serverList.end());
 
   return serverList;
@@ -394,35 +401,33 @@ BoundingBox3f DistributedCoordinateSegmentation::region()  {
   return mTopLevelRegion.mBoundingBox;
 }
 
-uint32 DistributedCoordinateSegmentation::numServers() {  
+uint32 DistributedCoordinateSegmentation::numServers() {
   return mLoadBalancer.numAvailableServers();
 
   //int count = mTopLevelRegion.countServers();
   //return count;
 }
 
-void DistributedCoordinateSegmentation::handleLoadReport(Sirikata::Protocol::CSeg::LoadReportMessage* message) {    
+void DistributedCoordinateSegmentation::handleLoadReport(Sirikata::Protocol::CSeg::LoadReportMessage* message) {
   ServerID sid = message->server();
   BoundingBox3f bbox = message->bbox();
 
   Vector3f searchVec = Vector3f( (bbox.min().x+bbox.max().x)/2.0, (bbox.min().y+bbox.max().y)/2,
-                                 (bbox.min().z+bbox.max().z)/2.0 );  
+                                 (bbox.min().z+bbox.max().z)/2.0 );
 
   SegmentedRegion* segRegion = mTopLevelRegion.lookup(searchVec);
   ServerID topLevelIdx = segRegion->mServer;
-  
+
   if (topLevelIdx == mContext->id())
   {
-    SerializedBBox serializedBBox;
-    serializedBBox.serialize(segRegion->mBoundingBox);   
-    String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
+      String bbox_hash = sha1_bbox(segRegion->mBoundingBox);
 
     std::map<String, SegmentedRegion*>::iterator it=  mHigherLevelTrees.find(bbox_hash);
 
     if (it != mHigherLevelTrees.end()) {
-      segRegion = (*it).second->lookup(searchVec);      
+      segRegion = (*it).second->lookup(searchVec);
 
-      // deal with the value for this region's load; 
+      // deal with the value for this region's load;
       if (sid == segRegion->mServer && bbox == segRegion->mBoundingBox) {
         segRegion->mLoadValue = message->load_value();
 
@@ -445,7 +450,7 @@ void DistributedCoordinateSegmentation::handleLoadReport(Sirikata::Protocol::CSe
         // you should never be here.
         assert(false);
       }
-    }    
+    }
   }
   else {
     //remote function call to the relevant server
@@ -507,7 +512,7 @@ void DistributedCoordinateSegmentation::poll() {
     service();
 }
 
-void DistributedCoordinateSegmentation::service() {  
+void DistributedCoordinateSegmentation::service() {
   boost::unique_lock<boost::shared_mutex> lock(mCSEGReadWriteMutex);
 
   mLoadBalancer.service();
@@ -527,11 +532,11 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
   /* Fill in the fields in the message */
   for (unsigned int i=0; i<segInfoVector.size(); i++) {
     ServerID serverID= segInfoVector[i].server;
-    
+
     for (unsigned int j=0; j<segInfoVector[i].region.size(); j++) {
       csegMessage.mutable_change_message().add_region();
 
-      
+
 
       csegMessage.mutable_change_message().mutable_region(count).set_id(serverID);
       csegMessage.mutable_change_message().mutable_region(count).set_bounds(segInfoVector[i].region[j]);
@@ -546,7 +551,7 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
   /* Send to space servers connected to this server.  */
   sendToAllSpaceServers(csegMessage);
 
-  
+
 
   printf("Notified all space servers of change\n");
 }
@@ -587,15 +592,15 @@ void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* re
 void DistributedCoordinateSegmentation::accept_handler()
 {
   uint8* asyncBufferArray = new uint8[1];
-    
+
   mSocket->async_read_some( boost::asio::buffer(asyncBufferArray, 1),
-			    std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this, 
+			    std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this,
 					   mSocket, asyncBufferArray, _1, _2)  );
 
   startAccepting();
 }
 
-void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket> socket, 
+void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket> socket,
 						  uint8* asyncBufferArray,
 						  const boost::system::error_code& ec,
 						  std::size_t bytes_transferred)
@@ -603,30 +608,30 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
   if (ec == boost::asio::error::eof) {
     // EOF RECEIVED; CLOSING CONNECTION AT SERVER
     delete asyncBufferArray;
-    socket->close();    
+    socket->close();
     return;
   }
-  
+
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
   Sirikata::Protocol::CSeg::CSegMessage csegResponseMessage;
 
-  readCSEGMessage(socket, csegMessage, asyncBufferArray, 1); //at least one byte is guaranteed to be read  
+  readCSEGMessage(socket, csegMessage, asyncBufferArray, 1); //at least one byte is guaranteed to be read
 
    /* Deal with the request included in the received data */
-  
-  boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex); 
-  
+
+  boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex);
+
   if (csegMessage.has_lookup_request_message()) {
     csegResponseMessage.mutable_lookup_response_message().set_server_id(
-                           lookup(Vector3f(csegMessage.lookup_request_message().x(), 
-                                           csegMessage.lookup_request_message().y(), 
-                                           csegMessage.lookup_request_message().z())) 
+                           lookup(Vector3f(csegMessage.lookup_request_message().x(),
+                                           csegMessage.lookup_request_message().y(),
+                                           csegMessage.lookup_request_message().z()))
                                                                         );
 
     writeCSEGMessage(socket, csegResponseMessage);
   }
   else if (csegMessage.has_num_servers_request_message()) {
-    
+
     csegResponseMessage.mutable_num_servers_response_message().set_num_servers(numServers());
 
     writeCSEGMessage(socket, csegResponseMessage);
@@ -639,17 +644,17 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
   }
   else if (csegMessage.has_server_region_request_message()) {
     BoundingBoxList bboxList = serverRegion(csegMessage.server_region_request_message().server_id());
-   
+
     for (uint32 i=0; i < bboxList.size() ; i++) {
       BoundingBox3f bbox = bboxList[i];
-      
+
       BoundingBox3d3f bboxd = bbox;
       csegResponseMessage.mutable_server_region_response_message().add_bbox_list(bboxd);
-    }   
+    }
 
     writeCSEGMessage(socket, csegResponseMessage);
   }
-  else if (csegMessage.has_segmentation_listen_message()) {    
+  else if (csegMessage.has_segmentation_listen_message()) {
     SegmentationChangeListener sl;
     memcpy(sl.host, csegMessage.segmentation_listen_message().host().c_str(), 255);
     sl.port = csegMessage.segmentation_listen_message().port();
@@ -666,17 +671,17 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
   }
   else if (csegMessage.has_lookup_bbox_request_message()) {
     //do the lookup
-    std::vector<ServerID> serverList = lookupBoundingBox(csegMessage.lookup_bbox_request_message().bbox());    
-    
-    for (uint32 i=0; i < serverList.size() ; i++) {      
+    std::vector<ServerID> serverList = lookupBoundingBox(csegMessage.lookup_bbox_request_message().bbox());
+
+    for (uint32 i=0; i < serverList.size() ; i++) {
       csegResponseMessage.mutable_lookup_bbox_response_message().add_server_list(serverList[i]);
-    }    
+    }
 
     writeCSEGMessage(socket, csegResponseMessage);
   }
 
-  socket->async_read_some( boost::asio::buffer(asyncBufferArray, 1) , 
-			   std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this, 
+  socket->async_read_some( boost::asio::buffer(asyncBufferArray, 1) ,
+			   std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this,
 					  socket, asyncBufferArray, _1, _2)  );
 }
 
@@ -702,12 +707,9 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
 
   if (csegMessage.has_ll_lookup_request_message() )   {
     BoundingBox3f bbox = csegMessage.ll_lookup_request_message().bbox();
-    Vector3f vect = csegMessage.ll_lookup_request_message().lookup_vector(); 
+    Vector3f vect = csegMessage.ll_lookup_request_message().lookup_vector();
 
-    SerializedBBox serialBox;
-    serialBox.serialize(bbox);
-
-    String bbox_hash = sha1(&serialBox, sizeof(serialBox));
+    String bbox_hash = sha1_bbox(bbox);
     std::map<String, SegmentedRegion*>::iterator it=  mLowerLevelTrees.find(bbox_hash);
 
     ServerID retval = 0;
@@ -718,12 +720,12 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
     }
 
     csegResponseMessage.mutable_ll_lookup_response_message().set_server_id(retval);
-    
+
     writeCSEGMessage(socket, csegResponseMessage);
   }
   else if (csegMessage.has_ll_server_region_request_message() ) {
     ServerID serverID = csegMessage.ll_server_region_request_message().server_id();
-    BoundingBoxList boundingBoxList;    
+    BoundingBoxList boundingBoxList;
 
     if (mLowerTreeServerRegionMap.find(serverID) != mLowerTreeServerRegionMap.end()) {
       boundingBoxList = mLowerTreeServerRegionMap[serverID];
@@ -732,7 +734,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
       for(std::map<String, SegmentedRegion*>::const_iterator it = mLowerLevelTrees.begin();
           it != mLowerLevelTrees.end(); ++it)
     	{
-          
+
           it->second->serverRegion(serverID, boundingBoxList);
         }
     }
@@ -750,7 +752,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
   else if (csegMessage.has_change_message() ) {
     std::cout << "csegChangeMessage received\n"; fflush(stdout);
 
-    mWholeTreeServerRegionMap.clear();    
+    mWholeTreeServerRegionMap.clear();
 
     mLoadBalancer.handleSegmentationChange( csegMessage.change_message() );
 
@@ -758,10 +760,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
   }
   else if (csegMessage.has_ll_load_report_message() ) {
     BoundingBox3f lowerTreeRootBox = csegMessage.ll_load_report_message().lower_root_box();
-    SerializedBBox serializedLowerTreeRootBox;
-    serializedLowerTreeRootBox.serialize(lowerTreeRootBox);
-
-    String bbox_hash = sha1(&serializedLowerTreeRootBox, sizeof(serializedLowerTreeRootBox));
+    String bbox_hash = sha1_bbox(lowerTreeRootBox);
     std::map<String, SegmentedRegion*>::iterator it=  mLowerLevelTrees.find(bbox_hash);
 
     BoundingBox3f leafBBox = csegMessage.ll_load_report_message().load_report_message().bbox();
@@ -791,20 +790,19 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
 
     SerializedBBox serialBox;
     BoundingBox3f bbox = csegMessage.ll_lookup_bbox_request_message().bbox();
-    serialBox.serialize(bbox);    
- 
+    serialBox.serialize(bbox);
+
     std::vector<ServerID> serverList;
     for (int i=0; i < csegMessage.ll_lookup_bbox_request_message().candidate_boxes_size(); i++) {
       BoundingBox3f candidateBbox = csegMessage.ll_lookup_bbox_request_message().candidate_boxes(i);
-      serialBox.serialize(candidateBbox);
-      String bbox_hash = sha1(&serialBox, sizeof(serialBox));
-      
+      String bbox_hash = sha1_bbox(candidateBbox);
+
       //do the lookups
       std::map<String, SegmentedRegion*>::iterator it=  mLowerLevelTrees.find(bbox_hash);
       if (it != mLowerLevelTrees.end()) {
         std::vector<SegmentedRegion*> vect;
         (*it).second->lookupBoundingBox(bbox, vect);
-        
+
         for (uint j = 0; j < vect.size(); j++) {
           serverList.push_back(vect[j]->mServer);
         }
@@ -819,7 +817,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
       ServerID server_id = serverList[i];
       csegResponseMessage.mutable_ll_lookup_bbox_response_message().add_server_id_list(server_id);
     }
-   
+
     writeCSEGMessage(socket, csegResponseMessage);
   }
 
@@ -833,7 +831,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
 
 void DistributedCoordinateSegmentation::startAccepting() {
   mSocket = boost::shared_ptr<tcp::socket>(new tcp::socket(mIOService));
-  mAcceptor->async_accept(*mSocket, boost::bind(&DistributedCoordinateSegmentation::accept_handler,this)); 
+  mAcceptor->async_accept(*mSocket, boost::bind(&DistributedCoordinateSegmentation::accept_handler,this));
 }
 
 void DistributedCoordinateSegmentation::startAcceptingLLRequests() {
@@ -882,9 +880,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
         segRegion->mServer = region->mServer;
       }
 
-      SerializedBBox serializedBBox;
-      serializedBBox.serialize(segRegion->mBoundingBox);
-      String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
+      String bbox_hash = sha1_bbox(segRegion->mBoundingBox);
       mLowerLevelTrees[bbox_hash] = segRegion;
     }
 
@@ -906,10 +902,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
     assert(region->mParent == NULL || region->mSplitAxis != SegmentedRegion::UNDEFINED);
     segRegion->mSplitAxis = region->mSplitAxis;
 
-    SerializedBBox serializedBBox;
-    serializedBBox.serialize(segRegion->mBoundingBox);
-
-    String bbox_hash = sha1(&serializedBBox, sizeof(serializedBBox));
+    String bbox_hash = sha1_bbox(segRegion->mBoundingBox);
     mHigherLevelTrees[bbox_hash] = segRegion;
     return;
   }
@@ -923,9 +916,9 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
   boost::upgrade_lock<boost::shared_mutex> lock(mSocketsToCSEGServersMutex);
 
   std::map<ServerID, SocketQueuePtr >::iterator it = mLeasedSocketsToCSEGServers.find(server_id);
-  if (it != mLeasedSocketsToCSEGServers.end()) {    
+  if (it != mLeasedSocketsToCSEGServers.end()) {
     SocketContainer socket;
-    
+
     bool retval = it->second->pop(socket);
 
     if (retval) {
@@ -952,7 +945,7 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
   tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
   tcp::resolver::iterator end;
-  
+
   boost::shared_ptr<tcp::socket> socket = boost::shared_ptr<tcp::socket>(new tcp::socket (mIOService));
   boost::system::error_code error = boost::asio::error::host_not_found;
   while (error && endpoint_iterator != end)
@@ -965,9 +958,9 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
     std::cout << "Error connecting to  " << addr << ":" << port_str
 	      <<"\n";
     assert(false);
-  } 
+  }
 
-  
+
   //add the new socket to the list of leased sockets.
   SocketContainer socketContainer(socket);
 
@@ -980,7 +973,7 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
   else {
     //check that adding this socket to the map doesn't break the size limit.
     assert(it->second->push(socketContainer, false));
-    
+
     it->second->pop(socketContainer);
   }
 
@@ -997,7 +990,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundi
   //send the request to other CSEG servers.
   for (std::map<ServerID, std::vector<SegmentedRegion*> >::const_iterator it = csegServers.begin();
        it != csegServers.end(); it++
-      ) 
+      )
   {
     ServerID server_id = it->first;
 
@@ -1005,18 +998,18 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundi
 
     SocketContainer socketContainer = getSocketToCSEGServer(server_id);
     SocketPtr socket = socketContainer.socket();
-    
+
     if (socket.get() == 0) {
       continue;
-    }   
+    }
 
     Sirikata::Protocol::CSeg::CSegMessage csegMessage;
     csegMessage.mutable_ll_lookup_bbox_request_message().set_bbox(lookedUpBbox);
-  
+
     for (uint j = 0; j < segRegionList.size(); j++) {
       csegMessage.mutable_ll_lookup_bbox_request_message().add_candidate_boxes(segRegionList[j]->mBoundingBox);
     }
-    
+
     writeCSEGMessage(socket, csegMessage);
 
     socketList[server_id] = socketContainer;
@@ -1024,10 +1017,10 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundi
 
   //collect the responses...
   for (std::map<ServerID, SocketContainer>::iterator it = socketList.begin();
-       it != socketList.end(); 
+       it != socketList.end();
        it++)
   {
-    boost::shared_ptr<tcp::socket> socket = it->second.socket();    
+    boost::shared_ptr<tcp::socket> socket = it->second.socket();
 
     Sirikata::Protocol::CSeg::CSegMessage csegMessage;
     readCSEGMessage(socket, csegMessage);
@@ -1042,7 +1035,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundi
   //release the sockets to the socket pool.
   boost::upgrade_lock<boost::shared_mutex> lock(mSocketsToCSEGServersMutex);
   for (std::map<ServerID, SocketContainer>::iterator it = socketList.begin();
-       it != socketList.end(); 
+       it != socketList.end();
        it++)
   {
     mLeasedSocketsToCSEGServers[it->first]->push(it->second, false);
@@ -1054,7 +1047,7 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
 								      const BoundingBox3f& boundingBox)
 {
   SocketContainer socketContainer = getSocketToCSEGServer(server_id);
-  
+
   SocketPtr socket= socketContainer.socket();
 
   if (socket.get() == 0) {
@@ -1076,7 +1069,7 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
   ServerID retval = csegMessage.ll_lookup_response_message().server_id();
 
   boost::upgrade_lock<boost::shared_mutex> lock(mSocketsToCSEGServersMutex);
-  mLeasedSocketsToCSEGServers[server_id]->push(socketContainer, false); 
+  mLeasedSocketsToCSEGServers[server_id]->push(socketContainer, false);
 
   return retval;
 }
@@ -1086,27 +1079,27 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 									BoundingBoxList& bbList)
 {
   std::map< ServerID, SocketContainer > socketList;
-  
+
   for (uint32 i = mUpperTreeCSEGServers+1; i <= (uint32)mAvailableCSEGServers; i++) {
     if (i == mContext->id()) continue;
 
     SocketContainer socketContainer = getSocketToCSEGServer(i);
     SocketPtr socket = socketContainer.socket();
-    
+
     if (socket.get() == 0) {
       continue;
     }
-    
+
     Sirikata::Protocol::CSeg::CSegMessage csegMessage;
     csegMessage.mutable_ll_server_region_request_message().set_server_id(server_id);
     writeCSEGMessage(socket, csegMessage);
 
     socketList[i] = socketContainer;
   }
-  
+
 
   for (std::map<ServerID, SocketContainer>::iterator it = socketList.begin();
-       it != socketList.end(); 
+       it != socketList.end();
        it++)
   {
     uint8* dataReceived = NULL;
@@ -1114,17 +1107,17 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 
     Sirikata::Protocol::CSeg::CSegMessage csegMessage;
     readCSEGMessage(socket, csegMessage);
-    
-    for (int j=0; j < csegMessage.ll_server_region_response_message().bboxes_size(); j++) {      
+
+    for (int j=0; j < csegMessage.ll_server_region_response_message().bboxes_size(); j++) {
       BoundingBox3f bbox = csegMessage.ll_server_region_response_message().bboxes(j);
-      
-      bbList.push_back(bbox);      
+
+      bbList.push_back(bbox);
     }
   }
 
   boost::upgrade_lock<boost::shared_mutex> lock(mSocketsToCSEGServersMutex);
   for (std::map<ServerID, SocketContainer>::iterator it = socketList.begin();
-       it != socketList.end(); 
+       it != socketList.end();
        it++)
   {
     mLeasedSocketsToCSEGServers[it->first]->push(it->second, false);
@@ -1140,19 +1133,19 @@ void DistributedCoordinateSegmentation::sendLoadReportToLowerLevelCSEGServer(Ser
     assert(false);
   }
 
-  
+
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
   csegMessage.mutable_ll_load_report_message().set_lower_root_box(boundingBox);
   csegMessage.mutable_ll_load_report_message().mutable_load_report_message().set_server(message->server());
   csegMessage.mutable_ll_load_report_message().mutable_load_report_message().set_load_value(message->load_value());
   csegMessage.mutable_ll_load_report_message().mutable_load_report_message().set_bbox(message->bbox());
 
-  
-  writeCSEGMessage(socket, csegMessage);  
+
+  writeCSEGMessage(socket, csegMessage);
 
   //read ack message and discard
   readCSEGMessage(socket, csegMessage);
-  
+
   boost::upgrade_lock<boost::shared_mutex> lock(mSocketsToCSEGServersMutex);
   mLeasedSocketsToCSEGServers[cseg_server_id]->push(socketContainer, false);
 }
@@ -1166,7 +1159,7 @@ void DistributedCoordinateSegmentation::sendToAllCSEGServers(Sirikata::Protocol:
 
     SocketContainer socketContainer = getSocketToCSEGServer(i);
     SocketPtr socket = socketContainer.socket();
-    
+
     if (socket.get() == 0) {
       continue;
     }
@@ -1210,13 +1203,13 @@ void DistributedCoordinateSegmentation::sendToAllSpaceServers(Sirikata::Protocol
     }
 
     writeCSEGMessage(socket, csegMessage);
-    
+
     socket->close();
   }
 }
 
-void DistributedCoordinateSegmentation::writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
-                                                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage) 
+void DistributedCoordinateSegmentation::writeCSEGMessage(boost::shared_ptr<tcp::socket> socket,
+                                                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage)
 {
   std::string buffer = serializePBJMessage(csegMessage);
 
@@ -1229,11 +1222,11 @@ void DistributedCoordinateSegmentation::writeCSEGMessage(boost::shared_ptr<tcp::
                      boost::asio::transfer_all() );
 }
 
-void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                                                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage,
                                                         uint8* bufferSoFar, uint bufferSoFarSize
                                                         )
-{  
+{
   assert(bufferSoFarSize <= 4);
 
   uint8 lengthBuf[4];
@@ -1247,7 +1240,7 @@ void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::s
   uint32* length = (uint32*) lengthBuf;
   *length = ntohl(*length);
 
-  
+
   uint8* buf = new uint8[*length];
   boost::asio::read(*socket, boost::asio::buffer(buf, *length), boost::asio::transfer_all());
 
@@ -1260,7 +1253,7 @@ void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::s
   delete buf;
 }
 
-void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                                                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage)
 {
   return readCSEGMessage(socket, csegMessage, NULL, 0);
