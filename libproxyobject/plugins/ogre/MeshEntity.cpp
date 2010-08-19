@@ -292,10 +292,13 @@ void MeshEntity::setSelected(bool selected) {
 
 void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<DenseData> response)
 {
-    ProxyObject *obj = mProxy.get();
-    ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
-    if (meshProxy) {
-        meshProxy->meshDownloaded(request, response);
+    String fn = request->getURI().filename();
+    if (fn.rfind(".dae") == fn.size() - 4) {
+        ProxyObject *obj = mProxy.get();
+        ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
+        if (meshProxy) {
+            meshProxy->meshDownloaded(request, response);
+        }
     }
 }
 
@@ -306,11 +309,12 @@ void MeshEntity::downloadMeshFile(URI const& uri)
     (*dl)();
 }
 
+
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 // MCB: integrate these with the MeshObject model class
 
-void MeshEntity::onSetMesh ( URI const& meshFile )
+void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
 {
     downloadMeshFile(meshFile);
 
@@ -463,7 +467,7 @@ void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
         Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
 }
 
-void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
+void MeshEntity::onMeshParsed(ProxyObjectPtr proxy, String const& uri, Meshdata& md) {
     mURI = uri;
 
     mRemainingDownloads = md.textures.size();
@@ -483,12 +487,12 @@ void MeshEntity::onMeshParsed (String const& uri, Meshdata& md) {
     }
 }
 
-void MeshEntity::onSetScale ( Vector3f const& scale )
+void MeshEntity::onSetScale (ProxyObjectPtr proxy, Vector3f const& scale )
 {
     mSceneNode->setScale ( toOgre ( scale ) );
 }
 
-void MeshEntity::onSetPhysical ( PhysicalParameters const& pp )
+void MeshEntity::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp )
 {
 
 }

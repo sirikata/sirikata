@@ -30,15 +30,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "ResourceDownloadPlanner.hpp"
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+
 using namespace std;
 using namespace Sirikata;
 using namespace Sirikata::Transfer;
-/*
-namespace Meru {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner()
+namespace Sirikata {
+
+ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager)
+{
+    //proxyManager->addListener(this);
+}
+
+ResourceDownloadPlanner::~ResourceDownloadPlanner()
+{
+
+}
+/*
+void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
+{
+
+}
+
+void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
+{
+    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    if (meshptr) meshptr->MeshProvider::removeListener(this);
+    }*/
+
+void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p)
+{
+    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    if (meshptr) {
+        meshptr->MeshProvider::addListener(this);
+    }
+}
+
+void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
+{
+
+}
+
+void ResourceDownloadPlanner::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata &md)
+{
+
+}
+
+void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, Vector3f const &scale)
+{
+
+}
+
+void ResourceDownloadPlanner::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp)
 {
 
 }
 }
-*/

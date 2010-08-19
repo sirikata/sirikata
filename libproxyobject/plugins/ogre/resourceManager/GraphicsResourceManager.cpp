@@ -42,11 +42,11 @@
 #include "ResourceManager.hpp"
 #include "../meruCompat/Event.hpp"
 #include "../meruCompat/EventSource.hpp"
+#include "ResourceDownloadPlanner.hpp"
 #include <sirikata/core/util/Thread.hpp>
 #include <stdio.h>
 
 using namespace std;
-
 using namespace Sirikata;
 using namespace Sirikata::Transfer;
 
@@ -81,6 +81,7 @@ GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *depe
 : mEpoch(0), mEnabled(true)
 {
   initializeMediator();
+
 
   this->mTickListener = EventSource::getSingleton().subscribeId(
     EventID(EventTypes::Tick),

@@ -29,24 +29,40 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*
+
 #ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
 #define _RESOURCE_DOWNLOAD_PLANNER_HPP
 
 #include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
 
-class ResourceDownloadPlanner
+namespace Sirikata {
+
+class ResourceDownloadPlanner : public MeshListener
 {
 public:
-    ResourceDownloadPlanner();
+    ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager);
+    ~ResourceDownloadPlanner();
+
+    void addNewObject(ProxyObjectPtr p);
+
+    // MeshListener Interface
+    /*virtual void onSetMesh(URI const &meshFile);
+    virtual void onMeshParsed (String const& hash, Meshdata &md);
+    virtual void onSetScale (Vector3f const &scale);
+    virtual void onSetPhysical (PhysicalParameters const& pp);*/
+
+    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+    virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
+    virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
 private:
-    bool uricmp(const string str1, const string str2) {
-        return true;
-    };
 
-    std::map<const std::string, Transfer::ChunkRequestPtr, uricmp> ChunkRequests;
+    //std::map<const std::string, Transfer::ChunkRequestPtr> ChunkRequests;
+};
 }
 
 #endif
-*/

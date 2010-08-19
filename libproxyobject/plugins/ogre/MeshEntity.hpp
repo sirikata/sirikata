@@ -106,7 +106,7 @@ public:
 
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
-void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+    void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     /** Load the mesh and use it for this entity
@@ -130,18 +130,20 @@ void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
     }
 
     void downloadMeshFile(URI const& uri);
-/*
-    virtual bool loadMesh(const String&name){
-        return false;
-    }
-  */
+
+    void processMesh(URI const &uri);
 
     // interface from MeshListener
     public:
-        virtual void onSetMesh ( URI const& meshFile );
+    /* virtual void onSetMesh ( URI const& meshFile );
         virtual void onMeshParsed (String const& hash, Meshdata& md);
         virtual void onSetScale ( Vector3f const& scale );
-        virtual void onSetPhysical ( PhysicalParameters const& pp );
+        virtual void onSetPhysical ( PhysicalParameters const& pp );*/
+
+        virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
+        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     protected:
 

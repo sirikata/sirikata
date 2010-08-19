@@ -101,12 +101,12 @@ const SpaceID&BulletObj::getSpaceID()const {
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 
-void BulletObj::onSetMesh (const URI &newMesh) {
+void BulletObj::onSetMesh (ProxyObjectPtr proxy, const URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    onSetMesh: " << newMesh << endl;)
     mMeshname = newMesh;
 }
 
-void BulletObj::onMeshParsed (String const& hash, Meshdata& md) {
+void BulletObj::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md) {
     mMeshdata = &md;
     if (!mActive) {
         if (mShape==BulletObj::ShapeMesh) {
@@ -115,7 +115,7 @@ void BulletObj::onMeshParsed (String const& hash, Meshdata& md) {
     }
 }
 
-void BulletObj::onSetScale (const Vector3f &newScale) {
+void BulletObj::onSetScale (ProxyObjectPtr proxy, const Vector3f &newScale) {
     if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (mSizeX==newScale.x && mSizeY==newScale.y && mSizeZ==newScale.z)
@@ -144,7 +144,7 @@ void BulletObj::onSetScale (const Vector3f &newScale) {
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
-void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
+void BulletObj::onSetPhysical(ProxyObjectPtr proxy, const PhysicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << (unsigned int)pp.mode
             << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
@@ -275,7 +275,7 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
                             break;
                           case SubMeshGeometry::Primitive::LINES:
                             for (size_t k=0; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[k]);          
+                                mIndices.push_back(offset+prim->indices[k]);
                                 if (k%2==1) {
                                     mIndices.push_back(offset+prim->indices[k]);
                                 }
@@ -291,19 +291,19 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
                           case SubMeshGeometry::Primitive::TRISTRIPS:
                             for (size_t k=2; k<prim->indices.size(); ++k) {
                                 if (k%2==0) {
-                                    mIndices.push_back(offset+prim->indices[k-2]);          
+                                    mIndices.push_back(offset+prim->indices[k-2]);
                                     mIndices.push_back(offset+prim->indices[k-1]);
                                     mIndices.push_back(offset+prim->indices[k]);
                                 }else {
                                     mIndices.push_back(offset+prim->indices[k]);
                                     mIndices.push_back(offset+prim->indices[k-1]);
-                                    mIndices.push_back(offset+prim->indices[k-2]);          
+                                    mIndices.push_back(offset+prim->indices[k-2]);
                                 }
                             }
                             break;
                           case SubMeshGeometry::Primitive::TRIFANS:
                             for (size_t k=2; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[0]);          
+                                mIndices.push_back(offset+prim->indices[0]);
                                 mIndices.push_back(offset+prim->indices[k-1]);
                                 mIndices.push_back(offset+prim->indices[k]);
                             }

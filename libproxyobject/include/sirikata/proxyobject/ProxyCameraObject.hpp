@@ -50,6 +50,7 @@ public:
                 uint32 height);
     void detach();
 
+
 };
 
 typedef std::tr1::shared_ptr<ProxyCameraObject> ProxyCameraObjectPtr;

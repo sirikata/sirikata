@@ -194,7 +194,6 @@ public:
             std::stringstream out;
             out<<uri.toString()<<seconds<<random;
             mUniqueID = out.str();
-            cout<<"just made chunk request: "<<mUniqueID;
 
 	}
 

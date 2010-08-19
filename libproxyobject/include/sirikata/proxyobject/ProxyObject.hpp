@@ -66,9 +66,10 @@ typedef Provider<PositionListener*> PositionProvider;
  * and appropriate listeners be registered.
  */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
-  : public ProxyObjectProvider,
-    public PositionProvider,
-    protected ProxyObjectListener // Parent death notification. FIXME: or should we leave the parent here, but ignore it in globalLocation()???
+    : public SelfWeakPtr<ProxyObject>,
+      public ProxyObjectProvider,
+      public PositionProvider,
+      protected ProxyObjectListener // Parent death notification. FIXME: or should we leave the parent here, but ignore it in globalLocation()???
 {
 
 public:
@@ -79,6 +80,7 @@ public:
             const Location&predictedValue) const;
     };
     typedef TimedWeightedExtrapolator<Location,UpdateNeeded> Extrapolator;
+
 private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;

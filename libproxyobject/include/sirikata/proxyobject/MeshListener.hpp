@@ -34,6 +34,7 @@
 
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata {
 
@@ -77,10 +78,10 @@ class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
     public:
         virtual ~MeshListener() {}
 
-        virtual void onSetMesh ( URI const& newMesh) = 0;
-        virtual void onMeshParsed (String const& hash, Meshdata& md) = 0;
-        virtual void onSetScale ( Vector3f const& newScale ) = 0;
-        virtual void onSetPhysical ( PhysicalParameters const& pp ) = 0;
+        virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh) = 0;
+        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md) = 0;
+        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale ) = 0;
+        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp ) = 0;
 };
 
 } // namespace Sirikata

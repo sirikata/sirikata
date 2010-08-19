@@ -1006,17 +1006,20 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
     ProxyObjectPtr proxy_obj;
     if (is_camera) {
-        proxy_obj = ProxyObjectPtr(new ProxyCameraObject(proxy_manager.get(), objref, getSharedPtr()));
+
+        proxy_obj = ProxyObject::construct<ProxyCameraObject>(proxy_manager.get(), objref, getSharedPtr());
         proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
     }
     else {
-        ProxyMeshObjectPtr mesh_proxy_obj(new ProxyMeshObject(proxy_manager.get(), objref, getSharedPtr()));
-        proxy_obj = ProxyObjectPtr(mesh_proxy_obj);
+        proxy_obj = ProxyObject::construct<ProxyMeshObject>(proxy_manager.get(), objref, getSharedPtr());
+
         // The call to createObject must occur before trying to do any other
         // operations so that any listeners will be set up.
         proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
-        if (meshuri)
-            mesh_proxy_obj->setMesh(meshuri);
+        if (meshuri) {
+            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+            if (mesh) mesh->setMesh(meshuri);
+        }
     }
     return proxy_obj;
 }
