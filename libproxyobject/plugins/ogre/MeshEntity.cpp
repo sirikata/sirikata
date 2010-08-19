@@ -745,11 +745,13 @@ void MeshEntity::createMesh(const Meshdata& md) {
         }
         const LightInfo& sublight = md.lights[lightinst.lightIndex];
 
-        String lightname = hash + "_light_" + boost::lexical_cast<String>(light_idx++);
+        String lightname = getProxy().getObjectReference().toString()+"_light_"+hash+ boost::lexical_cast<String>(light_idx++);
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
-        mLights.push_back(light);
-        mSceneNode->attachObject(light);
-        light->setDebugDisplayEnabled(true);
+        if (!light->isAttached()) {
+            mLights.push_back(light);
+            mSceneNode->attachObject(light);
+            light->setDebugDisplayEnabled(true);
+        }
     }
 }
 

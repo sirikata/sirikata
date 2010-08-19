@@ -526,6 +526,7 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
+    mLightMap[light->getUniqueId()] = mLights.size();
     mLights.push_back(LightInfo());
     LightInfo *sublight = &mLights.back();
 
@@ -541,9 +542,7 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     // Type
     switch (light->getLightType()) {
       case COLLADAFW::Light::AMBIENT_LIGHT:
-        COLLADA_LOG(error,"Ambient lights are not supported.");
-        mLights.pop_back();
-        return true;
+        sublight->setLightType(LightInfo::POINT);//just make it a point light for now
         break;
       case COLLADAFW::Light::DIRECTIONAL_LIGHT:
         sublight->setLightType(LightInfo::DIRECTIONAL);
