@@ -477,7 +477,6 @@ public:
             if (geoinst.geometryIndex >= md.geometry.size())
                 continue;
             const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
-            Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
             AxisAlignedBox ogresubmeshaabb(Graphics::toOgre(geoinst.aabb.min()),
                                            Graphics::toOgre(geoinst.aabb.max()));
             double rad=0;
@@ -499,6 +498,8 @@ public:
                 std::string matname = md.textures.size() > 0 ?
                     hash + "_texture_" + md.textures[0] :
                     "baseogremat";
+                Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
+            
                 osubmesh->setMaterialName(matname);
                 if (useSharedBuffer) {
                     osubmesh->useSharedVertices=true;
