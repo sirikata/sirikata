@@ -146,12 +146,11 @@ void Proximity::shutdown() {
     }
 }
 
+// Setup all known servers for a server query update
 void Proximity::addAllServersForUpdate() {
-    // FIXME this assumes that ServerIDs are simple sequence of IDs
-    for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-        if (sid == mContext->id()) continue;
-        mNeedServerQueryUpdate.insert(sid);
-    }
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
+        mNeedServerQueryUpdate.insert(*it);
 }
 
 void Proximity::sendQueryRequests() {
@@ -162,9 +161,12 @@ void Proximity::sendQueryRequests() {
     BoundingBox3f bbox = aggregateBBoxes(bboxes);
     BoundingSphere3f bounds = bbox.toBoundingSphere();
 
-    std::set<ServerID> sub_servers;
-    sub_servers.swap(mNeedServerQueryUpdate);
-    for(std::set<ServerID>::iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
+    ServerSet sub_servers;
+    {
+        boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+        sub_servers.swap(mNeedServerQueryUpdate);
+    }
+    for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
         Sirikata::Protocol::Prox::Container container;
         Sirikata::Protocol::Prox::IServerQuery msg = container.mutable_query();
@@ -186,7 +188,10 @@ void Proximity::sendQueryRequests() {
         bool sent = mProxServerMessageService->route(smsg);
         if (!sent) {
             delete smsg;
-            mNeedServerQueryUpdate.insert(sid);
+            {
+                boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+                mNeedServerQueryUpdate.insert(sid);
+            }
         }
     }
 }
@@ -291,11 +296,20 @@ void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, Se
 // PintoServerQuerierListener Interface
 
 void Proximity::addRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
     // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.insert(sid);
+    mNeedServerQueryUpdate.insert(sid);
 }
 
 void Proximity::removeRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
     // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.erase(sid);
 }
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {

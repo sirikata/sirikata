@@ -86,9 +86,9 @@ public:
   static Ogre::Ray transformRay(Ogre::Node *entity, const Ogre::Ray &original);
   static bool intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*itr, bool plane);
   void  intersect(Ogre::Node *node, const Ogre::Ray &ray, IntersectResult &res);
-  OgreMesh(Ogre::SubMesh *submesh, bool texcoord);
+  OgreMesh(Ogre::SubMesh *submesh, bool texcoord, std::vector<TriVertex>&sharedVertices);
 protected:
-  void syncFromOgreMesh(Ogre::SubMesh *mSubMesh, bool texcoord);
+  void syncFromOgreMesh(Ogre::SubMesh *mSubMesh, bool texcoord, std::vector<TriVertex>&sharedVertices);
   std::vector<Triangle> mTriangles;
 public:
   int64 size()const;

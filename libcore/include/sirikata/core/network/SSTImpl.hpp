@@ -274,6 +274,9 @@ private:
 
   std::map<uint16, StreamReturnCallbackFunction> mListeningStreamsCallbackMap;
   std::map<uint16, std::vector<ReadDatagramCallback> > mReadDatagramCallbacks;
+  typedef std::vector<std::string> PartialPayloadList;
+  typedef std::map<LSID, PartialPayloadList> PartialPayloadMap;
+  PartialPayloadMap mPartialReadDatagrams;
 
   uint16 mNumStreams;
 
@@ -797,21 +800,48 @@ private:
   }
 
   void handleDatagram(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
-    uint8* payload = (uint8*) received_stream_msg->payload().data();
-    uint32 payload_size = received_stream_msg->payload().size();
+      uint8 msg_flags = received_stream_msg->flags();
 
-    uint16 dest_port = received_stream_msg->dest_port();
+      if (msg_flags & Sirikata::Protocol::SST::SSTStreamHeader::CONTINUES) {
+          // More data is coming, just store the current data
+          mPartialReadDatagrams[received_stream_msg->lsid()].push_back( received_stream_msg->payload() );
+      }
+      else {
+          // Extract dispatch information
+          uint16 dest_port = received_stream_msg->dest_port();
+          std::vector<ReadDatagramCallback> datagramCallbacks;
+          if (mReadDatagramCallbacks.find(dest_port) != mReadDatagramCallbacks.end()) {
+              datagramCallbacks = mReadDatagramCallbacks[dest_port];
+          }
 
-    std::vector<ReadDatagramCallback> datagramCallbacks;
+          // The datagram is all here, just deliver
+          PartialPayloadMap::iterator it = mPartialReadDatagrams.find(received_stream_msg->lsid());
+          if (it != mPartialReadDatagrams.end()) {
+              // Had previous partial packets
+              // FIXME this should be more efficient
+              std::string full_payload;
+              for(PartialPayloadList::iterator pp_it = it->second.begin(); pp_it != it->second.end(); pp_it++)
+                  full_payload = full_payload + (*pp_it);
+              full_payload = full_payload + received_stream_msg->payload();
+              mPartialReadDatagrams.erase(it);
+              uint8* payload = (uint8*) full_payload.data();
+              uint32 payload_size = full_payload.size();
+              for (uint32 i=0 ; i < datagramCallbacks.size(); i++) {
+                  datagramCallbacks[i](payload, payload_size);;
+              }
+          }
+          else {
+              // Only this part, no need to aggregate into single buffer
+              uint8* payload = (uint8*) received_stream_msg->payload().data();
+              uint32 payload_size = received_stream_msg->payload().size();
+              for (uint32 i=0 ; i < datagramCallbacks.size(); i++) {
+                  datagramCallbacks[i](payload, payload_size);
+              }
+          }
+      }
 
-    if (mReadDatagramCallbacks.find(dest_port) != mReadDatagramCallbacks.end()) {
-      datagramCallbacks = mReadDatagramCallbacks[dest_port];
-    }
 
-    for (uint32 i=0 ; i < datagramCallbacks.size(); i++) {
-      datagramCallbacks[i](payload, payload_size);
-    }
-
+    // And ack
     boost::mutex::scoped_lock lock(mQueueMutex);
 
     Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
@@ -1054,14 +1084,27 @@ public:
         // data over time.
         int header_buffer = 28;
         while(true) {
-            int buffLen = (length-currOffset > (MAX_PAYLOAD_SIZE-header_buffer)) ?
-                (MAX_PAYLOAD_SIZE-header_buffer) :
-                (length-currOffset);
+            int buffLen;
+            bool continues;
+            if (length-currOffset > (MAX_PAYLOAD_SIZE-header_buffer)) {
+                buffLen = MAX_PAYLOAD_SIZE-header_buffer;
+                continues = true;
+            }
+            else {
+                buffLen = length-currOffset;
+                continues = false;
+            }
+
 
             Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
             sstMsg.set_lsid( lsid );
             sstMsg.set_type(sstMsg.DATAGRAM);
-            sstMsg.set_flags(0);
+
+            uint8 flags = 0;
+            if (continues)
+                flags = flags | Sirikata::Protocol::SST::SSTStreamHeader::CONTINUES;
+            sstMsg.set_flags(flags);
+
             sstMsg.set_window( (unsigned char)10 );
             sstMsg.set_src_port(local_port);
             sstMsg.set_dest_port(remote_port);
