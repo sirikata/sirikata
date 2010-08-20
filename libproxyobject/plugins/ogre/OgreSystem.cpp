@@ -360,7 +360,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     proxyManager->addListener(this);
 
     //initialize the Resource Download Planner
-    dlPlanner = new ResourceDownloadPlanner(proxyManager);
+    dlPlanner = new ResourceDownloadPlanner(proxyManager, mContext);
 
     //add ogre system options here
     OptionValue*pluginFile;

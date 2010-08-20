@@ -33,6 +33,7 @@
 #include "ResourceDownloadPlanner.hpp"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "../MeshEntity.hpp"
+#include <stdlib.h>
 
 using namespace std;
 using namespace Sirikata;
@@ -41,7 +42,8 @@ using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager)
+ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
+ : PollingService(c->mainStrand, Duration::seconds(1), c, "Resource Download Planner Poll")
 {
     proxyManager->addListener(this);
 }
@@ -59,8 +61,11 @@ void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
 void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
 {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) meshptr->MeshProvider::removeListener(this);
+    if (meshptr) {
+        meshptr->MeshProvider::removeListener(this);
+        MeshEntities.erase(meshptr.get());
     }
+}
 
 void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
@@ -91,6 +96,16 @@ void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, Vector3f const &
 }
 
 void ResourceDownloadPlanner::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp)
+{
+
+}
+
+void ResourceDownloadPlanner::poll()
+{
+    cout<<"POLL"<<endl;
+}
+
+void ResourceDownloadPlanner::stop()
 {
 
 }

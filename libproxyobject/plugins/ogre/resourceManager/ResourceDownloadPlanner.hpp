@@ -35,6 +35,8 @@
 
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
@@ -44,10 +46,10 @@ namespace Graphics{
 class MeshEntity;
 }
 
-class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener
+class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener, public PollingService
 {
 public:
-    ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager);
+    ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
     ~ResourceDownloadPlanner();
 
     void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
@@ -62,8 +64,11 @@ public:
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
     virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
-private:
+    //PollingService interface
+    virtual void poll();
+    virtual void stop();
 
+private:
     std::map<ProxyMeshObject *, Graphics::MeshEntity *> MeshEntities;
 };
 }
