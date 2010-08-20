@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
+
+#include "DistanceDownloadPlanner.hpp"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "../MeshEntity.hpp"
 #include <stdlib.h>
@@ -45,59 +46,66 @@ using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
+DistanceDownloadPlanner::DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
+ : ResourceDownloadPlanner(proxyManager, c)
 {
-    c->add(this);
-    proxyManager->addListener(this);
 }
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
+DistanceDownloadPlanner::~DistanceDownloadPlanner()
 {
 
 }
 
-void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
+void DistanceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
 {
 
 }
 
-void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
+vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::findResource(ProxyObjectPtr p)
+{
+    vector<Resource>::iterator it;
+    for (it = resources.begin(); it != resources.end(); it++) {
+        if (it->proxy == p) return it;
+    }
+}
+
+void DistanceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
+{
+    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    if (meshptr) {
+        meshptr->MeshProvider::removeListener(this);
+        vector<Resource>::iterator it = findResource(p);
+        resources.erase(it);
+    }
+}
+
+void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
+{
+    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    if (meshptr) {
+        meshptr->MeshProvider::addListener(this);
+
+        Resource r(mesh, p, false);
+        resources.push_back(r);
+    }
+}
+
+void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
+{
+   ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy));
+   if (meshptr) {
+       Resource sample = Resource(NULL, meshptr, false);
+       vector<Resource>::iterator it = findResource(proxy);
+       it->mesh->processMesh(meshFile);
+   }
+}
+
+void DistanceDownloadPlanner::poll()
 {
 
 }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata &md)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, Vector3f const &scale)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
+void DistanceDownloadPlanner::stop()
 {
 
 }
