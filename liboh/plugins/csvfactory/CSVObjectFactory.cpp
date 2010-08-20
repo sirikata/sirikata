@@ -122,6 +122,7 @@ void CSVObjectFactory::generate() {
                 );
                 String mesh( line_parts[mesh_idx] );
 
+                
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
                 obj->connect(

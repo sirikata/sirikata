@@ -786,7 +786,9 @@ void HostedObject::connect(
     mObjectHost->connect(
         getSharedPtr(), spaceID,
         TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
-        TimedMotionQuaternion(Time::null(), MotionQuaternion( Quaternion::identity(), Quaternion::identity() )),
+        //TimedMotionQuaternion(Time::null(), MotionQuaternion(
+        //Quaternion::identity(), Quaternion::identity() )),
+        TimedMotionQuaternion(Time::null(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
         mesh,
         SolidAngle(.00001f),
