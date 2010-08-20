@@ -79,6 +79,8 @@ protected:
     float mSolidAngle;
 }; // class SolidAngle
 
+SIRIKATA_FUNCTION_EXPORT std::ostream & operator<<(std::ostream & os, const Sirikata::SolidAngle& sa);
+
 } // namespace Sirikata
 
 #endif //_SIRIKATA_SOLID_ANGLE_HPP_

@@ -61,6 +61,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
 
 //    lastURIString = uri.toString();
     mMesh = new Meshdata();
+    mMesh->uri = uri.toString();
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()
@@ -177,7 +178,36 @@ void ColladaDocumentImporter::finish ()
                     GeometryInstance new_geo_inst;
                     new_geo_inst.geometryIndex = geo_it->second;
                     new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
-                    mMesh->instances.push_back(new_geo_inst);
+                    new_geo_inst.radius=0;
+                    new_geo_inst.aabb=BoundingBox3f3f::null();
+                    if (geo_it->second<mMesh->geometry.size()) {
+                        const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
+                        for (size_t i=0;i<geometry.primitives.size();++i) {
+                            const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
+                            size_t indsize=prim.indices.size();
+                            for (size_t j=0;j<indsize;++j) {
+                                Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
+                                Matrix4x4f trans = new_geo_inst.transform;
+                                Vector4f pos4= trans*Vector4f(untransformed_pos.x,
+                                                             untransformed_pos.y,
+                                                             untransformed_pos.z,
+                                                             1.0f);
+                                Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
+                                if (j==0&&i==0) {
+                                    new_geo_inst.aabb=BoundingBox3f3f(pos,0);
+                                    new_geo_inst.radius = pos.lengthSquared();
+                                }else {
+                                    new_geo_inst.aabb=new_geo_inst.aabb.merge(pos);
+                                    double rads=pos.lengthSquared();
+                                    if (rads> new_geo_inst.radius)
+                                        new_geo_inst.radius=rads;
+                                }
+                            }
+                        }
+                        new_geo_inst.radius=sqrt(new_geo_inst.radius);
+                        mMesh->instances.push_back(new_geo_inst);
+                        
+                    }
                 }
 
                 // Instance Lights
@@ -233,7 +263,7 @@ void ColladaDocumentImporter::finish ()
 
 
     // Finally, if we actually have anything for the user, ship the parsed mesh
-    if (mMesh->instances.size() > 0) {
+    if (mMesh->instances.size() > 0 || mMesh->lightInstances.size()) {
     //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
     //                                          meshstore[mDocument->getURI().toString()] );
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
@@ -318,6 +348,8 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     mGeometryMap[geometry->getUniqueId()]=mGeometries.size();
     mGeometries.push_back(SubMeshGeometry());
     SubMeshGeometry* submesh = &mGeometries.back();
+    submesh->radius=0;
+    submesh->aabb=BoundingBox3f3f::null();
     submesh->name = mesh->getName();
 
     COLLADAFW::MeshVertexData const& verts((mesh->getPositions()));
@@ -386,18 +418,27 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 if (where==indexSetMap.end()) {
                     indexSetMap[uniqueIndexSet]=submesh->positions.size();
                     outputPrim->indices.push_back(submesh->positions.size());
-                    if (vdata) {
-                        submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
-                    }else if (vdatad) {
-                        submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                    if (vdata||vdatad) {
+                        if (vdata) {
+                            submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                                  vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                                  vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                        }else if (vdatad) {
+                            submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                                  vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                                  vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                        }
+                        if (submesh->aabb==BoundingBox3f3f::null())
+                            submesh->aabb=BoundingBox3f3f(submesh->positions.back(),0);
+                        else
+                            submesh->aabb=submesh->aabb.merge(submesh->positions.back());
+                        double l2=submesh->positions.back().lengthSquared();
+                        if (l2>submesh->radius)
+                            submesh->radius=l2;
+
                     }else {
                         COLLADA_LOG(error,"SubMesh without position index data\n");
                     }
-
                     if (ndata) {
                         submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
                                                             ndata->getData()[uniqueIndexSet.normalIndices*normStride+1],
@@ -437,7 +478,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         }
 
     }
-
+    submesh->radius=sqrt(submesh->radius);
     bool ok = mDocument->import ( *this, *geometry );
 
     return ok;
@@ -486,6 +527,7 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
+    mLightMap[light->getUniqueId()] = mLights.size();
     mLights.push_back(LightInfo());
     LightInfo *sublight = &mLights.back();
 
@@ -501,9 +543,10 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     // Type
     switch (light->getLightType()) {
       case COLLADAFW::Light::AMBIENT_LIGHT:
-        COLLADA_LOG(error,"Ambient lights are not supported.");
-        mLights.pop_back();
-        return true;
+        sublight->setLightAmbientColor(lcol);
+        sublight->setLightDiffuseColor(Color(0,0,0));
+        sublight->setLightSpecularColor(Color(0,0,0));
+        sublight->setLightType(LightInfo::POINT);//just make it a point light for now
         break;
       case COLLADAFW::Light::DIRECTIONAL_LIGHT:
         sublight->setLightType(LightInfo::DIRECTIONAL);

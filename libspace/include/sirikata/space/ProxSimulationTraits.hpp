@@ -1,7 +1,7 @@
-/*  Sirikata Network Services - Scenario factory
- *  ScenarioFactory.cpp
+/*  Sirikata
+ *  ProxSimulationTraits.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,31 +29,47 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
+#define _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
+
 #include <sirikata/core/util/Platform.hpp>
-#include "ScenarioFactory.hpp"
-#include "DistributionPingScenario.hpp"
-#include "DelugePairScenario.hpp"
-#include "PingDelugeScenario.hpp"
-#include "ByteTransferScenario.hpp"
-#include "LoadPacketTrace.hpp"
-#include "NullScenario.hpp"
+#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
 
-AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
+#include <sirikata/space/Platform.hpp>
+
 namespace Sirikata {
-ScenarioFactory::ScenarioFactory(){
-    DistributionPingScenario::addConstructorToFactory(this);
-    DelugePairScenario::addConstructorToFactory(this);
-    PingDelugeScenario::addConstructorToFactory(this);
-    LoadPacketTrace::addConstructorToFactory(this);
-    ByteTransferScenario::addConstructorToFactory(this);
-    NullScenario::addConstructorToFactory(this);
-}
-ScenarioFactory::~ScenarioFactory(){}
-ScenarioFactory&ScenarioFactory::getSingleton(){
-    return Sirikata::AutoSingleton<ScenarioFactory>::getSingleton();
-}
-void ScenarioFactory::destroy(){
-    Sirikata::AutoSingleton<ScenarioFactory>::destroy();
-}
 
-}
+class SIRIKATA_SPACE_EXPORT ProxSimulationTraits {
+public:
+    typedef float32 realType;
+
+    typedef Vector3f Vector3Type;
+    typedef TimedMotionVector3f MotionVector3Type;
+
+    typedef BoundingSphere3f BoundingSphereType;
+
+    typedef SolidAngle SolidAngleType;
+
+    typedef Time TimeType;
+    typedef Duration DurationType;
+
+    const static realType InfiniteRadius;
+}; // class ProxSimulationTraits
+
+class SIRIKATA_SPACE_EXPORT ObjectProxSimulationTraits : public ProxSimulationTraits {
+public:
+    typedef UUID ObjectIDType;
+    typedef UUID::Hasher ObjectIDHasherType;
+};
+
+class SIRIKATA_SPACE_EXPORT ServerProxSimulationTraits : public ProxSimulationTraits {
+public:
+    typedef ServerID ObjectIDType;
+    typedef std::tr1::hash<ServerID> ObjectIDHasherType;
+};
+
+} // namespace Sirikata
+
+#endif //_SIRIKATA_PROX_SIMULATION_TRAITS_HPP_

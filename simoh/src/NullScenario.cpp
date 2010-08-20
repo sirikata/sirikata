@@ -1,7 +1,7 @@
 /*  Sirikata
- *  ProxSimulationTraits.hpp
+ *  NullScenario.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,34 +30,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
-#define _SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
-
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/UUID.hpp>
-#include <sirikata/core/util/MotionVector.hpp>
+#include "NullScenario.hpp"
+#include "ScenarioFactory.hpp"
 
 namespace Sirikata {
 
-class ProxSimulationTraits {
-public:
-    typedef float32 realType;
+NullScenario::NullScenario(const String &options)
+{
+    mContext=NULL;
+}
 
-    typedef Vector3f Vector3Type;
-    typedef TimedMotionVector3f MotionVector3Type;
+NullScenario::~NullScenario(){
+}
 
-    typedef BoundingSphere3f BoundingSphereType;
+NullScenario*NullScenario::create(const String& options){
+    return new NullScenario(options);
+}
+void NullScenario::addConstructorToFactory(ScenarioFactory* thus){
+    thus->registerConstructor("null", &NullScenario::create);
+}
 
-    typedef SolidAngle SolidAngleType;
+void NullScenario::initialize(ObjectHostContext*ctx) {
+    mContext = ctx;
+}
 
-    typedef UUID ObjectIDType;
+void NullScenario::start() {
+}
 
-    typedef Time TimeType;
-    typedef Duration DurationType;
+void NullScenario::stop() {
+}
 
-    const static realType InfiniteRadius; // Storate in Proximity.cpp
-}; // class ProxSimulationTraits
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_PROX_SIMULATION_TRAITS_HPP_
+}

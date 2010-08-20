@@ -147,4 +147,9 @@ void SolidAngle::clamp() {
     if (mSolidAngle > MaxVal) mSolidAngle = MaxVal;
 }
 
+std::ostream& operator<< (std::ostream &os, const Sirikata::SolidAngle& output) {
+    os << output.asFloat() << "sr";
+    return os;
+}
+
 } // namespace Sirikata

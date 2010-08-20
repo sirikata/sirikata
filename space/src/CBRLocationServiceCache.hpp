@@ -33,13 +33,11 @@
 #ifndef _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 #define _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 
-#include "ProxSimulationTraits.hpp"
+#include <sirikata/space/ProxSimulationTraits.hpp>
 #include "LocationService.hpp"
 #include <prox/LocationServiceCache.hpp>
 
 namespace Sirikata {
-
-typedef Prox::LocationServiceCache<ProxSimulationTraits> LocationServiceCache;
 
 /* Implementation of LocationServiceCache which serves Prox libraries;
  * works by listening for updates from our LocationService.  Note that
@@ -49,9 +47,9 @@ typedef Prox::LocationServiceCache<ProxSimulationTraits> LocationServiceCache;
  * work happens in the proximity thread, with the callbacks just storing
  * information to be picked up in the next iteration.
  */
-class CBRLocationServiceCache : public Prox::LocationServiceCache<ProxSimulationTraits>, public LocationServiceListener {
+class CBRLocationServiceCache : public Prox::LocationServiceCache<ObjectProxSimulationTraits>, public LocationServiceListener {
 public:
-    typedef Prox::LocationUpdateListener<ProxSimulationTraits> LocationUpdateListener;
+    typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
     /** Constructs a CBRLocationServiceCache which caches entries from locservice.  If
      *  replicas is true, then it caches replica entries from locservice, in addition
@@ -67,8 +65,8 @@ public:
     bool tracking(const ObjectID& id) const;
 
     virtual const TimedMotionVector3f& location(const Iterator& id) const;
-    virtual const BoundingSphere3f& bounds(const Iterator& id) const;
-    virtual float32 radius(const Iterator& id) const;
+    virtual const BoundingSphere3f& region(const Iterator& id) const;
+    virtual float32 maxSize(const Iterator& id) const;
 
     virtual const UUID& iteratorID(const Iterator& id) const;
 
@@ -129,7 +127,13 @@ private:
     struct ObjectData {
         TimedMotionVector3f location;
         TimedMotionQuaternion orientation;
+        // The raw bounding volume.
         BoundingSphere3f bounds;
+        // "Region" is the center of the object's bounding region, with 0 size
+        // for the bounding sphere.
+        BoundingSphere3f region;
+        // MaxSize is the size of the object, stored upon bounding region updates.
+        float32 maxSize;
         String mesh;
         bool tracking;
     };

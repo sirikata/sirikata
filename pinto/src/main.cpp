@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     pinto_context->add(pinto_context);
     pinto_context->add(pinto);
 
-    pinto_context->run(2);
+    pinto_context->run(1);
 
     pinto_context->cleanup();
 

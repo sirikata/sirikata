@@ -1,7 +1,7 @@
-/*  Sirikata Network Services - Scenario factory
- *  ScenarioFactory.cpp
+/*  Sirikata
+ *  ProxSimulationTraits.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,31 +29,13 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <sirikata/core/util/Platform.hpp>
-#include "ScenarioFactory.hpp"
-#include "DistributionPingScenario.hpp"
-#include "DelugePairScenario.hpp"
-#include "PingDelugeScenario.hpp"
-#include "ByteTransferScenario.hpp"
-#include "LoadPacketTrace.hpp"
-#include "NullScenario.hpp"
 
-AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
+#include <sirikata/space/ProxSimulationTraits.hpp>
+
+#include <float.h>
+
 namespace Sirikata {
-ScenarioFactory::ScenarioFactory(){
-    DistributionPingScenario::addConstructorToFactory(this);
-    DelugePairScenario::addConstructorToFactory(this);
-    PingDelugeScenario::addConstructorToFactory(this);
-    LoadPacketTrace::addConstructorToFactory(this);
-    ByteTransferScenario::addConstructorToFactory(this);
-    NullScenario::addConstructorToFactory(this);
-}
-ScenarioFactory::~ScenarioFactory(){}
-ScenarioFactory&ScenarioFactory::getSingleton(){
-    return Sirikata::AutoSingleton<ScenarioFactory>::getSingleton();
-}
-void ScenarioFactory::destroy(){
-    Sirikata::AutoSingleton<ScenarioFactory>::destroy();
-}
 
-}
+const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_MAX;
+
+} // namespace Sirikata

@@ -46,7 +46,9 @@ public:
     LocalPintoServerQuerier(SpaceContext* ctx) {}
     virtual ~LocalPintoServerQuerier() {}
 
-    virtual void update(const BoundingBox3f& region, float max_radius) {
+    virtual void updateRegion(const BoundingBox3f& region) {
+    }
+    virtual void updateLargestObject(float max_radius) {
     }
     virtual void updateQuery(const SolidAngle& min_angle) {
     }

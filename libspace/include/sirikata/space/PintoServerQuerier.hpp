@@ -36,8 +36,20 @@
 #include <sirikata/space/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/util/Factory.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
+
+/** Listener interface for PintoServerQuerier. Receives updates on which
+ *  servers need to be queried based on the submitted query information.
+ */
+class SIRIKATA_SPACE_EXPORT PintoServerQuerierListener {
+public:
+    virtual ~PintoServerQuerierListener() {}
+
+    virtual void addRelevantServer(ServerID sid) = 0;
+    virtual void removeRelevantServer(ServerID sid) = 0;
+};
 
 /** PintoServerQuerier is an interface for discovering other space servers which
  *  must be queried for Pinto results. It looks a lot like Pinto itself since it
@@ -46,31 +58,26 @@ namespace Sirikata {
  *  implementations might be a single server that the PintoServerQuerier submits
  *  queries to, or perhaps a multiple server service that is fault tolerant.
  */
-class SIRIKATA_SPACE_EXPORT PintoServerQuerier {
+class SIRIKATA_SPACE_EXPORT PintoServerQuerier : public Provider<PintoServerQuerierListener*> {
 public:
 
     virtual ~PintoServerQuerier() {}
 
     /** Update this server's parameters.
      *  \param region bounding box of the region covered by this server
+     */
+    virtual void updateRegion(const BoundingBox3f& region) = 0;
+
+    /** Update this server's parameters.
      *  \param max_radius size of the largest object in the region
      */
-    virtual void update(const BoundingBox3f& region, float max_radius) = 0;
+    virtual void updateLargestObject(float max_radius) = 0;
 
     /** Update query parameters with the server.
      *  \param min_angle the smallest query angle requested
      */
     virtual void updateQuery(const SolidAngle& min_angle) = 0;
 
-    /** Listener interface for PintoServerQuerier. Receives updates on which
-     *  servers need to be queried based on the submitted query information.
-     */
-    class Listener {
-        virtual ~Listener() {}
-
-        virtual void addRelevantServer(ServerID sid) = 0;
-        virtual void removeRelevantServer(ServerID sid) = 0;
-    };
 }; // PintoServerQuerier
 
 class SIRIKATA_SPACE_EXPORT PintoServerQuerierFactory

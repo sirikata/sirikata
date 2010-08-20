@@ -61,11 +61,16 @@ struct SubMeshGeometry {
         }primitiveType;
         unsigned int MaterialIndex;//FIXME
     };
+    BoundingBox3f3f aabb;
+    double radius;
     std::vector<Primitive> primitives;
 };
 struct GeometryInstance {
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
+    BoundingBox3f3f aabb;//transformed aabb
+    double radius;//transformed radius
+    
 };
 
 struct LightInstance {

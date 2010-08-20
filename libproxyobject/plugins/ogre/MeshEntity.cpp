@@ -353,96 +353,389 @@ bool MeshEntity::createMeshWork(const Meshdata& md) {
     return true;
 }
 
+
+class MeshdataManualLoader : public Ogre::ManualResourceLoader {
+    Meshdata md;
+    Ogre::VertexData * createVertexData(const SubMeshGeometry &submesh, int vertexCount, Ogre::HardwareVertexBufferSharedPtr&vbuf) {
+        using namespace Ogre;
+        Ogre::VertexData *vertexData = OGRE_NEW Ogre::VertexData();
+        VertexDeclaration* vertexDecl = vertexData->vertexDeclaration;
+        size_t currOffset = 0;
+        
+        vertexDecl->addElement(0, currOffset, VET_FLOAT3, VES_POSITION);
+        currOffset += VertexElement::getTypeSize(VET_FLOAT3);
+        if (submesh.normals.size()==submesh.positions.size()) {
+            vertexDecl->addElement(0, currOffset, VET_FLOAT3, VES_NORMAL);
+            currOffset += VertexElement::getTypeSize(VET_FLOAT3);
+        }
+        if (submesh.tangents.size()==submesh.positions.size()) {
+            vertexDecl->addElement(0, currOffset, VET_FLOAT3, VES_TANGENT);
+            currOffset += VertexElement::getTypeSize(VET_FLOAT3);
+        }
+        if (submesh.colors.size()==submesh.positions.size()) {
+            vertexDecl->addElement(0, currOffset, VET_COLOUR_ARGB, VES_DIFFUSE);
+            currOffset += VertexElement::getTypeSize(VET_COLOUR_ARGB);
+        }
+        unsigned int numUVs=submesh.texUVs.size();
+        for (unsigned int tc=0; tc<numUVs; ++ tc) {
+            VertexElementType vet;
+            switch (submesh.texUVs[tc].stride) {
+              case 1:
+                vet=VET_FLOAT1;
+                break;
+              case 2:
+                vet=VET_FLOAT2;
+                break;
+              case 3:
+                vet=VET_FLOAT3;
+                break;
+              case 4:
+                vet=VET_FLOAT4;
+                break;
+              default:
+                vet=VET_FLOAT4;
+            }
+            vertexDecl->addElement(0, currOffset, vet, VES_TEXTURE_COORDINATES, tc);
+            currOffset += VertexElement::getTypeSize(vet);
+        }
+        vertexData->vertexCount = vertexCount;
+        HardwareBuffer::Usage vertexBufferUsage= HardwareBuffer::HBU_STATIC_WRITE_ONLY;
+        bool vertexShadowBuffer = false;
+        vbuf = HardwareBufferManager::getSingleton().
+            createVertexBuffer(vertexDecl->getVertexSize(0), vertexData->vertexCount,
+                               vertexBufferUsage, vertexShadowBuffer);
+        VertexBufferBinding* binding = vertexData->vertexBufferBinding;
+        binding->setBinding(0, vbuf);
+        return vertexData;
+    }
+public:
+
+    MeshdataManualLoader(const Meshdata&meshdata):md(meshdata) {
+        
+    }
+    void prepareResource(Ogre::Resource*r){}
+    void loadResource(Ogre::Resource *r) {
+        using namespace Ogre;
+        SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
+        String hash = sha.convertToHexString();
+        bool useSharedBuffer = true;
+        size_t totalVertexCount=0;
+        int up = md.up_axis;
+        for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+            const GeometryInstance& geoinst = *geoinst_it;
+
+            // Get the instanced submesh
+            if (geoinst.geometryIndex >= md.geometry.size())
+                continue;
+            size_t i = geoinst.geometryIndex;
+
+            totalVertexCount+=md.geometry[i].positions.size();
+            if ((md.geometry[i].positions.size()==md.geometry[i].normals.size())
+                != (md.geometry[0].positions.size()==md.geometry[0].normals.size())) {
+                useSharedBuffer=false;
+            }
+
+            if ((md.geometry[i].positions.size()==md.geometry[i].tangents.size())
+                != (md.geometry[0].positions.size()==md.geometry[0].tangents.size())) {
+                useSharedBuffer=false;
+            }
+
+            if ((md.geometry[i].positions.size()==md.geometry[i].colors.size())
+                != (md.geometry[0].positions.size()==md.geometry[0].colors.size())) {
+                useSharedBuffer=false;
+            }
+            if (md.geometry[0].texUVs.size()!=md.geometry[i].texUVs.size()) {
+                useSharedBuffer=false;
+            } else {
+                for (size_t j=0;j<md.geometry[0].texUVs.size();++j) {
+                    if (md.geometry[i].texUVs[j].stride!=md.geometry[i].texUVs[j].stride)
+                        useSharedBuffer=false;
+                    if ((md.geometry[i].texUVs[j].uvs.size()==md.geometry[i].positions.size())!=
+                        (md.geometry[0].texUVs[j].uvs.size()==md.geometry[0].positions.size())) {
+                        useSharedBuffer=false;
+                    }
+                }
+            }
+        }
+    
+        if (totalVertexCount>65535) 
+            useSharedBuffer=false;
+        Mesh* mesh= dynamic_cast <Mesh*> (r);
+        
+        if (totalVertexCount==0 || mesh==NULL)
+            return;
+        char * pData  = NULL;
+        Ogre::HardwareVertexBufferSharedPtr vbuf;              
+        unsigned short sharedVertexOffset=0;
+        unsigned int totalVerticesCopied=0;
+        if (useSharedBuffer) {
+            mesh->sharedVertexData = createVertexData(md.geometry[md.instances[0].geometryIndex],totalVertexCount, vbuf);
+            pData=(char*)vbuf->lock(HardwareBuffer::HBL_DISCARD);
+        }
+        for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+            const GeometryInstance& geoinst = *geoinst_it;
+            
+            Matrix4x4f pos_xform = geoinst.transform;
+            Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
+            
+            // Get the instanced submesh
+            if (geoinst.geometryIndex >= md.geometry.size())
+                continue;
+            const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
+            AxisAlignedBox ogresubmeshaabb(Graphics::toOgre(geoinst.aabb.min()),
+                                           Graphics::toOgre(geoinst.aabb.max()));
+            double rad=0;
+            if (geoinst_it != md.instances.begin()) {
+                ogresubmeshaabb.merge(mesh->getBounds());
+                rad=mesh->getBoundingSphereRadius();
+            }
+            if (geoinst.radius>rad) {
+                rad=geoinst.radius;
+            }
+            mesh->_setBounds(ogresubmeshaabb);
+            mesh->_setBoundingSphereRadius(rad);
+            int vertcount = submesh.positions.size();
+            int normcount = submesh.normals.size();
+            for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
+                const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
+                
+                // FIXME select proper texture/material
+                std::string matname = md.textures.size() > 0 ?
+                    hash + "_texture_" + md.textures[0] :
+                    "baseogremat";
+                Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
+            
+                osubmesh->setMaterialName(matname);
+                if (useSharedBuffer) {
+                    osubmesh->useSharedVertices=true;
+                }else {
+                    osubmesh->useSharedVertices=false;
+                    osubmesh->vertexData = createVertexData(submesh,(int)submesh.positions.size(),vbuf);
+                    pData=(char*)vbuf->lock(HardwareBuffer::HBL_DISCARD);
+                }
+                if (primitive_index==0||useSharedBuffer==false) {
+                    if (useSharedBuffer) {
+                        sharedVertexOffset=totalVerticesCopied;
+                        assert(totalVerticesCopied<65536||vertcount==0);//should be checked by other code
+                    }
+                    totalVerticesCopied+=vertcount;
+                    for (int i=0;i<vertcount; ++i) {
+                        Vector3f v = fixUp(up, submesh.positions[i]);
+                        Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
+                        v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
+                        memcpy(pData,&v.x,sizeof(float));
+                        memcpy(pData+sizeof(float),&v.y,sizeof(float));
+                        memcpy(pData+2*sizeof(float),&v.z,sizeof(float));
+                        pData+=VertexElement::getTypeSize(VET_FLOAT3);
+                        if (submesh.normals.size()==submesh.positions.size()) {
+                            Vector3f normal = fixUp(up, submesh.normals[i]);
+                            normal = (normal_xform * normal).normal();
+                            memcpy(pData,&normal.x,sizeof(float));
+                            memcpy(pData+sizeof(float),&normal.y,sizeof(float));
+                            memcpy(pData+2*sizeof(float),&normal.z,sizeof(float));
+                            pData+=VertexElement::getTypeSize(VET_FLOAT3);
+                        }
+                        if (submesh.tangents.size()==submesh.positions.size()) {
+                            Vector3f tangent = fixUp(up, submesh.tangents[i]);
+                            tangent = normal_xform * tangent;
+                            memcpy(pData,&tangent.x,sizeof(float));
+                            memcpy(pData+sizeof(float),&tangent.y,sizeof(float));
+                            memcpy(pData+2*sizeof(float),&tangent.z,sizeof(float));
+                            pData+=VertexElement::getTypeSize(VET_FLOAT3);                    
+                        }
+                        if (submesh.colors.size()==submesh.positions.size()) {
+                            unsigned char r = (unsigned char)(submesh.colors[i].x*255);
+                            unsigned char g = (unsigned char)(submesh.colors[i].y*255);
+                            unsigned char b = (unsigned char)(submesh.colors[i].z*255);
+                            unsigned char a = (unsigned char)(submesh.colors[i].w*255);
+                            pData[0]=a;
+                            pData[1]=r;
+                            pData[2]=g;
+                            pData[3]=b;
+                            pData+=VertexElement::getTypeSize(VET_COLOUR_ARGB);
+                        }
+                        unsigned int numUVs= submesh.texUVs.size();
+                        for (unsigned int tc=0;tc<numUVs;++tc) {
+                            VertexElementType vet;
+                            int stride=0;
+                            switch (submesh.texUVs[tc].stride) {
+                              case 1:
+                                stride=1;
+                                vet=VET_FLOAT1;
+                                break;
+                              case 2:
+                                stride=2;
+                                vet=VET_FLOAT2;
+                                break;
+                              case 3:
+                                stride=3;
+                                vet=VET_FLOAT3;
+                            break;
+                              case 4:
+                              default:
+                                stride=4;
+                                vet=VET_FLOAT4;
+                                break;
+                            }
+                            
+                            memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
+                            pData += VertexElement::getTypeSize(vet);
+                        }
+                    }
+                    if (!useSharedBuffer)
+                        vbuf->unlock();
+                }
+
+                unsigned int indexcount = prim.indices.size();
+                osubmesh->indexData->indexCount = indexcount;
+                HardwareBuffer::Usage indexBufferUsage= HardwareBuffer::HBU_STATIC_WRITE_ONLY;
+                bool indexShadowBuffer = false;
+
+                osubmesh->indexData->indexBuffer = HardwareBufferManager::getSingleton().
+                    createIndexBuffer(HardwareIndexBuffer::IT_16BIT,
+                                      indexcount, indexBufferUsage, indexShadowBuffer);
+                unsigned short * iData = (unsigned short*)osubmesh->indexData->indexBuffer->lock(HardwareBuffer::HBL_DISCARD);
+                if (useSharedBuffer) {
+                    for (unsigned int i=0;i<indexcount;++i) {
+                        iData[i]=prim.indices[i]+sharedVertexOffset;
+                        assert(iData[i]<totalVertexCount);
+                    }
+                }else {
+                    memcpy(iData,&prim.indices[0],indexcount*sizeof(unsigned short));
+                }
+                osubmesh->indexData->indexBuffer->unlock();
+                switch (prim.primitiveType) {
+                  case SubMeshGeometry::Primitive::TRIANGLES:
+                    osubmesh->operationType = Ogre::RenderOperation::OT_TRIANGLE_LIST;
+                    break;
+                  case SubMeshGeometry::Primitive::TRISTRIPS:
+                    osubmesh->operationType = Ogre::RenderOperation::OT_TRIANGLE_STRIP;
+                    break;
+                  case SubMeshGeometry::Primitive::TRIFANS:
+                    osubmesh->operationType = Ogre::RenderOperation::OT_TRIANGLE_FAN;
+                    break;
+                  case SubMeshGeometry::Primitive::LINESTRIPS:
+                    osubmesh->operationType = Ogre::RenderOperation::OT_LINE_STRIP;
+                    break;
+                  case SubMeshGeometry::Primitive::LINES:
+                    osubmesh->operationType = Ogre::RenderOperation::OT_LINE_LIST;
+                    break;
+                  case SubMeshGeometry::Primitive::POINTS:
+                    osubmesh->operationType = Ogre::RenderOperation::OT_POINT_LIST;
+                    break;
+                  default:
+                    break;
+                }
+            }
+        }
+        if (useSharedBuffer) {
+            assert(totalVerticesCopied==totalVertexCount);
+        
+            vbuf->unlock();
+        }
+        mesh->load();
+    }
+};
+
 void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
-    int up = md.up_axis;
 
-    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-    Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
-    for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
-        std::string matname = hash + "_texture_" + *tex_it;
-        Ogre::MaterialPtr mat = base_mat->clone(matname);
-        String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
-        mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
-    }
-
-    Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-    /// FIXME: set bounds, bounding radius here
-    Ogre::ManualObject mo(hash);
-    mo.clear();
-
-    for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
-        const GeometryInstance& geoinst = *geoinst_it;
-
-        Matrix4x4f pos_xform = geoinst.transform;
-        Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
-
-        // Get the instanced submesh
-
-        assert(geoinst.geometryIndex < md.geometry.size());
-        const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
-        int vertcount = submesh.positions.size();
-        int normcount = submesh.normals.size();
-        for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
-            const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
-            int indexcount = prim.indices.size();
-
-            // FIXME select proper texture/material
-            std::string matname = md.textures.size() > 0 ?
-                hash + "_texture_" + md.textures[0] :
-                base_mat->getName();
-            mo.begin(matname);
-            std::cerr<<"Begin "<<matname<<"\n";
-            float tu, tv;
-            for (int i=0; i<indexcount; i++) {
-                int j = prim.indices[i];
-                Vector3f v = fixUp(up, submesh.positions[j]);
-                Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
-                v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
-                mo.position(v[0], v[1], v[2]);
-                std::cerr<<"Mo pos "<<v[0]<<","<<v[1]<<","<<v[2]<<"\n";
-                Vector3f normal = fixUp(up, submesh.normals[j]);
-                normal = normal_xform * normal;
-                mo.normal(normal[0], normal[1], normal[2]);
-                std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";
-                mo.colour(1.0,1.0,1.0,1.0);
-                if (submesh.texUVs.size()==0) {
-                    /// bogus texture for textureless models
-                    if (i%3==0) {
-                        tu=0.0;
-                        tv=0.0;
-                    }
-                    if (i%3==1) {
-                        tu=0.0;
-                        tv=1.0;
-                    }
-                    if (i%3==2) {
-                        tu=1.0;
-                        tv=1.0;
-                    }
-                }
-                else {
-                    Sirikata::Vector2f uv (submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride ],
-                                           submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride+1]);
-                    tu = uv[0];
-                    tv = 1.0-uv[1];           //  why you gotta be like that?
-                }
-                std::cerr<<"Mo tex "<<tu<<","<<tv<<"\n";
-                mo.textureCoord(tu, tv);
-            }
-            std::cerr<<"Mo end\n";
-            mo.end();
+    if (!md.instances.empty()) {
+        Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+        Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
+        for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
+            std::string matname = hash + "_texture_" + *tex_it;
+            Ogre::MaterialPtr mat = base_mat->clone(matname);
+            String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
+            mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
         }
-    } // submesh
-
-    mo.setVisible(true);
-    Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    bool check = mm.resourceExists(hash);
-    loadMesh(hash);                     /// this is here because we removed
-                                        /// mResource->loaded(true, mEpoch) in
-                                        /// ModelLoadTask::doRun
-
+        Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
+        if (1) {
+            /// FIXME: set bounds, bounding radius here
+            Ogre::ManualResourceLoader *reload;
+            Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=OGRE_NEW MeshdataManualLoader(md))));
+            reload->prepareResource(&*mo);
+            reload->loadResource(&*mo);
+        }else {
+            int up = md.up_axis;
+            /// FIXME: set bounds, bounding radius here
+            Ogre::ManualObject mo(hash);
+            mo.clear();
+            
+            for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+                const GeometryInstance& geoinst = *geoinst_it;
+                
+                Matrix4x4f pos_xform = geoinst.transform;
+                Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
+                
+                // Get the instanced submesh
+                assert(geoinst.geometryIndex < md.geometry.size());
+                const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
+                
+                int vertcount = submesh.positions.size();
+                int normcount = submesh.normals.size();
+                for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
+                    const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
+                    int indexcount = prim.indices.size();
+                    
+                    // FIXME select proper texture/material
+                    std::string matname = md.textures.size() > 0 ?
+                        hash + "_texture_" + md.textures[0] :
+                        base_mat->getName();
+                    mo.begin(matname);
+                    std::cerr<<"Begin "<<matname<<"\n";
+                    float tu, tv;
+                    for (int i=0; i<indexcount; i++) {
+                        int j = prim.indices[i];
+                        Vector3f v = fixUp(up, submesh.positions[j]);
+                        Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
+                        v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
+                        mo.position(v[0], v[1], v[2]);
+                        std::cerr<<"Mo pos "<<v[0]<<","<<v[1]<<","<<v[2]<<"\n";
+                        Vector3f normal = fixUp(up, submesh.normals[j]);
+                        normal = normal_xform * normal;
+                        mo.normal(normal[0], normal[1], normal[2]);
+                        std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";                
+                        mo.colour(1.0,1.0,1.0,1.0);
+                        if (submesh.texUVs.size()==0) {
+                            /// bogus texture for textureless models
+                            if (i%3==0) {
+                                tu=0.0;
+                                tv=0.0;
+                            }
+                            if (i%3==1) {
+                                tu=0.0;
+                                tv=1.0;
+                            }
+                            if (i%3==2) {
+                                tu=1.0;
+                                tv=1.0;
+                            }
+                        }
+                        else {
+                            Sirikata::Vector2f uv (submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride ],
+                                                   submesh.texUVs[0].uvs[ j*submesh.texUVs[0].stride+1]);
+                            tu = uv[0];
+                            tv = 1.0-uv[1];           //  why you gotta be like that?
+                        }
+                        std::cerr<<"Mo tex "<<tu<<","<<tv<<"\n";
+                        mo.textureCoord(tu, tv);
+                    }
+                    std::cerr<<"Mo end\n";
+                    mo.end();
+                }
+            } // submesh
+        
+            mo.setVisible(true);
+            Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        }
+    
+        bool check = mm.resourceExists(hash);
+        loadMesh(hash);                     /// this is here because we removed
+                                            /// mResource->loaded(true, mEpoch) in
+                                            /// ModelLoadTask::doRun
+    }
     // Lights
     int light_idx = 0;
     for(Meshdata::LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
@@ -451,14 +744,19 @@ void MeshEntity::createMesh(const Meshdata& md) {
         Matrix4x4f pos_xform = lightinst.transform;
 
         // Get the instanced submesh
-        assert(lightinst.lightIndex < md.lights.size());
+        if(lightinst.lightIndex >= (int)md.lights.size()){
+            SILOG(ogre,error, "bad light index %d for lights only sized %d\n"<<lightinst.lightIndex<<"/"<<(int)md.lights.size());
+            continue;
+        }
         const LightInfo& sublight = md.lights[lightinst.lightIndex];
 
-        String lightname = hash + "_light_" + boost::lexical_cast<String>(light_idx++);
+        String lightname = getProxy().getObjectReference().toString()+"_light_"+hash+ boost::lexical_cast<String>(light_idx++);
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
-        mLights.push_back(light);
-        mSceneNode->attachObject(light);
-        light->setDebugDisplayEnabled(true);
+        if (!light->isAttached()) {
+            mLights.push_back(light);
+            mSceneNode->attachObject(light);
+//            light->setDebugDisplayEnabled(true);
+        }
     }
 }
 
