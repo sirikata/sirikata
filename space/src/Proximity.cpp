@@ -693,7 +693,10 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
     if (it == mServerQueries.end()) {
         PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat());
 
-        Query* q = mServerQueryHandler->registerQuery(loc, bounds, angle);
+        BoundingSphere3f region(bounds.center(), 0);
+        float ms = bounds.radius();
+
+        Query* q = mServerQueryHandler->registerQuery(loc, region, ms, angle);
         mServerQueries[server] = q;
     }
     else {
@@ -701,7 +704,8 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
 
         Query* q = it->second;
         q->position(loc);
-        q->bounds(bounds);
+        q->region( BoundingSphere3f(bounds.center(), 0) );
+        q->maxSize( bounds.radius() );
         q->angle(angle);
     }
 }
@@ -729,14 +733,18 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
         // This is necessary because we get this update for all location updates, even those for objects
         // which don't have subscriptions.
         if (angle != NoUpdateSolidAngle) {
-            Query* q = mObjectQueryHandler->registerQuery(loc, bounds, angle);
+            BoundingSphere3f region(bounds.center(), 0);
+            float ms = bounds.radius();
+
+            Query* q = mObjectQueryHandler->registerQuery(loc, region, ms, angle);
             mObjectQueries[object] = q;
         }
     }
     else {
         Query* query = it->second;
         query->position(loc);
-        query->bounds(bounds);
+        query->region( BoundingSphere3f(bounds.center(), 0) );
+        query->maxSize( bounds.radius() );
         if (angle != NoUpdateSolidAngle)
             query->angle(angle);
     }

@@ -129,13 +129,13 @@ void PintoManager::handleClientReceived(Sirikata::Network::Stream* stream, Chunk
         cdata.server = msg.server().server();
 
         TimedMotionVector3f default_loc( Time::null(), MotionVector3f( Vector3f::nil(), Vector3f::nil() ) );
-        BoundingSphere3f default_bnds(BoundingSphere3f::null());
+        BoundingSphere3f default_region(BoundingSphere3f::null());
         float32 default_max = 0.f;
         SolidAngle default_min_angle(SolidAngle::Max);
 
-        mLocCache->addSpaceServer(cdata.server, default_loc, default_bnds, default_max);
+        mLocCache->addSpaceServer(cdata.server, default_loc, default_region, default_max);
 
-        Query* query = mQueryHandler->registerQuery(default_loc, default_bnds, default_min_angle);
+        Query* query = mQueryHandler->registerQuery(default_loc, default_region, default_max, default_min_angle);
         cdata.query = query;
         mClientsByQuery[query] = stream;
         query->setEventListener(this);
@@ -152,13 +152,13 @@ void PintoManager::handleClientReceived(Sirikata::Network::Stream* stream, Chunk
     if (msg.has_region()) {
         PINTO_LOG(debug, "Received region update from " << cdata.server << ": " << msg.region().bounds());
         mLocCache->updateSpaceServerRegion(cdata.server, msg.region().bounds());
-        cdata.query->bounds( msg.region().bounds() );
+        cdata.query->region( msg.region().bounds() );
     }
 
     if (msg.has_largest()) {
         PINTO_LOG(debug, "Received largest object update from " << cdata.server << ": " << msg.largest().radius());
         mLocCache->updateSpaceServerMaxSize(cdata.server, msg.largest().radius());
-        PINTO_LOG(fatal, "FIXME need way to specify largest object to query");
+        cdata.query->maxSize( msg.largest().radius() );
     }
 
     if (msg.has_query()) {
