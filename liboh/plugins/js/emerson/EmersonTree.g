@@ -12,15 +12,22 @@ options
 	//output=template;
 	backtrack=true;
 //	memoize=true;
-	rewrite=true;
+//	rewrite=true;
 	ASTLabelType=pANTRL3_BASE_TREE;
+//	ASTLabelType=pANTRL3_COMMON_TREE;
 	tokenVocab=Emerson;
  language = C;
 }
 
+@header
+{
+  #include <stdlib.h>;
+}
+
 	program
-	:^(PROG sourceElements) // omitting LT and EOF
-;
+	:^(PROG sourceElements)   
+	                       
+	;
 	
  sourceElements
 	:sourceElement+  // omitting the LT 
@@ -235,7 +242,7 @@ memberExpression
  : primaryExpression
 	| functionExpression
 	| ^(NEW memberExpression arguments) 
-	| ^(memberExpressionSuffix memberExpression memberExpression)
+	| ^(memberExpressionSuffix memberExpression memberExpression) 
 	;
 
 
@@ -245,7 +252,7 @@ memberExpressionSuffix
 	;
 
 callExpression
- : ^(CALL memberExpression arguments)
+ : ^(CALL memberExpression arguments) 
 	|^(callExpressionSuffix callExpression callExpression)
 	;
 	
@@ -264,7 +271,7 @@ indexSuffix
 	;	
 	
 propertyReferenceSuffix
-	: ^(DOT Identifier)
+	: ^(DOT Identifier) 
 	;
 	
 assignmentOperator

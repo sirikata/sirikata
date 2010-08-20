@@ -13,6 +13,7 @@ options
 	backtrack=true;
 	memoize=true;
  ASTLabelType = pANTLR3_BASE_TREE; 
+// ASTLabelType = pANTLR3_COMMON_TREE; 
 	language = C;
 }
 
@@ -106,12 +107,12 @@ tokens
 	
 
 program
-	: LTERM* sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
+	: a=LTERM* sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
 
 	;
-	
+
 sourceElements
-	: sourceElement (LTERM* sourceElement)* -> ^(sourceElement)+  // omitting the LTERM 
+	: sourceElement (LTERM* sourceElement)* -> sourceElement+  // omitting the LTERM 
 	;
 	
 sourceElement

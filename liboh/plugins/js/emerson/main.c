@@ -35,7 +35,11 @@
 #include    "EmersonLexer.h"
 #include    "EmersonParser.h"
 #include    "EmersonTree.h"
+#include <stdlib.h>
+#include "EmersonUtil.h"
 
+
+extern pANTLR3_UINT8* EmersonParserTokenNames;
 // Main entry point for this example
 //
 int ANTLR3_CDECL
@@ -216,17 +220,26 @@ main	(int argc, char *argv[])
 	}
 	else
 	{
+
+
+	 // Print the emerson tree here
+
+  printf("Emerson Tree after parsing \n%s\n", emerson_printAST(emersonAST.tree)->chars);
+
+
 		nodes	= antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE HINT WILL SOON BE DEPRECATED!!
 
-		printf("Nodes: %s\n", emersonAST.tree->toStringTree(emersonAST.tree)->chars);
+   
 
 		// Tree parsers are given a common tree node stream (or your override)
 		//
+
+  
+
 		treePsr	= EmersonTreeNew(nodes);
-
-
-
 		treePsr->program(treePsr);
+		
+
 		nodes   ->free  (nodes);	    nodes	= NULL;
 		treePsr ->free  (treePsr);	    treePsr	= NULL;
 	}
