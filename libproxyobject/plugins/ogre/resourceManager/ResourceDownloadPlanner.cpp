@@ -32,23 +32,25 @@
 
 #include "ResourceDownloadPlanner.hpp"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include "../MeshEntity.hpp"
 
 using namespace std;
 using namespace Sirikata;
 using namespace Sirikata::Transfer;
+using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
 ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager)
 {
-    //proxyManager->addListener(this);
+    proxyManager->addListener(this);
 }
 
 ResourceDownloadPlanner::~ResourceDownloadPlanner()
 {
 
 }
-/*
+
 void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
 {
 
@@ -58,19 +60,24 @@ void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
 {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     if (meshptr) meshptr->MeshProvider::removeListener(this);
-    }*/
+    }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p)
+void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     if (meshptr) {
         meshptr->MeshProvider::addListener(this);
+        MeshEntities[meshptr.get()] = mesh;
     }
 }
 
 void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
 {
-
+   ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy));
+   if (meshptr) {
+       MeshEntity *mesh = MeshEntities[meshptr.get()];
+       if (mesh) mesh->processMesh(meshFile);
+   }
 }
 
 void ResourceDownloadPlanner::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata &md)

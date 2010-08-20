@@ -316,6 +316,11 @@ void MeshEntity::downloadMeshFile(URI const& uri)
 
 void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
 {
+
+}
+
+void MeshEntity::processMesh(URI const& meshFile)
+{
     downloadMeshFile(meshFile);
 
     // MCB: responsibility to load model meshes must move to MeshObject plugin

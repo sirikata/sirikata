@@ -97,6 +97,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         // documents that have been transfered, parsed, and loaded.
         // MCB: make this a map when/if a key becomes useful
+
         typedef std::set< ColladaDocumentPtr > DocumentSet;
         DocumentSet mDocuments;
 

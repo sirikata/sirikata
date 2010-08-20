@@ -37,23 +37,26 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 
 namespace Sirikata {
+namespace Graphics{
+class MeshEntity;
+}
 
-class ResourceDownloadPlanner : public MeshListener
+class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener
 {
 public:
     ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager);
     ~ResourceDownloadPlanner();
 
-    void addNewObject(ProxyObjectPtr p);
+    void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
 
-    // MeshListener Interface
-    /*virtual void onSetMesh(URI const &meshFile);
-    virtual void onMeshParsed (String const& hash, Meshdata &md);
-    virtual void onSetScale (Vector3f const &scale);
-    virtual void onSetPhysical (PhysicalParameters const& pp);*/
+    //ProxyCreationListener interface
+    virtual void onCreateProxy ( ProxyObjectPtr object );
+    virtual void onDestroyProxy ( ProxyObjectPtr object );
 
+    //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
     virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
@@ -61,7 +64,7 @@ public:
 
 private:
 
-    //std::map<const std::string, Transfer::ChunkRequestPtr> ChunkRequests;
+    std::map<ProxyMeshObject *, Graphics::MeshEntity *> MeshEntities;
 };
 }
 

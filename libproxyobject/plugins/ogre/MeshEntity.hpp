@@ -42,6 +42,7 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
@@ -104,6 +105,8 @@ public:
 
     WebView *getWebView(int whichSubEnt);
 
+    void processMesh(URI const& newMesh);
+
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
     void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
@@ -131,14 +134,8 @@ public:
 
     void downloadMeshFile(URI const& uri);
 
-    void processMesh(URI const &uri);
-
     // interface from MeshListener
     public:
-    /* virtual void onSetMesh ( URI const& meshFile );
-        virtual void onMeshParsed (String const& hash, Meshdata& md);
-        virtual void onSetScale ( Vector3f const& scale );
-        virtual void onSetPhysical ( PhysicalParameters const& pp );*/
 
         virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
         virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);

@@ -163,5 +163,13 @@ void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
     setStatic(getProxy().isStatic());
 }
 
+Vector3d Entity::getOgrePosition() {
+    return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
+}
+
+Quaternion Entity::getOgreOrientation() {
+    return fromOgre(mSceneNode->getOrientation());
+}
+
 }
 }

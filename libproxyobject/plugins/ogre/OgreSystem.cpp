@@ -57,9 +57,10 @@
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ManualMaterialLoader.hpp"
 #include "resourceManager/UploadTool.hpp"
+#include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
-#include "resourceManager/ResourceDownloadPlanner.cpp"
+
 using Meru::GraphicsResourceManager;
 using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
@@ -359,7 +360,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     proxyManager->addListener(this);
 
     //initialize the Resource Download Planner
-    new ResourceDownloadPlanner(proxyManager);
+    dlPlanner = new ResourceDownloadPlanner(proxyManager);
 
     //add ogre system options here
     OptionValue*pluginFile;
@@ -734,7 +735,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         } else if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
-            // dlPlanner->addNewObject(p, mesh);
+            dlPlanner->addNewObject(p, mesh);
         }
     }
     if (!created) {
