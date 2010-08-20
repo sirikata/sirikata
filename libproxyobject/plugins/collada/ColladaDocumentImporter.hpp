@@ -92,10 +92,11 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
-        MaterialEffectInfo::Texture makeTexture (MaterialEffectInfo::Texture::Affecting type,
-                                                 const COLLADAFW::MaterialBinding * binding, 
-                                                 const COLLADAFW::EffectCommon * effect, 
-                                                 const COLLADAFW::ColorOrTexture & color);
+        void makeTexture (MaterialEffectInfo::Texture::Affecting type,
+                          const COLLADAFW::MaterialBinding * binding, 
+                          const COLLADAFW::EffectCommon * effect, 
+                          const COLLADAFW::ColorOrTexture & color,
+                          MaterialEffectInfo::TextureList&output);
         size_t finishEffect(const COLLADAFW::MaterialBinding *binding);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
@@ -142,6 +143,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
+        
+        
 
         Meshdata::SubMeshGeometryList mGeometries;
         IndicesMap mGeometryMap;
@@ -154,7 +157,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         URIMap mTextureMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, const COLLADAFW::Effect *, UniqueIdHash> ColladaEffectMap;
         ColladaEffectMap mColladaEffects;
-        IndicesMap mEffectMap;
+        //IndicesMap mEffectMap;
         Meshdata::MaterialEffectInfoList mEffects;
         
         Meshdata * mMesh;

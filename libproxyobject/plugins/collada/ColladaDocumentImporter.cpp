@@ -142,7 +142,6 @@ void ColladaDocumentImporter::finish ()
 
 
     mMesh->geometry.swap(mGeometries);
-    mMesh->materials.swap(mEffects);
     mMesh->lights.swap(mLights);
 
 
@@ -180,6 +179,10 @@ void ColladaDocumentImporter::finish ()
                     new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                     new_geo_inst.radius=0;
                     new_geo_inst.aabb=BoundingBox3f3f::null();
+                    const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
+                    for (size_t bind=0;bind< bindings.getCount();++bind) {
+                        new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind]);
+                    }
                     if (geo_it->second<mMesh->geometry.size()) {
                         const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
                         for (size_t i=0;i<geometry.primitives.size();++i) {
@@ -261,11 +264,10 @@ void ColladaDocumentImporter::finish ()
         }
     }
 
+    mMesh->materials.swap(mEffects);//effects is built up during the above run
 
     // Finally, if we actually have anything for the user, ship the parsed mesh
     if (mMesh->instances.size() > 0 || mMesh->lightInstances.size()) {
-    //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
-    //                                          meshstore[mDocument->getURI().toString()] );
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
         spp->meshParsed( mDocument->getURI().toString(), mMesh );
     }
@@ -394,6 +396,23 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         for (size_t i=0;i<groupedVertexElementCount;++i) {
             submesh->primitives.push_back(SubMeshGeometry::Primitive());
             outputPrim=&submesh->primitives.back();
+            switch(prim->getPrimitiveType()) {
+              case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIFANS;break;
+              case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRISTRIPS;break;
+              case COLLADAFW::MeshPrimitive::LINE_STRIPS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::LINESTRIPS;break;
+              case COLLADAFW::MeshPrimitive::POINTS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::POINTS;break;
+              case COLLADAFW::MeshPrimitive::LINES:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::LINES;break;
+              case COLLADAFW::MeshPrimitive::TRIANGLES:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;break;
+              default:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;
+            }
+            outputPrim->materialId= prim->getMaterialId();
             size_t faceCount=prim->getGroupedVerticesVertexCount(i);
             if (!multiPrim)
                 faceCount *= prim->getGroupedVertexElementsCount();
@@ -493,19 +512,25 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
-MaterialEffectInfo::Texture ColladaDocumentImporter::makeTexture 
+void ColladaDocumentImporter::makeTexture 
                          (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding *binding,
                           const COLLADAFW::EffectCommon * effectCommon, 
-                          const COLLADAFW::ColorOrTexture & color) {
+                          const COLLADAFW::ColorOrTexture & color, 
+                          MaterialEffectInfo::TextureList&output ) {
     using namespace COLLADAFW;
-    MaterialEffectInfo::Texture retval;
     if (color.isColor()) {
+        output.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture &retval=output.back();
+
         retval.color.x=color.getColor().getRed();
         retval.color.y=color.getColor().getGreen();
         retval.color.z=color.getColor().getBlue();
         retval.color.w=color.getColor().getAlpha();
-    }else {
+    }else if (color.isTexture()){
+        output.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture &retval=output.back();
+
         // retval.uri  = mTextureMap[color.getTexture().getTextureMapId()];
         TextureMapId tid =color.getTexture().getTextureMapId();
         size_t tbindcount = binding->getTextureCoordinateBindingArray().getCount();
@@ -579,7 +604,6 @@ MaterialEffectInfo::Texture ColladaDocumentImporter::makeTexture
         retval.maxMipLevel = sampler->getMipmapMaxlevel();
         retval.uri = mTextureMap[sampler->getSourceImage()];
     }
-    return retval;
 }
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
@@ -610,15 +634,15 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
           case EffectCommon::SHADER_PHONG:
-            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular()));
+            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),mat.textures);
           case EffectCommon::SHADER_LAMBERT:
-            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse()));
-            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient()));
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),mat.textures);
             
           case EffectCommon::SHADER_CONSTANT:
-            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission()));
-            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity()));
-            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective()));
+            makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),mat.textures);
             break;
           default:
             break;
