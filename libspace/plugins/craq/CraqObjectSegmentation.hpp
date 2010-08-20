@@ -199,10 +199,11 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
     virtual OSegEntry lookup(const UUID& obj_id);
     virtual OSegEntry cacheLookup(const UUID& obj_id);
     virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
-    virtual void addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool);
+      virtual void addNewObject(const UUID& obj_id, float radius);
+      virtual void addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool);
+      virtual void removeObject(const UUID& obj_id);
     virtual void receiveMessage(Message* msg);
     virtual bool clearToMigrate(const UUID& obj_id);
-    virtual void newObjectAdd(const UUID& obj_id, float radius);
     virtual void craqGetResult(CraqOperationResult* cor);
     virtual void craqSetResult(CraqOperationResult* cor);
     virtual void stop();

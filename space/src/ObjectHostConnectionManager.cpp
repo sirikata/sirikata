@@ -64,6 +64,14 @@ ObjectHostConnectionManager::ConnectionID& ObjectHostConnectionManager::Connecti
     return *this;
 }
 
+bool ObjectHostConnectionManager::ConnectionID::operator==(const ConnectionID& rhs) const {
+    return (conn == rhs.conn);
+}
+
+bool ObjectHostConnectionManager::ConnectionID::operator!=(const ConnectionID& rhs) const {
+    return (conn != rhs.conn);
+}
+
 
 
 
@@ -81,14 +89,15 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHos
 }
 
 
-ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
+ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb)
  : mContext(ctx),
    mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
    mIOWork(NULL),
    mIOThread(NULL),
    mAcceptor(NULL),
-   mMessageReceivedCallback(cb)
+   mMessageReceivedCallback(msg_cb),
+   mConnectionClosedCallback(closed_cb)
 {
     mIOWork = new Network::IOWork( mIOService, "ObjectHostConnectionManager Work" );
     mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
@@ -191,7 +200,10 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     // Add the new connection to our index, set read callbacks
     ObjectHostConnection* conn = new ObjectHostConnection(str);
     set_callbacks(
-        &Sirikata::Network::Stream::ignoreConnectionCallback,
+        std::tr1::bind(&ObjectHostConnectionManager::handleConnectionEvent,
+            this,
+            conn,
+            _1, _2),
         std::tr1::bind(&ObjectHostConnectionManager::handleConnectionRead,
             this,
             conn,
@@ -202,6 +214,15 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectHostConnectionManager::insertConnection, this, conn)
     );
+}
+
+void ObjectHostConnectionManager::handleConnectionEvent(ObjectHostConnection* conn, Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
+    if (status == Network::Stream::Disconnected) {
+        // Close out all associated connections
+        mContext->mainStrand->post(
+            std::tr1::bind(&ObjectHostConnectionManager::destroyConnection, this, conn)
+        );
+    }
 }
 
 void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
@@ -218,16 +239,20 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
     // We either got it or dropped it, either way it was accepted.  Don't do
     // anything with pause parameter.
 }
+
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
     mConnections.insert(conn);
 }
 
+void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) {
+    mConnectionClosedCallback(conn->conn_id());
+    mConnections.erase(conn);
+    delete conn;
+}
+
 void ObjectHostConnectionManager::closeAllConnections() {
-    // Close each connection
-    for(ObjectHostConnectionSet::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
-        ObjectHostConnection* conn = (*it);
-        conn->socket->close();
-    }
+    while(!mConnections.empty())
+        destroyConnection(*(mConnections.begin()));
 }
 
 
