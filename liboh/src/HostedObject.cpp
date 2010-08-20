@@ -1135,12 +1135,38 @@ void HostedObject::handleProximityMessage(const SpaceID& space, uint8* buffer, i
     bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
+    std::cout<<"\n\n\n\n";
+    std::cout<<"DEBUG: received a handleProximityMessage";
+    std::cout<<"\n\n\n\n";
+    
     for(int32 idx = 0; idx < contents.addition_size(); idx++) {
         Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
         TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
+        std::cout<<"\n\n\n*******************************************************************\n\n";
+        std::cout<<"\n\n\nOrientation position\n";
+        std::cout<<addition.orientation().position().toString();
+        std::cout<<"\n\n\nOrientation velocity\n";
+        std::cout<<addition.orientation().velocity().toString();
+        std::cout<<"\n\n\nLocation postion\n";
+        std::cout<<addition.location().position().toString();
+        std::cout<<"\n\n\nLocation velocity\n";
+        std::cout<<addition.location().velocity().toString();
+        std::cout<<"\n\n\n";
+        std::cout<<"\n\n\n*******************************************************************\n\n";
+        // std::cout<<"Debug.  This is orient x:  "<<addition.orientation().position().x<<"\n";
+        // std::cout<<"Debug.  This is orient y:  "<<addition.orientation().position().y<<"\n";
+        // std::cout<<"Debug.  This is orient z:  "<<addition.orientation().position().z<<"\n";
+        // std::cout<<"Debug.  This is orient w:  "<<addition.orientation().position().w<<"\n";
+        // std::cout<<"\n\n\n";
+        // std::cout<<"Debug.  This is loc x:     "<<addition.location()position().x<<"\n";
+        // std::cout<<"Debug.  This is loc y:     "<<addition.location()position().y<<"\n";
+        // std::cout<<"Debug.  This is loc z:     "<<addition.location()position().z<<"\n";
+        // std::cout<<"\n\n\n";
+
+        
         SpaceObjectReference proximateID(space, ObjectReference(addition.object()));
         // FIXME use weak_ptr instead of raw
         URI meshuri;
