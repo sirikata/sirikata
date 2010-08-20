@@ -42,8 +42,12 @@
 #include "COLLADAFWMesh.h"
 #include "COLLADAFWImage.h"
 #include "COLLADAFWMaterial.h"
+#include "COLLADAFWMaterialBinding.h"
 #include "COLLADAFWFileInfo.h"
 #include "COLLADAFWNode.h"
+#include "COLLADAFWColorOrTexture.h"
+#include "COLLADAFWEffectCommon.h"
+
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/Meshdata.hpp>
 
@@ -88,7 +92,11 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
-
+        MaterialEffectInfo::Texture makeTexture (MaterialEffectInfo::Texture::Affecting type,
+                                                 const COLLADAFW::MaterialBinding * binding, 
+                                                 const COLLADAFW::EffectCommon * effect, 
+                                                 const COLLADAFW::ColorOrTexture & color);
+        size_t finishEffect(const COLLADAFW::MaterialBinding *binding);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
     public:
@@ -144,7 +152,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         
         IdMap mMaterialMap;
         URIMap mTextureMap;
-
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, const COLLADAFW::Effect *, UniqueIdHash> ColladaEffectMap;
+        ColladaEffectMap mColladaEffects;
         IndicesMap mEffectMap;
         Meshdata::MaterialEffectInfoList mEffects;
         

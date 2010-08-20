@@ -493,17 +493,152 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
-
+MaterialEffectInfo::Texture ColladaDocumentImporter::makeTexture 
+                         (MaterialEffectInfo::Texture::Affecting type,
+                          const COLLADAFW::MaterialBinding *binding,
+                          const COLLADAFW::EffectCommon * effectCommon, 
+                          const COLLADAFW::ColorOrTexture & color) {
+    using namespace COLLADAFW;
+    MaterialEffectInfo::Texture retval;
+    if (color.isColor()) {
+        retval.color.x=color.getColor().getRed();
+        retval.color.y=color.getColor().getGreen();
+        retval.color.z=color.getColor().getBlue();
+        retval.color.w=color.getColor().getAlpha();
+    }else {
+        // retval.uri  = mTextureMap[color.getTexture().getTextureMapId()];
+        TextureMapId tid =color.getTexture().getTextureMapId();
+        size_t tbindcount = binding->getTextureCoordinateBindingArray().getCount();
+        for (size_t i=0;i<tbindcount;++i) {
+            const TextureCoordinateBinding& b=binding->getTextureCoordinateBindingArray()[i];
+            if (b.getTextureMapId()==tid) {
+                retval.texCoord = b.getSetIndex();//is this correct!?
+                break;
+            }
+        }
+        retval.affecting = type;
+        const Sampler * sampler =effectCommon->getSamplerPointerArray()[color.getTexture().getSamplerId()];
+#define FIX_ENUM(var,val) case Sampler::val: var = MaterialEffectInfo::Texture::val; break
+        switch (sampler->getMinFilter()) {
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR);
+          default:
+            retval.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR;
+        }
+        switch (sampler->getMipFilter()) {
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR);
+          default:break;
+        }
+        switch (sampler->getMagFilter()) {
+            FIX_ENUM(retval.magFilter,SAMPLER_FILTER_NEAREST);
+            FIX_ENUM(retval.magFilter,SAMPLER_FILTER_LINEAR);
+          default:
+            retval.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR;
+        }
+        
+        switch (const_cast<Sampler*>(sampler)->getSamplerType()) {//<-- bug in constness
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_1D);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_2D);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_3D);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_CUBE);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_RECT);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_DEPTH);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_STATE);
+          default:
+            retval.samplerType = MaterialEffectInfo::Texture::SAMPLER_TYPE_2D;
+        }
+        switch (sampler->getWrapS()) {
+            FIX_ENUM(retval.wrapS,WRAP_MODE_WRAP);
+            FIX_ENUM(retval.wrapS,WRAP_MODE_MIRROR);
+            FIX_ENUM(retval.wrapS,WRAP_MODE_CLAMP);
+          default:
+            retval.wrapS = MaterialEffectInfo::Texture::WRAP_MODE_CLAMP;
+        }
+        switch (sampler->getWrapT()) {
+            FIX_ENUM(retval.wrapT,WRAP_MODE_WRAP);
+            FIX_ENUM(retval.wrapT,WRAP_MODE_MIRROR);
+            FIX_ENUM(retval.wrapT,WRAP_MODE_CLAMP);
+          default:
+            retval.wrapT = MaterialEffectInfo::Texture::WRAP_MODE_CLAMP;
+        }
+        switch (sampler->getWrapP()) {
+            FIX_ENUM(retval.wrapU,WRAP_MODE_WRAP);
+            FIX_ENUM(retval.wrapU,WRAP_MODE_MIRROR);
+            FIX_ENUM(retval.wrapU,WRAP_MODE_CLAMP);
+          default:
+            retval.wrapU = MaterialEffectInfo::Texture::WRAP_MODE_CLAMP;
+        }
+        retval.mipBias = sampler->getMipmapBias();
+        retval.maxMipLevel = sampler->getMipmapMaxlevel();
+        retval.uri = mTextureMap[sampler->getSourceImage()];
+    }
+    return retval;
+}
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << effect << ") entered" << std::endl,true));
-    mEffectMap[effect->getUniqueId()]=mEffects.size();
-    mEffects.push_back(MaterialEffectInfo());
-    //FIXME elaborate on this
-
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
+    mColladaEffects[effect->getUniqueId()]=effect;
     return true;
+}
+size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding) {
+    using namespace COLLADAFW;
+    size_t retval=mEffects.size();
+    mEffects.push_back(MaterialEffectInfo());
+    const Effect *effect=NULL;
+    {
+        const UniqueId & refmat= binding->getReferencedMaterial();
+        IdMap::iterator matwhere=mMaterialMap.find(refmat);
+        if (matwhere!=mMaterialMap.end()) {
+            ColladaEffectMap::iterator effectwhere = mColladaEffects.find(matwhere->second);
+            if (effectwhere!=mColladaEffects.end()) {
+                effect=effectwhere->second;
+            }else return retval;
+        }else return retval;
+    }
+    MaterialEffectInfo&mat = mEffects.back();
+    CommonEffectPointerArray commonEffects = effect->getCommonEffects();
+    if (commonEffects.getCount()) {
+        EffectCommon* commonEffect = commonEffects[0];
+        switch (commonEffect->getShaderType()) {
+          case EffectCommon::SHADER_BLINN:
+          case EffectCommon::SHADER_PHONG:
+            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular()));
+          case EffectCommon::SHADER_LAMBERT:
+            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse()));
+            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient()));
+            
+          case EffectCommon::SHADER_CONSTANT:
+            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission()));
+            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity()));
+            mat.textures.push_back(makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective()));
+            break;
+          default:
+            break;
+        }
+        mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
+            ? commonEffect->getShininess().getFloatValue()
+             : 1.0;
+        mat.reflectivity = commonEffect->getReflectivity().getType()==FloatOrParam::FLOAT
+            ? commonEffect->getReflectivity().getFloatValue()
+             : 1.0;
+        
+    }else {
+        mat.textures.push_back(MaterialEffectInfo::Texture());
+        mat.textures.back().color.x=effect->getStandardColor().getRed();
+        mat.textures.back().color.y=effect->getStandardColor().getGreen();
+        mat.textures.back().color.z=effect->getStandardColor().getBlue();
+        mat.textures.back().color.w=effect->getStandardColor().getAlpha();
+    }
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
+    return retval;
 }
 
 
@@ -557,6 +692,8 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
       case COLLADAFW::Light::SPOT_LIGHT:
         sublight->setLightType(LightInfo::SPOTLIGHT);
         break;
+      default:
+        mLights.pop_back();
     }
 
 
