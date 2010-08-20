@@ -338,7 +338,7 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
         if (obj_type == Local) {
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
-
+            
             if (request.has_location()) {
                 TimedMotionVector3f newloc(
                     request.location().t(),
@@ -356,6 +356,22 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                 loc_it->second.bounds = newbounds;
                 notifyLocalBoundsUpdated( source, newbounds );
             }
+
+            if (request.has_mesh()) {
+                String newmesh = request.mesh();
+                loc_it->second.mesh = newmesh;
+                notifyLocalMeshUpdated( source, newmesh );
+            }
+
+            if (request.has_orientation()) {
+                TimedMotionQuaternion neworient(
+                    request.orientation().t(),
+                    MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
+                );
+                loc_it->second.orientation = neworient;
+                notifyLocalOrientationUpdated( source, neworient );
+            }
+            
         }
         else {
             // Warn about update to non-local object

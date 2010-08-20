@@ -1634,6 +1634,21 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
     requestLocationUpdate(space,tmv);
 }
 
+//send a request to update the orientation of this object
+void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref,const Quaternion& quat)
+{
+    Quaternion curQuatVel = requestCurrentQuatVel(space,oref);
+    TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(quat,curQuatVel));
+    requestOrientationUpdate(space, tmq);
+}
+
+
+Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref)
+{
+    ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    return proxy_obj->getOrientationSpeed();
+}
+
 
 
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
@@ -1653,16 +1668,6 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
     //known position.  (Right now, we're going with last known position.)
 
     Vector3d currentPosition = proxy_obj->getPosition();
-    std::cout<<"\n\n\n\n";
-    std::cout<<"Inside of requestCurrentLocation.";
-    std::cout<<"\n\n";
-    std::cout<<"x:  "<<currentPosition.x;
-    std::cout<<"\n\n";
-    std::cout<<"y:  "<<currentPosition.y;
-    std::cout<<"\n\n";
-    std::cout<<"z:  "<<currentPosition.z;
-    std::cout<<"\n\n\n\n";
-    
     return currentPosition;
 }
 
@@ -1710,15 +1715,11 @@ ObjectReference HostedObject::getObjReference(const SpaceID& space)
     }
    
     return space_data_it->second.object;
-
 }
 
 
 Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
 {
-    // ProxyManagerPtr proxy_manager = getProxyManager(space);
-    // ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
-
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
     return (Vector3f)proxy_obj->getVelocity();
 }
@@ -1754,7 +1755,9 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
     if (bounds != NULL)
         loc_request.set_bounds(*bounds);
     if (mesh != NULL)
+    {
         loc_request.set_mesh(*mesh);
+    }
 
     std::string payload = serializePBJMessage(container);
 

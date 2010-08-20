@@ -297,12 +297,9 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
 
     FIXME_GET_SPACE();
-    // const HostedObject::SpaceSet& spaces = mParent->spaces();
-    // SpaceID spaceider = *(spaces.begin());
 
-//    UUID myUUID = mParent->getObjReference(space).getAsUUID();;
+    
     SpaceObjectReference mSporef = mParent->id(space);
-
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
     {
@@ -311,9 +308,6 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
         tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
         tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(mAddressableList[s]));
             
-        //lkjs;
-        //tmpObj->SetInternalField(OREF_OREF_FIELD,External::New(mAddressableList[s]));
-        //tmpObj->SetInternalField(OREF_JSOBJSCRIPT_FIELD,External::New(this));
 
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
@@ -361,13 +355,6 @@ void JSObjectScript::sendMessageToEntity(int numIndex, const std::string& msgBod
 //std::string& msgBody) const
 void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std::string& msgBody) const
 {
-    // const HostedObject::SpaceSet& spaces = mParent->spaces();
-    // SpaceID spaceider = *(spaces.begin());
-
-    FIXME_GET_SPACE();
-    //lkjs;
-    
-    //ODP::Endpoint dest (space,*reffer,Services::COMMUNICATION);
     ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
     mMessagingPort->send(dest,MemoryReference(msgBody));
 }
@@ -553,6 +540,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 // }
 
 
+//DEPRECATED: use getVisualFunction
 v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceObjectReference* sporef)
 {
     //std::string url_string = mParent->requestMeshUri(*sID, *oref).toString();
@@ -564,6 +552,8 @@ v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceObjectReference* spo
 //    return v8::Undefined();
 }
 
+
+//DEPRECATED: use setVisualFunction
 //FIXME: May want to have an error handler for this function.
 void  JSObjectScript::setVisual(const SpaceObjectReference* sporef, const std::string& newMeshString)
 {
@@ -683,6 +673,42 @@ v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectRefer
 }
 
 
+//now going to change quaternion
+
+
+v8::Handle<v8::String> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
+{
+    //std::string url_string = mParent->requestMeshUri(*sID, *oref).toString();
+    //return v8::String::New( url_string.c_str(), url_string.size() );
+    assert(false);
+    std::string returner = "Not working yet";
+    return v8::String::New(returner.c_str(), returner.size());
+
+}
+
+
+//FIXME: May want to have an error handler for this function.
+void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
+{
+    //mParent->requestMeshUpdate(*sID,newMeshString);
+    //FIXME: need to also pass in the object reference
+    mParent->requestMeshUpdate(sporef->space(),newMeshString);
+}
+
+
+void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
+{
+    mParent->requestOrientationDirectionUpdate(sporef->space(),sporef->object(),quat);
+}
+
+v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectReference* sporef)
+{
+    std::cout<<"\n\n\n\n";
+    std::cout<<"Still need to write this function";
+    std::cout<<"\n\n\n\n";
+    assert(false);
+    return v8::Undefined();
+}
 
 
 

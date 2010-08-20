@@ -391,14 +391,19 @@ public:
     //note: location update services both position and velocity
 
     virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+
     virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
     virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
 
 
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
-    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
 
+    //should re-name one or the other
+    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
+    virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
+    virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
+                                                                                                         
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
     //virtual void requestMeshUpdate(const SpaceID& space);

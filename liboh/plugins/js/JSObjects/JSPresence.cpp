@@ -2,6 +2,7 @@
 #include "JSFields.hpp"
 #include "../JSPresenceStruct.hpp"
 #include "JSVec3.hpp"
+#include "JSQuaternion.hpp"
 #include <sirikata/core/transfer/URI.hpp>
 
 using namespace v8;
@@ -51,7 +52,7 @@ namespace Sirikata
             if (! uriArgValid)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
 
-            mStruct->jsObjScript->setVisual(mStruct->sporef, uriLocation);
+            mStruct->jsObjScript->setVisualFunction(mStruct->sporef, uriLocation);
 
 	    return v8::Undefined();
         }
@@ -140,6 +141,38 @@ namespace Sirikata
         }
 
         
+
+        Handle<v8::Value>      getOrientation(const v8::Arguments& args)
+        {
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getOrientation function.  Invalid presence struct.")) );
+
+            return mStruct->jsObjScript->getOrientationFunction(mStruct->sporef);
+        }
+        
+        v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args)
+        {
+            if (args.Length() != 1)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setOrientation function.")) );
+
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Invalid presence struct.")) );
+
+            //get first args
+            Handle<Object> orientationArg = ObjectCast(args[0]);
+
+            if ( ! QuaternionValidate(orientationArg))
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
+
+            
+            Quaternion newOrientation (QuaternionExtract(orientationArg));
+
+            mStruct->jsObjScript->setOrientationFunction(mStruct->sporef,newOrientation);
+            return v8::Undefined();
+        }
+
         
         //Takes in args, tries to get out the first argument, which should be a
         //string that we convert to a TransferURI object.  If anything fails,

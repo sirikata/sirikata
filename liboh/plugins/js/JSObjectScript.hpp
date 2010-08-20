@@ -116,6 +116,13 @@ public:
 
     void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
     v8::Handle<v8::Value> getVelocityFunction(const SpaceObjectReference* sporef);
+
+    void  setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
+    v8::Handle<v8::String> getVisualFunction(const SpaceObjectReference* sporef);
+
+    void  setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
+    v8::Handle<v8::Value> getOrientationFunction(const SpaceObjectReference* sporef);
+    
     
     v8::Handle<v8::Value> getVisualScale();
     void setVisualScale(v8::Local<v8::Value>& newvis);

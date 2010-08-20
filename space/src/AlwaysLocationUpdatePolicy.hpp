@@ -182,6 +182,9 @@ private:
 
             SubscriberSet* object_subscribers = obj_sub_it->second;
 
+
+            std::cout<<"\n\n\nIn AlwaysLocationUpdatePolicy.hpp.  Got a message to update property\n\n\n\n";
+            
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
                 if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
                 assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
@@ -202,10 +205,10 @@ private:
             }
         }
 
-        static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) { ui.location = newval; }
+        static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) {ui.location = newval; }
         static void setUIOrientation(UpdateInfo& ui, const TimedMotionQuaternion& newval) { ui.orientation = newval; }
         static void setUIBounds(UpdateInfo& ui, const BoundingSphere3f& newval) { ui.bounds = newval; }
-        static void setUIMesh(UpdateInfo& ui, const String& newval) { ui.mesh = newval; }
+        static void setUIMesh(UpdateInfo& ui, const String& newval) {ui.mesh = newval;}
 
         void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
             propertyUpdated(

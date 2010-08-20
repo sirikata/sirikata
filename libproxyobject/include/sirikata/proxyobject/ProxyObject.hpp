@@ -137,7 +137,7 @@ public:
         return Vector3d(mLoc.position());
     }
 
-    /// bftm returns the last updated velocity for this object
+    /// returns the last updated velocity for this object
     inline Vector3d getVelocity() const
     {
         return Vector3d(mLoc.velocity());
@@ -148,6 +148,12 @@ public:
         return mOrientation.position();
     }
 
+    /// Returns the Quaternion speed (I know that's not the right term; maybe
+    /// angular velocity???) for this object.
+    inline const Quaternion& getOrientationSpeed() const{
+        return mOrientation.velocity();
+    }
+    
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
