@@ -245,6 +245,7 @@ void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
 }
 
 void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) {
+    if (mConnections.find(conn) == mConnections.end()) return;
     mConnectionClosedCallback(conn->conn_id());
     mConnections.erase(conn);
     delete conn;
