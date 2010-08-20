@@ -182,8 +182,6 @@ private:
 
             SubscriberSet* object_subscribers = obj_sub_it->second;
 
-
-            std::cout<<"\n\n\nIn AlwaysLocationUpdatePolicy.hpp.  Got a message to update property\n\n\n\n";
             
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
                 if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
