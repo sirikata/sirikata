@@ -141,7 +141,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     printf("\n\nDoes not meet first condition for object:  %s\n\n", uuid.toString().c_str());
     fflush(stdout);
   }
-  if (! ( mLocations[uuid].local == true ))
+  else if (! ( mLocations[uuid].local == true ))
   {
     printf("\n\nDoes not meet second condition for object:  %s\n\n", uuid.toString().c_str());
     fflush(stdout);

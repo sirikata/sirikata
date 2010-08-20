@@ -59,13 +59,17 @@ OSegEntry LocalObjectSegmentation::lookup(const UUID& obj_id) {
     return it->second;
 }
 
-void LocalObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) {
+void LocalObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
+    mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
+    mWriteListener->osegWriteFinished(obj_id);
+}
+
+void LocalObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) {
     mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
 }
 
-void LocalObjectSegmentation::newObjectAdd(const UUID& obj_id, float radius) {
-    mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
-    mWriteListener->osegWriteFinished(obj_id);
+void LocalObjectSegmentation::removeObject(const UUID& obj_id) {
+    mOSeg.erase(obj_id);
 }
 
 bool LocalObjectSegmentation::clearToMigrate(const UUID& obj_id) {
