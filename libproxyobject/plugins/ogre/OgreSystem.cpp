@@ -836,9 +836,10 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
                 Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
                 Ogre::Mesh *mesh = foundEntity->getMesh().get();
                 uint16 numSubMeshes = mesh->getNumSubMeshes();
+                std::vector<TriVertex> sharedVertices;
                 for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
                     Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
-                    OgreMesh ogreMesh(submesh, texcoord);
+                    OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
                     IntersectResult intRes;
                     ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
                     if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {

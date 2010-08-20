@@ -60,16 +60,28 @@ using Ogre::Real;
 //using Ogre::AxisAlignedBox;
 
 namespace Sirikata { namespace Graphics {
-OgreMesh::OgreMesh(Ogre::SubMesh *subMesh, bool texcoord)
+OgreMesh::OgreMesh(Ogre::SubMesh *subMesh, bool texcoord, std::vector<TriVertex>& sharedVertices)
 {
-    syncFromOgreMesh(subMesh, texcoord);
+    syncFromOgreMesh(subMesh, texcoord, sharedVertices);
 }
 int64 OgreMesh::size() const{
     return mTriangles.size()*sizeof(Triangle);
 }
-void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord)
+void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord, std::vector<TriVertex>& sharedVertices)
 {
-    VertexData *vertexData = subMesh->vertexData;
+    VertexData *vertexData;
+    std::vector<TriVertex> subVertices;
+    std::vector<TriVertex> *lpvertices;
+
+    if (subMesh->useSharedVertices) {
+        vertexData = subMesh->parent->sharedVertexData;
+        lpvertices=&sharedVertices;
+    }else {
+        vertexData = subMesh->vertexData;
+        lpvertices=&subVertices;
+    }
+    std::vector<TriVertex>&lvertices=*lpvertices;
+
     if (vertexData)
     {
         VertexDeclaration *vertexDecl = vertexData->vertexDeclaration;
@@ -81,39 +93,40 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord)
         // find and lock the buffer containing position information
         VertexBufferBinding *bufferBinding = vertexData->vertexBufferBinding;
         HardwareVertexBuffer *buffer = bufferBinding->getBuffer(element->getSource()).get();
-        unsigned char *pVert = static_cast<unsigned char*>(buffer->lock(HardwareBuffer::HBL_READ_ONLY));
-        HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;
-        unsigned char *pTexVert = texbuffer
-                                  ? (texbuffer == buffer ? pVert : static_cast<unsigned char*>(texbuffer->lock(HardwareBuffer::HBL_READ_ONLY)))
-                                          : NULL;
-        std::vector<TriVertex> lvertices;
-        for (size_t vert = 0; vert < vertexData->vertexCount; vert++)
-        {
-            float *vertex = 0;
-            Real x, y, z;
-            element->baseVertexPointerToElement(pVert, &vertex);
-            x = *vertex++;
-            y = *vertex++;
-            z = *vertex++;
-            Ogre::Vector3 vec(x, y, z);
-            Ogre::Vector2 texvec(0,0);
-            if (texelement)
+        if (lvertices.empty()) {
+            unsigned char *pVert = static_cast<unsigned char*>(buffer->lock(HardwareBuffer::HBL_READ_ONLY));
+            HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;
+            unsigned char *pTexVert = texbuffer
+                ? (texbuffer == buffer ? pVert : static_cast<unsigned char*>(texbuffer->lock(HardwareBuffer::HBL_READ_ONLY)))
+                : NULL;
+            for (size_t vert = 0; vert < vertexData->vertexCount; vert++)
             {
-                float *texvertex = 0;
-                float u, v, w;
-                texelement->baseVertexPointerToElement(pTexVert, &texvertex);
-                u = *texvertex++;
-                v = *texvertex++;
-                texvec = Ogre::Vector2(u, v);
-                pTexVert += texbuffer->getVertexSize();
+                float *vertex = 0;
+                Real x, y, z;
+                element->baseVertexPointerToElement(pVert, &vertex);
+                x = *vertex++;
+                y = *vertex++;
+                z = *vertex++;
+                Ogre::Vector3 vec(x, y, z);
+                Ogre::Vector2 texvec(0,0);
+                if (texelement)
+                {
+                    float *texvertex = 0;
+                    float u, v, w;
+                    texelement->baseVertexPointerToElement(pTexVert, &texvertex);
+                    u = *texvertex++;
+                    v = *texvertex++;
+                    texvec = Ogre::Vector2(u, v);
+                    pTexVert += texbuffer->getVertexSize();
+                }
+                
+                lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
+                
+                pVert += buffer->getVertexSize();
             }
-
-            lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
-
-            pVert += buffer->getVertexSize();
+        
+            buffer->unlock();
         }
-        buffer->unlock();
-
         // find and lock buffer containg vertex indices
         Ogre::RenderOperation ro;
         subMesh->_getRenderOperation(ro);
@@ -126,11 +139,11 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord)
             {
                 for (size_t index = indexData->indexStart; index < indexData->indexCount; )
                 {
+                    
                     uint16 *uint16Buffer = (uint16 *) pIndex;
                     uint16 v1 = uint16Buffer[index++];
                     uint16 v2 = uint16Buffer[index++];
                     uint16 v3 = uint16Buffer[index++];
-
                     mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
                 }
             }
