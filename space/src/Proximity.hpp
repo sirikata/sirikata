@@ -189,9 +189,14 @@ private:
     // This tracks the minimum object query size, which is used
     // as the angle for queries to other servers.
     SolidAngle mMinObjectQueryAngle;
+
+    typedef std::tr1::unordered_set<ServerID> ServerSet;
+    boost::mutex mServerSetMutex;
+    // This tracks the servers we currently have subscriptions with
+    ServerSet mServersQueried;
     // And this indicates whether we need to send new requests
     // out to other servers
-    std::set<ServerID> mNeedServerQueryUpdate;
+    ServerSet mNeedServerQueryUpdate;
 
     std::deque<Message*> mServerResultsToSend; // server query results waiting to be sent
     std::deque<Sirikata::Protocol::Object::ObjectMessage*> mObjectResultsToSend; // object query results waiting to be sent
