@@ -100,6 +100,8 @@ public:
         loc.setAngularSpeed(0);
         mUpdatedLocation.resetValue(timestamp, loc);
     }
+
+
     void locationWasSet(const Protocol::ObjLoc &msg) {
         Time timestamp = msg.timestamp();
         Location loc = mUpdatedLocation.extrapolate(timestamp);
@@ -108,6 +110,7 @@ public:
         loc.setAngularSpeed(0);
         mUpdatedLocation.updateValue(timestamp, loc);
     }
+
 
     void updateLocation(HostedObject *ho) {
         if (!mProxyObject) {
@@ -120,6 +123,11 @@ public:
             Protocol::ObjLoc toSet;
             toSet.set_position(realLocation.getPosition());
             toSet.set_velocity(realLocation.getVelocity());
+
+            toSet.set_orientation(realLocation.getOrientation());
+            toSet.set_rotational_axis(realLocation.getAxisOfRotation());
+            toSet.set_angular_speed(realLocation.getAngularSpeed());
+            
             RoutableMessageBody body;
             toSet.SerializeToString(body.add_message("ObjLoc"));
             RoutableMessageHeader header;
@@ -785,10 +793,14 @@ void HostedObject::connect(
 
     mObjectHost->connect(
         getSharedPtr(), spaceID,
-        TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
+        //TimedMotionVector3f(Time::null(), MotionVector3f(
+        //Vector3f(startingLocation.getPosition()),
+        //startingLocation.getVelocity()) ),
+        TimedMotionVector3f(Time::local(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
         //TimedMotionQuaternion(Time::null(), MotionQuaternion(
         //Quaternion::identity(), Quaternion::identity() )),
-        TimedMotionQuaternion(Time::null(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
+        //TimedMotionQuaternion(Time::null(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
+        TimedMotionQuaternion(Time::local(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
         mesh,
         SolidAngle(.00001f),

@@ -37,6 +37,7 @@
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/TemporalValue.hpp>
 
+
 namespace Sirikata {
 
 class MotionQuaternion {
@@ -63,6 +64,7 @@ public:
     }
 
     Quaternion extrapolatePosition(const Duration& dt) const {
+        //return (mStart * (mDirection.exp(rand() % 20)));
         return (mStart * (mDirection.exp(dt.toSeconds())));
     }
 
@@ -89,7 +91,12 @@ public:
      : TemporalValue<MotionQuaternion>()
     {}
     TimedMotionQuaternion(const Time& when, const MotionQuaternion& l)
-     : TemporalValue<MotionQuaternion>(when, l)
+     : TemporalValue<MotionQuaternion>(  when , l)
+       //: //TemporalValue<MotionQuaternion>( (when == Time::null()) ? (Time::local()) : when , l)
+       //FIXME: making it so that TimedMotionQuaternion does not accept null time.
+       //Only doing this because we haven't solved synchronization yet, and it's
+       //making it so that can't put default motion values into initialization
+       //file.  
     {}
 
     Time updateTime() const {

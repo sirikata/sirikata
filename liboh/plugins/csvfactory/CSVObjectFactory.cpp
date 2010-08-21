@@ -62,6 +62,9 @@ void CSVObjectFactory::generate() {
     int orient_idx = -1;
     int vel_idx = -1;
     int mesh_idx = -1;
+
+    int quat_vel_idx = -1;
+    
     // For each line
     while(fp) {
         String line;
@@ -88,6 +91,8 @@ void CSVObjectFactory::generate() {
             last_comma = next_comma;
         }
 
+
+        
         if (is_first) {
             for(int idx = 0; idx < line_parts.size(); idx++) {
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
@@ -95,12 +100,13 @@ void CSVObjectFactory::generate() {
                 if (line_parts[idx] == "orient_x") orient_idx = idx;
                 if (line_parts[idx] == "vel_x") vel_idx = idx;
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
+                if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
             }
 
             is_first = false;
         }
         else {
-            assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1);
+            assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {
                 Vector3d pos(
@@ -120,6 +126,15 @@ void CSVObjectFactory::generate() {
                     safeLexicalCast<float>(line_parts[vel_idx+1]),
                     safeLexicalCast<float>(line_parts[vel_idx+2])
                 );
+
+                Vector3f rot_axis(
+                    safeLexicalCast<float>(line_parts[quat_vel_idx+0]),
+                    safeLexicalCast<float>(line_parts[quat_vel_idx+1]),
+                    safeLexicalCast<float>(line_parts[quat_vel_idx+2])
+                );
+
+                float angular_speed = safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
+                
                 String mesh( line_parts[mesh_idx] );
 
                 
@@ -127,7 +142,7 @@ void CSVObjectFactory::generate() {
                 obj->init();
                 obj->connect(
                     mSpace,
-                    Location( pos, orient, vel, Vector3f::nil(), 0),
+                    Location( pos, orient, vel, rot_axis, angular_speed),
                     BoundingSphere3f(Vector3f::nil(), 1.f),
                     mesh,
                     UUID::null());

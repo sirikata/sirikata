@@ -180,6 +180,7 @@ public:
         Vector3f angaxis;
         float32 angvel;
         mOrientation.velocity().toAngleAxis(angvel, angaxis);
+        
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
 };
