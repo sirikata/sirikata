@@ -1738,7 +1738,7 @@ IF(V8_FOUND)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
 ADD_PLUGIN_TARGET(scripting-js
                     SOURCES ${LIBOH_PLUGIN_JS_SOURCES}
-                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS} ${BERKELIUM_CFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${V8_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     )
