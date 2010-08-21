@@ -353,6 +353,24 @@ bool MeshEntity::createMeshWork(const Meshdata& md) {
     return true;
 }
 
+class MaterialManualLoader : public Ogre::ManualResourceLoader {
+    MaterialEffectInfo mMat;
+    std::string mName;
+public:
+    MaterialManualLoader(const std::string &name, 
+                         const MaterialEffectInfo&mat) {
+        mName=name;
+        mMat=mat;
+    }
+    void prepareResource(Ogre::Resource*r){}
+    void loadResource(Ogre::Resource *r) {
+        using namespace Ogre;
+        Material* material= dynamic_cast <Material*> (r);
+        
+    }    
+
+};
+
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
     Meshdata md;
@@ -637,12 +655,28 @@ public:
     }
 };
 
+
+
+
 void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
 
     if (!md.instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+        int index=0;
+        for (Meshdata::MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
+            std::string matname = hash+"_mat_"+boost::lexical_cast<string>(index);
+            Ogre::MaterialPtr matPtr=matm.getByName(matname);
+            if (matPtr.isNull()) {
+                Ogre::ManualResourceLoader * reload;
+                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (matname,*mat)));
+                
+                reload->prepareResource(&*matPtr);
+                reload->loadResource(&*matPtr);
+                
+            }
+        }
         Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
         for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
             std::string matname = hash + "_texture_" + *tex_it;
