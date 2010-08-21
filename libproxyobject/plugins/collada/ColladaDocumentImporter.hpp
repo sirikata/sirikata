@@ -92,11 +92,12 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
-        void makeTexture (MaterialEffectInfo::Texture::Affecting type,
+        //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
+        bool makeTexture (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding * binding, 
                           const COLLADAFW::EffectCommon * effect, 
                           const COLLADAFW::ColorOrTexture & color,
-                          MaterialEffectInfo::TextureList&output);
+                          MaterialEffectInfo::TextureList&output, bool forceBlack=false);
         size_t finishEffect(const COLLADAFW::MaterialBinding *binding);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter

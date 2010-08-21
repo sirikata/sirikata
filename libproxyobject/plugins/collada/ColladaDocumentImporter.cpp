@@ -512,21 +512,26 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
-void ColladaDocumentImporter::makeTexture 
+bool ColladaDocumentImporter::makeTexture 
                          (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding *binding,
                           const COLLADAFW::EffectCommon * effectCommon, 
                           const COLLADAFW::ColorOrTexture & color, 
-                          MaterialEffectInfo::TextureList&output ) {
+                          MaterialEffectInfo::TextureList&output , bool forceBlack) {
     using namespace COLLADAFW;
     if (color.isColor()) {
-        output.push_back(MaterialEffectInfo::Texture());
-        MaterialEffectInfo::Texture &retval=output.back();
-
-        retval.color.x=color.getColor().getRed();
-        retval.color.y=color.getColor().getGreen();
-        retval.color.z=color.getColor().getBlue();
-        retval.color.w=color.getColor().getAlpha();
+        if (color.getColor().getRed() ||
+            color.getColor().getGreen() ||
+            color.getColor().getBlue() ||
+            color.getColor().getAlpha()||forceBlack) {
+            output.push_back(MaterialEffectInfo::Texture());
+            MaterialEffectInfo::Texture &retval=output.back();
+            
+            retval.color.x=color.getColor().getRed();
+            retval.color.y=color.getColor().getGreen();
+            retval.color.z=color.getColor().getBlue();
+            retval.color.w=color.getColor().getAlpha();
+        }else return false;
     }else if (color.isTexture()){
         output.push_back(MaterialEffectInfo::Texture());
         MaterialEffectInfo::Texture &retval=output.back();
@@ -604,6 +609,7 @@ void ColladaDocumentImporter::makeTexture
         retval.maxMipLevel = sampler->getMipmapMaxlevel();
         retval.uri = mTextureMap[sampler->getSourceImage()];
     }
+    return true;
 }
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
@@ -629,23 +635,33 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
     }
     MaterialEffectInfo&mat = mEffects.back();
     CommonEffectPointerArray commonEffects = effect->getCommonEffects();
+    bool allBlack=true;
+    bool curBlack=false;
     if (commonEffects.getCount()) {
         EffectCommon* commonEffect = commonEffects[0];
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
-          case EffectCommon::SHADER_PHONG:
-            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),mat.textures);
+          case EffectCommon::SHADER_PHONG:            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),mat.textures);
+            if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_LAMBERT:
-            makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),mat.textures);
-            makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),mat.textures);
-            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),mat.textures);
+            if (!curBlack) allBlack=false;
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),mat.textures);
+            if (!curBlack) allBlack=false;            
           case EffectCommon::SHADER_CONSTANT:
-            makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),mat.textures);
-            makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),mat.textures);
-            makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),mat.textures);
+            if (!curBlack) allBlack=false;            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),mat.textures);
+            if (!curBlack) allBlack=false;            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),mat.textures);
+            if (!curBlack) allBlack=false;            
             break;
           default:
             break;
+        }
+        if (allBlack) {
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getReflective(),mat.textures,true);
         }
         mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
             ? commonEffect->getShininess().getFloatValue()
