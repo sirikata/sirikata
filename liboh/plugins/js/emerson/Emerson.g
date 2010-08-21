@@ -17,6 +17,7 @@ options
 	language = C;
 }
 
+
 tokens
 {
   UNDEF; // imaginary opertator for some undefined operator. we don't knwo what happened
@@ -104,6 +105,15 @@ tokens
 		EXPR_LIST;
 		COND_EXPR;
 }
+
+@header
+{
+  #include <stdlib.h>;
+		#include <stdio.h>;
+		#include "EmersonUtil.h";
+}
+
+
 	
 
 program
@@ -321,13 +331,31 @@ newExpression
 	;
 	
 memberExpression
-	: (primaryExpression -> primaryExpression) ( LTERM* memberExpressionSuffix -> ^(memberExpressionSuffix $memberExpression) )* 
-	| (functionExpression -> functionExpression) (LTERM* memberExpressionSuffix -> ^(memberExpressionSuffix $memberExpression) )* 
+
+	: (primaryExpression -> primaryExpression) ( LTERM* memberExpressionSuffix  -> ^(memberExpressionSuffix $memberExpression) )* 
+	
+	  {
+			  //pANTLR3_STRING prev = emerson_printAST($memberExpression.tree); 
+					//printf("\%s\n", prev->chars);
+					emerson_createTreeMirrorImage($memberExpression.tree); 
+					//pANTLR3_STRING newT = emerson_printAST($memberExpression.tree);
+					//printf("\%s\n", newT->chars);
+					
+			} 
+	| (functionExpression -> functionExpression) (LTERM* memberExpressionSuffix -> ^(memberExpressionSuffix $memberExpression) )*
+	{
+	  
+					emerson_createTreeMirrorImage($memberExpression.tree); 
+	}
 	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* memberExpressionSuffix -> ^(memberExpressionSuffix $memberExpression) )*  
+	{
+	  
+					emerson_createTreeMirrorImage($memberExpression.tree); 
+	}
 	;
 	
 memberExpressionSuffix
-	: indexSuffix -> indexSuffix
+	: indexSuffix -> indexSuffix 
 	| propertyReferenceSuffix -> propertyReferenceSuffix 
 	;
 

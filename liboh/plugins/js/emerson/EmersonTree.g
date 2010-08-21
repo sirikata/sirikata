@@ -13,7 +13,7 @@ options
 	backtrack=true;
 //	memoize=true;
 //	rewrite=true;
-	ASTLabelType=pANTRL3_BASE_TREE;
+	ASTLabelType=pANTLR3_BASE_TREE;
 //	ASTLabelType=pANTRL3_COMMON_TREE;
 	tokenVocab=Emerson;
  language = C;
@@ -242,7 +242,9 @@ memberExpression
  : primaryExpression
 	| functionExpression
 	| ^(NEW memberExpression arguments) 
-	| ^(memberExpressionSuffix memberExpression memberExpression) 
+	//| ^(memberExpressionSuffix memberExpression memberExpression) 
+	| ^(DOT memberExpression memberExpression)
+	| ^(ARRAY_INDEX memberExpression memberExpression)
 	;
 
 
