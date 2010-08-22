@@ -539,6 +539,7 @@ bool ColladaDocumentImporter::makeTexture
             retval.color.y=color.getColor().getGreen();
             retval.color.z=color.getColor().getBlue();
             retval.color.w=color.getColor().getAlpha();
+            retval.affecting = type;
         }else return false;
     }else if (color.isTexture()){
         output.push_back(MaterialEffectInfo::Texture());
@@ -669,7 +670,7 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
             break;
         }
         if (allBlack) {
-            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures,true);
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures,true);
         }
         mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
             ? commonEffect->getShininess().getFloatValue()

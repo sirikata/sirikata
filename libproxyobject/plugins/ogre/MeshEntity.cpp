@@ -419,44 +419,48 @@ public:
             if (tex.uri.length()==0) {
                 switch (tex.affecting) {
                 case MaterialEffectInfo::Texture::DIFFUSE:
-/*
                   pass->setDiffuse(ColourValue(tex.color.x,
                                                tex.color.y,
                                                tex.color.z,
-                                               tex.color.w));*/
+                                               tex.color.w));
+/*
                   pass->setAmbient(ColourValue(0,0,0,0));
                   pass->setSelfIllumination(ColourValue(0,0,0,0));
                   pass->setSpecular(ColourValue(0,0,0,0));
+*/
                   break;
                 case MaterialEffectInfo::Texture::AMBIENT:
+/*
                   pass->setDiffuse(ColourValue(0,0,0,0));
                   pass->setSelfIllumination(ColourValue(0,0,0,0));
                   pass->setSpecular(ColourValue(0,0,0,0));
-/*
+*/
                   pass->setAmbient(ColourValue(tex.color.x,
                                                tex.color.y,
                                                tex.color.z,
-                                               tex.color.w));*/
+                                               tex.color.w));
                   break;
                 case MaterialEffectInfo::Texture::EMISSION:
+/*
                   pass->setDiffuse(ColourValue(0,0,0,0));
                   pass->setAmbient(ColourValue(0,0,0,0));
                   pass->setSpecular(ColourValue(0,0,0,0));
-/*
+*/
                   pass->setSelfIllumination(ColourValue(tex.color.x,
                                                         tex.color.y,
                                                         tex.color.z,
-                                                        tex.color.w));*/
+                                                        tex.color.w));
                   break;
                 case MaterialEffectInfo::Texture::SPECULAR:
+/*
                   pass->setDiffuse(ColourValue(0,0,0,0));
                   pass->setAmbient(ColourValue(0,0,0,0));
                   pass->setSelfIllumination(ColourValue(0,0,0,0));
-/*
+*/
                   pass->setSpecular(ColourValue(tex.color.x,
                                                 tex.color.y,
                                                 tex.color.z,
-                                                tex.color.w));*/
+                                                tex.color.w));
                   break;
                 default:
                   break;
