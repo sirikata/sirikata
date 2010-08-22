@@ -97,8 +97,10 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
                           const COLLADAFW::MaterialBinding * binding, 
                           const COLLADAFW::EffectCommon * effect, 
                           const COLLADAFW::ColorOrTexture & color,
+                          size_t geom_index,
+                          size_t prim_index,
                           MaterialEffectInfo::TextureList&output, bool forceBlack=false);
-        size_t finishEffect(const COLLADAFW::MaterialBinding *binding);
+        size_t finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geom_index, size_t prim_index);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
     public:
@@ -149,8 +151,13 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         Meshdata::SubMeshGeometryList mGeometries;
         IndicesMap mGeometryMap;
-
-
+        struct ExtraPrimitiveData {
+            std::map<size_t, size_t> uvSetMap;
+        };
+        struct ExtraGeometryData {
+            std::vector<ExtraPrimitiveData> primitives;
+        };
+        std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
         IndicesMap mLightMap;
         Meshdata::LightInfoList mLights;
         

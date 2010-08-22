@@ -171,7 +171,7 @@ void ColladaDocumentImporter::finish ()
                     const COLLADAFW::InstanceGeometry* geo_inst = curnode.node->getInstanceGeometries()[geo_idx];
                     // FIXME handle child nodes, such as materials
                     IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst->getInstanciatedObjectId());
-                    if (geo_it == mGeometryMap.end()) {
+                    if (geo_it == mGeometryMap.end()||geo_it->second>=mMesh->geometry.size()||mMesh->geometry[geo_it->second].primitives.empty()) {
                         continue;
                     }
                     GeometryInstance new_geo_inst;
@@ -181,7 +181,8 @@ void ColladaDocumentImporter::finish ()
                     new_geo_inst.aabb=BoundingBox3f3f::null();
                     const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
                     for (size_t bind=0;bind< bindings.getCount();++bind) {
-                        new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind]);
+                        new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
+                                                                                                                                       //stays the same between primitives
                     }
                     if (geo_it->second<mMesh->geometry.size()) {
                         const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
@@ -349,6 +350,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     }
     mGeometryMap[geometry->getUniqueId()]=mGeometries.size();
     mGeometries.push_back(SubMeshGeometry());
+    mExtraGeometryData.push_back(ExtraGeometryData());
     SubMeshGeometry* submesh = &mGeometries.back();
     submesh->radius=0;
     submesh->aabb=BoundingBox3f3f::null();
@@ -395,6 +397,10 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         size_t offset=0;
         for (size_t i=0;i<groupedVertexElementCount;++i) {
             submesh->primitives.push_back(SubMeshGeometry::Primitive());
+            mExtraGeometryData.back().primitives.push_back(ExtraPrimitiveData());
+            for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
+                mExtraGeometryData.back().primitives.back().uvSetMap[prim->getUVCoordIndices(uvSet)->getSetIndex()]=uvSet;
+            }
             outputPrim=&submesh->primitives.back();
             switch(prim->getPrimitiveType()) {
               case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
@@ -517,6 +523,8 @@ bool ColladaDocumentImporter::makeTexture
                           const COLLADAFW::MaterialBinding *binding,
                           const COLLADAFW::EffectCommon * effectCommon, 
                           const COLLADAFW::ColorOrTexture & color, 
+                          size_t geomindex,
+                          size_t primindex,
                           MaterialEffectInfo::TextureList&output , bool forceBlack) {
     using namespace COLLADAFW;
     if (color.isColor()) {
@@ -542,7 +550,7 @@ bool ColladaDocumentImporter::makeTexture
         for (size_t i=0;i<tbindcount;++i) {
             const TextureCoordinateBinding& b=binding->getTextureCoordinateBindingArray()[i];
             if (b.getTextureMapId()==tid) {
-                retval.texCoord = b.getSetIndex();//is this correct!?
+                retval.texCoord = mExtraGeometryData[geomindex].primitives[primindex].uvSetMap[b.getSetIndex()];//is this correct!?
                 break;
             }
         }
@@ -618,7 +626,7 @@ bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
     mColladaEffects[effect->getUniqueId()]=effect;
     return true;
 }
-size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding) {
+size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geomIndex, size_t primIndex) {
     using namespace COLLADAFW;
     size_t retval=mEffects.size();
     mEffects.push_back(MaterialEffectInfo());
@@ -642,26 +650,26 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
           case EffectCommon::SHADER_PHONG:            
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_LAMBERT:
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;            
           case EffectCommon::SHADER_CONSTANT:
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;            
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;            
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;            
             break;
           default:
             break;
         }
         if (allBlack) {
-            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getReflective(),mat.textures,true);
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures,true);
         }
         mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
             ? commonEffect->getShininess().getFloatValue()
