@@ -403,7 +403,8 @@ public:
     virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
     virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
     virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
-                                                                                                         
+    virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
+    
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
     //virtual void requestMeshUpdate(const SpaceID& space);

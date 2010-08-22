@@ -195,6 +195,10 @@ private:
                     new_ui.location = locservice->location(uuid);
                     new_ui.bounds = locservice->bounds(uuid);
                     new_ui.mesh = locservice->mesh(uuid);
+                    //lkjs
+                    new_ui.orientation = locservice->orientation(uuid);
+                    //lkjs;
+                    
                     sub_info->outstandingUpdates[uuid] = new_ui;
                 }
 

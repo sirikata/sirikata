@@ -703,11 +703,9 @@ void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef,
 
 v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectReference* sporef)
 {
-    std::cout<<"\n\n\n\n";
-    std::cout<<"Still need to write this function";
-    std::cout<<"\n\n\n\n";
-    assert(false);
-    return v8::Undefined();
+    Quaternion curOrientation = mParent->requestCurrentOrientation(sporef->space(),sporef->object());
+
+    return CreateJSResult(mContext,curOrientation);
 }
 
 
