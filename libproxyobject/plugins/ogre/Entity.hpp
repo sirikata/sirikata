@@ -96,12 +96,10 @@ public:
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;
     }
-    Vector3d getOgrePosition() {
-        return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
-    }
-    Quaternion getOgreOrientation() {
-        return fromOgre(mSceneNode->getOrientation());
-    }
+    Vector3d getOgrePosition();
+
+    Quaternion getOgreOrientation();
+
     void extrapolateLocation(TemporalValue<Location>::Time current);
 
     virtual void setSelected(bool selected) {

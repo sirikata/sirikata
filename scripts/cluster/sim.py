@@ -294,7 +294,8 @@ class ClusterSim:
         class_params['object.sl-center'] = '--object.sl-center=' + ('<%f,%f,%f>' % self.settings.object_sl_center)
         class_params['object.pack-num'] = '--object.pack-num=' + str(self.settings.num_pack_objects)
         class_params['object.scenario'] = '--scenario=' + self.settings.scenario
-        class_params['object.scenario-options'] = '--scenario-options=' + self.settings.scenario_options
+        if self.settings.scenario_options:
+            class_params['object.scenario-options'] = '--scenario-options=' + self.settings.scenario_options
 
         for tracetype in self.settings.traces['simoh']:
             class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))

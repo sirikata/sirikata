@@ -36,6 +36,8 @@
 #include "PingDelugeScenario.hpp"
 #include "ByteTransferScenario.hpp"
 #include "LoadPacketTrace.hpp"
+#include "NullScenario.hpp"
+
 AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
 namespace Sirikata {
 ScenarioFactory::ScenarioFactory(){
@@ -44,6 +46,7 @@ ScenarioFactory::ScenarioFactory(){
     PingDelugeScenario::addConstructorToFactory(this);
     LoadPacketTrace::addConstructorToFactory(this);
     ByteTransferScenario::addConstructorToFactory(this);
+    NullScenario::addConstructorToFactory(this);
 }
 ScenarioFactory::~ScenarioFactory(){}
 ScenarioFactory&ScenarioFactory::getSingleton(){

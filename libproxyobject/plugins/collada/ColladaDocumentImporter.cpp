@@ -61,6 +61,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
 
 //    lastURIString = uri.toString();
     mMesh = new Meshdata();
+    mMesh->uri = uri.toString();
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()
@@ -141,7 +142,6 @@ void ColladaDocumentImporter::finish ()
 
 
     mMesh->geometry.swap(mGeometries);
-    mMesh->materials.swap(mEffects);
     mMesh->lights.swap(mLights);
 
 
@@ -177,7 +177,40 @@ void ColladaDocumentImporter::finish ()
                     GeometryInstance new_geo_inst;
                     new_geo_inst.geometryIndex = geo_it->second;
                     new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
-                    mMesh->instances.push_back(new_geo_inst);
+                    new_geo_inst.radius=0;
+                    new_geo_inst.aabb=BoundingBox3f3f::null();
+                    const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
+                    for (size_t bind=0;bind< bindings.getCount();++bind) {
+                        new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind]);
+                    }
+                    if (geo_it->second<mMesh->geometry.size()) {
+                        const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
+                        for (size_t i=0;i<geometry.primitives.size();++i) {
+                            const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
+                            size_t indsize=prim.indices.size();
+                            for (size_t j=0;j<indsize;++j) {
+                                Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
+                                Matrix4x4f trans = new_geo_inst.transform;
+                                Vector4f pos4= trans*Vector4f(untransformed_pos.x,
+                                                             untransformed_pos.y,
+                                                             untransformed_pos.z,
+                                                             1.0f);
+                                Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
+                                if (j==0&&i==0) {
+                                    new_geo_inst.aabb=BoundingBox3f3f(pos,0);
+                                    new_geo_inst.radius = pos.lengthSquared();
+                                }else {
+                                    new_geo_inst.aabb=new_geo_inst.aabb.merge(pos);
+                                    double rads=pos.lengthSquared();
+                                    if (rads> new_geo_inst.radius)
+                                        new_geo_inst.radius=rads;
+                                }
+                            }
+                        }
+                        new_geo_inst.radius=sqrt(new_geo_inst.radius);
+                        mMesh->instances.push_back(new_geo_inst);
+                        
+                    }
                 }
 
                 // Instance Lights
@@ -231,11 +264,10 @@ void ColladaDocumentImporter::finish ()
         }
     }
 
+    mMesh->materials.swap(mEffects);//effects is built up during the above run
 
     // Finally, if we actually have anything for the user, ship the parsed mesh
-    if (mMesh->instances.size() > 0) {
-    //    std::tr1::shared_ptr<ProxyMeshObject>(mProxyPtr).get()->meshParsed( mDocument->getURI().toString(),
-    //                                          meshstore[mDocument->getURI().toString()] );
+    if (mMesh->instances.size() > 0 || mMesh->lightInstances.size()) {
         std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
         spp->meshParsed( mDocument->getURI().toString(), mMesh );
     }
@@ -318,6 +350,8 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
     mGeometryMap[geometry->getUniqueId()]=mGeometries.size();
     mGeometries.push_back(SubMeshGeometry());
     SubMeshGeometry* submesh = &mGeometries.back();
+    submesh->radius=0;
+    submesh->aabb=BoundingBox3f3f::null();
     submesh->name = mesh->getName();
 
     COLLADAFW::MeshVertexData const& verts((mesh->getPositions()));
@@ -362,6 +396,23 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         for (size_t i=0;i<groupedVertexElementCount;++i) {
             submesh->primitives.push_back(SubMeshGeometry::Primitive());
             outputPrim=&submesh->primitives.back();
+            switch(prim->getPrimitiveType()) {
+              case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIFANS;break;
+              case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRISTRIPS;break;
+              case COLLADAFW::MeshPrimitive::LINE_STRIPS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::LINESTRIPS;break;
+              case COLLADAFW::MeshPrimitive::POINTS:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::POINTS;break;
+              case COLLADAFW::MeshPrimitive::LINES:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::LINES;break;
+              case COLLADAFW::MeshPrimitive::TRIANGLES:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;break;
+              default:
+                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;
+            }
+            outputPrim->materialId= prim->getMaterialId();
             size_t faceCount=prim->getGroupedVerticesVertexCount(i);
             if (!multiPrim)
                 faceCount *= prim->getGroupedVertexElementsCount();
@@ -386,18 +437,27 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 if (where==indexSetMap.end()) {
                     indexSetMap[uniqueIndexSet]=submesh->positions.size();
                     outputPrim->indices.push_back(submesh->positions.size());
-                    if (vdata) {
-                        submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
-                                                              vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
-                    }else if (vdatad) {
-                        submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
-                                                              vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                    if (vdata||vdatad) {
+                        if (vdata) {
+                            submesh->positions.push_back(Vector3f(vdata->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                                  vdata->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                                  vdata->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                        }else if (vdatad) {
+                            submesh->positions.push_back(Vector3f(vdatad->getData()[uniqueIndexSet.positionIndices*vertStride],//FIXME: is stride 3 or 3*sizeof(float)
+                                                                  vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+1],
+                                                                  vdatad->getData()[uniqueIndexSet.positionIndices*vertStride+2]));
+                        }
+                        if (submesh->aabb==BoundingBox3f3f::null())
+                            submesh->aabb=BoundingBox3f3f(submesh->positions.back(),0);
+                        else
+                            submesh->aabb=submesh->aabb.merge(submesh->positions.back());
+                        double l2=submesh->positions.back().lengthSquared();
+                        if (l2>submesh->radius)
+                            submesh->radius=l2;
+
                     }else {
                         COLLADA_LOG(error,"SubMesh without position index data\n");
                     }
-
                     if (ndata) {
                         submesh->normals.push_back(Vector3f(ndata->getData()[uniqueIndexSet.normalIndices*normStride],//FIXME: is stride 3 or 3*sizeof(float)
                                                             ndata->getData()[uniqueIndexSet.normalIndices*normStride+1],
@@ -437,7 +497,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         }
 
     }
-
+    submesh->radius=sqrt(submesh->radius);
     bool ok = mDocument->import ( *this, *geometry );
 
     return ok;
@@ -452,17 +512,157 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
+void ColladaDocumentImporter::makeTexture 
+                         (MaterialEffectInfo::Texture::Affecting type,
+                          const COLLADAFW::MaterialBinding *binding,
+                          const COLLADAFW::EffectCommon * effectCommon, 
+                          const COLLADAFW::ColorOrTexture & color, 
+                          MaterialEffectInfo::TextureList&output ) {
+    using namespace COLLADAFW;
+    if (color.isColor()) {
+        output.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture &retval=output.back();
 
+        retval.color.x=color.getColor().getRed();
+        retval.color.y=color.getColor().getGreen();
+        retval.color.z=color.getColor().getBlue();
+        retval.color.w=color.getColor().getAlpha();
+    }else if (color.isTexture()){
+        output.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture &retval=output.back();
+
+        // retval.uri  = mTextureMap[color.getTexture().getTextureMapId()];
+        TextureMapId tid =color.getTexture().getTextureMapId();
+        size_t tbindcount = binding->getTextureCoordinateBindingArray().getCount();
+        for (size_t i=0;i<tbindcount;++i) {
+            const TextureCoordinateBinding& b=binding->getTextureCoordinateBindingArray()[i];
+            if (b.getTextureMapId()==tid) {
+                retval.texCoord = b.getSetIndex();//is this correct!?
+                break;
+            }
+        }
+        retval.affecting = type;
+        const Sampler * sampler =effectCommon->getSamplerPointerArray()[color.getTexture().getSamplerId()];
+#define FIX_ENUM(var,val) case Sampler::val: var = MaterialEffectInfo::Texture::val; break
+        switch (sampler->getMinFilter()) {
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR);
+          default:
+            retval.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR;
+        }
+        switch (sampler->getMipFilter()) {
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_NEAREST);
+            FIX_ENUM(retval.minFilter,SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR);
+          default:break;
+        }
+        switch (sampler->getMagFilter()) {
+            FIX_ENUM(retval.magFilter,SAMPLER_FILTER_NEAREST);
+            FIX_ENUM(retval.magFilter,SAMPLER_FILTER_LINEAR);
+          default:
+            retval.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR;
+        }
+        
+        switch (const_cast<Sampler*>(sampler)->getSamplerType()) {//<-- bug in constness
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_1D);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_2D);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_3D);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_CUBE);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_RECT);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_DEPTH);
+            FIX_ENUM(retval.samplerType,SAMPLER_TYPE_STATE);
+          default:
+            retval.samplerType = MaterialEffectInfo::Texture::SAMPLER_TYPE_2D;
+        }
+        switch (sampler->getWrapS()) {
+            FIX_ENUM(retval.wrapS,WRAP_MODE_WRAP);
+            FIX_ENUM(retval.wrapS,WRAP_MODE_MIRROR);
+            FIX_ENUM(retval.wrapS,WRAP_MODE_CLAMP);
+          default:
+            retval.wrapS = MaterialEffectInfo::Texture::WRAP_MODE_CLAMP;
+        }
+        switch (sampler->getWrapT()) {
+            FIX_ENUM(retval.wrapT,WRAP_MODE_WRAP);
+            FIX_ENUM(retval.wrapT,WRAP_MODE_MIRROR);
+            FIX_ENUM(retval.wrapT,WRAP_MODE_CLAMP);
+          default:
+            retval.wrapT = MaterialEffectInfo::Texture::WRAP_MODE_CLAMP;
+        }
+        switch (sampler->getWrapP()) {
+            FIX_ENUM(retval.wrapU,WRAP_MODE_WRAP);
+            FIX_ENUM(retval.wrapU,WRAP_MODE_MIRROR);
+            FIX_ENUM(retval.wrapU,WRAP_MODE_CLAMP);
+          default:
+            retval.wrapU = MaterialEffectInfo::Texture::WRAP_MODE_CLAMP;
+        }
+        retval.mipBias = sampler->getMipmapBias();
+        retval.maxMipLevel = sampler->getMipmapMaxlevel();
+        retval.uri = mTextureMap[sampler->getSourceImage()];
+    }
+}
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << effect << ") entered" << std::endl,true));
-    mEffectMap[effect->getUniqueId()]=mEffects.size();
-    mEffects.push_back(MaterialEffectInfo());
-    //FIXME elaborate on this
-
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
+    mColladaEffects[effect->getUniqueId()]=effect;
     return true;
+}
+size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding) {
+    using namespace COLLADAFW;
+    size_t retval=mEffects.size();
+    mEffects.push_back(MaterialEffectInfo());
+    const Effect *effect=NULL;
+    {
+        const UniqueId & refmat= binding->getReferencedMaterial();
+        IdMap::iterator matwhere=mMaterialMap.find(refmat);
+        if (matwhere!=mMaterialMap.end()) {
+            ColladaEffectMap::iterator effectwhere = mColladaEffects.find(matwhere->second);
+            if (effectwhere!=mColladaEffects.end()) {
+                effect=effectwhere->second;
+            }else return retval;
+        }else return retval;
+    }
+    MaterialEffectInfo&mat = mEffects.back();
+    CommonEffectPointerArray commonEffects = effect->getCommonEffects();
+    if (commonEffects.getCount()) {
+        EffectCommon* commonEffect = commonEffects[0];
+        switch (commonEffect->getShaderType()) {
+          case EffectCommon::SHADER_BLINN:
+          case EffectCommon::SHADER_PHONG:
+            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),mat.textures);
+          case EffectCommon::SHADER_LAMBERT:
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),mat.textures);
+            
+          case EffectCommon::SHADER_CONSTANT:
+            makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),mat.textures);
+            break;
+          default:
+            break;
+        }
+        mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
+            ? commonEffect->getShininess().getFloatValue()
+             : 1.0;
+        mat.reflectivity = commonEffect->getReflectivity().getType()==FloatOrParam::FLOAT
+            ? commonEffect->getReflectivity().getFloatValue()
+             : 1.0;
+        
+    }else {
+        mat.textures.push_back(MaterialEffectInfo::Texture());
+        mat.textures.back().color.x=effect->getStandardColor().getRed();
+        mat.textures.back().color.y=effect->getStandardColor().getGreen();
+        mat.textures.back().color.z=effect->getStandardColor().getBlue();
+        mat.textures.back().color.w=effect->getStandardColor().getAlpha();
+    }
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
+    return retval;
 }
 
 
@@ -486,6 +686,7 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
+    mLightMap[light->getUniqueId()] = mLights.size();
     mLights.push_back(LightInfo());
     LightInfo *sublight = &mLights.back();
 
@@ -501,9 +702,10 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     // Type
     switch (light->getLightType()) {
       case COLLADAFW::Light::AMBIENT_LIGHT:
-        COLLADA_LOG(error,"Ambient lights are not supported.");
-        mLights.pop_back();
-        return true;
+        sublight->setLightAmbientColor(lcol);
+        sublight->setLightDiffuseColor(Color(0,0,0));
+        sublight->setLightSpecularColor(Color(0,0,0));
+        sublight->setLightType(LightInfo::POINT);//just make it a point light for now
         break;
       case COLLADAFW::Light::DIRECTIONAL_LIGHT:
         sublight->setLightType(LightInfo::DIRECTIONAL);
@@ -514,6 +716,8 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
       case COLLADAFW::Light::SPOT_LIGHT:
         sublight->setLightType(LightInfo::SPOTLIGHT);
         break;
+      default:
+        mLights.pop_back();
     }
 
 

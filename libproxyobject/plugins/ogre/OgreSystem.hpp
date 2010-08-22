@@ -40,6 +40,7 @@
 #include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
+#include "resourceManager/ResourceDownloadPlanner.hpp"
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
 #ifdef nil
@@ -235,6 +236,10 @@ public:
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);
 
     ~OgreSystem();
+
+private:
+    ResourceDownloadPlanner *dlPlanner;
+
 };
 
 

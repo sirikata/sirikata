@@ -66,7 +66,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
         static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
 //        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
-        void loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy  );
+        void loadDocument(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
+
         // documents that have been transfered, parsed, and loaded.
 
         std::tr1::shared_ptr<Transfer::TransferPool> transferPool();
@@ -95,6 +97,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         // documents that have been transfered, parsed, and loaded.
         // MCB: make this a map when/if a key becomes useful
+
         typedef std::set< ColladaDocumentPtr > DocumentSet;
         DocumentSet mDocuments;
 

@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_PROXIMITY_HPP_
 #define _SIRIKATA_PROXIMITY_HPP_
 
-#include "ProxSimulationTraits.hpp"
+#include <sirikata/space/ProxSimulationTraits.hpp>
 #include "CBRLocationServiceCache.hpp"
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include "MigrationDataClient.hpp"
@@ -44,18 +44,28 @@
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
+#include <sirikata/space/PintoServerQuerier.hpp>
+
+
 namespace Sirikata {
 
 class LocationService;
 class ProximityInputEvent;
 class ProximityOutputEvent;
-class PintoServerQuerier;
 
-class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient, MigrationDataClient, public PollingService {
+class Proximity :
+        Prox::QueryEventListener<ObjectProxSimulationTraits>,
+        LocationServiceListener,
+        CoordinateSegmentation::Listener,
+        MessageRecipient,
+        MigrationDataClient,
+        public PollingService,
+        PintoServerQuerierListener
+{
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
-    typedef Prox::Query<ProxSimulationTraits> Query;
-    typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
+    typedef Prox::Query<ObjectProxSimulationTraits> Query;
+    typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
     Proximity(SpaceContext* ctx, LocationService* locservice);
     ~Proximity();
@@ -99,6 +109,9 @@ public:
     virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
 
+    // PintoServerQuerierListener Interface
+    virtual void addRelevantServer(ServerID sid);
+    virtual void removeRelevantServer(ServerID sid);
 private:
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
@@ -112,6 +125,10 @@ private:
 
     // Object queries
     void updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa);
+
+    // Object sizes
+    void updateObjectSize(const UUID& obj, float rad);
+    void removeObjectSize(const UUID& obj);
 
     // Setup all known servers for a server query update
     void addAllServersForUpdate();
@@ -164,12 +181,22 @@ private:
     typedef std::map<UUID, SolidAngle> ObjectQueryAngleMap;
     ObjectQueryAngleMap mObjectQueryAngles;
 
+    // Track object sizes and the maximum of all of them.
+    typedef std::tr1::unordered_map<UUID, float32, UUID::Hasher> ObjectSizeMap;
+    ObjectSizeMap mObjectSizes;
+    float32 mMaxObject;
+
     // This tracks the minimum object query size, which is used
     // as the angle for queries to other servers.
     SolidAngle mMinObjectQueryAngle;
+
+    typedef std::tr1::unordered_set<ServerID> ServerSet;
+    boost::mutex mServerSetMutex;
+    // This tracks the servers we currently have subscriptions with
+    ServerSet mServersQueried;
     // And this indicates whether we need to send new requests
     // out to other servers
-    std::set<ServerID> mNeedServerQueryUpdate;
+    ServerSet mNeedServerQueryUpdate;
 
     std::deque<Message*> mServerResultsToSend; // server query results waiting to be sent
     std::deque<Sirikata::Protocol::Object::ObjectMessage*> mObjectResultsToSend; // object query results waiting to be sent
@@ -177,7 +204,7 @@ private:
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
-    typedef Prox::QueryHandler<ProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
     void tickQueryHandler(ProxQueryHandler* qh);
 
     Thread* mProxThread;

@@ -141,7 +141,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     printf("\n\nDoes not meet first condition for object:  %s\n\n", uuid.toString().c_str());
     fflush(stdout);
   }
-  if (! ( mLocations[uuid].local == true ))
+  else if (! ( mLocations[uuid].local == true ))
   {
     printf("\n\nDoes not meet second condition for object:  %s\n\n", uuid.toString().c_str());
     fflush(stdout);
@@ -326,6 +326,8 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
     }
 }
 
+
+
 void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 length) {
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
@@ -378,6 +380,7 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
         }
     }
 }
+
 
 
 } // namespace Sirikata

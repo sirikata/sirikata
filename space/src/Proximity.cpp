@@ -38,22 +38,24 @@
 
 #include <prox/BruteForceQueryHandler.hpp>
 #include <prox/RTreeQueryHandler.hpp>
+#include <prox/RTreeCutQueryHandler.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
-#include <float.h>
-
-#include <sirikata/space/PintoServerQuerier.hpp>
-
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace Sirikata {
 
-const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_MAX;
-
 static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
+
+static BoundingBox3f aggregateBBoxes(const BoundingBoxList& bboxes) {
+    BoundingBox3f bbox = bboxes[0];
+    for(uint32 i = 1; i< bboxes.size(); i++)
+        bbox.mergeIn(bboxes[i]);
+    return bbox;
+}
 
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
@@ -81,15 +83,16 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     String pinto_type = GetOptionValue<String>(OPT_PINTO);
     String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
     mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
+    mServerQuerier->addListener(this);
 
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
-    mServerQueryHandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
+    mServerQueryHandler = new Prox::BruteForceQueryHandler<ObjectProxSimulationTraits>();
     mServerQueryHandler->initialize(mLocalLocCache);
 
     // Object Queries
     mGlobalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
-    mObjectQueryHandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
+    mObjectQueryHandler = new Prox::BruteForceQueryHandler<ObjectProxSimulationTraits>();
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
     mLocService->addListener(this);
@@ -127,6 +130,11 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
     mCSeg = cseg;
 
     mCSeg->addListener(this);
+
+    // Always initialize with CSeg's current size
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    mServerQuerier->updateRegion(bbox);
 }
 
 void Proximity::shutdown() {
@@ -138,12 +146,11 @@ void Proximity::shutdown() {
     }
 }
 
+// Setup all known servers for a server query update
 void Proximity::addAllServersForUpdate() {
-    // FIXME this assumes that ServerIDs are simple sequence of IDs
-    for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-        if (sid == mContext->id()) continue;
-        mNeedServerQueryUpdate.insert(sid);
-    }
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
+        mNeedServerQueryUpdate.insert(*it);
 }
 
 void Proximity::sendQueryRequests() {
@@ -151,15 +158,15 @@ void Proximity::sendQueryRequests() {
 
     // FIXME avoid computing this so much
     BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
-    BoundingBox3f bbox = bboxes[0];
-    for(uint32 i = 1; i< bboxes.size(); i++)
-        bbox.mergeIn(bboxes[i]);
-
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
     BoundingSphere3f bounds = bbox.toBoundingSphere();
 
-    std::set<ServerID> sub_servers;
-    sub_servers.swap(mNeedServerQueryUpdate);
-    for(std::set<ServerID>::iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
+    ServerSet sub_servers;
+    {
+        boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+        sub_servers.swap(mNeedServerQueryUpdate);
+    }
+    for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
         Sirikata::Protocol::Prox::Container container;
         Sirikata::Protocol::Prox::IServerQuery msg = container.mutable_query();
@@ -181,7 +188,10 @@ void Proximity::sendQueryRequests() {
         bool sent = mProxServerMessageService->route(smsg);
         if (!sent) {
             delete smsg;
-            mNeedServerQueryUpdate.insert(sid);
+            {
+                boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+                mNeedServerQueryUpdate.insert(sid);
+            }
         }
     }
 }
@@ -283,6 +293,24 @@ void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, Se
     addQuery(obj, obj_query_angle);
 }
 
+// PintoServerQuerierListener Interface
+
+void Proximity::addRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
+    // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.insert(sid);
+    mNeedServerQueryUpdate.insert(sid);
+}
+
+void Proximity::removeRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
+    // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.erase(sid);
+}
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
     mProxStrand->post(
@@ -315,6 +343,7 @@ void Proximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const Boun
             mMinObjectQueryAngle = sa;
             PROXLOG(debug,"Query addition initiated server query request.");
             addAllServersForUpdate();
+            mServerQuerier->updateQuery(mMinObjectQueryAngle);
         }
     }
 }
@@ -343,7 +372,35 @@ void Proximity::removeQuery(UUID obj) {
         if (minangle != mMinObjectQueryAngle) {
             mMinObjectQueryAngle = minangle;
             addAllServersForUpdate();
+            mServerQuerier->updateQuery(mMinObjectQueryAngle);
         }
+    }
+}
+
+void Proximity::updateObjectSize(const UUID& obj, float rad) {
+    mObjectSizes[obj] = rad;
+
+    if (rad > mMaxObject) {
+        mMaxObject = rad;
+        mServerQuerier->updateLargestObject(mMaxObject);
+    }
+}
+
+void Proximity::removeObjectSize(const UUID& obj) {
+    ObjectSizeMap::iterator it = mObjectSizes.find(obj);
+    assert(it != mObjectSizes.end());
+
+    float32 old_val = it->second;
+    mObjectSizes.erase(it);
+
+    if (old_val == mMaxObject) {
+        // We need to recompute mMaxObject since it may not be accurate anymore
+        mMaxObject = 0.0f;
+        for(ObjectSizeMap::iterator oit = mObjectSizes.begin(); oit != mObjectSizes.end(); oit++)
+            mMaxObject = std::max(mMaxObject, oit->second);
+
+        if (mMaxObject != old_val)
+            mServerQuerier->updateLargestObject(mMaxObject);
     }
 }
 
@@ -421,8 +478,10 @@ void Proximity::queryHasEvents(Query* query) {
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
 void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+    updateObjectSize(uuid, bounds.radius());
 }
 void Proximity::localObjectRemoved(const UUID& uuid) {
+    removeObjectSize(uuid);
 }
 void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle);
@@ -431,6 +490,7 @@ void Proximity::localOrientationUpdated(const UUID& uuid, const TimedMotionQuate
 }
 void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle);
+    updateObjectSize(uuid, newval.radius());
 }
 void Proximity::localMeshUpdated(const UUID& uuid, const String& newval) {
 }
@@ -448,6 +508,9 @@ void Proximity::replicaMeshUpdated(const UUID& uuid, const String& newval) {
 }
 
 void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    mServerQuerier->updateRegion(bbox);
 }
 
 
@@ -630,7 +693,10 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
     if (it == mServerQueries.end()) {
         PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat());
 
-        Query* q = mServerQueryHandler->registerQuery(loc, bounds, angle);
+        BoundingSphere3f region(bounds.center(), 0);
+        float ms = bounds.radius();
+
+        Query* q = mServerQueryHandler->registerQuery(loc, region, ms, angle);
         mServerQueries[server] = q;
     }
     else {
@@ -638,7 +704,8 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
 
         Query* q = it->second;
         q->position(loc);
-        q->bounds(bounds);
+        q->region( BoundingSphere3f(bounds.center(), 0) );
+        q->maxSize( bounds.radius() );
         q->angle(angle);
     }
 }
@@ -666,14 +733,18 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
         // This is necessary because we get this update for all location updates, even those for objects
         // which don't have subscriptions.
         if (angle != NoUpdateSolidAngle) {
-            Query* q = mObjectQueryHandler->registerQuery(loc, bounds, angle);
+            BoundingSphere3f region(bounds.center(), 0);
+            float ms = bounds.radius();
+
+            Query* q = mObjectQueryHandler->registerQuery(loc, region, ms, angle);
             mObjectQueries[object] = q;
         }
     }
     else {
         Query* query = it->second;
         query->position(loc);
-        query->bounds(bounds);
+        query->region( BoundingSphere3f(bounds.center(), 0) );
+        query->maxSize( bounds.radius() );
         if (angle != NoUpdateSolidAngle)
             query->angle(angle);
     }

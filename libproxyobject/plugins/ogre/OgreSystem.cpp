@@ -57,8 +57,10 @@
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ManualMaterialLoader.hpp"
 #include "resourceManager/UploadTool.hpp"
+#include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
+
 using Meru::GraphicsResourceManager;
 using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
@@ -356,6 +358,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mLocalTimeOffset=localTimeOffset;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
+
+    //initialize the Resource Download Planner
+    dlPlanner = new ResourceDownloadPlanner(proxyManager, mContext);
+
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -418,7 +424,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             Meru::EventSource::sSingleton = ((Task::GenEventManager*)eventManager->as<void*>());
             new SequentialWorkQueue ((Task::WorkQueue*)workQueue->as<void*>());
-            new ResourceManager(mTransferManager);
+            new ResourceManager();
             new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
 
@@ -729,6 +735,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         } else if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
+            dlPlanner->addNewObject(p, mesh);
         }
     }
     if (!created) {
@@ -829,9 +836,10 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
                 Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
                 Ogre::Mesh *mesh = foundEntity->getMesh().get();
                 uint16 numSubMeshes = mesh->getNumSubMeshes();
+                std::vector<TriVertex> sharedVertices;
                 for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
                     Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
-                    OgreMesh ogreMesh(submesh, texcoord);
+                    OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
                     IntersectResult intRes;
                     ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
                     if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {

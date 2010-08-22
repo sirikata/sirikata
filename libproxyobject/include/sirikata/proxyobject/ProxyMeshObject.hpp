@@ -37,6 +37,8 @@
 
 #include "MeshListener.hpp"
 #include "ProxyObject.hpp"
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
@@ -69,7 +71,11 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
     // interface from MeshObject
     public:
         virtual void setMesh ( URI const& rhs );
+
         virtual URI const& getMesh () const;
+
+        void meshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
 
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;

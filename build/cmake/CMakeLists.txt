@@ -778,6 +778,7 @@ SET(ProtocolBuffersSources
 
   Loc
   Prox
+  MasterPinto
   Session
   CSeg
   ServerMessage
@@ -1141,6 +1142,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
+  ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   )
 
 SET(LIBPROXYOBJECT_SOURCES
@@ -1148,6 +1150,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/models/MeshObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp
@@ -1272,6 +1275,7 @@ ${GFX}/resourceManager/ManualMaterialLoader.cpp
 ${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDependencyTask.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
+${GFX}/resourceManager/ResourceDownloadPlanner.cpp
 ${GFX}/resourceManager/ResourceLoadTask.cpp
 ${GFX}/resourceManager/ResourceLoadingQueue.cpp
 ${GFX}/resourceManager/ResourceManager.cpp
@@ -1361,6 +1365,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
+  ${SIMOH_SOURCE_DIR}/NullScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
@@ -1377,6 +1382,7 @@ SET(CSEG_SOURCES
 
 SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/PintoManager.cpp
+  ${PINTO_SOURCE_DIR}/PintoManagerLocationServiceCache.cpp
   ${PINTO_SOURCE_DIR}/Options.cpp
   ${PINTO_SOURCE_DIR}/main.cpp
   )
@@ -1738,8 +1744,9 @@ IF(V8_FOUND)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
 ADD_PLUGIN_TARGET(scripting-js
                     SOURCES ${LIBOH_PLUGIN_JS_SOURCES}
-                    TARGET_LDFLAGS ${sirikata_LDFLAGS} ${BERKELIUM_CFLAGS}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS} ${BERKELIUM_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    TARGET_CXXFLAGS  ${BERKELIUM_CFLAGS}
                     LIBRARIES ${V8_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     )
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} scripting-js)
@@ -1785,6 +1792,7 @@ ENDIF(OpenCOLLADA_FOUND)
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL
 SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+ADD_DEPENDENCIES(${TEST_BINARY} tcpsst)
 
 ADD_EXECUTABLE(${SPACE_BINARY} ${SPACE_SOURCES})
 SET_TARGET_PROPERTIES(${SPACE_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
@@ -1820,6 +1828,7 @@ SET_TARGET_PROPERTIES(pinto PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(pinto
         ${Boost_LIBRARIES}
         ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_SPACE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 

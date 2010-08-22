@@ -87,7 +87,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
-        std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
+        std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2),
+        mContext->mainStrand->wrap(std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, std::tr1::placeholders::_1))
     );
 
     mLocalForwarder = new LocalForwarder(mContext);
@@ -312,7 +313,9 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
         handleConnectAck(oh_conn_id, *msg);
     }
     else if (session_msg.has_disconnect()) {
-        // FIXME handle disconnections
+        ObjectConnectionMap::iterator it = mObjects.find(session_msg.disconnect().object());
+        if (it != mObjects.end())
+            handleDisconnect(it->first, it->second);
     }
 
     // InitiateMigration messages
@@ -320,6 +323,20 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     assert(!session_msg.has_init_migration());
 
     delete msg;
+}
+
+void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionManager::ConnectionID& oh_conn_id) {
+    for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); ) {
+        UUID obj_id = it->first;
+        ObjectConnection* obj_conn = it->second;
+
+        it++; // Iterator might get erased in handleDisconnect
+
+        if (obj_conn->connID() != oh_conn_id)
+            continue;
+
+        handleDisconnect(obj_id, obj_conn);
+    }
 }
 
 void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
@@ -404,7 +421,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     sc.conn_msg = connect_msg;
     mStoredConnectionData[obj_id] = sc;
 
-    mOSeg->newObjectAdd(obj_id,connect_msg.bounds().radius());
+    mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
 
 }
 
@@ -496,6 +513,22 @@ void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& o
 
     // Allow the forwarder to send to ship messages to this connection
     mForwarder->enableObjectConnection(obj_id);
+}
+
+void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
+    assert(conn->id() == obj_id);
+
+    mOSeg->removeObject(obj_id);
+    mLocalForwarder->removeActiveConnection(obj_id);
+    mLocationService->removeLocalObject(obj_id);
+
+    // Register proximity query
+    mProximity->removeQuery(obj_id);
+
+    mForwarder->removeObjectConnection(obj_id);
+
+    mObjects.erase(obj_id);
+    delete conn;
 }
 
 void Server::osegWriteFinished(const UUID& id) {
@@ -603,7 +636,7 @@ void Server::handleMigration(const UUID& obj_id)
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
-    mOSeg->addObject(obj_id, obj_bounds.radius(), idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
+    mOSeg->addMigratedObject(obj_id, obj_bounds.radius(), idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
 
     // Handle any data packed into the migration message for space components
@@ -661,7 +694,6 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
 
     // Make sure we aren't getting an out of date event
     // FIXME
-
 
     if (mOSeg->clearToMigrate(obj_id)) //needs to check whether migration to this server has finished before can begin migrating to another server.
     {
@@ -844,7 +876,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
     //update our oseg to show that we know that we have this object now.
     OSegEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());
-    mOSeg->addObject(obj_id, idOSegAckTo.radius(), idOSegAckTo.server(), true);//true states to send an ack message to idOSegAckTo
+    mOSeg->addMigratedObject(obj_id, idOSegAckTo.radius(), idOSegAckTo.server(), true);//true states to send an ack message to idOSegAckTo
 
 
 

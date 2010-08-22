@@ -144,8 +144,9 @@ public:
     virtual OSegEntry lookup(const UUID& obj_id) = 0;
     virtual OSegEntry cacheLookup(const UUID& obj_id) = 0;
     virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id) = 0;
-      virtual void addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) = 0;
-    virtual void newObjectAdd(const UUID& obj_id, float radius) = 0;
+    virtual void addNewObject(const UUID& obj_id, float radius) = 0;
+    virtual void addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) = 0;
+    virtual void removeObject(const UUID& obj_id) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
   };
 

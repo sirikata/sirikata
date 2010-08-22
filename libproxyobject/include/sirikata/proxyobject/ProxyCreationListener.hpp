@@ -31,6 +31,9 @@
  */
 #ifndef _SIRIKATA_PROXY_CREATION_LISTENER_HPP_
 #define _SIRIKATA_PROXY_CREATION_LISTENER_HPP_
+
+#include <sirikata/proxyobject/Platform.hpp>
+
 namespace Sirikata {
 class ProxyObject;
 

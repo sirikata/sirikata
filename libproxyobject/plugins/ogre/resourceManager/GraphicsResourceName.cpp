@@ -57,12 +57,24 @@ SharedResourcePtr GraphicsResourceName::getReference()
 
 void GraphicsResourceName::doParse()
 {
-  ResourceHash result;
+    /*ResourceHash result;
   std::tr1::function<void(const URI &, const ResourceHash *)> callback = std::tr1::bind(&GraphicsResourceName::hashLookupCallback, getWeakPtr(), mReferencedType, _1, _2);
 
   if (ResourceManager::getSingleton().nameLookup(mURI, result, callback)) {
     hashLookupCallback(getWeakPtr(), mReferencedType, mURI, &result);
-  }
+    }*/
+    SharedResourcePtr resource = getWeakPtr().lock();
+    if (resource) {
+        try{
+            GraphicsResourceManager *grm = GraphicsResourceManager::getSingletonPtr();
+            SharedResourcePtr newResource = grm->getResourceAsset(mURI, mReferencedType);
+            resource->addDependency(newResource);
+            resource->parsed(true);
+        }
+        catch(std::invalid_argument &exc) {
+            resource->parsed(false);
+        }
+    } else resource->parsed(false);
 }
 
 void GraphicsResourceName::doLoad()
@@ -75,6 +87,10 @@ void GraphicsResourceName::doUnload()
   unloaded(true, mLoadEpoch);
 }
 
+// old name download callback, no longer used since TransferMediator does not
+// deal with hashes
+
+/*
 void GraphicsResourceName::hashLookupCallback(WeakResourcePtr resourcePtr, Type refType, const URI &id, const ResourceHash *hash)
 {
 //  assert(id != hash);
@@ -98,7 +114,7 @@ void GraphicsResourceName::hashLookupCallback(WeakResourcePtr resourcePtr, Type 
       resource->parsed(false);
    }
   }
-}
+}*/
 
 void GraphicsResourceName::fullyParsed()
 {
@@ -111,10 +127,11 @@ void GraphicsResourceName::fullyParsed()
       std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
           std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
       if (assetPtr) {
-        resourcePtr->resolveName(mURI, assetPtr->getRemoteFileId());
+          //resourcePtr->resolveName(mURI, assetPtr->getRemoteFileId());
+          resourcePtr->resolveName(mURI);
       } else {
         SILOG(resource,fatal,"Fatal: Dependency of GraphicsResourceName is not a GraphicsResourceAsset" << getID() << " -> " << (*mDependencies.begin())->getID());
-        resourcePtr->resolveName(mURI, ResourceHash(URI((*mDependencies.begin())->getID())));
+        resourcePtr->resolveName(mURI);//, ResourceHash(URI((*mDependencies.begin())->getID())));
       }
     }
   }
@@ -126,10 +143,10 @@ void GraphicsResourceName::addDependent(Meru::WeakResourcePtr newParent)
     std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
         std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
     if (assetPtr) {
-      newParent.lock()->resolveName(mURI, assetPtr->getRemoteFileId());
+        newParent.lock()->resolveName(mURI); //, assetPtr->getRemoteFileId());
     } else {
       SILOG(resource,fatal,"Fatal: Dependency of GraphicsResourceName is not a GraphicsResourceAsset" << getID() << " -> " << (*mDependencies.begin())->getID());
-      newParent.lock()->resolveName(mURI, ResourceHash(URI((*mDependencies.begin())->getID())));
+      newParent.lock()->resolveName(mURI);//, ResourceHash(URI((*mDependencies.begin())->getID())));
     }
   }
   GraphicsResource::addDependent(newParent);

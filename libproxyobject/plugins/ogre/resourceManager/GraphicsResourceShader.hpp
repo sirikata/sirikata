@@ -39,7 +39,7 @@ namespace Meru {
 
 class GraphicsResourceShader : public GraphicsResourceAsset {
 public:
-  GraphicsResourceShader(const RemoteFileId &resourceID);
+  GraphicsResourceShader(const URI &uri);
   virtual ~GraphicsResourceShader();
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);

@@ -108,9 +108,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
-    chromeWebView = createWebView("__chrome", "__chrome", 430, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+
+        /*chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         FILE * testfile=NULL;
-        chromeWebView->loadFile("navbar.html");
+        chromeWebView->loadFile("navbar.html");*/
 
         /*
         WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
@@ -402,17 +403,16 @@ bool WebViewManager::injectMouseDown(int buttonID)
 			int relX = focusedWebView->getRelativeX(mouseXPos);
 			int relY = focusedWebView->getRelativeY(mouseYPos);
 
-			focusedWebView->injectMouseDown(relX, relY);
+            if (focusedWebView->inDraggableRegion(relX, relY)) {
+                isDragging = true;
+            } else {
+                focusedWebView->injectMouseDown(relX, relY);
+            }
 		}
 	}
-	else if(buttonID == RightMouseButton)
-	{
-		isDragging = true;
-		focusWebView(getTopWebView(mouseXPos, mouseYPos));
-	}
 	else if(buttonID == MiddleMouseButton) {
-            isResizing = true;
-            focusWebView(getTopWebView(mouseXPos, mouseYPos));
+        isResizing = true;
+        focusWebView(getTopWebView(mouseXPos, mouseYPos));
 	}
 
 	if(focusedWebView)
@@ -429,11 +429,11 @@ bool WebViewManager::injectMouseUp(int buttonID)
 		int relX = focusedWebView->getRelativeX(mouseXPos);
 		int relY = focusedWebView->getRelativeY(mouseYPos);
 
-		focusedWebView->injectMouseUp(relX, relY);
-	}
-	else if(buttonID == RightMouseButton)
-	{
-		isDragging = false;
+		if (focusedWebView->inDraggableRegion(relX, relY)) {
+		    isDragging = false;
+		} else {
+		    focusedWebView->injectMouseUp(relX, relY);
+		}
 	}
 	else if(buttonID == MiddleMouseButton) {
             isResizing = false;

@@ -110,5 +110,12 @@ public:
         return (mCenter != rhs.mCenter || mRadius != rhs.mRadius);
     }
 };
+
+template<typename scalar>
+inline std::ostream& operator <<(std::ostream& os, const BoundingSphere<scalar> &rhs) {
+  os << '<' << rhs.center() << ',' << rhs.radius() << '>';
+  return os;
+}
+
 }
 #endif

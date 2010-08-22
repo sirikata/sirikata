@@ -107,6 +107,8 @@ private:
     // network strand to allow for fast forwarding, see
     // handleObjectHostMessageRouting for continuation in main strand
     bool handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
+    // Handle an object host closing its connection
+    void handleObjectHostConnectionClosed(const ObjectHostConnectionManager::ConnectionID& conn_id);
     // Schedule main thread to handle oh message routing
     void scheduleObjectHostMessageRouting();
     void handleObjectHostMessageRouting();
@@ -130,6 +132,9 @@ private:
 
     // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);
+
+    // Handle a disconnection
+    void handleDisconnect(const UUID& obj_id, ObjectConnection* conn);
 
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);

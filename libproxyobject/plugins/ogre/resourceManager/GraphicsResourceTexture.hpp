@@ -39,7 +39,7 @@ namespace Meru {
 
 class GraphicsResourceTexture : public GraphicsResourceAsset {
 public:
-  GraphicsResourceTexture(const RemoteFileId &resourceID);
+  GraphicsResourceTexture(const URI &uri);
   virtual ~GraphicsResourceTexture();
 
   virtual DependencyTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);

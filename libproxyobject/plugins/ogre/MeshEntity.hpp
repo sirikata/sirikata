@@ -42,6 +42,7 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
@@ -104,8 +105,12 @@ public:
 
     WebView *getWebView(int whichSubEnt);
 
+    void processMesh(URI const& newMesh);
+
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
+    void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -113,11 +118,6 @@ public:
     void loadMesh(const String& meshname);
 
     void unloadMesh();
-
-    void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-        std::tr1::shared_ptr<Transfer::RemoteFileMetadata>response, Meshdata& md);
-    void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     virtual void setSelected(bool selected);
 
@@ -132,23 +132,19 @@ public:
         mResource = resourcePtr;
     }
 
-    Task::EventResponse downloadFinished(Task::EventPtr evbase, Meshdata& md);
-
-/*
-    virtual bool loadMesh(const String&name){
-        return false;
-    }
-  */
+    void downloadMeshFile(URI const& uri);
 
     // interface from MeshListener
     public:
-        virtual void onSetMesh ( URI const& meshFile );
-        virtual void onMeshParsed (String const& hash, Meshdata& md);
-        virtual void onSetScale ( Vector3f const& scale );
-        virtual void onSetPhysical ( PhysicalParameters const& pp );
+
+        virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
+        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     protected:
 
+    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<Transfer::DenseData> response);
 };
 
 }

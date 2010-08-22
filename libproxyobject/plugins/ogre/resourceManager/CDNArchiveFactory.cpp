@@ -67,30 +67,30 @@ unsigned int CDNArchiveFactory::addArchive()
   return mCurArchive++;
 }
 
-unsigned int CDNArchiveFactory::addArchive(const SHA256&filename, const SparseData &rbuffer)
+unsigned int CDNArchiveFactory::addArchive(const String& uri, const SparseData &rbuffer)
 {
   boost::mutex::scoped_lock lok(CDNArchiveMutex);
   CDNArchivePackages[mCurArchive]=std::vector<Ogre::String>();
-  addArchiveDataNoLock(mCurArchive, filename.convertToHexString(), rbuffer);
+  addArchiveDataNoLock(mCurArchive, uri, rbuffer);
   return mCurArchive++;
 }
 
-void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String&filename, const SparseData &rbuffer)
+void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String& uri, const SparseData &rbuffer)
 {
-  std::map<Ogre::String,SparseData>::iterator where=CDNArchiveFiles.find(filename);
+    std::map<Ogre::String,SparseData>::iterator where=CDNArchiveFiles.find(uri);
   if (where!=CDNArchiveFiles.end()) {
-    SILOG(resource,error,"File "<<filename<<" Already exists in CDNArchive!!!");
+    SILOG(resource,error,"File "<<uri<<" Already exists in CDNArchive!!!");
   }
-  SILOG(resource,debug,"File "<<filename<<" Added to CDNArchive");
-  CDNArchiveFiles[filename]=rbuffer;
+  SILOG(resource,debug,"File "<<uri<<" Added to CDNArchive");
+  CDNArchiveFiles[uri]=rbuffer;
 
-  CDNArchivePackages[archiveName].push_back(filename);
+  CDNArchivePackages[archiveName].push_back(uri);
 }
 
-void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const SHA256&filename, const SparseData &rbuffer)
+void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer)
 {
   boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  addArchiveDataNoLock(archiveName,filename.convertToHexString(),rbuffer);
+  addArchiveDataNoLock(archiveName, uri,rbuffer);
 }
 
 void CDNArchiveFactory::clearArchive(unsigned int which)

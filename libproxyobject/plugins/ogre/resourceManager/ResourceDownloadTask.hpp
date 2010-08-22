@@ -57,8 +57,11 @@ class ResourceDownloadQueue {
 class ResourceDownloadTask : public DependencyTask
 {
 public:
+    typedef std::tr1::function<void(
+        std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<Transfer::DenseData> response)> DownloadCallback;
 
-  ResourceDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, ResourceRequestor* resourceRequestor);
+    ResourceDownloadTask(DependencyManager* mgr, const URI& uri, ResourceRequestor* resourceRequestor, DownloadCallback cb);
   virtual ~ResourceDownloadTask();
 
   void setRange(const Transfer::Range &r) {
@@ -74,18 +77,21 @@ public:
   }
 
 protected:
-  void requestDownload();
+
+DownloadCallback cb;
+
   EventResponse downloadCompleteHandler(const EventPtr &event);
   void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
-	    
+
   void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
             std::tr1::shared_ptr<Transfer::DenseData> response);
-	    
-	    
-  bool mStarted;
 
-  const RemoteFileId mHash;
+
+  bool mStarted;
+    bool customCb;
+
+  const URI mURI;
   SubscriptionId mCurrentDownload;
   Transfer::Range mRange;
   ResourceRequestor* mResourceRequestor;

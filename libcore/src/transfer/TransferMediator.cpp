@@ -25,7 +25,7 @@ void TransferMediator::destroy() {
     AutoSingleton<TransferMediator>::destroy();
 }
 
-TransferMediator::TransferMediator() {  
+TransferMediator::TransferMediator() {
     mCleanup = false;
     mNumOutstanding = 0;
     mThread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));

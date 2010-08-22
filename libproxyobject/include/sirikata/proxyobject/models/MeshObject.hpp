@@ -34,6 +34,7 @@
 #define _SIRIKATA_MESH_OBJECT_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
 
 // MCB: move to model plugin
 //#include "transfer/URI.hpp"
@@ -62,6 +63,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT MeshObject
 
         virtual void setMesh ( URI const& rhs ) = 0;
         virtual URI const& getMesh () const = 0;
+        virtual void parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
 
         virtual void setScale ( Vector3f const& rhs ) = 0;
         virtual Vector3f const& getScale () const = 0;

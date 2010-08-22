@@ -36,30 +36,6 @@
 
 namespace Sirikata {
 
-
-
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
-// FIXME #93
-#define PACKED_STRUCT __attribute__((__packed__))
-#else
-#define PACKED_STRUCT
-#endif
-
-typedef struct SerializedVector{
-  float32 x, y, z;
-
-  void serialize(const Vector3f& vect) {
-    x = vect.x;
-    y = vect.y;
-    z = vect.z;
-  }
-
-  void deserialize(Vector3f& vect) {
-    vect = Vector3f(x,y,z);
-  }
-
-} PACKED_STRUCT SerializedVector;
-
 typedef struct SerializedBBox{
   float32 minX;
   float32 minY;
@@ -84,7 +60,7 @@ typedef struct SerializedBBox{
 			 Vector3f(maxX, maxY, maxZ));
   }
 
-} PACKED_STRUCT SerializedBBox ;
+} SerializedBBox ;
 
 typedef struct SegmentedRegion {
 
@@ -215,19 +191,19 @@ typedef struct SegmentedRegion {
   }
 
   SegmentedRegion* lookup(const Vector3f& pos) const {
-    if (mRightChild == NULL && mLeftChild == NULL) {      
+    if (mRightChild == NULL && mLeftChild == NULL) {
       if (mBoundingBox.contains(pos)) {
 	return ((SegmentedRegion*)this);
       }
     }
 
     SegmentedRegion* region = NULL;
-    
-    if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {      
-      region = mLeftChild->lookup(pos);
-    }    
 
-    if (region == NULL && mRightChild!=NULL && mRightChild->mBoundingBox.contains(pos)){ 
+    if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {
+      region = mLeftChild->lookup(pos);
+    }
+
+    if (region == NULL && mRightChild!=NULL && mRightChild->mBoundingBox.contains(pos)){
       region= mRightChild->lookup(pos);
     }
 
@@ -235,7 +211,7 @@ typedef struct SegmentedRegion {
   }
 
   void lookupBoundingBox(const BoundingBox3f& bbox, std::vector<SegmentedRegion*>& intersectingLeaves) {
-    if (mRightChild == NULL && mLeftChild == NULL) {      
+    if (mRightChild == NULL && mLeftChild == NULL) {
       if (mBoundingBox.intersects(bbox)) {
 	intersectingLeaves.push_back((SegmentedRegion*) this);
       }
@@ -273,7 +249,7 @@ typedef struct SegmentedRegion {
   SegmentedRegion* mParent;
 
   enum SplitAxis{ X, Y, Z, UNDEFINED  };
-  
+
   SplitAxis mSplitAxis;
 
   uint32 mLeafCount;
@@ -294,7 +270,7 @@ typedef struct SerializedSegmentedRegion {
     mRightChildIdx = 0;
   }
 
-} PACKED_STRUCT SerializedSegmentedRegion;
+} SerializedSegmentedRegion;
 
 
 
@@ -349,7 +325,7 @@ private:
     mNodeCount = 0;
   }
 
-} PACKED_STRUCT SerializedBSPTree;
+} SerializedBSPTree;
 
 
 }

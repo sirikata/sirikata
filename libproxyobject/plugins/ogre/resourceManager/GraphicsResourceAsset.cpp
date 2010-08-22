@@ -42,8 +42,8 @@ using namespace std;
 
 namespace Meru {
 
-GraphicsResourceAsset::GraphicsResourceAsset(const RemoteFileId &resourceID, GraphicsResource::Type resourceType)
-: GraphicsResource(resourceID.fingerprint().convertToHexString(), resourceType), mResourceID(resourceID),
+GraphicsResourceAsset::GraphicsResourceAsset(const URI &uri, GraphicsResource::Type resourceType)
+ : GraphicsResource(uri.toString(), resourceType), mURI(uri),
   mLoadTask(NULL), mParseTask(NULL), mUnloadTask(NULL)
 {
 

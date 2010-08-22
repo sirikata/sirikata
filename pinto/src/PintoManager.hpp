@@ -36,6 +36,15 @@
 #include "PintoContext.hpp"
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/core/network/Stream.hpp>
+
+#include <sirikata/space/ProxSimulationTraits.hpp>
+
+#include <prox/QueryHandler.hpp>
+#include <prox/QueryEventListener.hpp>
+#include <prox/LocationUpdateListener.hpp>
+
+#include "PintoManagerLocationServiceCache.hpp"
 
 namespace Sirikata {
 
@@ -45,7 +54,7 @@ namespace Sirikata {
  *  services on each space server use it to determine which other servers they
  *  may need to query.
  */
-class PintoManager : public Service {
+class PintoManager : public Service, public Prox::QueryEventListener<ServerProxSimulationTraits> {
 public:
     PintoManager(PintoContext* ctx);
     ~PintoManager();
@@ -54,10 +63,45 @@ public:
     virtual void stop();
 
 private:
+    typedef Prox::QueryHandler<ServerProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Query<ServerProxSimulationTraits> Query;
+    typedef Prox::QueryEvent<ServerProxSimulationTraits> QueryEvent;
+
     void newStreamCallback(Sirikata::Network::Stream* newStream, Sirikata::Network::Stream::SetCallbacks& setCallbacks);
+
+    void handleClientConnection(Sirikata::Network::Stream* stream, Network::Stream::ConnectionStatus status, const std::string &reason);
+    void handleClientReceived(Sirikata::Network::Stream* stream, Network::Chunk& data, const Network::Stream::PauseReceiveCallback& pause) ;
+    void handleClientReadySend(Sirikata::Network::Stream* stream);
+
+    // QueryEventListener Interface
+    virtual void queryHasEvents(Query* query);
+
+    // Tick the QueryHandler. We don't actually care about time since Servers
+    // won't be in motion. Should only be called when the server data or query
+    // data is updated.
+    void tick();
 
     PintoContext* mContext;
     Network::StreamListener* mListener;
+
+    struct ClientData {
+        ClientData()
+         : server(NullServerID),
+           query(NULL)
+        {}
+
+        ServerID server;
+        Query* query;
+    };
+    std::tr1::unordered_map<Sirikata::Network::Stream*, ClientData> mClients;
+    // Reverse index for queryHasEvents callbacks
+    typedef std::tr1::unordered_map<Query*, Sirikata::Network::Stream*> ClientsByQuery;
+    ClientsByQuery mClientsByQuery;
+
+    PintoManagerLocationServiceCache* mLocCache;
+    ProxQueryHandler* mQueryHandler;
+    Time mLastTime;
+    Duration mDt;
 };
 
 } // namespace Sirikata

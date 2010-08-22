@@ -298,7 +298,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
   }
 
 
-  void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id, float radius)
+  void CraqObjectSegmentation::addNewObject(const UUID& obj_id, float radius)
   {
     if (mReceivedStopRequest)
       return ;
@@ -318,6 +318,9 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
     trackedAddMessages[trackID] = tsrda;
   }
 
+void CraqObjectSegmentation::removeObject(const UUID& obj_id) {
+    SILOG(craqoseg, error, "CraqObjectSegmentation::removeObject not implemented.");
+}
 
 Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id, float radius)
   {
@@ -498,7 +501,7 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
     If you're initially adding an object to the world, you should use the newObjectAdd function instead.
   */
-void CraqObjectSegmentation::addObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool generateAck)
+void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool generateAck)
   {
     if (mReceivedStopRequest)
       return;

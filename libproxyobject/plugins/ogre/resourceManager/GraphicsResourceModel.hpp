@@ -39,10 +39,10 @@ namespace Meru {
 
 class GraphicsResourceModel : public GraphicsResourceAsset {
 public:
-  GraphicsResourceModel(const RemoteFileId &resourceID);
+  GraphicsResourceModel(const URI &uri);
   virtual ~GraphicsResourceModel();
 
-  virtual void resolveName(const URI& id, const ResourceHash& hash);
+  virtual void resolveName(const URI& id);
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
@@ -53,6 +53,8 @@ public:
 
 protected:
   std::map<String, String> mMaterialNames;
+
+
 };
 
 }

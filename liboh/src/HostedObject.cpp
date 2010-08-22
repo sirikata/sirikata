@@ -104,6 +104,8 @@ public:
         loc.setAngularSpeed(0);
         mUpdatedLocation.resetValue(timestamp, loc);
     }
+
+
     void locationWasSet(const Protocol::ObjLoc &msg) {
         Time timestamp = msg.timestamp();
         Location loc = mUpdatedLocation.extrapolate(timestamp);
@@ -112,6 +114,7 @@ public:
         loc.setAngularSpeed(0);
         mUpdatedLocation.updateValue(timestamp, loc);
     }
+
 
     void updateLocation(HostedObject *ho) {
         if (!mProxyObject) {
@@ -124,6 +127,11 @@ public:
             Protocol::ObjLoc toSet;
             toSet.set_position(realLocation.getPosition());
             toSet.set_velocity(realLocation.getVelocity());
+
+            toSet.set_orientation(realLocation.getOrientation());
+            toSet.set_rotational_axis(realLocation.getAxisOfRotation());
+            toSet.set_angular_speed(realLocation.getAngularSpeed());
+            
             RoutableMessageBody body;
             toSet.SerializeToString(body.add_message("ObjLoc"));
             RoutableMessageHeader header;
@@ -857,8 +865,14 @@ void HostedObject::connect(
 
     mObjectHost->connect(
         getSharedPtr(), spaceID,
-        TimedMotionVector3f(Time::null(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
-        TimedMotionQuaternion(Time::null(), MotionQuaternion( Quaternion::identity(), Quaternion::identity() )),
+        //TimedMotionVector3f(Time::null(), MotionVector3f(
+        //Vector3f(startingLocation.getPosition()),
+        //startingLocation.getVelocity()) ),
+        TimedMotionVector3f(Time::local(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
+        //TimedMotionQuaternion(Time::null(), MotionQuaternion(
+        //Quaternion::identity(), Quaternion::identity() )),
+        //TimedMotionQuaternion(Time::null(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
+        TimedMotionQuaternion(Time::local(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
         mesh,
         SolidAngle(.00001f),
@@ -1233,17 +1247,20 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
     ProxyObjectPtr proxy_obj;
     if (is_camera) {
-        proxy_obj = ProxyObjectPtr(new ProxyCameraObject(proxy_manager.get(), objref, getSharedPtr()));
+
+        proxy_obj = ProxyObject::construct<ProxyCameraObject>(proxy_manager.get(), objref, getSharedPtr());
         proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
     }
     else {
-        ProxyMeshObjectPtr mesh_proxy_obj(new ProxyMeshObject(proxy_manager.get(), objref, getSharedPtr()));
-        proxy_obj = ProxyObjectPtr(mesh_proxy_obj);
+        proxy_obj = ProxyObject::construct<ProxyMeshObject>(proxy_manager.get(), objref, getSharedPtr());
+
         // The call to createObject must occur before trying to do any other
         // operations so that any listeners will be set up.
         proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
-        if (meshuri)
-            mesh_proxy_obj->setMesh(meshuri);
+        if (meshuri) {
+            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+            if (mesh) mesh->setMesh(meshuri);
+        }
     }
     return proxy_obj;
 }
@@ -1577,6 +1594,7 @@ const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
     SpaceDataMap::iterator where=mSpaceData->find(space);
     if (where!=mSpaceData->end()) {
         //bftm FIXME: uncomment the next line (but not the line below it).
+
         //SILOG(ho,warn,"Hit missing time sync in HostedObject.");
         //return where->second.mSpaceConnection.getTopLevelStream()->getServerTimeOffset();
     }

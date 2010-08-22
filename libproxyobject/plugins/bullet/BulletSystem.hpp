@@ -368,10 +368,16 @@ public:
 
     // interface from MeshListener
     public:
-        virtual void onSetMesh ( URI const& meshFile );
+
+    /*virtual void onSetMesh ( URI const& meshFile );
         virtual void onMeshParsed (String const& hash, Meshdata& md);
         virtual void onSetScale ( Vector3f const& scale );
-        virtual void onSetPhysical ( PhysicalParameters const& pp );
+        virtual void onSetPhysical ( PhysicalParameters const& pp );*/
+
+    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
+        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     protected:
 

@@ -44,7 +44,7 @@ namespace Meru {
 class ShaderDependencyTask : public ResourceDependencyTask
 {
 public:
-  ShaderDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
+  ShaderDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
   virtual ~ShaderDependencyTask();
 
   virtual void operator()();
@@ -53,7 +53,7 @@ public:
 class ShaderLoadTask : public ResourceLoadTask
 {
 public:
-  ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch);
+  ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const URI &uri, unsigned int archiveName, unsigned int epoch);
 
   virtual void doRun();
 
@@ -64,7 +64,7 @@ protected:
 class ShaderUnloadTask : public ResourceUnloadTask
 {
 public:
-  ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch);
+  ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int archiveName, unsigned int epoch);
 
   virtual void doRun();
 
@@ -72,8 +72,8 @@ protected:
   const unsigned int mArchiveName;
 };
 
-GraphicsResourceShader::GraphicsResourceShader(const RemoteFileId &resourceID)
-: GraphicsResourceAsset(resourceID, GraphicsResource::SHADER),
+GraphicsResourceShader::GraphicsResourceShader(const URI &uri)
+: GraphicsResourceAsset(uri, GraphicsResource::SHADER),
   mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
 
@@ -87,28 +87,28 @@ GraphicsResourceShader::~GraphicsResourceShader()
 
 ResourceDownloadTask* GraphicsResourceShader::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-  return new ResourceDownloadTask(manager, mResourceID, resourceRequestor);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceShader::createDependencyTask(DependencyManager *manager)
 {
-  return new ShaderDependencyTask(manager, getWeakPtr(), mResourceID.toString());
+  return new ShaderDependencyTask(manager, getWeakPtr(), mURI);
 }
 
 ResourceLoadTask* GraphicsResourceShader::createLoadTask(DependencyManager *manager)
 {
-  return new ShaderLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mArchiveName, mLoadEpoch);
+  return new ShaderLoadTask(manager, getSharedPtr(), mURI, mArchiveName, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceShader::createUnloadTask(DependencyManager *manager)
 {
-  return new ShaderUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mArchiveName, mLoadEpoch);
+  return new ShaderUnloadTask(manager, getWeakPtr(), mURI, mArchiveName, mLoadEpoch);
 }
 
 /***************************** SHADER DEPENDENCY TASK *************************/
 
-ShaderDependencyTask::ShaderDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash)
-: ResourceDependencyTask(mgr, resource, hash)
+ShaderDependencyTask::ShaderDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri)
+: ResourceDependencyTask(mgr, resource, uri)
 {
 
 }
@@ -133,21 +133,21 @@ void ShaderDependencyTask::operator()()
 
 /***************************** SHADER LOAD TASK *************************/
 
-ShaderLoadTask::ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int archiveName, unsigned int epoch)
-: ResourceLoadTask(mgr, resourcePtr, hash, epoch), mArchiveName(archiveName)
+ShaderLoadTask::ShaderLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const URI &uri, unsigned int archiveName, unsigned int epoch)
+: ResourceLoadTask(mgr, resourcePtr, uri, epoch), mArchiveName(archiveName)
 {
 }
 
 void ShaderLoadTask::doRun()
 {
-  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mHash, mBuffer);
+    CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mURI.toString(), mBuffer);
   mResource->loaded(true, mEpoch);
 }
 
 /***************************** SHADER UNLOAD TASK *************************/
 
-ShaderUnloadTask::ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch)
-: ResourceUnloadTask(mgr, resource, hash, epoch), mArchiveName(archiveName)
+ShaderUnloadTask::ShaderUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int archiveName, unsigned int epoch)
+: ResourceUnloadTask(mgr, resource, uri, epoch), mArchiveName(archiveName)
 {
 
 }

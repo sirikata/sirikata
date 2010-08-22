@@ -40,7 +40,7 @@ namespace Meru {
 class ResourceUnloadTask : public DependencyTask
 {
 public:
-  ResourceUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256& hash, const unsigned int epoch);
+  ResourceUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri, const unsigned int epoch);
   virtual ~ResourceUnloadTask();
 
   virtual void operator() ()
@@ -65,7 +65,7 @@ protected:
   virtual void doRun() = 0;
 
   WeakResourcePtr mResource;
-  SHA256 mHash;
+    const URI mURI;
   const unsigned int mEpoch;
   bool mCancelled;
   bool mStarted;

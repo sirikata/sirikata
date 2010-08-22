@@ -33,7 +33,10 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 
+
 //#include <util/ListenerProvider.hpp>
+
+using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 
@@ -65,28 +68,35 @@ void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )
 
 void ProxyMeshObject::setMesh ( URI const& mesh )
 {
-    if (hasModelObject())
-        mModelObject->setMesh ( mesh );
-
-    /// dbm: this is what triggers Ogre mesh download [and Model for now]
-
-    MeshProvider::notify ( &MeshListener::onSetMesh, mesh );
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
+    //else assert(false);
 }
 
 URI const& ProxyMeshObject::getMesh () const
 {
-	static URI defaultReturn;
+    static URI defaultReturn;
     if (!hasModelObject())
         return defaultReturn;
 
     return mModelObject->getMesh ();
 }
 
+void ProxyMeshObject::meshDownloaded(std::tr1::shared_ptr<ChunkRequest>request,
+    std::tr1::shared_ptr<DenseData> response)
+{
+    if (hasModelObject()){
+        mModelObject->parseFile(request, response);
+    }
+}
+
 void ProxyMeshObject::setScale ( Vector3f const& scale )
 {
     if (hasModelObject())
         mModelObject->setScale ( scale );
-    MeshProvider::notify ( &MeshListener::onSetScale, scale );
+
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify (&MeshListener::onSetScale, ptr, scale );
 }
 
 Vector3f const& ProxyMeshObject::getScale () const
@@ -102,7 +112,9 @@ void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 {
     if (hasModelObject())
         mModelObject->setPhysical ( pp );
-    MeshProvider::notify ( &MeshListener::onSetPhysical, pp );
+
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify (&MeshListener::onSetPhysical, ptr, pp );
 }
 
 PhysicalParameters const& ProxyMeshObject::getPhysical () const
@@ -116,7 +128,8 @@ PhysicalParameters const& ProxyMeshObject::getPhysical () const
 
 void ProxyMeshObject::meshParsed (String hash, Meshdata* md)
 {
-    MeshProvider::notify ( &MeshListener::onMeshParsed, hash, *md );
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify (&MeshListener::onMeshParsed, ptr, hash, *md );
 }
 
 

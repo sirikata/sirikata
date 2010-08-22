@@ -114,14 +114,37 @@ void ColladaSystem::metadataFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy),
 }
 
 
-void ColladaSystem::loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy )
+void ColladaSystem::loadDocument (std::tr1::weak_ptr<ProxyMeshObject>(proxy),
+    std::tr1::shared_ptr<ChunkRequest> request,
+    std::tr1::shared_ptr<DenseData> response)
 {
-  TransferRequestPtr req(new MetadataRequest(what, 1, std::tr1::bind(&ColladaSystem::metadataFinished, this, proxy,
+    if (response != NULL) {
+
+      ColladaDocumentLoader loader(request->getMetadata().getURI(), proxy);
+
+      SparseData data = SparseData();
+      data.addValidData(response);
+
+      Transfer::DenseDataPtr flatData = data.flatten();
+
+      char const* buffer = reinterpret_cast<char const*>(flatData->begin());
+
+
+      if (loader.load(buffer, flatData->length())) {
+            // finally we can add the Product to our set of completed documents
+            mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
+      } else {
+            std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
+      }
+  } else std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
+
+
+ /* TransferRequestPtr req(new MetadataRequest(what, 1, std::tr1::bind(&ColladaSystem::metadataFinished, this, proxy,
 								    std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
 
 
- mTransferPool->addRequest(req);
+                                                                    mTransferPool->addRequest(req);*/
 
 
   // Use our TransferManager to async download the data into memory.

@@ -40,6 +40,8 @@
 #include "TransferHandlers.hpp"
 #include "URI.hpp"
 #include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -91,6 +93,7 @@ typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
 /*
  * Handles requests for metadata of a file when all you have is the URI
  */
+
 class MetadataRequest: public TransferRequest {
 
 public:
@@ -99,8 +102,15 @@ public:
             std::tr1::shared_ptr<RemoteFileMetadata> response)> MetadataCallback;
 
     MetadataRequest(const URI &uri, PriorityType priority, MetadataCallback cb) :
-        mURI(uri), mUniqueID(uri.toString()), mCallback(cb) {
+     mURI(uri), mCallback(cb) {
         mPriority = priority;
+
+        const time_t seconds = time(NULL);
+        int random = rand();
+
+        std::stringstream out;
+        out<<uri.toString()<<seconds<<random;
+        mUniqueID = out.str();
     }
 
     inline const std::string &getIdentifier() const {
@@ -132,15 +142,23 @@ public:
     }
 
 protected:
+
     const URI mURI;
-    const std::string mUniqueID;
+    std::string mUniqueID;
     MetadataCallback mCallback;
     std::tr1::shared_ptr<RemoteFileMetadata> mRemoteFileMetadata;
 
     MetadataRequest(const URI &uri, PriorityType priority) :
-        mURI(uri), mUniqueID(uri.toString()) {
+        mURI(uri) {
         mPriority = priority;
+        const time_t seconds = time(NULL);
+        int random = rand();
+
+        std::stringstream out;
+        out<<uri.toString()<<seconds<<random;
+        mUniqueID = out.str();
     }
+
 
     inline void execute_finished(std::tr1::shared_ptr<RemoteFileMetadata> response, ExecuteFinished cb) {
         mRemoteFileMetadata = response;
@@ -167,9 +185,16 @@ public:
 	        PriorityType priority, ChunkCallback cb)
 		: MetadataRequest(uri, priority),
 		  mMetadata(std::tr1::shared_ptr<RemoteFileMetadata>(new RemoteFileMetadata(metadata))),
-		  mUniqueID(MetadataRequest::mUniqueID + chunk.getHash().convertToHexString()),
 		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
 		  mCallback(cb) {
+
+            const time_t seconds = time(NULL);
+            int random = rand();
+
+            std::stringstream out;
+            out<<uri.toString()<<seconds<<random;
+            mUniqueID = out.str();
+
 	}
 
 	inline const RemoteFileMetadata& getMetadata() {
@@ -201,7 +226,7 @@ public:
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
-    const std::string mUniqueID;
+    std::string mUniqueID;
     std::tr1::shared_ptr<Chunk> mChunk;
     std::tr1::shared_ptr<DenseData> mDenseData;
     ChunkCallback mCallback;

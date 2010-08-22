@@ -44,19 +44,20 @@ namespace Meru {
 class GraphicsResourceAsset : public GraphicsResource
 {
 public:
-  GraphicsResourceAsset(const RemoteFileId &resourceID, GraphicsResource::Type type);
+  GraphicsResourceAsset(const URI &uri, GraphicsResource::Type type);
   virtual ~GraphicsResourceAsset();
 
-  inline const RemoteFileId &getRemoteFileId() const {
+    /*inline const RemoteFileId &getRemoteFileId() const {
     return mResourceID;
-  }
-  inline const URI& getURI() const{
-    return mResourceID.uri();
-  }
+    }*/
 
+  inline const URI& getURI() const{
+    return mURI;
+  }
+/*
   inline const SHA256 &getHash() const {
     return mResourceID.fingerprint();
-  }
+    }*/
 
 protected:
   virtual void doParse();
@@ -72,7 +73,8 @@ protected:
   virtual ResourceLoadTask * createLoadTask(DependencyManager *manager) = 0;
   virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager) = 0;
 
-  const RemoteFileId mResourceID;
+    //const RemoteFileId mResourceID;
+    const URI mURI;
 
   ResourceLoadTask* mLoadTask;
   ResourceDependencyTask* mParseTask;

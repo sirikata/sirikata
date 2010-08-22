@@ -59,6 +59,9 @@ public:
         ConnectionID();
         ConnectionID(const ConnectionID& rhs);
         ConnectionID& operator=(const ConnectionID& rhs);
+
+        bool operator==(const ConnectionID& rhs) const;
+        bool operator!=(const ConnectionID& rhs) const;
       private:
         friend class ObjectHostConnectionManager;
         friend class ObjectHostConnection;
@@ -73,8 +76,12 @@ public:
      *  from any strand -- use strand->wrap to ensure its handled in your strand.
      */
     typedef std::tr1::function<bool(ConnectionID, Sirikata::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
+    /** Callback generated when the underlying connection is closed, which will
+     *  trigger all objects on that connection to disconnect.
+     */
+    typedef std::tr1::function<void(ConnectionID)> ConnectionClosedCallback;
 
-    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
+    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb);
     ~ObjectHostConnectionManager();
 
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
@@ -108,6 +115,7 @@ private:
     ObjectHostConnectionSet mConnections;
 
     MessageReceivedCallback mMessageReceivedCallback;
+    ConnectionClosedCallback mConnectionClosedCallback;
 
 
     /** Listen for and handle new connections. */
@@ -116,12 +124,16 @@ private:
 
     /** Reading and writing handling for ObjectHostConnections. */
 
+    // Handle connection events for entire connections
+    void handleConnectionEvent(ObjectHostConnection* conn, Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason);
+
     // Handle async reading callbacks for this connection
     void handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
 
 
     // Utility methods which we can post to the main strand to ensure they operate safely.
     void insertConnection(ObjectHostConnection* conn);
+    void destroyConnection(ObjectHostConnection* conn);
     void closeAllConnections();
 };
 
