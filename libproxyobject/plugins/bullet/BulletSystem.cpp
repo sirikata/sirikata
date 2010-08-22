@@ -471,7 +471,7 @@ void BulletSystem::addPhysicalObject(BulletObj* obj,
     DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->mShape << endl);
     String fn = obj->mMeshptr->getMesh().toString();
     bool is_collada=false;
-    if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
+    if (fn.rfind(".dae")==fn.size()-4||fn.rfind(".DAE")==fn.size()-4) is_collada=true;
     if (obj->mDynamic) {
         /// create the object now
         obj->buildBulletBody(NULL, 0, is_collada);                /// no mesh data

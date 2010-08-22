@@ -305,7 +305,7 @@ void MeshEntity::setSelected(bool selected) {
 void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<DenseData> response)
 {
     String fn = request->getURI().filename();
-    if (fn.rfind(".dae") == fn.size() - 4) {
+    if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
         ProxyObject *obj = mProxy.get();
         ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
         if (meshProxy) {
@@ -339,7 +339,7 @@ void MeshEntity::processMesh(URI const& meshFile)
     /// hack to support collada mesh -- eventually this should be smarter
     String fn = meshFile.filename();
     bool is_collada=false;
-    if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
+    if (fn.rfind(".dae")==fn.size()-4 || fn.rfind(".DAE")==fn.size()-4) is_collada=true;
     if (is_collada) {
         Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
         Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset ( meshFile, Meru::GraphicsResource::MODEL );

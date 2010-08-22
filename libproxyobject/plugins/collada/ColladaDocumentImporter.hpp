@@ -144,19 +144,23 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
                 }
         };
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMap;
+        typedef std::tr1::unordered_multimap<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMultimap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
         
         
-
+        
         Meshdata::SubMeshGeometryList mGeometries;
-        IndicesMap mGeometryMap;
+        IndicesMultimap mGeometryMap;
         struct ExtraPrimitiveData {
             std::map<size_t, size_t> uvSetMap;
         };
         struct ExtraGeometryData {
             std::vector<ExtraPrimitiveData> primitives;
         };
+        void setupPrim(SubMeshGeometry::Primitive* outputPrim,
+                       ExtraPrimitiveData&outputPrimExtra,
+                       const COLLADAFW::MeshPrimitive*prim);
         std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
         IndicesMap mLightMap;
         Meshdata::LightInfoList mLights;
