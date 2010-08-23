@@ -125,6 +125,9 @@ class OgreSystem::MouseHandler {
     DeviceSubMap mDeviceSubscriptions;
 
     uint32 mScreenshotID;
+    bool mPeriodicScreenshot;
+    Task::LocalTime mScreenshotStartTime;
+    Task::LocalTime mLastScreenshotTime;
 
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
@@ -290,10 +293,26 @@ public:
     }
 private:
 
+    static String fillZeroPrefix(const String& prefill, int32 nwide) {
+        String retval = prefill;
+        while(retval.size() < nwide)
+            retval = String("0") + retval;
+        return retval;
+    }
+
     void screenshotAction() {
         String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".ppm");
         mParent->screenshot(fname);
         mScreenshotID++;
+    }
+
+    void togglePeriodicScreenshotAction() {
+        mPeriodicScreenshot = !mPeriodicScreenshot;
+    }
+
+    void timedScreenshotAction(const Task::LocalTime& t) {
+        String fname = String("screenshot-") + fillZeroPrefix(boost::lexical_cast<String>((t - mScreenshotStartTime).toMilliseconds()), 8) + String(".ppm");
+        mParent->screenshot(fname);
     }
 
     void quitAction() {
@@ -1481,6 +1500,13 @@ private:
         }
     }
 
+    void screenshotTick(const Task::LocalTime& t) {
+        if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.f/10.f))) {
+            timedScreenshotAction(t);
+            mLastScreenshotTime = t;
+        }
+    }
+
     /// WebView Actions
     void webViewNavigateAction(WebViewManager::NavigationAction action) {
         WebViewManager::getSingleton().navigate(action);
@@ -1543,6 +1569,9 @@ public:
     MouseHandler(OgreSystem *parent)
      : mParent(parent),
        mScreenshotID(0),
+       mPeriodicScreenshot(false),
+       mScreenshotStartTime(Task::LocalTime::now()),
+       mLastScreenshotTime(Task::LocalTime::now()),
        mCurrentGroup(SpaceObjectReference::null()),
        mLastCameraTime(Task::LocalTime::now()),
        mLastFpsTime(Task::LocalTime::now()),
@@ -1592,6 +1621,7 @@ public:
                 std::tr1::bind(&MouseHandler::webviewHandler, this, _1)));
 
         mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::screenshotAction, this));
+        mInputResponses["togglePeriodicScreenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::togglePeriodicScreenshotAction, this));
         mInputResponses["quit"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::quitAction, this));
 
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
@@ -1665,6 +1695,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
 
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I, Input::MOD_CTRL), mInputResponses["togglePeriodicScreenshot"]);
 
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
@@ -1766,6 +1797,7 @@ public:
     void tick(const Task::LocalTime& t) {
         cameraPathTick(t);
         fpsUpdateTick(t);
+        screenshotTick(t);
     }
 };
 
