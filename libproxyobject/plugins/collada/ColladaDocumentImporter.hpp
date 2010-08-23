@@ -46,8 +46,10 @@
 #include "COLLADAFWFileInfo.h"
 #include "COLLADAFWNode.h"
 #include "COLLADAFWColorOrTexture.h"
+#include "COLLADAFWEffect.h"
 #include "COLLADAFWEffectCommon.h"
-
+#include "COLLADAFWSkinControllerData.h"
+#include "COLLADAFWSkinController.h"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/Meshdata.hpp>
 
@@ -148,8 +150,23 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
         
-        
-        
+        struct SkinControllerData {
+            Matrix4x4f bindShapeMatrix;
+            ///n+1 elements where n is the number of vertices, so that we can do simple subtraction to find out how many joints influence each vertex
+            std::vector<unsigned int> weightStartIndices;
+            std::vector<float> weights;
+            std::vector<unsigned int>jointIndices;
+            std::vector<Matrix4x4f> inverseBindMatrices;
+        };
+        struct SkinController {
+            COLLADAFW::UniqueId source;
+            COLLADAFW::UniqueId skinControllerData;
+            std::vector<COLLADAFW::UniqueId> joints;
+        };
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId,SkinControllerData, UniqueIdHash> SkinControllerDataMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId,SkinController, UniqueIdHash> SkinControllerMap;
+        SkinControllerDataMap mSkinControllerData;
+        SkinControllerMap mSkinController;
         Meshdata::SubMeshGeometryList mGeometries;
         IndicesMultimap mGeometryMap;
         struct ExtraPrimitiveData {
@@ -167,8 +184,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         
         IdMap mMaterialMap;
         URIMap mTextureMap;
-        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, const COLLADAFW::Effect *, UniqueIdHash> ColladaEffectMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::Effect, UniqueIdHash> ColladaEffectMap;
         ColladaEffectMap mColladaEffects;
+        std::vector <COLLADAFW::EffectCommon*> mColladaClonedCommonEffects;
         //IndicesMap mEffectMap;
         Meshdata::MaterialEffectInfoList mEffects;
         

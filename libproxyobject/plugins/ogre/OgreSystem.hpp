@@ -125,6 +125,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     void postFrame(Task::LocalTime, Duration);
     void destroyRenderTarget(Ogre::ResourcePtr &name);
 
+    void screenshot(const String& filename);
+
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();
 

@@ -44,6 +44,12 @@ struct SubMeshGeometry {
     std::vector<Sirikata::Vector3f> normals;
     std::vector<Sirikata::Vector3f> tangents;
     std::vector<Sirikata::Vector4f> colors;
+    std::vector<unsigned int> influenceStartIndex;//a list of where a given position's joint weights start
+    std::vector<unsigned int> jointindices;
+    std::vector<float> weights;
+
+    std::vector<Sirikata::Matrix4x4f> inverseBindMatrices;
+
     struct TextureSet {
         unsigned int stride;
         std::vector<float> uvs;
