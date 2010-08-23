@@ -504,7 +504,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 //now that we know what the indices are, find them in the indexSetMap...if this is the first time we see the indices, we must gather the data and place it
                 //into our output list
 
-                std::tr1::unordered_map<IndexSet,unsigned short>::iterator where =  indexSetMap.find(uniqueIndexSet);
+                std::tr1::unordered_map<IndexSet,unsigned short,IndexSet::IndexSetHash>::iterator where =  indexSetMap.find(uniqueIndexSet);
                 int vertStride = 3;//verts.getStride(0);<-- OpenCollada returns bad values for this
                 int normStride = 3;//norms.getStride(0);<-- OpenCollada returns bad values for this
                 if (where==indexSetMap.end()&&indexSetMap.size()>=65530&&j%6==0) {//want a multiple of 6 so that lines and triangles terminate properly 65532%6==0
