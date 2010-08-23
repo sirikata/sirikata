@@ -473,7 +473,7 @@ public:
                 if (where!=mTextureFingerprints.end()) {
                     String ogreTextureName = where->second;
                     fixOgreURI(ogreTextureName);
-                    Ogre::TextureUnitState*tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                    Ogre::TextureUnitState*tus;
                     //tus->setTextureName(tex.uri);
                     //tus->setTextureCoordSet(tex.texCoord);
                     if (useAlpha==false) {
@@ -495,6 +495,10 @@ public:
                     }
                     switch (tex.affecting) {
                       case MaterialEffectInfo::Texture::DIFFUSE:
+                        if (tech->getNumPasses()<=valid_passes) {
+                            pass=tech->createPass();
+                            ++valid_passes;
+                        }
                         pass->setDiffuse(ColourValue(1,1,1,1));
 /*
                         pass->setAmbient(ColourValue(0,0,0,0));
@@ -502,19 +506,25 @@ public:
                         pass->setSpecular(ColourValue(0,0,0,0));
 */
                         //pass->setIlluminationStage(IS_PER_LIGHT);
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                        
                         tus->setColourOperation(LBO_MODULATE);
 
                         break;
                       case MaterialEffectInfo::Texture::AMBIENT:
-/*
+                        if (tech->getNumPasses()<=valid_passes) {
+                            pass=tech->createPass();
+                            ++valid_passes;
+                        }
+
                         pass->setDiffuse(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         pass->setSpecular(ColourValue(0,0,0,0));
-*/
+
                         pass->setAmbient(ColourValue(1,1,1,1));
                         tus->setColourOperation(LBO_MODULATE);
-                    
-                        //pass->setIlluminationStage(IS_AMBIENT);
+
+                        pass->setIlluminationStage(IS_AMBIENT);
                         break;
                       case MaterialEffectInfo::Texture::EMISSION:
 /*
@@ -522,20 +532,26 @@ public:
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSpecular(ColourValue(0,0,0,0));
 */
-                        pass->setSelfIllumination(ColourValue(1,1,1,1));
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+//                        pass->setSelfIllumination(ColourValue(1,1,1,1));
                         tus->setColourOperation(LBO_ADD);
                     
                         //pass->setIlluminationStage(IS_DECAL);
                         break;
                       case MaterialEffectInfo::Texture::SPECULAR:
-/*
+                        if (tech->getNumPasses()<=valid_passes) {
+                            pass=tech->createPass();
+                            ++valid_passes;
+                        }
+
+
                         pass->setDiffuse(ColourValue(0,0,0,0));
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         //pass->setIlluminationStage(IS_PER_LIGHT);
-                        */
-                        tus->setColourOperation(LBO_ADD);
-                    
+                        
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);                    
+                        tus->setColourOperation(LBO_MODULATE);
                         pass->setSpecular(ColourValue(1,1,1,1));
                         break;
                       default:
