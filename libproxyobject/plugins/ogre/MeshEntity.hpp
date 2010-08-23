@@ -87,6 +87,8 @@ private:
     bool createMeshWork(const Meshdata& md);
 
     void createMesh(const Meshdata& md);
+    bool mActiveCDNArchive;
+    unsigned int mCDNArchive;
 public:
     ProxyMeshObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);

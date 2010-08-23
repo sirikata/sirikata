@@ -171,45 +171,47 @@ void ColladaDocumentImporter::finish ()
                     const COLLADAFW::InstanceGeometry* geo_inst = curnode.node->getInstanceGeometries()[geo_idx];
                     // FIXME handle child nodes, such as materials
                     IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst->getInstanciatedObjectId());
-                    if (geo_it == mGeometryMap.end()) {
-                        continue;
-                    }
-                    GeometryInstance new_geo_inst;
-                    new_geo_inst.geometryIndex = geo_it->second;
-                    new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
-                    new_geo_inst.radius=0;
-                    new_geo_inst.aabb=BoundingBox3f3f::null();
-                    const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
-                    for (size_t bind=0;bind< bindings.getCount();++bind) {
-                        new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind]);
-                    }
-                    if (geo_it->second<mMesh->geometry.size()) {
-                        const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                        for (size_t i=0;i<geometry.primitives.size();++i) {
-                            const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
-                            size_t indsize=prim.indices.size();
-                            for (size_t j=0;j<indsize;++j) {
-                                Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
-                                Matrix4x4f trans = new_geo_inst.transform;
-                                Vector4f pos4= trans*Vector4f(untransformed_pos.x,
-                                                             untransformed_pos.y,
-                                                             untransformed_pos.z,
-                                                             1.0f);
-                                Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
-                                if (j==0&&i==0) {
-                                    new_geo_inst.aabb=BoundingBox3f3f(pos,0);
-                                    new_geo_inst.radius = pos.lengthSquared();
-                                }else {
-                                    new_geo_inst.aabb=new_geo_inst.aabb.merge(pos);
-                                    double rads=pos.lengthSquared();
-                                    if (rads> new_geo_inst.radius)
-                                        new_geo_inst.radius=rads;
+                    for (;geo_it != mGeometryMap.end()&&geo_it->first==geo_inst->getInstanciatedObjectId();++geo_it) {
+                        if (geo_it->second>=mMesh->geometry.size()||mMesh->geometry[geo_it->second].primitives.empty()) {
+                            continue;
+                        }
+                        GeometryInstance new_geo_inst;
+                        new_geo_inst.geometryIndex = geo_it->second;
+                        new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                        new_geo_inst.radius=0;
+                        new_geo_inst.aabb=BoundingBox3f3f::null();
+                        const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
+                        for (size_t bind=0;bind< bindings.getCount();++bind) {
+                            new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
+                            //stays the same between primitives
+                        }
+                        if (geo_it->second<mMesh->geometry.size()) {
+                            const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
+                            for (size_t i=0;i<geometry.primitives.size();++i) {
+                                const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
+                                size_t indsize=prim.indices.size();
+                                for (size_t j=0;j<indsize;++j) {
+                                    Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
+                                    Matrix4x4f trans = new_geo_inst.transform;
+                                    Vector4f pos4= trans*Vector4f(untransformed_pos.x,
+                                                                  untransformed_pos.y,
+                                                                  untransformed_pos.z,
+                                                                  1.0f);
+                                    Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
+                                    if (j==0&&i==0) {
+                                        new_geo_inst.aabb=BoundingBox3f3f(pos,0);
+                                        new_geo_inst.radius = pos.lengthSquared();
+                                    }else {
+                                        new_geo_inst.aabb=new_geo_inst.aabb.merge(pos);
+                                        double rads=pos.lengthSquared();
+                                        if (rads> new_geo_inst.radius)
+                                            new_geo_inst.radius=rads;
+                                    }
                                 }
                             }
+                            new_geo_inst.radius=sqrt(new_geo_inst.radius);
+                            mMesh->instances.push_back(new_geo_inst);
                         }
-                        new_geo_inst.radius=sqrt(new_geo_inst.radius);
-                        mMesh->instances.push_back(new_geo_inst);
-                        
                     }
                 }
 
@@ -336,6 +338,44 @@ struct IndexSet{
         return same;
     }
 };
+
+void ColladaDocumentImporter::setupPrim(SubMeshGeometry::Primitive* outputPrim,
+                                        ExtraPrimitiveData&outputPrimExtra,
+                                        const COLLADAFW::MeshPrimitive*prim) {
+    for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
+        outputPrimExtra.uvSetMap[prim->getUVCoordIndices(uvSet)->getSetIndex()]=uvSet;
+    }
+    switch(prim->getPrimitiveType()) {
+      case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIFANS;break;
+      case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::TRISTRIPS;break;
+      case COLLADAFW::MeshPrimitive::LINE_STRIPS:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::LINESTRIPS;break;
+      case COLLADAFW::MeshPrimitive::POINTS:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::POINTS;break;
+      case COLLADAFW::MeshPrimitive::LINES:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::LINES;break;
+      case COLLADAFW::MeshPrimitive::TRIANGLES:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;break;
+      default:
+        outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;
+    }
+    outputPrim->materialId= prim->getMaterialId();
+}
+IndexSet createIndexSet(const COLLADAFW::MeshPrimitive*prim,
+                        unsigned int whichIndex) {
+    IndexSet uniqueIndexSet;
+    //gather the indices from the previous set
+    uniqueIndexSet.positionIndices=prim->getPositionIndices()[whichIndex];
+    uniqueIndexSet.normalIndices=prim->hasNormalIndices()?prim->getNormalIndices()[whichIndex]:uniqueIndexSet.positionIndices;
+    
+    for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
+        uniqueIndexSet.uvIndices.push_back(prim->getUVCoordIndices(uvSet)->getIndex(whichIndex));
+    }
+    return uniqueIndexSet;
+    
+}
 bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometry )
 {
     String uri = mDocument->getURI().toString();
@@ -347,8 +387,9 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         return true;
         assert(false);
     }
-    mGeometryMap[geometry->getUniqueId()]=mGeometries.size();
+    mGeometryMap.insert(IndicesMultimap::value_type(geometry->getUniqueId(),mGeometries.size()));
     mGeometries.push_back(SubMeshGeometry());
+    mExtraGeometryData.push_back(ExtraGeometryData());
     SubMeshGeometry* submesh = &mGeometries.back();
     submesh->radius=0;
     submesh->aabb=BoundingBox3f3f::null();
@@ -395,45 +436,66 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         size_t offset=0;
         for (size_t i=0;i<groupedVertexElementCount;++i) {
             submesh->primitives.push_back(SubMeshGeometry::Primitive());
+            mExtraGeometryData.back().primitives.push_back(ExtraPrimitiveData());
             outputPrim=&submesh->primitives.back();
-            switch(prim->getPrimitiveType()) {
-              case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIFANS;break;
-              case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRISTRIPS;break;
-              case COLLADAFW::MeshPrimitive::LINE_STRIPS:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::LINESTRIPS;break;
-              case COLLADAFW::MeshPrimitive::POINTS:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::POINTS;break;
-              case COLLADAFW::MeshPrimitive::LINES:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::LINES;break;
-              case COLLADAFW::MeshPrimitive::TRIANGLES:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;break;
-              default:
-                outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIANGLES;
-            }
-            outputPrim->materialId= prim->getMaterialId();
+            setupPrim(outputPrim,mExtraGeometryData.back().primitives.back(),prim);
             size_t faceCount=prim->getGroupedVerticesVertexCount(i);
             if (!multiPrim)
                 faceCount *= prim->getGroupedVertexElementsCount();
             for (size_t j=0;j<faceCount;++j) {
                 size_t whichIndex = offset+j;
-                IndexSet uniqueIndexSet;
-
-                //gather the indices from the previous set
-                uniqueIndexSet.positionIndices=prim->getPositionIndices()[whichIndex];
-                uniqueIndexSet.normalIndices=prim->hasNormalIndices()?prim->getNormalIndices()[whichIndex]:uniqueIndexSet.positionIndices;
-
-                for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
-                    uniqueIndexSet.uvIndices.push_back(prim->getUVCoordIndices(uvSet)->getIndex(whichIndex));
-                }
-
+                IndexSet uniqueIndexSet=createIndexSet(prim,whichIndex);
                 //now that we know what the indices are, find them in the indexSetMap...if this is the first time we see the indices, we must gather the data and place it
                 //into our output list
 
                 std::tr1::unordered_map<IndexSet,unsigned short>::iterator where =  indexSetMap.find(uniqueIndexSet);
                 int vertStride = 3;//verts.getStride(0);<-- OpenCollada returns bad values for this
                 int normStride = 3;//norms.getStride(0);<-- OpenCollada returns bad values for this
+                if (where==indexSetMap.end()&&indexSetMap.size()>=65530&&j%6==0) {//want a multiple of 6 so that lines and triangles terminate properly 65532%6==0
+                    mGeometryMap.insert(IndicesMultimap::value_type(geometry->getUniqueId(),mGeometries.size()));
+                    mGeometries.push_back(SubMeshGeometry());
+                    mExtraGeometryData.push_back(ExtraGeometryData());
+                    submesh = &mGeometries.back();
+                    submesh->radius=0;
+                    submesh->aabb=BoundingBox3f3f::null();
+                    submesh->name = mesh->getName();
+                    //duplicated code from beginning of writeGeometry
+                    submesh->primitives.push_back(SubMeshGeometry::Primitive());
+                    mExtraGeometryData.back().primitives.push_back(ExtraPrimitiveData());
+                    outputPrim=&submesh->primitives.back();
+                    setupPrim(outputPrim,mExtraGeometryData.back().primitives.back(),prim);
+                    switch(prim->getPrimitiveType()) {
+                      case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
+                        SILOG(collada,error,"Do not support triangle fans with more than 64K elements");                        
+                        if (whichIndex-2>=offset) {
+                            j-=2;
+                        }
+                        whichIndex=offset;
+                        uniqueIndexSet=createIndexSet(prim,whichIndex);                        
+                        break;
+                      case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
+                        if (whichIndex-1>=offset) {
+                            j--;
+                            whichIndex--;
+                        }
+                        if (whichIndex-2>=offset) {
+                            j--;
+                            whichIndex--;
+                        }
+                      
+                        uniqueIndexSet=createIndexSet(prim,whichIndex);
+                        break;
+                      case COLLADAFW::MeshPrimitive::LINE_STRIPS:        
+                        if (whichIndex-1>=offset) {
+                            j--;
+                            whichIndex--;
+                        }
+                        uniqueIndexSet=createIndexSet(prim,whichIndex);
+                        break;
+                    }
+                    indexSetMap.clear();
+                    where=indexSetMap.end();
+                }
                 if (where==indexSetMap.end()) {
                     indexSetMap[uniqueIndexSet]=submesh->positions.size();
                     outputPrim->indices.push_back(submesh->positions.size());
@@ -451,9 +513,9 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                             submesh->aabb=BoundingBox3f3f(submesh->positions.back(),0);
                         else
                             submesh->aabb=submesh->aabb.merge(submesh->positions.back());
-                        double l2=submesh->positions.back().lengthSquared();
-                        if (l2>submesh->radius)
-                            submesh->radius=l2;
+                        double l=sqrt(submesh->positions.back().lengthSquared());
+                        if (l>submesh->radius)
+                            submesh->radius=l;
 
                     }else {
                         COLLADA_LOG(error,"SubMesh without position index data\n");
@@ -497,7 +559,6 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         }
 
     }
-    submesh->radius=sqrt(submesh->radius);
     bool ok = mDocument->import ( *this, *geometry );
 
     return ok;
@@ -512,21 +573,29 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
-void ColladaDocumentImporter::makeTexture 
+bool ColladaDocumentImporter::makeTexture 
                          (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding *binding,
                           const COLLADAFW::EffectCommon * effectCommon, 
                           const COLLADAFW::ColorOrTexture & color, 
-                          MaterialEffectInfo::TextureList&output ) {
+                          size_t geomindex,
+                          size_t primindex,
+                          MaterialEffectInfo::TextureList&output , bool forceBlack) {
     using namespace COLLADAFW;
     if (color.isColor()) {
-        output.push_back(MaterialEffectInfo::Texture());
-        MaterialEffectInfo::Texture &retval=output.back();
-
-        retval.color.x=color.getColor().getRed();
-        retval.color.y=color.getColor().getGreen();
-        retval.color.z=color.getColor().getBlue();
-        retval.color.w=color.getColor().getAlpha();
+        if (color.getColor().getRed() ||
+            color.getColor().getGreen() ||
+            color.getColor().getBlue() ||
+            color.getColor().getAlpha()||forceBlack) {
+            output.push_back(MaterialEffectInfo::Texture());
+            MaterialEffectInfo::Texture &retval=output.back();
+            
+            retval.color.x=color.getColor().getRed();
+            retval.color.y=color.getColor().getGreen();
+            retval.color.z=color.getColor().getBlue();
+            retval.color.w=color.getColor().getAlpha();
+            retval.affecting = type;
+        }else return false;
     }else if (color.isTexture()){
         output.push_back(MaterialEffectInfo::Texture());
         MaterialEffectInfo::Texture &retval=output.back();
@@ -537,7 +606,7 @@ void ColladaDocumentImporter::makeTexture
         for (size_t i=0;i<tbindcount;++i) {
             const TextureCoordinateBinding& b=binding->getTextureCoordinateBindingArray()[i];
             if (b.getTextureMapId()==tid) {
-                retval.texCoord = b.getSetIndex();//is this correct!?
+                retval.texCoord = mExtraGeometryData[geomindex].primitives[primindex].uvSetMap[b.getSetIndex()];//is this correct!?
                 break;
             }
         }
@@ -604,6 +673,7 @@ void ColladaDocumentImporter::makeTexture
         retval.maxMipLevel = sampler->getMipmapMaxlevel();
         retval.uri = mTextureMap[sampler->getSourceImage()];
     }
+    return true;
 }
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
@@ -612,7 +682,7 @@ bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
     mColladaEffects[effect->getUniqueId()]=effect;
     return true;
 }
-size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding) {
+size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geomIndex, size_t primIndex) {
     using namespace COLLADAFW;
     size_t retval=mEffects.size();
     mEffects.push_back(MaterialEffectInfo());
@@ -629,23 +699,33 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
     }
     MaterialEffectInfo&mat = mEffects.back();
     CommonEffectPointerArray commonEffects = effect->getCommonEffects();
+    bool allBlack=true;
+    bool curBlack=false;
     if (commonEffects.getCount()) {
         EffectCommon* commonEffect = commonEffects[0];
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
-          case EffectCommon::SHADER_PHONG:
-            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),mat.textures);
+          case EffectCommon::SHADER_PHONG:            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
+            if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_LAMBERT:
-            makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),mat.textures);
-            makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),mat.textures);
-            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
+            if (!curBlack) allBlack=false;
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
+            if (!curBlack) allBlack=false;            
           case EffectCommon::SHADER_CONSTANT:
-            makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),mat.textures);
-            makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),mat.textures);
-            makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),mat.textures);
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),geomIndex,primIndex,mat.textures);
+            if (!curBlack) allBlack=false;            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),geomIndex,primIndex,mat.textures);
+            if (!curBlack) allBlack=false;            
+            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
+            if (!curBlack) allBlack=false;            
             break;
           default:
             break;
+        }
+        if (allBlack) {
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures,true);
         }
         mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
             ? commonEffect->getShininess().getFloatValue()

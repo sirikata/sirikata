@@ -67,7 +67,8 @@ struct SubMeshGeometry {
     std::vector<Primitive> primitives;
 };
 struct GeometryInstance {
-    std::map<SubMeshGeometry::Primitive::MaterialId,size_t> materialBindingMap;//maps materialIndex to offset in Meshdata's materials
+    typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
+    MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
     BoundingBox3f3f aabb;//transformed aabb

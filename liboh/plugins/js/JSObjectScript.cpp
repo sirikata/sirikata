@@ -311,7 +311,6 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
-        //if(mAddressableList[s]->getAsUUID().toString() == myUUID.toString())
         if((*mAddressableList[s]) == mSporef)
             system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), tmpObj);
 
@@ -473,18 +472,6 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
             cb
         )
     );
-
-        
-    //
-//     mParent->getObjectHost()->getSpaceIO()->post(
-//         dur,
-//         std::tr1::bind(
-//             &JSObjectScript::handleTimeout,
-//             this,
-//             target,
-//             cb
-//         )
-//     );
 }
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
@@ -541,15 +528,16 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 
 //DEPRECATED: use getVisualFunction
-v8::Handle<v8::String> JSObjectScript::getVisual(const SpaceObjectReference* sporef)
+v8::Handle<v8::Value> JSObjectScript::getVisual(const SpaceObjectReference* sporef)
 {
-    //std::string url_string = mParent->requestMeshUri(*sID, *oref).toString();
-    //return v8::String::New( url_string.c_str(), url_string.size() );
-    assert(false);
-    std::string returner = "Not working yet";
-    return v8::String::New(returner.c_str(), returner.size());
+    Transfer::URI uri_returner;
+    bool hasMesh = mParent->requestMeshUri(sporef->space(),sporef->object(),uri_returner);
 
-//    return v8::Undefined();
+    if (! hasMesh)
+        return v8::Undefined();
+    
+    std::string string_returner = uri_returner.toString();
+    return v8::String::New(string_returner.c_str(), string_returner.size());
 }
 
 
@@ -766,11 +754,6 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 
 void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
-    std::cout<<"\n\n\n";
-    std::cout<<"Got into handleCommunicationMessageNewProto";
-    std::cout<<"\n\n\n";
-
-    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
@@ -821,63 +804,6 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
         std::cout<<"\n\nMessage did not match any files\n\n";
 }
 
-//just a handler for receiving any message.  for now, not doing any dispatch.
-void JSObjectScript::handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload)
-{
-    std::cout<<"\n\n\n";
-    std::cout<<"Got into handleCommunicationMessage";
-    std::cout<<"\n\n\n";
-
-    
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-    v8::Local<v8::Object> obj = v8::Object::New();
-
-    v8::Local<v8::Object> msgSender = getMessageSender(hdr);
-    //try deserialization
-    bool deserializeWorks;
-    deserializeWorks = JSSerializer::deserializeObject( payload,obj);
-
-    /*
-      FIXME: perhaps send a message back saying that deserialization failed
-    */
-    if (! deserializeWorks)
-        return;
-
-
-    // Checks if matches some handler.  Try to dispatch the message
-    bool matchesSomeHandler = false;
-
-
-    //cannot affect the event handlers when we are executing event handlers.
-    mHandlingEvent = true;
-
-    for (int s=0; s < (int) mEventHandlers.size(); ++s)
-    {
-        if (mEventHandlers[s]->matches(obj,msgSender))
-        {
-            // Adding support for the knowing the message properties too
-            int argc = 2;
-
-            Handle<Value> argv[2] = { obj, msgSender };
-            ProtectedJSCallback(mContext, mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
-
-            matchesSomeHandler = true;
-        }
-    }
-
-
-    mHandlingEvent = false;
-    flushQueuedHandlerEvents();
-
-
-    /*
-      FIXME: What should I do if the message that I receive does not match any handler?
-     */
-    if (!matchesSomeHandler)
-        std::cout<<"\n\nMessage did not match any files\n\n";
-
-}
 
 
 //This function takes care of all of the event handling changes that were queued

@@ -177,28 +177,31 @@ private:
         // update to values.
         void propertyUpdated(const UUID& uuid, LocationService* locservice, UpdateFunctor fup) {
             // Add the update to each subscribed object
+
+            
             typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
             if (obj_sub_it == mObjectSubscribers.end()) return;
 
             SubscriberSet* object_subscribers = obj_sub_it->second;
-
+            
             
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
+
+
+                
                 if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
                 assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
                 SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
                 if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
                 assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
 
+                
                 if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
                     UpdateInfo new_ui;
                     new_ui.location = locservice->location(uuid);
                     new_ui.bounds = locservice->bounds(uuid);
                     new_ui.mesh = locservice->mesh(uuid);
-                    //lkjs
                     new_ui.orientation = locservice->orientation(uuid);
-                    //lkjs;
-                    
                     sub_info->outstandingUpdates[uuid] = new_ui;
                 }
 
@@ -234,6 +237,9 @@ private:
         }
 
         void meshUpdated(const UUID& uuid, const String& newval, LocationService* locservice) {
+
+            std::cout<<"\n\n\n\n\nGot into mesh updated function of AlwaysLocationUpdatePolicy.hpp\n\n\n";
+            
             propertyUpdated(
                 uuid, locservice,
                 std::tr1::bind(&setUIMesh, std::tr1::placeholders::_1, newval)

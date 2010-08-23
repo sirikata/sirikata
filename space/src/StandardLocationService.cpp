@@ -363,6 +363,7 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                 String newmesh = request.mesh();
                 loc_it->second.mesh = newmesh;
                 notifyLocalMeshUpdated( source, newmesh );
+
             }
 
             if (request.has_orientation()) {

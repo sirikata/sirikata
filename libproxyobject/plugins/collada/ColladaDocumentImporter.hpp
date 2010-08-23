@@ -92,12 +92,15 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
-        void makeTexture (MaterialEffectInfo::Texture::Affecting type,
+        //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
+        bool makeTexture (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding * binding, 
                           const COLLADAFW::EffectCommon * effect, 
                           const COLLADAFW::ColorOrTexture & color,
-                          MaterialEffectInfo::TextureList&output);
-        size_t finishEffect(const COLLADAFW::MaterialBinding *binding);
+                          size_t geom_index,
+                          size_t prim_index,
+                          MaterialEffectInfo::TextureList&output, bool forceBlack=false);
+        size_t finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geom_index, size_t prim_index);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
     public:
@@ -141,15 +144,24 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
                 }
         };
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMap;
+        typedef std::tr1::unordered_multimap<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMultimap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
         
         
-
+        
         Meshdata::SubMeshGeometryList mGeometries;
-        IndicesMap mGeometryMap;
-
-
+        IndicesMultimap mGeometryMap;
+        struct ExtraPrimitiveData {
+            std::map<size_t, size_t> uvSetMap;
+        };
+        struct ExtraGeometryData {
+            std::vector<ExtraPrimitiveData> primitives;
+        };
+        void setupPrim(SubMeshGeometry::Primitive* outputPrim,
+                       ExtraPrimitiveData&outputPrimExtra,
+                       const COLLADAFW::MeshPrimitive*prim);
+        std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
         IndicesMap mLightMap;
         Meshdata::LightInfoList mLights;
         

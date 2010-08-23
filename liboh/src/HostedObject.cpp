@@ -1699,30 +1699,23 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
 }
 
 
-// //BFTM: FIXME: we're assuming that all scripted objects have meshes.
-// Transfer::URI const& HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref)
-// {
+bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri)
+{
     
-//     ProxyManagerPtr proxy_manager = getProxyManager(space);
-//     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+    ProxyManagerPtr proxy_manager = getProxyManager(space);
+    ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
-//     ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObjectPtr,ProxyObject> (proxy_obj);
-//     //ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(proxy_obj);
+
+    //this cast does not work.
+    ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
+
     
+    if (proxy_mesh_obj )
+        return false;
 
-// //     if (proxy_mesh_obj == NULL)
-// //     {
-// //         std::cout<<"\n\nRequesting the mesh uri for an object that shouldn't have a mesh\n\n";
-// //         std::cout.flush();
-// //         assert(false);
-// //     }
-// //     return proxy_mesh_obj->getMesh();
-
-//     // assert(false);
-
-//     Transfer::URI incorrect("incorrect");
-//     return incorrect;
-// }
+    tUri =  proxy_mesh_obj->getMesh();
+    return true;
+}
 
 
 

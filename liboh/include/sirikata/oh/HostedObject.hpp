@@ -409,6 +409,8 @@ public:
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
     //virtual void requestMeshUpdate(const SpaceID& space);
     //virtual Transfer::URI const& requestMeshUri(const SpaceID& space, const ObjectReference& oref);
+    virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
+
     
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);

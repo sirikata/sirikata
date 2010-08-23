@@ -107,7 +107,7 @@ public:
     //v8::Handle<v8::String> getVisual();
     //void setVisual(v8::Local<v8::Value>& newvis);
     
-    v8::Handle<v8::String> getVisual(const SpaceObjectReference* sporef);
+    v8::Handle<v8::Value> getVisual(const SpaceObjectReference* sporef);
     //void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
     void  setVisual(const SpaceObjectReference* sporef, const std::string& newMeshString);
 
@@ -167,10 +167,8 @@ private:
 
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    void handleCommunicationMessage(const RoutableMessageHeader& hdr, MemoryReference payload);
     void getAllMessageable(AddressableList&allAvailableObjectReferences) const;
     v8::Handle<v8::Value> protectedEval(const String& script_str);
-
 
     
 
@@ -186,8 +184,6 @@ private:
     
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
-
-
     
 
 

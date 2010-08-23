@@ -135,7 +135,10 @@ void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, const BoundingS
         (*it)->localBoundsUpdated(uuid, newval);
 }
 
-void LocationService::notifyLocalMeshUpdated(const UUID& uuid, const String& newval) const {
+void LocationService::notifyLocalMeshUpdated(const UUID& uuid, const String& newval) const
+{
+    std::cout<<"\n\n\nInside of notifyLocalMeshUpdated in LocationService.cpp.  This is newval: "<<newval<<"\n\n\n";
+    
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->localMeshUpdated(uuid, newval);
 }
