@@ -62,6 +62,8 @@
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 
+#include <boost/lexical_cast.hpp>
+
 namespace Sirikata {
 namespace Graphics {
 using namespace Input;
@@ -121,6 +123,8 @@ class OgreSystem::MouseHandler {
     std::vector<SubscriptionId> mEvents;
     typedef std::multimap<InputDevice*, SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
+
+    uint32 mScreenshotID;
 
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
@@ -285,6 +289,12 @@ public:
         mSelectedObjects.clear();
     }
 private:
+
+    void screenshotAction() {
+        String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".ppm");
+        mParent->screenshot(fname);
+        mScreenshotID++;
+    }
 
     void quitAction() {
         mParent->quit();
@@ -1532,6 +1542,7 @@ private:
 public:
     MouseHandler(OgreSystem *parent)
      : mParent(parent),
+       mScreenshotID(0),
        mCurrentGroup(SpaceObjectReference::null()),
        mLastCameraTime(Task::LocalTime::now()),
        mLastFpsTime(Task::LocalTime::now()),
@@ -1580,6 +1591,7 @@ public:
                 WebViewEvent::Id,
                 std::tr1::bind(&MouseHandler::webviewHandler, this, _1)));
 
+        mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::screenshotAction, this));
         mInputResponses["quit"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::quitAction, this));
 
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
@@ -1651,6 +1663,8 @@ public:
 
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
+
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
 
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
