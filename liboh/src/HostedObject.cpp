@@ -1709,6 +1709,7 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
     //this cast does not work.
     ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
 
+    //lkjs;
     
     if (proxy_mesh_obj )
         return false;
@@ -1752,7 +1753,29 @@ void HostedObject::requestBoundsUpdate(const SpaceID& space, const BoundingSpher
     sendLocUpdateRequest(space, NULL, NULL, &bounds, NULL);
 }
 
-void HostedObject::requestMeshUpdate(const SpaceID& space, const String& mesh) {
+void HostedObject::requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo)
+{
+    std::cout<<"\n\nThe requestScaleUpdate function does not work\n\n";
+    assert(false);
+}
+
+bool HostedObject::requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler)
+{
+    std::cout<<"\n\nThe requestCurrentScale function does not work\n\n";
+    assert(false);
+    return false;
+    //lkjs;
+    // ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    // ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
+    
+    // if (proxy_mesh_obj )
+    //     return false;
+    // return proxy_mesh_obj->getBounds();
+}
+
+
+void HostedObject::requestMeshUpdate(const SpaceID& space, const String& mesh)
+{
     sendLocUpdateRequest(space, NULL, NULL, NULL, &mesh);
 }
 

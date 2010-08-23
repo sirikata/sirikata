@@ -204,68 +204,6 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
 
 
-// Visual
-
-// v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info) {
-//     JSObjectScript* target_script = GetTargetJSObjectScript(info);
-//     return target_script->getVisual();
-// }
-
-// void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
-//     JSObjectScript* target_script = GetTargetJSObjectScript(info);
-//     target_script->setVisual(value);
-// }
-
-
-
-
-// Scale
-
-v8::Handle<v8::Value> ScriptGetScale(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    return target_script->getVisualScale();
-}
-
-void ScriptSetScale(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    target_script->setVisualScale(value);
-}
-
-
-
-
-// Velocity
-
-v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    return target_script->getVelocity();
-}
-
-void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    target_script->setVelocity(value);
-}
-
-
-// Orientation
-
-v8::Handle<v8::Value> ScriptGetOrientation(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    return target_script->getOrientation();
-}
-
-void ScriptSetOrientation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    target_script->setOrientation(value);
-}
-
-
 // AxisOfRotation
 
 v8::Handle<v8::Value> ScriptGetAxisOfRotation(v8::Local<v8::String> property, const v8::AccessorInfo &info)
@@ -345,20 +283,27 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
 
-    
-   // Sender
-    JSObjectScript* dummy_jsscript      = NULL;
-    SpaceObjectReference* dummy_sporef  = NULL;
-    if (! JSAddressable::decodeAddressable(sender_val,dummy_jsscript,dummy_sporef))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Not a valid sender.")) );
-
-    
-
     v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
     v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
 
-    v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
+    // Sender
+    JSObjectScript* dummy_jsscript      = NULL;
+    SpaceObjectReference* dummy_sporef  = NULL;
+    if (! sender_val->IsNull())  //means that it's a valid sender
+    {
+        if (! JSAddressable::decodeAddressable(sender_val,dummy_jsscript,dummy_sporef))
+        {
+            std::cout<<"\n\nWarning: did not receive a valid sender: will match any sender\n\n";
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Not a valid sender.")) );
+        }
+    }
+        
+    v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);    
     v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
+
+    //originally
+    //v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);    
+    //v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
 
 
     // Function

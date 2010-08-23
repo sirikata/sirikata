@@ -24,14 +24,7 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args);
 v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> Print(const v8::Arguments& args);
 
-v8::Handle<v8::Value> ScriptGetScale(v8::Local<v8::String> property, const v8::AccessorInfo &info);
-void ScriptSetScale(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
-v8::Handle<v8::Value> ScriptGetPosition(v8::Local<v8::String> property, const v8::AccessorInfo &info);
-void ScriptSetPosition(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
-v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);
-void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
-v8::Handle<v8::Value> ScriptGetOrientation(v8::Local<v8::String> property, const v8::AccessorInfo &info);
-void ScriptSetOrientation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
+
 v8::Handle<v8::Value> ScriptGetAxisOfRotation(v8::Local<v8::String> property, const v8::AccessorInfo &info);
 void ScriptSetAxisOfRotation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 v8::Handle<v8::Value> ScriptGetAngularSpeed(v8::Local<v8::String> property, const v8::AccessorInfo &info);
