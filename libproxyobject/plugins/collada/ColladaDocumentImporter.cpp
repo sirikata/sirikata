@@ -67,7 +67,18 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
 ColladaDocumentImporter::~ColladaDocumentImporter ()
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::~ColladaDocumentImporter() entered" << std::endl,true));
-
+    for (size_t i=0;i<mColladaClonedCommonEffects.size();++i) {
+        delete mColladaClonedCommonEffects[i];
+    }
+    for (ColladaEffectMap::iterator i=mColladaEffects.begin();i!=mColladaEffects.end();i++) {
+        delete i->second;
+    }
+    for (SkinControllerMap::iterator i=mSkinController.begin();i!=mSkinController.end();i++) {
+        delete i->second;
+    }
+    for (SkinControllerDataMap::iterator i=mSkinControllerData.begin();i!=mSkinControllerData.end();i++) {
+        delete i->second;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -126,6 +137,36 @@ struct NodeState {
     Modes mode;
 };
 } // namespace Collada
+
+double computeRadiusAndBounds(const SubMeshGeometry&geometry, const Matrix4x4f &new_geo_inst_transform, BoundingBox3f3f&new_geo_inst_aabb) {
+    double new_geo_inst_radius=0;
+    new_geo_inst_aabb=BoundingBox3f3f::null();
+    for (size_t i=0;i<geometry.primitives.size();++i) {
+        const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
+        size_t indsize=prim.indices.size();
+        for (size_t j=0;j<indsize;++j) {
+            Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
+            Matrix4x4f trans = new_geo_inst_transform;
+            Vector4f pos4= trans*Vector4f(untransformed_pos.x,
+                                          untransformed_pos.y,
+                                          untransformed_pos.z,
+                                          1.0f);
+            Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
+            if (j==0&&i==0) {
+                new_geo_inst_aabb=BoundingBox3f3f(pos,0);
+                new_geo_inst_radius = pos.lengthSquared();
+            }else {
+                new_geo_inst_aabb=new_geo_inst_aabb.merge(pos);
+                double rads=pos.lengthSquared();
+                if (rads> new_geo_inst_radius)
+                    new_geo_inst_radius=rads;
+            }
+        }
+    }
+    new_geo_inst_radius=sqrt(new_geo_inst_radius);
+    return new_geo_inst_radius;
+}
+
 
 void ColladaDocumentImporter::finish ()
 {
@@ -187,30 +228,43 @@ void ColladaDocumentImporter::finish ()
                         }
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                            for (size_t i=0;i<geometry.primitives.size();++i) {
-                                const SubMeshGeometry::Primitive & prim=geometry.primitives[i];
-                                size_t indsize=prim.indices.size();
-                                for (size_t j=0;j<indsize;++j) {
-                                    Vector3f untransformed_pos = geometry.positions[prim.indices[j]];
-                                    Matrix4x4f trans = new_geo_inst.transform;
-                                    Vector4f pos4= trans*Vector4f(untransformed_pos.x,
-                                                                  untransformed_pos.y,
-                                                                  untransformed_pos.z,
-                                                                  1.0f);
-                                    Vector3f pos (pos4.x/pos4.w,pos4.y/pos4.w,pos4.z/pos4.w);
-                                    if (j==0&&i==0) {
-                                        new_geo_inst.aabb=BoundingBox3f3f(pos,0);
-                                        new_geo_inst.radius = pos.lengthSquared();
-                                    }else {
-                                        new_geo_inst.aabb=new_geo_inst.aabb.merge(pos);
-                                        double rads=pos.lengthSquared();
-                                        if (rads> new_geo_inst.radius)
-                                            new_geo_inst.radius=rads;
-                                    }
-                                }
-                            }
-                            new_geo_inst.radius=sqrt(new_geo_inst.radius);
+                            new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
+                            
                             mMesh->instances.push_back(new_geo_inst);
+                        }
+                    }
+                }
+
+                // Instance Controllers
+                for(size_t geo_idx = 0; geo_idx < curnode.node->getInstanceControllers().getCount(); geo_idx++) {
+                    const COLLADAFW::InstanceController* geo_inst = curnode.node->getInstanceControllers()[geo_idx];
+                    // FIXME handle child nodes, such as materials
+                    SkinControllerMap::const_iterator skin_it = mSkinController.find(geo_inst->getInstanciatedObjectId());
+                    if (skin_it != mSkinController.end()) {
+                        
+                        COLLADAFW::UniqueId geo_inst_geometry_name=skin_it->second->getSource();
+                        IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst_geometry_name);
+                        for (;geo_it != mGeometryMap.end()&&geo_it->first==geo_inst_geometry_name;++geo_it) {
+                            
+                            if (geo_it->second>=mMesh->geometry.size()||mMesh->geometry[geo_it->second].primitives.empty()) {
+                                continue;
+                            }
+                            GeometryInstance new_geo_inst;
+                            new_geo_inst.geometryIndex = geo_it->second;
+                            new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                            new_geo_inst.radius=0;
+                            new_geo_inst.aabb=BoundingBox3f3f::null();
+                            const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
+                            for (size_t bind=0;bind< bindings.getCount();++bind) {
+                                new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
+                                //stays the same between primitives
+                            }
+                            if (geo_it->second<mMesh->geometry.size()) {
+                                const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
+                                new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
+                                
+                                mMesh->instances.push_back(new_geo_inst);
+                            }
                         }
                     }
                 }
@@ -492,6 +546,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                         }
                         uniqueIndexSet=createIndexSet(prim,whichIndex);
                         break;
+                      default:break;
                     }
                     indexSetMap.clear();
                     where=indexSetMap.end();
@@ -676,10 +731,16 @@ bool ColladaDocumentImporter::makeTexture
     return true;
 }
 
-bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* effect )
+bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << effect << ") entered" << std::endl,true));
-    mColladaEffects[effect->getUniqueId()]=effect;
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << eff << ") entered" << std::endl,true));
+    COLLADAFW::Effect *effect = (mColladaEffects[eff->getUniqueId()]= new COLLADAFW::Effect(eff->getUniqueId()));
+    *effect=*eff;
+    COLLADAFW::CommonEffectPointerArray &commonEffect=effect->getCommonEffects();
+    for (size_t i=0;i<commonEffect.getCount();++i) {
+        /*mColladaClonedCommonEffects.push_back*/(commonEffect[i]=new COLLADAFW::EffectCommon(*commonEffect[i]));
+        // don't need to delete them, commonEffect will
+    }
     return true;
 }
 size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geomIndex, size_t primIndex) {
@@ -819,9 +880,29 @@ bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList cons
     return true;
 }
 
-
+#define SKIN_GETSET(target,source,name) ((target)->set##name((source)->get##name()))
+#define SKIN_COPY(target,source,name) ((source)->get##name().cloneArray((target)->get##name()))
 bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControllerData const* skinControllerData )
 {
+    COLLADAFW::SkinControllerData * copy = (mSkinControllerData[skinControllerData->getUniqueId()]= new COLLADAFW::SkinControllerData(skinControllerData->getUniqueId()));
+    SKIN_GETSET(copy,skinControllerData,Name);
+    SKIN_GETSET(copy,skinControllerData,BindShapeMatrix);
+    SKIN_GETSET(copy,skinControllerData,JointsCount);
+    copy->getWeights().setType(COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT);
+    if (skinControllerData->getWeights().getType()==COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
+        skinControllerData->getWeights().getFloatValues()->cloneArray(*copy->getWeights().getFloatValues());
+    }else {
+        size_t count = skinControllerData->getWeights().getFloatValues()->getCount();
+        copy->getWeights().getFloatValues()->allocMemory(skinControllerData->getWeights().getFloatValues()->getCapacity());
+        copy->getWeights().getFloatValues()->setCount(count);
+        for (size_t i=0;i<count;++i) {
+            (*copy->getWeights().getFloatValues())[i]=(*skinControllerData->getWeights().getFloatValues())[i];
+        }
+    }
+    SKIN_COPY(copy,skinControllerData,JointsPerVertex);
+    SKIN_COPY(copy,skinControllerData,WeightIndices);
+    SKIN_COPY(copy,skinControllerData,JointIndices);
+
     assert((std::cout << "MCB: ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered" << std::endl,true));
     return true;
 }
@@ -829,6 +910,14 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
 
 bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* controller )
 {
+    if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {
+        const COLLADAFW::SkinController * skinController = dynamic_cast<const COLLADAFW::SkinController*>(controller);
+        COLLADAFW::SkinController * copy = (mSkinController[controller->getUniqueId()] = new COLLADAFW::SkinController(skinController->getUniqueId()));
+        SKIN_GETSET(copy,skinController,Source);
+        SKIN_GETSET(copy,skinController,SkinControllerData);
+        SKIN_COPY(copy,skinController,Joints);
+    }
+
     assert((std::cout << "MCB: ColladaDocumentImporter::writeController(" << controller << ") entered" << std::endl,true));
     return true;
 }
