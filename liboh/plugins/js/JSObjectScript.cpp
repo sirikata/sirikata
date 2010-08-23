@@ -527,54 +527,8 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 // }
 
 
-//DEPRECATED: use getVisualFunction
-v8::Handle<v8::Value> JSObjectScript::getVisual(const SpaceObjectReference* sporef)
-{
-    Transfer::URI uri_returner;
-    bool hasMesh = mParent->requestMeshUri(sporef->space(),sporef->object(),uri_returner);
-
-    if (! hasMesh)
-        return v8::Undefined();
-    
-    std::string string_returner = uri_returner.toString();
-    return v8::String::New(string_returner.c_str(), string_returner.size());
-}
 
 
-//DEPRECATED: use setVisualFunction
-//FIXME: May want to have an error handler for this function.
-void  JSObjectScript::setVisual(const SpaceObjectReference* sporef, const std::string& newMeshString)
-{
-    //mParent->requestMeshUpdate(*sID,newMeshString);
-    //FIXME: need to also pass in the object reference
-    mParent->requestMeshUpdate(sporef->space(),newMeshString);
-}
-
-
-
-//FIXME: need to return the right space here.
-//lkjs; need to return the visuals for a particular space.;
-v8::Handle<v8::Value> JSObjectScript::getVisualScale() {
-    //FIXME: actually need to write this function.
-    assert(false);
-    return v8::Undefined();
-    //lkjs;
-    //FIXME_GET_SPACE();
-    //return CreateJSResult(mContext, mParent->getVisualScale(space));
-}
-
-void JSObjectScript::setVisualScale(v8::Local<v8::Value>& newscale) {
-    Handle<Object> scale_obj = ObjectCast(newscale);
-    if (!Vec3Validate(scale_obj))
-        return;
-
-    Vector3f native_scale(Vec3Extract(scale_obj));
-    FIXME_GET_SPACE();
-    assert(false);
-    //lkjs;
-    //FIXME: write this function.
-    //mParent->setVisualScale(space, native_scale);
-}
 
 #define CreateLocationAccessorHandlersWithSpace(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
     v8::Handle<v8::Value> JSObjectScript::get##PropName(SpaceID& space) {             \
@@ -661,29 +615,8 @@ v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectRefer
 }
 
 
-//now going to change quaternion
 
-
-v8::Handle<v8::String> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
-{
-    //std::string url_string = mParent->requestMeshUri(*sID, *oref).toString();
-    //return v8::String::New( url_string.c_str(), url_string.size() );
-    assert(false);
-    std::string returner = "Not working yet";
-    return v8::String::New(returner.c_str(), returner.size());
-
-}
-
-
-//FIXME: May want to have an error handler for this function.
-void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
-{
-    //mParent->requestMeshUpdate(*sID,newMeshString);
-    //FIXME: need to also pass in the object reference
-    mParent->requestMeshUpdate(sporef->space(),newMeshString);
-}
-
-
+//orientation
 void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
 {
     mParent->requestOrientationDirectionUpdate(sporef->space(),sporef->object(),quat);
@@ -697,9 +630,58 @@ v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectRe
 }
 
 
+//scale
+//FIXME: need to return the right space here.
+//lkjs; need to return the visuals for a particular space.;
+v8::Handle<v8::Value> JSObjectScript::getVisualScaleFunction(const SpaceObjectReference* sporef)
+{
+    //FIXME: actually need to write this function.
+    assert(false);
+    return v8::Undefined();
+    //lkjs;
+    //FIXME_GET_SPACE();
+    //return CreateJSResult(mContext, mParent->getVisualScale(space));
+}
+
+void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newscale)
+{
+    Handle<Object> scale_obj = ObjectCast(newscale);
+    if (!Vec3Validate(scale_obj))
+        return;
+
+    Vector3f native_scale(Vec3Extract(scale_obj));
+    FIXME_GET_SPACE();
+    assert(false);
+    //lkjs;
+    //FIXME: write this function.
+    //mParent->setVisualScale(space, native_scale);
+}
 
 
-// lkjs;
+//mesh
+v8::Handle<v8::Value> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
+{
+    Transfer::URI uri_returner;
+    bool hasMesh = mParent->requestMeshUri(sporef->space(),sporef->object(),uri_returner);
+
+    if (! hasMesh)
+        return v8::Undefined();
+    
+    std::string string_returner = uri_returner.toString();
+    return v8::String::New(string_returner.c_str(), string_returner.size());
+}
+
+
+
+//FIXME: May want to have an error handler for this function.
+void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
+{
+    //FIXME: need to also pass in the object reference
+    mParent->requestMeshUpdate(sporef->space(),newMeshString);
+}
+
+
+
 // need to ensure that the sender object is an addressable of type spaceobject reference rather than just having an object reference;
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {

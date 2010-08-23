@@ -41,6 +41,36 @@ function testGetVisual()
 
 
 
+function testSetHandler()
+{
+    var returnerCallBack = function()
+    {
+        system.print("\n\n\nI got into returner callback\n\n");
+    };
+
+    //requires message to have field m with value o.
+    var mPattern = new system.Pattern("m","o");
+    
+    var handler = system.registerHandler(mPattern,null,returnerCallBack,null);
+}
+
+//this function sends a message to every single message-able entity with a message that will trigger the handler set in the previous function
+function testForceHandler()
+{
+    var objectMessage = new Object();
+    objectMessage.m = "o";
+    
+    for (var s=0; s < system.addressable.length; ++s)
+    {
+        system.addressable[s].sendMessage(objectMessage);
+    }
+}
+
+
+
+
+
+
 function addVec3(a,b)
 {
     var returner = system.Vec3(a.x+b.x,a.y+b.y,a.z+b.z);

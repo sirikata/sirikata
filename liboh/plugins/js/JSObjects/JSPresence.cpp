@@ -69,7 +69,7 @@ namespace Sirikata
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getMesh function.  Invalid presence struct.")) );
                     
-            return mStruct->jsObjScript->getVisual(mStruct->sporef);
+            return mStruct->jsObjScript->getVisualFunction(mStruct->sporef);
         }
 
 

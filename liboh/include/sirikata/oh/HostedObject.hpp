@@ -395,7 +395,6 @@ public:
     virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
     virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
 
-
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
 
@@ -407,8 +406,13 @@ public:
     
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
-    //virtual void requestMeshUpdate(const SpaceID& space);
-    //virtual Transfer::URI const& requestMeshUri(const SpaceID& space, const ObjectReference& oref);
+    
+
+    virtual void requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo);
+    virtual bool requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler);
+
+    
+
     virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
 
     

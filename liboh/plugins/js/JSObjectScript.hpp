@@ -104,12 +104,9 @@ public:
     void create_presence(const SpaceID& new_space,std::string new_mesh);
     void create_presence(const SpaceID& new_space);
     
-    //v8::Handle<v8::String> getVisual();
-    //void setVisual(v8::Local<v8::Value>& newvis);
     
-    v8::Handle<v8::Value> getVisual(const SpaceObjectReference* sporef);
-    //void  setVisual(const SpaceID* sID, const Transfer::URI* newMesh);
-    void  setVisual(const SpaceObjectReference* sporef, const std::string& newMeshString);
+    v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
+    void  setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
 
     void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
     v8::Handle<v8::Value> getPositionFunction(const SpaceObjectReference* sporef);
@@ -117,22 +114,15 @@ public:
     void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
     v8::Handle<v8::Value> getVelocityFunction(const SpaceObjectReference* sporef);
 
-    void  setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
-    v8::Handle<v8::String> getVisualFunction(const SpaceObjectReference* sporef);
-
     void  setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
     v8::Handle<v8::Value> getOrientationFunction(const SpaceObjectReference* sporef);
     
-    
-    v8::Handle<v8::Value> getVisualScale();
-    void setVisualScale(v8::Local<v8::Value>& newvis);
+    v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
+    void setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newvis);
 
-    v8::Handle<v8::Value> getPosition();
-    void setPosition(v8::Local<v8::Value>& newval);
-    v8::Handle<v8::Value> getVelocity();
-    void setVelocity(v8::Local<v8::Value>& newval);
-    v8::Handle<v8::Value> getOrientation();
-    void setOrientation(v8::Local<v8::Value>& newval);
+    
+
+    
     v8::Handle<v8::Value> getAxisOfRotation();
     void setAxisOfRotation(v8::Local<v8::Value>& newval);
     v8::Handle<v8::Value> getAngularSpeed();
