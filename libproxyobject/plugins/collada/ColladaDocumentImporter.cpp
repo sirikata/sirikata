@@ -70,6 +70,7 @@ ColladaDocumentImporter::~ColladaDocumentImporter ()
     for (size_t i=0;i<mColladaClonedCommonEffects.size();++i) {
         delete mColladaClonedCommonEffects[i];
     }
+/*
     for (ColladaEffectMap::iterator i=mColladaEffects.begin();i!=mColladaEffects.end();i++) {
         delete i->second;
     }
@@ -79,6 +80,7 @@ ColladaDocumentImporter::~ColladaDocumentImporter ()
     for (SkinControllerDataMap::iterator i=mSkinControllerData.begin();i!=mSkinControllerData.end();i++) {
         delete i->second;
     }
+*/
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -242,7 +244,7 @@ void ColladaDocumentImporter::finish ()
                     SkinControllerMap::const_iterator skin_it = mSkinController.find(geo_inst->getInstanciatedObjectId());
                     if (skin_it != mSkinController.end()) {
                         
-                        COLLADAFW::UniqueId geo_inst_geometry_name=skin_it->second->getSource();
+                        COLLADAFW::UniqueId geo_inst_geometry_name=skin_it->second.source;
                         IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst_geometry_name);
                         for (;geo_it != mGeometryMap.end()&&geo_it->first==geo_inst_geometry_name;++geo_it) {
                             
@@ -734,8 +736,8 @@ bool ColladaDocumentImporter::makeTexture
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << eff << ") entered" << std::endl,true));
-    COLLADAFW::Effect *effect = (mColladaEffects[eff->getUniqueId()]= new COLLADAFW::Effect(eff->getUniqueId()));
-    *effect=*eff;
+    mColladaEffects.insert(ColladaEffectMap::value_type(eff->getUniqueId(),*eff));
+    COLLADAFW::Effect *effect = &mColladaEffects.find(eff->getUniqueId())->second;
     COLLADAFW::CommonEffectPointerArray &commonEffect=effect->getCommonEffects();
     for (size_t i=0;i<commonEffect.getCount();++i) {
         /*mColladaClonedCommonEffects.push_back*/(commonEffect[i]=new COLLADAFW::EffectCommon(*commonEffect[i]));
@@ -754,7 +756,7 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         if (matwhere!=mMaterialMap.end()) {
             ColladaEffectMap::iterator effectwhere = mColladaEffects.find(matwhere->second);
             if (effectwhere!=mColladaEffects.end()) {
-                effect=effectwhere->second;
+                effect=&effectwhere->second;
             }else return retval;
         }else return retval;
     }
@@ -884,24 +886,44 @@ bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList cons
 #define SKIN_COPY(target,source,name) ((source)->get##name().cloneArray((target)->get##name()))
 bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControllerData const* skinControllerData )
 {
-    COLLADAFW::SkinControllerData * copy = (mSkinControllerData[skinControllerData->getUniqueId()]= new COLLADAFW::SkinControllerData(skinControllerData->getUniqueId()));
-    SKIN_GETSET(copy,skinControllerData,Name);
-    SKIN_GETSET(copy,skinControllerData,BindShapeMatrix);
-    SKIN_GETSET(copy,skinControllerData,JointsCount);
-    copy->getWeights().setType(COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT);
+    SkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
+    copy->bindShapeMatrix = Matrix4x4f(skinControllerData->getBindShapeMatrix(),Matrix4x4f::ROW_MAJOR());    
+    std::vector<float> xweights;
     if (skinControllerData->getWeights().getType()==COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
-        skinControllerData->getWeights().getFloatValues()->cloneArray(*copy->getWeights().getFloatValues());
+        const COLLADAFW::FloatArray * weights=skinControllerData->getWeights().getFloatValues();
+        for (size_t i=0;i<weights->getCount();++i) {
+            xweights.push_back((*weights)[i]);
+        }
     }else {
-        size_t count = skinControllerData->getWeights().getFloatValues()->getCount();
-        copy->getWeights().getFloatValues()->allocMemory(skinControllerData->getWeights().getFloatValues()->getCapacity());
-        copy->getWeights().getFloatValues()->setCount(count);
-        for (size_t i=0;i<count;++i) {
-            (*copy->getWeights().getFloatValues())[i]=(*skinControllerData->getWeights().getFloatValues())[i];
+        const COLLADAFW::DoubleArray * weights=skinControllerData->getWeights().getDoubleValues();
+        for (size_t i=0;i<weights->getCount();++i) {
+            xweights.push_back((*weights)[i]);
         }
     }
-    SKIN_COPY(copy,skinControllerData,JointsPerVertex);
-    SKIN_COPY(copy,skinControllerData,WeightIndices);
-    SKIN_COPY(copy,skinControllerData,JointIndices);
+    const COLLADAFW::Matrix4Array * inverseBind = &skinControllerData->getInverseBindMatrices();
+    for (size_t i=0;i<inverseBind->getCount();++i) {
+        copy->inverseBindMatrices.push_back(Matrix4x4f((*inverseBind)[i],Matrix4x4f::ROW_MAJOR()));
+    }
+    const COLLADAFW::UIntValuesArray * jointsPer = &skinControllerData->getJointsPerVertex();
+    unsigned int runningTotal=0;
+    for (size_t i=0;i<jointsPer->getCount();++i) {
+        copy->weightStartIndices.push_back(runningTotal);
+        runningTotal+=(*jointsPer)[i];
+    }
+    copy->weightStartIndices.push_back(runningTotal);
+    
+    const COLLADAFW::UIntValuesArray * weightIndices = &skinControllerData->getWeightIndices();    
+    for (size_t i=0;i<weightIndices->getCount();++i) {
+        if ((*weightIndices)[i]<xweights.size()) {
+            copy->weights.push_back(xweights[(*weightIndices)[i]]);
+        }else {
+            copy->weights.push_back(0);
+        }
+    }
+    const COLLADAFW::IntValuesArray * jointIndices = &skinControllerData->getJointIndices();    
+    for (size_t i=0;i<jointIndices->getCount();++i) {
+        copy->jointIndices.push_back((*jointIndices)[i]);
+    }
 
     assert((std::cout << "MCB: ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered" << std::endl,true));
     return true;
@@ -911,11 +933,13 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
 bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* controller )
 {
     if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {
+        SkinController * copy = &mSkinController[controller->getUniqueId()];
         const COLLADAFW::SkinController * skinController = dynamic_cast<const COLLADAFW::SkinController*>(controller);
-        COLLADAFW::SkinController * copy = (mSkinController[controller->getUniqueId()] = new COLLADAFW::SkinController(skinController->getUniqueId()));
-        SKIN_GETSET(copy,skinController,Source);
-        SKIN_GETSET(copy,skinController,SkinControllerData);
-        SKIN_COPY(copy,skinController,Joints);
+        copy->source = skinController->getSource();
+        copy->skinControllerData = skinController->getSkinControllerData();
+        for (unsigned int i=0;i<skinController->getJoints().getCount();++i) {
+            copy->joints.push_back((skinController->getJoints())[i]);
+        }
     }
 
     assert((std::cout << "MCB: ColladaDocumentImporter::writeController(" << controller << ") entered" << std::endl,true));
