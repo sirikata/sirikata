@@ -394,7 +394,8 @@ public:
             pass->setSpecular(ColourValue(1,1,1,1));
         }
         for (size_t i=0;i<mMat.textures.size();++i) {
-            if (mMat.textures[i].affecting==MaterialEffectInfo::Texture::OPACITY) {
+            if (mMat.textures[i].affecting==MaterialEffectInfo::Texture::OPACITY&&
+                (mMat.textures[i].uri.length()||mMat.textures[i].color.w<1.0)){
                 useAlpha=true;
                 break;
             }
@@ -456,16 +457,17 @@ public:
                   pass->setDiffuse(ColourValue(0,0,0,0));
                   pass->setAmbient(ColourValue(0,0,0,0));
                   pass->setSelfIllumination(ColourValue(0,0,0,0));
-*/
+
                   pass->setSpecular(ColourValue(tex.color.x,
                                                 tex.color.y,
                                                 tex.color.z,
                                                 tex.color.w));
+*///FIXME looks awful for some reason
                   break;
                 default:
                   break;
                 }
-            }else {
+            }else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) {
                 String texURI = mURI.substr(0, mURI.rfind("/")+1) + tex.uri;
                 MeshEntity::TextureBindingsMap::iterator where = mTextureFingerprints.find(texURI);
                 if (where!=mTextureFingerprints.end()) {
@@ -474,14 +476,17 @@ public:
                     Ogre::TextureUnitState*tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
                     //tus->setTextureName(tex.uri);
                     //tus->setTextureCoordSet(tex.texCoord);
-                    tus->setColourOperation(LBO_MODULATE);
                     if (useAlpha==false) {
+                        pass->setAlphaRejectValue(.5);
+                        pass->setAlphaRejectSettings(CMPF_GREATER,128,true);
                         if (true||i==0) {
                             pass->setSceneBlending(SBF_ONE,SBF_ZERO);
                         } else {
                             pass->setSceneBlending(SBF_ONE,SBF_ONE);
                         }
                     }else {
+                        pass->setDepthWriteEnabled(false);
+                        pass->setDepthCheckEnabled(true);
                         if (true||i==0) {
                             pass->setSceneBlending(SBF_SOURCE_ALPHA,SBF_ONE_MINUS_SOURCE_ALPHA);
                         }else {
@@ -491,30 +496,46 @@ public:
                     switch (tex.affecting) {
                       case MaterialEffectInfo::Texture::DIFFUSE:
                         pass->setDiffuse(ColourValue(1,1,1,1));
+/*
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         pass->setSpecular(ColourValue(0,0,0,0));
+*/
                         //pass->setIlluminationStage(IS_PER_LIGHT);
+                        tus->setColourOperation(LBO_MODULATE);
+
                         break;
                       case MaterialEffectInfo::Texture::AMBIENT:
+/*
                         pass->setDiffuse(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         pass->setSpecular(ColourValue(0,0,0,0));
+*/
                         pass->setAmbient(ColourValue(1,1,1,1));
+                        tus->setColourOperation(LBO_MODULATE);
+                    
                         //pass->setIlluminationStage(IS_AMBIENT);
                         break;
                       case MaterialEffectInfo::Texture::EMISSION:
+/*
                         pass->setDiffuse(ColourValue(0,0,0,0));
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSpecular(ColourValue(0,0,0,0));
+*/
                         pass->setSelfIllumination(ColourValue(1,1,1,1));
+                        tus->setColourOperation(LBO_ADD);
+                    
                         //pass->setIlluminationStage(IS_DECAL);
                         break;
                       case MaterialEffectInfo::Texture::SPECULAR:
+/*
                         pass->setDiffuse(ColourValue(0,0,0,0));
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         //pass->setIlluminationStage(IS_PER_LIGHT);
+                        */
+                        tus->setColourOperation(LBO_ADD);
+                    
                         pass->setSpecular(ColourValue(1,1,1,1));
                         break;
                       default:
@@ -752,6 +773,9 @@ public:
                             }
                             
                             memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
+                            float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
+                            UVHACK=1.0-UVHACK;
+                            memcpy(pData+sizeof(float),&UVHACK,sizeof(float));
                             pData += VertexElement::getTypeSize(vet);
                         }
                     }

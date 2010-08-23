@@ -258,7 +258,9 @@ void ColladaDocumentImporter::finish ()
                             new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
                             for (size_t bind=0;bind< bindings.getCount();++bind) {
-                                new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
+                                COLLADAFW::MaterialId id = bindings[bind].getMaterialId();
+                                size_t offset = finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
+                                new_geo_inst.materialBindingMap[id]=offset;
                                 //stays the same between primitives
                             }
                             if (geo_it->second<mMesh->geometry.size()) {
