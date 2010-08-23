@@ -213,7 +213,7 @@ void ColladaDocumentImporter::finish ()
                 for(size_t geo_idx = 0; geo_idx < curnode.node->getInstanceGeometries().getCount(); geo_idx++) {
                     const COLLADAFW::InstanceGeometry* geo_inst = curnode.node->getInstanceGeometries()[geo_idx];
                     // FIXME handle child nodes, such as materials
-                    IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst->getInstanciatedObjectId());
+                    IndicesMultimap::const_iterator geo_it = mGeometryMap.find(geo_inst->getInstanciatedObjectId());
                     for (;geo_it != mGeometryMap.end()&&geo_it->first==geo_inst->getInstanciatedObjectId();++geo_it) {
                         if (geo_it->second>=mMesh->geometry.size()||mMesh->geometry[geo_it->second].primitives.empty()) {
                             continue;
@@ -231,7 +231,7 @@ void ColladaDocumentImporter::finish ()
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
                             new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
-                            
+
                             mMesh->instances.push_back(new_geo_inst);
                         }
                     }
@@ -243,11 +243,11 @@ void ColladaDocumentImporter::finish ()
                     // FIXME handle child nodes, such as materials
                     SkinControllerMap::const_iterator skin_it = mSkinController.find(geo_inst->getInstanciatedObjectId());
                     if (skin_it != mSkinController.end()) {
-                        
+
                         COLLADAFW::UniqueId geo_inst_geometry_name=skin_it->second.source;
-                        IndicesMap::const_iterator geo_it = mGeometryMap.find(geo_inst_geometry_name);
+                        IndicesMultimap::const_iterator geo_it = mGeometryMap.find(geo_inst_geometry_name);
                         for (;geo_it != mGeometryMap.end()&&geo_it->first==geo_inst_geometry_name;++geo_it) {
-                            
+
                             if (geo_it->second>=mMesh->geometry.size()||mMesh->geometry[geo_it->second].primitives.empty()) {
                                 continue;
                             }
@@ -266,7 +266,7 @@ void ColladaDocumentImporter::finish ()
                             if (geo_it->second<mMesh->geometry.size()) {
                                 const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
                                 new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
-                                
+
                                 mMesh->instances.push_back(new_geo_inst);
                             }
                         }
@@ -427,12 +427,12 @@ IndexSet createIndexSet(const COLLADAFW::MeshPrimitive*prim,
     //gather the indices from the previous set
     uniqueIndexSet.positionIndices=prim->getPositionIndices()[whichIndex];
     uniqueIndexSet.normalIndices=prim->hasNormalIndices()?prim->getNormalIndices()[whichIndex]:uniqueIndexSet.positionIndices;
-    
+
     for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
         uniqueIndexSet.uvIndices.push_back(prim->getUVCoordIndices(uvSet)->getIndex(whichIndex));
     }
     return uniqueIndexSet;
-    
+
 }
 bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometry )
 {
@@ -524,12 +524,12 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                     setupPrim(outputPrim,mExtraGeometryData.back().primitives.back(),prim);
                     switch(prim->getPrimitiveType()) {
                       case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
-                        SILOG(collada,error,"Do not support triangle fans with more than 64K elements");                        
+                        SILOG(collada,error,"Do not support triangle fans with more than 64K elements");
                         if (whichIndex-2>=offset) {
                             j-=2;
                         }
                         whichIndex=offset;
-                        uniqueIndexSet=createIndexSet(prim,whichIndex);                        
+                        uniqueIndexSet=createIndexSet(prim,whichIndex);
                         break;
                       case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
                         if (whichIndex-1>=offset) {
@@ -540,10 +540,10 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                             j--;
                             whichIndex--;
                         }
-                      
+
                         uniqueIndexSet=createIndexSet(prim,whichIndex);
                         break;
-                      case COLLADAFW::MeshPrimitive::LINE_STRIPS:        
+                      case COLLADAFW::MeshPrimitive::LINE_STRIPS:
                         if (whichIndex-1>=offset) {
                             j--;
                             whichIndex--;
@@ -632,11 +632,11 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
-bool ColladaDocumentImporter::makeTexture 
+bool ColladaDocumentImporter::makeTexture
                          (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding *binding,
-                          const COLLADAFW::EffectCommon * effectCommon, 
-                          const COLLADAFW::ColorOrTexture & color, 
+                          const COLLADAFW::EffectCommon * effectCommon,
+                          const COLLADAFW::ColorOrTexture & color,
                           size_t geomindex,
                           size_t primindex,
                           MaterialEffectInfo::TextureList&output , bool forceBlack) {
@@ -648,7 +648,7 @@ bool ColladaDocumentImporter::makeTexture
             color.getColor().getAlpha()||forceBlack) {
             output.push_back(MaterialEffectInfo::Texture());
             MaterialEffectInfo::Texture &retval=output.back();
-            
+
             retval.color.x=color.getColor().getRed();
             retval.color.y=color.getColor().getGreen();
             retval.color.z=color.getColor().getBlue();
@@ -695,7 +695,7 @@ bool ColladaDocumentImporter::makeTexture
           default:
             retval.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR;
         }
-        
+
         switch (const_cast<Sampler*>(sampler)->getSamplerType()) {//<-- bug in constness
             FIX_ENUM(retval.samplerType,SAMPLER_TYPE_1D);
             FIX_ENUM(retval.samplerType,SAMPLER_TYPE_2D);
@@ -770,21 +770,21 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         EffectCommon* commonEffect = commonEffects[0];
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
-          case EffectCommon::SHADER_PHONG:            
+          case EffectCommon::SHADER_PHONG:
             curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_LAMBERT:
             curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
             curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;            
+            if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_CONSTANT:
             curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;            
+            if (!curBlack) allBlack=false;
             curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;            
+            if (!curBlack) allBlack=false;
             curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;            
+            if (!curBlack) allBlack=false;
             break;
           default:
             break;
@@ -798,7 +798,7 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         mat.reflectivity = commonEffect->getReflectivity().getType()==FloatOrParam::FLOAT
             ? commonEffect->getReflectivity().getFloatValue()
              : 1.0;
-        
+
     }else {
         mat.textures.push_back(MaterialEffectInfo::Texture());
         mat.textures.back().color.x=effect->getStandardColor().getRed();
@@ -889,7 +889,7 @@ bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList cons
 bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControllerData const* skinControllerData )
 {
     SkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
-    copy->bindShapeMatrix = Matrix4x4f(skinControllerData->getBindShapeMatrix(),Matrix4x4f::ROW_MAJOR());    
+    copy->bindShapeMatrix = Matrix4x4f(skinControllerData->getBindShapeMatrix(),Matrix4x4f::ROW_MAJOR());
     std::vector<float> xweights;
     if (skinControllerData->getWeights().getType()==COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
         const COLLADAFW::FloatArray * weights=skinControllerData->getWeights().getFloatValues();
@@ -913,8 +913,8 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
         runningTotal+=(*jointsPer)[i];
     }
     copy->weightStartIndices.push_back(runningTotal);
-    
-    const COLLADAFW::UIntValuesArray * weightIndices = &skinControllerData->getWeightIndices();    
+
+    const COLLADAFW::UIntValuesArray * weightIndices = &skinControllerData->getWeightIndices();
     for (size_t i=0;i<weightIndices->getCount();++i) {
         if ((*weightIndices)[i]<xweights.size()) {
             copy->weights.push_back(xweights[(*weightIndices)[i]]);
@@ -922,7 +922,7 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
             copy->weights.push_back(0);
         }
     }
-    const COLLADAFW::IntValuesArray * jointIndices = &skinControllerData->getJointIndices();    
+    const COLLADAFW::IntValuesArray * jointIndices = &skinControllerData->getJointIndices();
     for (size_t i=0;i<jointIndices->getCount();++i) {
         copy->jointIndices.push_back((*jointIndices)[i]);
     }
