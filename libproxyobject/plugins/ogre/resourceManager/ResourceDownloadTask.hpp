@@ -61,7 +61,7 @@ public:
         std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<Transfer::DenseData> response)> DownloadCallback;
 
-    ResourceDownloadTask(DependencyManager* mgr, const URI& uri, ResourceRequestor* resourceRequestor, DownloadCallback cb);
+    ResourceDownloadTask(DependencyManager* mgr, const URI& uri, ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb);
   virtual ~ResourceDownloadTask();
 
   void setRange(const Transfer::Range &r) {
@@ -90,12 +90,12 @@ DownloadCallback cb;
 
   bool mStarted;
     bool customCb;
-
   const URI mURI;
   SubscriptionId mCurrentDownload;
   Transfer::Range mRange;
   ResourceRequestor* mResourceRequestor;
   Transfer::SparseData mMergeData;
+    double mPriority;
 };
 
 }

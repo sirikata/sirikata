@@ -324,6 +324,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     std::list<CameraEntity*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
     if (renderTargetName.empty()) {
         mPrimaryCamera = entity;
+        dlPlanner->setCamera(entity);
         std::vector<String> cubeMapNames;
 
         std::vector<Vector3f> cubeMapOffsets;

@@ -42,8 +42,8 @@ using namespace std;
 
 namespace Meru {
 
-GraphicsResourceAsset::GraphicsResourceAsset(const URI &uri, GraphicsResource::Type resourceType)
- : GraphicsResource(uri.toString(), resourceType), mURI(uri),
+GraphicsResourceAsset::GraphicsResourceAsset(const URI &uri, GraphicsResource::Type resourceType, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResource(uri.toString(), resourceType, proxy), mURI(uri),
   mLoadTask(NULL), mParseTask(NULL), mUnloadTask(NULL)
 {
 

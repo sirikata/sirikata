@@ -53,10 +53,11 @@ InitializeGlobalOptions graphicsresourcemeshopts("ogregraphics",
 class MeshDependencyTask : public ResourceDependencyTask
 {
 public:
-  MeshDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
+    MeshDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~MeshDependencyTask();
 
   virtual void operator()();
+ Sirikata::ProxyObjectPtr mProxy;
 };
 
 class MeshLoadTask : public ResourceLoadTask
@@ -78,8 +79,8 @@ protected:
   //bool mainThreadUnload(String name);
 };
 
-GraphicsResourceMesh::GraphicsResourceMesh(const URI &uri)
-: GraphicsResourceAsset(uri, GraphicsResource::MESH)
+GraphicsResourceMesh::GraphicsResourceMesh(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+  : GraphicsResourceAsset(uri, GraphicsResource::MESH, proxy)
 {
 
 }
@@ -124,12 +125,12 @@ void GraphicsResourceMesh::setMaterialNames(GraphicsResourceMesh* resourcePtr)
 
 ResourceDownloadTask* GraphicsResourceMesh::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-    return new ResourceDownloadTask(manager, mURI, resourceRequestor, NULL);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, mProxy->priority, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceMesh::createDependencyTask(DependencyManager *manager)
 {
-  return new MeshDependencyTask(manager, getWeakPtr(), mURI);
+    return new MeshDependencyTask(manager, getWeakPtr(), mURI, mProxy);
 }
 
 ResourceLoadTask* GraphicsResourceMesh::createLoadTask(DependencyManager *manager)
@@ -145,8 +146,8 @@ ResourceUnloadTask* GraphicsResourceMesh::createUnloadTask(DependencyManager *ma
 
 /***************************** MESH DEPENDENCY TASK *************************/
 
-MeshDependencyTask::MeshDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri)
-: ResourceDependencyTask(mgr, resource, uri)
+MeshDependencyTask::MeshDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy)
+ : ResourceDependencyTask(mgr, resource, uri), mProxy(proxy)
 {
 
 }
@@ -191,7 +192,7 @@ void MeshDependencyTask::operator()()
           ++itr;
         }
 
-        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL, mProxy);
         resourcePtr->addDependency(hashResource);
       }
     }

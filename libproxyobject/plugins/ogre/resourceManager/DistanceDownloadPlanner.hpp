@@ -41,6 +41,7 @@
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "ResourceDownloadPlanner.hpp"
+#include "../CameraEntity.hpp"
 #include <vector>
 
 namespace Sirikata {
@@ -68,20 +69,14 @@ public:
     virtual void stop();
 
     struct Resource {
-        Resource(Graphics::MeshEntity *m, ProxyObjectPtr p, bool started) : mesh(m), proxy(p), processed(started) {}
-        virtual ~Resource(){}
-        virtual bool operator<(Resource &other) {
-            return true;
-        }
-        bool operator==(Resource &other) {
-            if (proxy == other.proxy) return true;
-            else return false;
-        }
+        Resource(Graphics::MeshEntity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
+            ready = false;
+            file = NULL;
+        }        virtual ~Resource(){}
 
-        URI const &file;
+        URI *file;
         Graphics::MeshEntity *mesh;
         ProxyObjectPtr proxy;
-        bool processed;
         bool ready;
     };
 
@@ -89,6 +84,9 @@ public:
 
 protected:
     std::vector<Resource> resources;
+
+private:
+    double getPriority(ProxyObjectPtr proxy);
 
 };
 }

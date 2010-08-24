@@ -32,6 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_TEXTURE_HPP
 #define _GRAPHICS_RESOURCE_TEXTURE_HPP
 
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "../meruCompat/MeruDefs.hpp"
 #include "GraphicsResourceAsset.hpp"
 
@@ -39,7 +40,7 @@ namespace Meru {
 
 class GraphicsResourceTexture : public GraphicsResourceAsset {
 public:
-  GraphicsResourceTexture(const URI &uri);
+    GraphicsResourceTexture(const URI &uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceTexture();
 
   virtual DependencyTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);

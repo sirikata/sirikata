@@ -50,6 +50,7 @@ ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*
 {
     c->add(this);
     proxyManager->addListener(this);
+    camera = NULL;
 }
 
 ResourceDownloadPlanner::~ResourceDownloadPlanner()
@@ -70,6 +71,11 @@ void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
 void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
 
+}
+
+void ResourceDownloadPlanner::setCamera(CameraEntity *entity)
+{
+    camera = entity;
 }
 
 void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)

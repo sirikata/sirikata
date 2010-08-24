@@ -33,6 +33,7 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "Entity.hpp"
 #include <sirikata/core/options/Options.hpp>
+#include "OgreSystem.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -164,7 +165,8 @@ void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
 }
 
 Vector3d Entity::getOgrePosition() {
-    return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
+    if (mScene == NULL) assert(false);
+    return fromOgre(mSceneNode->getPosition(), mScene->getOffset());
 }
 
 Quaternion Entity::getOgreOrientation() {

@@ -39,7 +39,7 @@ namespace Meru {
 
 class GraphicsResourceMesh : public GraphicsResourceAsset {
 public:
-  GraphicsResourceMesh(const URI &uri);
+    GraphicsResourceMesh(const URI &uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceMesh();
 
   virtual void resolveName(const URI& id);

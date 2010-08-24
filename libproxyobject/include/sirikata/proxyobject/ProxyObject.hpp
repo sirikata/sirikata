@@ -121,6 +121,8 @@ public:
         return mParent.get();
     }
 
+    double priority;
+
     /// Send a message.  FIXME this is temporary to transition from QueryTracker.
     bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
 

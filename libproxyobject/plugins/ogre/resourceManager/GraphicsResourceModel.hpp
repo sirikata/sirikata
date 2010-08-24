@@ -32,6 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_MODEL_HPP
 #define _GRAPHICS_RESOURCE_MODEL_HPP
 
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "../meruCompat/MeruDefs.hpp"
 #include "GraphicsResourceAsset.hpp"
 
@@ -39,7 +40,7 @@ namespace Meru {
 
 class GraphicsResourceModel : public GraphicsResourceAsset {
 public:
-  GraphicsResourceModel(const URI &uri);
+    GraphicsResourceModel(const URI &uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceModel();
 
   virtual void resolveName(const URI& id);

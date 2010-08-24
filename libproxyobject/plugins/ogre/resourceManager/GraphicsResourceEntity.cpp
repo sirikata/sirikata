@@ -43,8 +43,8 @@ using std::set;
 
 namespace Meru {
 
-GraphicsResourceEntity::GraphicsResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity)
-    : GraphicsResource(id.toString(), ENTITY), mGraphicsEntity(graphicsEntity), mLoadTime(Sirikata::Task::LocalTime::now())
+GraphicsResourceEntity::GraphicsResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResource(id.toString(), ENTITY, proxy), mGraphicsEntity(graphicsEntity), mLoadTime(Sirikata::Task::LocalTime::now())
 {
 }
 

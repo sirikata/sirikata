@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "OgreSystem.hpp"
 #include <sirikata/proxyobject/Platform.hpp>
 #include "CameraEntity.hpp"
 #include <sirikata/core/options/Options.hpp>

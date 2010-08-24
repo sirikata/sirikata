@@ -45,10 +45,11 @@ namespace Meru {
 class MaterialDependencyTask : public ResourceDependencyTask
 {
 public:
-  MaterialDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
+    MaterialDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~MaterialDependencyTask();
 
   virtual void operator()();
+    Sirikata::ProxyObjectPtr mProxy;
 };
 
 class MaterialLoadTask : public ResourceLoadTask
@@ -74,8 +75,8 @@ protected:
   const unsigned int mArchiveName;
 };
 
-GraphicsResourceMaterial::GraphicsResourceMaterial(const URI &uri)
-  : GraphicsResourceAsset(uri, GraphicsResource::MATERIAL),
+GraphicsResourceMaterial::GraphicsResourceMaterial(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResourceAsset(uri, GraphicsResource::MATERIAL, proxy),
     mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
   mTextureAliases[""] = uri.toString();
@@ -94,12 +95,12 @@ void GraphicsResourceMaterial::resolveName(const URI& id)
 
 ResourceDownloadTask* GraphicsResourceMaterial::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-    return new ResourceDownloadTask(manager, mURI, resourceRequestor, NULL);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, mProxy->priority, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceMaterial::createDependencyTask(DependencyManager *manager)
 {
-  return new MaterialDependencyTask(manager, getWeakPtr(), mURI);
+    return new MaterialDependencyTask(manager, getWeakPtr(), mURI, mProxy);
 }
 
 ResourceLoadTask* GraphicsResourceMaterial::createLoadTask(DependencyManager *manager)
@@ -114,8 +115,8 @@ ResourceUnloadTask* GraphicsResourceMaterial::createUnloadTask(DependencyManager
 
 /***************************** MATERIAL DEPENDENCY TASK *************************/
 
-MaterialDependencyTask::MaterialDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri)
-  : ResourceDependencyTask(mgr, resource, uri)
+MaterialDependencyTask::MaterialDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, Sirikata::ProxyObjectPtr proxy)
+ : ResourceDependencyTask(mgr, resource, uri), mProxy(proxy)
 {
 
 }
@@ -238,7 +239,7 @@ void MaterialDependencyTask::operator()()
           Ogre::String dependencyName (start_index,midpoint);
           if (dependencyName.size()) {
             SILOG(resource,debug,"Found LEGACY dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL, mProxy);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -249,7 +250,7 @@ void MaterialDependencyTask::operator()()
         Ogre::String dependencyName(start_index, midpoint);
         if (dependencyName.size()) {
           SILOG(resource,debug,"Found Normal dependency "<<dependencyName);
-          SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
+          SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL, mProxy);
           resourcePtr->addDependency(hashResource);
         }
       }
@@ -265,7 +266,7 @@ void MaterialDependencyTask::operator()()
             {
               URI dependencyURI(dependencyName); ///////// NOTE: Not using URI Context!!!!
               if (!dependencyURI.proto().empty()) {
-                SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                  SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE, mProxy);
                 if (hashResource)
                   resourcePtr->addDependency(hashResource);
               }
@@ -297,7 +298,7 @@ void MaterialDependencyTask::operator()()
                   URI dependencyURI(dependencyName); /////////// NOTE: Not using URI Context!
                   if (!dependencyURI.proto().empty()) {
                     SILOG(resource,debug,"Found ANIM texture dependency "<<dependencyName);
-                    SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                    SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE, mProxy);
                     resourcePtr->addDependency(hashResource);
                   }
                 }
@@ -327,7 +328,7 @@ void MaterialDependencyTask::operator()()
                     URI dependencyURI(dependencyName); ////// NOTE: Not using uri context!
                     if (!dependencyURI.proto().empty()) {
                       SILOG(resource,debug,"Found CUBIC texture dependency "<<dependencyName);
-                      SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                      SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE, mProxy);
                       resourcePtr->addDependency(hashResource);
                     }
                   }
@@ -337,7 +338,7 @@ void MaterialDependencyTask::operator()()
           }
           if (what[3].matched) {
             SILOG(resource,debug,"Found what[3] dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::SHADER);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::SHADER, mProxy);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -348,7 +349,7 @@ void MaterialDependencyTask::operator()()
       if (dependencyName.size()) {
         // this is actually a material reference
         SILOG(resource,debug,"Found material dependency "<<dependencyName);
-        SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL, mProxy);
         resourcePtr->addDependency(hashResource);
       }
     }

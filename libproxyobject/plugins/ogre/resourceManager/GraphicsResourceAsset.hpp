@@ -32,6 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_ASSET_HPP_
 #define _GRAPHICS_RESOURCE_ASSET_HPP_
 
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "GraphicsResource.hpp"
 #include "ResourceDownloadTask.hpp"
 #include "ResourceDependencyTask.hpp"
@@ -44,7 +45,7 @@ namespace Meru {
 class GraphicsResourceAsset : public GraphicsResource
 {
 public:
-  GraphicsResourceAsset(const URI &uri, GraphicsResource::Type type);
+    GraphicsResourceAsset(const URI &uri, GraphicsResource::Type type, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceAsset();
 
     /*inline const RemoteFileId &getRemoteFileId() const {
