@@ -724,14 +724,8 @@ void JSObjectScript::printAllHandlerLocations()
 
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
-    std::cout<<"\n\nThis is the src space in getMessageSender:  "<<src.space()<<"\n";
-    std::cout<<"\n\nThis is the src object in getMessageSender: "<<src.object()<<"\n";
     
     SpaceObjectReference* sporef = new SpaceObjectReference(src.space(),src.object());
-
-    std::cout<<"\n\nThis is the src space in sporef:  "<<sporef->space()<<"\n";
-    std::cout<<"\n\nThis is the src object in sporef: "<<sporef->object()<<"\n";
-
     
     Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
     tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
@@ -877,9 +871,6 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 //parses them.
 void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
-
-    std::cout<<"\n\nFor scripting:  "<<src.space()<<"\n\n\n";
-    std::cout<<"\n\nFor scripting:  "<<dst.space()<<"\n\n\n";
     
     Sirikata::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());

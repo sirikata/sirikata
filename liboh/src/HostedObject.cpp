@@ -1692,7 +1692,9 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
     //BFTM_FIXME: need to decide whether want the extrapolated position or last
     //known position.  (Right now, we're going with last known position.)
 
-    Vector3d currentPosition = proxy_obj->getPosition();
+
+    Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    Vector3d currentPosition = curLoc.getPosition();
     return currentPosition;
 }
 
@@ -1707,7 +1709,6 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
     //this cast does not work.
     ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
 
-    //lkjs;
     
     if (proxy_mesh_obj )
         return false;

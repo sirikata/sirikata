@@ -21,8 +21,12 @@ namespace JSAddressable {
 
 v8::Handle<v8::Value> toString(const v8::Arguments& args)
 {
-    if (args.Length() != 1)
+    if (args.Length() != 0)
+    {
+        std::cout<<"\n\n\n";
+        std::cout<<"This is args.Length(): "<<args.Length()<<"\n\n";
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to toString method of Addressable")));
+    }
     
     JSObjectScript*         caller;
     SpaceObjectReference*   sporef;
