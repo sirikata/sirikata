@@ -1698,7 +1698,7 @@ public:
         mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
 
         // Session
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_P, Input::MOD_CTRL), mInputResponses["quit"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
 
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I, Input::MOD_CTRL), mInputResponses["togglePeriodicScreenshot"]);
@@ -1724,7 +1724,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
+        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G), mInputResponses["groupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, Input::MOD_ALT), mInputResponses["ungroupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
