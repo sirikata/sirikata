@@ -301,7 +301,7 @@ private:
     }
 
     void screenshotAction() {
-        String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".ppm");
+        String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".png");
         mParent->screenshot(fname);
         mScreenshotID++;
     }
@@ -311,7 +311,7 @@ private:
     }
 
     void timedScreenshotAction(const Task::LocalTime& t) {
-        String fname = String("screenshot-") + fillZeroPrefix(boost::lexical_cast<String>((t - mScreenshotStartTime).toMilliseconds()), 8) + String(".ppm");
+        String fname = String("screenshot-") + fillZeroPrefix(boost::lexical_cast<String>((t - mScreenshotStartTime).toMilliseconds()), 8) + String(".png");
         mParent->screenshot(fname);
     }
 

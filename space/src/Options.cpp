@@ -76,8 +76,8 @@ void InitSpaceOptions() {
         .addOption(new OptionValue("cseg-service-tcp-port", "2234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
 
         .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))
-        .addOption(new OptionValue(LOC_MAX_PER_RESULT, "10", Sirikata::OptionValueType<uint32>(), "Maximum number of loc updates to report in each result message."))
-        .addOption(new OptionValue(PROX_MAX_PER_RESULT, "10", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
+        .addOption(new OptionValue(LOC_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of loc updates to report in each result message."))
+        .addOption(new OptionValue(PROX_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
 
         .addOption(new OptionValue(OPT_PINTO,"local",Sirikata::OptionValueType<String>(),"Specifies which type of Pinto to use."))
         .addOption(new OptionValue(OPT_PINTO_OPTIONS,"",Sirikata::OptionValueType<String>(),"Specifies arguments to Pinto."))

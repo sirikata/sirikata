@@ -961,6 +961,7 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
 
         ProxyManagerPtr proxy_manager = getProxyManager(space);
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space, ObjectReference(update.object())));
+        if (!proxy_obj) continue;
 
         if (update.has_location()) {
             Sirikata::Protocol::TimedMotionVector update_loc = update.location();
