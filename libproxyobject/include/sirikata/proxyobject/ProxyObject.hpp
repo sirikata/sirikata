@@ -87,6 +87,7 @@ private:
 
     TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
+    BoundingSphere3f mBounds;
 
     VWObjectPtr mParent;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
@@ -149,6 +150,10 @@ public:
         return mLoc.velocity();
     }
 
+    inline const BoundingSphere3f& getBounds() const {
+        return mBounds;
+    }
+
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -170,6 +175,10 @@ public:
         Space that we have moved, but it is the first step in moving a local object. */
     void setOrientation(const TimedMotionQuaternion& reqorient);
 
+    /** Sets the bounds. Note: This does not tell the Space that we have moved,
+        but it is the first step in moving a local object. */
+    void setBounds(const BoundingSphere3f& bnds);
+
     /// Returns the global location of this object in space coordinates at timeStamp.
     Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
         ProxyObjectPtr ppop = getParentProxy();
@@ -189,6 +198,7 @@ public:
 
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
+
 };
 }
 #endif

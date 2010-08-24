@@ -64,7 +64,7 @@ void CSVObjectFactory::generate() {
     int mesh_idx = -1;
 
     int quat_vel_idx = -1;
-    
+
     // For each line
     while(fp) {
         String line;
@@ -92,7 +92,7 @@ void CSVObjectFactory::generate() {
         }
 
 
-        
+
         if (is_first) {
             for(int idx = 0; idx < line_parts.size(); idx++) {
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
@@ -134,10 +134,10 @@ void CSVObjectFactory::generate() {
                 );
 
                 float angular_speed = safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
-                
+
                 String mesh( line_parts[mesh_idx] );
 
-                
+
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
                 obj->connect(

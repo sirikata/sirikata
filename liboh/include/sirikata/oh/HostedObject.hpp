@@ -244,7 +244,7 @@ public:
 
   private:
     void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const Location& startingLocation);
+        const Location& startingLocation, const BoundingSphere3f& bnds);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceID& space);
 
@@ -324,8 +324,8 @@ public:
     void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc);
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc, const BoundingSphere3f& bnds);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
     ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera);
 
     // Helper for constructing and sending location update
