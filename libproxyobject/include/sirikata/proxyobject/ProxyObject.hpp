@@ -145,6 +145,10 @@ public:
         return mOrientation.position();
     }
 
+    inline Vector3f getVelocity() {
+        return mLoc.velocity();
+    }
+
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -182,7 +186,7 @@ public:
         Vector3f angaxis;
         float32 angvel;
         mOrientation.velocity().toAngleAxis(angvel, angaxis);
-        
+
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
 };

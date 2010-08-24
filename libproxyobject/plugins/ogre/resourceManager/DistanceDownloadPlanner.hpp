@@ -74,7 +74,7 @@ public:
             file = NULL;
         }        virtual ~Resource(){}
 
-        URI *file;
+        URI const *file;
         Graphics::MeshEntity *mesh;
         ProxyObjectPtr proxy;
         bool ready;
