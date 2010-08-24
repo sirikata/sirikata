@@ -97,6 +97,10 @@ void Entity::init(Ogre::MovableObject *obj) {
     if (obj) {
         mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
+        float rad = mOgreObject->getBoundingRadius();
+        BoundingSphere3f bnds = getProxy().getBounds();
+        float rad_factor = bnds.radius() / rad;
+        mSceneNode->setScale( rad_factor, rad_factor, rad_factor );
     }
 }
 
