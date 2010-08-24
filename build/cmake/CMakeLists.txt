@@ -1248,6 +1248,7 @@ ${GFX}/resourceManager/ResourceDependencyTask.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
 ${GFX}/resourceManager/DistanceDownloadPlanner.cpp
+${GFX}/resourceManager/SAngleDownloadPlanner.cpp
 ${GFX}/resourceManager/ResourceLoadTask.cpp
 ${GFX}/resourceManager/ResourceLoadingQueue.cpp
 ${GFX}/resourceManager/ResourceManager.cpp

@@ -31,8 +31,27 @@
  */
 
 #include "SAngleDownloadPlanner.hpp"
+#include <sirikata/core/util/SolidAngle.hpp>
 
-class SAngleDownloadPlanner : public ResourceDownloadPlanner
+namespace Sirikata {
+
+SAngleDownloadPlanner::SAngleDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
+ : DistanceDownloadPlanner(proxyManager, c)
 {
 
+}
+
+SAngleDownloadPlanner::~SAngleDownloadPlanner()
+{
+
+}
+
+double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
+{
+    float radius = 10;
+    Vector3d diff = camera->getOgrePosition() - proxy->getPosition();
+    SolidAngle sa = SolidAngle::fromCenterRadius((Vector3f)diff, radius);
+    float priority = (sa.asFloat())/(SolidAngle::Max.asFloat());
+    return (double)priority;
+}
 }

@@ -55,7 +55,7 @@ public:
     DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
     ~DistanceDownloadPlanner();
 
-    void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
 
     //ProxyCreationListener interface
     virtual void onCreateProxy ( ProxyObjectPtr object );
@@ -74,7 +74,7 @@ public:
             file = NULL;
         }        virtual ~Resource(){}
 
-        URI const *file;
+        URI *file;
         Graphics::MeshEntity *mesh;
         ProxyObjectPtr proxy;
         bool ready;
@@ -84,9 +84,7 @@ public:
 
 protected:
     std::vector<Resource> resources;
-
-private:
-    double getPriority(ProxyObjectPtr proxy);
+    virtual double calculatePriority(ProxyObjectPtr proxy);
 
 };
 }
