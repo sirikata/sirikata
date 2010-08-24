@@ -364,7 +364,27 @@ bool MeshEntity::createMeshWork(const Meshdata& md) {
     createMesh(md);
     return true;
 }
+Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectInfo::Texture::WrapMode w) {
+    switch(w) {
+      case MaterialEffectInfo::Texture::WRAP_MODE_CLAMP:
+        printf ("CLAMPING");
+        return Ogre::TextureUnitState::TAM_CLAMP;        
+      case MaterialEffectInfo::Texture::WRAP_MODE_MIRROR:
+        printf ("MIRRORING");
+        return Ogre::TextureUnitState::TAM_MIRROR;
+      case MaterialEffectInfo::Texture::WRAP_MODE_WRAP:
+      default:
+        printf ("WRAPPING");
+        return Ogre::TextureUnitState::TAM_WRAP;
+    }
+}
 
+void fixupTextureUnitState(Ogre::TextureUnitState*tus, const MaterialEffectInfo::Texture&tex) {
+    tus->setTextureAddressingMode(translateWrapMode(tex.wrapS),
+                                  translateWrapMode(tex.wrapT),
+                                  translateWrapMode(tex.wrapU));
+    
+}
 class MaterialManualLoader : public Ogre::ManualResourceLoader {
     MaterialEffectInfo mMat;
     std::string mName;
@@ -507,7 +527,7 @@ public:
 */
                         //pass->setIlluminationStage(IS_PER_LIGHT);
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
-                        
+                        fixupTextureUnitState(tus,tex);                        
                         tus->setColourOperation(LBO_MODULATE);
 
                         break;
@@ -533,6 +553,7 @@ public:
                         pass->setSpecular(ColourValue(0,0,0,0));
 */
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                        fixupTextureUnitState(tus,tex);
 //                        pass->setSelfIllumination(ColourValue(1,1,1,1));
                         tus->setColourOperation(LBO_ADD);
                     
@@ -551,6 +572,7 @@ public:
                         //pass->setIlluminationStage(IS_PER_LIGHT);
                         
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);                    
+                        fixupTextureUnitState(tus,tex);
                         tus->setColourOperation(LBO_MODULATE);
                         pass->setSpecular(ColourValue(1,1,1,1));
                         break;

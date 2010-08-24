@@ -1409,8 +1409,14 @@ private:
         loc.setOrientation( orient );
         loc.setVelocity(Vector3f(0,0,0));
         loc.setAngularSpeed(0);
-
-        //cam->setLocation(now, loc);
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        SpaceID space = cam->getObjectReference().space();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        Location oldloc = cam->extrapolateLocation(now);
+        cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))));
+        TimedMotionVector3f newplace(now,MotionVector3f(Vector3f(oldloc.getPosition()),Vector3f(pos-oldloc.getPosition())));
+        cam->setLocation(newplace);
+        cam_vwobj->requestLocationUpdate(space, newplace);
     }
 
     void cameraPathSetToKeyFrame(uint32 idx) {
@@ -1692,7 +1698,7 @@ public:
         mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
 
         // Session
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
 
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I, Input::MOD_CTRL), mInputResponses["togglePeriodicScreenshot"]);
@@ -1706,6 +1712,8 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN, Input::MOD_SHIFT), mInputResponses["rotateXNeg"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["moveForward"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["moveBackward"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["moveUp"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Z), mInputResponses["moveDown"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RIGHT), mInputResponses["stableRotateNeg"]);
 
@@ -1716,7 +1724,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
+        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G), mInputResponses["groupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, Input::MOD_ALT), mInputResponses["ungroupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
@@ -1742,15 +1750,15 @@ public:
         mInputBinding.add(InputBindingEvent::MouseClick(3), mInputResponses["selectObjectReverse"]);
 
         // Camera Path
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathLoad"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSave"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathNextKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathPreviousKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_P), mInputResponses["cameraPathInsertKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathDeleteKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["cameraPathRun"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSpeedUp"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSlowDown"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_1), mInputResponses["cameraPathLoad"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_2), mInputResponses["cameraPathSave"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_3), mInputResponses["cameraPathNextKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_4), mInputResponses["cameraPathPreviousKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_5), mInputResponses["cameraPathInsertKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_6), mInputResponses["cameraPathDeleteKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_7), mInputResponses["cameraPathRun"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_8), mInputResponses["cameraPathSpeedUp"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_9), mInputResponses["cameraPathSlowDown"]);
 
         // WebView Chrome
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navnewtab"), mInputResponses["webNewTab"]);
