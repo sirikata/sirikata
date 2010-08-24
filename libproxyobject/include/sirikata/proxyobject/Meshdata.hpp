@@ -44,6 +44,12 @@ struct SubMeshGeometry {
     std::vector<Sirikata::Vector3f> normals;
     std::vector<Sirikata::Vector3f> tangents;
     std::vector<Sirikata::Vector4f> colors;
+    std::vector<unsigned int> influenceStartIndex;//a list of where a given position's joint weights start
+    std::vector<unsigned int> jointindices;
+    std::vector<float> weights;
+
+    std::vector<Sirikata::Matrix4x4f> inverseBindMatrices;
+
     struct TextureSet {
         unsigned int stride;
         std::vector<float> uvs;
@@ -67,7 +73,8 @@ struct SubMeshGeometry {
     std::vector<Primitive> primitives;
 };
 struct GeometryInstance {
-    std::map<SubMeshGeometry::Primitive::MaterialId,size_t> materialBindingMap;//maps materialIndex to offset in Meshdata's materials
+    typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
+    MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
     BoundingBox3f3f aabb;//transformed aabb

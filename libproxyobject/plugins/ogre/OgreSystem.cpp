@@ -1063,6 +1063,11 @@ void OgreSystem::postFrame(Task::LocalTime current, Duration frameTime) {
 
 }
 
+void OgreSystem::screenshot(const String& filename) {
+    if (mRenderTarget != NULL)
+        mRenderTarget->writeContentsToFile(filename);
+}
+
 // ConnectionEventListener Interface
 void OgreSystem::onConnected(const Network::Address& addr) {
 }

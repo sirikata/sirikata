@@ -48,7 +48,7 @@
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "Lights.hpp"
 #include <boost/lexical_cast.hpp>
-
+#include "resourceManager/CDNArchive.hpp"
 
 using namespace std;
 using namespace Sirikata::Transfer;
@@ -56,7 +56,11 @@ using namespace Meru;
 
 namespace Sirikata {
 namespace Graphics {
-
+void fixOgreURI(String &uri) {
+    for (String::iterator i=uri.begin();i!=uri.end();++i) {
+        if(*i=='.') *i='{';
+    }
+}
 MeshEntity::MeshEntity(OgreSystem *scene,
                        const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
                        const std::string &id)
@@ -65,6 +69,8 @@ MeshEntity::MeshEntity(OgreSystem *scene,
                  id.length()?id:ogreMeshName(pmo->getObjectReference()),
                  NULL)
 {
+    mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
+    mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
     Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr();
     mResource = std::tr1::dynamic_pointer_cast<Meru::GraphicsResourceEntity>
@@ -268,6 +274,12 @@ void MeshEntity::loadMesh(const String& meshname)
         getScene()->getSceneManager()->destroyEntity(oldMeshObj);
     }
     fixTextures();
+    if (mActiveCDNArchive) {
+        CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
+        mActiveCDNArchive=false;
+    }else {
+        SILOG(ogre,error,"Archive deactivated early, texture data may be unavailable");
+    }
 }
 
 void MeshEntity::unloadMesh() {
@@ -293,7 +305,7 @@ void MeshEntity::setSelected(bool selected) {
 void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<DenseData> response)
 {
     String fn = request->getURI().filename();
-    if (fn.rfind(".dae") == fn.size() - 4) {
+    if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
         ProxyObject *obj = mProxy.get();
         ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
         if (meshProxy) {
@@ -327,7 +339,7 @@ void MeshEntity::processMesh(URI const& meshFile)
     /// hack to support collada mesh -- eventually this should be smarter
     String fn = meshFile.filename();
     bool is_collada=false;
-    if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
+    if (fn.rfind(".dae")==fn.size()-4 || fn.rfind(".DAE")==fn.size()-4) is_collada=true;
     if (is_collada) {
         Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
         Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MODEL, mProxy);
@@ -352,6 +364,205 @@ bool MeshEntity::createMeshWork(const Meshdata& md) {
     createMesh(md);
     return true;
 }
+
+class MaterialManualLoader : public Ogre::ManualResourceLoader {
+    MaterialEffectInfo mMat;
+    std::string mName;
+    String mURI;
+    MeshEntity::TextureBindingsMap mTextureFingerprints;
+public:
+    MaterialManualLoader(const std::string &name, 
+                         const MaterialEffectInfo&mat,
+                         const std::string uri,
+                         const MeshEntity::TextureBindingsMap& textureFingerprints):mTextureFingerprints(textureFingerprints) {
+        mName=name;
+        mMat=mat;
+        mURI=uri;
+    }
+    void prepareResource(Ogre::Resource*r){}
+    void loadResource(Ogre::Resource *r) {
+        using namespace Ogre;
+        Material* material= dynamic_cast <Material*> (r);
+        material->setCullingMode(CULL_NONE);
+        Ogre::Technique* tech=material->getTechnique(0);
+        bool useAlpha=false;
+        if (mMat.textures.empty()) {
+            Ogre::Pass*pass=tech->getPass(0);
+            pass->setDiffuse(ColourValue(1,1,1,1));
+            pass->setAmbient(ColourValue(1,1,1,1));
+            pass->setSelfIllumination(ColourValue(0,0,0,0));
+            pass->setSpecular(ColourValue(1,1,1,1));
+        }
+        for (size_t i=0;i<mMat.textures.size();++i) {
+            if (mMat.textures[i].affecting==MaterialEffectInfo::Texture::OPACITY&&
+                (mMat.textures[i].uri.length()||mMat.textures[i].color.w<1.0)){
+                useAlpha=true;
+                break;
+            }
+        }
+        unsigned int valid_passes=0;
+        {
+            Ogre::Pass* pass = tech->getPass(0);
+            pass->setAmbient(ColourValue(0,0,0,0));
+            pass->setDiffuse(ColourValue(0,0,0,0));
+            pass->setSelfIllumination(ColourValue(0,0,0,0));
+            pass->setSpecular(ColourValue(0,0,0,0));
+        }
+        for (size_t i=0;i<mMat.textures.size();++i) {
+            MaterialEffectInfo::Texture&tex=mMat.textures[i];
+            Ogre::Pass*pass=tech->getPass(0);
+/*
+            if (tex.uri.length()&&tech->getNumPasses()<=valid_passes) {
+                pass=tech->createPass();
+                ++valid_passes;
+            }
+*/          
+            if (tex.uri.length()==0) {
+                switch (tex.affecting) {
+                case MaterialEffectInfo::Texture::DIFFUSE:
+                  pass->setDiffuse(ColourValue(tex.color.x,
+                                               tex.color.y,
+                                               tex.color.z,
+                                               tex.color.w));
+/*
+                  pass->setAmbient(ColourValue(0,0,0,0));
+                  pass->setSelfIllumination(ColourValue(0,0,0,0));
+                  pass->setSpecular(ColourValue(0,0,0,0));
+*/
+                  break;
+                case MaterialEffectInfo::Texture::AMBIENT:
+/*
+                  pass->setDiffuse(ColourValue(0,0,0,0));
+                  pass->setSelfIllumination(ColourValue(0,0,0,0));
+                  pass->setSpecular(ColourValue(0,0,0,0));
+*/
+                  pass->setAmbient(ColourValue(tex.color.x,
+                                               tex.color.y,
+                                               tex.color.z,
+                                               tex.color.w));
+                  break;
+                case MaterialEffectInfo::Texture::EMISSION:
+/*
+                  pass->setDiffuse(ColourValue(0,0,0,0));
+                  pass->setAmbient(ColourValue(0,0,0,0));
+                  pass->setSpecular(ColourValue(0,0,0,0));
+*/
+                  pass->setSelfIllumination(ColourValue(tex.color.x,
+                                                        tex.color.y,
+                                                        tex.color.z,
+                                                        tex.color.w));
+                  break;
+                case MaterialEffectInfo::Texture::SPECULAR:
+/*
+                  pass->setDiffuse(ColourValue(0,0,0,0));
+                  pass->setAmbient(ColourValue(0,0,0,0));
+                  pass->setSelfIllumination(ColourValue(0,0,0,0));
+
+                  pass->setSpecular(ColourValue(tex.color.x,
+                                                tex.color.y,
+                                                tex.color.z,
+                                                tex.color.w));
+*///FIXME looks awful for some reason
+                  break;
+                default:
+                  break;
+                }
+            }else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) {
+                String texURI = mURI.substr(0, mURI.rfind("/")+1) + tex.uri;
+                MeshEntity::TextureBindingsMap::iterator where = mTextureFingerprints.find(texURI);
+                if (where!=mTextureFingerprints.end()) {
+                    String ogreTextureName = where->second;
+                    fixOgreURI(ogreTextureName);
+                    Ogre::TextureUnitState*tus;
+                    //tus->setTextureName(tex.uri);
+                    //tus->setTextureCoordSet(tex.texCoord);
+                    if (useAlpha==false) {
+                        pass->setAlphaRejectValue(.5);
+                        pass->setAlphaRejectSettings(CMPF_GREATER,128,true);
+                        if (true||i==0) {
+                            pass->setSceneBlending(SBF_ONE,SBF_ZERO);
+                        } else {
+                            pass->setSceneBlending(SBF_ONE,SBF_ONE);
+                        }
+                    }else {
+                        pass->setDepthWriteEnabled(false);
+                        pass->setDepthCheckEnabled(true);
+                        if (true||i==0) {
+                            pass->setSceneBlending(SBF_SOURCE_ALPHA,SBF_ONE_MINUS_SOURCE_ALPHA);
+                        }else {
+                            pass->setSceneBlending(SBF_SOURCE_ALPHA,SBF_ONE);
+                        }
+                    }
+                    switch (tex.affecting) {
+                      case MaterialEffectInfo::Texture::DIFFUSE:
+                        if (tech->getNumPasses()<=valid_passes) {
+                            pass=tech->createPass();
+                            ++valid_passes;
+                        }
+                        pass->setDiffuse(ColourValue(1,1,1,1));
+/*
+                        pass->setAmbient(ColourValue(0,0,0,0));
+                        pass->setSelfIllumination(ColourValue(0,0,0,0));
+                        pass->setSpecular(ColourValue(0,0,0,0));
+*/
+                        //pass->setIlluminationStage(IS_PER_LIGHT);
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                        
+                        tus->setColourOperation(LBO_MODULATE);
+
+                        break;
+                      case MaterialEffectInfo::Texture::AMBIENT:
+                        if (tech->getNumPasses()<=valid_passes) {
+                            pass=tech->createPass();
+                            ++valid_passes;
+                        }
+
+                        pass->setDiffuse(ColourValue(0,0,0,0));
+                        pass->setSelfIllumination(ColourValue(0,0,0,0));
+                        pass->setSpecular(ColourValue(0,0,0,0));
+
+                        pass->setAmbient(ColourValue(1,1,1,1));
+                        tus->setColourOperation(LBO_MODULATE);
+
+                        pass->setIlluminationStage(IS_AMBIENT);
+                        break;
+                      case MaterialEffectInfo::Texture::EMISSION:
+/*
+                        pass->setDiffuse(ColourValue(0,0,0,0));
+                        pass->setAmbient(ColourValue(0,0,0,0));
+                        pass->setSpecular(ColourValue(0,0,0,0));
+*/
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+//                        pass->setSelfIllumination(ColourValue(1,1,1,1));
+                        tus->setColourOperation(LBO_ADD);
+                    
+                        //pass->setIlluminationStage(IS_DECAL);
+                        break;
+                      case MaterialEffectInfo::Texture::SPECULAR:
+                        if (tech->getNumPasses()<=valid_passes) {
+                            pass=tech->createPass();
+                            ++valid_passes;
+                        }
+
+
+                        pass->setDiffuse(ColourValue(0,0,0,0));
+                        pass->setAmbient(ColourValue(0,0,0,0));
+                        pass->setSelfIllumination(ColourValue(0,0,0,0));
+                        //pass->setIlluminationStage(IS_PER_LIGHT);
+                        
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);                    
+                        tus->setColourOperation(LBO_MODULATE);
+                        pass->setSpecular(ColourValue(1,1,1,1));
+                        break;
+                      default:
+                  break;
+                    }
+                }
+            }
+        }
+    }    
+
+};
 
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
@@ -500,9 +711,8 @@ public:
                 const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
 
                 // FIXME select proper texture/material
-                std::string matname = md.textures.size() > 0 ?
-                    hash + "_texture_" + md.textures[0] :
-                    "baseogremat";
+                GeometryInstance::MaterialBindingMap::const_iterator whichMaterial = geoinst.materialBindingMap.find(prim.materialId);
+                std::string matname = whichMaterial!=geoinst.materialBindingMap.end()?hash+"_mat_"+boost::lexical_cast<std::string>(whichMaterial->second):"baseogremat";
                 Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
 
                 osubmesh->setMaterialName(matname);
@@ -579,6 +789,9 @@ public:
                             }
 
                             memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
+                            float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
+                            UVHACK=1.0-UVHACK;
+                            memcpy(pData+sizeof(float),&UVHACK,sizeof(float));
                             pData += VertexElement::getTypeSize(vet);
                         }
                     }
@@ -637,18 +850,35 @@ public:
     }
 };
 
+
+
+
 void MeshEntity::createMesh(const Meshdata& md) {
     SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
     String hash = sha.convertToHexString();
 
     if (!md.instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+        int index=0;
+        for (Meshdata::MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
+            std::string matname = hash+"_mat_"+boost::lexical_cast<string>(index);
+            Ogre::MaterialPtr matPtr=matm.getByName(matname);
+            if (matPtr.isNull()) {
+                Ogre::ManualResourceLoader * reload;
+                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (matname,*mat, mURI, mTextureFingerprints)));
+                
+                reload->prepareResource(&*matPtr);
+                reload->loadResource(&*matPtr);
+                
+            }
+        }
         Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
         for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
             std::string matname = hash + "_texture_" + *tex_it;
             Ogre::MaterialPtr mat = base_mat->clone(matname);
             String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
-            mat->getTechnique(0)->getPass(0)->createTextureUnitState("Cache/" + mTextureFingerprints[texURI], 0);
+            String ogreTextureName = "Cache/" + mTextureFingerprints[texURI];
+            mat->getTechnique(0)->getPass(0)->createTextureUnitState(ogreTextureName,0);
         }
         Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
         if (1) {
@@ -762,9 +992,13 @@ void MeshEntity::createMesh(const Meshdata& md) {
 
 void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
     std::tr1::shared_ptr<DenseData> response, Meshdata& md) {
-
+    
     mTextureFingerprints[request->getURI().toString()] = request->getIdentifier();
-
+    if (mActiveCDNArchive) {
+        String id = request->getIdentifier();
+        fixOgreURI(id);
+        CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(response));
+    }
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
         Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
