@@ -114,8 +114,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
     for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
     {
-
-        
         //register for scripting messages from user
         SpaceID space_id=*space_it;
         mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
@@ -355,7 +353,10 @@ void JSObjectScript::sendMessageToEntity(int numIndex, const std::string& msgBod
 void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std::string& msgBody) const
 {
     ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
-    mMessagingPort->send(dest,MemoryReference(msgBody));
+    MemoryReference toSend(msgBody);
+
+    //mMessagingPort->send(dest,MemoryReference(msgBody));
+    mMessagingPort->send(dest,toSend);
 }
 
 
@@ -723,15 +724,20 @@ void JSObjectScript::printAllHandlerLocations()
 
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
+    std::cout<<"\n\nThis is the src space in getMessageSender:  "<<src.space()<<"\n";
+    std::cout<<"\n\nThis is the src object in getMessageSender: "<<src.object()<<"\n";
+    
     SpaceObjectReference* sporef = new SpaceObjectReference(src.space(),src.object());
+
+    std::cout<<"\n\nThis is the src space in sporef:  "<<sporef->space()<<"\n";
+    std::cout<<"\n\nThis is the src object in sporef: "<<sporef->object()<<"\n";
+
     
     Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
     tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
     tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sporef));
     return tmpObj;
 }
-
-
 
 
 void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
@@ -741,14 +747,24 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     v8::Local<v8::Object> obj = v8::Object::New();
 
 
+    std::cout<<"\n\nComm: dst space: "<<dst.space()<<"\n\n";
+    
     v8::Local<v8::Object> msgSender = getMessageSender(src);
     //try deserialization
-    bool deserializeWorks;
-    deserializeWorks = JSSerializer::deserializeObject( payload,obj);
 
-    /*
-      FIXME: perhaps send a message back saying that deserialization failed
-    */
+    Sirikata::JS::Protocol::JSMessage js_msg;
+    bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
+
+//bftm:clean all this up later
+    
+    if (! parsed)
+    {
+        std::cout<<"\n\nCannot parse the message that I received on this port\n\n";
+        assert(false);
+    }
+    
+    bool deserializeWorks = JSSerializer::deserializeObject( js_msg,obj);
+    
     if (! deserializeWorks)
         return;
 
@@ -861,6 +877,10 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 //parses them.
 void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
+
+    std::cout<<"\n\nFor scripting:  "<<src.space()<<"\n\n\n";
+    std::cout<<"\n\nFor scripting:  "<<dst.space()<<"\n\n\n";
+    
     Sirikata::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
     if (!parsed)

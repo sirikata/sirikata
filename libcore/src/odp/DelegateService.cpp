@@ -124,9 +124,12 @@ bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReferen
 bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
     // Check from most to least specific
     PortMap const* pm = getPortMap(dst.space());
-    if (pm != NULL) {
+    if (pm != NULL)
+    {
         PortMap::const_iterator it = pm->find(dst.port());
-        if (it != pm->end()) {
+        
+        if (it != pm->end())
+        {
             DelegatePort* port = it->second;
             bool delivered = port->deliver(src, dst, data);
             if (delivered)

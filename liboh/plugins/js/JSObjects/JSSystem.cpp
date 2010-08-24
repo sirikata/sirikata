@@ -188,12 +188,13 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
     if(!messageBody->IsObject())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object")) );
 
+    Local<v8::Object> v8Object = messageBody->ToObject();
 
     //serialize the object to send
-    Local<v8::Object> v8Object = messageBody->ToObject();
+
     std::string serialized_message = JSSerializer::serializeObject(v8Object);
 
-    
+        
     //sender
     JSObjectScript* target = GetTargetJSObjectScript(args);
     target->bftm_testSendMessageBroadcast(serialized_message);

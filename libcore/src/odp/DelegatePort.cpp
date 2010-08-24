@@ -81,14 +81,15 @@ bool DelegatePort::deliver(const RoutableMessageHeader& header, MemoryReference 
     return false;
 }
 
-bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const {
+bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const
+{
     // See ODP::Port documentation for details on this ordering.
-    if (tryDeliver(src, dst, data)) return true;
-    if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), src.port()), dst, data)) return true;
-    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), src.port()), dst, data)) return true;
-    if (tryDeliver(Endpoint(src.space(), src.object(), PortID::any()), dst, data)) return true;
-    if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), PortID::any()), dst, data)) return true;
-    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), PortID::any()), dst, data)) return true;
+    if (tryDeliver(src, dst, data,src,dst)) return true;
+    if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), src.port()), dst, data,src,dst)) return true;
+    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), src.port()), dst, data,src,dst)) return true;
+    if (tryDeliver(Endpoint(src.space(), src.object(), PortID::any()), dst, data,src,dst)) return true;
+    if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), PortID::any()), dst, data,src,dst)) return true;
+    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), PortID::any()), dst, data,src,dst)) return true;
 
     return false;
 }
@@ -103,13 +104,13 @@ bool DelegatePort::tryDeliver(const Endpoint& ep, const RoutableMessageHeader& h
     return true;
 }
 
-bool DelegatePort::tryDeliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
+bool DelegatePort::tryDeliver(const Endpoint& src, const Endpoint& dst, MemoryReference data, const Endpoint& src_real, const Endpoint& dst_real) const {
     ReceiveFromHandlers::const_iterator rit = mFromHandlers.find(src);
     if (rit == mFromHandlers.end())
         return false;
 
     const MessageHandler& handler = rit->second;
-    handler(src, dst, data);
+    handler(src_real, dst_real, data);
     return true;
 }
 

@@ -59,11 +59,12 @@ function testForceHandler()
 {
     var objectMessage = new Object();
     objectMessage.m = "o";
-    
-    for (var s=0; s < system.addressable.length; ++s)
-    {
-        system.addressable[s].sendMessage(objectMessage);
-    }
+
+    system.__broadcast(objectMessage);
+    // for (var s=0; s < system.addressable.length; ++s)
+    // {
+    //     system.addressable[s].sendMessage(objectMessage);
+    // }
 }
 
 

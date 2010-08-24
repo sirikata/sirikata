@@ -52,12 +52,28 @@ Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handl
 
 bool Pattern::matches(v8::Handle<v8::Object> obj) const
 {
+    // std::cout<<"\n\nPrinting the fields the object has: \n";
+    // v8::Local<v8::Array> allFields = obj->GetPropertyNames();
+    // for (int s=0; s < allFields->Length(); ++s)
+    // {
+    //     v8::Local<v8::Value> toPrint = allFields->Get(s);
+    //     v8::Local<v8::String>toPrintV8String = toPrint->ToString();
+    //     v8::String::AsciiValue ascii(toPrintV8String);
+        
+    //     std::cout<<"\tThis is the object's internal field: " << *ascii<<"\n\n";
+    // }
+
+    
+    
     if (!obj->Has(v8::String::New(mName.c_str())))
+    {
         return false;
+    }
 
     if (hasValue())
     {
         Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
+
         
         if (!field->Equals(mValue))
             return false;

@@ -1,55 +1,17 @@
 
-function testSetPosition()
-{
-    var initialPosition = system.presences[0].getPosition();
-    printVec3(initialPosition,"\n\n\nInitial position\n");
-    var displacement = system.Vec3(1,1,1);
-
-    system.presences[0].setPosition(addVec3(initialPosition,displacement));
-    
-}
-
-
-function testSetOrientation()
-{
-    var initialPosition = system.presences[0].getOrientation();
-    printQuat(initialPosition,"\n\n\nInitial orientation\n");
-    var displacement = system.Quaternion(1,1,1,1);
-
-    system.presences[0].setOrientation(addQuat(initialPosition,displacement));
-}
-
-
-function testSetVisual()
-{
-    var testMesh = "meerkat:///lily/milktruck.dae"
-    //    var testMesh = "meerkat:///danielrh/cube.dae"
-
-    system.print("\n\nChanging mesh\n\n");
-    system.presences[0].setMesh(testMesh);
-    
-}
-
-function testGetVisual()
-{
-
-    var visualMeshUri = system.presences[0].getMesh();
-    system.print("\n\n\nMesh:");
-    system.print(visualMeshUri);
-    system.print("\n\n\n");
-}
-
-
 
 function getLocationCallback(object,sender) {
    sender.sendMessage({command:"locationResponse",position:system.presences[0].getPosition(),
                                                   velocity:system.presences[0].getVelocity(),
                                                   orientation:system.presences[0].getOrientation()});
 }
+
 function getPositionCallback(object,sender) {
    sender.sendMessage({command:"positionResponse",position:system.presences[0].getPosition()});
 }
-function getOrientationCallback(object,sender) {
+
+function getOrientationCallback(object,sender)
+{
    sender.sendMessage({command:"orientationResponse":orientation:system.presences[0].getOrientation()});
 }
 function getVelocityCallback(object,sender) {
@@ -82,17 +44,14 @@ function locationResponseCallback(object,sender) {
 
 
 
-function positionPoller() {
+function positionPoller()
+{
    system.__broadcast({command:"getLocation"});
-/*
-   for (var i=0; i<system.addressable.length();++i) {
-       system.addressable[i].sendMessage();
-   } 
-*/
 }
 
 
-function boidPoller() {
+function boidPoller()
+{
    var centroid = new system.Vec3(0,0,0);
    var numAve=0;
    for (i in remoteLocations) {
@@ -109,9 +68,8 @@ function boidPoller() {
 
 var locationResponsePattern = new system.Pattern("command","getLocationResponse");
 var locResponseHandler = system.registerHandler(locationResponsePattern,null,locationResponseCallback,null);
-system.registerTimer(".1s",positionPoller);
-
-system.registerTimer(".1s",boidPoller);
+system.setTimeout(1,null,positionPoller);
+system.setTimeout(1,boidPoller);
 
 function testSetHandler()
 {

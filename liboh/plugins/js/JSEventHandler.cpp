@@ -26,12 +26,12 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
         wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
 
     void* ptr = wrap->Value();
-    ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
-
+    //ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
     SpaceObjectReference* spref1 = static_cast<SpaceObjectReference*>(ptr);
     
     if (! this->sender->IsNull())
     {
+        
         //have a sender to match.  see if it does
         if (this->sender->InternalFieldCount() > 0)
             wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
@@ -40,19 +40,27 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
 
         SpaceObjectReference* spref2 = static_cast<SpaceObjectReference*>(ptr);
         
-        if ( spref1  != spref2)
+        if ( (*spref1)  != (*spref2))
+        {
+            std::cout<<"\n\n\nThe senders do not match\n\n";
             return false;
+        }
         else
             std::cout<<"\n\nThe senders match\n\n";
     }
-        
 
+    
     //check if the pattern matches the obj
     for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
     {
-        if (!pat_it->matches(obj))
+        if (! pat_it->matches(obj))
             return false;
+        
+        // if (pat_it->matches(obj))
+        //     return true;
     }
+
+    //return false;
     return true;
 }
 

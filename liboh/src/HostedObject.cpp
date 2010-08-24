@@ -399,9 +399,6 @@ struct HostedObject::PrivateCallbacks {
                                 const SpaceID&sid,
                                 Network::Stream::ConnectionStatus ce,
                                 const String&reason) {
-
-        std::cout<<"\n\n\nGot a connection event\n\n\n";
-        std::cout.flush();
         
         if (ce!=Network::Stream::Connected) {
             disconnectionEvent(thus,sid,reason);
@@ -426,9 +423,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
     SpaceDataMap::const_iterator it = mSpaceData->find(space);
     if (it == mSpaceData->end())
     {
-        std::cout<<"\n\n\n";
-        std::cout<<"Got inside of getProxyManager and did not have the space in mSpaceData";
-        std::cout<<"\n\n\n";
         
         it = mSpaceData->insert(
             SpaceDataMap::value_type( space, PerSpaceData(this, space) )
@@ -1046,17 +1040,20 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
+    
     // FIXME to transition to real ODP instead of ObjectMessageRouter +
     // ObjectMessageDispatcher, we need to allow the old route as well.  First
     // we check if we can use ObjectMessageDispatcher::dispatchMessage, and if
     // not, we allow it through to the long term solution, ODP::Service
     if (ObjectMessageDispatcher::dispatchMessage(*msg)) {
         // Successfully delivered using old method
+        
         delete msg;
         return;
     }
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
+        
         delete msg;
     }
     else if (handleScriptInitMessage(src_ep,dst_ep,MemoryReference(msg->payload())))
@@ -1621,7 +1618,8 @@ ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* par
     );
 }
 
-bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
+bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload)
+{
     assert(source_ep.space() == dest_ep.space());
     return mObjectHost->send(getSharedPtr(), source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(), dest_ep.port(), payload);
 }
