@@ -40,7 +40,7 @@ enum Ports{
     GEOM=3, // Proximity service: Also known as PROX
     ROUTER=4,
     PERSISTENCE=5,
-	PHYSICS=6,
+    PHYSICS=6,
     TIMESYNC=7,
     SUBSCRIPTION=9,
     BROADCAST=10,
@@ -54,7 +54,10 @@ enum Ports{
                                 //any begin scriptable events.  if it receives
                                 //any, will instantiate a JSObjectScript
                                 //attached to the HostedObject.  Currently, ogre
-                                //mouse events send this signal to the HostedObject.
+                                //mouse events send this signal to the
+                                //HostedObject.
+    CREATE_ENTITY=14,           //The HostedObject listens to this port for
+                                //messages to spawn a new entity
     OBJECT_CONNECTIONS=16383
 };
 }

@@ -133,12 +133,19 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         if (mMessagingPort)
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
 
-        space_it=spaces.find(space_id);//in case the space_set was munged in the process
+        space_it=spaces.find(space_id);//in case the space_set was munged in the
+                                       //process
+
+
+        //register a port for creating entities
+        mCreateEntityPort = mParent->bindODPPort(space_id, Services::CREATE_ENTITY);
+        //shouldn't need to receive on this port
     }
 }
 
 
-void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
+
+void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& mesh_name)
 {
 
   //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
@@ -148,24 +155,23 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
   Sirikata::Protocol::CreateObject creator;
   Sirikata::Protocol::IConnectToSpace spacer = creator.add_space_properties();
   Sirikata::Protocol::IObjLoc loc = spacer.mutable_requested_object_loc();
-  //loc.set_position(curLoc.getPosition() + Vector3d(direction(curLoc.getOrientation()))*WORLD_SCALE/3);
+
   loc.set_position(vec);
-  //loc.set_orientation(curLoc.getOrientation());
   loc.set_velocity(Vector3f(0,0,0));
   loc.set_angular_speed(0);
   loc.set_rotational_axis(Vector3f(1,0,0));
 
-  creator.set_mesh("http://www.sirikata.com/content/assets/cube.dae");
+  creator.set_mesh(mesh_name);
   creator.set_scale(Vector3f(1,1,1));
   creator.set_script(script_type);
   creator.set_script_name(script_name);
-  //Sirikata::Protocol::IStringMapProperty script_args = creator.mutable_script_args();
+
   std::string serializedCreate;
   creator.SerializeToString(&serializedCreate);
-  RoutableMessageBody body;
-  body.add_message("CreateObject", serializedCreate);
-  std::string serialized;
-  body.SerializeToString(&serialized);
+  // RoutableMessageBody body;
+  // body.add_message("CreateObject", serializedCreate);
+  // std::string serialized;
+  // body.SerializeToString(&serialized);
 
 
   FIXME_GET_SPACE();
@@ -174,10 +180,12 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name)
 
   //ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
   //The .object call to SpaceObjectReference gets out the ObjectReference.
-  ODP::Endpoint dest (space,(mParent->id(space)).object(),Services::RPC);
+//  ODP::Endpoint dest (space,(mParent->id(space)).object(),Services::RPC);
 
-  
-  mMessagingPort->send(dest, MemoryReference(serialized.data(), serialized.length()));
+  ODP::Endpoint dest (space,mParent->getObjReference(space),Services::CREATE_ENTITY);
+  //mCreateEntityPort->send(dest, MemoryReference(serialized.data(),
+  //serialized.length()));
+  mCreateEntityPort->send(dest, MemoryReference(serializedCreate));
 
 }
 

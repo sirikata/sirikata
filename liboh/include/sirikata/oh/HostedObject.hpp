@@ -365,6 +365,8 @@ public:
     */
     void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
 
+    bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    
   public:
     //BFTM_FIXME: need to actually write this function.
     void updateAddressable();

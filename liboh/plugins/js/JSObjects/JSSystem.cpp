@@ -27,17 +27,20 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
   
 }
 
+//first argument is the position of the new entity
+//second argument is the name of the file to execute scripts from
+//third argument is the mesh file to use.
 v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 {
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>, <script filename>, <mesh uri> arguments")) );
  
   JSObjectScript* target_script = GetTargetJSObjectScript(args);
   // get the location from the args
 
   Handle<Object> val_obj = ObjectCast(args[0]);
   if( !Vec3Validate(val_obj))
-  {
-    return v8::Undefined();
-  }
+      return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
 
   Vector3d pos(Vec3Extract(val_obj));
   
@@ -46,8 +49,16 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
   v8::String::Utf8Value str(args[1]);
   const char* cstr = ToCString(str);
   String script(cstr);
-  target_script->create_entity(pos, script);
 
+  //get the mesh to represent as
+  v8::String::Utf8Value mesh_str(args[2]);
+  const char* mesh_cstr = ToCString(mesh_str);
+  String mesh(cstr);
+
+  
+  target_script->create_entity(pos, script,mesh);
+
+  
   return v8::Undefined();
 }
 
