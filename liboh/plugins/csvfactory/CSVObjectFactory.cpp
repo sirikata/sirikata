@@ -64,6 +64,8 @@ void CSVObjectFactory::generate() {
     int mesh_idx = -1;
 
     int quat_vel_idx = -1;
+    int script_file_idx = -1;
+
     
     // For each line
     while(fp) {
@@ -101,11 +103,13 @@ void CSVObjectFactory::generate() {
                 if (line_parts[idx] == "vel_x") vel_idx = idx;
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
+                if (line_parts[idx] == "script_file") script_file_idx = idx;
             }
 
             is_first = false;
         }
         else {
+            //note: script_file is not required, so not checking it witht he assert
             assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {
@@ -132,11 +136,24 @@ void CSVObjectFactory::generate() {
                     safeLexicalCast<float>(line_parts[quat_vel_idx+1]),
                     safeLexicalCast<float>(line_parts[quat_vel_idx+2])
                 );
-
+                
                 float angular_speed = safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
                 
                 String mesh( line_parts[mesh_idx] );
 
+                String scriptFile = "";
+                String scriptType = "";
+                if (script_file_idx != -1)
+                {
+                    std::cout<<"\n\nLength of line_parts: "<<line_parts.size();
+                    std::cout<<"\n\nIndex: "<<script_file_idx<<"\n\n";
+                    std::cout.flush();
+                    scriptFile = line_parts[script_file_idx];
+                    std::cout<<"\n\nGot a script file:  "<<scriptFile<<"\n\n";
+                    scriptType = line_parts[script_file_idx+1];
+                }
+
+                
                 
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
@@ -145,7 +162,9 @@ void CSVObjectFactory::generate() {
                     Location( pos, orient, vel, rot_axis, angular_speed),
                     BoundingSphere3f(Vector3f::nil(), 1.f),
                     mesh,
-                    UUID::null());
+                    UUID::null(),
+                    scriptFile,
+                    scriptType);
             }
         }
     }

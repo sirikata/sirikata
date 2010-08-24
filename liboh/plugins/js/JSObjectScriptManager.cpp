@@ -92,11 +92,12 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
 
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
+    system_templ->Set(v8::String::New("update_addressable"),v8::FunctionTemplate::New(JSSystem::ScriptUpdateAddressable));
 
+    
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
     
-
 
     //these are mutable fields
 	
@@ -109,7 +110,6 @@ void JSObjectScriptManager::createSystemTemplate()
     //system_templ->SetAccessor(JS_STRING(orientation), JSSystem::ScriptGetOrientation, JSSystem::ScriptSetOrientation);
     system_templ->SetAccessor(JS_STRING(angularAxis), JSSystem::ScriptGetAxisOfRotation, JSSystem::ScriptSetAxisOfRotation);
     system_templ->SetAccessor(JS_STRING(angularVelocity), JSSystem::ScriptGetAngularSpeed, JSSystem::ScriptSetAngularSpeed);
-
 
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);

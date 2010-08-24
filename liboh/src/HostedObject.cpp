@@ -123,6 +123,7 @@ public:
         SpaceID space = mProxyObject->getObjectReference().space();
         Time now = Time::now(ho->getSpaceTimeOffset(space));
         Location realLocation = mProxyObject->globalLocation(now);
+
         if (mUpdatedLocation.needsUpdate(now, realLocation)) {
             Protocol::ObjLoc toSet;
             toSet.set_position(realLocation.getPosition());
@@ -811,15 +812,15 @@ void HostedObject::attachScript(const String& script_name)
 {
   if(!mObjectScript)
   {
-    SILOG(oh,warn,"[OH] Ignored attachScript because script is not initialized for " << getUUID().toString() << "(internal id)");
-        return;
+      SILOG(oh,warn,"[OH] Ignored attachScript because script is not initialized for " << getUUID().toString() << "(internal id)");
+      return;
   }
   
   mObjectScript->attachScript(script_name);
 
 }
 
-void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
+void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach) {
     if (mObjectScript) {
         SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
         return;
@@ -845,19 +846,23 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
     if (mgr) {
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
+        if (fileScriptToAttach != "")
+        {
+            std::cout<<"\n\nAttaching script: "<<fileScriptToAttach<<"\n\n";
+            mObjectScript->attachScript(fileScriptToAttach);
+        }
     }
 }
+
 void HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
-        const UUID&object_uuid_evidence)
+        const UUID&object_uuid_evidence,
+        const String& scriptFile,
+        const String& scriptType)
 {
-
-    std::cout<<"\n\nGot a hosted object connect message\n\n\n";
-
-    
     if (spaceID == SpaceID::null())
     {
         return;
@@ -876,7 +881,7 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         SolidAngle(.00001f),
-        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3,startingLocation) ),
+        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3,startingLocation,scriptFile,scriptType) ),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, spaceID)
     );
@@ -889,7 +894,8 @@ void HostedObject::connect(
     }
 }
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation)
+
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation, const String& scriptFile, const String& scriptType )
 {
     if (server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
@@ -913,6 +919,14 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     //receive the scripting signal for the first time, that means that we create
     //a JSObjectScript for this hostedobject
     bindODPPort(space,Services::LISTEN_FOR_SCRIPT_BEGIN);
+
+    //attach script callback;
+    if (scriptFile != "")
+    {
+        ObjectScriptManager::Arguments script_args;  //these can just be empty;
+        this->initializeScript(scriptType,script_args,scriptFile);
+    }
+    
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server) {
@@ -1048,167 +1062,7 @@ bool HostedObject::handleEntityCreateMessage(const ODP::Endpoint& src, const ODP
         return false;
 
     std::cout<<"\n\n\nI got a create entity message!!!\n\n";
-    
-    Protocol::CreateObject co;
-    bool parsedOk = co.ParseFromArray(bodyData.data(),bodyData.size());
-    if (!parsedOk)
-    {
-        std::cout<<"\n\nError parsing the create_entity message in HostedObject.cpp\n\n";
-        assert(false);
-    }
-
-    PhysicalParameters phys;
-    LightInfo light;
-    LightInfo *pLight=NULL;
-    UUID uuid;
-    std::string weburl;
-    std::string mesh;
-    bool camera=false;
-    if (!co.has_object_uuid()) {
-        uuid = UUID::random();
-    } else {
-        uuid = co.object_uuid();
-    }
-    if (!co.has_scale()) {
-        co.set_scale(Vector3f(1,1,1));
-    }
-    if (co.has_weburl()) {
-        weburl = co.weburl();
-    }
-    if (co.has_mesh()) {
-        std::cout<<"\n\nObject has mesh\n\n";
-        mesh = co.mesh();
-    }
-    if (co.has_physical()) {
-        //parsePhysicalParameters(phys, co.physical());
-    }
-    if (co.has_light_info()) {
-        pLight=&light;
-        light = LightInfo(co.light_info());
-    }
-    if (co.has_camera() && co.camera())
-    {
-        camera=true;
-    }
-
-    
-    SILOG(cppoh,info,"Creating new object "<<ObjectReference(uuid));
-    VWObjectPtr vwobj = HostedObject::construct<HostedObject>(mContext, mObjectHost, uuid, camera);
-    std::tr1::shared_ptr<HostedObject>obj=std::tr1::static_pointer_cast<HostedObject>(vwobj);
-    if (camera)
-    {
-        std::cout<<"\nNot making cameras\n";
-        assert(false);
-        obj->initializeDefault("",NULL,"",co.scale(),phys);
-    }
-    else
-    {
-        obj->initializeDefault(mesh,pLight,weburl,co.scale(),phys);
-    }
-                
-    // We check if the new entity is scripted. Also
-    //note down the details of the script env given 
-    //while creating this entity
-    //These details are retrieved when the RetObj 
-    //confirmation is sent by the space and we
-    //initialize the script for the entity
-
-    if (co.has_script())
-    {
-        std::cout<<"\n\nI have a script\n\n";
-        obj->setHasScript(true); 
-        String script_type = co.script();
-        
-        obj->setScriptType(script_type);
-        
-        ObjectScriptManager::Arguments script_args;
-        if (co.has_script_args())
-        {
-            Protocol::StringMapProperty args_map = co.script_args();
-            assert(args_map.keys_size() == args_map.values_size());
-            for (int i = 0; i < args_map.keys_size(); ++i)
-                script_args[ args_map.keys(i) ] = args_map.values(i);
-        }
-
-        obj->setScriptArgs(script_args);
-
-        if(co.has_script_name())
-        {
-            obj->setScriptName(co.script_name());
-        }
-        
-    }
-
-  //   BoundingSphere3f bs (PBJ::BoundingSphere3f(Vector3f(0,0,0),1));
-  //   Location tmpLoc;
-  //   tmpLoc.setPosition(loc.get_position());
-  //   tmpLoc.setVelocity(loc.get_velocity());
-  //   tmpLoc.setAngularSpeed(loc.get_angular_speed());
-  //   tmpLoc.setRotationalAxis(loc.get_rotational_axis());
-  // //         loc.set_position(vec);
-  // // loc.set_velocity(Vector3f(0,0,0));
-  // // loc.set_angular_speed(0);
-  // // loc.set_rotational_axis(Vector3f(1,0,0));
-
-  //   obj->connect(dst.space(), tmpLoc, bs, mesh, uuid);
-    //FIXME: set to new location
-            
-            
-    for (int i = 0; i < co.space_properties_size(); ++i)
-    {
-        std::cout<<"\n\nHas space property\n\n";
-        //RoutableMessageHeader connMessage
-        //obj->processRoutableMessage(connMessageHeader, connMessageData);
-        Protocol::ConnectToSpace space = co.space_properties(i);
-        UUID evidence = space.has_object_uuid_evidence()
-            ? space.object_uuid_evidence()
-            : uuid;
-        
-        //SpaceID spaceid
-        //(space.has_space_id()?space.space_id():msg.destination_space().getObjectUUID());
-        // SpaceID spaceid = dst.space();
-        // if (space.has_space_id())
-        //     spaceid = space.space_id();
-
-        //lkjs: FIXME: should be able to specify space to connect to.
-        //SpaceID spaceid(space.has_space_id() ? space.space_id() : dst.space());
-
-        SpaceID spaceid(dst.space());
-        
-        if (!space.has_bounding_sphere()) {
-            space.set_bounding_sphere(PBJ::BoundingSphere3f(Vector3f(0,0,0),1));
-        }
-        if (space.has_requested_object_loc() && space.has_bounding_sphere()) {
-            BoundingSphere3f bs (space.bounding_sphere());
-            Location location(Vector3d::nil(),Quaternion::identity(),Vector3f::nil(),Vector3f(1,0,0),0);
-            const Protocol::ObjLoc &loc = space.requested_object_loc();
-            SILOG(cppoh,debug,"Creating object "<<ObjectReference(getUUID())
-                <<" at position "<<loc.position());
-            if (loc.has_position())
-            {
-                location.setPosition(loc.position());
-            }
-            if (loc.has_orientation())
-            {
-                location.setOrientation(loc.orientation());
-            }
-            if (loc.has_velocity())
-            {
-                location.setVelocity(loc.velocity());
-            }
-            if (loc.has_rotational_axis())
-            {
-                location.setAxisOfRotation(loc.rotational_axis());
-            }
-            if (loc.has_angular_speed())
-            {
-                location.setAngularSpeed(loc.angular_speed());
-            }
-            obj->connect(spaceid, location, bs, "", evidence);
-
-        }
-    }
-    
+    std::cout<<"\n\nIt's unsupported for now\n\n";
 
     return true;
 }
@@ -1834,6 +1688,8 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
     TimedMotionVector3f tmv (Time::local(),MotionVector3f(curPos,vel));
     //FIXME: re-write the requestLocationUpdate function so that takes in object
     //reference as well
+
+
     requestLocationUpdate(space,tmv);
 }
 

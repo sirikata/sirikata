@@ -80,6 +80,9 @@ function resetVelocity()
     system.presences[0].setVelocity(newVel);
     system.print("\n\nResetting velocity\n\n");
     printVec3(newVel,"\nNewVeloc vector: \n");
+
+    var oldVel = system.presences[0].getVelocity();
+    printVec3(oldVel,"\nOldVelocVector:\n");
 }
 
 //register handlers for a getLocation command

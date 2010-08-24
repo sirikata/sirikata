@@ -293,7 +293,6 @@ void JSObjectScript::test() const
 //populates the internal addressable object references vector
 void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 {
-
     //loading the vector
     mAddressableList.clear();
     getAllMessageable(mAddressableList);
@@ -1037,7 +1036,7 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 
 void JSObjectScript::attachScript(const String& script_name)
 {
-  import(script_name);  
+    import(script_name);  
 }
 
 void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)

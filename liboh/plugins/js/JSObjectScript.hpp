@@ -67,7 +67,7 @@ public:
     
     void updateAddressable();
 
-    void attachScript(const String&);
+    virtual void attachScript(const String&);
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -86,9 +86,10 @@ public:
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
-    
-
-    
+    // virtual void attachScript(const String& filename)
+    // {
+    //     import(filename);
+    // }
     
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);

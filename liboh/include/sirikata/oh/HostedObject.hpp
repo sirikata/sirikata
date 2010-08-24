@@ -175,8 +175,9 @@ public:
             const Vector3f&meshScale,
             const PhysicalParameters&physicalParameters);
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    void initializeScript(const String&script, const std::map<String,String> &args);
-
+    //void initializeScript(const String&script, const std::map<String,String> &args);
+    void initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach="");
+    
     bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void processInitScriptMessage(MemoryReference& body);
     bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
@@ -316,13 +317,15 @@ public:
         const Location&startingLocation,
         const BoundingSphere3f&meshBounds,
         const String& mesh,
-        const UUID&evidence);
+        const UUID&evidence,
+        const String& scriptFile="",
+        const String& scriptType="");
     
     Location getLocation(const SpaceID& space);
 
   private:
-
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation);
+    
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation, const String& scriptFile, const String& scriptType );
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceID& space);
 
