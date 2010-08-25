@@ -397,7 +397,7 @@ IF(NOT BOOST_ROOT)
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex)
+  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex iostreams)
 ELSE(WIN32)
   FIND_PACKAGE(Boost COMPONENTS system)
 
@@ -420,6 +420,10 @@ ELSE(WIN32)
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
+  
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
 SET(Boost_LIBRARIES
@@ -429,6 +433,7 @@ SET(Boost_LIBRARIES
   debug ${Boost_FILESYSTEM_LIBRARY_DEBUG} optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE}
   debug ${Boost_DATE_TIME_LIBRARY_DEBUG} optimized ${Boost_DATE_TIME_LIBRARY_RELEASE}
   debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
+  debug ${Boost_IOSTREAMS_LIBRARY_DEBUG} optimized ${Boost_IOSTREAMS_LIBRARY_RELEASE}
   )
 
 #dependency: curl

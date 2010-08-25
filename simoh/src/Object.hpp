@@ -131,6 +131,13 @@ private:
     void scheduleNextLocUpdate();
     void handleNextLocUpdate(const TimedMotionVector3f& up);
 
+    // Handlers for substreams for space-managed updates
+    void handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s);
+    // Handlers for substream read events for space-managed updates
+    void handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
+    void handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
+
     void locationMessage(uint8* buffer, int len);
     void proximityMessage(uint8* buffer, int len);
 

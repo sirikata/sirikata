@@ -135,11 +135,9 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Proto
 
   bool sent = false;
   if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
-    boost::shared_ptr<Connection<UUID> > conn = locServiceStream->connection().lock();
-    assert(conn);
-
-    sent = conn->datagram( (void*)bluMsg.data(), bluMsg.size(),
-						     OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION, NULL);
+    locServiceStream->createChildStream(NULL, (void*)bluMsg.data(), bluMsg.size(),
+        OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION);
+    sent = true;
   }
 
   return sent;
