@@ -1,12 +1,22 @@
 
 var minDist = 6;
 var howFastToEvadeConst = 3;
-var evading = false;
+var evading = 0;
 var howLongToFlee = 2;
-var orientationCallbackResolution = .5; //will blend quaternions every .2 seconds
-var blendQuaternion_factor = .5; //how much of goal quaternion vs how much of current orientation.
-var runOrientationCallback = true;
+var orientationCallbackResolution = .2; //will blend quaternions every .2 seconds
+var blendQuaternion_factor = .7; //how much of goal quaternion vs how much of current orientation. (high is more of goal).
 
+var runOrientationCallback = true;
+//var runOrientationCallback = false;
+
+var runDartingAboutCallback = true;
+var scaleRandomness = 3.0;
+
+var realCenter= new system.Vec3(0,0,-12);
+var maxRadiusFromCenter = 3;
+var dartingAboutCallbackPeriod = 1; //how long to go before calling darting about callback
+var minVelocitySquared = 1.0;
+var constBirdVelocity = .7;
 
 //this function returns an object that has converted the relevant position fields from strings to a vec3
 function parseLocationFromObject(object)
@@ -42,13 +52,15 @@ function cameraLocationCallback(object, sender)
 //it sets velocity to be in the opposite direction of the camera
 function evasiveManeuvers(camLocation,curPosition)
 {
-    evading = true;
-    var velocityDirection = new system.Vec3(curPosition.x-camLocation.x,curPosition.y-camLocation.y, curPosition.z-camLocation.z);
+    evading = evading + 1;
+    //var velocityDirection = new system.Vec3(curPosition.x-camLocation.x,curPosition.y-camLocation.y, curPosition.z-camLocation.z);
+    var velocityDirection = new system.Vec3(curPosition.x-camLocation.x,0, curPosition.z-camLocation.z);
     var newVel = scalarMultVec(howFastToEvadeConst, (normalizeVector(velocityDirection)));
     system.presences[0].setVelocity(newVel);
     system.timeout(howLongToFlee,null,regularOperationCallback);
     
 }
+
 
 function normalizeVector(vec)
 {
@@ -64,14 +76,20 @@ function scalarMultVec(scalar, vec)
 
 function regularOperationCallback()
 {
-    evading = false;
-    system.presences[0].setVelocity(new system.Vec3(0,0,0));
+    evading = evading -1;
+    if (evading == 0)
+    {
+        system.presences[0].setVelocity(new system.Vec3(0,0,0));
+        callDartingAbout();        
+    }
     
 }
+
 
 //listenging for camera location
 var cameraLocationPattern = new system.Pattern("command","locationCamera");
 var cameraLocationHandler = system.registerHandler(cameraLocationPattern,null,cameraLocationCallback,null);
+
 
 
 //orientation library
@@ -321,4 +339,96 @@ function resumeOrientationCallback()
 //gets the orientation interpolation callbacks going.
 orientationCallback();
 
+
+
+//what to do in absence of disturbances
+function dartingAboutCallback()
+{
+
+    if (evading == 0)
+    {
+        callDartingAbout();
+    }
+
+    if (runDartingAboutCallback)
+        system.timeout(dartingAboutCallbackPeriod,null,dartingAboutCallback);
+}
+
+dartingAboutCallback();
+
+
+function zeroVelocity()
+{
+    system.presences[0].setVelocity(new system.Vec3(0,0,0));
+}
+
+function resetPosition()
+{
+    system.presences[0].setPosition(realCenter);
+}
+
+//this function assumes that you are not evading.
+//it checks if your current position is not outside the specified radius.
+//if it is, then it gets you to turn back towards the center (with some randomness)
+//if it isn't, it checks if you're moving.  If you aren't, it tells you to start moving in a random direction.
+function callDartingAbout()
+{
+    var curPosition = system.presences[0].getPosition();
+
+    var distToCenter = distance(curPosition,realCenter);
+
+    system.print("\nThis is the distToCenter: " + distToCenter + "\n\n");
+    
+    if (distToCenter > maxRadiusFromCenter)
+    {
+        system.print("\ndist to center too great\n");
+        var newVelDirection = new system.Vec3(realCenter.x - curPosition.x , realCenter.y - curPosition.y, realCenter.z - curPosition.z);
+
+        var normalizedVector = normalizeVector(newVelDirection);
+        var newVel = scalarMultVec(constBirdVelocity, normalizedVector);
+
+        newVel.x += scaleRandomness*(system.rand() - .5);
+        //newVel.y += scaleRandomness*(system.rand() - .5);
+        newVel.y = 0;
+        newVel.z += scaleRandomness*(system.rand() - .5);
+
+        system.presences[0].setVelocity(newVel);
+        previousVelocity = newVel;
+    }
+    else
+    {
+        system.print("\nstill close enough to center\n");
+        
+        var prevVelocitySquared = previousVelocity.x*previousVelocity.x + previousVelocity.y*previousVelocity.y + previousVelocity.z*previousVelocity.z;
+        //not moving fast enough.  increase the speed.
+        if (prevVelocitySquared < minVelocitySquared)
+        {
+            //var newVelocity = new system.Vec3(previousVelocity.x,previousVelocity.y,previousVelocity.z );
+            var newVelocity = new system.Vec3(previousVelocity.x,0,previousVelocity.z );
+            
+            var randX = system.rand();
+            var randY = system.rand();
+            var randZ = system.rand();
+            
+            if (previousVelocity.x < 0)
+                newVelocity.x -=randX;
+            else
+                newVelocity.x +=randX;
+
+     //        if (previousVelocity.y < 0)
+//                 newVelocity.y -=randY;
+//             else
+//                 newVelocity.y +=randY;
+
+            if (previousVelocity.z < 0)
+                newVelocity.z -=randZ;
+            else
+                newVelocity.z +=randZ;
+
+
+            system.presences[0].setVelocity(newVelocity);
+            previousVelocity = newVelocity;
+        }
+    }
+}
 

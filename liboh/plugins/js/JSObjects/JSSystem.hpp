@@ -32,6 +32,8 @@ v8::Handle<v8::Value> ScriptGetAngularSpeed(v8::Local<v8::String> property, cons
 void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 
 
+v8::Handle<v8::Value> ScriptRandFunction(const v8::Arguments& args);
+
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args);

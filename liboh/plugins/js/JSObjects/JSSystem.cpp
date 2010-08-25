@@ -8,7 +8,9 @@
 #include "../JSUtil.hpp"
 #include "Addressable.hpp"
 #include <math.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <float.h>
 
 namespace Sirikata{
 namespace JS{
@@ -256,6 +258,20 @@ void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> 
 }
 
 
+//returns a random float from 0 to 1
+v8::Handle<v8::Value> ScriptRandFunction(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to rand.")) );
+
+
+    float rander = (float)rand()/(float)RAND_MAX;
+
+    //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
+    return v8::Number::New(rander);
+}
+
+
 //takes in a single argument
 //returns a float
 v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args)
@@ -267,9 +283,6 @@ v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args)
     
     double d_toSqrt = NumericExtract(toSqrt);
     
-    
-    std::cout<<"\n\nThis is number to sqrt: "<<d_toSqrt<<"\n\n";
-    std::cout.flush();
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
     return v8::Number::New(sqrt(d_toSqrt));
