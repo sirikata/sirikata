@@ -125,6 +125,10 @@ void JSObjectScriptManager::createSystemTemplate()
      **/
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
     system_templ->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSSystem::ScriptSqrtFunction));
+    system_templ->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSSystem::ScriptAcosFunction));
+    system_templ->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSSystem::ScriptAsinFunction));
+    system_templ->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSSystem::ScriptCosFunction));
+    system_templ->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSSystem::ScriptSinFunction));
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
 }
 

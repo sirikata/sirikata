@@ -77,7 +77,62 @@ int_quaternionToRotation = function(q) {
 
 
 
+function axisRotation (axis, angle) {
+  var d = 1 / system.sqrt(axis[0] * axis[0] +
+                        axis[1] * axis[1] +
+                        axis[2] * axis[2]);
+  var sin = system.sin(angle / 2);
+  var cos = system.cos(angle / 2);
+  return [sin * axis[0] * d, sin * axis[1] * d, sin * axis[2] * d, cos];
+};
 
+
+function forwardToQuaternion(ev) {
+    var l=system.sqrt(ev.x*ev.x+ev.y*ev.y+ev.z*ev.z);
+    var input=[-ev.x/l,-ev.y/l,-ev.z/l];
+    var y=input;
+    var up=[0,1,0];
+    var x=[1,0,0];
+    if (ev.y==0&&ev.z==0) {
+        x=[0,1,0];
+    }
+    function cross (a, b) {
+        return [a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0]];
+    }
+    function len (a) {
+       return system.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);
+    }
+    function renorm (a) {
+        var l = len(a);
+        return [a[0]/l,a[1]/l,a[2]/l];
+    }
+    var rotationaxis=cross(up,input);
+    var sinangle = len(rotationaxis);
+    var angle = system.asin(sinangle);
+    var q = axisRotation(rotationaxis,angle);
+/*
+    var mat = [[x[0], y[0], z[0]], [x[1], y[1], z[1]], [x[2], y[2], z[2]]];
+    var q = int_RotationToQuaternion(mat);//[x,y,z]fixme: is this x,y,z
+    or is this transpose of that 
+*/
+    system.print("\n\nforwardtoquaternion_out\n\n");
+    var sysq = new system.Quaternion(q[0],q[1],q[2],q[3]);
+    var test = int_quaternionToRotation(q);
+    system.print ("Velocity is ");
+    system.print(input);
+    system.print("Axis is ");
+    system.print(rotationaxis);
+    system.print("intermediate Quat is ");
+    system.print(q);
+    system.print ("Test is ");
+    system.print(test);
+
+    return sysq;
+}
+
+/* BUSTED!
 function forwardToQuaternion(ev) {
     var l=system.sqrt(ev.x*ev.x+ev.y*ev.y+ev.z*ev.z);
     var y=[-ev.x/l,-ev.y/l,-ev.z/l];
@@ -113,7 +168,7 @@ function forwardToQuaternion(ev) {
 
     return sysq;
 }
-
+*/
 function quaternionToCardinal(q,ind) {
     var r=int_quaternionToRotation([q.x,q.y,q.z,q.w]);
     system.print("\n\nquaternion to cardinal\n\n");
