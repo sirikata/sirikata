@@ -124,6 +124,7 @@ void JSObjectScriptManager::createSystemTemplate()
        FIXME: need to add way to remove a handler.
      **/
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
+    system_templ->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSSystem::ScriptSqrtFunction));
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
 }
 
@@ -173,6 +174,10 @@ void JSObjectScriptManager::createPresenceTemplate()
   //orientations
   mPresenceTemplate->Set(v8::String::New("setOrientation"),v8::FunctionTemplate::New(JSPresence::setOrientation));
   mPresenceTemplate->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSPresence::getOrientation));
+
+  //orientation velocities
+  mPresenceTemplate->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
+  mPresenceTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
 
  
   //FIXME:

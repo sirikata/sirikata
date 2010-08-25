@@ -222,7 +222,6 @@ void StandardLocationService::receiveMessage(Message* msg) {
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
     bool parsed = parsePBJMessage(&contents, msg->payload());
 
-    std::cout<<"\n\nreceiveMessage1 in StandardLocationService.cpp\n\n";
     if (parsed) {
         for(int32 idx = 0; idx < contents.update_size(); idx++) {
             Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
@@ -277,8 +276,6 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
     assert(msg.dest_object() == UUID::null());
     assert(msg.dest_port() == OBJECT_PORT_LOCATION);
 
-    std::cout<<"\n\nreceiveMessage in StandardLocationService.cpp\n\n";
-    
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString(msg.payload());
     assert(parse_success);
@@ -336,8 +333,6 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     assert(parse_success);
 
-    std::cout<<"\n\nLocation update in StandardLocationService.cpp\n\n";
-    
     if (loc_container.has_update_request()) {
         Sirikata::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
 

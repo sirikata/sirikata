@@ -1161,7 +1161,6 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
 
         if (update.has_location())
         {
-            std::cout<<"\n\nUpdate had location\n\n";
             Sirikata::Protocol::TimedMotionVector update_loc = update.location();
             TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
             proxy_obj->setLocation(loc);
@@ -1171,10 +1170,6 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
                 update.object(),
                 loc
             );
-        }
-        else
-        {
-            std::cout<<"\n\nUpdate did not have location\n\n";
         }
 
         if (update.has_orientation()) {
@@ -1717,8 +1712,25 @@ Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const Objec
 Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    return proxy_obj->getOrientation();
+    Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    return curLoc.getOrientation();
+    // return proxy_obj->getOrientation();
+    // lkjs;
 }
+
+Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref)
+{
+    ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    return proxy_obj->getOrientationSpeed();
+}
+
+void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat)
+{
+    Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
+    TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(curOrientQuat,quat));
+    requestOrientationUpdate(space, tmq);
+}
+
 
 
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)

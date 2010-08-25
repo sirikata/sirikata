@@ -663,12 +663,16 @@ void Proximity::generateObjectQueryEvents() {
                 }
                 else {
                     count++;
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, evt.id())
-                    );
+                    // FIXME removal is disabled because setting velocities was
+                    // causing objects to be removed.  This might be a bug with
+                    // extrapolation.  See bug http://sirikata.com/trac/ticket/109.
 
-                    Sirikata::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
-                    removal.set_object( evt.id() );
+                    //mContext->mainStrand->post(
+                    //    std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, evt.id())
+                    //);
+
+                    //Sirikata::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
+                    //removal.set_object( evt.id() );
                 }
 
                 evts.pop_front();
