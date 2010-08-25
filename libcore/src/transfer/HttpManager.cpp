@@ -371,6 +371,12 @@ int HttpManager::on_headers_complete(http_parser* _) {
         curResponse->mHeaders[curResponse->mTempHeaderField] = curResponse->mTempHeaderValue;
     }
 
+    //Check if Content-Encoding = gzip
+    std::map<std::string, std::string>::const_iterator it = curResponse->mHeaders.find("Content-Encoding");
+    if(it != curResponse->mHeaders.end() && it->second == "gzip") {
+        curResponse->mGzip = true;
+    }
+
     curResponse->mHeaderComplete = true;
     return 0;
 }
@@ -425,14 +431,34 @@ int HttpManager::on_header_value(http_parser* _, const char* at, size_t len) {
 int HttpManager::on_body(http_parser* _, const char* at, size_t len) {
     //SILOG(transfer, debug, "on_body called with length = " << len);
     HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
-    //Append the bytes in current body pointer to the DenseData pointer in our response
-    curResponse->mData->append(at, len, true);
+
+    if(curResponse->mGzip) {
+        //Gzip encoding, so pass this buffer through a decoder
+        SILOG(transfer, debug, "writing " << len << " bytes to compressed stream");
+        curResponse->mCompressedStream.write(at, len);
+    } else {
+        //Raw encoding, so append the bytes in current body pointer directly to the DenseData pointer in our response
+        curResponse->mData->append(at, len, true);
+    }
+
     return 0;
 }
 
 int HttpManager::on_message_complete(http_parser* _) {
     //SILOG(transfer, debug, "message complete. content length = " << _->content_length);
     HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
+
+    if(curResponse->mGzip) {
+        std::stringstream decompressed;
+        boost::iostreams::filtering_streambuf<boost::iostreams::input> out;
+        out.push(boost::iostreams::gzip_decompressor());
+        out.push(curResponse->mCompressedStream);
+        boost::iostreams::copy(out, decompressed);
+        curResponse->mCompressedStream.str("");
+        curResponse->mData->append(decompressed.str().c_str(), decompressed.str().length(), true);
+        curResponse->mContentLength = decompressed.str().length();
+    }
+
     curResponse->mMessageComplete = true;
     return 0;
 }
