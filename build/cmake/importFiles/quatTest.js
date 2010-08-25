@@ -176,7 +176,7 @@ function quaternionToCardinal(q,ind) {
     system.print(r[0]);
     system.print(r[1]);
     system.print(r[2]);
-    return new system.Vec3(-r[0][ind],-r[1][ind],-r[2][ind]);//similar fixme from above applies  is it [ind][0] or [0][ind]
+    return new system.Vec3(r[0][ind],r[1][ind],r[2][ind]);//similar fixme from above applies  is it [ind][0] or [0][ind]
 }
 function quaternionToForward(q) {
     return quaternionToCardinal(q,1);
