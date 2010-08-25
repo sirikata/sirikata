@@ -79,8 +79,7 @@ void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
     std::ostringstream request_stream;
     request_stream << "HEAD /dns/global" << request->getURI().fullpath() << " HTTP/1.1\r\n";
     request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
-    request_stream << "Accept: * /*\r\n";
-    request_stream << "Connection: close\r\n\r\n";
+    request_stream << "Accept: * /*\r\n\r\n";
 
     HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::HEAD, request_stream.str(), std::tr1::bind(
             &HttpNameHandler::request_finished, this, _1, _2, _3, request, callback));
@@ -220,6 +219,9 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
     if(!foundIt) {
         SILOG(transfer, error, "HttpChunkHandler get called with chunk not present in file metadata");
+        //TODO: Uncomment below? It breaks things:
+        //callback(bad);
+        //return;
     }
 
     std::ostringstream request_stream;
@@ -230,8 +232,9 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
         request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
     }
     request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
-    request_stream << "Accept: * /*\r\n";
-    request_stream << "Connection: close\r\n\r\n";
+    request_stream << "Accept: * /*\r\n\r\n";
+    //TODO: Uncomment this. Breaks things.
+    //request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
 
     HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
             &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));

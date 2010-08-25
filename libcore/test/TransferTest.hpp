@@ -247,7 +247,6 @@ public:
         request_stream.str("");
         request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
         request_stream << "Host: cdn.sirikata.com\r\n";
-        request_stream << "Connection: close\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
 
@@ -268,6 +267,38 @@ public:
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
             TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+        }
+
+
+        /*
+         * Do a GET request with accept-encoding set AND make it a range request
+         * check content length present, content length = range size,
+         * http status code 200, Content-Encoding = gzip
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Range: bytes=10-20\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing compressed range get file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            it = mHttpResponse->getHeaders().find("Content-Encoding");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            TS_ASSERT(it->second == "gzip");
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getData());
+            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
+            TS_ASSERT(mHttpResponse->getContentLength() == 11);
         }
 
 
