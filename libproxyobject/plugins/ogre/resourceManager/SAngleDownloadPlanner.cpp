@@ -46,10 +46,24 @@ SAngleDownloadPlanner::~SAngleDownloadPlanner()
 
 }
 
+bool withinBound(float radius, Vector3d objLoc, Vector3d cameraLoc)
+{
+    if (cameraLoc.x < objLoc.x - radius && cameraLoc.x > objLoc.x + radius) return false;
+    if (cameraLoc.y < objLoc.y - radius && cameraLoc.y > objLoc.y + radius) return false;
+    if (cameraLoc.z < objLoc.z - radius && cameraLoc.z > objLoc.z + radius) return false;
+    return true;
+}
+
+
 double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 {
-    float radius = 10;
-    Vector3d diff = camera->getOgrePosition() - proxy->getPosition();
+    float radius = proxy->getBounds().radius();
+    Vector3d objLoc = proxy->getPosition();
+    Vector3d cameraLoc = camera->getOgrePosition();
+
+    if (withinBound(radius, objLoc, cameraLoc)) return 1;
+
+    Vector3d diff = cameraLoc - objLoc;
     SolidAngle sa = SolidAngle::fromCenterRadius((Vector3f)diff, radius);
     float priority = (sa.asFloat())/(SolidAngle::Max.asFloat());
     return (double)priority;

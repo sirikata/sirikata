@@ -120,11 +120,12 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 
 void DistanceDownloadPlanner::poll()
 {
-    /* if (camera == NULL) return;
+    if (camera == NULL) return;
     vector<Resource>::iterator it;
+
     for (it = resources.begin(); it != resources.end(); it++) {
         it->proxy->priority = calculatePriority(it->proxy);
-        }*/
+    }
 }
 
 void DistanceDownloadPlanner::stop()
