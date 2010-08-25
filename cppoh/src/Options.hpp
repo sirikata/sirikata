@@ -48,6 +48,9 @@
 #define OPT_OBJECT_FACTORY       "object-factory"
 #define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
 
+#define OPT_CAMERASCRIPT         "camerascript"
+#define OPT_CAMERASCRIPTTYPE         "camerascripttype"
+
 namespace Sirikata {
 
 void InitCPPOHOptions();
