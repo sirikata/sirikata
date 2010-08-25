@@ -1159,7 +1159,9 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
         ProxyManagerPtr proxy_manager = getProxyManager(space);
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space, ObjectReference(update.object())));
 
-        if (update.has_location()) {
+        if (update.has_location())
+        {
+            std::cout<<"\n\nUpdate had location\n\n";
             Sirikata::Protocol::TimedMotionVector update_loc = update.location();
             TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
             proxy_obj->setLocation(loc);
@@ -1169,6 +1171,10 @@ void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, in
                 update.object(),
                 loc
             );
+        }
+        else
+        {
+            std::cout<<"\n\nUpdate did not have location\n\n";
         }
 
         if (update.has_orientation()) {
@@ -1688,7 +1694,6 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
     TimedMotionVector3f tmv (Time::local(),MotionVector3f(curPos,vel));
     //FIXME: re-write the requestLocationUpdate function so that takes in object
     //reference as well
-
 
     requestLocationUpdate(space,tmv);
 }

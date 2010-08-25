@@ -121,6 +121,7 @@ void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
 }
 
 void LocationService::notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+    std::cout<<"\n\nInside of notifylocallocationupdated\n";
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->localLocationUpdated(uuid, newval);
 }
@@ -137,8 +138,6 @@ void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, const BoundingS
 
 void LocationService::notifyLocalMeshUpdated(const UUID& uuid, const String& newval) const
 {
-    std::cout<<"\n\n\nInside of notifyLocalMeshUpdated in LocationService.cpp.  This is newval: "<<newval<<"\n\n\n";
-    
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->localMeshUpdated(uuid, newval);
 }
@@ -155,6 +154,7 @@ void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
 }
 
 void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+    std::cout<<"\n\nInside of notifyreplicalocationupdated\n";
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->replicaLocationUpdated(uuid, newval);
 }
