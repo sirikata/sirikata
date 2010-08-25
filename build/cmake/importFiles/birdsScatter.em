@@ -3,8 +3,10 @@ var minDist = 6;
 var howFastToEvadeConst = 3;
 var evading = false;
 var howLongToFlee = 2;
-var orientationCallbackResolution = .8; //will blend quaternions every .2 seconds
+var orientationCallbackResolution = .5; //will blend quaternions every .2 seconds
 var blendQuaternion_factor = .5; //how much of goal quaternion vs how much of current orientation.
+var runOrientationCallback = true;
+
 
 //this function returns an object that has converted the relevant position fields from strings to a vec3
 function parseLocationFromObject(object)
@@ -281,14 +283,18 @@ var previousVelocity = system.presences[0].getVelocity();
 var previousQuaternionGoal = forwardToQuaternion(previousVelocity);
 
 
+
 function orientationCallback()
 {
-    system.print("\n\nn orientation callback\n\n");
+    system.print("\n\nIn orientation callback\n\n");
     var currentVelocity = system.presences[0].getVelocity();
-    if (currentVelocity != previousVelocity)
+    if ((currentVelocity.x != 0) || (currentVelocity.y != 0) || (currentVelocity.z != 0))
     {
-        previousQuaternionGoal = forwardToQuaternion(currentVelocity);
-        previousVelocity = currentVelocity;
+        if (currentVelocity != previousVelocity)
+        {
+            previousQuaternionGoal = forwardToQuaternion(currentVelocity);
+            previousVelocity = currentVelocity;
+        }
     }
 
 
@@ -297,7 +303,19 @@ function orientationCallback()
 
     system.presences[0].setOrientation(setQuaternion);
 
-    system.timeout(orientationCallbackResolution,null,orientationCallback);
+    if (runOrientationCallback)
+        system.timeout(orientationCallbackResolution,null,orientationCallback);
+}
+
+function cancelOrientationCallback()
+{
+    runOrientationCallback = false;
+}
+
+function resumeOrientationCallback()
+{
+    runOrientationCallback = true;
+    orientationCallback();
 }
 
 //gets the orientation interpolation callbacks going.
