@@ -174,6 +174,10 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("setOrientation"),v8::FunctionTemplate::New(JSPresence::setOrientation));
   mPresenceTemplate->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSPresence::getOrientation));
 
+  //orientation velocities
+  mPresenceTemplate->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
+  mPresenceTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
+
  
   //FIXME:
   //add function to check if presences are equal (point to same underlying object);

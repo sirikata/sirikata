@@ -173,6 +173,74 @@ namespace Sirikata
             return v8::Undefined();
         }
 
+
+
+        Handle<v8::Value>      getOrientationVel(const v8::Arguments& args)
+        {
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getOrientation function.  Invalid presence struct.")) );
+
+            assert(false);
+            //return
+            //mStruct->jsObjScript->getOrientationVelFunction(mStruct->sporef);
+            return v8::Undefined();
+        }
+        
+        v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args)
+        {
+            if (args.Length() == 1)
+                return setOrientationVelQuat(args);
+            else if (args.Length() == 2)
+                return setOrientationVelAxis(args);
+            else
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setOrientationVel function.")) );
+
+        }
+
+        v8::Handle<v8::Value>setOrientationVelQuat(const v8::Arguments& args)
+        {
+            // JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            // if (mStruct == NULL)
+            //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Invalid presence struct.")) );
+
+            // //get first args
+            // Handle<Object> orientationVelArg = ObjectCast(args[0]);
+
+            // if ( ! QuaternionValidate(orientationVelArg))
+            //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
+            
+            // Quaternion newOrientationVel (QuaternionExtract(orientationVelArg));
+
+            // mStruct->jsObjScript->setOrientationVelFunction(mStruct->sporef,newOrientationVel);
+            return v8::Undefined();
+        }
+
+        //first arg is axis of rotation (as a vec3), second argument is an
+        //angular speed
+        v8::Handle<v8::Value>setOrientationVelAxis(const v8::Arguments& args)
+        {
+            // JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            // if (mStruct == NULL)
+            //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Invalid presence struct.")) );
+
+            // //get first args
+            // Handle<Object> orientationAxisArg = ObjectCast(args[0]);
+            // Handle<Object> orientationAngSpeedArg = ObjectCast(args[1]);
+
+            // if ( ! QuaternionValidate(orientationVelArg))
+            //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
+            
+            // Quaternion newOrientationVel (QuaternionExtract(orientationVelArg));
+
+            // mStruct->jsObjScript->setOrientationVelFunction(mStruct->sporef,newOrientationVel);
+            return v8::Undefined();
+        }
+        
+
+
+        
+        
         
         //Takes in args, tries to get out the first argument, which should be a
         //string that we convert to a TransferURI object.  If anything fails,
