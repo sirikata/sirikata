@@ -249,14 +249,16 @@ int main (int argc, char** argv) {
             sims.push_back(sim);
         }
     }
-
+    String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
     // FIXME
     obj->connect(
         mainSpace,
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
         BoundingSphere3f(Vector3f::nil(), 1.f),
         "",
-        UUID::null());
+        UUID::null(),
+        scriptFile,
+        scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);

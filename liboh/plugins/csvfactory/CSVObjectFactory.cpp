@@ -148,9 +148,11 @@ void CSVObjectFactory::generate() {
                     std::cout<<"\n\nLength of line_parts: "<<line_parts.size();
                     std::cout<<"\n\nIndex: "<<script_file_idx<<"\n\n";
                     std::cout.flush();
-                    scriptFile = line_parts[script_file_idx];
-                    std::cout<<"\n\nGot a script file:  "<<scriptFile<<"\n\n";
-                    scriptType = line_parts[script_file_idx+1];
+                    if (script_file_idx<line_parts.size()) {
+                        scriptFile = line_parts[script_file_idx];
+                        std::cout<<"\n\nGot a script file:  "<<scriptFile<<"\n\n";
+                        scriptType = line_parts[script_file_idx+1];
+                    }
                 }
 
                 
