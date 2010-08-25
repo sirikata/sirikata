@@ -110,6 +110,9 @@ public:
     Quaternion(){}
     class XYZW{};
     class WXYZ{};
+    Quaternion(scalar x, scalar y, scalar z, scalar w):Vector4<scalar>(x,y,z,w) {
+
+    }
     Quaternion(scalar x,scalar y, scalar z, scalar w, XYZW convention):Vector4<scalar>(x,y,z,w) {
 
     }

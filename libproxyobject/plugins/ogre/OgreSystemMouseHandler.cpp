@@ -1544,7 +1544,7 @@ private:
     }
 
     void screenshotTick(const Task::LocalTime& t) {
-        if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.f/10.f))) {
+        if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.0))) {
             timedScreenshotAction(t);
             mLastScreenshotTime = t;
         }

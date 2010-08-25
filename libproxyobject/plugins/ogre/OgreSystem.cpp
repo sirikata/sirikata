@@ -344,6 +344,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     }
     return retval;
 }
+
 std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEntity*>::iterator entity) {
     if (entity != mAttachedCameras.end()) {
         if (mPrimaryCamera == *entity) {
@@ -361,7 +362,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     proxyManager->addListener(this);
 
     //initialize the Resource Download Planner
-    dlPlanner = new SAngleDownloadPlanner(proxyManager, mContext);
+    dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
 
     //add ogre system options here
     OptionValue*pluginFile;

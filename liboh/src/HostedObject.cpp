@@ -811,7 +811,8 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         SolidAngle(.00001f),
-        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, startingLocation, meshBounds) ),
+        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, startingLocation
+, meshBounds) ),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, spaceID)
     );
@@ -851,12 +852,16 @@ void HostedObject::handleStreamCreated(const SpaceID& space) {
     boost::shared_ptr<Stream<UUID> > sstStream = mObjectHost->getSpaceStream(space, getUUID());
 
     if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
-        sstStream->listenSubstream(OBJECT_PORT_LOCATION,
-            std::tr1::bind(&HostedObject::handleLocationSubstream, this, space, _1, _2)
+        boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
+        assert(sstConnection);
+
+        sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
+            std::tr1::bind(&HostedObject::handleLocationMessage, this, space, _1, _2)
         );
-        sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
-            std::tr1::bind(&HostedObject::handleProximitySubstream, this, space, _1, _2)
+        sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
+            std::tr1::bind(&HostedObject::handleProximityMessage, this, space, _1, _2)
         );
+
     }
 }
 
@@ -945,22 +950,6 @@ void HostedObject::tick() {
         // send update to LOC (2) service in the space, if necessary
         iter->second.updateLocation(this);
     }
-}
-
-void HostedObject::handleLocationSubstream(const SpaceID& space, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, space, s, _1, _2) );
-}
-
-void HostedObject::handleProximitySubstream(const SpaceID& space, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, space, s, _1, _2) );
-}
-
-void HostedObject::handleLocationSubstreamRead(const SpaceID& space, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    handleLocationMessage(space, buffer, length);
-}
-
-void HostedObject::handleProximitySubstreamRead(const SpaceID& space, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    handleProximityMessage(space, buffer, length);
 }
 
 void HostedObject::handleLocationMessage(const SpaceID& space, uint8* buffer, int len) {
@@ -1064,7 +1053,8 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     Quaternion quaternionVeloc(startingLoc.getAxisOfRotation(), startingLoc.getAngularSpeed());
     MotionQuaternion initQuatVec (startingLoc.getOrientation(),quaternionVeloc);
     TimedMotionQuaternion tmq (Time::local(),initQuatVec);
-    returner->setOrientation(tmq);
+
+    if (!is_camera) returner->setOrientation(tmq);
 
     returner->setBounds(bnds);
 

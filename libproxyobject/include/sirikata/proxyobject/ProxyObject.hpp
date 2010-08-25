@@ -85,7 +85,6 @@ private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
-    TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
     BoundingSphere3f mBounds;
 
@@ -96,6 +95,7 @@ private:
 protected:
     /// Notification that the Parent has been destroyed.
     virtual void destroyed(const TemporalValue<Location>::Time& when);
+    TimedMotionVector3f mLoc;
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it

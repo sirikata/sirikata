@@ -142,6 +142,7 @@ void Entity::setOgrePosition(const Vector3d &pos) {
     const Ogre::Vector3 &scale = mSceneNode->getScale();
     mSceneNode->setPosition(ogrepos);
 }
+
 void Entity::setOgreOrientation(const Quaternion &orient) {
     SILOG(ogre,debug,"setOgreOrientation "<<this<<" to "<<orient);
     mSceneNode->setOrientation(toOgre(orient));

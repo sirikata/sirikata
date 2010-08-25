@@ -37,6 +37,7 @@ namespace Sirikata {
 ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
  : ProxyObject(man, id, vwobj)
 {
+
 }
 
 void ProxyCameraObject::destroy(const TemporalValue<Location>::Time& when) {
