@@ -50,8 +50,8 @@ namespace Meru {
 ResourceRequestor::~ResourceRequestor() {
 }
 
-ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const URI &uri, ResourceRequestor* resourceRequestor, DownloadCallback cb)
- : DependencyTask(mgr == NULL ? NULL : mgr->getQueue()), mURI(uri), mRange(true), mResourceRequestor(resourceRequestor), cb(cb)
+ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const URI &uri, ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb)
+ : DependencyTask(mgr == NULL ? NULL : mgr->getQueue()), mURI(uri), mRange(true), mResourceRequestor(resourceRequestor), mPriority(priority), cb(cb)
 {
   mStarted = false;
   if (mgr == NULL) {
@@ -129,8 +129,9 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
     const Chunk *chunk = new Chunk(response->getFingerprint(), *range);
     const RemoteFileMetadata metadata = *response;
 
-    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, metadata, *chunk, 1.0,
-						    std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, metadata, *chunk, mPriority,
+            std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1,
+                std::tr1::placeholders::_2)));
 
     TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
     pool->addRequest(req);
@@ -148,8 +149,8 @@ void ResourceDownloadTask::operator()()
  mStarted = true;
 
  TransferRequestPtr req(
-                new MetadataRequest(mURI, 1, std::tr1::bind(
-                &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+     new MetadataRequest(mURI, mPriority, std::tr1::bind(
+             &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
   TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
    pool->addRequest(req);

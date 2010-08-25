@@ -1,5 +1,5 @@
 /*  Meru
- *  ResourceDownloadPlanner.hpp
+ *  ResourceDownloadTask.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
+#ifndef _DISTANCE_DOWNLOAD_PLANNER_HPP
+#define _DISTANCE_DOWNLOAD_PLANNER_HPP
 
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
@@ -40,6 +40,7 @@
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include "ResourceDownloadPlanner.hpp"
 #include "../CameraEntity.hpp"
 #include <vector>
 
@@ -48,14 +49,13 @@ namespace Graphics{
 class MeshEntity;
 }
 
-class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener, public PollingService
+class DistanceDownloadPlanner : public ResourceDownloadPlanner
 {
 public:
-    ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
-    ~ResourceDownloadPlanner();
+    DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    ~DistanceDownloadPlanner();
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-    virtual void setCamera(Graphics::CameraEntity *entity);
+    void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
 
     //ProxyCreationListener interface
     virtual void onCreateProxy ( ProxyObjectPtr object );
@@ -63,17 +63,30 @@ public:
 
     //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
-    virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
-    virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
-    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     //PollingService interface
     virtual void poll();
     virtual void stop();
 
+    struct Resource {
+        Resource(Graphics::MeshEntity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
+            ready = false;
+            file = NULL;
+        }        virtual ~Resource(){}
+
+        URI const *file;
+        Graphics::MeshEntity *mesh;
+        ProxyObjectPtr proxy;
+        bool ready;
+    };
+
+    std::vector<Resource>::iterator findResource(ProxyObjectPtr p);
+
 protected:
-    Graphics::CameraEntity *camera;
-    std::map<ProxyObjectPtr, Graphics::MeshEntity *> resources;
+    std::vector<Resource> resources;
+
+private:
+    double getPriority(ProxyObjectPtr proxy);
 
 };
 }

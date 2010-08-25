@@ -129,6 +129,7 @@ class TextureDownloadTask : public DependencyTask, public ResourceRequestor
     return !memcmp(data + which*4, checkAgainst, 4);
   }
 
+    Sirikata::ProxyObjectPtr mProxy;
   ResourceDownloadTask *mHeaderTask;
   ResourceDownloadTask *mDataTask;
   ResourceRequestor* mOrigResourceRequestor;
@@ -137,7 +138,7 @@ class TextureDownloadTask : public DependencyTask, public ResourceRequestor
   size_t determineDownloadRange(unsigned char *header);
 public:
     const URI &mURI;
-  TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor);
+    TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor, Sirikata::ProxyObjectPtr proxy);
   virtual ~TextureDownloadTask();
 
   virtual void operator()();
@@ -146,8 +147,8 @@ public:
 };
 
 
-GraphicsResourceTexture::GraphicsResourceTexture(const URI &uri)
-  : GraphicsResourceAsset(uri, GraphicsResource::TEXTURE)
+GraphicsResourceTexture::GraphicsResourceTexture(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResourceAsset(uri, GraphicsResource::TEXTURE, proxy)
 {
 
 }
@@ -164,7 +165,7 @@ int GraphicsResourceTexture::maxDimension() const {
 
 DependencyTask* GraphicsResourceTexture::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-  return new TextureDownloadTask(manager, mURI, maxDimension(), resourceRequestor);
+    return new TextureDownloadTask(manager, mURI, maxDimension(), resourceRequestor, mProxy);
 }
 
 ResourceDependencyTask* GraphicsResourceTexture::createDependencyTask(DependencyManager *manager)
@@ -257,12 +258,12 @@ void TextureUnloadTask::doRun()
 
 /***************************** TEXTURE DOWNLOAD TASK *************************/
 
-TextureDownloadTask::TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor)
-    : DependencyTask(mgr->getQueue()), mURI(uri)
+TextureDownloadTask::TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor, Sirikata::ProxyObjectPtr proxy)
+ : DependencyTask(mgr->getQueue()), mURI(uri), mProxy(proxy)
 {
-    mHeaderTask = new ResourceDownloadTask(mgr, uri, this, NULL);
+    mHeaderTask = new ResourceDownloadTask(mgr, uri, this, mProxy->priority, NULL);
     mHeaderTask->addDepender(this);
-    mDataTask = new ResourceDownloadTask(mgr, uri, this, NULL);
+    mDataTask = new ResourceDownloadTask(mgr, uri, this, mProxy->priority, NULL);
     mDataTask->addDepender(this);
 
 	mHeaderTask->setRange(Transfer::Range(0, DDSHEADER_BYTESIZE, Transfer::BOUNDS));

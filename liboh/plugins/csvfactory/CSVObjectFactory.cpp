@@ -44,10 +44,15 @@ CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const
 }
 
 template<typename T>
-T safeLexicalCast(const String& orig) {
+T safeLexicalCast(const String& orig, T default_val) {
     if (orig.empty())
-        return (T)0;
+        return default_val;
     return boost::lexical_cast<T>(orig);
+}
+
+template<typename T>
+T safeLexicalCast(const String& orig) {
+    return safeLexicalCast<T>(orig, (T)0);
 }
 
 void CSVObjectFactory::generate() {
@@ -64,7 +69,9 @@ void CSVObjectFactory::generate() {
     int mesh_idx = -1;
 
     int quat_vel_idx = -1;
-    
+
+    int scale_idx = -1;
+
     // For each line
     while(fp) {
         String line;
@@ -92,7 +99,7 @@ void CSVObjectFactory::generate() {
         }
 
 
-        
+
         if (is_first) {
             for(int idx = 0; idx < line_parts.size(); idx++) {
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
@@ -101,6 +108,7 @@ void CSVObjectFactory::generate() {
                 if (line_parts[idx] == "vel_x") vel_idx = idx;
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
+                if (line_parts[idx] == "scale") scale_idx = idx;
             }
 
             is_first = false;
@@ -134,16 +142,19 @@ void CSVObjectFactory::generate() {
                 );
 
                 float angular_speed = safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
-                
+
                 String mesh( line_parts[mesh_idx] );
 
-                
+                float scale = 1.f;
+                if (scale_idx != -1)
+                    scale = safeLexicalCast<float>(line_parts[scale_idx], 1.f);
+
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
                 obj->connect(
                     mSpace,
                     Location( pos, orient, vel, rot_axis, angular_speed),
-                    BoundingSphere3f(Vector3f::nil(), 1.f),
+                    BoundingSphere3f(Vector3f::nil(), scale),
                     mesh,
                     UUID::null());
             }

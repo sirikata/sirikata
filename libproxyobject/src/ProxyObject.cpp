@@ -104,6 +104,10 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient) {
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);
 }
 
+void ProxyObject::setBounds(const BoundingSphere3f& bnds) {
+    mBounds = bnds;
+}
+
 ProxyObjectPtr ProxyObject::getParentProxy() const {
     return ProxyObjectPtr();
 }

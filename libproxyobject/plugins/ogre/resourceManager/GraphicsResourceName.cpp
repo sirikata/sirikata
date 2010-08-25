@@ -39,8 +39,8 @@
 using namespace std;
 namespace Meru {
 
-GraphicsResourceName::GraphicsResourceName(const URI &resourceID, GraphicsResource::Type referencedType)
-: GraphicsResource(resourceID.toString(), NAME), mURI(resourceID), mReferencedType(referencedType)
+GraphicsResourceName::GraphicsResourceName(const URI &resourceID, GraphicsResource::Type referencedType, Sirikata::ProxyObjectPtr proxy)
+  : GraphicsResource(resourceID.toString(), NAME, proxy), mURI(resourceID), mReferencedType(referencedType)
 {
 
 }
@@ -67,7 +67,7 @@ void GraphicsResourceName::doParse()
     if (resource) {
         try{
             GraphicsResourceManager *grm = GraphicsResourceManager::getSingletonPtr();
-            SharedResourcePtr newResource = grm->getResourceAsset(mURI, mReferencedType);
+            SharedResourcePtr newResource = grm->getResourceAsset(mURI, mReferencedType, mProxy);
             resource->addDependency(newResource);
             resource->parsed(true);
         }

@@ -34,18 +34,23 @@
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "../MeshEntity.hpp"
 #include <stdlib.h>
+#include <algorithm>
 
 using namespace std;
 using namespace Sirikata;
 using namespace Sirikata::Transfer;
 using namespace Sirikata::Graphics;
 
+#define frequency 0.1
+
 namespace Sirikata {
 
 ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
- : PollingService(c->mainStrand, Duration::seconds(1), c, "Resource Download Planner Poll")
+ : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
 {
+    c->add(this);
     proxyManager->addListener(this);
+    camera = NULL;
 }
 
 ResourceDownloadPlanner::~ResourceDownloadPlanner()
@@ -60,29 +65,22 @@ void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
 
 void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
 {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) {
-        meshptr->MeshProvider::removeListener(this);
-        MeshEntities.erase(meshptr.get());
-    }
+
 }
 
 void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) {
-        meshptr->MeshProvider::addListener(this);
-        MeshEntities[meshptr.get()] = mesh;
-    }
+
+}
+
+void ResourceDownloadPlanner::setCamera(CameraEntity *entity)
+{
+    camera = entity;
 }
 
 void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
 {
-   ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy));
-   if (meshptr) {
-       MeshEntity *mesh = MeshEntities[meshptr.get()];
-       if (mesh) mesh->processMesh(meshFile);
-   }
+
 }
 
 void ResourceDownloadPlanner::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata &md)
@@ -102,7 +100,7 @@ void ResourceDownloadPlanner::onSetPhysical (ProxyObjectPtr proxy, PhysicalParam
 
 void ResourceDownloadPlanner::poll()
 {
-    cout<<"POLL"<<endl;
+
 }
 
 void ResourceDownloadPlanner::stop()

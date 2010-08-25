@@ -38,7 +38,6 @@
 #include <sirikata/core/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 
-
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
@@ -76,8 +75,8 @@ public:
 
   void computeLoadedSet();
 
-  SharedResourcePtr getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity);
-  SharedResourcePtr getResourceAsset(const URI &id, GraphicsResource::Type resourceType);
+    SharedResourcePtr getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity, Sirikata::ProxyObjectPtr proxy);
+    SharedResourcePtr getResourceAsset(const URI &id, GraphicsResource::Type resourceType, Sirikata::ProxyObjectPtr proxy);
   SharedResourcePtr getResourceAssetByHash(const ResourceHash &id, GraphicsResource::Type resourceType);
 
   DependencyManager* getDependencyManager() {

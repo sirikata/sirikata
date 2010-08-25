@@ -44,7 +44,7 @@ namespace Meru {
 class ShaderDependencyTask : public ResourceDependencyTask
 {
 public:
-  ShaderDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
+    ShaderDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
   virtual ~ShaderDependencyTask();
 
   virtual void operator()();
@@ -72,8 +72,8 @@ protected:
   const unsigned int mArchiveName;
 };
 
-GraphicsResourceShader::GraphicsResourceShader(const URI &uri)
-: GraphicsResourceAsset(uri, GraphicsResource::SHADER),
+GraphicsResourceShader::GraphicsResourceShader(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+  : GraphicsResourceAsset(uri, GraphicsResource::SHADER, proxy),
   mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
 
@@ -87,7 +87,7 @@ GraphicsResourceShader::~GraphicsResourceShader()
 
 ResourceDownloadTask* GraphicsResourceShader::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-    return new ResourceDownloadTask(manager, mURI, resourceRequestor, NULL);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, mProxy->priority, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceShader::createDependencyTask(DependencyManager *manager)

@@ -32,7 +32,6 @@
 #ifndef SIRIKATA_GRAPHICS_ENTITY_HPP__
 #define SIRIKATA_GRAPHICS_ENTITY_HPP__
 
-#include "OgreSystem.hpp"
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/ProxyObjectListener.hpp>

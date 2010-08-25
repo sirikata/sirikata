@@ -1,5 +1,5 @@
 /*  Meru
- *  GraphicsResourceMaterial.hpp
+ *  ResourceDownloadTask.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -29,32 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _GRAPHICS_RESOURCE_MATERIAL_HPP
-#define _GRAPHICS_RESOURCE_MATERIAL_HPP
 
-#include "../meruCompat/MeruDefs.hpp"
-#include "GraphicsResourceAsset.hpp"
-#include <OgreResourceBackgroundQueue.h>
+#include "SAngleDownloadPlanner.hpp"
 
-namespace Meru {
-
-class GraphicsResourceMaterial : public GraphicsResourceAsset {
-public:
-    GraphicsResourceMaterial(const URI &uri, Sirikata::ProxyObjectPtr proxy);
-  virtual ~GraphicsResourceMaterial();
-
-  virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
-  virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
-  virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
-  virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);
-
-  virtual void resolveName(const URI& id);
-
-protected:
-  const unsigned int mArchiveName;
-  Ogre::NameValuePairList mTextureAliases;
-};
+class SAngleDownloadPlanner : public ResourceDownloadPlanner
+{
 
 }
-
-#endif

@@ -324,6 +324,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     std::list<CameraEntity*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
     if (renderTargetName.empty()) {
         mPrimaryCamera = entity;
+        dlPlanner->setCamera(entity);
         std::vector<String> cubeMapNames;
 
         std::vector<Vector3f> cubeMapOffsets;
@@ -360,7 +361,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     proxyManager->addListener(this);
 
     //initialize the Resource Download Planner
-    dlPlanner = new ResourceDownloadPlanner(proxyManager, mContext);
+    dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
 
     //add ogre system options here
     OptionValue*pluginFile;

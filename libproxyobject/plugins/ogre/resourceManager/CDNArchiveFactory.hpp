@@ -51,7 +51,7 @@ class CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CD
 
   boost::mutex CDNArchiveMutex;
   std::map<unsigned int, std::vector <Ogre::String> > CDNArchivePackages;
-  std::map<Ogre::String, SparseData > CDNArchiveFiles;
+  std::tr1::unordered_map<std::string, SparseData > CDNArchiveFiles;
   int mCurArchive;
 
 public:
