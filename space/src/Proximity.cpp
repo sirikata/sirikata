@@ -433,11 +433,9 @@ void Proximity::poll() {
         std::string proxMsg = msg_front->payload();
 
         if (proxStream != boost::shared_ptr<Stream<UUID> >()) {
-          boost::shared_ptr<Connection<UUID> > conn = proxStream->connection().lock();
-          assert(conn);
-
-          object_sent = conn->datagram( (void*)proxMsg.data(), proxMsg.size(),
-                                                         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY, NULL);
+          proxStream->createChildStream(NULL, (void*)proxMsg.data(), proxMsg.size(),
+              OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY);
+          object_sent = true;
         }
         else {
           object_sent = false;

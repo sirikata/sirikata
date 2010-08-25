@@ -241,18 +241,16 @@ void Object::handleSpaceMigration(const SpaceID& space, const ObjectReference& o
 
 void Object::handleSpaceStreamCreated() {
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
+  using std::tr1::placeholders::_1;
+  using std::tr1::placeholders::_2;
 
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
-    boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
-    assert(sstConnection);
-
-    sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
-						std::tr1::bind(&Object::locationMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
-						);
-    sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
-                                                std::tr1::bind(&Object::proximityMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
-                                                );
-
+      sstStream->listenSubstream(OBJECT_PORT_LOCATION,
+          std::tr1::bind(&Object::handleLocationSubstream, this, _1, _2)
+      );
+      sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
+          std::tr1::bind(&Object::handleProximitySubstream, this, _1, _2)
+      );
   }
 }
 
@@ -268,6 +266,23 @@ void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg
     dispatchMessage(*msg);
     delete msg;
 }
+
+void Object::handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
+    s->registerReadCallback( std::tr1::bind(&Object::handleLocationSubstreamRead, this, s, _1, _2) );
+}
+
+void Object::handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
+    s->registerReadCallback( std::tr1::bind(&Object::handleProximitySubstreamRead, this, s, _1, _2) );
+}
+
+void Object::handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
+    locationMessage(buffer, length);
+}
+
+void Object::handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
+    proximityMessage(buffer, length);
+}
+
 
 void Object::locationMessage(uint8* buffer, int len) {
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;

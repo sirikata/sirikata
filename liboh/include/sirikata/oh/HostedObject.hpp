@@ -319,6 +319,13 @@ public:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
+    // Handlers for substreams for space-managed updates
+    void handleLocationSubstream(const SpaceID& space, int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleProximitySubstream(const SpaceID& space, int err, boost::shared_ptr< Stream<UUID> > s);
+    // Handlers for substream read events for space-managed updates
+    void handleLocationSubstreamRead(const SpaceID& space, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceID& space, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
+
     // Handlers for core space-managed updates
     void handleLocationMessage(const SpaceID& space, uint8* buffer, int len);
     void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);

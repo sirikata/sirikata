@@ -1654,8 +1654,10 @@ private:
 
 	//send back an error to the app by calling mStreamReturnCallback
 	//with an error code.
-	mStreamReturnCallback(SST_IMPL_FAILURE, boost::shared_ptr<Stream<UUID> >() );
-        mStreamReturnCallback = NULL;
+        if (mStreamReturnCallback) {
+            mStreamReturnCallback(SST_IMPL_FAILURE, boost::shared_ptr<Stream<UUID> >() );
+            mStreamReturnCallback = NULL;
+        }
 
         mState = DISCONNECTED;
 
