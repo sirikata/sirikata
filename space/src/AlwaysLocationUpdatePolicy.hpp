@@ -178,7 +178,6 @@ private:
         void propertyUpdated(const UUID& uuid, LocationService* locservice, UpdateFunctor fup) {
             // Add the update to each subscribed object
 
-            std::cout<<"\n\nGot into property updated\n\n";
             
             typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
             if (obj_sub_it == mObjectSubscribers.end()) return;
@@ -187,7 +186,6 @@ private:
             
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++)
             {
-                std::cout<<"\n\nInside of for loop of AlwaysLocationUpdatePolicy\n\n";
                 
                 if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
                 assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
@@ -195,7 +193,6 @@ private:
                 if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
                 assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
 
-                std::cout<<"\n\nPast ifs\n\n";
                 
                 if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
                     UpdateInfo new_ui;
@@ -217,7 +214,6 @@ private:
         static void setUIMesh(UpdateInfo& ui, const String& newval) {ui.mesh = newval;}
 
         void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
-            std::cout<<"\n\nGot into locationupdated\n\n";
             propertyUpdated(
                 uuid, locservice,
                 std::tr1::bind(&setUILocation, std::tr1::placeholders::_1, newval)
@@ -239,9 +235,6 @@ private:
         }
 
         void meshUpdated(const UUID& uuid, const String& newval, LocationService* locservice) {
-
-            std::cout<<"\n\n\n\n\nGot into mesh updated function of AlwaysLocationUpdatePolicy.hpp\n\n\n";
-            
             propertyUpdated(
                 uuid, locservice,
                 std::tr1::bind(&setUIMesh, std::tr1::placeholders::_1, newval)

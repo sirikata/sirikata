@@ -124,6 +124,7 @@ void JSObjectScriptManager::createSystemTemplate()
        FIXME: need to add way to remove a handler.
      **/
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
+    system_templ->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSSystem::ScriptSqrtFunction));
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
 }
 

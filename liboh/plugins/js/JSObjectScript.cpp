@@ -637,6 +637,18 @@ v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectRe
     return CreateJSResult(mContext,curOrientation);
 }
 
+//orientation vel
+v8::Handle<v8::Value>JSObjectScript::getOrientationVelFunction(const SpaceObjectReference* sporef)
+{
+    Quaternion curQuatVel = mParent->requestCurrentOrientationVel(sporef->space(),sporef->object());
+    return CreateJSResult(mContext,curQuatVel);
+}
+
+void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
+{
+    mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
+}
+
 
 //scale
 //FIXME: need to return the right space here.
@@ -944,6 +956,8 @@ Handle<Object> JSObjectScript::getSystemObject()
   Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
   return ret_obj;
 }
+
+
 
 
 void JSObjectScript::updateAddressable()

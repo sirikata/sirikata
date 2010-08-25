@@ -397,6 +397,7 @@ public:
 
     virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
 
+    
     virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
     virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
 
@@ -406,8 +407,12 @@ public:
     //should re-name one or the other
     virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
     virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
+    virtual void requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat);
+
     virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
     virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
+    virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
+
     
     virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
