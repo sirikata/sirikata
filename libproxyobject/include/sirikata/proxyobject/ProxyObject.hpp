@@ -104,8 +104,10 @@ public:
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
         \param vwobj the owning VWObject, allowing the ProxyObject to interact
                     with the space
+        \param owner_sor the owning SpaceObjectReference, i.e. the presence the
+        proximity event was generated for
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj);
+    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
     virtual ~ProxyObject();
 
     // MCB: default to true for legacy proxies. FIX ME when all converted.

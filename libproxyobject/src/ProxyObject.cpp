@@ -43,7 +43,7 @@
 
 namespace Sirikata {
 
-ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
+ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
  : mID(id),
    mManager(man),
    mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
@@ -52,7 +52,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
 {
     assert(mParent);
 
-    mDefaultPort = mParent->bindODPPort(id.space());
+    mDefaultPort = mParent->bindODPPort(owner_sor);
 }
 
 ProxyObject::~ProxyObject() {

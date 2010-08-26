@@ -60,8 +60,10 @@ public:
     virtual SpaceObjectReference id(const SpaceID& space) const = 0;
 
     // ODP::Service Interface
-    virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port) = 0;
-    virtual ODP::Port* bindODPPort(SpaceID space) = 0;
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) = 0;
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port) = 0;
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor) = 0;
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb) = 0;
     virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb) = 0;
 

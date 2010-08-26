@@ -39,7 +39,7 @@
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
-#include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 
 namespace Sirikata {
 
@@ -59,7 +59,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service {
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
     typedef SessionCallback MigratedCallback;
-    typedef std::tr1::function<void()> StreamCreatedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
@@ -274,6 +274,8 @@ private:
             ServerID connectedTo;
             // Server we're trying to migrate to
             ServerID migratingTo;
+
+            SpaceObjectReference connectedAs;
 
             ConnectedCallback connectedCB;
             MigratedCallback migratedCB;

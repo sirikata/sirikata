@@ -46,7 +46,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyLightObject
     public ProxyObject {
     LightInfo mLastInfo;
 public:
-    ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwptr);
+    ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwptr, const SpaceObjectReference& owner_sor);
     void update(const LightInfo &li);
     const LightInfo &getLastLightInfo() const {
         return mLastInfo;
