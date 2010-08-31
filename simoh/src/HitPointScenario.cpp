@@ -42,7 +42,7 @@
 
 namespace Sirikata {
 
-class DamagableObject {        
+class DamagableObject {
 public:
     Object *object;
     typedef float HPTYPE;
@@ -63,11 +63,11 @@ public:
         DamagableObject *mParent;
         boost::shared_ptr<Stream<UUID> > mSendStream;
         boost::shared_ptr<Stream<UUID> > mReceiveStream;
-        
-        uint8 mPartialUpdate[sizeof(DamagableObject::mHP)];
+
+        uint8 mPartialUpdate[sizeof(HPTYPE)];
         int mPartialCount;
-        
-        uint8 mPartialSend[sizeof(DamagableObject::mHP)*2];
+
+        uint8 mPartialSend[sizeof(HPTYPE)*2];
         int mPartialSendCount;
     public:
         ReceiveDamage(DamagableObject*parent, UUID id) {
@@ -83,7 +83,7 @@ public:
                                         EndPoint<UUID>(mParent->object->uuid(),parent->mListenPort),
                                         EndPoint<UUID>(mID,parent->mListenPort),
                                         std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,_1,_2));
-            
+
         }
         void connectionCallback(int err, boost::shared_ptr<Stream<UUID> > s) {
             if (err != 0 ) {
@@ -126,7 +126,7 @@ public:
         }
         void getUpdate(uint8*buffer, int length) {
             while (length>0) {
-                
+
                 int datacopied = (length>sizeof(DamagableObject::HPTYPE)-mPartialCount?sizeof(DamagableObject::HPTYPE)-mPartialCount:length);
                 memcpy(mPartialUpdate+mPartialCount, buffer,datacopied);
                 mPartialCount+=datacopied;
