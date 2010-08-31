@@ -63,10 +63,10 @@ public:
         DamagableObject *mParent;
         boost::shared_ptr<Stream<UUID> > mSendStream;
         boost::shared_ptr<Stream<UUID> > mReceiveStream;
-
+        
         uint8 mPartialUpdate[sizeof(HPTYPE)];
         int mPartialCount;
-
+        
         uint8 mPartialSend[sizeof(HPTYPE)*2];
         int mPartialSendCount;
     public:
@@ -83,7 +83,7 @@ public:
                                         EndPoint<UUID>(mParent->object->uuid(),parent->mListenPort),
                                         EndPoint<UUID>(mID,parent->mListenPort),
                                         std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,_1,_2));
-
+            
         }
         void connectionCallback(int err, boost::shared_ptr<Stream<UUID> > s) {
             if (err != 0 ) {
@@ -126,7 +126,7 @@ public:
         }
         void getUpdate(uint8*buffer, int length) {
             while (length>0) {
-
+                
                 int datacopied = (length>sizeof(DamagableObject::HPTYPE)-mPartialCount?sizeof(DamagableObject::HPTYPE)-mPartialCount:length);
                 memcpy(mPartialUpdate+mPartialCount, buffer,datacopied);
                 mPartialCount+=datacopied;
@@ -152,6 +152,7 @@ void PDSInitOptions(HitPointScenario *thus) {
         new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
+        new OptionValue("receivers-per-server","3",Sirikata::OptionValueType<int>(),"The number of folks listening for HP updates at each server"),
         NULL);
 }
 
@@ -241,8 +242,29 @@ void HitPointScenario::start() {
 }
 void HitPointScenario::delayedStart() {
     mStartTime = mContext->simTime();
+    
     mGeneratePingPoller->start();
     mPingPoller->start();
+    ServerID ss = mFloodServer;
+    if (mFloodServer ==0) {
+        ss=(rand() % mObjectTracker->numServerIDs())+1;
+    }
+    Object * objA = mObjectTracker->randomObjectFromServer(ss);
+    static int a =5050;
+    mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
+    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);    
+    int receiversPerServer = optionsSet->referenceOption("receivers-per-server")->as<int>();
+    for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
+        std::set<Object* > receivers;
+        for (int j=0;j<receiversPerServer;++j) {
+            Object * objB = mObjectTracker->randomObjectFromServer(i);
+            if (objB&&receivers.find(objB)==receivers.end()) {
+                receivers.insert(objB);
+                mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
+                                                                                                         objB->uuid()));
+            }
+        }
+    }
 }
 void HitPointScenario::stop() {
     mPingPoller->stop();
@@ -295,7 +317,7 @@ bool HitPointScenario::generateOnePing(const Time& t, PingInfo* result) {
 
 void HitPointScenario::generatePings() {
     mGeneratePingProfiler->started();
-
+    
     Time t=mContext->simTime();
     int64 howManyPings=((t-mStartTime).toSeconds()+0.25)*mNumPingsPerSecond;
 
@@ -317,6 +339,15 @@ void HitPointScenario::generatePings() {
 }
 
 void HitPointScenario::sendPings() {
+    {
+        Time t(mContext->simTime());
+        float hp = 1000-((t-mStartTime).toSeconds());
+        for (size_t index=0;index<mDamagableObjects.size();++index) {
+            mDamagableObjects[index]->mHP=hp;
+            mDamagableObjects[index]->update();
+        }
+    }
+
     mPingProfiler->started();
 
     Time newTime=mContext->simTime();
