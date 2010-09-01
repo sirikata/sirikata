@@ -12,7 +12,7 @@ options
 	//output=template;
 	backtrack=true;
 //	memoize=true;
-//	rewrite=true;
+	rewrite=true;
 	ASTLabelType=pANTLR3_BASE_TREE;
 //	ASTLabelType=pANTRL3_COMMON_TREE;
 	tokenVocab=Emerson;
@@ -22,6 +22,7 @@ options
 @header
 {
   #include <stdlib.h>;
+		#include <string.h>;
 }
 
 	program
@@ -30,29 +31,88 @@ options
 	;
 	
  sourceElements
-	:sourceElement+  // omitting the LT 
+		:(sourceElement{printf("\n");})+  // omitting the LT 
 	;
 	
 	sourceElement
 	: functionDeclaration
-	| statement
+	| statement{printf(";");}
 	;
 	
 // functions
 functionDeclaration
-	: ^( FUNC_DECL Identifier formalParameterList functionBody)
+	: ^( FUNC_DECL
+	         {
+										  printf("function ");
+										}
+	         Identifier
+	         {
+										  printf($Identifier.text->chars);
+	           printf("( ");
+										} 
+					formalParameterList 
+					     {
+										  printf(" )");
+												printf("\n{\n");
+										}
+					functionBody
+					     {
+										  printf("\n}\n");
+										}
+					 					
+					)
+	
 	;
 	
 functionExpression
-	: ^( FUNC_EXPR Identifier?  formalParameterList functionBody)
-	;
+	: ^( FUNC_EXPR 
+	     {
+        printf("function ");
+						}
+						(			
+						 Identifier
+						 {
+							  printf($Identifier.text->chars);
+							}
+						)?  
+						{
+						
+									printf("( ");
+						}
+						formalParameterList 
+						  {
+								  printf("  )");
+										printf("\n{\n");
+								}
+						functionBody
+						  {
+								  printf("\n}\n");
+								}
+						)
+	; 
 	
 formalParameterList
-	: ^( FUNC_PARAMS Identifier? Identifier*)
-	;
+	: ^( FUNC_PARAMS 
+	     (id1=Identifier
+									{
+						     printf("\%s ", $id1.text->chars);
+									}
+							)?		
+						(
+						 id2=Identifier
+							{
+							  
+						   printf(", \%s ", $id2.text->chars);
+							}
+						
+						)*
+						
+					)
+;
 
 functionBody
-	: (sourceElements)
+	: sourceElements
+	| EMPTY_FUNC_BODY 
 	;
 
 // statements
@@ -71,22 +131,47 @@ statement
 	| switchStatement
 	| throwStatement
 	| tryStatement
+	| msgSendStatement
+	| msgRecvStatement
 	;
 	
 statementBlock
-	:  statementList
+	: {printf(" {\n "); } statementList { printf(" }\n"); }
 	;
 	
 statementList
-	:  ^(SLIST statement+)
+	:  ^(
+	      SLIST 
+							(statement
+							  {
+			        printf("; \n");					  
+									}
+							)+
+							
+	
+	    )
 	;
 	
 variableStatement
-	:  ^( VARLIST variableDeclarationList)
+	:  ^( 
+	      VARLIST
+							  {
+									  printf("var ");
+									}
+	      variableDeclarationList
+					)
 	;
 	
 variableDeclarationList
-	: variableDeclaration+
+	: variableDeclaration 
+	  (
+      {
+						  printf(", ");
+						}	
+	   variableDeclaration
+			  
+			)*
+			
 	;
 	
 variableDeclarationListNoIn
@@ -94,11 +179,40 @@ variableDeclarationListNoIn
 	;
 	
 variableDeclaration
-	: ^(VAR Identifier initialiser?)
+	: ^(
+	    VAR
+	    Identifier 
+					  {
+							  printf($Identifier.text->chars);
+							}
+					
+					(
+					  {
+							  printf(" = ");
+							}
+					initialiser
+					)?
+					
+					)
 	;
 	
 variableDeclarationNoIn
-	: ^(VAR Identifier initialiserNoIn?)
+	: 
+	^(
+	    VAR
+	    Identifier 
+					  {
+							  printf($Identifier.text->chars);
+							}
+					
+					(
+					  {
+							  printf(" = ");
+							}
+					initialiserNoIn
+					)?
+					
+			)
 	;
 	
 initialiser
@@ -120,7 +234,32 @@ expressionStatement
 	;
 	
 ifStatement
-	: ^(IF expression statement statement?)
+	: ^(IF 
+	    {
+					  printf(" if ");
+							printf(" ( ");
+					}
+	   expression 
+				 {
+					  printf(" ) ");
+					  //printf(" { \n");
+					}
+     
+				statement 
+				 {
+					  //printf(" } \n");
+					}
+     
+				(
+				 {
+					  printf("else");
+					}
+				 statement
+				 
+				)?
+				
+				)
+	   
 	;
 	
 iterationStatement
@@ -131,15 +270,64 @@ iterationStatement
 	;
 	
 doWhileStatement
-	: ^( DO  statement expression )
+	: ^( 
+	    DO
+					 {
+        printf(" do ");  						  
+						}    
+	    statement
+					{
+					  printf("while ( " );      
+					}
+
+					expression 
+
+					{
+					  printf(" ) ");  
+					}
+					
+					)
 	;
 	
 whileStatement
-	: ^(WHILE  expression statement)
+	: ^(
+	   WHILE
+				  {
+						  printf(" while ( ");
+						}
+	
+	   expression 
+
+			 {
+			   printf(" ) "); 
+			 }
+			
+			 statement
+			)
 	;
 	
 forStatement
-	: ^(FOR (^(FORINIT forStatementInitialiserPart))?   (^(FORCOND expression))?  (^(FORITER expression))?  statement)
+	: ^(
+	     FOR 
+	     {
+						  printf(" for ( ");
+						}
+	     (^(FORINIT forStatementInitialiserPart))?
+						{
+						  printf(" ; ");
+						}
+						(^(FORCOND expression))? 
+						{
+						  printf(" ; ");
+						}
+						(^(FORITER expression))?  
+						
+      {
+						  printf(" ) ");
+						}
+						statement
+					
+					)
 	;
 	
 forStatementInitialiserPart
@@ -157,15 +345,55 @@ forInStatementInitialiserPart
 	;
 
 continueStatement
-	: ^(CONTINUE Identifier?)
+	: ^(
+	    CONTINUE 
+	    {
+					  printf("continue ");
+					} 
+	   
+				 (
+					 Identifier
+					 {
+						  printf($Identifier.text->chars);
+						}
+					)?
+
+				
+				)
+			
+
 	;
 
 breakStatement
-	: ^(BREAK Identifier?)
+	: ^(
+	    BREAK
+					{
+					  printf("break ");
+					}
+	     (
+						Identifier
+						{
+						  printf($Identifier.text->chars);
+						}
+						)?
+						
+					)
 	;
 
 returnStatement
-	: ^(RETURN expression?)
+	: ^(
+	    RETURN 
+	     {
+						  printf("return ");
+						}
+				(		
+	   
+				  expression
+				
+				)?
+				
+				)
+
 	;
 	
 withStatement
@@ -173,11 +401,37 @@ withStatement
 	;
 
 labelledStatement
-	: ^( LABEL Identifier statement)
+	: ^( LABEL 
+	    Identifier 
+					 {
+						  printf(" : \n");
+						}
+					statement
+					
+					)
 	;
 	
 switchStatement
-	: ^(SWITCH expression caseBlock)
+	: ^(
+	    SWITCH 
+	     {
+						  printf(" switch ( ");
+						}
+
+	    expression 
+			   {
+						  printf(" ) \n");
+								printf("{ \n");
+						}
+      
+						
+			  caseBlock
+
+					 {
+						  printf("} \n");
+						}
+			
+			)
 	;
 	
 caseBlock
@@ -197,15 +451,88 @@ throwStatement
 	;
 
 tryStatement
-	: ^(TRY statementBlock finallyClause?) 
+	: ^(TRY 
+	    
+	    statementBlock 
+					
+					finallyClause?) 
 	;
        
+
+msgSendStatement
+ : ^(
+	     MESSAGE_SEND 
+	     leftHandSideExpression 
+				  {
+
+						  printf(".sendMessage( ");
+						}
+				leftHandSideExpression 
+				  				
+				(
+				
+				 {
+					  printf(", ");
+					}
+				memberExpression
+			 			
+						)?
+						
+				)
+
+				{
+				  printf(" )" );
+				}
+;
+
+msgRecvStatement
+ : ^(
+	    MESSAGE_RECV
+	    {
+					  printf("system.registerHandler( callback = ");
+					}
+
+					memberExpression
+     {
+					  printf(", pattern = ");
+					} 
+     leftHandSideExpression
+
+					(
+					 {
+						  printf(", sender = ");
+						}
+						memberExpression
+					)?
+				)
+    {
+				  printf(") ");
+				}
+
+;
+
 catchClause
-	: ^(CATCH Identifier statementBlock)
+	: ^(CATCH 
+	    {
+					  printf(" catch ( ");
+					}
+	    Identifier 
+					{
+					  printf("\%s ) ", $Identifier.text->chars);
+					}
+					
+					statementBlock)
+	   
 	;
 	
 finallyClause
-	: ^( FINALLY statementBlock )
+	: ^( FINALLY 
+	   {
+				  printf(" finally ");
+				}
+	   statementBlock 
+				
+				)
 	;
 
 // expressions
@@ -218,14 +545,71 @@ expressionNoIn
 
 	;
 	
+
 assignmentExpression
+scope
+{
+  char* op;
+}
+
 	: ^(COND_EXPR conditionalExpression)
-	| ^(assignmentOperator  leftHandSideExpression assignmentExpression)
+	| ^(
+	    (
+					ASSIGN               { $assignmentExpression::op = " = ";    }
+					|MULT_ASSIGN         { $assignmentExpression::op = " *= ";  }
+					|DIV_ASSIGN          { $assignmentExpression::op = " /= ";  }
+					| MOD_ASSIGN         { $assignmentExpression::op = " \%= ";  }
+					| ADD_ASSIGN         { $assignmentExpression::op = " += ";  } 
+					| SUB_ASSIGN         { $assignmentExpression::op = " -= ";  } 
+					|LEFT_SHIFT_ASSIG    { $assignmentExpression::op = " <<= "; }
+					|RIGHT_SHIFT_ASSIGN  { $assignmentExpression::op = " >>= "; }
+					|TRIPLE_SHIFT_ASSIGN { $assignmentExpression::op = "  >>>= "; }
+					|AND_ASSIGN          { $assignmentExpression::op = " &= "; }
+					|EXP_ASSIGN          { $assignmentExpression::op  = " ^= "; }
+					|OR_ASSIGN           { $assignmentExpression::op = " |= "; } 
+					)
+
+					leftHandSideExpression 
+					  {
+							  printf(" \%s ", $assignmentExpression::op);
+							}
+							
+							assignmentExpression
+						 	
+						)
+	
 	;
 	
 assignmentExpressionNoIn
-	: conditionalExpressionNoIn
-	| ^(assignmentOperator leftHandSideExpression assignmentExpressionNoIn ) 
+
+scope
+{
+  char* op;
+}
+	: ^(COND_EXPR_NOIN conditionalExpressionNoIn)
+ | ^(
+	    (
+					ASSIGN               { $assignmentExpressionNoIn::op = " = ";    }
+					|MULT_ASSIGN         { $assignmentExpressionNoIn::op = " *= ";  }
+					|DIV_ASSIGN          { $assignmentExpressionNoIn::op = " /= ";  }
+					| MOD_ASSIGN         { $assignmentExpressionNoIn::op = " \%= ";  }
+					| ADD_ASSIGN         { $assignmentExpressionNoIn::op = " += ";  } 
+					| SUB_ASSIGN         { $assignmentExpressionNoIn::op = " -= ";  } 
+					|LEFT_SHIFT_ASSIG    { $assignmentExpressionNoIn::op = " <<= "; }
+					|RIGHT_SHIFT_ASSIGN  { $assignmentExpressionNoIn::op = " >>= "; }
+					|TRIPLE_SHIFT_ASSIGN { $assignmentExpressionNoIn::op = "  >>>= "; }
+					|AND_ASSIGN          { $assignmentExpressionNoIn::op = " &= "; }
+					|EXP_ASSIGN          { $assignmentExpressionNoIn::op  = " ^= "; }
+					|OR_ASSIGN           { $assignmentExpressionNoIn::op = " |= "; } 
+					)
+     
+					leftHandSideExpression
+     {
+					  printf(" \%s ", $assignmentExpression::op);
+					}
+
+					assignmentExpressionNoIn
+   )
 	;
 	
 leftHandSideExpression
@@ -241,10 +625,36 @@ newExpression
 memberExpression
  : primaryExpression
 	| functionExpression
-	| ^(NEW memberExpression arguments) 
-	//| ^(memberExpressionSuffix memberExpression memberExpression) 
-	| ^(DOT memberExpression memberExpression)
-	| ^(ARRAY_INDEX memberExpression memberExpression)
+	| ^(
+	     NEW 
+						  {
+								  printf("new ");
+								}
+						memberExpression 
+						
+						arguments
+					)
+
+	| ^(DOT 
+	      memberExpression
+							  {
+									  printf(".");
+									}
+							memberExpression
+				)
+	| ^(
+	    ARRAY_INDEX 
+					memberExpression 
+					    {
+           printf("[ ");
+									}
+					memberExpression
+					    {
+									  printf(" ]");
+									}
+					
+					)
+
 	;
 
 
@@ -255,9 +665,11 @@ memberExpressionSuffix
 
 callExpression
  : ^(CALL memberExpression arguments) 
-	|^(callExpressionSuffix callExpression callExpression)
+	//|^(callExpressionSuffix callExpression callExpression)
 	;
 	
+
+
 callExpressionSuffix
 	: arguments
 	| indexSuffix
@@ -265,7 +677,20 @@ callExpressionSuffix
 	;
 
 arguments
-	: ^(ARGLIST assignmentExpression*)
+	: ^(ARGLIST 
+	       {
+								  printf(" ( ");  
+								}
+	    (
+					  
+					  assignmentExpression
+					   	
+					)*
+				
+				)
+				{
+				  printf(" ) ");
+				}
 	;
 	
 indexSuffix
@@ -281,143 +706,242 @@ assignmentOperator
 	;
 
 conditionalExpression
-	: ^(logicalORExpression (assignmentExpression assignmentExpression)? )
+	: logicalORExpression 
+	|^(
+	    TERNARYOP
+					{
+					  printf( " ( ");
+					}
+	    logicalORExpression
+					{
+					  printf(" )  ? ( ");
+					}
+	    
+				 assignmentExpression 
+					{
+						  printf(" ) : ( ");
+					}
+						
+						assignmentExpression
+						{
+						  printf(" ) ");
+						}
+
+						)
+				
 	;
 
 conditionalExpressionNoIn
-	:^(logicalORExpressionNoIn (assignmentExpressionNoIn assignmentExpressionNoIn)?)
+ : logicalORExpressionNoIn
+	|^(
+	   TERNARYOP
+				{
+				  printf(" ( ");
+				}
+	   logicalORExpressionNoIn 
+				{
+				  printf(" ) ? ( ");
+				}
+    
+				 assignmentExpressionNoIn 
+			  {
+					  printf(" ) : ( ");
+					}		
+					assignmentExpressionNoIn
+					{
+					  printf(" ) ");
+					}
+				)
 	;
 
 
 logicalANDExpression
 	: bitwiseORExpression
-	|^(AND logicalANDExpression bitwiseORExpression)
+	|^(AND logicalANDExpression { printf(" && "); } bitwiseORExpression)
 	;
 
 
 logicalORExpression
 	: logicalANDExpression
-	|^(OR logicalORExpression logicalANDExpression)
+	|^(OR logicalORExpression { printf(" || "); } logicalANDExpression)
 	;
 	
 logicalORExpressionNoIn
 	: logicalANDExpressionNoIn
-	|^(OR logicalORExpressionNoIn logicalANDExpressionNoIn) 
+	|^(OR logicalORExpressionNoIn{ printf(" || "); }logicalANDExpressionNoIn) 
 	;
 	
 
 logicalANDExpressionNoIn
 	: bitwiseORExpressionNoIn 
-	|^(AND logicalANDExpressionNoIn bitwiseORExpressionNoIn) 
+	|^(AND logicalANDExpressionNoIn {printf(" && "); } bitwiseORExpressionNoIn) 
 	;
 	
 bitwiseORExpression
 	: bitwiseXORExpression 
-	|^(BIT_OR bitwiseORExpression bitwiseXORExpression)
+	|^(BIT_OR bitwiseORExpression { printf(" | "); } bitwiseXORExpression)
 	;
 	
 bitwiseORExpressionNoIn
 	: bitwiseXORExpressionNoIn 
-	|^( BIT_OR bitwiseORExpressionNoIn bitwiseXORExpressionNoIn)
+	|^( BIT_OR bitwiseORExpressionNoIn { printf(" | "); } bitwiseXORExpressionNoIn)
 	;
 	
 bitwiseXORExpression
 : bitwiseANDExpression 
-| ^( EXP bitwiseXORExpression bitwiseANDExpression)
+| ^( EXP e=bitwiseXORExpression { printf( " ^ ");} bitwiseANDExpression)
 ;
 	
 bitwiseXORExpressionNoIn
 	: bitwiseANDExpressionNoIn
-	|^( EXP bitwiseXORExpressionNoIn bitwiseANDExpressionNoIn) 
+	|^( EXP e=bitwiseXORExpressionNoIn { printf( " ^ ") ;}bitwiseANDExpressionNoIn) 
 	;
 	
 bitwiseANDExpression
 	: equalityExpression
-	| ^(BIT_AND bitwiseANDExpression equalityExpression) 
+	| ^(BIT_AND e=bitwiseANDExpression { printf( " & " );} equalityExpression) 
 	;
 	
 bitwiseANDExpressionNoIn
 	: equalityExpressionNoIn 
-	| ^(BIT_AND bitwiseANDExpressionNoIn equalityExpressionNoIn)
+	| ^(BIT_AND e=bitwiseANDExpressionNoIn { printf(" & "); } equalityExpressionNoIn)
 	;
 	
 equalityExpression
 	: relationalExpression
-	|^(equalityOps equalityExpression relationalExpression)
-	;
-
-equalityOps
-: EQUALS
-| NOT_EQUALS
-| IDENT
-| NOT_IDENT
+	| ^(EQUALS e=equalityExpression {printf(" == ") ;} relationalExpression)
+	| ^(NOT_EQUALS e=equalityExpression {printf(" != ");} relationalExpression)
+	| ^(IDENT e=equalityExpression { printf(" === ");} relationalExpression)
+	| ^(NOT_IDENT e=equalityExpression {printf(" !== ");} relationalExpression)
 ;
 
 equalityExpressionNoIn
 : relationalExpressionNoIn
-|^(equalityOps equalityExpressionNoIn relationalExpressionNoIn)
+| ^( EQUALS equalityExpressionNoIn {printf(" == ");} relationalExpressionNoIn)
+| ^( NOT_EQUALS equalityExpressionNoIn { printf(" != ") ;} relationalExpressionNoIn)
+| ^( IDENT equalityExpressionNoIn { printf(" === "); } relationalExpressionNoIn)
+| ^( NOT_IDENT equalityExpressionNoIn { printf(" !== "); } relationalExpressionNoIn)
+
 ;
 	
 
 relationalOps
-: LESS_THAN
-| GREATER_THAN
-| LESS_THAN_EQUAL
-| GREATER_THAN_EQUAL
-| INSTANCE_OF
-| IN
+: LESS_THAN {   $relationalExpression::op = "<" ;}
+| GREATER_THAN { $relationalExpression::op = ">" ;}
+| LESS_THAN_EQUAL {$relationalExpression::op = "<=" ;} 
+| GREATER_THAN_EQUAL { $relationalExpression::op = ">=" ;}
+| INSTANCE_OF {$relationalExpression::op = "instanceOf" ;}
+| IN {$relationalExpression::op = "in" ;} 
 ;
 
 relationalExpression
+scope
+{
+  char* op;
+}
+
 	: shiftExpression 
-	|^(relationalOps relationalExpression shiftExpression) 
+	| 
+	^(
+	   relationalOps 
+				e=relationalExpression
+				{
+				  printf( " \%s ", $relationalExpression::op );
+				}
+				shiftExpression
+			) 
 	;
 
 relationalOpsNoIn
-: LESS_THAN
-| GREATER_THAN
-| LESS_THAN_EQUAL
-| GREATER_THAN_EQUAL
-| INSTANCE_OF
+: LESS_THAN {  $relationalExpressionNoIn::op = "<" ;}
+| GREATER_THAN { $relationalExpressionNoIn::op = ">"; }
+| LESS_THAN_EQUAL { $relationalExpressionNoIn::op = "<= " ;}
+| GREATER_THAN_EQUAL { $relationalExpressionNoIn::op = ">=" ;}
+| INSTANCE_OF    { $relationalExpressionNoIn::op = "instanceOf" ;}
 ;
 
 relationalExpressionNoIn
+scope
+{
+  char* op;
+}
+
 	: shiftExpression 
-	| ^(relationalOpsNoIn relationalExpressionNoIn shiftExpression)
+	| 	^(
+	     relationalOpsNoIn
+						relationalExpressionNoIn
+						{
+						  printf(" \%s ", $relationalExpressionNoIn::op);
+						}
+						shiftExpression
+				)
+	   
 	;
 
 shiftOps
-: LEFT_SHIFT
-| RIGHT_SHIFT
-| TRIPLE_SHIFT
+: LEFT_SHIFT  {$shiftExpression::op = "<<" ;}
+| RIGHT_SHIFT { $shiftExpression::op = ">>" ;} 
+| TRIPLE_SHIFT { $shiftExpression::op = ">>>"; }
 ;
 
 shiftExpression
+scope
+{
+ char* op; 
+}
 	: additiveExpression
-	| ^(shiftOps shiftExpression additiveExpression)
+	| ^(shiftOps 
+	    e=shiftExpression 
+					 {
+						  printf(" \%s ", $shiftExpression::op);
+						}
+					additiveExpression
+					)
  ;	
 
-
-addOps
-: ADD
-| SUB
-;
 
 
 additiveExpression
 	: multiplicativeExpression
-	| ^(addOps additiveExpression multiplicativeExpression) 
+	| ^(
+	     ADD 
+						e1=additiveExpression
+						{
+						  printf(" + ");
+						}
+						multiplicativeExpression
+					) 
+	| ^(
+	     SUB 
+						e1=additiveExpression 
+						 {
+							  printf(" - ");
+							}
+						multiplicativeExpression
+					) 
 	;
 
-multOps
-: MULT
-| DIV
-| MOD
-;
 
 multiplicativeExpression
+
+/*
+@init
+{
+  printf(" ( ");
+}
+@after
+{
+  printf(" ) ");
+}
+*/
 	: unaryExpression
-	| ^(multOps multiplicativeExpression unaryExpression)
+	| ^( MULT 
+	    multiplicativeExpression 
+					{printf(" * ");} 
+					unaryExpression
+					)
+	| ^(DIV multiplicativeExpression {printf(" / ");} unaryExpression)
+	| ^(MOD multiplicativeExpression {printf(" \% ");} unaryExpression)
 	;
 
 unaryOps
@@ -435,7 +959,23 @@ unaryOps
 
 unaryExpression
 	: ^(POSTEXPR postfixExpression)
-	| ^(unaryOps unaryExpression)
+	| ^(
+	
+	    (
+				   DELETE          { printf("delete"); }
+       | VOID          { printf("void") ;  }
+       | TYPEOF        { printf("typeOf"); }
+       | PLUSPLUS      { printf("++"); }
+       | MINUSMINUS    { printf("--"); }
+       | UNARY_PLUS    { printf("+"); }
+       | UNARY_MINUS   { printf("-"); }
+       | COMPLEMENT    { printf("~"); }
+       | NOT           { printf("!"); }
+	
+					)
+
+	    unaryExpression
+				)
 	;
 	
 
@@ -445,8 +985,8 @@ postfixExpression
 	;
 
 primaryExpression
-	: 'this'
-	| Identifier
+	: 'this' {printf("this");}
+	| Identifier {printf($Identifier.text->chars);}
 	| literal
 	| arrayLiteral
 	| objectLiteral
@@ -455,30 +995,51 @@ primaryExpression
 	
 // arrayLiteral definition.
 arrayLiteral
-	: ^(ARRAY_LITERAL assignmentExpression? assignmentExpression*)
+	: ^(ARRAY_LITERAL
+	       {
+								  printf("[ ");
+								}
+	       head=assignmentExpression? 
+	
+	     tail=assignmentExpression*)
+
+        {
+								  printf(" ] ");
+
+								}
 	;
        
 // objectLiteral definition.
 objectLiteral
-	:^(OBJ_LITERAL propertyNameAndValue? propertyNameAndValue*)
+	:^(OBJ_LITERAL 
+	   
+				{ printf("{ "); }
+	   (head=propertyNameAndValue)? 
+				(tail=propertyNameAndValue)*
+				{ printf(" } "); }
+				
+				)
 	;
 	
 propertyNameAndValue
-	: ^(NAME_VALUE propertyName assignmentExpression)
+	: ^(NAME_VALUE 
+	   propertyName 
+			{	printf(" : "); }
+				assignmentExpression)
 	;
 
 propertyName
-	: Identifier
-	| StringLiteral
-	| NumericLiteral
+	: Identifier { printf($Identifier.text->chars); }
+	| StringLiteral { printf($StringLiteral.text->chars);  }
+	| NumericLiteral {printf($NumericLiteral.text->chars); }
 	;
 
 // primitive literal definition.
 literal
-	: 'null'
-	| 'true'
-	| 'false'
-	| StringLiteral
-	| NumericLiteral
+	: 'null' { printf("null");  }
+	| 'true' { printf("true");  }
+	| 'false'{ printf("false"); }
+	| StringLiteral {printf($StringLiteral.text->chars); }
+	| NumericLiteral {printf($NumericLiteral.text->chars); }
 	;
 	

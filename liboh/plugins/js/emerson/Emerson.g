@@ -104,6 +104,11 @@ tokens
   ARGLIST;
 		EXPR_LIST;
 		COND_EXPR;
+		COND_EXPR_NOIN;
+		TERNARYOP;
+		EMPTY_FUNC_BODY;
+		MESSAGE_SEND;
+		MESSAGE_RECV;
 }
 
 @header
@@ -144,7 +149,7 @@ formalParameterList
 	;
 
 functionBody
- : '{' LTERM* '}'
+ : '{' LTERM* '}' -> ^(EMPTY_FUNC_BODY)
 	| '{' LTERM* (sourceElements -> sourceElements) LTERM* '}'
 	;
 
@@ -164,6 +169,8 @@ statement
 	| switchStatement
 	| throwStatement
 	| tryStatement
+	| msgSendStatement
+	| msgRecvStatement
 	;
 	
 statementBlock
@@ -289,7 +296,7 @@ throwStatement
 	;
 
 tryStatement
-	: 'try' LTERM* statementBlock LTERM* (finallyClause | catchClause (LTERM* finallyClause)?) -> ^(TRY statementBlock finallyClause?) 
+	: ('try' LTERM* statementBlock LTERM* -> ^(TRY statementBlock))(finallyClause -> ^($tryStatement finallyClause)| catchClause (LTERM* finallyClause -> ^($tryStatement catchClause finallyClause))?) 
 	;
        
 catchClause
@@ -300,6 +307,15 @@ finallyClause
 	: 'finally' LTERM* statementBlock -> ^( FINALLY statementBlock )
 	;
 
+
+msgSendStatement
+ : (e1=leftHandSideExpression  '->'  e2=leftHandSideExpression -> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
+;
+
+msgRecvStatement
+ : (e1=memberExpression '<-' e2=leftHandSideExpression -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression -> ^($msgRecvStatement $e3) )? 
+
+;
 // expressions
 expression
 	: assignmentExpression (LTERM* ',' LTERM* assignmentExpression)* ->  ^(EXPR_LIST assignmentExpression+)
@@ -316,7 +332,7 @@ assignmentExpression
 	;
 	
 assignmentExpressionNoIn
-	: conditionalExpressionNoIn
+	: conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
 	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression assignmentExpressionNoIn ) 
 	;
 	
@@ -330,29 +346,23 @@ newExpression
 	| 'new' LTERM* newExpression -> ^( NEW newExpression)
 	;
 	
+
+indexSuffix1
+	: '[' LTERM* expression LTERM* ']' -> ^(expression)
+	;	
+
+
+propertyReferenceSuffix1
+	: '.' LTERM* Identifier -> ^(Identifier)
+	;
+	
+
 memberExpression
 
-	: (primaryExpression -> primaryExpression) ( LTERM* memberExpressionSuffix  -> ^(memberExpressionSuffix $memberExpression) )* 
-	
-	  {
-			  //pANTLR3_STRING prev = emerson_printAST($memberExpression.tree); 
-					//printf("\%s\n", prev->chars);
-					emerson_createTreeMirrorImage($memberExpression.tree); 
-					//pANTLR3_STRING newT = emerson_printAST($memberExpression.tree);
-					//printf("\%s\n", newT->chars);
-					
-			} 
-	| (functionExpression -> functionExpression) (LTERM* memberExpressionSuffix -> ^(memberExpressionSuffix $memberExpression) )*
-	{
-	  
-					emerson_createTreeMirrorImage($memberExpression.tree); 
-	}
-	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* memberExpressionSuffix -> ^(memberExpressionSuffix $memberExpression) )*  
-	{
-	  
-					emerson_createTreeMirrorImage($memberExpression.tree); 
-	}
-	;
+	: (primaryExpression -> primaryExpression) ( LTERM* propertyReferenceSuffix1 -> ^( DOT  $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
+	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1)  | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
+	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
+		;
 	
 memberExpressionSuffix
 	: indexSuffix -> indexSuffix 
@@ -360,7 +370,7 @@ memberExpressionSuffix
 	;
 
 callExpression
- : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* callExpressionSuffix  -> ^(callExpressionSuffix $callExpression))*
+ : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
 	;
 	
 callExpressionSuffix
@@ -386,11 +396,11 @@ assignmentOperator
 	;
 
 conditionalExpression
-	: logicalORExpression (LTERM* '?' LTERM* expr1=assignmentExpression LTERM* ':' LTERM* expr2=assignmentExpression)? -> ^(logicalORExpression ($expr1 $expr2)? )
+	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=assignmentExpression LTERM* ':' LTERM* expr2=assignmentExpression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
 	;
 
 conditionalExpressionNoIn
-	: logicalORExpressionNoIn (LTERM* '?' LTERM* expr1=assignmentExpressionNoIn LTERM* ':' LTERM* expr2=assignmentExpressionNoIn)? -> ^(logicalORExpressionNoIn ($expr1 $expr2)?)
+	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=assignmentExpressionNoIn LTERM* ':' LTERM* expr2=assignmentExpressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
 	;
 
 
@@ -442,7 +452,7 @@ equalityExpression
 equalityOps
 :  '==' -> ^(EQUALS)
 | '!=' -> ^(NOT_EQUALS)
-| '===' -> ^(IDENT)
+| '==' -> ^(IDENT)
 | '!==' -> ^(NOT_IDENT)
 ;
 
@@ -570,6 +580,10 @@ literal
 	| NumericLiteral
 	;
 	
+
+// emerson specific syntax
+
+
 // lexer rules.
 
 StringLiteral

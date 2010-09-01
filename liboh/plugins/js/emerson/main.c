@@ -229,7 +229,9 @@ main	(int argc, char *argv[])
 
 		nodes	= antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE HINT WILL SOON BE DEPRECATED!!
 
-   
+  //pANTLR3_REWRITE_RULE_TOKEN_STREAM rwStream = antlr3RewriteRuleTOKENStreamNewAE(psr->adaptor, psr->pParser->rec, (pANTLR3_UINT8)("rewrite stream"));    
+
+		//emerson_printRewriteStream(rwStream);
 
 		// Tree parsers are given a common tree node stream (or your override)
 		//
@@ -239,6 +241,8 @@ main	(int argc, char *argv[])
 		treePsr	= EmersonTreeNew(nodes);
 		treePsr->program(treePsr);
 		
+  
+  
 
 		nodes   ->free  (nodes);	    nodes	= NULL;
 		treePsr ->free  (treePsr);	    treePsr	= NULL;
