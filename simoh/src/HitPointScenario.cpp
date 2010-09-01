@@ -84,8 +84,10 @@ public:
         
         uint8 mPartialSend[sizeof(HPTYPE)*2];
         int mPartialSendCount;
+        Object * mObj;
     public:
-        ReceiveDamage(DamagableObject*parent, UUID id) {
+        ReceiveDamage(DamagableObject*parent, Object * obj, UUID id) {
+            mObj=obj;
             mID=id;
             mParent=parent;
             mPartialCount=0;
@@ -158,7 +160,8 @@ public:
                 if (mPartialCount==sizeof(DamagableObject::HPTYPE)) {
                     DamagableObject::HPTYPE hp;
                     memcpy(&hp,mPartialUpdate,mPartialCount);
-                    SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp);
+                    SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp<<" Delay "<<hp-mParent->mHP<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
+                    
                     mPartialCount=0;
                 }
                 buffer+=datacopied;
@@ -288,7 +291,8 @@ void HitPointScenario::delayedStart() {
             if (objB&&receivers.find(objB)==receivers.end()) {
                 receivers.insert(objB);
                 mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
-                                                                                                         objB->uuid()));
+                                                                                                        objB,
+                                                                                                        objB->uuid()));
             }
         }
     }
