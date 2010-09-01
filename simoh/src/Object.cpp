@@ -311,28 +311,32 @@ void Object::proximityMessage(uint8* buffer, int len) {
     bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
-    for(int32 idx = 0; idx < contents.addition_size(); idx++) {
-        Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
+    for(uint32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
-        TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
-        CONTEXT_OHTRACE(prox,
-            mID,
-            addition.object(),
-            true,
-            loc
-        );
-    }
+            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-    for(int32 idx = 0; idx < contents.removal_size(); idx++) {
-        Sirikata::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
+            CONTEXT_OHTRACE(prox,
+                mID,
+                addition.object(),
+                true,
+                loc
+            );
+        }
 
-        CONTEXT_OHTRACE(prox,
-            mID,
-            removal.object(),
-            false,
-            TimedMotionVector3f()
-        );
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+
+            CONTEXT_OHTRACE(prox,
+                mID,
+                removal.object(),
+                false,
+                TimedMotionVector3f()
+            );
+        }
     }
 }
 

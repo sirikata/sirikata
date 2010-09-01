@@ -190,11 +190,19 @@ void PintoManager::queryHasEvents(Query* query) {
 
     while(!evts.empty()) {
         const QueryEvent& evt = evts.front();
-        PINTO_LOG(debug, "Event generated for server " << cdata.server << ": " << evt.id() << (evt.type() == QueryEvent::Added ? " added" : " removed"));
+        //PINTO_LOG(debug, "Event generated for server " << cdata.server << ": " << evt.id() << (evt.type() == QueryEvent::Added ? " added" : " removed"));
 
-        Sirikata::Protocol::MasterPinto::IPintoResult result = msg.add_results();
-        result.set_addition( evt.type() == QueryEvent::Added );
-        result.set_server( evt.id() );
+        Sirikata::Protocol::MasterPinto::IPintoUpdate update = msg.add_update();
+        for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
+            Sirikata::Protocol::MasterPinto::IPintoResult result = update.add_change();
+            result.set_addition(true);
+            result.set_server(evt.additions()[aidx].id());
+        }
+        for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
+            Sirikata::Protocol::MasterPinto::IPintoResult result = update.add_change();
+            result.set_addition(false);
+            result.set_server(evt.removals()[ridx].id());
+        }
 
         evts.pop_front();
     }

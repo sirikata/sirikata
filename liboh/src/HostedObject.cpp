@@ -1002,37 +1002,41 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
-    for(int32 idx = 0; idx < contents.addition_size(); idx++) {
-        Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
-        TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
-        TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
-        SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
-        // FIXME use weak_ptr instead of raw
-        URI meshuri;
-        if (addition.has_mesh()) meshuri = URI(addition.mesh());
-        BoundingSphere3f bnds = addition.bounds();
-        ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
+            TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
-        CONTEXT_OHTRACE(prox,
-            getUUID(),
-            addition.object(),
-            true,
-            loc
-        );
-    }
+            SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
+            // FIXME use weak_ptr instead of raw
+            URI meshuri;
+            if (addition.has_mesh()) meshuri = URI(addition.mesh());
+            BoundingSphere3f bnds = addition.bounds();
+            ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
 
-    for(int32 idx = 0; idx < contents.removal_size(); idx++) {
-        Sirikata::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
+            CONTEXT_OHTRACE(prox,
+                getUUID(),
+                addition.object(),
+                true,
+                loc
+            );
+        }
 
-        HO_LOG(debug,"Proximity removal."); // Remove when properly handled
-        CONTEXT_OHTRACE(prox,
-            getUUID(),
-            removal.object(),
-            false,
-            TimedMotionVector3f()
-        );
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+
+            HO_LOG(debug,"Proximity removal."); // Remove when properly handled
+            CONTEXT_OHTRACE(prox,
+                getUUID(),
+                removal.object(),
+                false,
+                TimedMotionVector3f()
+            );
+        }
     }
 }
 

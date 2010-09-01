@@ -187,9 +187,12 @@ void MasterPintoServerQuerier::handleServerReceived(Chunk& data, const Network::
         return;
     }
 
-    for(int32 i = 0; i < msg.results_size(); i++) {
-        Sirikata::Protocol::MasterPinto::PintoResult result = msg.results(i);
-        MP_LOG(debug, "Event received from master pinto: " << result.server() << (result.addition() ? " added" : " removed"));
+    for(int32 idx = 0; idx < msg.update_size(); idx++) {
+        Sirikata::Protocol::MasterPinto::PintoUpdate update = msg.update(idx);
+        for(int32 i = 0; i < update.change_size(); i++) {
+            Sirikata::Protocol::MasterPinto::PintoResult result = update.change(i);
+            MP_LOG(debug, "Event received from master pinto: " << result.server() << (result.addition() ? " added" : " removed"));
+        }
     }
 }
 

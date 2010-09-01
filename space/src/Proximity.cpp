@@ -239,9 +239,11 @@ void Proximity::receiveMessage(Message* msg) {
         assert( prox_result_msg.has_t() );
         Time t = prox_result_msg.t();
 
-        if (prox_result_msg.addition_size() > 0) {
-            for(int32 idx = 0; idx < prox_result_msg.addition_size(); idx++) {
-                Sirikata::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
+        for(int32 idx = 0; idx < prox_result_msg.update_size(); idx++) {
+            Sirikata::Protocol::Prox::ProximityUpdate update = prox_result_msg.update(idx);
+
+            for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+                Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -251,11 +253,9 @@ void Proximity::receiveMessage(Message* msg) {
                     (addition.has_mesh() ? addition.mesh() : "")
                 );
             }
-        }
 
-        if (prox_result_msg.removal_size() > 0) {
-            for(int32 idx = 0; idx < prox_result_msg.removal_size(); idx++) {
-                Sirikata::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
+            for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+                Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
         }
@@ -556,48 +556,53 @@ void Proximity::generateServerQueryEvents() {
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
                 const QueryEvent& evt = evts.front();
-                if (evt.type() == QueryEvent::Added) {
-                    if (mLocalLocCache->tracking(evt.id())) { // If the cache already lost it, we can't do anything
+                Sirikata::Protocol::Prox::IProximityUpdate event_results = contents.add_update();
+                // Each QueryEvent is made up of additions and
+                // removals
+                for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
+                    UUID objid = evt.additions()[aidx].id();
+                    if (mLocalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                         count++;
 
                         mContext->mainStrand->post(
-                            std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, evt.id())
+                            std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, objid)
                         );
 
-                        Sirikata::Protocol::Prox::IObjectAddition addition = contents.add_addition();
-                        addition.set_object( evt.id() );
+                        Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                        addition.set_object( objid );
 
-                        TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
+                        TimedMotionVector3f loc = mLocalLocCache->location(objid);
                         Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
                         msg_loc.set_t(loc.updateTime());
                         msg_loc.set_position(loc.position());
                         msg_loc.set_velocity(loc.velocity());
 
-                        TimedMotionQuaternion orient = mLocalLocCache->orientation(evt.id());
+                        TimedMotionQuaternion orient = mLocalLocCache->orientation(objid);
                         Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
                         msg_orient.set_t(orient.updateTime());
                         msg_orient.set_position(orient.position());
                         msg_orient.set_velocity(orient.velocity());
 
-                        addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
-                        const String& mesh = mLocalLocCache->mesh(evt.id());
+                        addition.set_bounds( mLocalLocCache->bounds(objid) );
+                        const String& mesh = mLocalLocCache->mesh(objid);
                         if (mesh.size() > 0)
                             addition.set_mesh(mesh);
                     }
                 }
-                else {
+                for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
+                    UUID objid = evt.removals()[ridx].id();
                     count++;
                     mContext->mainStrand->post(
-                        std::tr1::bind(&Proximity::handleRemoveServerLocSubscription, this, sid, evt.id())
+                        std::tr1::bind(&Proximity::handleRemoveServerLocSubscription, this, sid, objid)
                     );
-                    Sirikata::Protocol::Prox::IObjectRemoval removal = contents.add_removal();
-                    removal.set_object( evt.id() );
+                    Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
+                    removal.set_object(objid);
                 }
 
                 evts.pop_front();
             }
 
-            PROXLOG(insane,"Reporting " << contents.addition_size() << " additions, " << contents.removal_size() << " removals to server " << sid);
+            //PROXLOG(insane,"Reporting " << contents.addition_size() << " additions, " << contents.removal_size() << " removals to server " << sid);
 
             Message* msg = new Message(
                 mContext->id(),
@@ -630,43 +635,46 @@ void Proximity::generateObjectQueryEvents() {
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
                 const QueryEvent& evt = evts.front();
+                Sirikata::Protocol::Prox::IProximityUpdate event_results = prox_results.add_update();
 
-                if (evt.type() == QueryEvent::Added) {
-                    if (mGlobalLocCache->tracking(evt.id())) { // If the cache already lost it, we can't do anything
+                for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
+                    UUID objid = evt.additions()[aidx].id();
+                    if (mGlobalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                         count++;
                         mContext->mainStrand->post(
-                            std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, evt.id())
+                            std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
                         );
 
-                        Sirikata::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
-                        addition.set_object( evt.id() );
+                        Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                        addition.set_object( objid );
 
                         Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                        TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
+                        TimedMotionVector3f loc = mGlobalLocCache->location(objid);
                         motion.set_t(loc.updateTime());
                         motion.set_position(loc.position());
                         motion.set_velocity(loc.velocity());
 
-                        TimedMotionQuaternion orient = mGlobalLocCache->orientation(evt.id());
+                        TimedMotionQuaternion orient = mGlobalLocCache->orientation(objid);
                         Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
                         msg_orient.set_t(orient.updateTime());
                         msg_orient.set_position(orient.position());
                         msg_orient.set_velocity(orient.velocity());
 
-                        addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
-                        const String& mesh = mGlobalLocCache->mesh(evt.id());
+                        addition.set_bounds( mGlobalLocCache->bounds(objid) );
+                        const String& mesh = mGlobalLocCache->mesh(objid);
                         if (mesh.size() > 0)
                             addition.set_mesh(mesh);
                     }
                 }
-                else {
+                for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
+                    UUID objid = evt.removals()[ridx].id();
                     count++;
                     mContext->mainStrand->post(
-                        std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, evt.id())
+                        std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, objid)
                     );
 
-                    Sirikata::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
-                    removal.set_object( evt.id() );
+                    Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
+                    removal.set_object( objid );
                 }
 
                 evts.pop_front();
