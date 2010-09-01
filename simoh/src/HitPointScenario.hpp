@@ -47,6 +47,7 @@ class DamagableObject;
 
 class HitPointScenario : public Scenario {
     double mNumPingsPerSecond;
+    double mNumHitPointsPerSecond;
 
     ObjectHostContext*mContext;
     ConnectedObjectTracker* mObjectTracker;
@@ -81,9 +82,11 @@ class HitPointScenario : public Scenario {
     void generatePings();
 
     void sendPings();
+    void sendHPs();
 
     static HitPointScenario*create(const String&options);
 public:
+    double calcHp(const Time*t=NULL);
     HitPointScenario(const String &options);
     ~HitPointScenario();
     virtual void initialize(ObjectHostContext*);
