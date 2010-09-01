@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _PING_DELUGE_SCENARIO_HPP_
-#define _PING_DELUGE_SCENARIO_HPP_
+#ifndef _HIT_POINT_DELUGE_SCENARIO_HPP_
+#define _HIT_POINT_DELUGE_SCENARIO_HPP_
 
 #include "Scenario.hpp"
 #include <sirikata/core/queue/CountResourceMonitor.hpp>
