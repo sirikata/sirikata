@@ -38,7 +38,7 @@ namespace Sirikata {
 
 void InitSpaceOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,space-local",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,space-local,space-standard",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -76,7 +76,10 @@ void InitSpaceOptions() {
         .addOption(new OptionValue("cseg-service-tcp-port", "2234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
 
         .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))
-        .addOption(new OptionValue(LOC_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of loc updates to report in each result message."))
+        .addOption(new OptionValue(LOC_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to Loc constructor."))
+        .addOption(new OptionValue(LOC_UPDATE, "always", Sirikata::OptionValueType<String>(), "Type of location service to run."))
+        .addOption(new OptionValue(LOC_UPDATE_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to Loc constructor."))
+
         .addOption(new OptionValue(PROX_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
 
         .addOption(new OptionValue(OPT_PINTO,"local",Sirikata::OptionValueType<String>(),"Specifies which type of Pinto to use."))

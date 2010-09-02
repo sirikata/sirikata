@@ -32,10 +32,24 @@
 
 #include <sirikata/space/LocationService.hpp>
 
+AUTO_SINGLETON_INSTANCE(Sirikata::LocationUpdatePolicyFactory);
+AUTO_SINGLETON_INSTANCE(Sirikata::LocationServiceFactory);
+
 namespace Sirikata {
 
 LocationServiceListener::~LocationServiceListener() {
 }
+
+
+
+LocationUpdatePolicyFactory& LocationUpdatePolicyFactory::getSingleton() {
+    return AutoSingleton<LocationUpdatePolicyFactory>::getSingleton();
+}
+
+void LocationUpdatePolicyFactory::destroy() {
+    AutoSingleton<LocationUpdatePolicyFactory>::destroy();
+}
+
 
 LocationUpdatePolicy::LocationUpdatePolicy()
  : mLocService(NULL)
@@ -53,6 +67,14 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
     delete mLocMessageRouter;
 }
 
+
+LocationServiceFactory& LocationServiceFactory::getSingleton() {
+    return AutoSingleton<LocationServiceFactory>::getSingleton();
+}
+
+void LocationServiceFactory::destroy() {
+    AutoSingleton<LocationServiceFactory>::destroy();
+}
 
 LocationService::LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),

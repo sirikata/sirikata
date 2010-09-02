@@ -1303,8 +1303,15 @@ SET(LIBSPACE_PLUGIN_MASTER_PINTO_SOURCES
   ${LIBSPACE_PLUGIN_MASTER_PINTO_DIR}/MasterPintoServerQuerier.cpp
 )
 
+SET(LIBSPACE_PLUGIN_STANDARD_DIR ${LIBSPACE_PLUGIN_DIR}/standard)
+SET(LIBSPACE_PLUGIN_STANDARD_SOURCES
+  ${LIBSPACE_PLUGIN_STANDARD_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_STANDARD_DIR}/StandardLocationService.cpp
+  ${LIBSPACE_PLUGIN_STANDARD_DIR}/AlwaysLocationUpdatePolicy.cpp
+)
+
+
 SET(SPACE_SOURCES
-  ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
@@ -1330,7 +1337,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/SpaceNetwork.cpp
   ${SPACE_SOURCE_DIR}/Proximity.cpp
   ${SPACE_SOURCE_DIR}/Server.cpp
-  ${SPACE_SOURCE_DIR}/StandardLocationService.cpp
   ${SPACE_SOURCE_DIR}/TCPSpaceNetwork.cpp
 #  ${SPACE_SOURCE_DIR}/Test.cpp
   ${SPACE_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
@@ -1638,6 +1644,13 @@ ADD_PLUGIN_TARGET(space-master-pinto
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-master-pinto)
+
+ADD_PLUGIN_TARGET(space-standard
+                    SOURCES ${LIBSPACE_PLUGIN_STANDARD_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-standard)
 
 IF(OGRE_FOUND AND sdl_FOUND )
   IF(WIN32)#not sure why this needs to happen again

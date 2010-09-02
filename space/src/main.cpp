@@ -42,7 +42,6 @@
 #include "Forwarder.hpp"
 
 #include <sirikata/space/LocationService.hpp>
-#include "AlwaysLocationUpdatePolicy.hpp"
 
 #include "Proximity.hpp"
 #include "Server.hpp"
@@ -51,7 +50,6 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
-#include "StandardLocationService.hpp"
 #include "TCPSpaceNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 #include "FairServerMessageQueue.hpp"
@@ -139,16 +137,15 @@ int main(int argc, char** argv) {
     }
 
 
+    String loc_update_type = GetOptionValue<String>(LOC_UPDATE);
+    String loc_update_opts = GetOptionValue<String>(LOC_UPDATE_OPTIONS);
+    LocationUpdatePolicy* loc_update_policy =
+        LocationUpdatePolicyFactory::getSingleton().getConstructor(loc_update_type)(loc_update_opts);
 
-    LocationUpdatePolicy* loc_update_policy = new AlwaysLocationUpdatePolicy();
-
-    LocationService* loc_service = NULL;
     String loc_service_type = GetOptionValue<String>(LOC);
-    if (loc_service_type == "standard")
-        loc_service = new StandardLocationService(space_context, loc_update_policy);
-    else
-        assert(false);
-
+    String loc_service_opts = GetOptionValue<String>(LOC_OPTIONS);
+    LocationService* loc_service =
+        LocationServiceFactory::getSingleton().getConstructor(loc_service_type)(space_context, loc_update_policy, loc_service_opts);
 
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOptionValue<String>(SERVER_QUEUE);

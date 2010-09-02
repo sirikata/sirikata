@@ -45,7 +45,9 @@
 #define CSEG                "cseg"
 
 #define LOC                        "loc"
-#define LOC_MAX_PER_RESULT         "loc.max-per-result"
+#define LOC_OPTIONS                "loc-options"
+#define LOC_UPDATE                 "loc-update"
+#define LOC_UPDATE_OPTIONS         "loc-update-options"
 
 #define OSEG                       "oseg"
 #define OSEG_OPTIONS               "oseg-options"

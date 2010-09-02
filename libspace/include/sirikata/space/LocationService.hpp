@@ -43,6 +43,8 @@
 
 #include <sirikata/space/Platform.hpp>
 
+#include <sirikata/core/util/Factory.hpp>
+
 namespace Sirikata {
 
 class LocationServiceListener;
@@ -111,6 +113,15 @@ protected:
     LocationService* mLocService; // The owner of this UpdatePolicy
     Router<Message*>* mLocMessageRouter; // Server Message Router for Loc Service
 }; // class LocationUpdatePolicy
+
+class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
+    : public AutoSingleton<LocationUpdatePolicyFactory>,
+      public Factory1<LocationUpdatePolicy*, const String&>
+{
+  public:
+    static LocationUpdatePolicyFactory& getSingleton();
+    static void destroy();
+}; // class LocationServiceFactory
 
 
 /** Interface for location services.  This provides a way for other components
@@ -223,6 +234,15 @@ protected:
 
     LocationUpdatePolicy* mUpdatePolicy;
 }; // class LocationService
+
+class SIRIKATA_SPACE_EXPORT LocationServiceFactory
+    : public AutoSingleton<LocationServiceFactory>,
+      public Factory3<LocationService*, SpaceContext*, LocationUpdatePolicy*, const String&>
+{
+  public:
+    static LocationServiceFactory& getSingleton();
+    static void destroy();
+}; // class LocationServiceFactory
 
 } // namespace Sirikata
 

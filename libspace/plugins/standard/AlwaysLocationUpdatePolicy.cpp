@@ -32,14 +32,23 @@
 
 #include "AlwaysLocationUpdatePolicy.hpp"
 #include <sirikata/space/ServerMessage.hpp>
+#include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
 
-AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy()
+void InitAlwaysLocationUpdatePolicyOptions() {
+    Sirikata::InitializeClassOptions ico(ALWAYS_POLICY_OPTIONS, NULL,
+        new OptionValue(LOC_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of loc updates to report in each result message."),
+        NULL);
+}
+
+AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(const String& args)
  : LocationUpdatePolicy(),
    mServerSubscriptions(this),
    mObjectSubscriptions(this)
 {
+    OptionSet* optionsSet = OptionSet::getOptions(ALWAYS_POLICY_OPTIONS,NULL);
+    optionsSet->parse(args);
 }
 
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {

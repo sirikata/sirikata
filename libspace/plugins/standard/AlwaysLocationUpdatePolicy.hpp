@@ -34,19 +34,23 @@
 #define _ALWAYS_LOCATION_UPDATE_POLICY_HPP_
 
 #include <sirikata/space/LocationService.hpp>
-#include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 
+#define ALWAYS_POLICY_OPTIONS      "always_location_update_policy"
+#define LOC_MAX_PER_RESULT         "loc.max-per-result"
+
 namespace Sirikata {
+
+void InitAlwaysLocationUpdatePolicyOptions();
 
 /** A LocationUpdatePolicy which always sends a location
  *  update message to all subscribers on any position update.
  */
 class AlwaysLocationUpdatePolicy : public LocationUpdatePolicy {
 public:
-    AlwaysLocationUpdatePolicy();
+    AlwaysLocationUpdatePolicy(const String& args);
     virtual ~AlwaysLocationUpdatePolicy();
 
     virtual void subscribe(ServerID remote, const UUID& uuid);
@@ -238,7 +242,7 @@ private:
 
 
         void service() {
-            uint32 max_updates = GetOptionValue<uint32>(LOC_MAX_PER_RESULT);
+            uint32 max_updates = GetOptionValue<uint32>(ALWAYS_POLICY_OPTIONS, LOC_MAX_PER_RESULT);
 
             std::list<SubscriberType> to_delete;
 
