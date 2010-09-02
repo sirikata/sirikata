@@ -98,20 +98,26 @@ public:
             memset(mPartialUpdate,0,sizeof(DamagableObject::HPTYPE));
             static int offset=0;
             ++offset;
+            int port = parent->mListenPort+offset;
             SILOG(hitpoint,error,"Listen/Connecting "<<mID.toString()<<" to "<<mParent->object->uuid().toString());
             Stream<UUID>::listen(std::tr1::bind(&DamagableObject::ReceiveDamage::login,this,_1,_2),
                                  EndPoint<UUID>(mID,parent->mListenPort));
             Stream<UUID>::connectStream(mParent->object,
-                                        EndPoint<UUID>(mParent->object->uuid(),parent->mListenPort+offset),
+                                        EndPoint<UUID>(mParent->object->uuid(),port),
                                         EndPoint<UUID>(mID,parent->mListenPort),
-                                        std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,_1,_2));
+                                        std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
             
         }
-        void connectionCallback(int err, boost::shared_ptr<Stream<UUID> > s) {
+        void connectionCallback(int port, int err, boost::shared_ptr<Stream<UUID> > s) {
             if (err != 0 ) {
-                SILOG(hitpoint,error,"Failed to connect two objects\n");
+                SILOG(hitpoint,error,"Failed to connect two objects...Retry"<<mParent->object->uuid().toString()<<" - "<<mID.toString());
+                Stream<UUID>::connectStream(mParent->object,
+                                            EndPoint<UUID>(mParent->object->uuid(),port),
+                                            EndPoint<UUID>(mID,mParent->mListenPort),
+                                            std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
+
             }else {
-                SILOG(hitpoint,error,"Got connection\n");
+                SILOG(hitpoint,error,"Got connection "<<mParent->object->uuid().toString()<<" - "<<mID.toString());
                 this->mSendStream = s;
                 s->registerReadCallback( std::tr1::bind( &DamagableObject::ReceiveDamage::senderShouldNotGetUpdate, this, _1, _2)  ) ;
                 sendUpdate();

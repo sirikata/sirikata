@@ -31,7 +31,8 @@ class FlowPairFairness(flow_fairness.FlowFairness):
             ['--num-pings-per-second=' + str(rate),
              '--ping-size=' + str(self.payload_size),
              '--local=' + localval,
-             '--receivers-per-server=3'
+             '--receivers-per-server=1'
+             '--num-hp-per-second=2'
              ]
             )
         self.cs.odp_flow_scheduler = self.scheme
@@ -96,12 +97,12 @@ if __name__ == "__main__":
         cs.object_pack = ''
         cs.pack_dump = ''
 
-    cs.object_connect_phase = '20s'
+    cs.object_connect_phase = '15s'
 
     cs.object_static = 'static'
     cs.object_query_frac = 0.0
 
-    cs.duration = '120s'
+    cs.duration = '220s'
 
     rates = sys.argv[1:]
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)
