@@ -35,8 +35,8 @@
 
 namespace Sirikata {
 
-AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(LocationService* locservice)
- : LocationUpdatePolicy(locservice),
+AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy()
+ : LocationUpdatePolicy(),
    mServerSubscriptions(this),
    mObjectSubscriptions(this)
 {

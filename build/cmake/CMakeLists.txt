@@ -1127,6 +1127,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
   ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
+  ${LIBSPACE_SOURCE_DIR}/LocationService.cpp
   )
 
 SET(LIBPROXYOBJECT_SOURCES
@@ -1320,7 +1321,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/Forwarder.cpp
   ${SPACE_SOURCE_DIR}/ForwarderServiceQueue.cpp
   ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
-  ${SPACE_SOURCE_DIR}/LocationService.cpp
   ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp
   ${SPACE_SOURCE_DIR}/ObjectConnection.cpp
   ${SPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp

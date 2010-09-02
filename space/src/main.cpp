@@ -41,7 +41,8 @@
 
 #include "Forwarder.hpp"
 
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
+#include "AlwaysLocationUpdatePolicy.hpp"
 
 #include "Proximity.hpp"
 #include "Server.hpp"
@@ -139,10 +140,12 @@ int main(int argc, char** argv) {
 
 
 
+    LocationUpdatePolicy* loc_update_policy = new AlwaysLocationUpdatePolicy();
+
     LocationService* loc_service = NULL;
     String loc_service_type = GetOptionValue<String>(LOC);
     if (loc_service_type == "standard")
-        loc_service = new StandardLocationService(space_context);
+        loc_service = new StandardLocationService(space_context, loc_update_policy);
     else
         assert(false);
 

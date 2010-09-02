@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
 #define _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
 
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
 
 namespace Sirikata {
 
@@ -42,7 +42,7 @@ namespace Sirikata {
  */
 class StandardLocationService : public LocationService {
 public:
-    StandardLocationService(SpaceContext* ctx);
+    StandardLocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual bool contains(const UUID& uuid) const;

@@ -33,7 +33,7 @@
 #ifndef _ALWAYS_LOCATION_UPDATE_POLICY_HPP_
 #define _ALWAYS_LOCATION_UPDATE_POLICY_HPP_
 
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
@@ -46,7 +46,7 @@ namespace Sirikata {
  */
 class AlwaysLocationUpdatePolicy : public LocationUpdatePolicy {
 public:
-    AlwaysLocationUpdatePolicy(LocationService* locservice);
+    AlwaysLocationUpdatePolicy();
     virtual ~AlwaysLocationUpdatePolicy();
 
     virtual void subscribe(ServerID remote, const UUID& uuid);

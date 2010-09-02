@@ -41,6 +41,8 @@
 
 #include <sirikata/core/network/SSTImpl.hpp>
 
+#include <sirikata/space/Platform.hpp>
+
 namespace Sirikata {
 
 class LocationServiceListener;
@@ -48,7 +50,7 @@ class LocationUpdatePolicy;
 class LocationService;
 
 /** Interface for objects that need to listen for location updates. */
-class LocationServiceListener {
+class SIRIKATA_SPACE_EXPORT LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
@@ -73,10 +75,12 @@ public:
  *  regular tick calls.  Based on this information it decides when to
  *  send updates to individual subscribers.
  */
-class LocationUpdatePolicy : public LocationServiceListener{
+class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener{
 public:
-    LocationUpdatePolicy(LocationService* locservice);
+    LocationUpdatePolicy();
     virtual ~LocationUpdatePolicy();
+
+    virtual void initialize(LocationService* loc);
 
     virtual void subscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
@@ -112,7 +116,7 @@ protected:
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
 public:
     enum TrackingType {
         NotTracking,
@@ -120,7 +124,7 @@ public:
         Replica
     };
 
-    LocationService(SpaceContext* ctx);
+    LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     virtual ~LocationService();
 
     const SpaceContext* context() const {

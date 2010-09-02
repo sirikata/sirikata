@@ -30,19 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "LocationService.hpp"
-#include "AlwaysLocationUpdatePolicy.hpp"
+#include <sirikata/space/LocationService.hpp>
 
 namespace Sirikata {
 
 LocationServiceListener::~LocationServiceListener() {
 }
 
-LocationUpdatePolicy::LocationUpdatePolicy(LocationService* locservice)
- : mLocService(locservice)
+LocationUpdatePolicy::LocationUpdatePolicy()
+ : mLocService(NULL)
 {
-    mLocService->addListener(this);
+}
 
+void LocationUpdatePolicy::initialize(LocationService* locservice)
+{
+    mLocService = locservice;
+    mLocService->addListener(this);
     mLocMessageRouter = mLocService->context()->serverRouter()->createServerMessageService("loc-update");
 }
 
@@ -51,13 +54,14 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 }
 
 
-LocationService::LocationService(SpaceContext* ctx)
+LocationService::LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
-   mContext(ctx)
+   mContext(ctx),
+   mUpdatePolicy(update_policy)
 {
     mProfiler = mContext->profiler->addStage("Location Service");
 
-    mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
+    mUpdatePolicy->initialize(this);
 
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);
 }

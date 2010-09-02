@@ -37,8 +37,8 @@
 
 namespace Sirikata {
 
-StandardLocationService::StandardLocationService(SpaceContext* ctx)
- : LocationService(ctx)
+StandardLocationService::StandardLocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
+ : LocationService(ctx, update_policy)
 {
 }
 
@@ -340,7 +340,7 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
         if (obj_type == Local) {
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
-            
+
             if (request.has_location()) {
                 TimedMotionVector3f newloc(
                     request.location().t(),
@@ -373,7 +373,7 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                 loc_it->second.orientation = neworient;
                 notifyLocalOrientationUpdated( source, neworient );
             }
-            
+
         }
         else {
             // Warn about update to non-local object

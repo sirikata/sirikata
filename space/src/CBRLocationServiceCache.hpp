@@ -34,7 +34,7 @@
 #define _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 
 #include <sirikata/space/ProxSimulationTraits.hpp>
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
 #include <prox/LocationServiceCache.hpp>
 
 namespace Sirikata {
