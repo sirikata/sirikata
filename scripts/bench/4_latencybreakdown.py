@@ -49,15 +49,7 @@ if __name__ == "__main__":
     
     nobjects = 1000#19000#326
     packname = '1a_objects.pack'
-    # If genpack is True, the sim will be run the first time with a
-    # single object host to generate data, dump it, and pull it down.
-    # Then run with genpack = False to push that pack up to all nodes
-    # and use it across multiple object hosts.
-    genpack = False
     numoh = 1
-
-    if (genpack):
-        numoh = 1
 
     cc = ClusterConfig()
     import math;
@@ -81,26 +73,11 @@ if __name__ == "__main__":
     cs.oseg_cache_entry_lifetime= "10000s"
 
 
-    
-    #if (genpack):
-    #    # Pack generation, run with 1 oh
-    #    assert(cs.num_oh == 1)
-    #    cs.num_random_objects = nobjects
-    #    cs.num_pack_objects = 0
-    #    cs.object_pack = ''
-    #    cs.pack_dump = packname
-    #elif (numoh > 1):
-    #    # Use pack across multiple ohs
-    #    cs.num_random_objects = 0
-    #    cs.num_pack_objects = nobjects / cs.num_oh
-    #    cs.object_pack = packname
-    #    cs.pack_dump = ''
-    #else:
-    #    # Only 1 oh, just use random
-    #    cs.num_random_objects = nobjects
-    #    cs.num_pack_objects = 0
-    #    cs.object_pack = ''
-    #    cs.pack_dump = ''
+    ## Use pack across multiple ohs
+    #cs.num_random_objects = 0
+    #cs.num_pack_objects = nobjects / cs.num_oh
+    #cs.object_pack = packname
+    #cs.pack_dump = True
     cs.num_random_objects = 0
     cs.object_sl_file='sl.trace.'+str(edgex)+'x'+str(edgey);
     cs.object_sl_center=(384,384,0);

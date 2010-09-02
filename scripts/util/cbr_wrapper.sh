@@ -48,7 +48,7 @@ if [ -z "${build_config}" ] ; then
 fi
 
 usage () {
-  echo "[space|simoh|cseg|pinto|analysis|bench] [-h|--help] [-g|--debug] [options]"
+  echo "[space|simoh|genpack|cseg|pinto|analysis|bench] [-h|--help] [-g|--debug] [options]"
   echo
   echo "        -g or --debug           Start within $GDB"
   echo "        -h or --help            This help screen"
@@ -66,7 +66,7 @@ want_interactive=0
 want_oprofile=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    space | simoh | cseg | pinto | analysis | bench)
+    space | simoh | genpack | cseg | pinto | analysis | bench)
       APPNAME="${1}${BUILD_POST}"
       shift;;
     -h | --help | -help )
