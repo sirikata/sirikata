@@ -34,8 +34,8 @@
 
 using namespace Sirikata;
 
-ProxyWebViewObject::ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id, VWObjectPtr vwobj)
- : ProxyMeshObject(man, id, vwobj)
+ProxyWebViewObject::ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
+ : ProxyMeshObject(man, id, vwobj, owner_sor)
 {
 }
 

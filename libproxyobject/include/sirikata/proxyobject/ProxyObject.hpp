@@ -85,7 +85,6 @@ private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
-    TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
     BoundingSphere3f mBounds;
 
@@ -96,6 +95,7 @@ private:
 protected:
     /// Notification that the Parent has been destroyed.
     virtual void destroyed(const TemporalValue<Location>::Time& when);
+    TimedMotionVector3f mLoc;
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -104,8 +104,10 @@ public:
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
         \param vwobj the owning VWObject, allowing the ProxyObject to interact
                     with the space
+        \param owner_sor the owning SpaceObjectReference, i.e. the presence the
+        proximity event was generated for
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj);
+    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
     virtual ~ProxyObject();
 
     // MCB: default to true for legacy proxies. FIX ME when all converted.

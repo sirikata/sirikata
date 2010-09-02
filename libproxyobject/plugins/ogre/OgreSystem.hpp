@@ -42,6 +42,7 @@
 #include <OgrePixelFormat.h>
 #include "resourceManager/ResourceDownloadPlanner.hpp"
 #include "resourceManager/DistanceDownloadPlanner.hpp"
+#include "resourceManager/SAngleDownloadPlanner.hpp"
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h

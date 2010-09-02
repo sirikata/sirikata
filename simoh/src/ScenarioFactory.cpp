@@ -37,6 +37,7 @@
 #include "ByteTransferScenario.hpp"
 #include "LoadPacketTrace.hpp"
 #include "NullScenario.hpp"
+#include "HitPointScenario.hpp"
 
 AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
 namespace Sirikata {
@@ -47,6 +48,7 @@ ScenarioFactory::ScenarioFactory(){
     LoadPacketTrace::addConstructorToFactory(this);
     ByteTransferScenario::addConstructorToFactory(this);
     NullScenario::addConstructorToFactory(this);
+    HitPointScenario::addConstructorToFactory(this);
 }
 ScenarioFactory::~ScenarioFactory(){}
 ScenarioFactory&ScenarioFactory::getSingleton(){

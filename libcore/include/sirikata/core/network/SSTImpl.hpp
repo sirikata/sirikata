@@ -1224,7 +1224,7 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUI
 class StreamBuffer{
 public:
 
-  const uint8* mBuffer;
+  uint8* mBuffer;
   uint16 mBufferLength;
   uint32 mOffset;
 
@@ -1237,14 +1237,14 @@ public:
   {
     assert(len > 0);
 
-    mBuffer = data;
-
+    mBuffer = new uint8[len];
+    memcpy(mBuffer,data,len);
     mBufferLength = len;
     mOffset = offset;
   }
 
   ~StreamBuffer() {
-
+      delete []mBuffer;
   }
 };
 
@@ -1654,8 +1654,10 @@ private:
 
 	//send back an error to the app by calling mStreamReturnCallback
 	//with an error code.
-	mStreamReturnCallback(SST_IMPL_FAILURE, boost::shared_ptr<Stream<UUID> >() );
-        mStreamReturnCallback = NULL;
+        if (mStreamReturnCallback) {
+            mStreamReturnCallback(SST_IMPL_FAILURE, boost::shared_ptr<Stream<UUID> >() );
+            mStreamReturnCallback = NULL;
+        }
 
         mState = DISCONNECTED;
 

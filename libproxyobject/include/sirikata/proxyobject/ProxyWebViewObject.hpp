@@ -54,7 +54,7 @@ public:
     void resize(int width, int height);
 
 private:
-    ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id, VWObjectPtr vwobj);
+    ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
 };
 
 }

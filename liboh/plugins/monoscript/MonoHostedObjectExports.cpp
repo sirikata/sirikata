@@ -133,11 +133,12 @@ static void Mono_HostedObject_iAsyncWait(Mono::CSharpDuration* mono_duration, Mo
 
 
 
-static MonoObject* Mono_HostedObject_iSendMessage(Mono::CSharpSpaceID* mono_dest_space, Mono::CSharpObjectReference* mono_dest_obj, uint32 mono_dest_port, MonoObject* mono_payload){
+static MonoObject* Mono_HostedObject_iSendMessage(Mono::CSharpSpaceID* mono_dest_space, Mono::CSharpObjectReference* mono_source_obj, Mono::CSharpObjectReference* mono_dest_obj, uint32 mono_dest_port, MonoObject* mono_payload){
     std::tr1::shared_ptr<HostedObject> ho = MonoContext::getSingleton().getVWObject();
     MemoryBuffer payload;
 
     SpaceID dest_space( Mono::SpaceIDFromMono(mono_dest_space) );
+    ObjectReference source_obj( Mono::ObjectReferenceFromMono(mono_source_obj) );
     ObjectReference dest_obj( Mono::ObjectReferenceFromMono(mono_dest_obj) );
     ODP::PortID dest_port(mono_dest_port);
     ODP::Endpoint dest_ep(dest_space, dest_obj, dest_port);
@@ -148,7 +149,7 @@ static MonoObject* Mono_HostedObject_iSendMessage(Mono::CSharpSpaceID* mono_dest
         return MonoContext::getSingleton().getDomain().Boolean(false).object();
 
     // FIXME exposing ODP ports would be a better solution
-    ODP::Port* temp_port = ho->bindODPPort(dest_space);
+    ODP::Port* temp_port = ho->bindODPPort( SpaceObjectReference(dest_space, source_obj) );
     if (temp_port == NULL)
         return MonoContext::getSingleton().getDomain().Boolean(false).object();
 

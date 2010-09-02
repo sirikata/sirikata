@@ -124,6 +124,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectInfo[obj].connectingTo = NullServerID;
         mObjectServerMap[connectedTo].push_back(obj);
 
+        mObjectInfo[obj].connectedAs = SpaceObjectReference(parent->mSpace, ObjectReference(obj));
         mObjectInfo[obj].connectedCB(parent->mSpace, ObjectReference(obj), connectedTo);
 
         // FIXME shoudl be setting internal/external ID maps here
@@ -160,7 +161,7 @@ void SessionManager::ObjectConnections::handleConnectError(const UUID& objid) {
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const UUID& objid) {
-  mObjectInfo[objid].streamCreatedCB();
+  mObjectInfo[objid].streamCreatedCB( mObjectInfo[objid].connectedAs );
 }
 
 void SessionManager::ObjectConnections::remove(const UUID& objid) {

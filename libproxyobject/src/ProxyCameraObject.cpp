@@ -34,9 +34,10 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
 namespace Sirikata {
-ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
- : ProxyObject(man, id, vwobj)
+ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
+ : ProxyObject(man, id, vwobj, owner_sor)
 {
+
 }
 
 void ProxyCameraObject::destroy(const TemporalValue<Location>::Time& when) {

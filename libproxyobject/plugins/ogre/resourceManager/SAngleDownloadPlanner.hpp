@@ -29,3 +29,36 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SANGLE_DOWNLOAD_PLANNER_HPP
+#define _SANGLE_DOWNLOAD_PLANNER_HPP
+
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include "DistanceDownloadPlanner.hpp"
+#include "../CameraEntity.hpp"
+#include <vector>
+
+namespace Sirikata {
+namespace Graphics{
+class MeshEntity;
+}
+
+class SAngleDownloadPlanner : public DistanceDownloadPlanner
+{
+public:
+    SAngleDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    ~SAngleDownloadPlanner();
+
+protected:
+    virtual double calculatePriority(ProxyObjectPtr proxy);
+
+};
+}
+
+#endif

@@ -73,7 +73,6 @@ public:
 
 protected:
     Graphics::CameraEntity *camera;
-    std::map<ProxyObjectPtr, Graphics::MeshEntity *> resources;
 
 };
 }

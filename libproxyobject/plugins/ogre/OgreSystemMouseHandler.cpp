@@ -162,7 +162,7 @@ class OgreSystem::MouseHandler {
 
     InputBinding mInputBinding;
 
-    WebView* chromeWebView;
+    WebView* mUploadWebView;
     WebView* mFPSWidgetView;
 
     class SubObjectIterator {
@@ -743,11 +743,47 @@ private:
         );
     }
 
+    void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
+        /*
+        if (args.size() < 1) {
+            SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
+            return;
+        }
+
+        // We've passed all the checks, just convert everything and we're good to go
+    //    String name = args[0].toString();
+        String name((char*)args[0].data(), args[0].size());
+        JSArguments event_args;
+        event_args.insert(event_args.begin(), args.begin() + 1, args.end());
+
+        mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
+        */
+        printf("upload object event fired arg length = %d\n", args.size());
+        if (args.size() != 3) {
+            printf("expected 3 arguments, returning.\n");
+            return;
+        }
+
+        String file_path(args[0].data());
+        String title(args[1].data());
+        String description(args[2].data());
+
+        printf("Upload request. path = '%s' , title = '%s' , desc = '%s' .\n", file_path.c_str(), title.c_str(), description.c_str());
+        WebViewManager::getSingleton().destroyWebView(mUploadWebView);
+        mUploadWebView = NULL;
+    }
+
     void startUploadObject() {
-        printf("startUploadObject called.\n");
-        chromeWebView = WebViewManager::getSingleton().createWebView("jeff", 420, 250, OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
-        chromeWebView->loadFile("upload.html");
-        chromeWebView->setTransparent(true);
+        if(mUploadWebView) {
+            printf("startUploadObject called. Focusing existing.\n");
+            mUploadWebView->focus();
+        } else {
+            printf("startUploadObject called. Opening upload UI.\n");
+            mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", 404, 227,
+                    OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
+            mUploadWebView->bind("event", std::tr1::bind(&MouseHandler::onUploadObjectEvent, this, _1, _2));
+            mUploadWebView->loadFile("upload.html");
+        }
     }
 
     void handleFPSWidget() {
@@ -757,7 +793,8 @@ private:
             mFPSWidgetView = NULL;
         } else {
             printf("creating fps widget\n");
-            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 45, OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
+            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 45,
+                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
             mFPSWidgetView->loadFile("fps.html");
             mFPSWidgetView->setTransparent(true);
         }
@@ -1507,7 +1544,7 @@ private:
     }
 
     void screenshotTick(const Task::LocalTime& t) {
-        if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.f/10.f))) {
+        if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.0))) {
             timedScreenshotAction(t);
             mLastScreenshotTime = t;
         }
@@ -1581,7 +1618,7 @@ public:
        mCurrentGroup(SpaceObjectReference::null()),
        mLastCameraTime(Task::LocalTime::now()),
        mLastFpsTime(Task::LocalTime::now()),
-       chromeWebView(NULL),
+       mUploadWebView(NULL),
        mFPSWidgetView(NULL),
        mWhichRayObject(0)
     {

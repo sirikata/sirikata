@@ -117,6 +117,14 @@ MARK_AS_ADVANCED(
     CMAKE_EXE_LINKER_FLAGS_DEFAULT
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
 
+SET(CMAKE_CXX_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
+    "Built cxxflags with default settings."
+    FORCE )
+SET( CMAKE_C_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+
+
 # Profile build target
 SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
     "Built cxxflags with default settings."
@@ -397,7 +405,7 @@ IF(NOT BOOST_ROOT)
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex)
+  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex iostreams)
 ELSE(WIN32)
   FIND_PACKAGE(Boost COMPONENTS system)
 
@@ -420,6 +428,10 @@ ELSE(WIN32)
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
+  
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
 SET(Boost_LIBRARIES
@@ -429,6 +441,7 @@ SET(Boost_LIBRARIES
   debug ${Boost_FILESYSTEM_LIBRARY_DEBUG} optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE}
   debug ${Boost_DATE_TIME_LIBRARY_DEBUG} optimized ${Boost_DATE_TIME_LIBRARY_RELEASE}
   debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
+  debug ${Boost_IOSTREAMS_LIBRARY_DEBUG} optimized ${Boost_IOSTREAMS_LIBRARY_RELEASE}
   )
 
 #dependency: curl
@@ -1248,6 +1261,7 @@ ${GFX}/resourceManager/ResourceDependencyTask.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
 ${GFX}/resourceManager/DistanceDownloadPlanner.cpp
+${GFX}/resourceManager/SAngleDownloadPlanner.cpp
 ${GFX}/resourceManager/ResourceLoadTask.cpp
 ${GFX}/resourceManager/ResourceLoadingQueue.cpp
 ${GFX}/resourceManager/ResourceManager.cpp
@@ -1334,6 +1348,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
   ${SIMOH_SOURCE_DIR}/PingDelugeScenario.cpp
+  ${SIMOH_SOURCE_DIR}/HitPointScenario.cpp
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp

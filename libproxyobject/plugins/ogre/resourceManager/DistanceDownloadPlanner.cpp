@@ -34,6 +34,7 @@
 #include "DistanceDownloadPlanner.hpp"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "../MeshEntity.hpp"
+#include "SAngleDownloadPlanner.hpp"
 #include <stdlib.h>
 #include <algorithm>
 #include <math.h>
@@ -96,20 +97,23 @@ void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFil
        vector<Resource>::iterator it = findResource(proxy);
        it->file = &(URI&)meshFile;
        it->ready = true;
-       proxy->priority = getPriority(proxy);
+       proxy->priority = calculatePriority(proxy);
        it->mesh->processMesh(meshFile);
    }
 }
 
-double DistanceDownloadPlanner::getPriority(ProxyObjectPtr proxy)
+double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 {
     Vector3d cameraLoc = camera->getOgrePosition();
     Vector3d objLoc = proxy->getPosition();
     Vector3d diff = cameraLoc - objLoc;
 
-    double diff2d = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
-    double diff3d = sqrt(pow(diff2d, 2) + pow(diff.x, 2));
-    double priority = 1/diff3d;
+    /*double diff2d = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
+      double diff3d = sqrt(pow(diff2d, 2) + pow(diff.x, 2));*/
+
+    if (diff.length() <= 0) return 1.0;
+
+    double priority = 1/(diff.length());
 
     return priority;
 }
@@ -118,12 +122,14 @@ void DistanceDownloadPlanner::poll()
 {
     if (camera == NULL) return;
     vector<Resource>::iterator it;
+
     for (it = resources.begin(); it != resources.end(); it++) {
-        it->proxy->priority = getPriority(it->proxy);
+        it->proxy->priority = calculatePriority(it->proxy);
     }
 }
 
 void DistanceDownloadPlanner::stop()
 {
+
 }
 }
