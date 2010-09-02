@@ -35,7 +35,7 @@
 #include "TimerSpeedBenchmark.hpp"
 #include "TimerJitterBenchmark.hpp"
 #include "TimerMonotonicityBenchmark.hpp"
-#include "SSTBenchmark.hpp"
+#include "TCPSSTBenchmark.hpp"
 
 using namespace Sirikata;
 

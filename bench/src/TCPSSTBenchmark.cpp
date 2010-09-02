@@ -1,4 +1,4 @@
-/*  cbr
+/*  Sirikata
  *  SSTBenchmark.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of cbr nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,21 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 
-#include <sirikata/core/util/PluginManager.hpp>
-#include "SSTBenchmark.hpp"
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
+
+#include <functional>
+#include "TCPSSTBenchmark.hpp"
+#include <sirikata/core/util/Timer.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#define ITERATIONS 1000000
+
 namespace Sirikata {
 
-SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&param, int argc, char**argv):
-          mForceStop(false),
-          mPingRate(Duration::seconds(0)),
+using std::tr1::placeholders::_1;
+using std::tr1::placeholders::_2;
+
+SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&param)
+        : Benchmark(finished_cb),
+         mForceStop(false),
+         mPingRate(Duration::seconds(0)),
           mStream(NULL),
           mListener(NULL),
           mStartTime(Time::epoch()),
@@ -52,11 +60,6 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
           mPingsSent(0),
           mPingsReceived(0)
 {
-    mPingsReceived=0;
-    mPingsSent=0;
-    mStream=NULL;
-    mListener=NULL;
-
     OptionValue*port;
     OptionValue*host;
     OptionValue*pingSize;
@@ -66,12 +69,10 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
     OptionValue*listenOptions;
     OptionValue*whichPlugin;
     OptionValue*numPings;
-    OptionValue*fillBuffer;
     mIOService = Sirikata::Network::IOServiceFactory::makeIOService();
     Sirikata::InitializeClassOptions ico("SSTBenchmark",this,
                                          port=new OptionValue("port","4091",Sirikata::OptionValueType<String>(),"port to connect/listen on"),
                                          host=new OptionValue("host","",Sirikata::OptionValueType<String>(),"host to connect to (blank for listen)"),
-                                         fillBuffer=new OptionValue("fill-send-buffer","false",Sirikata::OptionValueType<bool>(),"Whether to send just enough pings out to fill the tcpsst send buffer"),
                                          pingSize=new OptionValue("ping-size","10",Sirikata::OptionValueType<size_t>(),"Size of each individual ping"),
                                          pingRate=new OptionValue("pings-per-second","0",Sirikata::OptionValueType<double>(),"number of pings launched per second"),
                                          ordered=new OptionValue("ordered","true",Sirikata::OptionValueType<bool>(),"are the pings unordered"),
@@ -82,11 +83,8 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
                                          NULL);
 
     OptionSet* optionsSet = OptionSet::getOptions("SSTBenchmark",this);
+    optionsSet->parse(param);
 
-    if (argv&&argc>1)
-        optionsSet->parse(argc,argv);
-    else
-        optionsSet->parse(param);
     mPort=port->as<String>();
     mHost=host->as<String>();
     mPingSize=pingSize->as<size_t>();
@@ -98,7 +96,6 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
     mOrdered=ordered->as<bool>();
     mPingFunction=std::tr1::bind(&SSTBenchmark::pingPoller,this);
     mNumPings=numPings->as<size_t>();
-    mFillSendBuffer=fillBuffer->as<bool>();
 }
 
 String SSTBenchmark::name() {
@@ -124,8 +121,7 @@ void SSTBenchmark::pingPoller(){
                                             // you move this to after the loop
         }
         uint32 ii;
-        const bool goTillFull=mFillSendBuffer;
-        for(ii = 0; goTillFull||ii < numMorePings; ii++) {
+        for(ii = 0; ii < numMorePings; ii++) {
             Sirikata::Network::Chunk serializedChunk;
             size_t pingNumber=mOutstandingPings.size();
             for (int i=0;i<8;++i) {
@@ -142,11 +138,10 @@ void SSTBenchmark::pingPoller(){
                 mPingResponses.push_back(Duration::zero());
             }
             else {
-                mStream->requestReadySendCallback();
                 break;
             }
         }
-        if (mPingRate.toSeconds()!=0&&!mFillSendBuffer) {
+        if (mPingRate.toSeconds()!=0) {
             mIOService->post(mPingRate,mPingFunction);
         }
     }
@@ -162,12 +157,11 @@ void SSTBenchmark::connected(Sirikata::Network::Stream::ConnectionStatus connect
 void SSTBenchmark::remoteConnected(Sirikata::Network::Stream*strm, Sirikata::Network::Stream::ConnectionStatus connectionStatus,const std::string&reason){
     if (connectionStatus!=Sirikata::Network::Stream::Connected) {
         strm->close();
-        stop();
     }
 }
 
 
-void SSTBenchmark::computePingTime(Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pauseReceive){
+void SSTBenchmark::computePingTime(Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pause){
     Time cur=Time::now(Duration::zero());
     size_t index=0;
     if (chk.size()>=8) {
@@ -191,24 +185,22 @@ void SSTBenchmark::computePingTime(Sirikata::Network::Chunk&chk, const Sirikata:
         avg/=(double)mPingResponses.size();
         SILOG(benchmark,info,"Test Time: "<<cur-mStartTime);
         SILOG(benchmark,info,"Ping Average "<<avg);
-        SILOG(benchmark,info,"Transfer Rate "<<mNumPings*(double)chk.size()/(cur-mStartTime).toSeconds());
+        SILOG(benchmark,info,"Transfer Rate "<<2*mNumPings*(double)chk.size()/(cur-mStartTime).toSeconds());
         stop();
     }else
-    if (mPingRate.toSeconds()==0&&!mFillSendBuffer) {
+    if (mPingRate.toSeconds()==0) {
         pingPoller();
     }
 }
-void SSTBenchmark::bouncePing(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pauseReceive){
+void SSTBenchmark::bouncePing(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk&chk, const Sirikata::Network::Stream::PauseReceiveCallback& pause){
     if (!mForceStop) {
         strm->send(chk,mOrdered?Sirikata::Network::ReliableOrdered:Sirikata::Network::ReliableUnordered);
     }
 }
 void SSTBenchmark::newStream(Sirikata::Network::Stream*newStream, Sirikata::Network::Stream::SetCallbacks&cb) {
     if (newStream) {
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-        cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,_1,_2),
-            std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,_1,_2),
+      cb(std::tr1::bind(&SSTBenchmark::remoteConnected,this,newStream,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
+          std::tr1::bind(&SSTBenchmark::bouncePing,this,newStream,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
            &Sirikata::Network::Stream::ignoreReadySendCallback);
     }
 }
@@ -219,29 +211,17 @@ void SSTBenchmark::start() {
     pluginManager.load(mStreamPlugin);
     mForceStop = false;
     if (!mHost.empty()) {
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-
         mStream=Sirikata::Network::StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mStreamOptions));
-        std::tr1::function<void()>readySendCallback;
-        if(mFillSendBuffer) {
-            readySendCallback=std::tr1::bind(&SSTBenchmark::pingPoller,this);
-        }else {
-            readySendCallback=&Sirikata::Network::Stream::ignoreReadySendCallback;//nop
-        }
         mStream->connect(Sirikata::Network::Address(mHost,mPort),
                          &Sirikata::Network::Stream::ignoreSubstreamCallback,
-                         std::tr1::bind(&SSTBenchmark::connected,this,_1,_2),
-            std::tr1::bind(&SSTBenchmark::computePingTime,this,_1,_2),
-                         readySendCallback);
+                         std::tr1::bind(&SSTBenchmark::connected,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
+            std::tr1::bind(&SSTBenchmark::computePingTime,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
+                         &Sirikata::Network::Stream::ignoreReadySendCallback);
 
     }else {
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-
         mListener=Sirikata::Network::StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mListenOptions));
         mListener->listen(Sirikata::Network::Address("127.0.0.1",mPort),
-                          std::tr1::bind(&SSTBenchmark::newStream,this,_1,_2));
+                          std::tr1::bind(&SSTBenchmark::newStream,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2));
 
         mIOService->post(Duration::seconds(10000000.),&noop);
 
@@ -262,16 +242,8 @@ void SSTBenchmark::stop() {
     mIOService=NULL;
     mStream=NULL;
     mListener=NULL;
+        notifyFinished();
 }
 
 
 } // namespace Sirikata
-static void noop() {
-
-}
-int main (int argc, char**argv) {
-    Sirikata::SSTBenchmark *bm=new Sirikata::SSTBenchmark(&noop,"",argc,argv);
-    bm->start();
-
-    return 0;
-}

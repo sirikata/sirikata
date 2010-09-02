@@ -1390,7 +1390,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
-  ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TCPSSTBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
 
@@ -1414,8 +1414,8 @@ libcore/test/OptionTest.hpp
 #libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp
 libcore/test/RoutableMessageTest.hpp
-libcore/test/SstCloseTest.hpp
-libcore/test/SstTest.hpp
+libcore/test/TCPSSTCloseTest.hpp
+libcore/test/TCPSSTConnectTest.hpp
 libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
@@ -1803,7 +1803,7 @@ TARGET_LINK_LIBRARIES(${BENCH_BINARY}
   ${PROTOCOLBUFFERS_LIBRARIES}
   )
 # Fixme incorporate old benchmark
-#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/SSTBenchmark.cpp)
+#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/TCPSSTBenchmark.cpp)
 
 IF(CHROME_FOUND)
   IF(APPLE)
