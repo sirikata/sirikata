@@ -356,8 +356,10 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
-  bool serviceConnection() {
+  bool serviceConnection(boost::shared_ptr<Connection<EndPointType> > conn) {
     const Time curTime = Timer::now();
+
+    conn->localEndPoint();
 
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
@@ -425,7 +427,7 @@ private:
 
       if (!inSendingMode) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
-                                       std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this) );
+                                       std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this, mWeakThis.lock()) );
       }
     }
     else {
@@ -635,7 +637,7 @@ private:
 
         if (inSendingMode) {
           getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                       std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this) );
+                                         std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this, mWeakThis.lock()) );
         }
       }
     }
@@ -944,7 +946,11 @@ private:
       //the connection's root stream was unable to do so.
       
       boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
-      ConnectionReturnCallbackFunction cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
+      ConnectionReturnCallbackFunction cb = NULL;
+      if (sConnectionReturnCallbackMap.find(conn->localEndPoint()) != sConnectionReturnCallbackMap.end()) {
+        cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
+      }
+      
       boost::shared_ptr<Connection>  failed_conn = conn;
       
       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
@@ -952,7 +958,7 @@ private:
       
       lock.unlock();
       
-      if (connState == CONNECTION_PENDING_CONNECT)
+      if (connState == CONNECTION_PENDING_CONNECT && cb != NULL)
         cb(SST_IMPL_FAILURE, failed_conn);
     }
   }
