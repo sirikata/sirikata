@@ -63,11 +63,25 @@ String makeHexString(uint8*buffer, int length) {
 class DamagableObject {
 public:
     Object *object;
-    typedef double HPTYPE;
+    class HPTYPE {
+        double hp;
+        unsigned char magicNumber[8];
+    public:
+        bool operator == (const HPTYPE & other) const {
+            return hp==other.hp&&memcmp(magicNumber,other.magicNumber,8)==0;
+        }
+        double read()const {
+            return hp;
+        }
+        HPTYPE(double hp) {
+            static char mag[8]={10,251,229,199,24,50,200,178};
+            memcpy(magicNumber,mag,8);
+            this->hp=hp;
+        }
+    };
     HPTYPE mHP;
     unsigned int mListenPort;
-    DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort){
-        mHP=hp;
+    DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort):mHP(hp){
         object=obj;
         mListenPort = listenPort;
     }
@@ -166,10 +180,12 @@ public:
                 memcpy(mPartialUpdate+mPartialCount, buffer,datacopied);
                 mPartialCount+=datacopied;
                 if (mPartialCount==sizeof(DamagableObject::HPTYPE)) {
-                    DamagableObject::HPTYPE hp;
+                    DamagableObject::HPTYPE hp(0.0);
                     memcpy(&hp,mPartialUpdate,mPartialCount);
+                    DamagableObject::HPTYPE test(hp.read());
                     if (rand()%10==0)
-                        SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp<<" Delay "<<(hp-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
+                        SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp.read()<<" Delay "<<(hp.read()-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
+                    assert(hp==test);
                     
                     mPartialCount=0;
                 }

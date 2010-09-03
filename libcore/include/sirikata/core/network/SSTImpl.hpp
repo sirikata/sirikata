@@ -362,21 +362,29 @@ private:
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) {
-      getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                     std::tr1::bind(&Connection<EndPointType>::cleanup, 
-                                                    boost::shared_ptr<Connection<EndPointType> > (mWeakThis)) );
-
-      return false;
+        boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+        if (thus) {
+            getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                           std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                          thus) );
+        }else {
+            SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+        }        
+        return false;
     }
     else if (mState == CONNECTION_PENDING_DISCONNECT) {
       boost::mutex::scoped_lock lock(mQueueMutex);
 
       if (mQueuedSegments.empty()) {
         mState = CONNECTION_DISCONNECTED;
-
-        getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                     std::tr1::bind(&Connection<EndPointType>::cleanup, 
-                                                    boost::shared_ptr<Connection<EndPointType> > (mWeakThis)) );
+        boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+        if (thus) {
+            getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                           std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                          thus ));
+        }else {
+            SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+        }
         return false;
       }
     }
@@ -424,12 +432,17 @@ private:
       
 
       if (mState == CONNECTION_PENDING_CONNECT) {
+        boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+        if (thus) {
 
-        getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                     std::tr1::bind(&Connection<EndPointType>::cleanup, 
-                                                    boost::shared_ptr<Connection<EndPointType> > (mWeakThis)) );
-
-	return false; //the connection was unable to contact the other endpoint.
+            getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                           std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                          thus) );
+        }else {
+            SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");            
+        }
+        
+        return false; //the connection was unable to contact the other endpoint.
       }
 
       if (mOutstandingSegments.size() > 0) {
