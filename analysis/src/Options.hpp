@@ -50,6 +50,8 @@
 #define ANALYSIS_PROX_DUMP "analysis.prox.dump"
 #define ANALYSIS_FLOW_STATS "analysis.flow.stats"
 
+#define ANALYSIS_TOTAL_NUM_ALL_SERVERS "analysis.total.num.all.servers"
+
 #define OSEG_ANALYZE_AFTER         "oseg_analyze_after"
 
 

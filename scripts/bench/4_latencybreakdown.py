@@ -40,6 +40,8 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         if 'object' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('object')
         if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
         if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
+        #if 'oseg-cumulative' not in self.cs.traces['space']: self.cs.traces['space'].append('oseg-cumulative');
+        
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
 
@@ -93,6 +95,9 @@ if __name__ == "__main__":
     nobjectlist=[250,500,750,1000,1250,1500,1750,2000];#+=
     nobjectlist+=[2500,3000,3500,4000,4500]+range(5000,20000,1000)
     nobjectlist.reverse()
+
+    #nobjectlist = [5000];
+    
     #nobjectlist=[19000]
     caches=[256]*len(nobjectlist)
     #caches+=[250]*len(nobjectlist)

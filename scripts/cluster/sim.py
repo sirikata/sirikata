@@ -353,6 +353,7 @@ class ClusterSim:
             '--analysis.plugins=' + self.config.analysis_plugins,
             "--layout=" + self.settings.layout(),
             "--num-oh=" + str(self.settings.num_oh),
+            "--analysis.total.num.all.servers=" + str(self.num_servers()), 
             '--servermap=' + 'tabular',
             '--servermap-options=' + '--filename=' + self.ip_file(),
             "--duration=" + self.settings.duration,

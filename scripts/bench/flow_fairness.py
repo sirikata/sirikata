@@ -47,6 +47,10 @@ def run_message_latency_analysis(cluster_sim, log_file, histogram_file, samples_
     if os.path.exists('distance_latency_histogram.csv'):
         subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
 
+#I don't really know why this is called with a log_file parameter, but I'm going with it.
+def run_oseg_analysis(cluster_sim):
+    cluster_sim.oseg_analysis();
+
 def get_logfile_name(trial):
     log_file = 'flow_fairness.log.' + str(trial)
     return log_file
@@ -128,6 +132,8 @@ class FlowFairness:
                                      get_stage_samples_filename(rate)
                                      )
 
+        #run_oseg_analysis(cluster_sim);
+        
     def graph(self, io=util.stdio.StdIO()):
         #log_files = [get_logfile_name(x) for x in self._all_rates]
         #labels = ['%s pps'%(x) for x in self._all_rates]
