@@ -66,7 +66,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mQuitting(false),
    mLocUpdateTimer( Network::IOTimer::create(mContext->ioService) )
 {
-  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);
+  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, ctx, this, this);
 }
 
 Object::~Object() {
