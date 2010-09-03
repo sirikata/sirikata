@@ -67,6 +67,7 @@ vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::fin
     for (it = resources.begin(); it != resources.end(); it++) {
         if (it->proxy == p) return it;
     }
+    return resources.end();
 }
 
 void DistanceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)

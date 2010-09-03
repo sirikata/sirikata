@@ -1358,6 +1358,18 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
 
+SET(GENPACK_SOURCES
+  ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/Object.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/Options.cpp
+  ${SIMOH_SOURCE_DIR}/GenPack.cpp
+  )
+
 SET(CSEG_SOURCES
   ${CSEG_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CSEG_SOURCE_DIR}/Options.cpp
@@ -1390,7 +1402,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
-  ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TCPSSTBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
 
@@ -1414,8 +1426,8 @@ libcore/test/OptionTest.hpp
 #libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp
 libcore/test/RoutableMessageTest.hpp
-libcore/test/SstCloseTest.hpp
-libcore/test/SstTest.hpp
+libcore/test/TCPSSTCloseTest.hpp
+libcore/test/TCPSSTConnectTest.hpp
 libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
@@ -1769,6 +1781,15 @@ TARGET_LINK_LIBRARIES(simoh
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
+ADD_EXECUTABLE(genpack ${GENPACK_SOURCES})
+SET_TARGET_PROPERTIES(genpack PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(genpack
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_OH_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES})
 SET_TARGET_PROPERTIES(cseg PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cseg
@@ -1803,7 +1824,7 @@ TARGET_LINK_LIBRARIES(${BENCH_BINARY}
   ${PROTOCOLBUFFERS_LIBRARIES}
   )
 # Fixme incorporate old benchmark
-#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/SSTBenchmark.cpp)
+#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/TCPSSTBenchmark.cpp)
 
 IF(CHROME_FOUND)
   IF(APPLE)
@@ -1848,7 +1869,7 @@ ADD_DEPENDENCIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB})
 ADD_DEPENDENCIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 ADD_DEPENDENCIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_OH_LIB})
 
-SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh cseg pinto analysis ${BENCH_BINARY}
+SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh genpack cseg pinto analysis ${BENCH_BINARY}
                       PROPERTIES
                       DEBUG_POSTFIX "_d" )
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB}

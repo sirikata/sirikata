@@ -110,8 +110,8 @@ class SIRIKATA_EXPORT BaseDatagramLayer:public ObjectMessageRecipient
 {
 private:
 
-  BaseDatagramLayer(ObjectMessageRouter* router, ObjectMessageDispatcher* dispatcher) :
-                    mRouter(router), mDispatcher(dispatcher) { }
+  BaseDatagramLayer(const Context* ctx, ObjectMessageRouter* router, ObjectMessageDispatcher* dispatcher) :
+    mRouter(router), mDispatcher(dispatcher), mContext(ctx) { }
 
 
 public:
@@ -125,6 +125,7 @@ public:
 
   static boost::shared_ptr<BaseDatagramLayer<EndPointType> > createDatagramLayer(
 								  EndPointType endPoint,
+                                                                  const Context* ctx,
                                                                   ObjectMessageRouter* router,
 	 							  ObjectMessageDispatcher* dispatcher)
   {
@@ -134,7 +135,7 @@ public:
 
     boost::shared_ptr<BaseDatagramLayer<EndPointType> > datagramLayer =
                                             boost::shared_ptr<BaseDatagramLayer<EndPointType> >
-                                                           (new BaseDatagramLayer(router, dispatcher));
+                                              (new BaseDatagramLayer(ctx, router, dispatcher));
 
     sDatagramLayerMap[endPoint] = datagramLayer;
 
@@ -175,9 +176,14 @@ public:
     return mDispatcher;
   }
 
+  const Context* context() {
+    return mContext;
+  }
+
 private:
   ObjectMessageRouter* mRouter;
   ObjectMessageDispatcher* mDispatcher;
+  const Context* mContext;
 
   boost::mutex mMutex;
 
@@ -259,7 +265,7 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-  boost::shared_ptr<BaseDatagramLayer<EndPointType> > mDatagramLayer;
+  boost::shared_ptr<BaseDatagramLayer<EndPointType> > mDatagramLayer; 
 
   int mState;
   uint16 mRemoteChannelID;
@@ -324,6 +330,10 @@ private:
 				       buffer.size());
   }
 
+  const Context* getContext() {
+    return mDatagramLayer->context();
+  }
+
   /* Returns -1 if no channel is available. Otherwise returns the lowest
      available channel. */
   static int getAvailableChannel() {
@@ -346,33 +356,27 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
-  bool serviceConnection(const Time& curTime) {
+  bool serviceConnection() {
+    const Time curTime = Timer::now();
+
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
-    if (mState == CONNECTION_DISCONNECTED) return false;
+    if (mState == CONNECTION_DISCONNECTED) {
+      getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                     std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                    boost::shared_ptr<Connection<EndPointType> > (mWeakThis)) );
+
+      return false;
+    }
     else if (mState == CONNECTION_PENDING_DISCONNECT) {
       boost::mutex::scoped_lock lock(mQueueMutex);
 
       if (mQueuedSegments.empty()) {
         mState = CONNECTION_DISCONNECTED;
-        return false;
-      }
-    }
 
-    std::vector<LSID> disconnectedStreams;
-
-    //firstly, service the streams
-    for (typename std::map<LSID, boost::shared_ptr< Stream<EndPointType> > >::iterator it=mOutgoingSubstreamMap.begin();
-	 it != mOutgoingSubstreamMap.end(); ++it)
-    {
-      if (it->second->getState() == Stream<EndPointType>::DISCONNECTED) {
-        disconnectedStreams.push_back(it->first);
-        continue;
-      }
-
-      if ( (it->second->serviceStream(curTime)) == false) {
-        //the root stream was unable to connect, so it's ok to return false
-        //immediately, so that this connection can be closed.
+        getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                     std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                    boost::shared_ptr<Connection<EndPointType> > (mWeakThis)) );
         return false;
       }
     }
@@ -397,7 +401,6 @@ private:
 	    mLocalEndPoint.endPoint.readableHexData().c_str()
             , mRemoteEndPoint.endPoint.readableHexData().c_str());*/
 
-
 	  sendSSTChannelPacket(sstMsg);
 
 	  segment->mTransmitTime = curTime;
@@ -411,14 +414,21 @@ private:
 
           inSendingMode = false;
       }
+
+      if (!inSendingMode) {
+        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
+                                       std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this) );
+      }
     }
     else {
-      if ( (curTime - mLastTransmitTime).toMicroseconds() < mRTOMicroseconds)
-      {
-	return true;
-      }
+      
 
       if (mState == CONNECTION_PENDING_CONNECT) {
+
+        getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                     std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                    boost::shared_ptr<Connection<EndPointType> > (mWeakThis)) );
+
 	return false; //the connection was unable to contact the other endpoint.
       }
 
@@ -433,13 +443,6 @@ private:
       }
 
       inSendingMode = true;
-    }
-
-    // Remove any streams that have been closed.
-    for (std::vector<LSID>::iterator it = disconnectedStreams.begin();
-         it != disconnectedStreams.end(); it++)
-    {
-      mOutgoingSubstreamMap.erase(*it);
     }
 
     return true;
@@ -616,6 +619,11 @@ private:
         mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>(
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
         pushedIntoQueue = true;
+
+        if (inSendingMode) {
+          getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                       std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this) );
+        }
       }
     }
 
@@ -909,48 +917,30 @@ private:
     return mRTOMicroseconds;
   }
 
+  void eraseDisconnectedStream(Stream<EndPointType>* s) {
+    mOutgoingSubstreamMap.erase(s->getLSID());
+  }
 
-  static void service() {
-    Time curTime = Timer::now();
 
-    std::vector<boost::shared_ptr<Connection<EndPointType> > > connVector;
-
-    {
-      //Take the lock and get shared_ptrs to all of the connections.
+  static void cleanup(boost::shared_ptr<Connection<EndPointType> > conn) {
+    int connState = conn->mState;
+    
+    if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
+      //Deal with the connection not getting connected with the remote endpoint.
+      //This is in contrast to the case where the connection got connected, but
+      //the connection's root stream was unable to do so.
+      
       boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
-
-      typename ConnectionMap::iterator it = sConnectionMap.begin();
-      while ( it != sConnectionMap.end() ) {
-        connVector.push_back(it->second);
-        it++;
-      }
-    }
-
-    for (uint i = 0; i < connVector.size(); i++) {
-      boost::shared_ptr<Connection<EndPointType> > conn = connVector[i];
-      int connState = conn->mState;
-
-      bool keepConnection = conn->serviceConnection(curTime);
-
-      if (!keepConnection) {
-        if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
-          //Deal with the connection not getting connected with the remote endpoint.
-          //This is in contrast to the case where the connection got connected, but
-          //the connection's root stream was unable to do so.
-
-          boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
-          ConnectionReturnCallbackFunction cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
-          boost::shared_ptr<Connection>  failed_conn = conn;
-
-          sConnectionReturnCallbackMap.erase(conn->localEndPoint());
-          sConnectionMap.erase(conn->localEndPoint());
-
-          lock.unlock();
-
-          if (connState == CONNECTION_PENDING_CONNECT)
-            cb(SST_IMPL_FAILURE, failed_conn);
-        }
-      }
+      ConnectionReturnCallbackFunction cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
+      boost::shared_ptr<Connection>  failed_conn = conn;
+      
+      sConnectionReturnCallbackMap.erase(conn->localEndPoint());
+      sConnectionMap.erase(conn->localEndPoint());
+      
+      lock.unlock();
+      
+      if (connState == CONNECTION_PENDING_CONNECT)
+        cb(SST_IMPL_FAILURE, failed_conn);
     }
   }
 
@@ -1345,6 +1335,9 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
+      getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+
       return len;
     }
     else {
@@ -1366,6 +1359,8 @@ public:
 	count++;
       }
 
+      getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
 
       return currOffset;
     }
@@ -1440,6 +1435,11 @@ public:
     if (force) {
       mConnected = false;
       mState = DISCONNECTED;
+      
+      boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+      if (conn)
+        conn->eraseDisconnectedStream(this);
+      
       return true;
     }
     else {
@@ -1539,7 +1539,7 @@ private:
     mLocalPort(local_port),
     mRemotePort(remote_port),
     mParentLSID(parentLSID),
-    mConnection(conn),
+    mConnection(conn),mContext(NULL),
     mUSID(usid),
     mLSID(lsid),
     MAX_PAYLOAD_SIZE(1000),
@@ -1596,6 +1596,17 @@ private:
     }
   }
 
+  const Context* getContext() {
+    if (mContext == NULL) {
+      boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+      assert(conn);
+
+      mContext = conn->getContext();
+    }
+
+    return mContext;
+  }
+
   static void connectionCreated( int errCode, boost::shared_ptr<Connection<EndPointType> > c) {
     if (errCode != SST_IMPL_SUCCESS) {
 
@@ -1619,13 +1630,12 @@ private:
      unable to connect. In that case, the connection for this stream needs to
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
-  bool serviceStream(const Time& curTime) {
+  bool serviceStream() {
+    const Time curTime = Timer::now();
+
     if (mState != CONNECTED && mState != DISCONNECTED) {
 
       if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
-	if ( mLastSendTime != Time::null() && (curTime - mLastSendTime).toMicroseconds() < 2*mStreamRTOMicroseconds) {
-	  return true;
-	}
 
         sendInitPacket(mInitialData, mInitialDataLength);
 
@@ -1661,6 +1671,12 @@ private:
 
         mState = DISCONNECTED;
 
+        if (!retVal) {
+          getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                         std::tr1::bind(&Connection<EndPointType>::cleanup, 
+                                                        conn) );
+        }
+
 	return retVal;
       }
       else {
@@ -1684,6 +1700,10 @@ private:
 	    mChannelToBufferMap.empty() )
 	{
 	    mState = DISCONNECTED;
+
+            boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+            assert(conn);
+            conn->eraseDisconnectedStream(this);
 
 	    return true;
 	}
@@ -1716,6 +1736,9 @@ private:
 	  mTransmitWindowSize -= buffer->mBufferLength;
 	  mNumOutstandingBytes += buffer->mBufferLength;
 	}
+
+        getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds), 
+                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
       }
     }
 
@@ -1740,6 +1763,9 @@ private:
          mTransmitWindowSize = it->second->mBufferLength;
        }
      }
+
+    getContext()->mainStrand->post(Duration::seconds(0.01), 
+                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
 
 
 
@@ -1951,6 +1977,9 @@ private:
     boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
     conn->sendData( buffer.data(), buffer.size(), false );
+
+    getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds), 
+                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
   }
 
   void sendAckPacket() {
@@ -2021,6 +2050,7 @@ private:
 
   //weak_ptr to avoid circular dependency between Connection and Stream classes
   boost::weak_ptr<Connection<EndPointType> > mConnection;
+  const Context* mContext;
 
   std::map<uint64, boost::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
   std::map<uint64, uint32> mChannelToStreamOffsetMap;
@@ -2076,15 +2106,12 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
 class SSTConnectionManager : public PollingService {
 public:
     SSTConnectionManager(Context* ctx)
-      : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
+      : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10000)), // FIXME
        mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
     {
     }
 
     void poll() {
-        mProfiler->started();
-        Connection<UUID>::service();
-        mProfiler->finished();
     }
 
     ~SSTConnectionManager() {

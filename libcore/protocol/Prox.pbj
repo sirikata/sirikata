@@ -70,10 +70,15 @@ message ObjectRemoval {
     required uuid object = 1;
 }
 
+// "Atomic" update to proximity results
+message ProximityUpdate {
+    repeated ObjectAddition addition = 1;
+    repeated ObjectRemoval removal = 2;
+}
+
 message ProximityResults {
     required time t = 1;
-    repeated ObjectAddition addition = 2;
-    repeated ObjectRemoval removal = 3;
+    repeated ProximityUpdate update = 2;
 }
 
 message Container {

@@ -63,7 +63,7 @@ void InitSimOHOptions() {
         .addOption(new OptionValue(OBJECT_PACK, "", Sirikata::OptionValueType<String>(), "Filename of the object pack to use to generate objects."))
         .addOption(new OptionValue(OBJECT_PACK_OFFSET, "0", Sirikata::OptionValueType<uint32>(), "Offset into the object pack to start generating objects at."))
         .addOption(new OptionValue(OBJECT_PACK_NUM, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
-        .addOption(new OptionValue(OBJECT_PACK_DUMP, "", Sirikata::OptionValueType<String>(), "If non-empty, dumps any generated objects to the specified file."))
+        .addOption(new OptionValue(OBJECT_PACK_DUMP, "false", Sirikata::OptionValueType<bool>(), "If non-empty, dumps any generated objects to the specified file."))
 
         .addOption(new OptionValue(OBJECT_SL_FILE, "", Sirikata::OptionValueType<String>(), "Filename of the object pack to use to generate objects."))
         .addOption(new OptionValue(OBJECT_SL_NUM, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))

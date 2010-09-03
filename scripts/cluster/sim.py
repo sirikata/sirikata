@@ -48,6 +48,12 @@ class ClusterSimSettings:
         self.num_oh = num_object_hosts
         self.object_connect_phase = '10s'
 
+        # The number of objects settings need some explanation.  The user should always specify
+        # the number and type of objects they want in the actual simulation, *per space server*.
+        # We take care of pack generation if you specify pack_dump, translating pack objects to
+        # random objects automatically during the generation stage. SL trace objects can't be
+        # generated, so they are entirely independent.
+
         # OH: random object generation settings
         self.num_random_objects = 5000
         self.object_static = 'static'
@@ -66,7 +72,7 @@ class ClusterSimSettings:
 
         self.object_pack = 'objects.pack'
         self.num_pack_objects = 0
-        self.pack_dump = ''
+        self.pack_dump = False
 
         # OH: SL trace data loading
         self.object_sl_file = 'sl.dat'
@@ -266,12 +272,11 @@ class ClusterSim:
     def oh_objects_per_server(self):
         return self.settings.num_random_objects + self.settings.num_pack_objects
 
-    def oh_parameters(self):
+    def oh_parameters(self, genpack):
         class_params = {
             'oh.plugins' : '--oh.plugins=' + self.config.simoh_plugins,
             'oh.id' : '--ohid=%(node)d ',
             'oh.connect' : '--object.connect=' + self.settings.object_connect_phase,
-            'oh.num-random' : '--object.num.random=' + str(self.settings.num_random_objects),
             'oh.static' : '--object.static=' + self.settings.object_static,
             'oh.simple' : '--object.simple=' + self.settings.object_simple,
             'oh.2d' : '--object.2d=' + self.settings.object_2d,
@@ -284,15 +289,24 @@ class ClusterSim:
             }
         if (len(self.settings.object_pack)):
             class_params['object.pack'] = '--object.pack=' + self.settings.object_pack
-        if (len(self.settings.pack_dump)):
-            class_params['object.pack-dump'] = '--object.pack-dump=' + self.settings.pack_dump
+        # For pack generation, we take the specified number of pack objects and make random objects of them, turning pack dump on.
+        # For non pack generation, we respect whatever the user specified.  In that case, if they specify random objects, they get them,
+        # if they specify pack objects they get those.
+        # Therefore, the basic approach is to always specify what kind of objects you want in the full simulation and we take
+        # care of getting the pack generation correct.
+        if (self.settings.pack_dump and genpack):
+            class_params['object.pack-dump'] = '--object.pack-dump=true'
+            class_params['oh.num-random'] = '--object.num.random=' + str(self.settings.num_pack_objects * self.settings.num_oh)
+            class_params['object.pack-num'] = '--object.pack-num=' + str(0)
+        else:
+            class_params['oh.num-random'] = '--object.num.random=' + str(self.settings.num_random_objects)
+            class_params['object.pack-num'] = '--object.pack-num=' + str(self.settings.num_pack_objects)
 
         if (len(self.settings.object_sl_file)):
             class_params['object.sl-file'] = '--object.sl-file=' + self.settings.object_sl_file
         if (self.settings.num_sl_objects):
             class_params['object.sl-num'] = '--object.sl-num=' + str(self.settings.num_sl_objects)
         class_params['object.sl-center'] = '--object.sl-center=' + ('<%f,%f,%f>' % self.settings.object_sl_center)
-        class_params['object.pack-num'] = '--object.pack-num=' + str(self.settings.num_pack_objects)
         class_params['object.scenario'] = '--scenario=' + self.settings.scenario
         if self.settings.scenario_options:
             class_params['object.scenario-options'] = '--scenario-options=' + self.settings.scenario_options
@@ -339,6 +353,7 @@ class ClusterSim:
             '--analysis.plugins=' + self.config.analysis_plugins,
             "--layout=" + self.settings.layout(),
             "--num-oh=" + str(self.settings.num_oh),
+            "--analysis.total.num.all.servers=" + str(self.num_servers()), 
             '--servermap=' + 'tabular',
             '--servermap-options=' + '--filename=' + self.ip_file(),
             "--duration=" + self.settings.duration,
@@ -439,12 +454,6 @@ class ClusterSim:
             port += 2
             server_index += 1
 
-        # note: we do this here since we added push_init_data after a
-        # bunch of things were already setup to use the old sequence
-        # of initialization
-        self.push_init_data()
-
-
     def push_init_data(self):
         # If we're using a dump file, push it
         if (len(self.settings.object_pack)):
@@ -473,12 +482,13 @@ class ClusterSim:
     #                 'space', 'simoh', 'cseg' and how many of each should
     #                 be deployed
     # local: bool indicating whether this should all be run locally or remotely
-    def run_instances(self, instance_types, local):
+    # genpack: bool indicating if this is a genpack run
+    def run_instances(self, instance_types, local, genpack):
         # get various types of parameters, along with node-specific dict-functors
         debug_params = self.debug_parameters()
         common_params = self.common_parameters()
         cbr_params, cbr_param_functor_dict = self.cbr_parameters()
-        oh_params, oh_param_functor_dict = self.oh_parameters()
+        oh_params, oh_param_functor_dict = self.oh_parameters(genpack)
         vis_params, vis_param_functor_dict = self.vis_parameters()
         cseg_params, cseg_param_functor_dict = self.cseg_parameters()
         pinto_params, pinto_param_functor_dict = self.pinto_parameters()
@@ -500,6 +510,8 @@ class ClusterSim:
                     node_params['binary'].append('space')
                 elif (node_type == 'simoh'):
                     node_params['binary'].append('simoh')
+                elif (node_type == 'genpack'):
+                    node_params['binary'].append('genpack')
                 elif (node_type == 'vis'):
                     node_params['binary'].append('analysis')
                 elif (node_type == 'cseg'):
@@ -513,7 +525,7 @@ class ClusterSim:
                 self.fill_parameters(node_params, vis_param_functor_dict, node_type == 'analysis', x)
                 self.fill_parameters(node_params, cseg_param_functor_dict, node_type == 'cseg', num_cseg_instances)
                 self.fill_parameters(node_params, pinto_param_functor_dict, node_type == 'pinto', num_pinto_instances)
-                self.fill_parameters(node_params, oh_param_functor_dict, node_type == 'simoh', x)
+                self.fill_parameters(node_params, oh_param_functor_dict, node_type == 'simoh' or node_type == 'genpack', x)
                 self.fill_parameters(node_params, cbr_param_functor_dict, node_type == 'space', x)
 
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
@@ -521,7 +533,6 @@ class ClusterSim:
         # Construct the command lines to do the actual run and dispatch them
         cmd_seq = []
         cmd_seq.extend( [
-            CBR_WRAPPER,
             "%(binary)s",
             ] )
         cmd_seq.extend(debug_params)
@@ -563,11 +574,14 @@ class ClusterSim:
             # FIXME do we ever need to handle multiple local runs
             # FIXME what do we do about index? ideally it shouldn't matter, but analysis code cares about index=0
             cmd = ClusterSubstitute(cmd_seq, host='localhost', user='xxx', index=1, user_params=node_params)
-            util.invoke.invoke(cmd, io=self.io)
+            RunCBR(cmd, io=self.io)
         else: # cluster deployment
             # Generate the command string itself
             #  Note: we need to quote the entire command, so we we quote each parameter with escaped quotes,
             #        then separate with spaces, then wrap in regular quotes
+            real_cmd_seq = [CBR_WRAPPER]
+            real_cmd_seq.extend(cmd_seq)
+            cmd_seq = real_cmd_seq
             cmd = ' '.join([ '"' + x + '"' for x in cmd_seq])
             # FIXME this gets prepended here because I can't get all the quoting to work out with ssh properly
             # if it is included as part of the normal process
@@ -577,13 +591,24 @@ class ClusterSim:
 
 
     def run_cluster_sim(self):
+        # As a special case, if we need a pack, run a special instance
+        if self.settings.pack_dump:
+            instances = [('genpack', 1)]
+            self.run_instances(instances, True, True)
+
+        # note: we do this here since we added push_init_data after a
+        # bunch of things were already setup to use the old sequence
+        # of initialization
+        self.push_init_data()
+
+        # Then run the real simulation
         instances = [
             ('space', self.settings.space_server_pool),
             ('cseg', self.settings.num_cseg_servers),
             ('pinto', self.num_pinto_servers()),
             ('simoh', self.settings.num_oh)
             ]
-        self.run_instances(instances, False)
+        self.run_instances(instances, False, False)
 
 
 
@@ -591,17 +616,13 @@ class ClusterSim:
         instances = [
             ('vis', 1)
             ]
-        self.run_instances(instances, True)
+        self.run_instances(instances, True, False)
 
 
     def retrieve_data(self):
         # Copy the trace and sync data back here
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
         ClusterSCP(self.config, [trace_file_pattern, "."], io=self.io)
-
-        # If one was dumped, pull the dump file
-        if (len(self.settings.pack_dump)):
-            ClusterSCP(self.config, [self.pack_filename(self.settings.pack_dump), "."], io=self.io)
 
     def construct_analysis_cmd(self, user_args):
         cmd = ['analysis']

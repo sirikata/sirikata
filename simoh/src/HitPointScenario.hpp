@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _HIT_POINT_DELUGE_SCENARIO_HPP_
-#define _HIT_POINT_DELUGE_SCENARIO_HPP_
+#ifndef _HIT_POINT_SCENARIO_HPP_
+#define _HIT_POINT_SCENARIO_HPP_
 
 #include "Scenario.hpp"
 #include <sirikata/core/queue/CountResourceMonitor.hpp>
@@ -42,9 +42,8 @@ namespace Sirikata {
 
 class ScenarioFactory;
 class ConnectedObjectTracker;
+class RegionWeightCalculator;
 class DamagableObject;
-
-
 class HitPointScenario : public Scenario {
     double mNumPingsPerSecond;
     double mNumHitPointsPerSecond;
@@ -52,6 +51,7 @@ class HitPointScenario : public Scenario {
     ObjectHostContext*mContext;
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
+    Poller* mHPPoller;
 
     Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
@@ -73,9 +73,26 @@ class HitPointScenario : public Scenario {
     int64 mMaxPingsPerRound;
     TimeProfiler::Stage* mPingProfiler;
 
-    uint32 mFloodServer;
+    ServerID mFloodServer;
+    uint32 mNumObjectsPerServer;
     bool mLocalTraffic;
-
+    bool mSourceFloodServer;
+    double mFractionMessagesUniform;
+    struct MessageFlow {
+        float cumulativeProbability;
+        float dist;
+        UUID source;
+        UUID dest;
+        bool operator< (const MessageFlow&flow) const{
+            return cumulativeProbability<flow.cumulativeProbability;
+        }
+    };
+    Duration mGenPhase;
+    class MessageFlowLess{public:
+            bool operator()(const MessageFlow&a,const MessageFlow&b) const{return a<b;}
+    };
+    typedef std::vector<MessageFlow> FlowCDF;
+    FlowCDF mSendCDF;
     void delayedStart();
 
     bool generateOnePing(const Time& t, PingInfo* result);
@@ -83,10 +100,12 @@ class HitPointScenario : public Scenario {
 
     void sendPings();
     void sendHPs();
-
+    RegionWeightCalculator* mWeightCalculator;
     static HitPointScenario*create(const String&options);
+    void generatePairs();
 public:
     double calcHp(const Time*t=NULL);
+
     HitPointScenario(const String &options);
     ~HitPointScenario();
     virtual void initialize(ObjectHostContext*);

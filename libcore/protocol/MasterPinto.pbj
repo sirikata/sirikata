@@ -78,6 +78,11 @@ message PintoResult {
     optional uint32 server = 2;
 }
 
+// "Atomic" update to pinto results
+message PintoUpdate {
+    repeated PintoResult change = 1;
+}
+
 message PintoResponse {
-    repeated PintoResult results = 1;
+    repeated PintoUpdate update = 1;
 }

@@ -47,6 +47,10 @@ def run_message_latency_analysis(cluster_sim, log_file, histogram_file, samples_
     if os.path.exists('distance_latency_histogram.csv'):
         subprocess.call(['cp', 'distance_latency_histogram.csv', histogram_file])
 
+#I don't really know why this is called with a log_file parameter, but I'm going with it.
+def run_oseg_analysis(cluster_sim):
+    cluster_sim.oseg_analysis();
+
 def get_logfile_name(trial):
     log_file = 'flow_fairness.log.' + str(trial)
     return log_file
@@ -128,6 +132,8 @@ class FlowFairness:
                                      get_stage_samples_filename(rate)
                                      )
 
+        #run_oseg_analysis(cluster_sim);
+        
     def graph(self, io=util.stdio.StdIO()):
         #log_files = [get_logfile_name(x) for x in self._all_rates]
         #labels = ['%s pps'%(x) for x in self._all_rates]
@@ -146,15 +152,7 @@ class FlowFairness:
 if __name__ == "__main__":
     nobjects = 50
     packname = 'objects.pack'
-    # If genpack is True, the sim will be run the first time with a
-    # single object host to generate data, dump it, and pull it down.
-    # Then run with genpack = False to push that pack up to all nodes
-    # and use it across multiple object hosts.
-    genpack = False
     numoh = 1
-
-    if (genpack):
-        numoh = 1
 
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, 8, (8,1), numoh)
@@ -169,25 +167,11 @@ if __name__ == "__main__":
     cs.tx_bandwidth = 50000000
     cs.rx_bandwidth = 5000000
 
-    if (genpack):
-        # Pack generation, run with 1 oh
-        assert(cs.num_oh == 1)
-        cs.num_random_objects = nobjects
-        cs.num_pack_objects = 0
-        cs.object_pack = ''
-        cs.pack_dump = packname
-    elif (numoh > 1):
-        # Use pack across multiple ohs
-        cs.num_random_objects = 0
-        cs.num_pack_objects = nobjects / cs.num_oh
-        cs.object_pack = packname
-        cs.pack_dump = ''
-    else:
-        # Only 1 oh, just use random
-        cs.num_random_objects = nobjects
-        cs.num_pack_objects = 0
-        cs.object_pack = ''
-        cs.pack_dump = ''
+    # Use pack across multiple ohs
+    cs.num_random_objects = 0
+    cs.num_pack_objects = nobjects / cs.num_oh
+    cs.object_pack = packname
+    cs.pack_dump = True
 
     cs.object_connect_phase = '0s'
 

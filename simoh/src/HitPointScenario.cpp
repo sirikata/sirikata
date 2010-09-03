@@ -35,12 +35,14 @@
 #include "ObjectHost.hpp"
 #include "Object.hpp"
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
+#include <sirikata/core/util/RegionWeightCalculator.hpp>
 
 namespace Sirikata {
+
+
 char tohexdig(uint8 inp) {
     if (inp<=9) return inp+'0';
     return (inp-10)+'A';
@@ -57,6 +59,7 @@ String makeHexString(uint8*buffer, int length) {
     }
     return retval;
 }
+
 class DamagableObject {
 public:
     Object *object;
@@ -184,13 +187,16 @@ public:
     friend class ReceiveDamage;
 };
 
-void PDSInitOptions(HitPointScenario *thus) {
+void DPSInitOptions(HitPointScenario *thus) {
 
     Sirikata::InitializeClassOptions ico("HitPointScenario",thus,
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("num-hp-per-second","100",Sirikata::OptionValueType<double>(),"Number of hp updaets performed per simulation second"),
+        new OptionValue("prob-messages-uniform","1",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
+        new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
         new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
+        new OptionValue("source-flood-server","false",Sirikata::OptionValueType<bool>(),"This makes the flood server the source of all the packets rather than the destination, so that we can validate that egress routing gets proper fairness."),
         new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
         new OptionValue("receivers-per-server","3",Sirikata::OptionValueType<int>(),"The number of folks listening for HP updates at each server"),
         NULL);
@@ -203,16 +209,18 @@ HitPointScenario::HitPointScenario(const String &options)
     mContext=NULL;
     mObjectTracker = NULL;
     mPingID=0;
-    PDSInitOptions(this);
+    DPSInitOptions(this);
     OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);
     optionsSet->parse(options);
 
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
-    mNumHitPointsPerSecond=optionsSet->referenceOption("num-hp-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
+    mNumHitPointsPerSecond=optionsSet->referenceOption("num-hp-per-second")->as<double>();
     mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
+    mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
+    mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
     mLocalTraffic = optionsSet->referenceOption("local")->as<bool>();
-
+    mFractionMessagesUniform= optionsSet->referenceOption("prob-messages-uniform")->as<double>();
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
     mGeneratePingPoller = NULL;
@@ -220,6 +228,9 @@ HitPointScenario::HitPointScenario(const String &options)
         new Sirikata::SizedThreadSafeQueue<PingInfo,CountResourceMonitor>(
             CountResourceMonitor(std::max((uint32)(mNumPingsPerSecond / 4), (uint32)2))
         );
+    mWeightCalculator =
+        RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOptionValue<String>(OPT_REGION_WEIGHT))(GetOptionValue<String>(OPT_REGION_WEIGHT_ARGS))
+        ;
     mPingPoller = NULL;
     // NOTE: We have this limit because we can get in lock-step with the
     // generator, causing this to run for excessively long when we fall behind
@@ -250,8 +261,10 @@ void HitPointScenario::addConstructorToFactory(ScenarioFactory*thus){
 }
 
 void HitPointScenario::initialize(ObjectHostContext*ctx) {
+    mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext=ctx;
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
+
     mPingProfiler = mContext->profiler->addStage("Object Host Send Pings");
     mPingPoller = new Poller(
         ctx->mainStrand,
@@ -262,7 +275,7 @@ void HitPointScenario::initialize(ObjectHostContext*ctx) {
         Duration::seconds(1.0/mNumPingsPerSecond)
     );
 
-    mPingPoller = new Poller(
+    mHPPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&HitPointScenario::sendHPs, this),
         Duration::seconds(1./mNumHitPointsPerSecond));
@@ -280,7 +293,6 @@ void HitPointScenario::initialize(ObjectHostContext*ctx) {
 }
 
 void HitPointScenario::start() {
-    SILOG(hitpoint,error,"Delay starting this thing");
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
@@ -289,19 +301,15 @@ void HitPointScenario::start() {
 }
 void HitPointScenario::delayedStart() {
     mStartTime = mContext->simTime();
-    
-    mGeneratePingPoller->start();
-    mPingPoller->start();
-    ServerID ss = mFloodServer;
+    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);    
+    int receiversPerServer = optionsSet->referenceOption("receivers-per-server")->as<int>();
+    int ss=mFloodServer;
     if (mFloodServer ==0) {
         ss=(rand() % mObjectTracker->numServerIDs())+1;
     }
     Object * objA = mObjectTracker->randomObjectFromServer(ss);
-    static int a =5050;
+    static int a =14150;
     mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
-    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);    
-    int receiversPerServer = optionsSet->referenceOption("receivers-per-server")->as<int>();
-    SILOG(hitpoint,error,"Delay started");
     for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
         std::set<Object* > receivers;
         for (int j=0;j<receiversPerServer;++j) {
@@ -315,59 +323,116 @@ void HitPointScenario::delayedStart() {
             }
         }
     }
+    mGeneratePingPoller->start();
+    mPingPoller->start();
+
 }
 void HitPointScenario::stop() {
     mPingPoller->stop();
     mGeneratePingPoller->stop();
 }
+#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+void HitPointScenario::generatePairs() {
+
+    if (mSendCDF.empty()) {
+        std::vector<Object*> floodedObjects;
+        Time t=mContext->simTime();
+
+        for (int i=0;i<mObjectTracker->numServerIDs();++i) {
+            if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {
+                return;
+            }
+        }
+        OH_LOG(debug, "Beginning object seed phase at " << (t-mStartTime)<<"\n");
+        Object* first=mObjectTracker->roundRobinObject(mFloodServer);
+        if (!first) {
+            assert(0);
+            return;
+        }
+        Object* cur=first;
+        do {
+            floodedObjects.push_back(cur);
+            cur=mObjectTracker->roundRobinObject(mFloodServer);
+        }while(cur!=first);
+        for (size_t i=0;i<mObjectTracker->numServerIDs();++i) {
+            ServerID sid=mObjectTracker->getServerID(i);
+            if (sid==mFloodServer) continue;
+            Object* first=mObjectTracker->roundRobinObject(sid);
+            if (!first) {
+                assert(0);
+                return;
+            }
+            Object* cur=first;
+            do {
+                //generate message from/to cur to a floodedObject
+                Object* dest=floodedObjects[rand()%floodedObjects.size()];
+                assert(dest);
+                Object* src=cur=mObjectTracker->roundRobinObject(sid);
+                assert(src);
+                if (mSourceFloodServer) {
+                    std::swap(src,dest);
+                }
+                MessageFlow pi;
+                pi.dest=dest->uuid();
+                pi.source=src->uuid();
+                pi.dist=(src->location().position(t)-dest->location().position(t)).length();
+/*
+                printf ("Sending data from object size %f to object size %f, %f meters away\n",
+                        src->bounds().radius(),
+                        dest->bounds().radius(),
+                        pi.dist);
+*/
+                BoundingBox3f srcbb(src->location().position(t),src->bounds().radius());
+                BoundingBox3f dstbb(dest->location().position(t),dest->bounds().radius());
+                pi.cumulativeProbability= this->mWeightCalculator->weight(srcbb,dstbb);
+                mSendCDF.push_back(pi);
+
+            }while(cur!=first);
+        }
+        std::sort(mSendCDF.begin(),mSendCDF.end());
+        double cumulative=0;
+        for (size_t i=0;i<mSendCDF.size();++i) {
+            cumulative+=mSendCDF[i].cumulativeProbability;
+            mSendCDF[i].cumulativeProbability=cumulative;
+        }
+
+        for (size_t i=0;i<mSendCDF.size();++i) {
+            mSendCDF[i].cumulativeProbability/=cumulative;
+        }
+    }
+
+}
+static unsigned int even=0;
 bool HitPointScenario::generateOnePing(const Time& t, PingInfo* result) {
-    Object* objA = NULL;
-    Object* objB = NULL;
-    if (mFloodServer == 0) {
-        // When we don't have a flood server, we have a slightly different process.
-        if (mLocalTraffic) {
-            // If we need local traffic, pick a server and pin both of
-            // them to that server.
-            ServerID ss = rand() % mObjectTracker->numServerIDs();
-            objA = mObjectTracker->randomObjectFromServer(ss);
-            objB = mObjectTracker->randomObjectFromServer(ss);
+    generatePairs();
+    double which =(rand()/(double)RAND_MAX);
+    if (!mSendCDF.empty()) {
+        FlowCDF::iterator where;
+        {
+            MessageFlow comparator;
+            comparator.cumulativeProbability=which;
+            if (rand()<mFractionMessagesUniform*RAND_MAX)
+                where=mSendCDF.begin()+which*(mSendCDF.size()-1);
+            else
+                where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
         }
-        else {
-            // Otherwise, we don't care about the origin of either
-            objA = mObjectTracker->randomObject();
-            objB = mObjectTracker->randomObject();
+        if (where==mSendCDF.end()) {
+            --where;
         }
-    }
-    else {
-        // When we do have a flood server, we always pick the dest
-        // from that server.
-        objB = mObjectTracker->randomObjectFromServer(mFloodServer);
-
-        if (mLocalTraffic) {
-            // If forcing local traffic, pick source from same server
-            objA = mObjectTracker->randomObjectFromServer(mFloodServer);
-        }
-        else {
-            // Otherwise, pick from any *other* server.
-            objA = mObjectTracker->randomObjectExcludingServer(mFloodServer);
-        }
+        result->objB = where->source;
+        result->objA = where->dest;
+        result->dist = where->dist;
+        result->ping = new Sirikata::Protocol::Object::Ping();
+        mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
+        return true;
     }
 
-    if (!objA || !objB) {
-        return false;
-    }
-
-    result->objA = objA->uuid();
-    result->objB = objB->uuid();
-    result->dist = (objA->location().position(t) - objB->location().position(t)).length();
-    result->ping = new Sirikata::Protocol::Object::Ping();
-    mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
-    return true;
+    return false;
 }
 
 void HitPointScenario::generatePings() {
     mGeneratePingProfiler->started();
-    
+
     Time t=mContext->simTime();
     int64 howManyPings=((t-mStartTime).toSeconds()+0.25)*mNumPingsPerSecond;
 
@@ -387,6 +452,7 @@ void HitPointScenario::generatePings() {
 
     mGeneratePingProfiler->finished();
 }
+
 double HitPointScenario::calcHp(const Time*t) {
     if (t==NULL) {
         return 1000-((mContext->simTime()-mStartTime).toSeconds());
@@ -404,6 +470,7 @@ void HitPointScenario::sendHPs() {
         }
     }
 }
+
 void HitPointScenario::sendPings() {
     mPingProfiler->started();
 
