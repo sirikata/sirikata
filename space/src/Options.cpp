@@ -82,6 +82,12 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(PROX_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
 
+        .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
+        .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
+
+        .addOption(new OptionValue(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
+        .addOption(new OptionValue(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
+
         .addOption(new OptionValue(OPT_PINTO,"local",Sirikata::OptionValueType<String>(),"Specifies which type of Pinto to use."))
         .addOption(new OptionValue(OPT_PINTO_OPTIONS,"",Sirikata::OptionValueType<String>(),"Specifies arguments to Pinto."))
 

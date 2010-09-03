@@ -72,6 +72,11 @@
 
 #define PROX_MAX_PER_RESULT        "prox.max-per-result"
 
+#define OPT_PROX_SERVER_QUERY_HANDLER_TYPE         "prox.server.handler"
+#define OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS      "prox.server.handler-options"
+#define OPT_PROX_OBJECT_QUERY_HANDLER_TYPE         "prox.object.handler"
+#define OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS      "prox.object.handler-options"
+
 
 namespace Sirikata {
 

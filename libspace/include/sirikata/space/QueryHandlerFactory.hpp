@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Options.cpp
+ *  QueryHandlerFactory.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,24 +30,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Options.hpp"
-#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/util/Time.hpp>
+
+#include <prox/BruteForceQueryHandler.hpp>
+#include <prox/RTreeQueryHandler.hpp>
+#include <prox/RTreeCutQueryHandler.hpp>
 
 namespace Sirikata {
 
-void InitPintoOptions() {
-    InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(new OptionValue(OPT_PINTO_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
-        .addOption(new OptionValue(OPT_PINTO_PROTOCOL, "tcpsst", Sirikata::OptionValueType<String>(), "Protocol to use for connections from space servers."))
-        .addOption(new OptionValue(OPT_PINTO_PROTOCOL_OPTIONS, "", Sirikata::OptionValueType<String>(), "Protocol options to use for connections from space servers."))
-        .addOption(new OptionValue(OPT_PINTO_HOST, "0.0.0.0", Sirikata::OptionValueType<String>(), "IP address or host to listen for connections from space servers on."))
-        .addOption(new OptionValue(OPT_PINTO_PORT, "6789", Sirikata::OptionValueType<String>(), "Port to listen for connections from space servers."))
+/** Creates a Prox::QueryHandler of the specified type. Parses the arguments
+ *  specified and passes them to the query handler constructor.
+ */
+template<typename SimulationTraits>
+Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, const String& args) {
+    static OptionValue* branching = NULL;
+    if (branching == NULL) {
+        branching = new OptionValue("branching", "10", Sirikata::OptionValueType<uint32>(), "Number of children each node should have.");
+        Sirikata::InitializeClassOptions ico("query_handler", NULL,
+            branching,
+            NULL);
+    }
 
-        .addOption(new OptionValue(OPT_PINTO_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
-        .addOption(new OptionValue(OPT_PINTO_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
-        ;
+    assert(branching != NULL);
+
+    // Since these options end up being shared if you instantiate multiple
+    // QueryHandlers, reset them each time.
+    branching->unsafeAs<uint32>() = 10;
+
+    OptionSet* optionsSet = OptionSet::getOptions("query_handler", NULL);
+    optionsSet->parse(args);
+
+    if (type == "brute") {
+        return new Prox::BruteForceQueryHandler<SimulationTraits>();
+    }
+    else if (type == "rtree") {
+        return new Prox::RTreeQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>());
+    }
+    else if (type == "rtreecut") {
+        return new Prox::RTreeCutQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>(), false);
+    }
+    else if (type == "rtreecutagg") {
+        return new Prox::RTreeCutQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>(), true);
+    }
+    else {
+        return NULL;
+    }
 }
 
 } // namespace Sirikata

@@ -62,12 +62,14 @@ class SIRIKATA_SPACE_EXPORT ObjectProxSimulationTraits : public ProxSimulationTr
 public:
     typedef UUID ObjectIDType;
     typedef UUID::Hasher ObjectIDHasherType;
+    typedef UUID::Random ObjectIDRandomType;
 };
 
 class SIRIKATA_SPACE_EXPORT ServerProxSimulationTraits : public ProxSimulationTraits {
 public:
     typedef ServerID ObjectIDType;
     typedef std::tr1::hash<ServerID> ObjectIDHasherType;
+    typedef ServerIDRandom ObjectIDRandomType;
 };
 
 } // namespace Sirikata

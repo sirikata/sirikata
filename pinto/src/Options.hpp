@@ -40,6 +40,9 @@
 #define OPT_PINTO_HOST              "host"
 #define OPT_PINTO_PORT              "port"
 
+#define OPT_PINTO_HANDLER_TYPE      "handler"
+#define OPT_PINTO_HANDLER_OPTIONS   "handler-options"
+
 namespace Sirikata {
 
 void InitPintoOptions();

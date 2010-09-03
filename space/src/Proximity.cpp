@@ -36,9 +36,7 @@
 
 #include <algorithm>
 
-#include <prox/BruteForceQueryHandler.hpp>
-#include <prox/RTreeQueryHandler.hpp>
-#include <prox/RTreeCutQueryHandler.hpp>
+#include <sirikata/space/QueryHandlerFactory.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
 
@@ -87,12 +85,16 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
-    mServerQueryHandler = new Prox::BruteForceQueryHandler<ObjectProxSimulationTraits>();
+    String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
+    String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
+    mServerQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
     mServerQueryHandler->initialize(mLocalLocCache);
 
     // Object Queries
     mGlobalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
-    mObjectQueryHandler = new Prox::BruteForceQueryHandler<ObjectProxSimulationTraits>();
+    String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
+    String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
+    mObjectQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
     mLocService->addListener(this);

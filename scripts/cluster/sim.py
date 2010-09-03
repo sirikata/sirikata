@@ -126,6 +126,18 @@ class ClusterSimSettings:
         self.pinto_type = 'master'
         self.pinto_opts = ''
 
+        # Space: Prox settings
+        self.prox_server_query_handler_type = 'rtreecut'
+        self.prox_server_query_handler_opts = ''
+        self.prox_object_query_handler_type = 'rtreecut'
+        self.prox_object_query_handler_opts = ''
+
+
+        # Pinto Settings
+        self.pinto_handler_type = 'rtreecut'
+        self.pinto_handler_opts = ''
+
+        # Visualization
         self.vis_mode = 'object'
         self.vis_seed = 1
 
@@ -173,12 +185,12 @@ class ClusterSimSettings:
             return '--oseg-options=' + "--oseg_unique_craq_prefix=" + self.unique(),
         return ''
 
+    # Options to space about pinto
     def pinto_options_param(self):
         if (self.pinto_type == 'master'):
             assert(self.pinto_ip)
             assert(self.pinto_port)
             return '--pinto-options=' + '--host=' + str(self.pinto_ip) + ' --port=' + str(self.pinto_port)
-
         return ''
 
 class ClusterSim:
@@ -260,7 +272,15 @@ class ClusterSim:
             'oseg-cache-entry-lifetime' : "--oseg-cache-entry-lifetime=" + str(self.settings.oseg_cache_entry_lifetime),
             'pinto' : '--pinto=' + str(self.settings.pinto_type),
             'pinto-options' : self.settings.pinto_options_param(),
+            'prox.server.handler' : '--prox.server.handler=' + self.settings.prox_server_query_handler_type,
+            'prox.object.handler' : '--prox.object.handler=' + self.settings.prox_object_query_handler_type,
             }
+
+        if len(self.settings.prox_server_query_handler_opts) > 0:
+            class_params['prox.server.handler-options'] = '--prox.server.handler-options=' + self.settings.prox_server_query_handler_opts
+        if len(self.settings.prox_object_query_handler_opts) > 0:
+            class_params['prox.object.handler-options'] = '--prox.object.handler-options=' + self.settings.prox_object_query_handler_opts
+
         for tracetype in self.settings.traces['space']:
             class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
 
@@ -335,11 +355,15 @@ class ClusterSim:
 
     def pinto_parameters(self):
         class_params = {
-            'port' : '--port=' + str(self.settings.pinto_port)
+            'port' : '--port=' + str(self.settings.pinto_port),
+            'handler' : ' --handler=' + str(self.settings.pinto_handler_type),
             }
 
         if self.config.pinto_plugins != '':
             class_params['pinto.plugins'] = '--pinto.plugins=' + self.config.pinto_plugins
+
+        if self.settings.pinto_handler_opts != '':
+            class_params['handler-options'] = '--handler-options=' + self.settings.pinto_handler_opts
 
         for tracetype in self.settings.traces['pinto']:
             class_params[ ('trace-%s' % (tracetype)) ] =  ('--trace-%s=true' % (tracetype))
