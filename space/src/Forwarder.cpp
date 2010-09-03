@@ -117,7 +117,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
     mContext->mServerDispatcher = this;
     mContext->mObjectDispatcher = this;
 
-    mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(UUID::null(), this, this);
+    mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(UUID::null(), ctx, this, this);
 
 
     // Messages destined for objects are subscribed to here so we can easily pick them
