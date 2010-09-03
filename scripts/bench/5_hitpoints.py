@@ -29,17 +29,17 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         self.cs.object_simple='false'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
+             '--prob-messages-uniform=1.0',
+             '--num-objects-per-server=' + str(500),
              '--ping-size=' + str(self.payload_size),
              '--local=' + localval,
-             '--receivers-per-server=1'
-             '--num-hp-per-second=2'
              ]
             )
         self.cs.odp_flow_scheduler = self.scheme
 
         if 'object' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('object')
         if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
-        #if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
+        if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
-    
+
     cs.region_weight_options = '--flatness=8'
     cs.debug = True
 
@@ -68,19 +68,19 @@ if __name__ == "__main__":
     cs.oseg_cache_size=65536;
     cs.oseg_cache_clean_group=25;
     cs.oseg_cache_entry_lifetime= "1000s"
-    
+
     # Use pack across multiple ohs
     cs.num_random_objects = 0
     cs.num_pack_objects = nobjects / cs.num_oh
     cs.object_pack = packname
     cs.pack_dump = True
 
-    cs.object_connect_phase = '15s'
+    cs.object_connect_phase = '20s'
 
     cs.object_static = 'static'
     cs.object_query_frac = 0.0
 
-    cs.duration = '220s'
+    cs.duration = '120s'
 
     rates = sys.argv[1:]
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)
