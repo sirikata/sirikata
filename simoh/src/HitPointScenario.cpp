@@ -319,24 +319,35 @@ void HitPointScenario::delayedStart() {
         ss=(rand() % mObjectTracker->numServerIDs())+1;
     }
     Object * objA = mObjectTracker->randomObjectFromServer(ss);
-    static int a =14150;
-    mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
-    for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
-        std::set<Object* > receivers;
-        for (int j=0;j<receiversPerServer;++j) {
-            Object * objB = mObjectTracker->randomObjectFromServer(i);
-            if (objB&&receivers.find(objB)==receivers.end()) {
-                receivers.insert(objB);
-                mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
-                                                                                                        this,
-                                                                                                        objB,
-                                                                                                        objB->uuid()));
+    if (objA) {
+        static int a =14150;
+        mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
+        for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
+            std::set<Object* > receivers;
+            for (int j=0;j<receiversPerServer;++j) {
+                Object * objB = mObjectTracker->randomObjectFromServer(i);
+                if (objB&&receivers.find(objB)==receivers.end()) {
+                    receivers.insert(objB);
+                    mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
+                                                                                                            this,
+                                                                                                            objB,
+                                                                                                            objB->uuid()));
+                }
             }
         }
+        mGeneratePingPoller->start();
+        mHPPoller->start();
+        mPingPoller->start();
+    }else {
+        Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
+        connect_phase=connect_phase/16.0;
+        SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
+        mContext->mainStrand->post(
+            connect_phase,
+            std::tr1::bind(&HitPointScenario::delayedStart, this)
+            );
+        
     }
-    mGeneratePingPoller->start();
-    mHPPoller->start();
-    mPingPoller->start();
 
 }
 void HitPointScenario::stop() {
