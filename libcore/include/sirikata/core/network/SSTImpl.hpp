@@ -458,6 +458,9 @@ private:
       }
 
       inSendingMode = true;
+
+      getContext()->mainStrand->post(Duration::microseconds(1),
+                                     std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this, mWeakThis.lock()) );
     }
 
     return true;
@@ -692,6 +695,9 @@ private:
         }
 
         inSendingMode = true;
+
+        getContext()->mainStrand->post(
+                                     std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this, mWeakThis.lock()) );
 
         if (rand() % mCwnd == 0)  {
           mCwnd += 1;
@@ -1800,7 +1806,7 @@ private:
 
     if (!mChannelToBufferMap.empty()) {
       if (mStreamRTOMicroseconds < 2000000) {
-        mStreamRTOMicroseconds *= 1;
+        mStreamRTOMicroseconds *= 2;
       }
       mChannelToBufferMap.clear();
     }
