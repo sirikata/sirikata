@@ -289,7 +289,9 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
     /*SILOG(transfer, debug, "handle_read triggered with bytes_transferred = " << bytes_transferred << " EOF? "
             << (err == boost::asio::error::eof ? "Y" : "N"));*/
 
-    if ((err || bytes_transferred == 0) && err != boost::asio::error::eof) {
+    //Tahir: Had to comment out part of the if clause below because it was causing problems
+    //downloading large (>10 MB) files.
+    if ((err || bytes_transferred == 0) /*&& err != boost::asio::error::eof*/) {
         SILOG(transfer, error, "Failed to write. Error = " << err.message());
         socket->close();
         decrement_connection(req->addr);
