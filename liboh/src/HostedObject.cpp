@@ -310,7 +310,7 @@ struct HostedObject::PrivateCallbacks {
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?1.0:1.0);
-        realThis->connect(spaceID, location, sphere, "", realThis->getUUID());
+        realThis->connect(spaceID, location, sphere, "", SolidAngle::Max,realThis->getUUID());
         delete msg;
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
@@ -788,6 +788,7 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
     }
 }
+
 void HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
@@ -795,24 +796,30 @@ void HostedObject::connect(
         const String& mesh,
         const UUID&object_uuid_evidence)
 {
+    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence);
+}
+
+void HostedObject::connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
+        const String& mesh,
+        const SolidAngle& queryAngle,
+        const UUID&object_uuid_evidence)
+{
     if (spaceID == SpaceID::null())
         return;
 
     mObjectHost->connect(
         getSharedPtr(), spaceID,
-        //TimedMotionVector3f(Time::null(), MotionVector3f(
-        //Vector3f(startingLocation.getPosition()),
-        //startingLocation.getVelocity()) ),
         TimedMotionVector3f(Time::local(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
-        //TimedMotionQuaternion(Time::null(), MotionQuaternion(
-        //Quaternion::identity(), Quaternion::identity() )),
-        //TimedMotionQuaternion(Time::null(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         TimedMotionQuaternion(Time::local(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
         mesh,
-        SolidAngle(.00001f),
-        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, startingLocation
-, meshBounds) ),
+        queryAngle,
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, startingLocation, meshBounds)
+        ),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1)
     );

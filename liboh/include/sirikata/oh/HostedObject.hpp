@@ -240,6 +240,13 @@ public:
         const Location&startingLocation,
         const BoundingSphere3f&meshBounds,
         const String& mesh,
+        const SolidAngle& queryAngle,
+        const UUID&evidence);
+    void connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f&meshBounds,
+        const String& mesh,
         const UUID&evidence);
 
   private:
