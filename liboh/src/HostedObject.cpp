@@ -1014,16 +1014,8 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-
-            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
-            TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
-
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
-            // FIXME use weak_ptr instead of raw
-            URI meshuri;
-            if (addition.has_mesh()) meshuri = URI(addition.mesh());
-            BoundingSphere3f bnds = addition.bounds();
-            ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
                 getUUID(),
@@ -1031,6 +1023,16 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 true,
                 loc
             );
+
+            if (!getProxyManager(proximateID.space())->getProxyObject(proximateID)) {
+                TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+
+                // FIXME use weak_ptr instead of raw
+                URI meshuri;
+                if (addition.has_mesh()) meshuri = URI(addition.mesh());
+                BoundingSphere3f bnds = addition.bounds();
+                ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+            }
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -1044,6 +1046,7 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 TimedMotionVector3f()
             );
         }
+
     }
 }
 
