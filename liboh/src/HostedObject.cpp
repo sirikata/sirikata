@@ -957,25 +957,41 @@ void HostedObject::tick() {
 }
 
 void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
 void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
-void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    handleLocationMessage(spaceobj, buffer, length);
+void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (handleLocationMessage(spaceobj, prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
-void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    handleProximityMessage(spaceobj, buffer, length);
+void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (handleProximityMessage(spaceobj, prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
-void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, uint8* buffer, int len) {
+bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    bool parse_success = contents.ParseFromArray(buffer, len);
-    assert(parse_success);
+    bool parse_success = contents.ParseFromString(payload);
+    if (!parse_success) return false;
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
@@ -1002,12 +1018,14 @@ void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, u
             proxy_obj->setOrientation(orient);
         }
     }
+
+    return true;
 }
 
-void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, uint8* buffer, int len) {
+bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
     Sirikata::Protocol::Prox::ProximityResults contents;
-    bool parse_success = contents.ParseFromArray(buffer, len);
-    assert(parse_success);
+    bool parse_success = contents.ParseFromString(payload);
+    if (!parse_success) return false;
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
@@ -1046,8 +1064,9 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 TimedMotionVector3f()
             );
         }
-
     }
+
+    return true;
 }
 
 

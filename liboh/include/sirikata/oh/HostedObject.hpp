@@ -332,12 +332,12 @@ public:
     void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
     void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
-    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
+    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
-    void handleLocationMessage(const SpaceObjectReference& spaceobj, uint8* buffer, int len);
-    void handleProximityMessage(const SpaceObjectReference& spaceobj, uint8* buffer, int len);
+    bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
+    bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
     // Helper for creating the correct type of proxy
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc, const BoundingSphere3f& bnds);
