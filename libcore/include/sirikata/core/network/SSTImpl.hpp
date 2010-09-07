@@ -1440,7 +1440,7 @@ public:
   virtual bool registerReadCallback( ReadCallback callback) {
     mReadCallback = callback;
 
-    boost::mutex::scoped_lock lock(mReceiveBufferMutex);
+    boost::recursive_mutex::scoped_lock lock(mReceiveBufferMutex);
     sendToApp(0);
 
     return true;
@@ -1851,7 +1851,7 @@ private:
       mConnected = true;
     }
     else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
-      boost::mutex::scoped_lock lock(mReceiveBufferMutex);
+      boost::recursive_mutex::scoped_lock lock(mReceiveBufferMutex);
 
       assert ( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
       mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
@@ -2106,7 +2106,7 @@ private:
 
   uint8* mReceiveBuffer;
   uint8* mReceiveBitmap;
-  boost::mutex mReceiveBufferMutex;
+  boost::recursive_mutex mReceiveBufferMutex;
 
   ReadCallback mReadCallback;
   StreamReturnCallbackFunction mStreamReturnCallback;
