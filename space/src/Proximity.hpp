@@ -126,6 +126,8 @@ public:
     virtual void aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers);
 private:
 
+    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
+
     // MAIN Thread: These are utility methods which should only be called from the main thread.
 
     // Update queries based on current state.

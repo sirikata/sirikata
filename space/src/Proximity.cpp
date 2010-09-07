@@ -99,7 +99,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mObjectQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
-    mLocService->addListener(this);
+    mLocService->addListener(this, false);
 
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
 
@@ -316,24 +316,50 @@ void Proximity::removeRelevantServer(ServerID sid) {
     mServersQueried.erase(sid);
 }
 
+
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
-    PROXLOG(fatal, "Aggregate created " << objid.toString());
+    // On addition, an "aggregate" will have no children, i.e. its zero sized.
+    mLocService->addLocalAggregateObject(
+        objid,
+        TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
+        TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
+        BoundingSphere3f(),
+        ""
+    );
+}
+
+void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+    mLocService->updateLocalAggregateLocation(
+        objid,
+        TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
+    );
+    mLocService->updateLocalAggregateBounds(
+        objid,
+        BoundingSphere3f(Vector3f(0,0,0), bnds.radius())
+    );
 }
 
 void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    // Loc cares only about this chance to update state of aggregate
+    updateAggregateLoc(objid, bnds);
 }
 
 void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    // Loc cares only about this chance to update state of aggregate
+    updateAggregateLoc(objid, bnds);
 }
 
 void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+    updateAggregateLoc(objid, bnds);
 }
 
 void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
+    mLocService->removeLocalAggregateObject(objid);
 }
 
 void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
 }
+
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
     mProxStrand->post(

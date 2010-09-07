@@ -49,7 +49,7 @@ MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservic
    mMinEventTime(Time::null()),
    mCB(cb)
 {
-    mLocService->addListener(this);
+    mLocService->addListener(this, false);
     mCSeg->addListener(this);
 
     mBoundingRegions = mCSeg->serverRegion( mLocService->context()->id() );
