@@ -316,23 +316,23 @@ void Proximity::removeRelevantServer(ServerID sid) {
     mServersQueried.erase(sid);
 }
 
-void Proximity::aggregateCreated(const UUID& objid) {
+void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
     PROXLOG(fatal, "Aggregate created " << objid.toString());
 }
 
-void Proximity::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
 }
 
-void Proximity::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
 }
 
-void Proximity::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
+void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
 }
 
-void Proximity::aggregateDestroyed(const UUID& objid) {
+void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
 }
 
-void Proximity::aggregateObserved(const UUID& objid, uint32 nobservers) {
+void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
 }
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {

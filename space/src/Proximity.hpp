@@ -64,6 +64,8 @@ class Proximity :
         PintoServerQuerierListener,
         Prox::AggregateListener<ObjectProxSimulationTraits>
 {
+private:
+    typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
@@ -116,12 +118,12 @@ public:
     virtual void removeRelevantServer(ServerID sid);
 
     // AggregateListener Interface
-    virtual void aggregateCreated(const UUID& objid);
-    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds);
-    virtual void aggregateDestroyed(const UUID& objid);
-    virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
+    virtual void aggregateCreated(ProxQueryHandler* handler, const UUID& objid);
+    virtual void aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid);
+    virtual void aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers);
 private:
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
@@ -214,7 +216,6 @@ private:
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
-    typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
     void tickQueryHandler(ProxQueryHandler* qh);
 
     Thread* mProxThread;
