@@ -310,7 +310,7 @@ struct HostedObject::PrivateCallbacks {
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),realThis->hasProperty("IsCamera")?1.0:1.0);
-        realThis->connect(spaceID, location, sphere, "", realThis->getUUID());
+        realThis->connect(spaceID, location, sphere, "", SolidAngle::Max,realThis->getUUID());
         delete msg;
         if (!scriptName.empty()) {
             realThis->initializeScript(scriptName, scriptParams);
@@ -788,6 +788,7 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
     }
 }
+
 void HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
@@ -795,24 +796,30 @@ void HostedObject::connect(
         const String& mesh,
         const UUID&object_uuid_evidence)
 {
+    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence);
+}
+
+void HostedObject::connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
+        const String& mesh,
+        const SolidAngle& queryAngle,
+        const UUID&object_uuid_evidence)
+{
     if (spaceID == SpaceID::null())
         return;
 
     mObjectHost->connect(
         getSharedPtr(), spaceID,
-        //TimedMotionVector3f(Time::null(), MotionVector3f(
-        //Vector3f(startingLocation.getPosition()),
-        //startingLocation.getVelocity()) ),
         TimedMotionVector3f(Time::local(), MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
-        //TimedMotionQuaternion(Time::null(), MotionQuaternion(
-        //Quaternion::identity(), Quaternion::identity() )),
-        //TimedMotionQuaternion(Time::null(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         TimedMotionQuaternion(Time::local(),MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
         mesh,
-        SolidAngle(.00001f),
-        mContext->mainStrand->wrap( std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, startingLocation
-, meshBounds) ),
+        queryAngle,
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, startingLocation, meshBounds)
+        ),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1)
     );
@@ -950,25 +957,41 @@ void HostedObject::tick() {
 }
 
 void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
 void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
-void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    handleLocationMessage(spaceobj, buffer, length);
+void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (handleLocationMessage(spaceobj, prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
-void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    handleProximityMessage(spaceobj, buffer, length);
+void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (handleProximityMessage(spaceobj, prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
-void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, uint8* buffer, int len) {
+bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    bool parse_success = contents.ParseFromArray(buffer, len);
-    assert(parse_success);
+    bool parse_success = contents.ParseFromString(payload);
+    if (!parse_success) return false;
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
@@ -995,28 +1018,22 @@ void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, u
             proxy_obj->setOrientation(orient);
         }
     }
+
+    return true;
 }
 
-void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, uint8* buffer, int len) {
+bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
     Sirikata::Protocol::Prox::ProximityResults contents;
-    bool parse_success = contents.ParseFromArray(buffer, len);
-    assert(parse_success);
+    bool parse_success = contents.ParseFromString(payload);
+    if (!parse_success) return false;
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-
-            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
-            TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
-
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
-            // FIXME use weak_ptr instead of raw
-            URI meshuri;
-            if (addition.has_mesh()) meshuri = URI(addition.mesh());
-            BoundingSphere3f bnds = addition.bounds();
-            ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
                 getUUID(),
@@ -1024,6 +1041,16 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 true,
                 loc
             );
+
+            if (!getProxyManager(proximateID.space())->getProxyObject(proximateID)) {
+                TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+
+                // FIXME use weak_ptr instead of raw
+                URI meshuri;
+                if (addition.has_mesh()) meshuri = URI(addition.mesh());
+                BoundingSphere3f bnds = addition.bounds();
+                ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+            }
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -1038,6 +1065,8 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
         }
     }
+
+    return true;
 }
 
 

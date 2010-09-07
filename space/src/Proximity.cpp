@@ -88,6 +88,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
     String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
     mServerQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
+    mServerQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mServerQueryHandler->initialize(mLocalLocCache);
 
     // Object Queries
@@ -95,6 +96,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
     String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
     mObjectQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+    mObjectQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
     mLocService->addListener(this);
@@ -312,6 +314,25 @@ void Proximity::removeRelevantServer(ServerID sid) {
     // Potentially invoked from PintoServerQuerier IO thread
     boost::lock_guard<boost::mutex> lck(mServerSetMutex);
     mServersQueried.erase(sid);
+}
+
+void Proximity::aggregateCreated(const UUID& objid) {
+    PROXLOG(fatal, "Aggregate created " << objid.toString());
+}
+
+void Proximity::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+}
+
+void Proximity::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+}
+
+void Proximity::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
+}
+
+void Proximity::aggregateDestroyed(const UUID& objid) {
+}
+
+void Proximity::aggregateObserved(const UUID& objid, uint32 nobservers) {
 }
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {

@@ -39,6 +39,7 @@
 #include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
+#include <prox/AggregateListener.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
 #include <sirikata/core/network/SSTImpl.hpp>
@@ -60,7 +61,8 @@ class Proximity :
         MessageRecipient,
         MigrationDataClient,
         public PollingService,
-        PintoServerQuerierListener
+        PintoServerQuerierListener,
+        Prox::AggregateListener<ObjectProxSimulationTraits>
 {
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
@@ -112,6 +114,14 @@ public:
     // PintoServerQuerierListener Interface
     virtual void addRelevantServer(ServerID sid);
     virtual void removeRelevantServer(ServerID sid);
+
+    // AggregateListener Interface
+    virtual void aggregateCreated(const UUID& objid);
+    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(const UUID& objid);
+    virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
 private:
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
