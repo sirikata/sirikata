@@ -1373,7 +1373,7 @@ public:
 	              (len-currOffset);
 
 	if (mCurrentQueueLength + buffLen > MAX_QUEUE_LENGTH) {
-	  return currOffset;
+	  break;
 	}
 
 	mQueuedBuffers.push_back( boost::shared_ptr<StreamBuffer>(new StreamBuffer(data+currOffset, buffLen, mNumBytesSent)) );
