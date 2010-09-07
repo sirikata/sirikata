@@ -167,12 +167,14 @@ private:
     void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle);
     void handleRemoveObjectQuery(const UUID& object);
     // Generate query events based on results collected from query handlers
-    void generateServerQueryEvents();
-    void generateObjectQueryEvents();
+    void generateServerQueryEvents(Query* query);
+    void generateObjectQueryEvents(Query* query);
 
     typedef std::set<UUID> ObjectSet;
-    typedef std::map<ServerID, Query*> ServerQueryMap;
-    typedef std::map<UUID, Query*> ObjectQueryMap;
+    typedef std::tr1::unordered_map<ServerID, Query*> ServerQueryMap;
+    typedef std::tr1::unordered_map<Query*, ServerID> InvertedServerQueryMap;
+    typedef std::tr1::unordered_map<UUID, Query*, UUID::Hasher> ObjectQueryMap;
+    typedef std::tr1::unordered_map<Query*, UUID> InvertedObjectQueryMap;
 
 
     SpaceContext* mContext;
@@ -226,12 +228,14 @@ private:
     // These track local objects and answer queries from other
     // servers.
     ServerQueryMap mServerQueries;
+    InvertedServerQueryMap mInvertedServerQueries;
     CBRLocationServiceCache* mLocalLocCache;
     ProxQueryHandler* mServerQueryHandler;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
     ObjectQueryMap mObjectQueries;
+    InvertedObjectQueryMap mInvertedObjectQueries;
     CBRLocationServiceCache* mGlobalLocCache;
     ProxQueryHandler* mObjectQueryHandler;
 
