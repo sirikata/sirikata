@@ -139,8 +139,9 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
 
 
     //for lookups and sets respectively
-    AsyncCraqHybrid craqDhtGet;
-    AsyncCraqHybrid craqDhtSet;
+      AsyncCraqHybrid craqDhtGet1;
+      AsyncCraqHybrid craqDhtGet2;
+      AsyncCraqHybrid craqDhtSet;
 
 
       AtomicValue<int> mAtomicTrackID;

@@ -61,7 +61,8 @@ namespace Sirikata
 CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, char unique)
    : ObjectSegmentation(con, o_strand),
      mCSeg (cseg),
-     craqDhtGet(con, o_strand, this),
+     craqDhtGet1(con, o_strand, this),
+     craqDhtGet2(con, o_strand, this),
      craqDhtSet(con, o_strand, this),
      postingStrand(con->mainStrand),
      mStrand(o_strand),
@@ -95,7 +96,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
     // Register a ServerMessage service for oseg
     mOSegServerMessageService = mContext->serverRouter()->createServerMessageService("craq-oseg");
 
-    craqDhtGet.initialize(getInitArgs);
+    craqDhtGet1.initialize(getInitArgs);
+    craqDhtGet2.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
 
     myUniquePrefixKey = unique;
@@ -121,8 +123,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
   void CraqObjectSegmentation::stop()
   {
     craqDhtSet.stop();
-    craqDhtGet.stop();
-
+    craqDhtGet1.stop();
+    craqDhtGet2.stop();
+    
     mReceivedStopRequest = true;
   }
 
@@ -460,8 +463,11 @@ int CraqObjectSegmentation::getPushback()
 
       traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_END);
       traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_END);
-      
-      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
+
+      if ((numCraqLookups %2) == 0)
+          craqDhtGet1.get(cdSetGet,traceToken); //calling the craqDht to do a get
+      else
+          craqDhtGet2.get(cdSetGet,traceToken); //calling the craqDht to do a get.
     }
     else
     {
@@ -781,7 +787,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
         indexer.append(nfd->obj_id.rawHexData());
 
         CraqDataSetGet cdSetGet (indexer,CraqEntry(NullServerID,0),false,CraqDataSetGet::GET); //bftm modified
-        craqDhtGet.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
+        craqDhtGet1.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
 
         mNfData.pop(); //remove the item from the queue.
 

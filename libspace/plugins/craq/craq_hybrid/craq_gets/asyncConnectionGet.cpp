@@ -388,9 +388,13 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
 
   
   iqd->time_admitted = 0;
-
+  
+  
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
+
+
+  traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_GET_END);
 
 
   iqd->deadline_timer  = new Sirikata::Network::DeadlineTimer(*ctx->ioService);
@@ -400,7 +404,6 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
 
   iqd->traceToken = traceToken;
 
-  traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_GET_END);
   
   getQuery(dataToGet);
 
