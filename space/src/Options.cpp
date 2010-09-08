@@ -38,7 +38,7 @@ namespace Sirikata {
 
 void InitSpaceOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,space-local,space-standard",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-local,space-standard",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
