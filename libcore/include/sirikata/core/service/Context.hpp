@@ -125,6 +125,8 @@ public:
     // Stop the simulation
     void shutdown();
 
+    bool stopped() const { return mStopRequested.read(); }
+
     // Call after run returns to ensure all resources get cleaned up.
     void cleanup();
 
@@ -164,6 +166,8 @@ protected:
     std::tr1::shared_ptr<Thread> mKillThread;
     Network::IOService* mKillService;
     Network::IOTimerPtr mKillTimer;
+
+    Sirikata::AtomicValue<bool> mStopRequested;
 }; // class ObjectHostContext
 
 } // namespace Sirikata

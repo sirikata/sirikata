@@ -124,7 +124,10 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
         return false;
     }
 
-    // If its not in the connection list we're probably chasing bad pointers
+    // If its not in the connection list we're probably chasing bad
+    // pointers
+    if (mContext->stopped())
+        SPACE_LOG(fatal,"Trying to send after shutdown requested.");
     assert( mConnections.find(conn) != mConnections.end() );
 
     String data;
