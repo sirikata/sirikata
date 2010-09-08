@@ -598,13 +598,14 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
         delete traceToken;
       return;
     }
-
+    
+    mLookupListener->osegLookupCompleted(obj_id,sID);
+    
     if (traceToken != NULL) {
+        traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_END);
         CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
         delete traceToken;
     }
-
-    mLookupListener->osegLookupCompleted(obj_id,sID);
   }
 
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
@@ -850,8 +851,6 @@ void CraqObjectSegmentation::trySendMigAcks() {
     }
     inTransOrLookup_m.unlock();
 
-    if (cor->traceToken != NULL)
-        cor->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_END);
 
 
     callOsegLookupCompleted(tmper,cor->servID, cor->traceToken);

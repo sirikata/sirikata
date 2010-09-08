@@ -115,7 +115,9 @@ bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, con
     return false;
 
   //FIXME: hardcoded here
-  if (mOSeg->getPushback() > 3)
+  #define MAX_OSEG_PUSHBACK_PARAMETER 3
+  
+  if (mOSeg->getPushback() > MAX_OSEG_PUSHBACK_PARAMETER)
       return false;
   
   //  otherwise, do full oseg lookup;
