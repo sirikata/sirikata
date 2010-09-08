@@ -219,9 +219,8 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
     if(!foundIt) {
         SILOG(transfer, error, "HttpChunkHandler get called with chunk not present in file metadata");
-        //TODO: Uncomment below? It breaks things:
-        //callback(bad);
-        //return;
+        callback(bad);
+        return;
     }
 
     std::ostringstream request_stream;

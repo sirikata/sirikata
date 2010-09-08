@@ -78,8 +78,6 @@ public:
 
 protected:
 
-DownloadCallback cb;
-
   EventResponse downloadCompleteHandler(const EventPtr &event);
   void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
@@ -89,13 +87,14 @@ DownloadCallback cb;
 
 
   bool mStarted;
-    bool customCb;
+  bool customCb;
   const URI mURI;
   SubscriptionId mCurrentDownload;
   Transfer::Range mRange;
   ResourceRequestor* mResourceRequestor;
   Transfer::SparseData mMergeData;
-    double mPriority;
+  double mPriority;
+  DownloadCallback cb;
 };
 
 }
