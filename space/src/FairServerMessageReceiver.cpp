@@ -96,7 +96,7 @@ void FairServerMessageReceiver::service() {
     uint32 num_recv = 0;
     uint32 cum_recv_size = 0;
     uint32 went_empty = false;
-    while( num_recv < MAX_MESSAGES_PER_ROUND ) {
+    while( num_recv < MAX_MESSAGES_PER_ROUND && !mContext->stopped() ) {
         {
             boost::lock_guard<boost::mutex> lck(mMutex);
 
