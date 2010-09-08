@@ -428,7 +428,9 @@ public:
             request_stream.str("");
             request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
             request_stream << "Host: cdn.sirikata.com\r\n";
-            request_stream << "Accept: */*\r\n\r\n";
+            request_stream << "Accept: */*\r\n";
+            request_stream << "Accept-Encoding: deflate, gzip\r\n";
+            request_stream << "\r\n";
 
             SILOG(transfer, debug, "Issuing persistent get file request #" << i+1);
             Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),

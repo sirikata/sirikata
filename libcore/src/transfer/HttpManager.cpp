@@ -289,9 +289,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
     /*SILOG(transfer, debug, "handle_read triggered with bytes_transferred = " << bytes_transferred << " EOF? "
             << (err == boost::asio::error::eof ? "Y" : "N"));*/
 
-    //Tahir: Had to comment out part of the if clause below because it was causing problems
-    //downloading large (>10 MB) files.
-    if ((err || bytes_transferred == 0) /*&& err != boost::asio::error::eof*/) {
+    if ((err || bytes_transferred == 0) && err != boost::asio::error::eof) {
         SILOG(transfer, error, "Failed to write. Error = " << err.message());
         socket->close();
         decrement_connection(req->addr);
@@ -352,6 +350,13 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         }
         processQueue();
 
+    } else if(err == boost::asio::error::eof || bytes_transferred == 0) {
+        SILOG(transfer, warning, "EOF was true or bytes_transferred==0 and the parser wasn't finished, so connection is broken");
+        socket->close();
+        decrement_connection(req->addr);
+        add_req(req);
+        processQueue();
+        return;
     } else {
         //Read some more data
         socket->async_read_some(boost::asio::buffer(*vecbuf), boost::bind(
@@ -436,7 +441,6 @@ int HttpManager::on_body(http_parser* _, const char* at, size_t len) {
 
     if(curResponse->mGzip) {
         //Gzip encoding, so pass this buffer through a decoder
-        SILOG(transfer, debug, "writing " << len << " bytes to compressed stream");
         curResponse->mCompressedStream.write(at, len);
     } else {
         //Raw encoding, so append the bytes in current body pointer directly to the DenseData pointer in our response

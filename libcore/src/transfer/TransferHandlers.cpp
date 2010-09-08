@@ -232,8 +232,7 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
     request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
     request_stream << "Accept: */*\r\n";
-    //TODO: Uncomment this. Breaks things.
-    //request_stream << "Accept-Encoding: deflate, gzip\r\n";
+    request_stream << "Accept-Encoding: deflate, gzip\r\n";
     request_stream << "\r\n";
 
     HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
