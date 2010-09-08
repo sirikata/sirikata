@@ -273,7 +273,7 @@ public:
         /*
          * Do a GET request with accept-encoding set AND make it a range request
          * check content length present, content length = range size,
-         * http status code 200, Content-Encoding = gzip
+         * http status code 200, Content-Encoding = gzip, check actual bytes
          */
         request_stream.str("");
         request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
@@ -299,6 +299,122 @@ public:
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
             TS_ASSERT(mHttpResponse->getContentLength() == 11);
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(0) == 'i');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(1) == 'a');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(2) == 'l');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(3) == 'i');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(4) == 'z');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(5) == 'e');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(6) == 'r');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(7) == '_');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(8) == 'v');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(9) == '1');
+            TS_ASSERT(*mHttpResponse->getData()->dataAt(10) == '.');
+        }
+
+
+
+
+        /*
+         * Do a GET request with accept-encoding set to test compression
+         * and then do the same request with compression off to compare
+         * and make sur ethey are equal
+         */
+        request_stream.str("");
+        request_stream << "GET /files/global/af8e8a2c90802c7639e2026ce5f03f253130a7fe5ee79da0397416d4fc393c47 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing compressed get file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> compressed = mHttpResponse;
+
+        request_stream.str("");
+        request_stream << "GET /files/global/af8e8a2c90802c7639e2026ce5f03f253130a7fe5ee79da0397416d4fc393c47 HTTP/1.1\r\n";
+        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Accept: */*\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing uncompresed get file request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> uncompressed = mHttpResponse;
+
+        TS_ASSERT(compressed);
+        TS_ASSERT(uncompressed);
+        if(compressed && uncompressed) {
+            //make sure content length and status code are the same
+            TS_ASSERT(compressed->getContentLength() == uncompressed->getContentLength());
+            TS_ASSERT(compressed->getStatusCode() == uncompressed->getStatusCode());
+
+            //get headers
+            typedef std::map<std::string, std::string> HeaderMapType;
+            const HeaderMapType& compressedHeaders = compressed->getHeaders();
+            const HeaderMapType& uncompressedHeaders = uncompressed->getHeaders();
+
+            //loop through compressed headers
+            for(HeaderMapType::const_iterator it = compressedHeaders.begin(); it != compressedHeaders.end(); it++) {
+                if(it->first != "Content-Encoding" && it->first != "Vary" && it->first != "Content-Length") {
+                    HeaderMapType::const_iterator findOther = uncompressedHeaders.find(it->first);
+                    TS_ASSERT(findOther != uncompressedHeaders.end());
+                    if(findOther == uncompressedHeaders.end()) {
+                        SILOG(transfer, error, "Different header = " << it->first << ": " << it->second);
+                    } else {
+                        TS_ASSERT(findOther->second == it->second);
+                        if(findOther->second != it->second) {
+                            SILOG(transfer, error, "Header " << it->first <<
+                                    " differs. compressed = " << it->second <<
+                                    " while uncompressed = " << findOther->second);
+                        }
+                    }
+                }
+            }
+
+            //now loop through uncompressed headers
+            for(HeaderMapType::const_iterator it = uncompressedHeaders.begin(); it != uncompressedHeaders.end(); it++) {
+                if(it->first != "Content-Encoding" && it->first != "Vary" && it->first != "Content-Length") {
+                    HeaderMapType::const_iterator findOther = compressedHeaders.find(it->first);
+                    TS_ASSERT(findOther != compressedHeaders.end());
+                    if(findOther == compressedHeaders.end()) {
+                        SILOG(transfer, error, "Different header = " << it->first << ": " << it->second);
+                    } else {
+                        TS_ASSERT(findOther->second == it->second);
+                        if(findOther->second != it->second) {
+                            SILOG(transfer, error, "Header " << it->first <<
+                                    " differs. uncompressed = " << it->second <<
+                                    " while compressed = " << findOther->second);
+                        }
+                    }
+                }
+            }
+
+            //now compare data byte by byte
+            std::tr1::shared_ptr<Sirikata::Transfer::DenseData> compressedData = compressed->getData();
+            std::tr1::shared_ptr<Sirikata::Transfer::DenseData> uncompressedData = uncompressed->getData();
+            TS_ASSERT(*compressedData == *uncompressedData);
+            TS_ASSERT(compressedData->length() == uncompressedData->length());
+            for(int i=0; i<compressed->getContentLength(); i++) {
+                TS_ASSERT(*(compressedData->dataAt(i)) == *(uncompressedData->dataAt(i)));
+            }
+
+            //now turn into sparse, then flatten and compare again
+            Transfer::SparseData compressedSparse = Transfer::SparseData();
+            Transfer::SparseData uncompressedSparse = Transfer::SparseData();
+            compressedSparse.addValidData(compressedData);
+            uncompressedSparse.addValidData(uncompressedData);
+
+            Transfer::DenseDataPtr compressedFlattened = compressedSparse.flatten();
+            Transfer::DenseDataPtr uncompressedFlattened = uncompressedSparse.flatten();
+            TS_ASSERT(*compressedFlattened == *uncompressedFlattened);
+            TS_ASSERT(compressedFlattened->length() == uncompressedFlattened->length());
+            for(int i=0; i<compressedFlattened->length(); i++) {
+                TS_ASSERT(*(compressedFlattened->dataAt(i)) == *(uncompressedFlattened->dataAt(i)));
+            }
         }
 
 

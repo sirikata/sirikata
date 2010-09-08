@@ -231,9 +231,10 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
         request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
     }
     request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
-    request_stream << "Accept: * /*\r\n\r\n";
+    request_stream << "Accept: */*\r\n";
     //TODO: Uncomment this. Breaks things.
-    //request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
+    //request_stream << "Accept-Encoding: deflate, gzip\r\n";
+    request_stream << "\r\n";
 
     HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
             &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));
