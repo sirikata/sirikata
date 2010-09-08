@@ -51,6 +51,7 @@ class Repository:
 
     def update(self, with_submodules=True):
         cd_cmd = self.cd_to_code()
+        fetch_cmd = "git fetch origin"
         pull_cmd = "git pull origin master"
         reset_cmd = ""
         if self.is_submodule:
@@ -60,7 +61,7 @@ class Repository:
         if with_submodules:
             submodules_init_cmd = "git submodule init"
             submodules_update_cmd = "git submodule update"
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, pull_cmd, reset_cmd, submodules_init_cmd, submodules_update_cmd]))
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, fetch_cmd, pull_cmd, reset_cmd, submodules_init_cmd, submodules_update_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
     def reset_to_origin_head(self):
