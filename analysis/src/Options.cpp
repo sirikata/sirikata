@@ -38,7 +38,7 @@ namespace Sirikata {
 
 void InitAnalysisOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(new OptionValue(OPT_ANALYSIS_PLUGINS,"weight-exp,weight-sqr",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_ANALYSIS_PLUGINS,"weight-exp,weight-sqr,weight-const",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("num-oh", "1", Sirikata::OptionValueType<uint32>(), "Number of object hosts."))
 
