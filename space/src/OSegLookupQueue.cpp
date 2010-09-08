@@ -114,6 +114,10 @@ bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, con
   if (mLookups.size() > mMaxLookups)
     return false;
 
+  //FIXME: hardcoded here
+  if (mOSeg->getPushback() > 3)
+      return false;
+  
   //  otherwise, do full oseg lookup;
   destServer = mOSeg->lookup(dest_obj);
   // If we already have a server, handle the callback right away

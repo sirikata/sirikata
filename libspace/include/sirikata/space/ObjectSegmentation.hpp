@@ -148,6 +148,12 @@ public:
     virtual void addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) = 0;
     virtual void removeObject(const UUID& obj_id) = 0;
     virtual bool clearToMigrate(const UUID& obj_id) = 0;
+
+    virtual int getPushback()
+    {
+        return 0;
+    }
+    
   };
 
 class SIRIKATA_SPACE_EXPORT OSegFactory

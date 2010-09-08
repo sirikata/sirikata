@@ -307,29 +307,32 @@ public:
     void generateOSegQLenQuery();
     void generateOSegQLenReturn();
     void generateRunTime();
-
+      void generateBeginTime();
+      
     uint64 mInitialTime;
 
     struct CumulativeTraceData
     {
-      uint64 cacheTime;
-      uint64 craqLookupPostTime;
-      uint64 craqLookupTime;
-      uint64 craqLookupNotAlreadyLookingUpTime;
-      uint64 managerPostTime;
-      uint64 managerEnqueueTime;
-      uint64 managerDequeueTime;
-      uint64 connectionPostTime;
-      uint64 connectionNetworkQueryTime;
-      uint64 connectionsNetworkTime;
-      uint64 returnPostTime;
-      uint64 lookupReturnsTime;
-      uint64 completeLookupTime;
-      uint64 fullTime;
+        uint64 cacheTime;
+        uint64 craqLookupPostTime;
+        uint64 craqLookupTime;
+        uint64 craqLookupNotAlreadyLookingUpTime;
+        uint64 managerPostTime;
+        uint64 managerEnqueueTime;
+        uint64 managerDequeueTime;
+        uint64 connectionPostTime;
+        uint64 connectionNetworkQueryTime;
+        uint64 connectionsNetworkTime;
+        uint64 returnPostTime;
+        uint64 lookupReturnsTime;
+        uint64 completeLookupTime;
+        uint64 fullTime;
 
-      uint64 osegQLenPostQuery;
-      uint64 osegQLenPostReturn;
-      uint64 runTime;
+        uint64 osegQLenPostQuery;
+        uint64 osegQLenPostReturn;
+        uint64 runTime;
+
+        uint64 beginTime;
     };
 
     struct OSegCumulativeDurationComparator

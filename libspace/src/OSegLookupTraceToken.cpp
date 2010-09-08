@@ -31,15 +31,15 @@
  */
 
 #include <sirikata/space/OSegLookupTraceToken.hpp>
-
+#include <sirikata/core/util/Time.hpp>
 #include <iostream>
 #include <iomanip>
 
 namespace Sirikata
 {
 
-  OSegLookupTraceToken::OSegLookupTraceToken()
-  {
+OSegLookupTraceToken::OSegLookupTraceToken(bool loggingOn)
+{
     lookerUpper = NullServerID;
     locatedOn   = NullServerID;
 
@@ -66,11 +66,13 @@ namespace Sirikata
 
     osegQLenPostReturn                  = 1000;
     osegQLenPostQuery                   = 1000;
-  }
+
+    mLoggingOn = loggingOn;
+}
 
 
-  OSegLookupTraceToken::OSegLookupTraceToken(const UUID& uID)
-  {
+OSegLookupTraceToken::OSegLookupTraceToken(const UUID& uID, bool loggingOn)
+{
     mID         =          uID;
     lookerUpper = NullServerID;
     locatedOn   = NullServerID;
@@ -99,7 +101,86 @@ namespace Sirikata
     osegQLenPostReturn                  = 1000;
     osegQLenPostQuery                   = 1000;
 
+    mLoggingOn = loggingOn;
   }
+
+
+
+void OSegLookupTraceToken::stamp(OSegTraceStage osts)
+{
+    if (!mLoggingOn)
+        return;
+
+    Duration curDur = Time::local() - Time::epoch();
+    uint64 curTime = curDur.toMicroseconds();
+
+    
+    switch(osts)
+    {
+      case OSEG_TRACE_INITIAL_LOOKUP_TIME:
+        initialLookupTime = curTime;
+        break;
+      case OSEG_TRACE_CHECK_CACHE_LOCAL_BEGIN:
+        checkCacheLocalBegin = curTime;
+        break;
+      case OSEG_TRACE_CHECK_CACHE_LOCAL_END:
+        checkCacheLocalEnd = curTime;
+        break;
+
+      case OSEG_TRACE_CRAQ_LOOKUP_BEGIN:
+        craqLookupBegin = curTime;
+        break;
+
+      case OSEG_TRACE_CRAQ_LOOKUP_END:
+        craqLookupEnd = curTime;
+        break;
+        
+      case OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_BEGIN:
+        craqLookupNotAlreadyLookingUpBegin = curTime;
+        break;
+        
+      case OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_END:
+        craqLookupNotAlreadyLookingUpEnd = curTime;
+        break;
+        
+      case OSEG_TRACE_GET_MANAGER_ENQUEUE_BEGIN:
+        getManagerEnqueueBegin = curTime;
+        break;
+        
+      case OSEG_TRACE_GET_MANAGER_ENQUEUE_END:
+        getManagerEnqueueEnd = curTime;
+        break;
+        
+      case OSEG_TRACE_GET_MANAGER_DEQUEUED:
+        getManagerDequeued = curTime;
+        break;
+        
+      case OSEG_TRACE_GET_CONNECTION_NETWORK_GET_BEGIN:
+        getConnectionNetworkGetBegin = curTime;
+        break;
+        
+      case OSEG_TRACE_GET_CONNECTION_NETWORK_GET_END:
+        getConnectionNetworkGetEnd = curTime;
+        break;
+        
+      case OSEG_TRACE_GET_CONNECTION_NETWORK_RECEIVED:
+        getConnectionNetworkReceived = curTime;
+        break;
+
+      case OSEG_TRACE_LOOKUP_RETURN_BEGIN:
+        lookupReturnBegin = curTime;
+        break;
+        
+      case OSEG_TRACE_LOOKUP_RETURN_END:
+        lookupReturnEnd = curTime;
+        break;
+        
+      default:
+        std::cout<<"\n\n\nUnknown oseg lookup trace stage in OSegLookupTraceToken.cpp\n\n";
+        assert (false);
+    }
+    
+}
 
 
   void OSegLookupTraceToken::printCumulativeTraceToken()
