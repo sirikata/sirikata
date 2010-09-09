@@ -49,8 +49,8 @@ class FlowFairnessTest(ClusterSimTest):
 
         nobjects = self._cs.num_random_objects
 
-        self._cs.num_random_objects = nobjects / self._cs.num_oh
-        self._cs.num_pack_objects = 0
+        self._cs.num_random_objects = 0
+        self._cs.num_pack_objects = nobjects / self._cs.num_oh
         self._cs.object_pack = packname
         self._cs.pack_dump = True
 
