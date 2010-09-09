@@ -46,12 +46,12 @@ UUID::UUID(const std::string & other,HumanReadable ) {
 UUID::UUID(const boost_::uuid&other){
     mData.initialize(other.begin(),other.end());
 }
-UUID::UUID(UUID::Random) {
+UUID::UUID(UUID::GenerateRandom) {
     boost_::uuid randval = boost_::uuid::create();
     mData.initialize(randval.begin(),randval.end());
 }
 UUID UUID::random() {
-    return UUID(UUID::Random());
+    return UUID(UUID::GenerateRandom());
 }
 std::string UUID::readableHexData()const{
     std::ostringstream oss;

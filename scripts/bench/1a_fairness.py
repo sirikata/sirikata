@@ -30,7 +30,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
              '--prob-messages-uniform=1.0',
-             '--num-objects-per-server=' + str(500),
+             '--num-objects-per-server=20',
              '--ping-size=' + str(self.payload_size),
              '--local=' + localval,
              ]
@@ -49,19 +49,11 @@ if __name__ == "__main__":
     nss=9
     nobjects = 1500*nss
     packname = '1a_objects.pack'
-    # If genpack is True, the sim will be run the first time with a
-    # single object host to generate data, dump it, and pull it down.
-    # Then run with genpack = False to push that pack up to all nodes
-    # and use it across multiple object hosts.
-    genpack = False
     numoh = 2
-
-    if (genpack):
-        numoh = 1
 
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
-    
+
     cs.region_weight_options = '--flatness=8'
     cs.debug = True
 
@@ -76,26 +68,12 @@ if __name__ == "__main__":
     cs.oseg_cache_size=65536;
     cs.oseg_cache_clean_group=25;
     cs.oseg_cache_entry_lifetime= "1000s"
-    
-    if (genpack):
-        # Pack generation, run with 1 oh
-        assert(cs.num_oh == 1)
-        cs.num_random_objects = nobjects
-        cs.num_pack_objects = 0
-        cs.object_pack = ''
-        cs.pack_dump = packname
-    elif (numoh > 1):
-        # Use pack across multiple ohs
-        cs.num_random_objects = 0
-        cs.num_pack_objects = nobjects / cs.num_oh
-        cs.object_pack = packname
-        cs.pack_dump = ''
-    else:
-        # Only 1 oh, just use random
-        cs.num_random_objects = nobjects
-        cs.num_pack_objects = 0
-        cs.object_pack = ''
-        cs.pack_dump = ''
+
+    # Use pack across multiple ohs
+    cs.num_random_objects = 0
+    cs.num_pack_objects = nobjects / cs.num_oh
+    cs.object_pack = packname
+    cs.pack_dump = True
 
     cs.object_connect_phase = '20s'
 

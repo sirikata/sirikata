@@ -33,6 +33,7 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "Entity.hpp"
 #include <sirikata/core/options/Options.hpp>
+#include "OgreSystem.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -96,6 +97,10 @@ void Entity::init(Ogre::MovableObject *obj) {
     if (obj) {
         mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
+        float rad = mOgreObject->getBoundingRadius();
+        BoundingSphere3f bnds = getProxy().getBounds();
+        float rad_factor = bnds.radius() / rad;
+        mSceneNode->setScale( rad_factor, rad_factor, rad_factor );
     }
 }
 
@@ -137,6 +142,7 @@ void Entity::setOgrePosition(const Vector3d &pos) {
     const Ogre::Vector3 &scale = mSceneNode->getScale();
     mSceneNode->setPosition(ogrepos);
 }
+
 void Entity::setOgreOrientation(const Quaternion &orient) {
     //SILOG(ogre,debug,"setOgreOrientation "<<this<<" to "<<orient);
     mSceneNode->setOrientation(toOgre(orient));
@@ -164,7 +170,8 @@ void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
 }
 
 Vector3d Entity::getOgrePosition() {
-    return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
+    if (mScene == NULL) assert(false);
+    return fromOgre(mSceneNode->getPosition(), mScene->getOffset());
 }
 
 Quaternion Entity::getOgreOrientation() {

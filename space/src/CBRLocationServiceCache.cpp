@@ -46,7 +46,7 @@ CBRLocationServiceCache::CBRLocationServiceCache(Network::IOStrand* strand, Loca
    mWithReplicas(replicas)
 {
     assert(mLoc != NULL);
-    mLoc->addListener(this);
+    mLoc->addListener(this, false);
 }
 
 CBRLocationServiceCache::~CBRLocationServiceCache() {

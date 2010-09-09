@@ -62,7 +62,7 @@ public:
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
     typedef SessionCallback MigratedCallback;
-    typedef std::tr1::function<void()> StreamCreatedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 

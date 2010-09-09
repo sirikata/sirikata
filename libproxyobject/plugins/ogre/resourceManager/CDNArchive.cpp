@@ -126,9 +126,9 @@ static const int num_native_files=sizeof(native_files)/sizeof(native_files[0]);
  * Also, removes quotes and a %%_%% prefix.
  * If the URI is not a hashed URI, then returns the input.
  */
-String CDNArchive::canonicalizeHash(const String&filename_orig)
+std::string CDNArchive::canonicalizeHash(const String&filename_orig)
 {
-  String filename = filename_orig;
+    std::string filename = filename_orig;
   if (filename.length()>strlen(CDN_REPLACING_MATERIAL_STREAM_HINT)&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,strlen(CDN_REPLACING_MATERIAL_STREAM_HINT))==0) {
     filename = filename.substr(strlen(CDN_REPLACING_MATERIAL_STREAM_HINT));
   }
@@ -271,8 +271,13 @@ char * findMem(char *data, size_t howmuch, const char * target, size_t targlen)
 Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
 {
   boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
-  std::map<Ogre::String,SparseData>::iterator where =
-      mOwner->CDNArchiveFiles.find(canonicalizeHash(filename));
+  std::string canonicalName = canonicalizeHash(filename);
+  std::tr1::unordered_map<std::string,SparseData>::iterator where =
+      mOwner->CDNArchiveFiles.find(canonicalName);
+  if (where == mOwner->CDNArchiveFiles.end()) {
+      where =
+          mOwner->CDNArchiveFiles.find(filename);
+  }
   if (where != mOwner->CDNArchiveFiles.end()) {
     SILOG(resource,debug,"File "<<filename << " Opened");
     unsigned int hintlen=strlen(CDN_REPLACING_MATERIAL_STREAM_HINT);
@@ -331,8 +336,12 @@ Ogre::FileInfoListPtr CDNArchive::findFileInfo(const Ogre::String& pattern, bool
 
 bool CDNArchive::exists(const Ogre::String& filename) {
     boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
-    if (mOwner->CDNArchiveFiles.find(canonicalizeHash(filename))!=mOwner->CDNArchiveFiles.end()) {
-      SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalizeHash(filename));
+    std::string canonicalName = canonicalizeHash(filename);
+    if (mOwner->CDNArchiveFiles.find(canonicalName)!=mOwner->CDNArchiveFiles.end()) {
+        SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalName);
+        return true;
+    }else if (mOwner->CDNArchiveFiles.find(filename)!=mOwner->CDNArchiveFiles.end()) {
+        SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalName);
         return true;
     }else {
       String Filename=filename;
@@ -345,7 +354,7 @@ bool CDNArchive::exists(const Ogre::String& filename) {
                   if (Filename.find("white.png")!=0) {
                       if (Filename.find("bad.mesh")!=0) {
 
-                          SILOG(resource,error,"File "<<filename << " AKA "<<canonicalizeHash(filename)<<" Not existing in recently loaded cache");
+                          SILOG(resource,error,"File "<<filename << " AKA "<<canonicalName<<" Not existing in recently loaded cache for "<<(size_t)mOwner<<" because "<<(mOwner->CDNArchiveFiles.find(canonicalName)!=mOwner->CDNArchiveFiles.end())<<" archive size "<<mOwner->CDNArchiveFiles.size());
 
                           return false;
                       }

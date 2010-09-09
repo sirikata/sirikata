@@ -37,8 +37,8 @@
 
 namespace Sirikata {
 
-StandardLocationService::StandardLocationService(SpaceContext* ctx)
- : LocationService(ctx)
+StandardLocationService::StandardLocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
+ : LocationService(ctx, update_policy)
 {
 }
 
@@ -50,10 +50,11 @@ LocationService::TrackingType StandardLocationService::type(const UUID& uuid) co
     LocationMap::const_iterator it = mLocations.find(uuid);
     if (it == mLocations.end())
         return NotTracking;
+    if (it->second.aggregate)
+        return Aggregate;
     if (it->second.local)
         return Local;
-    else
-        return Replica;
+    return Replica;
 }
 
 
@@ -112,7 +113,6 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
         it = mLocations.find(uuid);
     } else {
         // It was already in there as a replica, notify its removal
-
         assert(it->second.local == false);
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME remote server ID
         notifyReplicaObjectRemoved(uuid);
@@ -124,44 +124,91 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     locinfo.bounds = bnds;
     locinfo.mesh = msh;
     locinfo.local = true;
+    locinfo.aggregate = false;
 
     // FIXME: we might want to verify that location(uuid) and bounds(uuid) are
     // reasonable compared to the loc and bounds passed in
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
+    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // Remove from mLocations, but save the cached state
-
-  if (!(mLocations.find(uuid)!= mLocations.end()))
-  {
-    printf("\n\nDoes not meet first condition for object:  %s\n\n", uuid.toString().c_str());
-    fflush(stdout);
-  }
-  else if (! ( mLocations[uuid].local == true ))
-  {
-    printf("\n\nDoes not meet second condition for object:  %s\n\n", uuid.toString().c_str());
-    fflush(stdout);
-  }
-
-  assert( mLocations.find(uuid) != mLocations.end() );
-  assert( mLocations[uuid].local == true );
-  mLocations.erase(uuid);
-
-
-
+    assert( mLocations.find(uuid) != mLocations.end() );
+    assert( mLocations[uuid].local == true );
+    assert( mLocations[uuid].aggregate == false );
+    mLocations.erase(uuid);
 
     // Remove from the list of local objects
-  CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
-    notifyLocalObjectRemoved(uuid);
+    CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
+    notifyLocalObjectRemoved(uuid, false);
 
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
     // instead of immediately removing all traces of the object.
     // However, this needs to be handled carefully, prefer updates from another server, and expire
     // automatically.
+}
+
+void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
+    // Aggregates get randomly assigned IDs -- if there's a conflict either we
+    // got a true conflict (incredibly unlikely) or somebody (prox/query
+    // handler) screwed up.
+    assert(mLocations.find(uuid) == mLocations.end());
+
+    mLocations[uuid] = LocationInfo();
+    LocationMap::iterator it = mLocations.find(uuid);
+
+    LocationInfo& locinfo = it->second;
+    locinfo.location = loc;
+    locinfo.orientation = orient;
+    locinfo.bounds = bnds;
+    locinfo.mesh = msh;
+    locinfo.local = true;
+    locinfo.aggregate = true;
+
+    // Add to the list of local objects
+    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
+}
+
+void StandardLocationService::removeLocalAggregateObject(const UUID& uuid) {
+    // Remove from mLocations, but save the cached state
+    assert( mLocations.find(uuid) != mLocations.end() );
+    assert( mLocations[uuid].local == true );
+    assert( mLocations[uuid].aggregate == true );
+    mLocations.erase(uuid);
+
+    notifyLocalObjectRemoved(uuid, true);
+}
+
+void StandardLocationService::updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    loc_it->second.location = newval;
+    notifyLocalLocationUpdated( uuid, true, newval );
+}
+void StandardLocationService::updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    loc_it->second.orientation = newval;
+    notifyLocalOrientationUpdated( uuid, true, newval );
+}
+void StandardLocationService::updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    loc_it->second.bounds = newval;
+    notifyLocalBoundsUpdated( uuid, true, newval );
+}
+void StandardLocationService::updateLocalAggregateMesh(const UUID& uuid, const String& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    loc_it->second.mesh = newval;
+    notifyLocalMeshUpdated( uuid, true, newval );
 }
 
 void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
@@ -189,13 +236,13 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         locinfo.bounds = bnds;
         locinfo.mesh = msh;
         locinfo.local = false;
+        locinfo.aggregate = false;
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
         notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
     }
-
 }
 
 void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uuid) {
@@ -294,7 +341,7 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
                     MotionVector3f( request.location().position(), request.location().velocity() )
                 );
                 loc_it->second.location = newloc;
-                notifyLocalLocationUpdated( msg.source_object(), newloc );
+                notifyLocalLocationUpdated( msg.source_object(), loc_it->second.aggregate, newloc );
 
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), msg.source_object(), newloc );
             }
@@ -305,19 +352,19 @@ void StandardLocationService::receiveMessage(const Sirikata::Protocol::Object::O
                     MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
                 );
                 loc_it->second.orientation = neworient;
-                notifyLocalOrientationUpdated( msg.source_object(), neworient );
+                notifyLocalOrientationUpdated( msg.source_object(), loc_it->second.aggregate, neworient );
             }
 
             if (request.has_bounds()) {
                 BoundingSphere3f newbounds = request.bounds();
                 loc_it->second.bounds = newbounds;
-                notifyLocalBoundsUpdated( msg.source_object(), newbounds );
+                notifyLocalBoundsUpdated( msg.source_object(), loc_it->second.aggregate, newbounds );
             }
 
             if (request.has_mesh()) {
                 String newmesh = request.mesh();
                 loc_it->second.mesh = newmesh;
-                notifyLocalMeshUpdated( msg.source_object(), newmesh );
+                notifyLocalMeshUpdated( msg.source_object(), loc_it->second.aggregate, newmesh );
             }
         }
         else {
@@ -340,14 +387,14 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
         if (obj_type == Local) {
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
-            
+
             if (request.has_location()) {
                 TimedMotionVector3f newloc(
                     request.location().t(),
                     MotionVector3f( request.location().position(), request.location().velocity() )
                 );
                 loc_it->second.location = newloc;
-                notifyLocalLocationUpdated( source, newloc );
+                notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
 
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
 
@@ -356,14 +403,13 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
             if (request.has_bounds()) {
                 BoundingSphere3f newbounds = request.bounds();
                 loc_it->second.bounds = newbounds;
-                notifyLocalBoundsUpdated( source, newbounds );
+                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, newbounds );
             }
 
             if (request.has_mesh()) {
                 String newmesh = request.mesh();
                 loc_it->second.mesh = newmesh;
-                notifyLocalMeshUpdated( source, newmesh );
-
+                notifyLocalMeshUpdated( source, loc_it->second.aggregate, newmesh );
             }
 
             if (request.has_orientation()) {
@@ -372,9 +418,9 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                     MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
                 );
                 loc_it->second.orientation = neworient;
-                notifyLocalOrientationUpdated( source, neworient );
+                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
             }
-            
+
         }
         else {
             // Warn about update to non-local object

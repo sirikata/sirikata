@@ -40,6 +40,8 @@
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include "../CameraEntity.hpp"
+#include <vector>
 
 namespace Sirikata {
 namespace Graphics{
@@ -52,7 +54,8 @@ public:
     ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
     ~ResourceDownloadPlanner();
 
-    void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void setCamera(Graphics::CameraEntity *entity);
 
     //ProxyCreationListener interface
     virtual void onCreateProxy ( ProxyObjectPtr object );
@@ -68,8 +71,9 @@ public:
     virtual void poll();
     virtual void stop();
 
-private:
-    std::map<ProxyMeshObject *, Graphics::MeshEntity *> MeshEntities;
+protected:
+    Graphics::CameraEntity *camera;
+
 };
 }
 

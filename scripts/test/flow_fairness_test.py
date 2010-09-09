@@ -12,7 +12,7 @@ from sim_test import ClusterSimTest
 from bench.flow_fairness import FlowFairness
 
 class FlowFairnessTest(ClusterSimTest):
-    def __init__(self, name, rate, scheme, payload, local=False, oh_pool=1, genpack=False, packname='flow.pack', **kwargs):
+    def __init__(self, name, rate, scheme, payload, local=False, oh_pool=1, packname='flow.pack', **kwargs):
         """
         name: Name of the test
         rate: Ping rate to test with
@@ -45,25 +45,14 @@ class FlowFairnessTest(ClusterSimTest):
         else:
             post_sim_func = self.__post_sim_func
 
-        if (genpack): oh_pool = 1
-
         ClusterSimTest.__init__(self, name, pre_sim_func=pre_sim_func, sim_func=sim_func, post_sim_func=post_sim_func, oh_pool=oh_pool, **kwargs)
 
         nobjects = self._cs.num_random_objects
 
-        if (genpack):
-            # Pack generation, run with 1 oh
-            assert(self._cs.num_oh == 1)
-            self._cs.num_random_objects = nobjects
-            self._cs.num_pack_objects = 0
-            self._cs.object_pack = ''
-            self._cs.pack_dump = packname
-        elif (oh_pool > 1):
-            # Use pack across multiple ohs
-            self._cs.num_random_objects = 0
-            self._cs.num_pack_objects = nobjects / self._cs.num_oh
-            self._cs.object_pack = packname
-            self._cs.pack_dump = ''
+        self._cs.num_random_objects = nobjects / self._cs.num_oh
+        self._cs.num_pack_objects = 0
+        self._cs.object_pack = packname
+        self._cs.pack_dump = True
 
         self.bench = FlowFairness(self._cc, self._cs, scheme=scheme, payload=payload, local=local)
 

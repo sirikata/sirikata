@@ -203,6 +203,7 @@ public:
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
 
+
     
 	/** These are properties related the object script 
 	    that would be attached to this hosted object in case
@@ -317,17 +318,29 @@ public:
         const Location&startingLocation,
         const BoundingSphere3f&meshBounds,
         const String& mesh,
+        const SolidAngle& queryAngle,
         const UUID&evidence,
         const String& scriptFile="",
         const String& scriptType="");
     
     Location getLocation(const SpaceID& space);
 
+    void connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f&meshBounds,
+        const String& mesh,
+        const UUID&evidence,
+        const String& scriptFile="",
+        const String& scriptType="");
+
+    
   private:
     
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation, const String& scriptFile, const String& scriptType );
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation, const String& scriptFile, const String& scriptType,  const BoundingSphere3f& bnds);
+
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
-    void handleStreamCreated(const SpaceID& space);
+    void handleStreamCreated(const SpaceObjectReference& spaceobj);
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -387,8 +400,10 @@ public:
     virtual SpaceObjectReference id(const SpaceID& space) const;
 
     // ODP::Service Interface
-    virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
-    virtual ODP::Port* bindODPPort(SpaceID space);
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
     virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
 
@@ -427,19 +442,28 @@ public:
 
     
   private:
-    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
+    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
+    // Handlers for substreams for space-managed updates
+    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
+    // Handlers for substream read events for space-managed updates
+    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+
     // Handlers for core space-managed updates
-    void handleLocationMessage(const SpaceID& space, uint8* buffer, int len);
-    void handleProximityMessage(const SpaceID& space, uint8* buffer, int len);
+    bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
+    bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
     // Helper for creating the correct type of proxy
-    //ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera = false);
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc);
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq);
-    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const Transfer::URI& meshuri, bool is_camera);
     
+
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc, const BoundingSphere3f& bnds);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
+    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera);
+
+
     // Helper for constructing and sending location update
     void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
 };

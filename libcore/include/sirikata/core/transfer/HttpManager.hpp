@@ -37,10 +37,14 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <string>
 #include <deque>
+#include <sstream>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/copy.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/Asio.hpp>
@@ -85,6 +89,8 @@ public:
         bool mMessageComplete;
         http_parser_settings mHttpSettings;
         http_parser mHttpParser;
+        bool mGzip;
+        std::stringstream mCompressedStream;
         //
 
         std::map<std::string, std::string> mHeaders;
@@ -94,7 +100,7 @@ public:
 
         HttpResponse()
             : mLastCallback(NONE), mHeaderComplete(false), mMessageComplete(false),
-              mContentLength(0), mStatusCode(0) {}
+              mGzip(false), mContentLength(0), mStatusCode(0) {}
     public:
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
         inline const std::map<std::string, std::string>& getHeaders() { return mHeaders; }

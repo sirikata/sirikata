@@ -376,6 +376,14 @@ namespace Sirikata {
 
 typedef uint32 ServerID;
 #define NullServerID 0
+struct ServerIDRandom {
+    ServerID operator()() {
+        // Because ServerIDs aren't really random (we start allocating linearly
+        // from 1), this just tries to generate one that won't conflict by
+        // choosing a large number ( > 1,000,000).
+        return (1 << 20) + (rand() % (1 << 20));
+    };
+};
 
 // Space Server Regions
 typedef std::vector<BoundingBox3f> BoundingBoxList;

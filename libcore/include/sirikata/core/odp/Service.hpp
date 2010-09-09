@@ -49,13 +49,15 @@ public:
 
     /** Bind an ODP port for use.
      *  \param space the Space to communicate via
+     *  \param objref the Object to communicate via
      *  \param port the PortID to attempt to bind
      *  \returns an ODP Port object which can be used immediately, or NULL if
      *           the port is already bound
      *  \throws PortAllocationError if the Service cannot allocate the port for
      *          some reason other than it already being allocated.
      */
-    virtual Port* bindODPPort(SpaceID space, PortID port) = 0;
+    virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, PortID port) = 0;
+    virtual Port* bindODPPort(const SpaceObjectReference& sor, PortID port) = 0;
 
     /** Bind a random, unused ODP port for use.
      *  \param space the Space to communicate via
@@ -64,7 +66,8 @@ public:
      *  \throws PortAllocationError if the Service cannot allocate the port for
      *          some reason other than it already being allocated.
      */
-    virtual Port* bindODPPort(SpaceID space) = 0;
+    virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
+    virtual Port* bindODPPort(const SpaceObjectReference& sor) = 0;
 
     /** Register a handler for messages that arrive on unbound ports.  By
      *  default there is no handler and such messages are ignored.  Note that

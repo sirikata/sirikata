@@ -77,14 +77,15 @@ unsigned int CDNArchiveFactory::addArchive(const String& uri, const SparseData &
 
 void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String& uri, const SparseData &rbuffer)
 {
-    std::map<Ogre::String,SparseData>::iterator where=CDNArchiveFiles.find(uri);
+    std::tr1::unordered_map<std::string,SparseData>::iterator where=CDNArchiveFiles.find(uri);
   if (where!=CDNArchiveFiles.end()) {
     SILOG(resource,error,"File "<<uri<<" Already exists in CDNArchive!!!");
   }
-  SILOG(resource,debug,"File "<<uri<<" Added to CDNArchive");
+  SILOG(resource,debug,"File "<<uri<<" Adding to CDNArchive "<<(size_t)this);
   CDNArchiveFiles[uri]=rbuffer;
 
   CDNArchivePackages[archiveName].push_back(uri);
+  SILOG(resource,debug,"File "<<uri<<" Added to CDNArchive "<<(size_t)this<< " success "<<(CDNArchiveFiles.find(uri)!=CDNArchiveFiles.end())<<" archive size "<<CDNArchiveFiles.size());
 }
 
 void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer)
@@ -99,7 +100,7 @@ void CDNArchiveFactory::clearArchive(unsigned int which)
   std::map<unsigned int, std::vector<Ogre::String> >::iterator where=CDNArchivePackages.find(which);
   if (where!=CDNArchivePackages.end()) {
     for (std::vector<Ogre::String>::iterator i=where->second.begin(),ie=where->second.end();i!=ie;++i) {
-      std::map<Ogre::String,SparseData>::iterator where2=CDNArchiveFiles.find(*i);
+      std::tr1::unordered_map<std::string,SparseData>::iterator where2=CDNArchiveFiles.find(*i);
       if (where2!=CDNArchiveFiles.end()) {
         // FIXME: clearArchive seems to get called too often, so texture files referenced in materials seem not to be found.
         //CDNArchiveFiles.erase(where2);

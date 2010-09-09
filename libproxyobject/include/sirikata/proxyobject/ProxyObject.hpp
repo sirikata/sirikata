@@ -85,8 +85,8 @@ private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
-    TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
+    BoundingSphere3f mBounds;
 
     VWObjectPtr mParent;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
@@ -95,6 +95,7 @@ private:
 protected:
     /// Notification that the Parent has been destroyed.
     virtual void destroyed(const TemporalValue<Location>::Time& when);
+    TimedMotionVector3f mLoc;
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -103,8 +104,10 @@ public:
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
         \param vwobj the owning VWObject, allowing the ProxyObject to interact
                     with the space
+        \param owner_sor the owning SpaceObjectReference, i.e. the presence the
+        proximity event was generated for
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj);
+    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
     virtual ~ProxyObject();
 
     // MCB: default to true for legacy proxies. FIX ME when all converted.
@@ -120,6 +123,8 @@ public:
         DEPRECATED(ProxyObject);
         return mParent.get();
     }
+
+    double priority;
 
     /// Send a message.  FIXME this is temporary to transition from QueryTracker.
     bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
@@ -156,6 +161,12 @@ public:
         return mOrientation.velocity();
     }
     
+
+    inline const BoundingSphere3f& getBounds() const {
+        return mBounds;
+    }
+
+
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -177,6 +188,10 @@ public:
         Space that we have moved, but it is the first step in moving a local object. */
     void setOrientation(const TimedMotionQuaternion& reqorient);
 
+    /** Sets the bounds. Note: This does not tell the Space that we have moved,
+        but it is the first step in moving a local object. */
+    void setBounds(const BoundingSphere3f& bnds);
+
     /// Returns the global location of this object in space coordinates at timeStamp.
     Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
         ProxyObjectPtr ppop = getParentProxy();
@@ -193,9 +208,10 @@ public:
         Vector3f angaxis;
         float32 angvel;
         mOrientation.velocity().toAngleAxis(angvel, angaxis);
-        
+
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
+
 };
 }
 #endif

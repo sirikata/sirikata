@@ -51,7 +51,7 @@ class DelegatePort;
  */
 class SIRIKATA_EXPORT DelegateService : public Service {
 public:
-    typedef std::tr1::function<DelegatePort*(DelegateService*,SpaceID,PortID)> PortCreateFunction;
+    typedef std::tr1::function<DelegatePort*(DelegateService*,const SpaceObjectReference&,PortID)> PortCreateFunction;
 
     /** Create a DelegateService that uses create_func to generate new ports.
      *  \param create_func a function which accepts a SpaceID and PortID and
@@ -64,8 +64,10 @@ public:
     virtual ~DelegateService();
 
     // Service Interface
-    virtual Port* bindODPPort(SpaceID space, PortID port);
-    virtual Port* bindODPPort(SpaceID space);
+    virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, PortID port);
+    virtual Port* bindODPPort(const SpaceObjectReference& sor, PortID port);
+    virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const MessageHandler& cb);
     virtual void registerDefaultODPHandler(const OldMessageHandler& cb);
 
@@ -87,7 +89,7 @@ public:
     bool deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const;
 private:
     typedef std::tr1::unordered_map<PortID, DelegatePort*, PortID::Hasher> PortMap;
-    typedef std::tr1::unordered_map<SpaceID, PortMap*, SpaceID::Hasher> SpacePortMap;
+    typedef std::tr1::unordered_map<SpaceObjectReference, PortMap*, SpaceObjectReference::Hasher> SpacePortMap;
 
     friend class DelegatePort;
     // Deallocates the port by removing it from the data structure.  Should only
@@ -96,10 +98,10 @@ private:
 
     // Helper. Gets an existing PortMap for the specified space or returns NULL
     // if one doesn't exist yet.
-    PortMap* getPortMap(SpaceID space) const;
+    PortMap* getPortMap(const SpaceObjectReference& sor) const;
     // Helper. Gets an existing PortMap for the specified space or creates one
     // if one doesn't exist yet.
-    PortMap* getOrCreatePortMap(SpaceID space);
+    PortMap* getOrCreatePortMap(const SpaceObjectReference& sor);
 
     PortCreateFunction mCreator;
     SpacePortMap mSpacePortMap;

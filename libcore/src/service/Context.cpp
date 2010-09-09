@@ -49,7 +49,8 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
    mSimDuration(simlen),
    mKillThread(),
    mKillService(NULL),
-   mKillTimer()
+   mKillTimer(),
+   mStopRequested(false)
 {
 }
 
@@ -78,6 +79,7 @@ void Context::shutdown() {
 }
 
 void Context::stop() {
+    mStopRequested = true;
     mFinishedTimer.reset();
     startForceQuitTimer();
 }

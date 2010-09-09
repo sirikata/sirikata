@@ -51,10 +51,11 @@ namespace Meru {
 class ModelDependencyTask : public ResourceDependencyTask
 {
 public:
-  ModelDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri);
+    ModelDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~ModelDependencyTask();
 
   virtual void operator()();
+    Sirikata::ProxyObjectPtr mProxy;
 };
 
 class ModelLoadTask : public ResourceLoadTask
@@ -76,8 +77,8 @@ protected:
   //bool mainThreadUnload(String name);
 };
 
-GraphicsResourceModel::GraphicsResourceModel(const URI &uri)
-: GraphicsResourceAsset(uri, GraphicsResource::MODEL)
+GraphicsResourceModel::GraphicsResourceModel(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+  : GraphicsResourceAsset(uri, GraphicsResource::MODEL, proxy)
 {
 
 }
@@ -122,12 +123,12 @@ void GraphicsResourceModel::setMaterialNames(GraphicsResourceModel* resourcePtr)
 
 ResourceDownloadTask* GraphicsResourceModel::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-    return new ResourceDownloadTask(manager, mURI, resourceRequestor, NULL);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, mProxy->priority, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceModel::createDependencyTask(DependencyManager *manager)
 {
-  return new ModelDependencyTask(manager, getWeakPtr(), mURI);
+    return new ModelDependencyTask(manager, getWeakPtr(), mURI, mProxy);
 }
 
 ResourceLoadTask* GraphicsResourceModel::createLoadTask(DependencyManager *manager)
@@ -142,8 +143,8 @@ ResourceUnloadTask* GraphicsResourceModel::createUnloadTask(DependencyManager *m
 
 /***************************** MODEL DEPENDENCY TASK *************************/
 
-ModelDependencyTask::ModelDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri)
-: ResourceDependencyTask(mgr, resource, uri)
+ModelDependencyTask::ModelDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy)
+ : ResourceDependencyTask(mgr, resource, uri), mProxy(proxy)
 {
 
 }
@@ -185,7 +186,7 @@ void ModelDependencyTask::operator()()
           ++itr;
         }
 
-        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL, mProxy);
         resourcePtr->addDependency(hashResource);
       }
     }

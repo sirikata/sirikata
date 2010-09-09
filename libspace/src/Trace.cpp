@@ -56,7 +56,7 @@ OptionValue* SpaceTrace::mLogCSeg;
 
 void SpaceTrace::InitOptions() {
     mLogOSeg = new OptionValue(TRACE_OSEG_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
-    mLogOSegCumulative = new OptionValue(TRACE_OSEG_CUMULATIVE_NAME,"true",Sirikata::OptionValueType<bool>(),"Log oseg cumulative trace data");
+    mLogOSegCumulative = new OptionValue(TRACE_OSEG_CUMULATIVE_NAME,"false",Sirikata::OptionValueType<bool>(),"Log oseg cumulative trace data");
     mLogMigration = new OptionValue(TRACE_MIGRATION_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogDatagram = new OptionValue(TRACE_DATAGRAM_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");
     mLogLocProx = new OptionValue(TRACE_LOCPROX_NAME,"false",Sirikata::OptionValueType<bool>(),"Log object trace data");

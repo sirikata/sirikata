@@ -117,6 +117,14 @@ MARK_AS_ADVANCED(
     CMAKE_EXE_LINKER_FLAGS_DEFAULT
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
 
+SET(CMAKE_CXX_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
+    "Built cxxflags with default settings."
+    FORCE )
+SET( CMAKE_C_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+
+
 # Profile build target
 SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
     "Built cxxflags with default settings."
@@ -410,7 +418,7 @@ IF(NOT BOOST_ROOT)
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex)
+  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex iostreams)
 ELSE(WIN32)
   FIND_PACKAGE(Boost COMPONENTS system)
 
@@ -433,6 +441,10 @@ ELSE(WIN32)
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
+  
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
+  STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
 SET(Boost_LIBRARIES
@@ -442,6 +454,7 @@ SET(Boost_LIBRARIES
   debug ${Boost_FILESYSTEM_LIBRARY_DEBUG} optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE}
   debug ${Boost_DATE_TIME_LIBRARY_DEBUG} optimized ${Boost_DATE_TIME_LIBRARY_RELEASE}
   debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
+  debug ${Boost_IOSTREAMS_LIBRARY_DEBUG} optimized ${Boost_IOSTREAMS_LIBRARY_RELEASE}
   )
 
 #dependency: curl
@@ -674,6 +687,7 @@ SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
 SET(PINTO_SOURCE_DIR ${TOP_LEVEL}/pinto/src)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
+SET(STREAM_ECHO_SOURCE_DIR ${TOP_LEVEL}/tools/stream_echo)
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
 
 #plugins locations
@@ -1143,6 +1157,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
   ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
+  ${LIBSPACE_SOURCE_DIR}/LocationService.cpp
   )
 
 SET(LIBPROXYOBJECT_SOURCES
@@ -1215,6 +1230,11 @@ SET(LIBCORE_PLUGIN_WEIGHTSQR_SOURCES
   ${LIBCORE_PLUGIN_WEIGHTSQR_DIR}/SqrIntegral.cpp
   )
 
+SET(LIBCORE_PLUGIN_WEIGHTCONST_DIR ${LIBCORE_PLUGIN_DIR}/weightconst)
+SET(LIBCORE_PLUGIN_WEIGHTCONST_SOURCES
+  ${LIBCORE_PLUGIN_WEIGHTCONST_DIR}/PluginInterface.cpp
+  )
+
 SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR ${LIBCORE_PLUGIN_DIR}/servermap_tabular)
 SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES
   ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/PluginInterface.cpp
@@ -1276,6 +1296,8 @@ ${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDependencyTask.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
+${GFX}/resourceManager/DistanceDownloadPlanner.cpp
+${GFX}/resourceManager/SAngleDownloadPlanner.cpp
 ${GFX}/resourceManager/ResourceLoadTask.cpp
 ${GFX}/resourceManager/ResourceLoadingQueue.cpp
 ${GFX}/resourceManager/ResourceManager.cpp
@@ -1316,8 +1338,15 @@ SET(LIBSPACE_PLUGIN_MASTER_PINTO_SOURCES
   ${LIBSPACE_PLUGIN_MASTER_PINTO_DIR}/MasterPintoServerQuerier.cpp
 )
 
+SET(LIBSPACE_PLUGIN_STANDARD_DIR ${LIBSPACE_PLUGIN_DIR}/standard)
+SET(LIBSPACE_PLUGIN_STANDARD_SOURCES
+  ${LIBSPACE_PLUGIN_STANDARD_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_STANDARD_DIR}/StandardLocationService.cpp
+  ${LIBSPACE_PLUGIN_STANDARD_DIR}/AlwaysLocationUpdatePolicy.cpp
+)
+
+
 SET(SPACE_SOURCES
-  ${SPACE_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
@@ -1334,7 +1363,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/Forwarder.cpp
   ${SPACE_SOURCE_DIR}/ForwarderServiceQueue.cpp
   ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
-  ${SPACE_SOURCE_DIR}/LocationService.cpp
   ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp
   ${SPACE_SOURCE_DIR}/ObjectConnection.cpp
   ${SPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
@@ -1344,7 +1372,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/SpaceNetwork.cpp
   ${SPACE_SOURCE_DIR}/Proximity.cpp
   ${SPACE_SOURCE_DIR}/Server.cpp
-  ${SPACE_SOURCE_DIR}/StandardLocationService.cpp
   ${SPACE_SOURCE_DIR}/TCPSpaceNetwork.cpp
 #  ${SPACE_SOURCE_DIR}/Test.cpp
   ${SPACE_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
@@ -1362,6 +1389,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ConnectedObjectTracker.cpp
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
   ${SIMOH_SOURCE_DIR}/PingDelugeScenario.cpp
+  ${SIMOH_SOURCE_DIR}/HitPointScenario.cpp
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
@@ -1369,6 +1397,18 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
+  )
+
+SET(GENPACK_SOURCES
+  ${SIMOH_SOURCE_DIR}/RandomMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
+  ${SIMOH_SOURCE_DIR}/Object.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
+  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/Options.cpp
+  ${SIMOH_SOURCE_DIR}/GenPack.cpp
   )
 
 SET(CSEG_SOURCES
@@ -1398,12 +1438,16 @@ SET(ANALYSIS_SOURCES
   ${ANALYSIS_SOURCE_DIR}/main.cpp
 )
 
+SET(STREAM_ECHO_SOURCES
+  ${STREAM_ECHO_SOURCE_DIR}/StreamEcho.cpp
+)
+
 SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/BenchmarkRunner.cpp
   ${BENCH_SOURCE_DIR}/TimerSpeedBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
-  ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/TCPSSTBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
 
@@ -1427,8 +1471,8 @@ libcore/test/OptionTest.hpp
 #libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp
 libcore/test/RoutableMessageTest.hpp
-libcore/test/SstCloseTest.hpp
-libcore/test/SstTest.hpp
+libcore/test/TCPSSTCloseTest.hpp
+libcore/test/TCPSSTConnectTest.hpp
 libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
@@ -1511,6 +1555,7 @@ SET(SIRIKATA_PROXYOBJECT_LIB sirikata-proxyobject)
 SET(SPACE_BINARY space)
 SET(CPPOH_BINARY cppoh)
 SET(TEST_BINARY tests)
+SET(STREAM_ECHO_BINARY stream_echo)
 SET(BENCH_BINARY bench)
 
 
@@ -1605,6 +1650,13 @@ ADD_PLUGIN_TARGET(weight-sqr
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-sqr)
 
+ADD_PLUGIN_TARGET(weight-const
+                    SOURCES ${LIBCORE_PLUGIN_WEIGHTCONST_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-const)
+
 ADD_PLUGIN_TARGET(servermap-tabular
                     SOURCES ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
@@ -1639,6 +1691,13 @@ ADD_PLUGIN_TARGET(space-master-pinto
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-master-pinto)
+
+ADD_PLUGIN_TARGET(space-standard
+                    SOURCES ${LIBSPACE_PLUGIN_STANDARD_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-standard)
 
 IF(OGRE_FOUND AND sdl_FOUND )
   IF(WIN32)#not sure why this needs to happen again
@@ -1815,6 +1874,15 @@ TARGET_LINK_LIBRARIES(simoh
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
+ADD_EXECUTABLE(genpack ${GENPACK_SOURCES})
+SET_TARGET_PROPERTIES(genpack PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(genpack
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${SIRIKATA_OH_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES})
 SET_TARGET_PROPERTIES(cseg PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cseg
@@ -1841,6 +1909,14 @@ TARGET_LINK_LIBRARIES(analysis
         #${GLUT_LIBRARIES}
         )
 
+ADD_EXECUTABLE(${STREAM_ECHO_BINARY} ${STREAM_ECHO_SOURCES})
+SET_TARGET_PROPERTIES(${STREAM_ECHO_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(${STREAM_ECHO_BINARY}
+  ${Boost_LIBRARIES}
+  ${SIRIKATA_CORE_LIB}
+  ${PROTOCOLBUFFERS_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES})
 SET_TARGET_PROPERTIES(${BENCH_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(${BENCH_BINARY}
@@ -1849,7 +1925,7 @@ TARGET_LINK_LIBRARIES(${BENCH_BINARY}
   ${PROTOCOLBUFFERS_LIBRARIES}
   )
 # Fixme incorporate old benchmark
-#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/SSTBenchmark.cpp)
+#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/TCPSSTBenchmark.cpp)
 
 IF(CHROME_FOUND)
   IF(APPLE)
@@ -1894,7 +1970,7 @@ ADD_DEPENDENCIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB})
 ADD_DEPENDENCIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 ADD_DEPENDENCIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_OH_LIB})
 
-SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh cseg pinto analysis ${BENCH_BINARY}
+SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh genpack cseg pinto analysis ${STREAM_ECHO_BINARY} ${BENCH_BINARY}
                       PROPERTIES
                       DEBUG_POSTFIX "_d" )
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB}

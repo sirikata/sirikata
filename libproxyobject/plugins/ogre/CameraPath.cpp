@@ -34,10 +34,13 @@
 #include "CameraPath.hpp"
 #include <boost/filesystem.hpp>
 #include <math.h>
+#include <stdlib.h>
+
 
 namespace Sirikata {
 namespace Graphics {
 
+using namespace std;
 using namespace Sirikata::Task;
 
 CameraPath::CameraPath()

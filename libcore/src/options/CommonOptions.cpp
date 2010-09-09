@@ -86,6 +86,11 @@ OptionValue* GetOption(const char* name) {
     return options->referenceOption(name);
 }
 
+OptionValue* GetOption(const char* klass, const char* name) {
+    OptionSet* options = OptionSet::getOptions(klass,NULL);
+    return options->referenceOption(name);
+}
+
 template<typename T>
 T GetOptionValueUnsafe(const char* name) {
     OptionValue* opt = GetOption(name);

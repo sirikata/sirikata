@@ -44,6 +44,9 @@ void InitPintoOptions() {
         .addOption(new OptionValue(OPT_PINTO_PROTOCOL_OPTIONS, "", Sirikata::OptionValueType<String>(), "Protocol options to use for connections from space servers."))
         .addOption(new OptionValue(OPT_PINTO_HOST, "0.0.0.0", Sirikata::OptionValueType<String>(), "IP address or host to listen for connections from space servers on."))
         .addOption(new OptionValue(OPT_PINTO_PORT, "6789", Sirikata::OptionValueType<String>(), "Port to listen for connections from space servers."))
+
+        .addOption(new OptionValue(OPT_PINTO_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
+        .addOption(new OptionValue(OPT_PINTO_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
         ;
 }
 

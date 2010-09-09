@@ -74,7 +74,7 @@ MeshEntity::MeshEntity(OgreSystem *scene,
     getProxy().MeshProvider::addListener(this);
     Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr();
     mResource = std::tr1::dynamic_pointer_cast<Meru::GraphicsResourceEntity>
-        (grm->getResourceEntity(pmo->getObjectReference(), this));
+        (grm->getResourceEntity(pmo->getObjectReference(), this, pmo));
     unloadMesh();
 }
 
@@ -307,7 +307,7 @@ void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::
 
 void MeshEntity::downloadMeshFile(URI const& uri)
 {
-    ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, uri, NULL, std::tr1::bind(&MeshEntity::MeshDownloaded,
+    ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, uri, NULL, mProxy->priority, std::tr1::bind(&MeshEntity::MeshDownloaded,
             this, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
     (*dl)();
 }
@@ -333,12 +333,12 @@ void MeshEntity::processMesh(URI const& meshFile)
     if (fn.rfind(".dae")==fn.size()-4 || fn.rfind(".DAE")==fn.size()-4) is_collada=true;
     if (is_collada) {
         Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
-        Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset ( meshFile, Meru::GraphicsResource::MODEL );
+        Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MODEL, mProxy);
         mResource->setMeshResource ( newModelPtr );
     }
     else {
         Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
-        Meru::SharedResourcePtr newMeshPtr = grm->getResourceAsset ( meshFile, Meru::GraphicsResource::MESH );
+        Meru::SharedResourcePtr newMeshPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MESH, mProxy);
         mResource->setMeshResource ( newMeshPtr );
     }
 }
@@ -355,7 +355,27 @@ bool MeshEntity::createMeshWork(const Meshdata& md) {
     createMesh(md);
     return true;
 }
+Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectInfo::Texture::WrapMode w) {
+    switch(w) {
+      case MaterialEffectInfo::Texture::WRAP_MODE_CLAMP:
+        printf ("CLAMPING");
+        return Ogre::TextureUnitState::TAM_CLAMP;        
+      case MaterialEffectInfo::Texture::WRAP_MODE_MIRROR:
+        printf ("MIRRORING");
+        return Ogre::TextureUnitState::TAM_MIRROR;
+      case MaterialEffectInfo::Texture::WRAP_MODE_WRAP:
+      default:
+        printf ("WRAPPING");
+        return Ogre::TextureUnitState::TAM_WRAP;
+    }
+}
 
+void fixupTextureUnitState(Ogre::TextureUnitState*tus, const MaterialEffectInfo::Texture&tex) {
+    tus->setTextureAddressingMode(translateWrapMode(tex.wrapS),
+                                  translateWrapMode(tex.wrapT),
+                                  translateWrapMode(tex.wrapU));
+    
+}
 class MaterialManualLoader : public Ogre::ManualResourceLoader {
     MaterialEffectInfo mMat;
     std::string mName;
@@ -498,7 +518,7 @@ public:
 */
                         //pass->setIlluminationStage(IS_PER_LIGHT);
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
-                        
+                        fixupTextureUnitState(tus,tex);                        
                         tus->setColourOperation(LBO_MODULATE);
 
                         break;
@@ -524,6 +544,7 @@ public:
                         pass->setSpecular(ColourValue(0,0,0,0));
 */
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                        fixupTextureUnitState(tus,tex);
 //                        pass->setSelfIllumination(ColourValue(1,1,1,1));
                         tus->setColourOperation(LBO_ADD);
                     
@@ -542,6 +563,7 @@ public:
                         //pass->setIlluminationStage(IS_PER_LIGHT);
                         
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);                    
+                        fixupTextureUnitState(tus,tex);
                         tus->setColourOperation(LBO_MODULATE);
                         pass->setSpecular(ColourValue(1,1,1,1));
                         break;
@@ -563,7 +585,7 @@ class MeshdataManualLoader : public Ogre::ManualResourceLoader {
         Ogre::VertexData *vertexData = OGRE_NEW Ogre::VertexData();
         VertexDeclaration* vertexDecl = vertexData->vertexDeclaration;
         size_t currOffset = 0;
-        
+
         vertexDecl->addElement(0, currOffset, VET_FLOAT3, VES_POSITION);
         currOffset += VertexElement::getTypeSize(VET_FLOAT3);
         if (submesh.normals.size()==submesh.positions.size()) {
@@ -613,7 +635,7 @@ class MeshdataManualLoader : public Ogre::ManualResourceLoader {
 public:
 
     MeshdataManualLoader(const Meshdata&meshdata):md(meshdata) {
-        
+
     }
     void prepareResource(Ogre::Resource*r){}
     void loadResource(Ogre::Resource *r) {
@@ -659,15 +681,15 @@ public:
                 }
             }
         }
-    
-        if (totalVertexCount>65535) 
+
+        if (totalVertexCount>65535)
             useSharedBuffer=false;
         Mesh* mesh= dynamic_cast <Mesh*> (r);
-        
+
         if (totalVertexCount==0 || mesh==NULL)
             return;
         char * pData  = NULL;
-        Ogre::HardwareVertexBufferSharedPtr vbuf;              
+        Ogre::HardwareVertexBufferSharedPtr vbuf;
         unsigned short sharedVertexOffset=0;
         unsigned int totalVerticesCopied=0;
         if (useSharedBuffer) {
@@ -676,10 +698,10 @@ public:
         }
         for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
-            
+
             Matrix4x4f pos_xform = geoinst.transform;
             Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
-            
+
             // Get the instanced submesh
             if (geoinst.geometryIndex >= md.geometry.size())
                 continue;
@@ -700,12 +722,12 @@ public:
             int normcount = submesh.normals.size();
             for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
                 const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
-                
+
                 // FIXME select proper texture/material
                 GeometryInstance::MaterialBindingMap::const_iterator whichMaterial = geoinst.materialBindingMap.find(prim.materialId);
                 std::string matname = whichMaterial!=geoinst.materialBindingMap.end()?hash+"_mat_"+boost::lexical_cast<std::string>(whichMaterial->second):"baseogremat";
                 Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
-            
+
                 osubmesh->setMaterialName(matname);
                 if (useSharedBuffer) {
                     osubmesh->useSharedVertices=true;
@@ -742,7 +764,7 @@ public:
                             memcpy(pData,&tangent.x,sizeof(float));
                             memcpy(pData+sizeof(float),&tangent.y,sizeof(float));
                             memcpy(pData+2*sizeof(float),&tangent.z,sizeof(float));
-                            pData+=VertexElement::getTypeSize(VET_FLOAT3);                    
+                            pData+=VertexElement::getTypeSize(VET_FLOAT3);
                         }
                         if (submesh.colors.size()==submesh.positions.size()) {
                             unsigned char r = (unsigned char)(submesh.colors[i].x*255);
@@ -778,7 +800,7 @@ public:
                                 vet=VET_FLOAT4;
                                 break;
                             }
-                            
+
                             memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
                             float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
                             UVHACK=1.0-UVHACK;
@@ -834,7 +856,7 @@ public:
         }
         if (useSharedBuffer) {
             assert(totalVerticesCopied==totalVertexCount);
-        
+
             vbuf->unlock();
         }
         mesh->load();
@@ -883,23 +905,23 @@ void MeshEntity::createMesh(const Meshdata& md) {
             /// FIXME: set bounds, bounding radius here
             Ogre::ManualObject mo(hash);
             mo.clear();
-            
+
             for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
                 const GeometryInstance& geoinst = *geoinst_it;
-                
+
                 Matrix4x4f pos_xform = geoinst.transform;
                 Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
-                
+
                 // Get the instanced submesh
                 assert(geoinst.geometryIndex < md.geometry.size());
                 const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
-                
+
                 int vertcount = submesh.positions.size();
                 int normcount = submesh.normals.size();
                 for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
                     const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
                     int indexcount = prim.indices.size();
-                    
+
                     // FIXME select proper texture/material
                     std::string matname = md.textures.size() > 0 ?
                         hash + "_texture_" + md.textures[0] :
@@ -917,7 +939,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
                         Vector3f normal = fixUp(up, submesh.normals[j]);
                         normal = normal_xform * normal;
                         mo.normal(normal[0], normal[1], normal[2]);
-                        std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";                
+                        std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";
                         mo.colour(1.0,1.0,1.0,1.0);
                         if (submesh.texUVs.size()==0) {
                             /// bogus texture for textureless models
@@ -947,11 +969,11 @@ void MeshEntity::createMesh(const Meshdata& md) {
                     mo.end();
                 }
             } // submesh
-        
+
             mo.setVisible(true);
             Ogre::MeshPtr mp = mo.convertToMesh(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
         }
-    
+
         bool check = mm.resourceExists(hash);
         loadMesh(hash);                     /// this is here because we removed
                                             /// mResource->loaded(true, mEpoch) in
@@ -1009,7 +1031,7 @@ void MeshEntity::onMeshParsed(ProxyObjectPtr proxy, String const& uri, Meshdata&
     for(Meshdata::TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
         String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
 
-        ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL,
+        ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL, mProxy->priority,
            std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));
         (*dl)();
     }

@@ -34,12 +34,13 @@
 
 #include "GraphicsResource.hpp"
 #include "../meruCompat/MeruDefs.hpp"
+#include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Meru {
 
 class GraphicsResourceEntity : public GraphicsResource {
 public:
-  GraphicsResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity);
+    GraphicsResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceEntity();
 
   virtual void doParse();

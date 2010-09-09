@@ -131,7 +131,9 @@ class SIRIKATA_EXPORT TransferMediator
 		std::tr1::shared_ptr<AggregateRequest>,
 		indexed_by<
 			hashed_unique<tag<tagID>, const_mem_fun<AggregateRequest,const std::string &,&AggregateRequest::getIdentifier> >,
-			ordered_non_unique<tag<tagPriority>, member<AggregateRequest,TransferRequest::PriorityType,&AggregateRequest::mPriority> >
+		ordered_non_unique<tag<tagPriority>,
+member<AggregateRequest,TransferRequest::PriorityType,&AggregateRequest::mPriority>,
+std::greater<TransferRequest::PriorityType> >
 		>
 	> AggregateList;
 	AggregateList mAggregateList;

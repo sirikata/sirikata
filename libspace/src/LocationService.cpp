@@ -30,19 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "LocationService.hpp"
-#include "AlwaysLocationUpdatePolicy.hpp"
+#include <sirikata/space/LocationService.hpp>
+
+AUTO_SINGLETON_INSTANCE(Sirikata::LocationUpdatePolicyFactory);
+AUTO_SINGLETON_INSTANCE(Sirikata::LocationServiceFactory);
 
 namespace Sirikata {
 
 LocationServiceListener::~LocationServiceListener() {
 }
 
-LocationUpdatePolicy::LocationUpdatePolicy(LocationService* locservice)
- : mLocService(locservice)
-{
-    mLocService->addListener(this);
 
+
+LocationUpdatePolicyFactory& LocationUpdatePolicyFactory::getSingleton() {
+    return AutoSingleton<LocationUpdatePolicyFactory>::getSingleton();
+}
+
+void LocationUpdatePolicyFactory::destroy() {
+    AutoSingleton<LocationUpdatePolicyFactory>::destroy();
+}
+
+
+LocationUpdatePolicy::LocationUpdatePolicy()
+ : mLocService(NULL)
+{
+}
+
+void LocationUpdatePolicy::initialize(LocationService* locservice)
+{
+    mLocService = locservice;
+    mLocService->addListener(this, true);
     mLocMessageRouter = mLocService->context()->serverRouter()->createServerMessageService("loc-update");
 }
 
@@ -51,13 +68,22 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 }
 
 
-LocationService::LocationService(SpaceContext* ctx)
+LocationServiceFactory& LocationServiceFactory::getSingleton() {
+    return AutoSingleton<LocationServiceFactory>::getSingleton();
+}
+
+void LocationServiceFactory::destroy() {
+    AutoSingleton<LocationServiceFactory>::destroy();
+}
+
+LocationService::LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
-   mContext(ctx)
+   mContext(ctx),
+   mUpdatePolicy(update_policy)
 {
     mProfiler = mContext->profiler->addStage("Location Service");
 
-    mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
+    mUpdatePolicy->initialize(this);
 
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);
 }
@@ -74,15 +100,20 @@ void LocationService::poll() {
     mProfiler->finished();
 }
 
-void LocationService::addListener(LocationServiceListener* listener) {
-    assert(mListeners.find(listener) == mListeners.end());
-    mListeners.insert(listener);
+void LocationService::addListener(LocationServiceListener* listener, bool want_aggregates) {
+    ListenerInfo info;
+    info.listener = listener;
+    info.wantAggregates = want_aggregates;
+    mListeners.insert(info);
 }
 
 void LocationService::removeListener(LocationServiceListener* listener) {
-    ListenerList::iterator it = mListeners.find(listener);
-    assert(it != mListeners.end());
-    mListeners.erase(it);
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++) {
+        if (it->listener == listener) {
+            mListeners.erase(it);
+            break;
+        }
+    }
 }
 
 void LocationService::subscribe(ServerID remote, const UUID& uuid) {
@@ -110,68 +141,74 @@ void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localObjectAdded(uuid, loc, orient, bounds, mesh);
+        if (!agg || it->wantAggregates)
+            it->listener->localObjectAdded(uuid, loc, orient, bounds, mesh);
 }
 
-void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
+void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localObjectRemoved(uuid);
+        if (!agg || it->wantAggregates)
+            it->listener->localObjectRemoved(uuid);
 }
 
-void LocationService::notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
-    std::cout<<"\n\nInside of notifylocallocationupdated\n";
+
+void LocationService::notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localLocationUpdated(uuid, newval);
+        if (!agg || it->wantAggregates)
+            it->listener->localLocationUpdated(uuid, newval);
 }
 
-void LocationService::notifyLocalOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const {
+void LocationService::notifyLocalOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localOrientationUpdated(uuid, newval);
+        if (!agg || it->wantAggregates)
+            it->listener->localOrientationUpdated(uuid, newval);
 }
 
-void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
+void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localBoundsUpdated(uuid, newval);
+        if (!agg || it->wantAggregates)
+            it->listener->localBoundsUpdated(uuid, newval);
 }
 
-void LocationService::notifyLocalMeshUpdated(const UUID& uuid, const String& newval) const
-{
+
+void LocationService::notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->localMeshUpdated(uuid, newval);
+        if (!agg || it->wantAggregates)
+            it->listener->localMeshUpdated(uuid, newval);
 }
 
 
 void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaObjectAdded(uuid, loc, orient, bounds, mesh);
+        it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh);
 }
 
 void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaObjectRemoved(uuid);
+        it->listener->replicaObjectRemoved(uuid);
 }
 
 void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
     std::cout<<"\n\nInside of notifyreplicalocationupdated\n";
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaLocationUpdated(uuid, newval);
+        it->listener->replicaLocationUpdated(uuid, newval);
 }
 
 void LocationService::notifyReplicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaOrientationUpdated(uuid, newval);
+        it->listener->replicaOrientationUpdated(uuid, newval);
 }
 
 void LocationService::notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaBoundsUpdated(uuid, newval);
+        it->listener->replicaBoundsUpdated(uuid, newval);
 }
 
 void LocationService::notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->replicaMeshUpdated(uuid, newval);
+        it->listener->replicaMeshUpdated(uuid, newval);
 }
 
 } // namespace Sirikata

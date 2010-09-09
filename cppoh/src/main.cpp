@@ -256,9 +256,11 @@ int main (int argc, char** argv) {
         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
         BoundingSphere3f(Vector3f::nil(), 1.f),
         "",
-        UUID::null(),
+        SolidAngle(0.00000001f),
+        UUID::null()
         scriptFile,
         scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
+
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);

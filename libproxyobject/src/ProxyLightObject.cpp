@@ -34,10 +34,9 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/ProxyLightObject.hpp>
 namespace Sirikata {
-ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj)
+ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
   : LightProvider(LightInfo()),
-    ProxyObject ( man, id, vwobj)
-{
+    ProxyObject(man, id, vwobj, owner_sor) {
 }
 void ProxyLightObject::update(const LightInfo&li) {
     LightProvider::notify(li);

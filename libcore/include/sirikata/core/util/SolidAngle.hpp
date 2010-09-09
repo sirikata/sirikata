@@ -33,8 +33,6 @@
 #ifndef _SIRIKATA_SOLID_ANGLE_HPP_
 #define _SIRIKATA_SOLID_ANGLE_HPP_
 
-#include "Vector3.hpp"
-
 namespace Sirikata {
 
 class SIRIKATA_EXPORT SolidAngle {

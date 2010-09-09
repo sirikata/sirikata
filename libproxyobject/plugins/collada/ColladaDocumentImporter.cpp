@@ -770,20 +770,20 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
           case EffectCommon::SHADER_PHONG:
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;
+//            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
+//            if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_LAMBERT:
             curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;
+//            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
+//            if (!curBlack) allBlack=false;
           case EffectCommon::SHADER_CONSTANT:
             curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
             curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),geomIndex,primIndex,mat.textures);
             if (!curBlack) allBlack=false;
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;
+//            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
+//            if (!curBlack) allBlack=false;
             break;
           default:
             break;

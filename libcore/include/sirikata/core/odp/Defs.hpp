@@ -131,6 +131,7 @@ public:
 
     const SpaceID& space() const;
     const ObjectReference& object() const;
+    SpaceObjectReference spaceObject() const { return SpaceObjectReference(space(), object()); }
     const PortID& port() const;
 
     String toString() const;

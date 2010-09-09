@@ -117,6 +117,13 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
 
 
 bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
+    // If its not in the connection list we're probably chasing bad
+    // pointers
+    if (mContext->stopped()) {
+        SPACE_LOG(fatal,"Trying to send after shutdown requested.");
+        return false;
+    }
+
     ObjectHostConnection* conn = conn_id.conn;
 
     if (conn == NULL) {
@@ -124,7 +131,6 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
         return false;
     }
 
-    // If its not in the connection list we're probably chasing bad pointers
     assert( mConnections.find(conn) != mConnections.end() );
 
     String data;

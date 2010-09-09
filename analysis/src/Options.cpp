@@ -38,7 +38,7 @@ namespace Sirikata {
 
 void InitAnalysisOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
-        .addOption(new OptionValue(OPT_ANALYSIS_PLUGINS,"weight-exp,weight-sqr",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_ANALYSIS_PLUGINS,"weight-exp,weight-sqr,weight-const",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("num-oh", "1", Sirikata::OptionValueType<uint32>(), "Number of object hosts."))
 
@@ -57,9 +57,14 @@ void InitAnalysisOptions() {
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH_RATE, "10ms", Sirikata::OptionValueType<Duration>(), "Frequency of samples in windowed bandwidth analysis, i.e. how much to slide the window by"))
 
         .addOption(new OptionValue(ANALYSIS_OSEG, "false", Sirikata::OptionValueType<bool>(), "Run OSEG analyses - migrates, lookups, processed lookups"))
-      .addOption(new OptionValue(OSEG_ANALYZE_AFTER,"0", Sirikata::OptionValueType<int>(),"Only run the oseg analysis after this many seconds of the run have elapsed."))
+        .addOption(new OptionValue(OSEG_ANALYZE_AFTER,"0", Sirikata::OptionValueType<int>(),"Only run the oseg analysis after this many seconds of the run have elapsed."))
 
 
+        .addOption(new OptionValue(ANALYSIS_TOTAL_NUM_ALL_SERVERS ,"0",Sirikata::OptionValueType<uint32>(),"Number of all servers/trace files to go through."))
+        
+
+        
+        
         .addOption(new OptionValue(ANALYSIS_LOC_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Run location latency analysis - latency of location updates"))
 
         .addOption(new OptionValue(ANALYSIS_PROX_DUMP, "", Sirikata::OptionValueType<String>(), "Run proximity dump analysis -- just dumps a textual form of all proximity events to the specified file"))

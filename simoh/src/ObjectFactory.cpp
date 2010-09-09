@@ -162,6 +162,10 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
  *  object in the file, making it easy to split the file across multiple object hosts.
  */
 void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Duration& duration) {
+    bool dump_pack = GetOptionValue<bool>(OBJECT_PACK_DUMP);
+    if (dump_pack) return; // If we're dumping objects, don't load
+                           // from a pack
+
     Time start(Time::null());
     Time end = start + duration;
     Vector3f region_extents = region.extents();
@@ -321,12 +325,11 @@ void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, cons
 }
 
 void ObjectFactory::dumpObjectPack() const {
-    String pack_filename = GetOptionValue<String>(OBJECT_PACK_DUMP);
-    if (pack_filename.empty())
-        return;
+    bool dump_pack = GetOptionValue<bool>(OBJECT_PACK_DUMP);
+    if (!dump_pack) return;
 
-    String pack_dir = GetOptionValue<String>(OBJECT_PACK_DIR);
-    pack_filename = pack_dir + pack_filename;
+    String pack_filename = GetOptionValue<String>(OBJECT_PACK);
+    assert(!pack_filename.empty());
 
     FILE* pack_file = fopen(pack_filename.c_str(), "wb");
     if (pack_file == NULL) {

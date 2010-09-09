@@ -66,7 +66,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mQuitting(false),
    mLocUpdateTimer( Network::IOTimer::create(mContext->ioService) )
 {
-  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, this, this);
+  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, ctx, this, this);
 }
 
 Object::~Object() {
@@ -241,18 +241,16 @@ void Object::handleSpaceMigration(const SpaceID& space, const ObjectReference& o
 
 void Object::handleSpaceStreamCreated() {
   boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
+  using std::tr1::placeholders::_1;
+  using std::tr1::placeholders::_2;
 
   if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
-    boost::shared_ptr<Connection<UUID> > sstConnection = sstStream->connection().lock();
-    assert(sstConnection);
-
-    sstConnection->registerReadDatagramCallback(OBJECT_PORT_LOCATION,
-						std::tr1::bind(&Object::locationMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
-						);
-    sstConnection->registerReadDatagramCallback(OBJECT_PORT_PROXIMITY,
-                                                std::tr1::bind(&Object::proximityMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
-                                                );
-
+      sstStream->listenSubstream(OBJECT_PORT_LOCATION,
+          std::tr1::bind(&Object::handleLocationSubstream, this, _1, _2)
+      );
+      sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
+          std::tr1::bind(&Object::handleProximitySubstream, this, _1, _2)
+      );
   }
 }
 
@@ -268,6 +266,23 @@ void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg
     dispatchMessage(*msg);
     delete msg;
 }
+
+void Object::handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
+    s->registerReadCallback( std::tr1::bind(&Object::handleLocationSubstreamRead, this, s, _1, _2) );
+}
+
+void Object::handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
+    s->registerReadCallback( std::tr1::bind(&Object::handleProximitySubstreamRead, this, s, _1, _2) );
+}
+
+void Object::handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
+    locationMessage(buffer, length);
+}
+
+void Object::handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
+    proximityMessage(buffer, length);
+}
+
 
 void Object::locationMessage(uint8* buffer, int len) {
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
@@ -296,28 +311,32 @@ void Object::proximityMessage(uint8* buffer, int len) {
     bool parse_success = contents.ParseFromArray(buffer, len);
     assert(parse_success);
 
-    for(int32 idx = 0; idx < contents.addition_size(); idx++) {
-        Sirikata::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
+    for(uint32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
-        TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
-        CONTEXT_OHTRACE(prox,
-            mID,
-            addition.object(),
-            true,
-            loc
-        );
-    }
+            TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-    for(int32 idx = 0; idx < contents.removal_size(); idx++) {
-        Sirikata::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
+            CONTEXT_OHTRACE(prox,
+                mID,
+                addition.object(),
+                true,
+                loc
+            );
+        }
 
-        CONTEXT_OHTRACE(prox,
-            mID,
-            removal.object(),
-            false,
-            TimedMotionVector3f()
-        );
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+
+            CONTEXT_OHTRACE(prox,
+                mID,
+                removal.object(),
+                false,
+                TimedMotionVector3f()
+            );
+        }
     }
 }
 

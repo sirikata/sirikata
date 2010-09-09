@@ -1,6 +1,9 @@
 <html>
 <head>
 <title>FPS</title>
+
+<script type="text/javascript" src="includes/js/jquery-1.4.2.min.js"></script>
+
 <style type="text/css">
 	body {
 		margin: 0px;
@@ -26,7 +29,8 @@
 </style>
 <script type="text/javascript">
 function update_fps(num) {
-	document.getElementById('fps-num').innerHTML = (Math.round(num*10)/10).toFixed(1);
+	var formatted = (Math.round(num*10)/10).toFixed(1);
+	$("#fps-num").html(formatted);
 }
 </script>
 </head>

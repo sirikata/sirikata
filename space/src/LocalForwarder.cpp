@@ -87,6 +87,9 @@ bool LocalForwarder::tryForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
     TIMESTAMP_START(tstamp, msg);
     TIMESTAMP_END(tstamp, Trace::FORWARDED_LOCALLY);
 
+    // If a stop was requested, don't try to forward.
+    if (mContext->stopped()) return false;
+
     bool send_success = conn->send(msg);
     if (!send_success) {
         TIMESTAMP_END(tstamp, Trace::DROPPED_AT_FORWARDED_LOCALLY);

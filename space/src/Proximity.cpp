@@ -36,9 +36,7 @@
 
 #include <algorithm>
 
-#include <prox/BruteForceQueryHandler.hpp>
-#include <prox/RTreeQueryHandler.hpp>
-#include <prox/RTreeCutQueryHandler.hpp>
+#include <sirikata/space/QueryHandlerFactory.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
 
@@ -87,15 +85,21 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
-    mServerQueryHandler = new Prox::BruteForceQueryHandler<ObjectProxSimulationTraits>();
+    String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
+    String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
+    mServerQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
+    mServerQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mServerQueryHandler->initialize(mLocalLocCache);
 
     // Object Queries
     mGlobalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
-    mObjectQueryHandler = new Prox::BruteForceQueryHandler<ObjectProxSimulationTraits>();
+    String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
+    String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
+    mObjectQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+    mObjectQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
-    mLocService->addListener(this);
+    mLocService->addListener(this, false);
 
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
 
@@ -239,9 +243,11 @@ void Proximity::receiveMessage(Message* msg) {
         assert( prox_result_msg.has_t() );
         Time t = prox_result_msg.t();
 
-        if (prox_result_msg.addition_size() > 0) {
-            for(int32 idx = 0; idx < prox_result_msg.addition_size(); idx++) {
-                Sirikata::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
+        for(int32 idx = 0; idx < prox_result_msg.update_size(); idx++) {
+            Sirikata::Protocol::Prox::ProximityUpdate update = prox_result_msg.update(idx);
+
+            for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+                Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -251,11 +257,9 @@ void Proximity::receiveMessage(Message* msg) {
                     (addition.has_mesh() ? addition.mesh() : "")
                 );
             }
-        }
 
-        if (prox_result_msg.removal_size() > 0) {
-            for(int32 idx = 0; idx < prox_result_msg.removal_size(); idx++) {
-                Sirikata::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
+            for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+                Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
         }
@@ -311,6 +315,51 @@ void Proximity::removeRelevantServer(ServerID sid) {
     boost::lock_guard<boost::mutex> lck(mServerSetMutex);
     mServersQueried.erase(sid);
 }
+
+
+void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
+    // On addition, an "aggregate" will have no children, i.e. its zero sized.
+    mLocService->addLocalAggregateObject(
+        objid,
+        TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
+        TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
+        BoundingSphere3f(),
+        ""
+    );
+}
+
+void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+    mLocService->updateLocalAggregateLocation(
+        objid,
+        TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
+    );
+    mLocService->updateLocalAggregateBounds(
+        objid,
+        BoundingSphere3f(Vector3f(0,0,0), bnds.radius())
+    );
+}
+
+void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    // Loc cares only about this chance to update state of aggregate
+    updateAggregateLoc(objid, bnds);
+}
+
+void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    // Loc cares only about this chance to update state of aggregate
+    updateAggregateLoc(objid, bnds);
+}
+
+void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+    updateAggregateLoc(objid, bnds);
+}
+
+void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
+    mLocService->removeLocalAggregateObject(objid);
+}
+
+void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
+}
+
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
     mProxStrand->post(
@@ -433,11 +482,9 @@ void Proximity::poll() {
         std::string proxMsg = msg_front->payload();
 
         if (proxStream != boost::shared_ptr<Stream<UUID> >()) {
-          boost::shared_ptr<Connection<UUID> > conn = proxStream->connection().lock();
-          assert(conn);
-
-          object_sent = conn->datagram( (void*)proxMsg.data(), proxMsg.size(),
-                                                         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY, NULL);
+          proxStream->createChildStream(NULL, (void*)proxMsg.data(), proxMsg.size(),
+              OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY);
+          object_sent = true;
         }
         else {
           object_sent = false;
@@ -469,8 +516,10 @@ void Proximity::handleRemoveAllServerLocSubscription(const ServerID& subscriber)
 }
 
 void Proximity::queryHasEvents(Query* query) {
-    // Currently we don't use this directly, we just always iterate over all queries and check them.
-    // FIXME we could store this information and only check the ones we get callbacks for here
+    if (query->handler() == mServerQueryHandler)
+        generateServerQueryEvents(query);
+    else
+        generateObjectQueryEvents(query);
 }
 
 
@@ -522,13 +571,9 @@ void Proximity::proxThreadMain() {
 
     Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
     Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
-    Poller mServerEventsPoller(mProxStrand, std::tr1::bind(&Proximity::generateServerQueryEvents, this), max_rate);
-    Poller mObjectEventsPoller(mProxStrand, std::tr1::bind(&Proximity::generateObjectQueryEvents, this), max_rate);
 
     mServerHandlerPoller.start();
     mObjectHandlerPoller.start();
-    mServerEventsPoller.start();
-    mObjectEventsPoller.start();
 
     mProxService->run();
 }
@@ -538,131 +583,107 @@ void Proximity::tickQueryHandler(ProxQueryHandler* qh) {
     qh->tick(simT);
 }
 
-void Proximity::generateServerQueryEvents() {
+void Proximity::generateServerQueryEvents(Query* query) {
     typedef std::deque<QueryEvent> QueryEventList;
 
     Time t = mContext->simTime();
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
-    for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
-        ServerID sid = query_it->first;
-        Query* query = query_it->second;
+    ServerID sid = mInvertedServerQueries[query];
 
-        QueryEventList evts;
-        query->popEvents(evts);
+    QueryEventList evts;
+    query->popEvents(evts);
 
-        while(!evts.empty()) {
-            Sirikata::Protocol::Prox::Container container;
-            Sirikata::Protocol::Prox::IProximityResults contents = container.mutable_result();
-            contents.set_t(t);
-            uint32 count = 0;
-            while(count < max_count && !evts.empty()) {
-                const QueryEvent& evt = evts.front();
-                if (evt.type() == QueryEvent::Added) {
-                    if (mLocalLocCache->tracking(evt.id())) { // If the cache already lost it, we can't do anything
-                        count++;
-
-                        mContext->mainStrand->post(
-                            std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, evt.id())
-                        );
-
-                        Sirikata::Protocol::Prox::IObjectAddition addition = contents.add_addition();
-                        addition.set_object( evt.id() );
-
-                        TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
-                        Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
-                        msg_loc.set_t(loc.updateTime());
-                        msg_loc.set_position(loc.position());
-                        msg_loc.set_velocity(loc.velocity());
-
-                        TimedMotionQuaternion orient = mLocalLocCache->orientation(evt.id());
-                        Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                        msg_orient.set_t(orient.updateTime());
-                        msg_orient.set_position(orient.position());
-                        msg_orient.set_velocity(orient.velocity());
-
-                        addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
-                        const String& mesh = mLocalLocCache->mesh(evt.id());
-                        if (mesh.size() > 0)
-                            addition.set_mesh(mesh);
-                    }
-                }
-                else {
+    while(!evts.empty()) {
+        Sirikata::Protocol::Prox::Container container;
+        Sirikata::Protocol::Prox::IProximityResults contents = container.mutable_result();
+        contents.set_t(t);
+        uint32 count = 0;
+        while(count < max_count && !evts.empty()) {
+            const QueryEvent& evt = evts.front();
+            Sirikata::Protocol::Prox::IProximityUpdate event_results = contents.add_update();
+            // Each QueryEvent is made up of additions and
+            // removals
+            for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
+                UUID objid = evt.additions()[aidx].id();
+                if (mLocalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&Proximity::handleRemoveServerLocSubscription, this, sid, evt.id())
-                    );
-                    Sirikata::Protocol::Prox::IObjectRemoval removal = contents.add_removal();
-                    removal.set_object( evt.id() );
-                }
 
-                evts.pop_front();
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, objid)
+                    );
+
+                    Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                    addition.set_object( objid );
+
+                    TimedMotionVector3f loc = mLocalLocCache->location(objid);
+                    Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
+                    msg_loc.set_t(loc.updateTime());
+                    msg_loc.set_position(loc.position());
+                    msg_loc.set_velocity(loc.velocity());
+
+                    TimedMotionQuaternion orient = mLocalLocCache->orientation(objid);
+                    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                    msg_orient.set_t(orient.updateTime());
+                    msg_orient.set_position(orient.position());
+                    msg_orient.set_velocity(orient.velocity());
+
+                    addition.set_bounds( mLocalLocCache->bounds(objid) );
+                    const String& mesh = mLocalLocCache->mesh(objid);
+                    if (mesh.size() > 0)
+                        addition.set_mesh(mesh);
+                }
+            }
+            for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
+                UUID objid = evt.removals()[ridx].id();
+                count++;
+                mContext->mainStrand->post(
+                    std::tr1::bind(&Proximity::handleRemoveServerLocSubscription, this, sid, objid)
+                );
+                Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
+                removal.set_object(objid);
             }
 
-            PROXLOG(insane,"Reporting " << contents.addition_size() << " additions, " << contents.removal_size() << " removals to server " << sid);
-
-            Message* msg = new Message(
-                mContext->id(),
-                SERVER_PORT_PROX,
-                sid,
-                SERVER_PORT_PROX,
-                serializePBJMessage(container)
-            );
-            mServerResults.push(msg);
+            evts.pop_front();
         }
+
+        //PROXLOG(insane,"Reporting " << contents.addition_size() << " additions, " << contents.removal_size() << " removals to server " << sid);
+
+        Message* msg = new Message(
+            mContext->id(),
+            SERVER_PORT_PROX,
+            sid,
+            SERVER_PORT_PROX,
+            serializePBJMessage(container)
+        );
+        mServerResults.push(msg);
     }
 }
 
-void Proximity::generateObjectQueryEvents() {
+void Proximity::generateObjectQueryEvents(Query* query) {
     typedef std::deque<QueryEvent> QueryEventList;
 
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
-    for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
-        UUID query_id = query_it->first;
-        Query* query = query_it->second;
+    UUID query_id = mInvertedObjectQueries[query];
 
-        QueryEventList evts;
-        query->popEvents(evts);
+    QueryEventList evts;
+    query->popEvents(evts);
 
-        while(!evts.empty()) {
-            Sirikata::Protocol::Prox::ProximityResults prox_results;
-            prox_results.set_t(mContext->simTime());
+    while(!evts.empty()) {
+        Sirikata::Protocol::Prox::ProximityResults prox_results;
+        prox_results.set_t(mContext->simTime());
 
-            uint32 count = 0;
-            while(count < max_count && !evts.empty()) {
-                const QueryEvent& evt = evts.front();
+        uint32 count = 0;
+        while(count < max_count && !evts.empty()) {
+            const QueryEvent& evt = evts.front();
+            Sirikata::Protocol::Prox::IProximityUpdate event_results = prox_results.add_update();
 
-                if (evt.type() == QueryEvent::Added) {
-                    if (mGlobalLocCache->tracking(evt.id())) { // If the cache already lost it, we can't do anything
-                        count++;
-                        mContext->mainStrand->post(
-                            std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, evt.id())
-                        );
-
-                        Sirikata::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
-                        addition.set_object( evt.id() );
-
-                        Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                        TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
-                        motion.set_t(loc.updateTime());
-                        motion.set_position(loc.position());
-                        motion.set_velocity(loc.velocity());
-
-                        TimedMotionQuaternion orient = mGlobalLocCache->orientation(evt.id());
-                        Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                        msg_orient.set_t(orient.updateTime());
-                        msg_orient.set_position(orient.position());
-                        msg_orient.set_velocity(orient.velocity());
-
-                        addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
-                        const String& mesh = mGlobalLocCache->mesh(evt.id());
-                        if (mesh.size() > 0)
-                            addition.set_mesh(mesh);
-                    }
-                }
-                else {
+            for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
+                UUID objid = evt.additions()[aidx].id();
+                if (mGlobalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
+<<<<<<< HEAD
                     // FIXME removal is disabled because setting velocities was
                     // causing objects to be removed.  This might be a bug with
                     // extrapolation.  See bug http://sirikata.com/trac/ticket/109.
@@ -673,20 +694,55 @@ void Proximity::generateObjectQueryEvents() {
 
                     //Sirikata::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
                     //removal.set_object( evt.id() );
-                }
+=======
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
+                    );
 
-                evts.pop_front();
+                    Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                    addition.set_object( objid );
+
+                    Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+                    TimedMotionVector3f loc = mGlobalLocCache->location(objid);
+                    motion.set_t(loc.updateTime());
+                    motion.set_position(loc.position());
+                    motion.set_velocity(loc.velocity());
+
+                    TimedMotionQuaternion orient = mGlobalLocCache->orientation(objid);
+                    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                    msg_orient.set_t(orient.updateTime());
+                    msg_orient.set_position(orient.position());
+                    msg_orient.set_velocity(orient.velocity());
+
+                    addition.set_bounds( mGlobalLocCache->bounds(objid) );
+                    const String& mesh = mGlobalLocCache->mesh(objid);
+                    if (mesh.size() > 0)
+                        addition.set_mesh(mesh);
+>>>>>>> origin/master
+                }
+            }
+            for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
+                UUID objid = evt.removals()[ridx].id();
+                count++;
+                mContext->mainStrand->post(
+                    std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, objid)
+                );
+
+                Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
+                removal.set_object( objid );
             }
 
-            Sirikata::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
-                mContext->id(),
-                UUID::null(), OBJECT_PORT_PROXIMITY,
-                query_id, OBJECT_PORT_PROXIMITY,
-                serializePBJMessage(prox_results)
-            );
-
-            mObjectResults.push(obj_msg);
+            evts.pop_front();
         }
+
+        Sirikata::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
+            mContext->id(),
+            UUID::null(), OBJECT_PORT_PROXIMITY,
+            query_id, OBJECT_PORT_PROXIMITY,
+            serializePBJMessage(prox_results)
+        );
+
+        mObjectResults.push(obj_msg);
     }
 }
 
@@ -701,7 +757,9 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
         float ms = bounds.radius();
 
         Query* q = mServerQueryHandler->registerQuery(loc, region, ms, angle);
+        q->setEventListener(this);
         mServerQueries[server] = q;
+        mInvertedServerQueries[q] = server;
     }
     else {
         PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat());
@@ -722,6 +780,7 @@ void Proximity::handleRemoveServerQuery(const ServerID& server) {
 
     Query* q = it->second;
     mServerQueries.erase(it);
+    mInvertedServerQueries.erase(q);
     delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
 
     mContext->mainStrand->post(
@@ -741,7 +800,9 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
             float ms = bounds.radius();
 
             Query* q = mObjectQueryHandler->registerQuery(loc, region, ms, angle);
+            q->setEventListener(this);
             mObjectQueries[object] = q;
+            mInvertedObjectQueries[q] = object;
         }
     }
     else {
@@ -760,6 +821,7 @@ void Proximity::handleRemoveObjectQuery(const UUID& object) {
 
     Query* q = it->second;
     mObjectQueries.erase(it);
+    mInvertedObjectQueries.erase(q);
     delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
 
     mContext->mainStrand->post(
