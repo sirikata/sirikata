@@ -70,11 +70,10 @@
 //     SpaceID space = *(spaces.begin());
 
 #define FIXME_GET_SPACE() \
-    HostedObject::SpaceSet spaces;              \
-    mParent->getSpaces(spaces);                 \
-    assert(spaces.size() == 1);                 \
-    SpaceID space = *(spaces.begin());
-
+    HostedObject::SpaceObjRefSet spaceobjrefs;              \
+    mParent->getSpaceObjRefs(spaceobjrefs);                 \
+    assert(spaceobjrefs.size() == 1);                 \
+    SpaceID space = (spaceobjrefs.begin())->space();
 
 
 using namespace v8;
@@ -107,16 +106,18 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     mHandlingEvent = false;
 
     //const HostedObject::SpaceSet& spaces = mParent->spaces();
-    HostedObject::SpaceSet spaces;
-    mParent->getSpaces(spaces);
-    if (spaces.size() > 1)
+    HostedObject::SpaceObjRefSet spaceobjrefs;
+
+    mParent->getSpaceObjRefs(spaceobjrefs);
+    if (spaceobjrefs.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
 
-    for(HostedObject::SpaceSet::const_iterator space_it = spaces.begin(); space_it != spaces.end(); space_it != spaces.end()?space_it++:space_it)
+    for(HostedObject::SpaceObjRefSet::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it != spaceobjrefs.end()?space_it++:space_it)
     {
         //register for scripting messages from user
-        SpaceID space_id=*space_it;
-        mScriptingPort = mParent->bindODPPort(space_id, Services::SCRIPTING);
+        SpaceID space_id=space_it->space();
+        ObjectReference obj_refer = space_it->object();
+        mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
 
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
@@ -126,19 +127,20 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 
         
         //register port for messaging
-        mMessagingPort = mParent->bindODPPort(space_id, Services::COMMUNICATION);
+        mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
 
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
         if (mMessagingPort)
             mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
 
-        space_it=spaces.find(space_id);//in case the space_set was munged in the
-                                       //process
+
+        //in case the space_set was munged in the process
+        space_it=spaceobjrefs.find(SpaceObjectReference(space_id, obj_refer));
 
 
         //register a port for creating entities
-        mCreateEntityPort = mParent->bindODPPort(space_id, Services::CREATE_ENTITY);
+        mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
         //shouldn't need to receive on this port
     }
 }
@@ -637,18 +639,6 @@ v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectRe
     return CreateJSResult(mContext,curOrientation);
 }
 
-//orientation vel
-v8::Handle<v8::Value>JSObjectScript::getOrientationVelFunction(const SpaceObjectReference* sporef)
-{
-    Quaternion curQuatVel = mParent->requestCurrentOrientationVel(sporef->space(),sporef->object());
-    return CreateJSResult(mContext,curQuatVel);
-}
-
-void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
-{
-    mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
-}
-
 
 //scale
 //FIXME: need to return the right space here.
@@ -958,8 +948,6 @@ Handle<Object> JSObjectScript::getSystemObject()
 }
 
 
-
-
 void JSObjectScript::updateAddressable()
 {
   HandleScope handle_scope;
@@ -1003,9 +991,9 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
 {
     HandleScope handle_scope;
     //HostedObject::SpaceSet spaces = mParent->spaces();
-    HostedObject::SpaceSet spaces;
-    mParent->getSpaces(spaces);
-    HostedObject::SpaceSet::const_iterator it = spaces.begin();
+    HostedObject::SpaceObjRefSet spaces;
+    mParent->getSpaceObjRefs(spaces);
+    HostedObject::SpaceObjRefSet::const_iterator it = spaces.begin();
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Array> arrayObj= v8::Array::New();
 
@@ -1015,8 +1003,7 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
 
         JSPresenceStruct* presToAdd = new JSPresenceStruct;
         presToAdd->jsObjScript = this;
-        presToAdd->sporef = new SpaceObjectReference(*it,(mParent->id(*it)).object());
-
+        presToAdd->sporef = new SpaceObjectReference(*it);
         
         mPresenceList.push_back(presToAdd);
         

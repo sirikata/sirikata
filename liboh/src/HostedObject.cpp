@@ -434,18 +434,20 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
 
 
 
-void HostedObject::getSpaces(SpaceSet& ss) const
+void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
 {
     if (mSpaceData == NULL)
     {
-        std::cout<<"\n\n\nCalling getSpaces when not connected to any spaces.  This really shouldn't happen\n\n\n";
+        std::cout<<"\n\n\nCalling getSpaceObjRefs when not connected to any spaces.  This really shouldn't happen\n\n\n";
         assert(false);
     }
-    
+
     SpaceDataMap::const_iterator smapIter;
     for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
-        ss.insert(smapIter->first);
+        ss.insert(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
 }
+
+
 
 
 
@@ -879,7 +881,9 @@ void HostedObject::connect(
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const SolidAngle& queryAngle,
-        const UUID&object_uuid_evidence)
+        const UUID&object_uuid_evidence,
+        const String& scriptFile,
+        const String& scriptType)
 {
     if (spaceID == SpaceID::null())
     {
@@ -935,7 +939,7 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     //bind an odp port to listen for the begin scripting signal.  if have
     //receive the scripting signal for the first time, that means that we create
     //a JSObjectScript for this hostedobject
-    bindODPPort(space,Services::LISTEN_FOR_SCRIPT_BEGIN);
+    bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
     //attach script callback;
     if (scriptFile != "")
@@ -1796,15 +1800,6 @@ void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const 
     Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
     TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(curOrientQuat,quat));
     requestOrientationUpdate(space, tmq);
-}
-
-
-
-ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyManagerPtr proxy_manager = getProxyManager(space);
-    ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
-    return proxy_obj;
 }
 
 

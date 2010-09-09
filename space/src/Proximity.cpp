@@ -683,18 +683,7 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                 UUID objid = evt.additions()[aidx].id();
                 if (mGlobalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
-<<<<<<< HEAD
-                    // FIXME removal is disabled because setting velocities was
-                    // causing objects to be removed.  This might be a bug with
-                    // extrapolation.  See bug http://sirikata.com/trac/ticket/109.
 
-                    //mContext->mainStrand->post(
-                    //    std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, evt.id())
-                    //);
-
-                    //Sirikata::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
-                    //removal.set_object( evt.id() );
-=======
                     mContext->mainStrand->post(
                         std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
                     );
@@ -718,7 +707,6 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                     const String& mesh = mGlobalLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
->>>>>>> origin/master
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {

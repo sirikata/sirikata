@@ -106,9 +106,7 @@ protected:
 //------- Members
     ObjectHostContext* mContext;
 
-    // public:
-    //   //typedef std::set<SpaceID> SpaceSet;
-    // private:
+
     
   private:
     //SpaceSet mSpaces;
@@ -154,12 +152,8 @@ private:
 public:
 
     /** Get a set of spaces the object is currently connected to. */
-    typedef std::set<SpaceID> SpaceSet;
-    void getSpaces(SpaceSet& ss) const;
-    //bftm re-write
-    // const SpaceSet& spaces() const {
-    //     return mSpaces;
-    // }
+    typedef std::set<SpaceObjectReference> SpaceObjRefSet;
+    void getSpaceObjRefs(SpaceObjRefSet& ss) const;
 
     
 

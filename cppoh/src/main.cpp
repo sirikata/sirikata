@@ -257,7 +257,7 @@ int main (int argc, char** argv) {
         BoundingSphere3f(Vector3f::nil(), 1.f),
         "",
         SolidAngle(0.00000001f),
-        UUID::null()
+        UUID::null(),
         scriptFile,
         scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
 
