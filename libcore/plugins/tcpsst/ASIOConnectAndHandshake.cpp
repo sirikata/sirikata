@@ -95,7 +95,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                                                  unsigned int whichSocket,
                                                  const tcp::resolver::iterator &it,
                                                  const ErrorCode &error) {
-    
+
     if (!connection) {
         return;
     }
