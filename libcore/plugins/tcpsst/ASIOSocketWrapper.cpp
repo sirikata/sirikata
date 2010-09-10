@@ -446,7 +446,7 @@ size_t ASIOSocketWrapper::CheckCRLF::operator() (const ASIOSocketWrapper::ErrorC
     return 65536;
 }
 
-void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol){
+void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::string& response){
     std::stringstream header;
     header << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
     header << "Upgrade: WebSocket\r\n";
@@ -455,6 +455,8 @@ void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thu
     header << "Sec-WebSocket-Location: ws://" << host << resource_name << "\r\n";
     header << "WebSocket-Protocol: " << subprotocol << "\r\n";
     header << "\r\n";
+    header << response;
+
     std::string finalHeader(header.str());
     Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
     rawSend(thus,headerData,true);

@@ -38,6 +38,10 @@
 #include "TCPSetCallbacks.hpp"
 #include "TCPStreamListener.hpp"
 #include "ASIOReadBuffer.hpp"
+
+#include <boost/lexical_cast.hpp>
+#include <openssl/md5.h>
+
 namespace Sirikata {
 namespace Network {
 namespace ASIOStreamBuilder{
@@ -48,12 +52,47 @@ class IncompleteStreamState {
 public:
     int mNumSockets;
     std::vector<TCPSocket*>mSockets;
+    std::map<TCPSocket*, std::string> mWebSocketResponses;
 };
 
 namespace {
 typedef std::map<UUID,IncompleteStreamState> IncompleteStreamMap;
 std::deque<UUID> sStaleUUIDs;
 IncompleteStreamMap sIncompleteStreams;
+
+int64 getObscuredNumber(const std::string& key) {
+    std::string filtered;
+    for(int32 i = 0; i < key.size(); i++)
+        if (key[i] >= '0' && key[i] <= '9')
+            filtered.push_back(key[i]);
+    return boost::lexical_cast<int64>(filtered);
+}
+
+int64 getNumSpaces(const std::string& key) {
+    int32 result = 0;
+    for(int32 i = 0; i < key.size(); i++)
+        if (key[i] == ' ') result++;
+    return result;
+}
+
+std::string getWebSocketSecReply(const std::string& key1, const std::string& key2, const std::string key3) {
+    char magic_concat[16];
+    int32* magic_1 = (int32*)magic_concat;
+    int32* magic_2 = (int32*)(magic_concat + 4);
+    char* magic_bytes = magic_concat + 8;
+
+    *magic_1 = htonl(getObscuredNumber(key1) / getNumSpaces(key1));
+    *magic_2 = htonl(getObscuredNumber(key2) / getNumSpaces(key2));
+    assert(key3.size() == 8);
+    memcpy(magic_bytes, &(key3[0]), 8);
+
+    // FIXME md5 hash
+    unsigned char result[MD5_DIGEST_LENGTH];
+    MD5((unsigned char*) magic_concat, 16, result);
+
+    return std::string((const char*)result, MD5_DIGEST_LENGTH);
+}
+
 }
 
 ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
@@ -158,6 +197,8 @@ void buildStream(TcpSstHeaderArray *buffer,
     std::string key3 = buffer_str.substr(bytes_transferred - 8);
     assert(key3.size() == 8);
 
+    std::string reply_str = getWebSocketSecReply(key1, key2, key3);
+
     bool binaryStream=protocol.find("sst")==0;
     bool base64Stream=!binaryStream;
     boost::asio::ip::tcp::no_delay option(data->mNoDelay);
@@ -194,13 +235,14 @@ void buildStream(TcpSstHeaderArray *buffer,
         sIncompleteStreams.erase(where);
     }else {
         where->second.mSockets.push_back(socket);
+        where->second.mWebSocketResponses[socket] = reply_str;
         if (numConnections==(unsigned int)where->second.mSockets.size()) {
             MultiplexedSocketPtr shared_socket(
                 MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,data->cb,base64Stream));
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
-            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol);
+            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, where->second.mWebSocketResponses);
             sIncompleteStreams.erase(where);
 
 
