@@ -59,7 +59,7 @@ class ResourceDownloadTask : public DependencyTask
 public:
     typedef std::tr1::function<void(
         std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<Transfer::DenseData> response)> DownloadCallback;
+        std::tr1::shared_ptr<const Transfer::DenseData> response)> DownloadCallback;
 
     ResourceDownloadTask(DependencyManager* mgr, const URI& uri, ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb);
   virtual ~ResourceDownloadTask();
@@ -83,7 +83,7 @@ protected:
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 
   void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<Transfer::DenseData> response);
+            std::tr1::shared_ptr<const Transfer::DenseData> response);
 
 
   bool mStarted;

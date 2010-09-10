@@ -302,7 +302,7 @@ void MeshEntity::setSelected(bool selected) {
     }
 }
 
-void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<DenseData> response)
+void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<const DenseData> response)
 {
     String fn = request->getURI().filename();
     if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
@@ -1013,7 +1013,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
 }
 
 void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
-    std::tr1::shared_ptr<DenseData> response, Meshdata& md) {
+    std::tr1::shared_ptr<const DenseData> response, Meshdata& md) {
     
     mTextureFingerprints[request->getURI().toString()] = request->getIdentifier();
     if (mActiveCDNArchive) {
