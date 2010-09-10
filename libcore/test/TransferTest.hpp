@@ -359,7 +359,7 @@ public:
 
             //loop through compressed headers
             for(HeaderMapType::const_iterator it = compressedHeaders.begin(); it != compressedHeaders.end(); it++) {
-                if(it->first != "Content-Encoding" && it->first != "Vary" && it->first != "Content-Length") {
+                if(it->first != "Content-Encoding" && it->first != "Vary" && it->first != "Content-Length" && it->first != "Date") {
                     HeaderMapType::const_iterator findOther = uncompressedHeaders.find(it->first);
                     TS_ASSERT(findOther != uncompressedHeaders.end());
                     if(findOther == uncompressedHeaders.end()) {
@@ -527,8 +527,8 @@ protected:
         TS_ASSERT(response->getFingerprint() == mHash);
         TS_ASSERT(response->getURI() == mURI);
         mMetadata = response;
-	
-	
+
+
 	cb();
     }
 
@@ -564,7 +564,7 @@ public:
     }
     void metadataFinished(std::tr1::shared_ptr<Transfer::TransferPool> pool,
             VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
-      
+
         //Make sure chunk given is part of file
         std::tr1::shared_ptr<Transfer::Chunk> chunk;
         const Transfer::ChunkList & chunks = mMetadata->getChunkList();
@@ -573,18 +573,17 @@ public:
                 std::tr1::shared_ptr<Transfer::Chunk> found(new Transfer::Chunk(*it));
                 chunk = found;
             }
-        } 
+        }
         TS_ASSERT(chunk);
 
         std::tr1::shared_ptr<Transfer::TransferRequest> req(
                 new Transfer::ChunkRequest(mURI, *mMetadata, *chunk, priority, std::tr1::bind(
                 &ChunkVerifier::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
-			
+
         pool->addRequest(req);
     }
     void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
             std::tr1::shared_ptr<const Transfer::DenseData> response, VerifyFinished cb) {
-	
         SILOG(transfer, debug, "verifying chunk");
         TS_ASSERT(request);
         TS_ASSERT(response);
@@ -745,4 +744,3 @@ public:
 	}
 
 };
-
