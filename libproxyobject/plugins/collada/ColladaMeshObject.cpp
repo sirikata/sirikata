@@ -106,7 +106,7 @@ bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::M
 // overrides from MeshObject
 
 void ColladaMeshObject::parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-    std::tr1::shared_ptr<Transfer::DenseData> response)
+    std::tr1::shared_ptr<const Transfer::DenseData> response)
 {
     mMeshURI = request->getMetadata().getURI();
     // MCB: trigger importation of mesh content
