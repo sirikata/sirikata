@@ -766,6 +766,8 @@ SET(ProtocolBuffersSourcesCore
   TimedMotionQuaternion
 )
 SET(ProtocolBuffersSources
+  Empty
+
   Persistence
   Sirikata
   Time
