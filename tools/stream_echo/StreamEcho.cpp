@@ -101,7 +101,7 @@ void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk
     if (!msg.ParseFromArray(payload.data(), payload.size())) {
         printf(" parsing PBJ failed.\n");
         // Indicate error to other side
-        char* error_msg = "Error"; // "Error" in base 64
+        const char* error_msg = "Error"; // "Error" in base 64
         strm->send(Sirikata::MemoryReference(error_msg, strlen(error_msg)), Sirikata::Network::ReliableOrdered);
         return;
     }
@@ -121,7 +121,7 @@ void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk
             printf(" %d fixed64 %ld\n", __FIELD(i).number(), __FIELD(i).fixed64());
             break;
           case ::google::protobuf::UnknownField::TYPE_LENGTH_DELIMITED:
-            printf(" %d length %d\n", __FIELD(i).number(), __FIELD(i).length_delimited().size());
+            printf(" %d length %d\n", __FIELD(i).number(), (int) __FIELD(i).length_delimited().size());
             break;
           case ::google::protobuf::UnknownField::TYPE_GROUP:
             printf(" %d group\n", __FIELD(i).number());
@@ -133,8 +133,10 @@ void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk
         };
     }
 
-    // Finally, reply
-    strm->send(payload, Sirikata::Network::ReliableOrdered);
+    // Finally, reply. Reserialize to test encoding consistency.
+    std::string return_payload;
+    bool serialized_success = msg.SerializeToString(&return_payload);
+    strm->send(Sirikata::MemoryReference(return_payload.data(), return_payload.size()), Sirikata::Network::ReliableOrdered);
 }
 
 void handleReadySend(Sirikata::Network::Stream* strm) {
