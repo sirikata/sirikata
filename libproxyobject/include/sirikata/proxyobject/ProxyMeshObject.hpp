@@ -72,7 +72,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
         virtual URI const& getMesh () const;
 
         void meshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request,
-            std::tr1::shared_ptr<Transfer::DenseData> response);
+            std::tr1::shared_ptr<const Transfer::DenseData> response);
 
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;

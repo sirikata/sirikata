@@ -41,6 +41,35 @@
 #include "ASIOConnectAndHandshake.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
+
+namespace {
+class CheckWebSocketReply {
+    const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
+    typedef boost::system::error_code ErrorCode;
+    uint32 mTotal;
+public:
+    CheckWebSocketReply(const Array<uint8,TCPStream::MaxWebSocketHeaderSize>*array) {
+        mArray=array;
+        mTotal = 0;
+    }
+    size_t operator() (const ErrorCode& error, size_t bytes_transferred) {
+        if (error) return 0;
+
+        mTotal += bytes_transferred;
+
+        if (mTotal >= 20 &&
+            (*mArray)[mTotal - 20] == '\r' &&
+            (*mArray)[mTotal - 19] == '\n' &&
+            (*mArray)[mTotal - 18] == '\r' &&
+            (*mArray)[mTotal - 17] == '\n')
+        {
+            return 0;
+        }
+        return 65536;
+    }
+};
+} // namespace
+
     void ASIOConnectAndHandshake::checkHeaderContents(const std::tr1::shared_ptr<MultiplexedSocket>&connection,
 						      bool noDelay,
                                                   unsigned int whichSocket,
@@ -72,7 +101,9 @@ using namespace boost::asio::ip;
                     connection->connectedCallback();
                 }
 
-                MemoryReference mb(buffer->begin()+whereHeaderEnds+1,bytes_received-(whereHeaderEnds+1));
+                // Note we shift an additional 16 bytes, ignoring the required
+                // WebSocket md5 response
+                MemoryReference mb(buffer->begin()+whereHeaderEnds+1+16,bytes_received-(whereHeaderEnds+1+16));
                 MakeASIOReadBuffer(connection,whichSocket,mb);
             }else {
                 mFinishedCheckCount-=1;
@@ -95,7 +126,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                                                  unsigned int whichSocket,
                                                  const tcp::resolver::iterator &it,
                                                  const ErrorCode &error) {
-    
+
     if (!connection) {
         return;
     }
@@ -132,7 +163,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                                 thus->mHeaderUUID,
                                 connection->numSockets());
         Array<uint8,TCPStream::MaxWebSocketHeaderSize> *header=new Array<uint8,TCPStream::MaxWebSocketHeaderSize>;
-        ASIOSocketWrapper::CheckCRLF headerCheck(header);
+        CheckWebSocketReply headerCheck(header);
         boost::asio::async_read(connection->getASIOSocketWrapper(whichSocket).getSocket(),
                                 boost::asio::buffer(header->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
                                 headerCheck,

@@ -31,7 +31,7 @@
  */
 
 #include "CSFQODPFlowScheduler.hpp"
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/core/util/Random.hpp>
 #include <sirikata/core/trace/Trace.hpp>

@@ -210,7 +210,7 @@ void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSo
 void ASIOSocketWrapper::sendManyDequeItems(const std::tr1::weak_ptr<MultiplexedSocket>&weakParentMultiSocket, const ErrorCode &error, std::size_t bytes_sent) {
     MultiplexedSocketPtr parentMultiSocket(weakParentMultiSocket.lock());
     mOutstandingDataParent.reset();
-	
+
     if (parentMultiSocket) {
         std::deque<TimestampedChunk> local_toSend;
         local_toSend.swap(mToSend);
@@ -270,7 +270,7 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
         }
     }
     mToSend.swap(input_toSend);
-    mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes	
+    mOutstandingDataParent=parentMultiSocket;//keep parent alive until send finishes
     boost::asio::async_write(*mSocket,
                             bufs,
                             boost::asio::transfer_at_least(total_size),
@@ -446,23 +446,17 @@ size_t ASIOSocketWrapper::CheckCRLF::operator() (const ASIOSocketWrapper::ErrorC
     return 65536;
 }
 
-void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol){
-    char prefix[]={  0x48, 0x54, 0x54, 0x50, 0x2F, 0x31, 0x2E, 0x31, 0x20, 0x31, 0x30, 0x31, 0x20, 0x57, 0x65, 0x62
-                   , 0x20, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x20, 0x50, 0x72, 0x6F, 0x74, 0x6F, 0x63, 0x6F, 0x6C
-                   , 0x20, 0x48, 0x61, 0x6E, 0x64, 0x73, 0x68, 0x61, 0x6B, 0x65, 0x0D, 0x0A, 0x55, 0x70, 0x67, 0x72
-                   , 0x61, 0x64, 0x65, 0x3A, 0x20, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x0D, 0x0A
-                   , 0x43, 0x6F, 0x6E, 0x6E, 0x65, 0x63, 0x74, 0x69, 0x6F, 0x6E, 0x3A, 0x20, 0x55, 0x70, 0x67, 0x72
-                   , 0x61, 0x64, 0x65, 0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x4F
-                   , 0x72, 0x69, 0x67, 0x69, 0x6E, 0x3A, 0x20, '\0'};
+void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::string& response){
     std::stringstream header;
-    char postfix[]={0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x4C, 0x6F, 0x63, 0x61
-                    , 0x74, 0x69, 0x6F, 0x6E, 0x3A, 0x20, '\0'};
+    header << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
+    header << "Upgrade: WebSocket\r\n";
+    header << "Connection: Upgrade\r\n";
+    header << "Sec-WebSocket-Origin: " << origin << "\r\n";
+    header << "Sec-WebSocket-Location: ws://" << host << resource_name << "\r\n";
+    header << "WebSocket-Protocol: " << subprotocol << "\r\n";
+    header << "\r\n";
+    header << response;
 
-    header << prefix<<origin<<postfix<<"ws://"<<host<<resource_name;
-    char protoprefix[]={0x0D, 0x0A, 0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x2D, 0x50, 0x72, 0x6F, 0x74
-                        , 0x6F, 0x63, 0x6F, 0x6C, 0x3A, 0x20,'\0'};
-    char crlf[]={0x0d,0x0a,'\0'};
-    header <<protoprefix<<subprotocol<<crlf<<crlf;
     std::string finalHeader(header.str());
     Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
     rawSend(thus,headerData,true);
@@ -471,37 +465,29 @@ void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thu
 void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const Address& address,  const UUID&value, unsigned int numConnections) {
 //    if (paerntMultiSocket->isZeroDelim()) {
         std::stringstream header;
-        char uuidprefix[]={0x47,0x45,0x54,0x20,'\0'};
-        header<<uuidprefix;
-        header<<"/"<<value.toString();
-        char uuidpostfix[]={0x20, 0x48, 0x54, 0x54, 0x50, 0x2F, 0x31, 0x2E,  0x31, 0x0D, 0x0A, 0x55, 0x70, 0x67, 0x72, 0x61,
-                            0x64, 0x65, 0x3A, 0x20, 0x57, 0x65, 0x62, 0x53,  0x6F, 0x63, 0x6B, 0x65, 0x74, 0x0D, 0x0A, 0x43,
-                            0x6F, 0x6E, 0x6E, 0x65, 0x63, 0x74, 0x69, 0x6F,  0x6E, 0x3A, 0x20, 0x55, 0x70, 0x67, 0x72, 0x61,
-                            0x64, 0x65, 0x0D, 0x0A, '\0'};
-        header<<uuidpostfix;
-        char hostprefix[]={0x48, 0x6f, 0x73, 0x74, 0x3a, 0x20, '\0'};
-        header << hostprefix;
+        header << "GET /" << value.toString() << " HTTP/1.1\r\n";
+        header << "Upgrade: WebSocket\r\n";
+        header << "Connection: Upgrade\r\n";
+
         std::string hostname=address.getHostName();
         for (std::string::iterator hi=hostname.begin(),he=hostname.end();hi!=he;++hi) {
             *hi=std::tolower(*hi);
         }
-        header << hostname;
-        char portspacer[]={0x3a,'\0'};
-        if (address.getService()!="80") {
-            header << portspacer;
-            header << address.getService();
-        }
-        char crlf[]={0x0d,0x0a,'\0'};
-        header << crlf;
-        char originprefix[]={0x4f, 0x72, 0x69, 0x67, 0x69,0x6e, 0x3a, 0x20, '\0'};
-        header << originprefix;
-        header << address.getHostName();
-        header << crlf;
-        char protocolprefix[]={0x57, 0x65, 0x62, 0x53, 0x6F, 0x63, 0x6B,
-                               0x65,  0x74, 0x2D, 0x50, 0x72, 0x6F, 0x74,
-                               0x6F, 0x63, 0x6F, 0x6C, 0x3A, 0x20, '\0'};
-        header<< protocolprefix<<(parentMultiSocket->isZeroDelim()?"wssst":"sst")<<numConnections<<crlf;
-        header << crlf;
+        header << "Host: " << hostname;
+        if (address.getService()!="80")
+            header << ":" << address.getService();
+        header << "\r\n";
+
+        header << "Origin: " << address.getHostName() << "\r\n";
+
+        header << "Sec-WebSocket-Key1: x!|6 j9  U 1 guf  36Y04  |   4\r\n";
+        header << "Sec-WebSocket-Key2: 3   59   2 E4   _11  x80      \r\n";
+        header << "Sec-WebSocket-Protocol: "
+               << (parentMultiSocket->isZeroDelim()?"wssst":"sst")
+               << numConnections << "\r\n";
+        header << "\r\n";
+        header << "abcdefgh";
+
         std::string finalHeader(header.str());
         Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
         rawSend(parentMultiSocket,headerData,true);

@@ -114,14 +114,6 @@ public:
         const SolidAngle& init_sa,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
-    void connect(
-        HostedObjectPtr obj, const SpaceID& space,
-        const TimedMotionVector3f& loc,
-        const TimedMotionQuaternion& orient,
-        const BoundingSphere3f& bnds,
-        const String& mesh,
-        ConnectedCallback connected_cb, MigratedCallback migrated_cb,
-        StreamCreatedCallback stream_created_cb);
 
     /** Disconnect the object from the space. */
     void disconnect(HostedObjectPtr obj, const SpaceID& space);

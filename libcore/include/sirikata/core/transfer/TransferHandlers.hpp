@@ -43,6 +43,9 @@
 #include <sirikata/core/transfer/HttpManager.hpp>
 #include <boost/asio.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/transfer/DiskCacheLayer.hpp>
+#include <sirikata/core/transfer/MemoryCacheLayer.hpp>
+#include <sirikata/core/transfer/LRUPolicy.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -76,7 +79,7 @@ class ChunkHandler {
 
 public:
     typedef std::tr1::function<void(
-                std::tr1::shared_ptr<DenseData> response
+                std::tr1::shared_ptr<const DenseData> response
             )> ChunkCallback;
 
     virtual void get(std::tr1::shared_ptr<RemoteFileMetadata> file,
@@ -130,6 +133,16 @@ private:
     static const char CDN_HOST_NAME [];
     static const char CDN_SERVICE [];
     const Network::Address mCdnAddr;
+    static const unsigned int DISK_LRU_CACHE_SIZE;
+    static const unsigned int MEMORY_LRU_CACHE_SIZE;
+
+    CachePolicy* mDiskCachePolicy;
+    CachePolicy* mMemoryCachePolicy;
+    std::vector<CacheLayer*> mCacheLayers;
+    CacheLayer* mCache;
+
+    void cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
+            std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
 
 public:
     HttpChunkHandler();

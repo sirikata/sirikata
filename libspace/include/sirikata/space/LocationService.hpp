@@ -41,6 +41,10 @@
 
 #include <sirikata/core/network/SSTImpl.hpp>
 
+#include <sirikata/space/Platform.hpp>
+
+#include <sirikata/core/util/Factory.hpp>
+
 namespace Sirikata {
 
 class LocationServiceListener;
@@ -48,7 +52,7 @@ class LocationUpdatePolicy;
 class LocationService;
 
 /** Interface for objects that need to listen for location updates. */
-class LocationServiceListener {
+class SIRIKATA_SPACE_EXPORT LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
@@ -73,10 +77,12 @@ public:
  *  regular tick calls.  Based on this information it decides when to
  *  send updates to individual subscribers.
  */
-class LocationUpdatePolicy : public LocationServiceListener{
+class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener{
 public:
-    LocationUpdatePolicy(LocationService* locservice);
+    LocationUpdatePolicy();
     virtual ~LocationUpdatePolicy();
+
+    virtual void initialize(LocationService* loc);
 
     virtual void subscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
@@ -108,19 +114,29 @@ protected:
     Router<Message*>* mLocMessageRouter; // Server Message Router for Loc Service
 }; // class LocationUpdatePolicy
 
+class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
+    : public AutoSingleton<LocationUpdatePolicyFactory>,
+      public Factory1<LocationUpdatePolicy*, const String&>
+{
+  public:
+    static LocationUpdatePolicyFactory& getSingleton();
+    static void destroy();
+}; // class LocationServiceFactory
+
 
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
 public:
     enum TrackingType {
         NotTracking,
         Local,
+        Aggregate,
         Replica
     };
 
-    LocationService(SpaceContext* ctx);
+    LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     virtual ~LocationService();
 
     const SpaceContext* context() const {
@@ -159,12 +175,27 @@ public:
     virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
     virtual void removeLocalObject(const UUID& uuid) = 0;
 
+    /** Aggregate objects are handled separately from other local objects.  All
+     *  the information is tracked, but listeners are notified about them
+     *  separately. This is necessary since not filtering them would cause them
+     *  to filter back into whatever system generated them.  In general, users
+     *  other than Proximity should learn about aggregates and treat them as
+     *  normal objects. Proximity ignores them since it is the one that
+     *  generates them.
+     */
+    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
+    virtual void removeLocalAggregateObject(const UUID& uuid) = 0;
+    virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
+    virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
+    virtual void updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval) = 0;
+    virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval) = 0;
+
     /** Methods dealing with replica objects. */
     virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
     virtual void removeReplicaObject(const Time& t, const UUID& uuid) = 0;
 
     /** Methods dealing with listeners. */
-    virtual void addListener(LocationServiceListener* listener);
+    virtual void addListener(LocationServiceListener* listener, bool want_aggregates);
     virtual void removeListener(LocationServiceListener* listener);
 
     /** Subscriptions for other servers. */
@@ -195,13 +226,12 @@ protected:
     virtual void poll();
     virtual void service() = 0;
 
-    void notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const;
-    void notifyLocalObjectRemoved(const UUID& uuid) const;
-    void notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
-    void notifyLocalOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const;
-    void notifyLocalBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
-    void notifyLocalMeshUpdated(const UUID& uuid, const String& newval) const;
-
+    void notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const;
+    void notifyLocalObjectRemoved(const UUID& uuid, bool agg) const;
+    void notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const;
+    void notifyLocalOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) const;
+    void notifyLocalBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) const;
+    void notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const;
 
     void notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const;
     void notifyReplicaObjectRemoved(const UUID& uuid) const;
@@ -214,11 +244,26 @@ protected:
 private:
     TimeProfiler::Stage* mProfiler;
 protected:
-    typedef std::set<LocationServiceListener*> ListenerList;
+    struct ListenerInfo {
+        LocationServiceListener* listener;
+        bool wantAggregates;
+
+        bool operator<(const ListenerInfo& rhs) const { return listener < rhs.listener; }
+    };
+    typedef std::set<ListenerInfo> ListenerList;
     ListenerList mListeners;
 
     LocationUpdatePolicy* mUpdatePolicy;
 }; // class LocationService
+
+class SIRIKATA_SPACE_EXPORT LocationServiceFactory
+    : public AutoSingleton<LocationServiceFactory>,
+      public Factory3<LocationService*, SpaceContext*, LocationUpdatePolicy*, const String&>
+{
+  public:
+    static LocationServiceFactory& getSingleton();
+    static void destroy();
+}; // class LocationServiceFactory
 
 } // namespace Sirikata
 

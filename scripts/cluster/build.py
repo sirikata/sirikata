@@ -3,16 +3,152 @@
 import sys
 import subprocess
 import os
+import os.path
 import stat
 from config import ClusterConfig
 from run import ClusterRun, ClusterRunConcatCommands, ClusterRunFailed, ClusterRunSummaryCode
 from scp import ClusterSCP
 
+class Repository:
+    def __init__(self, config, name, code_base, code_dir, is_submodule=False):
+        self.config = config
+        self.name = name
+        self.code_base = code_base
+        self.code_dir = code_dir
+        self.patchmail_file = '.' + name + '.commits.patch'
+        self.patch_file = '.' + name + '.changes.patch'
+        self.is_submodule = is_submodule
+
+    # Gets the path to the local directory for this repository
+    def local_directory(self):
+        # Assume we're in the tree somewhere.  Walk up until we find something that looks like
+        sirikata_dir = os.getcwd()
+        while True:
+            if (os.path.exists(os.path.join(sirikata_dir, 'libcore')) and os.path.exists(os.path.join(sirikata_dir, 'liboh')) and os.path.exists(os.path.join(sirikata_dir, 'libspace'))):
+                break
+            sirikata_dir = os.path.dirname(sirikata_dir)
+        return os.path.join(sirikata_dir, self.code_dir)
+
+    def remote_directory(self):
+        return os.path.join(self.code_base, self.code_dir)
+
+    def cd_to_code(self):
+        return "cd " + self.remote_directory()
+
+    def apply_patch(self, patch_file):
+        ClusterSCP(self.config, [patch_file, "remote:"+self.remote_directory()+"/"+patch_file])
+        cd_cmd = self.cd_to_code()
+        patch_cmd = "patch -p1 < " + patch_file
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, patch_cmd]))
+        return ClusterRunSummaryCode(retcodes)
+
+    def apply_patch_mail(self, patch_file):
+        ClusterSCP(self.config, [patch_file, "remote:"+self.remote_directory()+"/"+patch_file])
+        cd_cmd = self.cd_to_code()
+        patch_cmd = "git am " + patch_file
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, patch_cmd]))
+        return ClusterRunSummaryCode(retcodes)
+
+    def update(self, with_submodules=True):
+        cd_cmd = self.cd_to_code()
+        fetch_cmd = "git fetch origin"
+        pull_cmd = "git pull origin master"
+        reset_cmd = ""
+        if self.is_submodule:
+            reset_cmd = "git checkout origin/master"
+        submodules_init_cmd = ""
+        submodules_update_cmd = ""
+        if with_submodules:
+            submodules_init_cmd = "git submodule init"
+            submodules_update_cmd = "git submodule update"
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, fetch_cmd, pull_cmd, reset_cmd, submodules_init_cmd, submodules_update_cmd]))
+        return ClusterRunSummaryCode(retcodes)
+
+    def reset_to_origin_head(self):
+        cd_cmd = self.cd_to_code()
+        reset_cmd = "git reset --hard origin/" + self.config.branch
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
+        return ClusterRunSummaryCode(retcodes)
+
+    def git_clean(self):
+        cd_cmd = self.cd_to_code()
+        # note: we put clean_garbage before clean so the latter won't complain about these directories
+        clean_garbage_cmd = "rm -rf .dotest" # FIXME there's probably other types of garbage
+        clean_cmd = "git clean -f"
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, clean_garbage_cmd, clean_cmd]))
+        return ClusterRunSummaryCode(retcodes)
+
+    # generates a patchset based on changes made to tree locally
+    def create_patchset(self):
+        # first generate a patchmail
+        commits_patch_file = open(self.patchmail_file, 'w')
+        # FIXME in submodules, do we always want to use the same branch as in the main repository
+        rep_dir = self.local_directory()
+        formatpatch_ret = subprocess.call(['git', 'format-patch', '--stdout', 'origin/' + self.config.branch], stdout=commits_patch_file, cwd=rep_dir)
+        commits_patch_file.close()
+        if (formatpatch_ret != 0):
+            return formatpatch_ret
+
+        # then generate a diff
+        changes_patch_file = open(self.patch_file, 'w')
+        diff_ret = subprocess.call(['git', 'diff'], stdout=changes_patch_file, cwd=rep_dir)
+        changes_patch_file.close()
+        return diff_ret
+
+    # applies a patchset to all nodes
+    def apply_patchset(self):
+        # Setup all possible necessary commands, then filter out based on files
+        file_cmds = [ ('git am', self.patchmail_file),
+                      ('patch -p1 <', self.patch_file)
+                      ]
+        to_do = [ (cmd,file) for (cmd,file) in file_cmds if os.stat(file)[stat.ST_SIZE] > 0 ]
+
+        # Copy files over
+        scp_args = [ file for (cmd,file) in to_do ]
+        scp_args.append("remote:"+self.remote_directory()+"/")
+        ClusterSCP(self.config, scp_args)
+
+        # Perform actual patching
+        cd_cmd = self.cd_to_code()
+        patch_cmds = [ (cmd + ' ' + file) for (cmd, file) in to_do ]
+
+        cmds = [cd_cmd]
+        cmds.extend(patch_cmds)
+
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands(cmds))
+        return ClusterRunSummaryCode(retcodes)
+
+    # backs off all changes generated by a patchset
+    # should leave you with a clean tree at origin/HEAD
+    def revert_patchset(self):
+        reset_ret = self.reset_to_origin_head()
+        if (reset_ret != 0):
+            return reset_ret
+
+        clean_ret = self.git_clean()
+        if (clean_ret != 0):
+            return clean_ret
+
+        update_ret = self.update(with_submodules=False)
+        return update_ret
+
+
 class ClusterBuild:
     def __init__(self, config):
         self.config = config
-        self.patchmail_file = '.commits.patch'
-        self.patch_file = '.changes.patch'
+        # We only have 1 top level repository, but we list all of the
+        # child repositories (submodules) so we can do patches for
+        # everything.
+        #
+        # NOTE: These are listed from deeper to shallower
+        # intentionally: this allows us to properly handle cleaning up
+        # -- submodules are cleaned first, followed by the top-level
+        # repository, avoiding errors due to modified submodules.
+        self.repositories = [
+            Repository(config, 'prox', self.config.code_dir, 'externals/prox', True),
+            Repository(config, 'http-parser', self.config.code_dir, 'externals/http-parser', True),
+            Repository(config, 'sirikata', self.config.code_dir, '')
+            ]
 
     def cd_to_code(self):
         return "cd " + self.config.code_dir
@@ -34,46 +170,6 @@ class ClusterBuild:
         branch_cmd = "git branch _cluster origin/"  + self.config.branch
         checkout_branch_cmd = "git checkout _cluster"
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([checkout_cmd, cd_cmd, branch_cmd, checkout_branch_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def update(self):
-        cd_cmd = self.cd_to_code()
-        pull_cmd = "git pull origin"
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, pull_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def apply_patch(self, patch_file):
-        ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/"+patch_file])
-        cd_cmd = self.cd_to_code()
-        patch_cmd = "patch -p1 < " + patch_file
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, patch_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def apply_patch_mail(self, patch_file):
-        ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/"+patch_file])
-        cd_cmd = self.cd_to_code()
-        patch_cmd = "git am " + patch_file
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, patch_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def reset_to_head(self):
-        cd_cmd = self.cd_to_code()
-        reset_cmd = "git reset --hard HEAD"
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def reset_to_origin_head(self):
-        cd_cmd = self.cd_to_code()
-        reset_cmd = "git reset --hard origin/" + self.config.branch
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
-        return ClusterRunSummaryCode(retcodes)
-
-    def git_clean(self):
-        cd_cmd = self.cd_to_code()
-        # note: we put clean_garbage before clean so the latter won't complain about these directories
-        clean_garbage_cmd = "rm -rf .dotest" # FIXME there's probably other types of garbage
-        clean_cmd = "git clean -f"
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, clean_garbage_cmd, clean_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
     def dependencies(self):
@@ -112,64 +208,23 @@ class ClusterBuild:
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, clean_cmd, cd_build_cmd, cache_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
-    # generates a patchset based on changes made to tree locally
     def create_patchset(self):
-        # first generate a patchmail
-        commits_patch_file = open(self.patchmail_file, 'w')
-        formatpatch_ret = subprocess.call(['git', 'format-patch', '--stdout', 'origin/' + self.config.branch], 0, None, None, commits_patch_file)
-        commits_patch_file.close()
-        if (formatpatch_ret != 0):
-            return formatpatch_ret
-
-        # then generate a diff
-        changes_patch_file = open(self.patch_file, 'w')
-        diff_ret = subprocess.call(['git', 'diff'], 0, None, None, changes_patch_file)
-        changes_patch_file.close()
-        return diff_ret
-
-    # applies a patchset to all nodes
-    def apply_patchset(self):
-        # just use revert_patchset to make sure we're in a clean state
-        revert_ret = self.revert_patchset()
-        if (revert_ret != 0):
-            return revert_ret
-
-        # Setup all possible necessary commands, then filter out based on files
-        file_cmds = [ ('git am', self.patchmail_file),
-                      ('patch -p1 <', self.patch_file)
-                      ]
-        to_do = [ (cmd,file) for (cmd,file) in file_cmds if os.stat(file)[stat.ST_SIZE] > 0 ]
-
-        # Copy files over
-        scp_args = [ file for (cmd,file) in to_do ]
-        scp_args.append("remote:"+self.config.code_dir+"/")
-        ClusterSCP(self.config, scp_args)
-
-        # Perform actual patching
-        cd_cmd = self.cd_to_code()
-        patch_cmds = [ (cmd + ' ' + file) for (cmd, file) in to_do ]
-
-        cmds = [cd_cmd]
-        cmds.extend(patch_cmds)
-
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands(cmds))
+        retcodes = []
+        for rep in self.repositories:
+            retcodes.append( rep.create_patchset() )
         return ClusterRunSummaryCode(retcodes)
 
-        return 0
+    def apply_patchset(self):
+        retcodes = []
+        for rep in self.repositories:
+            retcodes.append( rep.apply_patchset() );
+        return ClusterRunSummaryCode(retcodes)
 
-    # backs off all changes generated by a patchset
-    # should leave you with a clean tree at origin/HEAD
     def revert_patchset(self):
-        reset_ret = self.reset_to_origin_head()
-        if (reset_ret != 0):
-            return reset_ret
-
-        clean_ret = self.git_clean()
-        if (clean_ret != 0):
-            return clean_ret
-
-        update_ret = self.update()
-        return update_ret
+        retcodes = []
+        for rep in self.repositories:
+            retcodes.append( rep.revert_patchset() );
+        return ClusterRunSummaryCode(retcodes)
 
     def profile(self, binary):
         cd_code_cmd = self.cd_to_code()
@@ -206,7 +261,7 @@ if __name__ == "__main__":
     # Some commands are simple shorthands for others and can just be
     # expanded into their long forms
     filter_rules = {
-        'deploy' : ['patchset_create', 'patchset_apply', 'clean', 'build'],
+        'deploy' : ['patchset_revert', 'patchset_create', 'patchset_apply', 'clean', 'build'],
         'update_dependencies' : ['dependencies']
         }
     filtered_args = []
@@ -244,20 +299,6 @@ if __name__ == "__main__":
                 else:
                     break
             retval = cluster_build.build(build_type, with_timestamp)
-        elif cmd == 'patch':
-            patch_file = filtered_args[cur_arg_idx]
-            cur_arg_idx += 1
-            retval = cluster_build.apply_patch(patch_file)
-        elif cmd == 'patchmail':
-            patch_file = filtered_args[cur_arg_idx]
-            cur_arg_idx += 1
-            retval = cluster_build.apply_patch_mail(patch_file)
-        elif cmd == 'reset':
-            retval = cluster_build.reset_to_head()
-        elif cmd == 'reset_origin':
-            retval = cluster_build.reset_to_origin_head()
-        elif cmd == 'git_clean':
-            retval = cluster_build.git_clean()
         elif cmd == 'clean':
             retval = cluster_build.clean()
         elif cmd == 'fullbuild':

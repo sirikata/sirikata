@@ -77,8 +77,8 @@ public:
     UUID(const std::string&s,BinaryString ){
         mData.memcpy(s.data(),s.length());
     }
-    class Random{};
-    UUID(Random);
+    class GenerateRandom{};
+    UUID(GenerateRandom);
     static UUID random();
     const Data& getArray()const{return mData;}
     UUID & operator=(const UUID & other) { mData = other.mData; return *this; }
@@ -90,6 +90,12 @@ public:
     class Hasher{public:
         size_t operator() (const UUID&uuid) const {
             return uuid.hash();
+        }
+    };
+    class Random {
+    public:
+        UUID operator()() const {
+            return UUID::random();
         }
     };
     std::string rawData()const;

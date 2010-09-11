@@ -50,8 +50,10 @@ namespace Meru {
 ResourceRequestor::~ResourceRequestor() {
 }
 
-ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const URI &uri, ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb)
- : DependencyTask(mgr == NULL ? NULL : mgr->getQueue()), mURI(uri), mRange(true), mResourceRequestor(resourceRequestor), mPriority(priority), cb(cb)
+ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const URI &uri,
+        ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb)
+ : DependencyTask(mgr == NULL ? NULL : mgr->getQueue()), mURI(uri), mRange(true),
+   mResourceRequestor(resourceRequestor), mPriority(priority), cb(cb)
 {
   mStarted = false;
   if (mgr == NULL) {
@@ -101,7 +103,7 @@ void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
 
 
 void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
-            std::tr1::shared_ptr<DenseData> response)
+            std::tr1::shared_ptr<const DenseData> response)
 {
     if (response != NULL) {
       if (customCb == false) {
@@ -125,11 +127,10 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
 {
   if (response != NULL) {
 
-    const Range *range = new Range(true);
-    const Chunk *chunk = new Chunk(response->getFingerprint(), *range);
-    const RemoteFileMetadata metadata = *response;
+    //TODO: Support files with more than 1 chunk
+    assert(response->getChunkList().size() == 1);
 
-    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, metadata, *chunk, mPriority,
+    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, *response, response->getChunkList().front(), mPriority,
             std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1,
                 std::tr1::placeholders::_2)));
 

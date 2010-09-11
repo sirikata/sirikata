@@ -112,7 +112,7 @@ public:
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
     void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
+        std::tr1::shared_ptr<const Transfer::DenseData> response, Meshdata& md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -146,7 +146,7 @@ public:
 
     protected:
 
-    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<Transfer::DenseData> response);
+    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
 };
 
 }

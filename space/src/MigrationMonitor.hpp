@@ -34,7 +34,7 @@
 #define _SIRIKATA_MIGRATION_MONITOR_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
 
 #include <boost/multi_index_container.hpp>

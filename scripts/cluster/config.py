@@ -53,11 +53,11 @@ class ClusterConfig:
         self.ccache = False
 
         self.plugins = 'tcpsst,servermap-tabular,core-local'
-        self.space_plugins = 'weight-exp,weight-sqr,space-craq,space-local,space-master-pinto'
-        self.cseg_plugins = 'weight-exp'
+        self.space_plugins = 'weight-exp,weight-sqr,weight-const,space-craq,space-local,space-standard,space-master-pinto'
+        self.cseg_plugins = 'weight-exp,weight-sqr,weight-const'
         self.pinto_plugins = ''
-        self.simoh_plugins = 'weight-exp,weight-sqr'
-        self.analysis_plugins = 'weight-exp,weight-sqr'
+        self.simoh_plugins = 'weight-exp,weight-sqr,weight-const'
+        self.analysis_plugins = 'weight-exp,weight-sqr,weight-const'
 
         self.zookeeper = ""
         self.zookeeper_addr = ""

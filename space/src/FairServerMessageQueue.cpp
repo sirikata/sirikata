@@ -107,7 +107,7 @@ void FairServerMessageQueue::service() {
     bool last_blocked = false;
     uint32 num_sent = 0;
     uint32 cum_sent_size = 0;
-    while( num_sent < MAX_MESSAGES_PER_ROUND ) {
+    while( num_sent < MAX_MESSAGES_PER_ROUND && !mContext->stopped() ) {
         uint32 packet_size = 0;
         {
             MutexLock lck(mMutex);

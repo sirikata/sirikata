@@ -63,11 +63,25 @@ String makeHexString(uint8*buffer, int length) {
 class DamagableObject {
 public:
     Object *object;
-    typedef double HPTYPE;
+    class HPTYPE {
+        double hp;
+        unsigned char magicNumber[8];
+    public:
+        bool operator == (const HPTYPE & other) const {
+            return hp==other.hp&&memcmp(magicNumber,other.magicNumber,8)==0;
+        }
+        double read()const {
+            return hp;
+        }
+        HPTYPE(double hp) {
+            static char mag[8]={10,251,229,199,24,50,200,178};
+            memcpy(magicNumber,mag,8);
+            this->hp=hp;
+        }
+    };
     HPTYPE mHP;
     unsigned int mListenPort;
-    DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort){
-        mHP=hp;
+    DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort):mHP(hp){
         object=obj;
         mListenPort = listenPort;
     }
@@ -123,7 +137,6 @@ public:
                 SILOG(hitpoint,error,"Got connection "<<mParent->object->uuid().toString()<<" - "<<mID.toString());
                 this->mSendStream = s;
                 s->registerReadCallback( std::tr1::bind( &DamagableObject::ReceiveDamage::senderShouldNotGetUpdate, this, _1, _2)  ) ;
-                sendUpdate();
             }
         }
         void login(int err, boost::shared_ptr< Stream<UUID> > s) {
@@ -136,11 +149,6 @@ public:
         }
         void sendUpdate() {
             if (mSendStream) {
-                static bool first=true;
-                if (first) {
-                    SILOG(hitpoint,error,"Warmed up");
-                    first=false;
-                }
                 int tosend=sizeof(DamagableObject::HPTYPE);
                 if (mPartialSendCount) {
                     memcpy(mPartialSend+sizeof(DamagableObject::HPTYPE),&mParent->mHP,sizeof(DamagableObject::HPTYPE));
@@ -149,7 +157,7 @@ public:
                 }else {
                     memcpy(mPartialSend,&mParent->mHP,tosend);
                 }
-                SILOG(hitpoint,error,"Sent buffer "<<makeHexString(mPartialSend+mPartialSendCount,tosend)<<" AT TIME ");
+                //SILOG(hitpoint,error,"Sent buffer "<<makeHexString(mPartialSend+mPartialSendCount,tosend)<<" AT TIME ");
                 mPartialSendCount+=mSendStream->write(mPartialSend+mPartialSendCount,tosend);
                 if(mPartialSendCount>=sizeof(DamagableObject::HPTYPE)) {
                     mPartialSendCount-=sizeof(DamagableObject::HPTYPE);
@@ -165,16 +173,19 @@ public:
             SILOG(hitpoint,error,"Should not receive updates from receiver");
         }
         void getUpdate(uint8*buffer, int length) {
-            SILOG(hitpoint,error,"Received buffer "<<makeHexString(buffer,length));
+            //SILOG(hitpoint,error,"Received buffer "<<makeHexString(buffer,length));
             while (length>0) {
                 
                 int datacopied = (length>sizeof(DamagableObject::HPTYPE)-mPartialCount?sizeof(DamagableObject::HPTYPE)-mPartialCount:length);
                 memcpy(mPartialUpdate+mPartialCount, buffer,datacopied);
                 mPartialCount+=datacopied;
                 if (mPartialCount==sizeof(DamagableObject::HPTYPE)) {
-                    DamagableObject::HPTYPE hp;
+                    DamagableObject::HPTYPE hp(0.0);
                     memcpy(&hp,mPartialUpdate,mPartialCount);
-                    SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp<<" Delay "<<(hp-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
+                    DamagableObject::HPTYPE test(hp.read());
+                    if (rand()%10==0)
+                        SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp.read()<<" Delay "<<(hp.read()-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
+                    assert(hp==test);
                     
                     mPartialCount=0;
                 }
@@ -308,23 +319,35 @@ void HitPointScenario::delayedStart() {
         ss=(rand() % mObjectTracker->numServerIDs())+1;
     }
     Object * objA = mObjectTracker->randomObjectFromServer(ss);
-    static int a =14150;
-    mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
-    for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
-        std::set<Object* > receivers;
-        for (int j=0;j<receiversPerServer;++j) {
-            Object * objB = mObjectTracker->randomObjectFromServer(i);
-            if (objB&&receivers.find(objB)==receivers.end()) {
-                receivers.insert(objB);
-                mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
-                                                                                                        this,
-                                                                                                        objB,
-                                                                                                        objB->uuid()));
+    if (objA) {
+        static int a =14150;
+        mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
+        for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
+            std::set<Object* > receivers;
+            for (int j=0;j<receiversPerServer;++j) {
+                Object * objB = mObjectTracker->randomObjectFromServer(i);
+                if (objB&&receivers.find(objB)==receivers.end()) {
+                    receivers.insert(objB);
+                    mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
+                                                                                                            this,
+                                                                                                            objB,
+                                                                                                            objB->uuid()));
+                }
             }
         }
+        mGeneratePingPoller->start();
+        mHPPoller->start();
+        mPingPoller->start();
+    }else {
+        Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
+        connect_phase=connect_phase/16.0;
+        SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
+        mContext->mainStrand->post(
+            connect_phase,
+            std::tr1::bind(&HitPointScenario::delayedStart, this)
+            );
+        
     }
-    mGeneratePingPoller->start();
-    mPingPoller->start();
 
 }
 void HitPointScenario::stop() {

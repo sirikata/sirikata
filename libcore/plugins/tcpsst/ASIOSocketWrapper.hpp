@@ -225,7 +225,7 @@ public:
      * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
      */
     void sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const Address& address, const UUID&value, unsigned int numConnections);
-    void sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol);
+    void sendServerProtocolHeader(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::string& response);
 
     void ioReactorThreadPauseStream(const MultiplexedSocketPtr&parentMultiSocket, Stream::StreamID sid);
     void unpauseSendStreams(const MultiplexedSocketPtr&parentMultiSocket);

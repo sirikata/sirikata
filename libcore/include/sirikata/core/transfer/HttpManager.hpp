@@ -162,6 +162,7 @@ private:
     typedef Sirikata::Network::TCPResolver TCPResolver;
     typedef Sirikata::Network::TCPSocket TCPSocket;
     typedef Sirikata::Network::IOWork IOWork;
+    typedef Sirikata::Network::IOCallback IOCallback;
     typedef boost::asio::ip::tcp::endpoint TCPEndPoint;
 
     //Convenience of storing request parameters together
@@ -205,6 +206,7 @@ private:
     IOServicePool* mServicePool;
     TCPResolver* mResolver;
     IOWork* mIOWork;
+    IOWork* mIOWork2;
 
     http_parser_settings EMPTY_PARSER_SETTINGS;
 
@@ -240,6 +242,13 @@ private:
       };
 
     static void print_flags(std::tr1::shared_ptr<HttpResponse> resp);
+
+public:
+
+    /*
+     * Posts a callback on the service pool
+     */
+    void postCallback(IOCallback cb);
 
 };
 

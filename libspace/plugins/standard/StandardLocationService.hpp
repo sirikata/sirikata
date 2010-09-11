@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
 #define _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
 
-#include "LocationService.hpp"
+#include <sirikata/space/LocationService.hpp>
 
 namespace Sirikata {
 
@@ -42,7 +42,7 @@ namespace Sirikata {
  */
 class StandardLocationService : public LocationService {
 public:
-    StandardLocationService(SpaceContext* ctx);
+    StandardLocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual bool contains(const UUID& uuid) const;
@@ -60,6 +60,13 @@ public:
     virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     virtual void removeLocalObject(const UUID& uuid);
 
+    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void removeLocalAggregateObject(const UUID& uuid);
+    virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval);
+    virtual void updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval);
+
     virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
@@ -75,6 +82,7 @@ private:
         BoundingSphere3f bounds;
         String mesh;
         bool local;
+        bool aggregate;
     };
     typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
 

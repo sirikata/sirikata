@@ -45,7 +45,9 @@
 #define CSEG                "cseg"
 
 #define LOC                        "loc"
-#define LOC_MAX_PER_RESULT         "loc.max-per-result"
+#define LOC_OPTIONS                "loc-options"
+#define LOC_UPDATE                 "loc-update"
+#define LOC_UPDATE_OPTIONS         "loc-update-options"
 
 #define OSEG                       "oseg"
 #define OSEG_OPTIONS               "oseg-options"
@@ -69,6 +71,11 @@
 #define OPT_PINTO_OPTIONS          "pinto-options"
 
 #define PROX_MAX_PER_RESULT        "prox.max-per-result"
+
+#define OPT_PROX_SERVER_QUERY_HANDLER_TYPE         "prox.server.handler"
+#define OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS      "prox.server.handler-options"
+#define OPT_PROX_OBJECT_QUERY_HANDLER_TYPE         "prox.object.handler"
+#define OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS      "prox.object.handler-options"
 
 
 namespace Sirikata {

@@ -60,16 +60,17 @@ HttpManager::HttpManager()
     EMPTY_PARSER_SETTINGS.on_message_complete = 0;
 
     //Making a single thread IOService to handle requests
-    mServicePool = new IOServicePool(1);
+    mServicePool = new IOServicePool(2);
 
     //Add a dummy IOWork so that the IOService stays running
-    mIOWork = new IOWork(*(mServicePool->service()));
+    mIOWork = new IOWork(*(mServicePool->service(0)));
+    mIOWork2 = new IOWork(*(mServicePool->service(1)));
 
     //This runs an IOService in a new thread
     mServicePool->run();
 
     //Used to resolve host:port names to IP addresses
-    mResolver = new TCPResolver(*(mServicePool->service()));
+    mResolver = new TCPResolver(*(mServicePool->service(0)));
 }
 
 HttpManager::~HttpManager() {
@@ -79,12 +80,18 @@ HttpManager::~HttpManager() {
     delete mResolver;
 
     //Stop the IOService and make sure its thread exist
-    mServicePool->service()->stop();
+    mServicePool->service(0)->stop();
+    mServicePool->service(1)->stop();
     mServicePool->join();
 
     //Delete dummy worker and service pool
     delete mIOWork;
+    delete mIOWork2;
     delete mServicePool;
+}
+
+void HttpManager::postCallback(IOCallback cb) {
+    mServicePool->service(1)->post(cb);
 }
 
 void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb) {
@@ -339,8 +346,8 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         SILOG(transfer, debug, "Finished http transfer with content length of " << respPtr->getContentLength());
         req->cb(respPtr, SUCCESS, ec);
 
-        //If this is Connection: Close, then close connection, otherwise recycle
-        if (respPtr->mHttpParser.flags & F_CONNECTION_CLOSE) {
+        //If this is Connection: Close or we reached EOF, then close connection, otherwise recycle
+        if ((respPtr->mHttpParser.flags & F_CONNECTION_CLOSE) || err == boost::asio::error::eof) {
             socket->close();
             decrement_connection(req->addr);
         } else {
@@ -350,6 +357,13 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         }
         processQueue();
 
+    } else if(err == boost::asio::error::eof || bytes_transferred == 0) {
+        SILOG(transfer, warning, "EOF was true or bytes_transferred==0 and the parser wasn't finished, so connection is broken");
+        socket->close();
+        decrement_connection(req->addr);
+        add_req(req);
+        processQueue();
+        return;
     } else {
         //Read some more data
         socket->async_read_some(boost::asio::buffer(*vecbuf), boost::bind(
@@ -434,7 +448,6 @@ int HttpManager::on_body(http_parser* _, const char* at, size_t len) {
 
     if(curResponse->mGzip) {
         //Gzip encoding, so pass this buffer through a decoder
-        SILOG(transfer, debug, "writing " << len << " bytes to compressed stream");
         curResponse->mCompressedStream.write(at, len);
     } else {
         //Raw encoding, so append the bytes in current body pointer directly to the DenseData pointer in our response

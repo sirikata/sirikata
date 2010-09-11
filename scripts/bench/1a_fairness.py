@@ -30,7 +30,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
              '--prob-messages-uniform=1.0',
-             '--num-objects-per-server=' + str(500),
+             '--num-objects-per-server=20',
              '--ping-size=' + str(self.payload_size),
              '--local=' + localval,
              ]
