@@ -67,7 +67,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
 //        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
         void loadDocument(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<Transfer::DenseData> response);
+            std::tr1::shared_ptr<const Transfer::DenseData> response);
 
         // documents that have been transfered, parsed, and loaded.
 
