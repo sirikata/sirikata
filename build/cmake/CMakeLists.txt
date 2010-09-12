@@ -759,32 +759,39 @@ ENDFOREACH()
 
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
+SET(SirikataProtocolRoot ${TOP_LEVEL}/externals/sirikata-protocol)
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(ProtocolBuffersSourcesCore
-  TimedMotionVector
-  TimedMotionQuaternion
+  ${SirikataProtocolRoot}/TimedMotionVector
+  ${SirikataProtocolRoot}/TimedMotionQuaternion
 )
 SET(ProtocolBuffersSources
-  Empty
+  # Core protocol messages
+  ${SirikataProtocolRoot}/Empty
 
-  Persistence
-  Sirikata
-  Time
-  Subscription
-  Test
-  ObjectMessage
-  SSTHeader
+  ${SirikataProtocolRoot}/ObjectMessage
+  ${SirikataProtocolRoot}/Session
+  ${SirikataProtocolRoot}/SSTHeader
+  ${SirikataProtocolRoot}/Loc
+  ${SirikataProtocolRoot}/Prox
 
-  Loc
-  Prox
-  MasterPinto
-  Session
-  CSeg
-  ServerMessage
-  Migration
-  OSeg
-  Forwarder
+
+  # Additional internal stuff
+  ${ProtocolBuffersRoot}/Persistence
+  ${ProtocolBuffersRoot}/MessageHeader
+  ${ProtocolBuffersRoot}/Sirikata
+  ${ProtocolBuffersRoot}/Time
+  ${ProtocolBuffersRoot}/Subscription
+  ${ProtocolBuffersRoot}/Test
+
+  ${ProtocolBuffersRoot}/ServerProx
+  ${ProtocolBuffersRoot}/MasterPinto
+  ${ProtocolBuffersRoot}/CSeg
+  ${ProtocolBuffersRoot}/ServerMessage
+  ${ProtocolBuffersRoot}/Migration
+  ${ProtocolBuffersRoot}/OSeg
+  ${ProtocolBuffersRoot}/Forwarder
   )
 
 # Based on dependencies, generate arguments for protocol buffers generation
@@ -802,7 +809,7 @@ SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(
   ${ProtocolBuffersSourcesCore}
-  INPUTDIR ${ProtocolBuffersRoot}
+  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -812,9 +819,9 @@ ADD_PBJ_TARGET(
   GENERATE_CPP
 )
 ADD_PBJ_TARGET(
-  MessageHeader ${ProtocolBuffersSources}
+  ${ProtocolBuffersSources}
   DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
-  INPUTDIR ${ProtocolBuffersRoot}
+  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}

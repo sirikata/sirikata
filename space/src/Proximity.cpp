@@ -39,6 +39,7 @@
 #include <sirikata/space/QueryHandlerFactory.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_ServerProx.pbj.hpp"
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
