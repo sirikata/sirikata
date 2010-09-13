@@ -106,7 +106,7 @@ public:
             mObj=obj;
             mID=id;
             mParent=parent;
-
+            distance=0;
 
 
             
@@ -134,6 +134,11 @@ public:
                 memcpy(&hp,buffer,sizeof(DamagableObject::HPTYPE));
                 Time sampTime (mContext->mContext->simTime());
                 samples.push_back(std::pair<Time,HPTYPE>(sampTime,hp)); 
+                if (rand()%500==0) {
+                    printf("Update: delay %f\n",hp.read()-mContext->calcHp(NULL));
+                }
+                distance=(mObj->location().position()-mParent->object->location().position()).length();
+
             }
         }
     };
@@ -205,6 +210,41 @@ UnreliableHitPointScenario::~UnreliableHitPointScenario(){
     SILOG(deluge,fatal,
         "HitPoint: Generated: " << mNumGeneratedPings <<
         " Sent: " << mNumTotalPings);
+    std::stringstream filenamess;
+    filenamess<<"hitpointlog."<<mNumPingsPerSecond<<'.'<<mNumHitPointsPerSecond;
+
+    std::string filename= filenamess.str();
+    FILE *fp=fopen(filename.c_str(),"wb");
+    if(fp) {     
+        for (DamagableObjectMap::iterator i=mDamagableObjects.begin(),ie=mDamagableObjects.end();i!=ie;++i) {
+            double minReceiveTime=1.0e38;
+            Time mMinRecvTimeRecord(mStartTime);
+            Time mMaxRecvTimeRecord(mStartTime);
+            double maxReceiveTime=0;
+            for (AWESOME::DamagableObject::DamageReceiverMap::iterator j=i->second->mDamageReceivers.begin(),je=i->second->mDamageReceivers.end();j!=je;++j) {
+                fprintf(fp,"%f",j->second->distance);
+                for(size_t k=0;k<j->second->samples.size();++k) {
+                    std::pair<Time, DamagableObject::HPTYPE >*sample = &j->second->samples[k];
+                    double hp = sample->second.read(); 
+                    Time sampTime(sample->first);
+                    double recvtime=(sampTime-mStartTime).toSeconds();
+                    fprintf(fp," %f %f",recvtime,hp);
+                    if (recvtime>maxReceiveTime) {
+                        maxReceiveTime=recvtime;
+                        mMaxRecvTimeRecord=sampTime;
+                    }
+                    if (recvtime<minReceiveTime) {
+                        minReceiveTime=recvtime;
+                        mMinRecvTimeRecord=sampTime;
+                    }
+                }
+                fprintf(fp,"\n");
+            }
+            fprintf (fp,"%f, %f, %f, %f\n",minReceiveTime,calcHp(&mMinRecvTimeRecord),maxReceiveTime,calcHp(&mMaxRecvTimeRecord));
+        }
+        fclose(fp);
+    }
+
     delete mPings;
     delete mPingPoller;
     delete mPingProfiler;

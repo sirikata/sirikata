@@ -74,6 +74,13 @@ SET( CMAKE_C_FLAGS_DEFAULT "-g -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_
 
 ELSE()
 
+SET( CMAKE_C_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+SET( CMAKE_CXX_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+
 IF(NOT CMAKE_BUILD_TYPE)
 #the below lines work around a bug when cmake first is configured without <CONFIG>
   SET(FORCE_USE_DEBUG_LOCATION "TRUE")
