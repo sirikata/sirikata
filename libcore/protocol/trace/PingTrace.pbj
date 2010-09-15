@@ -54,3 +54,16 @@ message Sent {
     optional uint64 ping_uid = 7;
     optional uint32 size = 8;
 }
+
+message HitPoint {
+    optional time t = 1;
+    optional uuid sender = 2;
+    optional time received = 3;
+    optional uuid receiver = 4;
+    optional double sent_hp = 11;
+    optional double actual_hp = 12;
+    optional double distance = 6;
+    optional float sender_radius = 10;
+    optional float receiver_radius = 9;
+    optional uint32 size = 8;
+}

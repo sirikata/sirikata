@@ -97,6 +97,9 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
     else if (type_hint == ObjectPingTag) {
         PARSE_PBJ_RECORD(Trace::Ping::Sent);
     }
+    else if (type_hint == ObjectHitPointTag) {
+        PARSE_PBJ_RECORD(Trace::Ping::HitPoint);
+    }
     else if (type_hint == MessageCreationTimestampTag) {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));

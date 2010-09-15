@@ -91,7 +91,23 @@ private:
         int64 recv_count;
         int64 recv_bytes;
     };
+    struct HitPointInfo  {
+        double weight;
+        double distance;
+        struct Sample {
+            Time start; 
+            Time end;
+            double starthp;
+            double endhp;
+            Sample(Time sent, Time received):start(sent),end(received) {
+            }
+
+        };
+        std::vector<Sample> samples;
+    };
     typedef std::tr1::unordered_map<ObjectPair, FlowInfo, ObjectPair::Hasher> FlowMap;
+    typedef std::tr1::unordered_map<ObjectPair, HitPointInfo, ObjectPair::Hasher> HitPointMap;
+    HitPointMap mHitPointMap;
     FlowMap mFlowMap;
 }; // class FlowStatsAnalysis
 

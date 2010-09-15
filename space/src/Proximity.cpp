@@ -527,22 +527,22 @@ void Proximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void Proximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     updateObjectSize(uuid, bounds.radius());
 }
-void Proximity::localObjectRemoved(const UUID& uuid) {
+void Proximity::localObjectRemoved(const UUID& uuid, bool agg) {
     removeObjectSize(uuid);
 }
-void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void Proximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle);
 }
-void Proximity::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void Proximity::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
 }
-void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void Proximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle);
     updateObjectSize(uuid, newval.radius());
 }
-void Proximity::localMeshUpdated(const UUID& uuid, const String& newval) {
+void Proximity::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
 }
 void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
 }

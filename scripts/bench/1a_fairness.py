@@ -80,7 +80,7 @@ if __name__ == "__main__":
     cs.object_static = 'static'
     cs.object_query_frac = 0.0
 
-    cs.duration = '120s'
+    cs.duration = '400s'
 
     rates = sys.argv[1:]
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)

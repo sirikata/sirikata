@@ -121,6 +121,7 @@ public:
         return mConnectedTo;
     }
     bool connected();
+    bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 private:
 
     // Initiate a connection
@@ -149,7 +150,6 @@ private:
 
     bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
-    bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
     void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 
     // THREAD SAFE:

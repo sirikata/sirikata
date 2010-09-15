@@ -79,30 +79,30 @@ void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
 }
 
 
-void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     // Ignore, initial additions will be handled by a prox update
 }
 
-void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid) {
+void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid, bool agg) {
     // Ignore, removals will be handled by a prox update
 }
 
-void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     mServerSubscriptions.locationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
     mServerSubscriptions.orientationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     mServerSubscriptions.boundsUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, const String& newval) {
+void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
     mServerSubscriptions.meshUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.meshUpdated(uuid, newval, mLocService);
 }

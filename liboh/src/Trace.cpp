@@ -133,5 +133,21 @@ CREATE_TRACE_DEF(OHTrace, ping, mLogPing, const Time& t, const UUID&sender, cons
     mTrace->writeRecord(ObjectPingTag, rec);
 }
 
+CREATE_TRACE_DEF(OHTrace, hitpoint, mLogPing, const Time& t, const UUID&sender, const Time&dst, const UUID& receiver, double sentHP, double recvHP, double distance, double srcRadius, double dstRadius, uint32 sz) {
+    Sirikata::Trace::Ping::HitPoint rec;
+    rec.set_t(t);
+    rec.set_sender(sender);
+    rec.set_received(dst);
+    rec.set_receiver(receiver);
+    rec.set_sent_hp(sentHP);
+    rec.set_actual_hp(recvHP);
+    rec.set_distance(distance);
+    rec.set_sender_radius(srcRadius);
+    rec.set_receiver_radius(dstRadius);
+    rec.set_size(sz);
+
+    mTrace->writeRecord(ObjectHitPointTag, rec);
+}
+
 
 } // namespace Sirikata
