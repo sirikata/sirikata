@@ -38,6 +38,7 @@
 
 #include <sirikata/space/QueryHandlerFactory.hpp>
 
+#include "Protocol_Frame.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_ServerProx.pbj.hpp"
 
@@ -454,6 +455,11 @@ void Proximity::removeObjectSize(const UUID& obj) {
     }
 }
 
+static void proxSubstreamCallback(int x, boost::shared_ptr<Stream<UUID> > substream) {
+    if (!substream)
+        PROXLOG(error,"Unhandled error when opening substream.");
+}
+
 void Proximity::poll() {
     // Update server-to-server angles if necessary
     sendQueryRequests();
@@ -482,8 +488,12 @@ void Proximity::poll() {
         boost::shared_ptr<Stream<UUID> > proxStream = mContext->getObjectStream(msg_front->dest_object());
         std::string proxMsg = msg_front->payload();
 
+        Sirikata::Protocol::Frame msg_frame;
+        msg_frame.set_payload(proxMsg);
+        std::string framed_prox_msg = serializePBJMessage(msg_frame);
+
         if (proxStream != boost::shared_ptr<Stream<UUID> >()) {
-          proxStream->createChildStream(NULL, (void*)proxMsg.data(), proxMsg.size(),
+          proxStream->createChildStream(proxSubstreamCallback, (void*)framed_prox_msg.data(), framed_prox_msg.size(),
               OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY);
           object_sent = true;
         }

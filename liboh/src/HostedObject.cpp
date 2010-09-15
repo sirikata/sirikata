@@ -62,6 +62,7 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#include "Protocol_Frame.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 
@@ -989,9 +990,11 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    bool parse_success = contents.ParseFromString(payload);
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
     if (!parse_success) return false;
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
+    contents.ParseFromString(payload);
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
@@ -1023,9 +1026,11 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 }
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    Sirikata::Protocol::Prox::ProximityResults contents;
-    bool parse_success = contents.ParseFromString(payload);
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
     if (!parse_success) return false;
+    Sirikata::Protocol::Prox::ProximityResults contents;
+    contents.ParseFromString(frame.payload());
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);

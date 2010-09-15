@@ -34,6 +34,8 @@
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/options/Options.hpp>
 
+#include "Protocol_Frame.pbj.hpp"
+
 namespace Sirikata {
 
 void InitAlwaysLocationUpdatePolicyOptions() {
@@ -137,6 +139,11 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
+static void locSubstreamCallback(int x, boost::shared_ptr<Stream<UUID> > substream) {
+    if (!substream)
+        SILOG(always_loc,error,"Unhandled error when opening substream.");
+}
+
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
   std::string bluMsg = serializePBJMessage(blu);
@@ -144,7 +151,11 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Proto
 
   bool sent = false;
   if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
-    locServiceStream->createChildStream(NULL, (void*)bluMsg.data(), bluMsg.size(),
+      Sirikata::Protocol::Frame msg_frame;
+      msg_frame.set_payload(bluMsg);
+      std::string framed_loc_msg = serializePBJMessage(msg_frame);
+
+    locServiceStream->createChildStream(locSubstreamCallback, (void*)framed_loc_msg.data(), framed_loc_msg.size(),
         OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION);
     sent = true;
   }

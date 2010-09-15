@@ -776,6 +776,7 @@ SET(ProtocolBuffersSourcesCore
 SET(ProtocolBuffersSources
   # Core protocol messages
   ${SirikataProtocolRoot}/Empty
+  ${SirikataProtocolRoot}/Frame
 
   ${SirikataProtocolRoot}/ObjectMessage
   ${SirikataProtocolRoot}/Session
