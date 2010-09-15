@@ -206,7 +206,7 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 /** LocationServiceListener Interface. */
 
-void MigrationMonitor::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds)
     );
@@ -219,7 +219,7 @@ void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotio
     waitForNextEvent();
 }
 
-void MigrationMonitor::localObjectRemoved(const UUID& uuid) {
+void MigrationMonitor::localObjectRemoved(const UUID& uuid, bool agg) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalObjectRemoved, this, uuid)
     );
@@ -230,7 +230,7 @@ void MigrationMonitor::handleLocalObjectRemoved(const UUID& uuid) {
     waitForNextEvent();
 }
 
-void MigrationMonitor::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void MigrationMonitor::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalLocationUpdated, this, uuid, newval)
     );
@@ -248,15 +248,15 @@ void MigrationMonitor::handleLocalLocationUpdated(const UUID& uuid, const TimedM
     waitForNextEvent();
 }
 
-void MigrationMonitor::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void MigrationMonitor::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
     // We only care about location, not orientation
 }
 
-void MigrationMonitor::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void MigrationMonitor::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     // We only care about location, not bounds
 }
 
-void MigrationMonitor::localMeshUpdated(const UUID& uuid, const String& newval) {
+void MigrationMonitor::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
     // We only care about location, not mesh
 }
 

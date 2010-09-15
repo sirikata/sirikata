@@ -144,37 +144,37 @@ void LocationService::unsubscribe(const UUID& remote) {
 void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localObjectAdded(uuid, loc, orient, bounds, mesh);
+            it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localObjectRemoved(uuid);
+            it->listener->localObjectRemoved(uuid, agg);
 }
 
 void LocationService::notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localLocationUpdated(uuid, newval);
+            it->listener->localLocationUpdated(uuid, agg, newval);
 }
 
 void LocationService::notifyLocalOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localOrientationUpdated(uuid, newval);
+            it->listener->localOrientationUpdated(uuid, agg, newval);
 }
 
 void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localBoundsUpdated(uuid, newval);
+            it->listener->localBoundsUpdated(uuid, agg, newval);
 }
 
 void LocationService::notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localMeshUpdated(uuid, newval);
+            it->listener->localMeshUpdated(uuid, agg, newval);
 }
 
 

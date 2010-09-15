@@ -56,12 +56,12 @@ class SIRIKATA_SPACE_EXPORT LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
-    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
-    virtual void localObjectRemoved(const UUID& uuid) = 0;
-    virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
-    virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
-    virtual void localMeshUpdated(const UUID& uuid, const String& newval) = 0;
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
+    virtual void localObjectRemoved(const UUID& uuid, bool agg) = 0;
+    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) = 0;
+    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) = 0;
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) = 0;
+    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
 
     virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
     virtual void replicaObjectRemoved(const UUID& uuid) = 0;
@@ -93,12 +93,12 @@ public:
     virtual void unsubscribe(const UUID& remote) = 0;
 
 
-    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
-    virtual void localObjectRemoved(const UUID& uuid) = 0;
-    virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
-    virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
-    virtual void localMeshUpdated(const UUID& uuid, const String& newval) = 0;
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
+    virtual void localObjectRemoved(const UUID& uuid, bool agg) = 0;
+    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) = 0;
+    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) = 0;
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) = 0;
+    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
 
     virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) = 0;
     virtual void replicaObjectRemoved(const UUID& uuid) = 0;
