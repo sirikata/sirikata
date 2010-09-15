@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _HIT_POINT_SCENARIO_HPP_
-#define _HIT_POINT_SCENARIO_HPP_
+#ifndef _YHIT_POINT_SCENARIO_HPP_
+#define _YHIT_POINT_SCENARIO_HPP_
 
 #include "Scenario.hpp"
 #include <sirikata/core/queue/CountResourceMonitor.hpp>
@@ -69,8 +69,8 @@ class UnreliableHitPointScenario : public Scenario {
 
     unsigned int mPingID;
     uint32 mPingPayloadSize;
-    Time mStartTime;
     int64 mNumTotalPings;
+    int64 mNumTotalHPs;
     int64 mMaxPingsPerRound;
     TimeProfiler::Stage* mPingProfiler;
 
@@ -106,7 +106,8 @@ class UnreliableHitPointScenario : public Scenario {
     static UnreliableHitPointScenario*create(const String&options);
     void generatePairs();
 public:
-    double calcHp(const Time*t=NULL);
+    Time mStartTime;
+
     ObjectHostContext*mContext;
 
     UnreliableHitPointScenario(const String &options);

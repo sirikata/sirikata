@@ -56,6 +56,8 @@ public:
 
     CREATE_TRACE_DECL(pingCreated, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint32 sz);
     CREATE_TRACE_DECL(ping, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId, uint32 sz);
+
+    CREATE_TRACE_DECL(hitpoint, const Time&sent, const UUID&src, const Time&recv, const UUID& dst, double sentHP, double recvHP, double distance, double srcRadius, double dstRadius, uint32 sz);
 private:
     Trace::Trace* mTrace;
     static OptionValue* mLogObject;

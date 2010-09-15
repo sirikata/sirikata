@@ -43,6 +43,7 @@
 namespace Sirikata {
 namespace AWESOME {
 
+
 static char tohexdig(uint8 inp) {
     if (inp<=9) return inp+'0';
     return (inp-10)+'A';
@@ -67,6 +68,7 @@ public:
         double hp;
         unsigned char magicNumber[8];
     public:
+        unsigned char otherData[8];
         bool operator == (const HPTYPE & other) const {
             return hp==other.hp&&memcmp(magicNumber,other.magicNumber,8)==0;
         }
@@ -76,18 +78,31 @@ public:
         HPTYPE(double hp) {
             static char mag[8]={10,251,229,199,24,50,200,178};
             memcpy(magicNumber,mag,8);
+            memset(otherData,0,sizeof(otherData));
             this->hp=hp;
         }
     };
     HPTYPE mHP;
     unsigned int mListenPort;
+    class ReceiveDamage;
+    typedef std::tr1::unordered_map<UUID,ReceiveDamage*,UUID::Hasher> DamageReceiverMap;
+    DamageReceiverMap::iterator curIter;
     DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort):mHP(hp){
         object=obj;
         mListenPort = listenPort;
+        curIter = mDamageReceivers.end();
     }
     void update() {
-        for (DamageReceiverMap::iterator i=mDamageReceivers.begin(),ie=mDamageReceivers.end();i!=ie;++i) {
-            i->second->sendUpdate();
+        if (curIter==mDamageReceivers.end()) {
+            curIter=mDamageReceivers.begin();
+        }else {
+            ++curIter;
+            if (curIter==mDamageReceivers.end()) {
+                curIter=mDamageReceivers.begin();
+            }            
+        }
+        if (curIter!=mDamageReceivers.end()) {
+            curIter->second->sendUpdate();
         }
     }
     class ReceiveDamage {
@@ -111,9 +126,6 @@ public:
 
             
 
-            static int offset=0;
-            ++offset;
-            int port = parent->mListenPort+offset;
             SILOG(hitpoint,error,"Listen/Connecting "<<mID.toString()<<" to "<<mParent->object->uuid().toString());
 
         }
@@ -125,27 +137,57 @@ public:
             for (int i=0;i<sizeof(DamagableObject::HPTYPE);++i) {
                 mPartialSend[i]=temp[i];
             }
-            mParent->object->send(mParent->mListenPort,mObj->uuid(),mParent->mListenPort,mPartialSend);
+            bool ok = mObj->send(mParent->mListenPort,mParent->object->uuid(),mParent->mListenPort,mPartialSend);
+            static bool first=true;
+            if (first)
+            if (ok) {
+                first=false;
+                SILOG(oh,error,"SENDING to "<<mParent->mListenPort);
+            }else {
+                SILOG(oh,error,"not sending to "<<mParent->mListenPort);
+            }
         
         }
-        void getUpdate(const uint8*buffer, int length) {
-            if (length>sizeof(DamagableObject::HPTYPE)) {
-                HPTYPE hp(0.0);
-                memcpy(&hp,buffer,sizeof(DamagableObject::HPTYPE));
-                Time sampTime (mContext->mContext->simTime());
-                samples.push_back(std::pair<Time,HPTYPE>(sampTime,hp)); 
-                if (rand()%500==0) {
-                    printf("Update: delay %f\n",hp.read()-mContext->calcHp(NULL));
-                }
-                distance=(mObj->location().position()-mParent->object->location().position()).length();
-
-            }
-        }
+        void getUpdate(const uint8*buffer, int length);
     };
-    typedef std::tr1::unordered_map<UUID,ReceiveDamage*,UUID::Hasher> DamageReceiverMap;
     DamageReceiverMap mDamageReceivers;
     friend class ReceiveDamage;
 };
+DamagableObject::HPTYPE calcHp(UnreliableHitPointScenario* thus, const Time*t) {
+    Time tim((t==NULL)?thus->mContext->simTime():*t);
+    DamagableObject::HPTYPE retval(1000-((tim-thus->mStartTime).toSeconds()));
+    uint64 timTime = tim.raw();
+    memcpy(retval.otherData,&timTime,sizeof(uint64));
+    return retval;
+}
+void DamagableObject::ReceiveDamage::getUpdate(const uint8*buffer, int length) {
+    if (length>=sizeof(DamagableObject::HPTYPE)) {
+        HPTYPE hp(0.0);
+        memcpy(&hp,buffer,sizeof(DamagableObject::HPTYPE));
+        Time sampTime (mContext->mContext->simTime());
+        samples.push_back(std::pair<Time,HPTYPE>(sampTime,hp)); 
+        if (rand()%1000==0) {
+            printf("Update: delay %f\n",hp.read()-calcHp(mContext,NULL).read());
+        }
+        distance=(mObj->location().position()-mParent->object->location().position()).length();
+        int64 raw;
+        memcpy(&raw,hp.otherData,sizeof(int64));
+        Time sentTime(Time::microseconds(raw));
+        ObjectHostContext *mContext=this->mContext->mContext;
+        CONTEXT_OHTRACE_NO_TIME(hitpoint,
+                                sentTime,
+                                mObj->uuid(),
+                                sampTime,
+                                mParent->object->uuid(),
+                                hp.read(),
+                                calcHp(this->mContext,&sampTime).read(),
+                                distance,
+                                mObj->bounds().radius(),
+                                mParent->object->bounds().radius(),
+                                length);
+                                
+    }
+}
 
 void DPSInitOptions(UnreliableHitPointScenario *thus) {
 
@@ -168,6 +210,7 @@ UnreliableHitPointScenario::UnreliableHitPointScenario(const String &options)
 {
     mPort=14050;
     mNumTotalPings=0;
+    mNumTotalHPs=0;
     mContext=NULL;
     mObjectTracker = NULL;
     mPingID=0;
@@ -240,7 +283,7 @@ UnreliableHitPointScenario::~UnreliableHitPointScenario(){
                 }
                 fprintf(fp,"\n");
             }
-            fprintf (fp,"%f, %f, %f, %f\n",minReceiveTime,calcHp(&mMinRecvTimeRecord),maxReceiveTime,calcHp(&mMaxRecvTimeRecord));
+            fprintf (fp,"%f, %f, %f, %f\n",minReceiveTime,calcHp(this,&mMinRecvTimeRecord).read(),maxReceiveTime,calcHp(this,&mMaxRecvTimeRecord).read());
         }
         fclose(fp);
     }
@@ -257,7 +300,12 @@ void UnreliableHitPointScenario::addConstructorToFactory(ScenarioFactory*thus){
     thus->registerConstructor("unreliablehitpoint",&UnreliableHitPointScenario::create);
 }
 void UnreliableHitPointScenario::hpReturn(const Sirikata::Protocol::Object::ObjectMessage&msg){
-    mDamagableObjects[msg.source_object()]->mDamageReceivers[msg.dest_object()]->getUpdate((const uint8*)msg.payload().data(),msg.payload().size());
+    static bool first=true;
+    if (first) {
+        first=false;
+        SILOG(oh,error,"RECVING");
+    }
+    mDamagableObjects[msg.dest_object()]->mDamageReceivers[msg.source_object()]->getUpdate((const uint8*)msg.payload().data(),msg.payload().size());
 }
 void UnreliableHitPointScenario::initialize(ObjectHostContext*ctx) {
     mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
@@ -326,7 +374,7 @@ void UnreliableHitPointScenario::delayedStart() {
             }
         }
         mGeneratePingPoller->start();
-        mHPPoller->start();
+        //mHPPoller->start();
         mPingPoller->start();
     }else {
         Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
@@ -432,8 +480,8 @@ bool UnreliableHitPointScenario::generateOnePing(const Time& t, PingInfo* result
         if (where==mSendCDF.end()) {
             --where;
         }
-        result->objB = where->source;
-        result->objA = where->dest;
+        result->objA = where->source;
+        result->objB = where->dest;
         result->dist = where->dist;
         result->ping = new Sirikata::Protocol::Object::Ping();
         mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
@@ -466,22 +514,20 @@ void UnreliableHitPointScenario::generatePings() {
     mGeneratePingProfiler->finished();
 }
 
-double UnreliableHitPointScenario::calcHp(const Time*t) {
-    if (t==NULL) {
-        return 1000-((mContext->simTime()-mStartTime).toSeconds());
-    }
-    return 1000-((*t-mStartTime).toSeconds());
-}
 
 void UnreliableHitPointScenario::sendHPs() {
     {
+        bool first=true;
         Time t(mContext->simTime());
-        DamagableObject::HPTYPE hp = calcHp(&t);
+        DamagableObject::HPTYPE hp = calcHp(this,&t);
 
         for (        DamagableObjectMap::iterator i=mDamagableObjects.begin(),ie=mDamagableObjects.end();i!=ie;++i) {
             i->second->mHP=hp;
             i->second->update();
+            assert(first);
+            first=false;
         }
+        
     }
 }
 
@@ -489,8 +535,9 @@ void UnreliableHitPointScenario::sendPings() {
     mPingProfiler->started();
 
     Time newTime=mContext->simTime();
-    int64 howManyPings = (newTime-mStartTime).toSeconds()*mNumPingsPerSecond;
-
+    double both=(mNumPingsPerSecond+mNumHitPointsPerSecond);
+    int64 howManyPings = (newTime-mStartTime).toSeconds()*both;
+    double chanceHp = mNumHitPointsPerSecond/both;
     bool broke=false;
     // NOTE: We limit here because we can get in lock-step with the generator,
     // causing this to run for excessively long when we fall behind on pings.
@@ -498,13 +545,18 @@ void UnreliableHitPointScenario::sendPings() {
     int64 i;
     for (i=0;i<limit;++i) {
         Time t(mContext->simTime());
-        PingInfo result;
-        if (!mPings->pop(result)) {
-            SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
-            break;
+        bool sent_success=true;
+        if (rand()<RAND_MAX*chanceHp) {
+            this->sendHPs();
+        }else {
+            PingInfo result;
+            if (!mPings->pop(result)) {
+                SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
+                break;
+            }
+            sent_success = mContext->objectHost->sendPing(t, result.objA, result.objB, result.ping);
+            delete result.ping;
         }
-        bool sent_success = mContext->objectHost->sendPing(t, result.objA, result.objB, result.ping);
-        delete result.ping;
         if (!sent_success)
             break;
     }

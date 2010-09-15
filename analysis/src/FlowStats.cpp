@@ -35,18 +35,21 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
 #include "Protocol_ObjectTrace.pbj.hpp"
+#include "Protocol_PingTrace.pbj.hpp"
 
 namespace Sirikata {
 
 typedef PBJEvent<Trace::Object::Connected> ObjectConnectedEvent;
 typedef PBJEvent<Trace::Object::GeneratedLoc> GeneratedLocationEvent;
+typedef PBJEvent<Trace::Ping::HitPoint> HitPointEvent;
 
 
 FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers) {
     RegionWeightCalculator* swc =
         RegionWeightCalculatorFactory::getSingleton().getConstructor(GetOptionValue<String>(OPT_REGION_WEIGHT))(GetOptionValue<String>(OPT_REGION_WEIGHT_ARGS))
 ;
-
+    Time smallestHitPointTime(Time::epoch());
+    bool firstHitPointSample=true;
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -87,10 +90,72 @@ FlowStatsAnalysis::FlowStatsAnalysis(const char* opt_name, const uint32 nservers
                     mFlowMap[ ObjectPair(ping_evt->data.sender(),ping_evt->data.receiver()) ].recv_bytes += ping_evt->data.size();
                 }
             }
+
+            {
+                HitPointEvent* ping_evt = dynamic_cast<HitPointEvent*>(evt);
+                if (ping_evt != NULL) {
+                    HitPointInfo * hpi=NULL;
+                    ObjectPair pair(ping_evt->data.sender(),ping_evt->data.receiver());
+                    if (mHitPointMap.find(pair)==mHitPointMap.end()) {
+                        
+                        ObjectMap::iterator source_it = mObjectMap.find(ping_evt->data.sender());
+                        ObjectMap::iterator dest_it = mObjectMap.find(ping_evt->data.receiver());
+                        if (source_it!=mObjectMap.end()&&dest_it!=mObjectMap.end()) {
+                            hpi=&mHitPointMap[pair];
+                            hpi->distance=ping_evt->data.distance();
+                            TimedMotionVector3f start1 = source_it->second.path.initial();
+                            TimedMotionVector3f start2 = dest_it->second.path.initial();
+                            
+                            BoundingBox3f world_bounds1 = BoundingBox3f(source_it->second.bounds.center() + start1.position(), source_it->second.bounds.radius());
+                            BoundingBox3f world_bounds2 = BoundingBox3f(dest_it->second.bounds.center() + start2.position(), dest_it->second.bounds.radius());
+                            double priority = swc->weight(world_bounds1, world_bounds2);
+
+
+                            hpi->weight=priority;
+                        }else {
+                            SILOG(analysis,error, "Unable to find "<<ping_evt->data.sender().toString()<<" and/or "<<ping_evt->data.receiver().toString());
+                        }
+                    }else {
+                        hpi=&mHitPointMap[pair];
+                    }
+                    hpi->samples.push_back(HitPointInfo::Sample(ping_evt->data.t(),ping_evt->data.received()));
+                    
+                    hpi->samples.back().starthp=ping_evt->data.sent_hp();
+                    hpi->samples.back().endhp=ping_evt->data.actual_hp();
+                    if(firstHitPointSample) 
+                        smallestHitPointTime=ping_evt->data.t();
+                    else if (smallestHitPointTime>ping_evt->data.t()) {
+                        smallestHitPointTime=ping_evt->data.t();
+                    }
+                    firstHitPointSample=false;
+                    
+                }
+            }
             delete evt;
         }
     }
-
+    if (mHitPointMap.size()) {
+        FILE * fp = fopen("hitpointstats.txt","w");
+        if (fp )  {
+            fprintf(fp,"Distance, Weight, sent, received, senthp, receivedhp\n");
+            for (HitPointMap::const_iterator i=mHitPointMap.begin(),ie=mHitPointMap.end();i!=ie;++i) {
+                fprintf(fp,"%f",i->second.distance);
+                fprintf(fp,",  %f",i->second.weight);
+                
+                for (size_t j=0;j<i->second.samples.size();++j) {
+                    HitPointInfo::Sample  s= i->second.samples[j];
+                    fprintf(fp,", %f, %f, %f, %f",
+                            (s.start-smallestHitPointTime).toSeconds(),
+                            (s.end-smallestHitPointTime).toSeconds(),
+                            s.starthp,
+                            s.endhp);
+                            
+                }
+                fprintf(fp,"\n");
+            }
+            fclose(fp);
+        }
+    }
     // Header
     SILOG(flowstats,fatal,"Distance, Rad1, Server1, Rad2, Server2, ServerOnlyPriority, DistanceOnlyPriority, Priority, ReceivedCount, SentCount");
     for(FlowMap::iterator it = mFlowMap.begin(); it != mFlowMap.end(); it++) {
