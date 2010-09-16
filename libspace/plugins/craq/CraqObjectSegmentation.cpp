@@ -331,10 +331,10 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
 bool CraqObjectSegmentation::shouldLog()
 {
-    static uint64 counter = 0;
-
-    ++counter;
-    return ((counter % 51) ==0);
+    // static uint64 counter = 0;
+    // ++counter;
+    // return ((counter % 51) ==0);
+    return false;
 }
 
 int CraqObjectSegmentation::getPushback()
