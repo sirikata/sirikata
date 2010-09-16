@@ -39,6 +39,7 @@
 #include "NullScenario.hpp"
 #include "HitPointScenario.hpp"
 #include "UnreliableHitPointScenario.hpp"
+#include "OSegScenario.hpp"
 
 AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
 namespace Sirikata {
@@ -46,6 +47,7 @@ ScenarioFactory::ScenarioFactory(){
     DistributionPingScenario::addConstructorToFactory(this);
     DelugePairScenario::addConstructorToFactory(this);
     PingDelugeScenario::addConstructorToFactory(this);
+    OSegScenario::addConstructorToFactory(this);
     LoadPacketTrace::addConstructorToFactory(this);
     ByteTransferScenario::addConstructorToFactory(this);
     NullScenario::addConstructorToFactory(this);

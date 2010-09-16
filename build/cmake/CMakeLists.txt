@@ -1381,6 +1381,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/UnreliableHitPointScenario.cpp
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
+  ${SIMOH_SOURCE_DIR}/OSegScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/NullScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
