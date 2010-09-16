@@ -69,6 +69,8 @@ if __name__ == "__main__":
     cs.oseg_cache_clean_group=25;
     cs.oseg_cache_entry_lifetime= "1000s"
 
+    cs.oseg_lookup_queue_size = 50; #for now
+    
     # Use pack across multiple ohs
     cs.num_random_objects = 0
     cs.num_pack_objects = nobjects / cs.num_oh
