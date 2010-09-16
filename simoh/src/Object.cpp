@@ -323,6 +323,7 @@ bool Object::locationMessage(const std::string& payload) {
 
         // FIXME do something with the data
     }
+    return true;
 }
 
 bool Object::proximityMessage(const std::string& payload) {
@@ -362,6 +363,8 @@ bool Object::proximityMessage(const std::string& payload) {
             );
         }
     }
+
+    return true;
 }
 
 } // namespace Sirikata
