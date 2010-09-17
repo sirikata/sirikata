@@ -137,7 +137,7 @@ public:
             for (int i=0;i<sizeof(DamagableObject::HPTYPE);++i) {
                 mPartialSend[i]=temp[i];
             }
-            bool ok = mObj->send(mParent->mListenPort,mParent->object->uuid(),mParent->mListenPort,mPartialSend);
+            bool ok = mParent->object->send(mParent->mListenPort,mObj->uuid(),mParent->mListenPort,mPartialSend);
             static bool first=true;
             if (first)
             if (ok) {
@@ -305,7 +305,7 @@ void UnreliableHitPointScenario::hpReturn(const Sirikata::Protocol::Object::Obje
         first=false;
         SILOG(oh,error,"RECVING");
     }
-    mDamagableObjects[msg.dest_object()]->mDamageReceivers[msg.source_object()]->getUpdate((const uint8*)msg.payload().data(),msg.payload().size());
+    mDamagableObjects[msg.source_object()]->mDamageReceivers[msg.dest_object()]->getUpdate((const uint8*)msg.payload().data(),msg.payload().size());
 }
 void UnreliableHitPointScenario::initialize(ObjectHostContext*ctx) {
     mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
@@ -480,8 +480,8 @@ bool UnreliableHitPointScenario::generateOnePing(const Time& t, PingInfo* result
         if (where==mSendCDF.end()) {
             --where;
         }
-        result->objA = where->source;
-        result->objB = where->dest;
+        result->objB = where->source;
+        result->objA = where->dest;
         result->dist = where->dist;
         result->ping = new Sirikata::Protocol::Object::Ping();
         mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);

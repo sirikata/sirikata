@@ -68,6 +68,7 @@ class HitPointScenario : public Scenario {
 
     unsigned int mPingID;
     uint32 mPingPayloadSize;
+    float mPingBigChance;
     Time mStartTime;
     int64 mNumTotalPings;
     int64 mMaxPingsPerRound;

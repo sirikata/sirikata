@@ -205,7 +205,8 @@ void DPSInitOptions(HitPointScenario *thus) {
         new OptionValue("num-hp-per-second","100",Sirikata::OptionValueType<double>(),"Number of hp updaets performed per simulation second"),
         new OptionValue("prob-messages-uniform","1",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
-        new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
+        new OptionValue("ping-size","8",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
+        new OptionValue("ping-big-chance",".5",Sirikata::OptionValueType<float>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         new OptionValue("source-flood-server","false",Sirikata::OptionValueType<bool>(),"This makes the flood server the source of all the packets rather than the destination, so that we can validate that egress routing gets proper fairness."),
         new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
@@ -226,6 +227,7 @@ HitPointScenario::HitPointScenario(const String &options)
 
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
+    mPingBigChance=optionsSet->referenceOption("ping-big-chance")->as<float>();
     mNumHitPointsPerSecond=optionsSet->referenceOption("num-hp-per-second")->as<double>();
     mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
     mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
@@ -446,7 +448,7 @@ bool HitPointScenario::generateOnePing(const Time& t, PingInfo* result) {
         result->objA = where->dest;
         result->dist = where->dist;
         result->ping = new Sirikata::Protocol::Object::Ping();
-        mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
+        mContext->objectHost->fillPing(result->dist, (rand()<mPingBigChance*RAND_MAX?1024:mPingPayloadSize), result->ping);
         return true;
     }
 
