@@ -98,7 +98,7 @@ void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk
     printf("Received %d PBJ bytes: ", (int)payload.size());
 
     Sirikata::Protocol::Empty msg;
-    if (!msg.ParseFromArray(payload.data(), payload.size())) {
+    if (!msg.ParseFromArray(&payload[0], payload.size())) {
         printf(" parsing PBJ failed.\n");
         // Indicate error to other side
         const char* error_msg = "Error"; // "Error" in base 64
