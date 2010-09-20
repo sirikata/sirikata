@@ -87,13 +87,15 @@ public:
     class ReceiveDamage;
     typedef std::tr1::unordered_map<UUID,ReceiveDamage*,UUID::Hasher> DamageReceiverMap;
     DamageReceiverMap::iterator curIter;
+    bool invalidIterator;
     DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort):mHP(hp){
+        invalidIterator=true;
         object=obj;
         mListenPort = listenPort;
         curIter = mDamageReceivers.end();
     }
     void update() {
-        if (curIter==mDamageReceivers.end()) {
+        if (invalidIterator||curIter==mDamageReceivers.end()) {
             curIter=mDamageReceivers.begin();
         }else {
             ++curIter;
@@ -102,8 +104,11 @@ public:
             }            
         }
         if (curIter!=mDamageReceivers.end()) {
-            curIter->second->sendUpdate();
+            assert(curIter->second);
+            if (curIter->second)
+                curIter->second->sendUpdate();
         }
+        invalidIterator=false;
     }
     class ReceiveDamage {
         UUID mID;
@@ -221,6 +226,12 @@ UnreliableHitPointScenario::UnreliableHitPointScenario(const String &options)
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
     mNumHitPointsPerSecond=optionsSet->referenceOption("num-hp-per-second")->as<double>();
+    if (GetOptionValue<ObjectHostID>("ohid").id!=ObjectHostID(11).id) {
+        SILOG(oh,error,"Not #11, not providing any hp pings");
+        mNumHitPointsPerSecond=0;
+    }else {
+        SILOG(oh,error,"Am #11, providing hp pings!!!");
+    }
     mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
     mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
     mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
@@ -305,7 +316,17 @@ void UnreliableHitPointScenario::hpReturn(const Sirikata::Protocol::Object::Obje
         first=false;
         SILOG(oh,error,"RECVING");
     }
-    mDamagableObjects[msg.source_object()]->mDamageReceivers[msg.dest_object()]->getUpdate((const uint8*)msg.payload().data(),msg.payload().size());
+    DamagableObjectMap::iterator where =mDamagableObjects.find(msg.source_object());
+    if (where!=mDamagableObjects.end()) {
+        DamagableObject::DamageReceiverMap::iterator where2=where->second->mDamageReceivers.find(msg.dest_object());
+        if (where2!=where->second->mDamageReceivers.end()) {
+            where2->second->getUpdate((const uint8*)msg.payload().data(),msg.payload().size());
+        }else {
+            SILOG(oh,error,"FAILED to find object "<<msg.dest_object().toString() <<" in map");
+        }
+    }else {
+        SILOG(oh,error,"FAILED to find sender object "<<msg.source_object().toString() <<" in map");
+    }
 }
 void UnreliableHitPointScenario::initialize(ObjectHostContext*ctx) {
     mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
@@ -358,20 +379,31 @@ void UnreliableHitPointScenario::delayedStart() {
     }
     Object * objA = mObjectTracker->randomObjectFromServer(ss);
     if (objA) {
-
-        DamagableObject * d=(mDamagableObjects[objA->uuid()]=new DamagableObject(objA,1000, mPort));
-        for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
-            std::set<Object* > receivers;
-            for (int j=0;j<receiversPerServer;++j) {
-                Object * objB = mObjectTracker->randomObjectFromServer(i);
-                if (objB&&receivers.find(objB)==receivers.end()) {
-                    receivers.insert(objB);
-                    d->mDamageReceivers[objB->uuid()]=(new DamagableObject::ReceiveDamage(d,
-                                                                                          this,
-                                                                                          objB,
-                                                                                          objB->uuid()));
+        if (mNumHitPointsPerSecond) {
+            DamagableObject * d=(mDamagableObjects[objA->uuid()]=new DamagableObject(objA,1000, mPort));
+            std::vector<Object* >allReceivers;
+            for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
+                std::set<Object* > receivers;
+                for (int j=0;j<receiversPerServer*i*i;++j) {//square number of receivers per server
+                    Object * objB = mObjectTracker->randomObjectFromServer(i);
+                    if (objB&&receivers.find(objB)==receivers.end()) {
+                        receivers.insert(objB);
+                        allReceivers.push_back(objB);
+                        d->mDamageReceivers[objB->uuid()]=NULL;
+                    }
                 }
             }
+        
+            SILOG(oh,error,"Pinging "<<allReceivers.size()<<" objects ");
+        
+            for (size_t i=0;i<allReceivers.size();++i) {
+                d->mDamageReceivers[allReceivers[i]->uuid()]=(new DamagableObject::ReceiveDamage(d,
+                                                                                                 this,
+                                                                                                 allReceivers[i],
+                                                                                                 allReceivers[i]->uuid()));
+        }
+            
+
         }
         mGeneratePingPoller->start();
         //mHPPoller->start();
