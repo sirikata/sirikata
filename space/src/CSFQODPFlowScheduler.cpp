@@ -155,10 +155,10 @@ bool CSFQODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, 
 
         for(int i = 0; i < NUM_DOWNSTREAM; i++)
             mTotalUsedWeight[i] += flow_info->usedWeight[i];
-        if (false) {
+        if (true) {
             double prob_drop = std::max(0.0, label ? 1.0 - mAlpha / label : 0);
             static Time start(curtime);
-            CSFQLOG(error,"p:"<<prob_drop<<" r:"<<flow_rate<<" w:"<<w_norm<<" tws:"<<sender_total_weights<<" sacc:"<<sender_acc_rate<<" swu:"<<savedTotalUsedWeight[SENDER]<<" swt:"<<mSenderTotalWeight<<" twr:"<<receiver_total_weights<<" racc:"<<receiver_acc_rate<<" rwu:"<<savedTotalUsedWeight[RECEIVER]<<" rwt:"<<mReceiverTotalWeight<<" a:"<<mAlpha<<" aw:"<<mAlphaWindowed<<" scap:"<<mSenderCapacity<<" rcap:"<<mReceiverCapacity<<" t:"<<(curtime-start).toSeconds()<<'\n');
+            //CSFQLOG(error,"p:"<<prob_drop<<" r:"<<flow_rate<<" w:"<<w_norm<<" tws:"<<sender_total_weights<<" sacc:"<<sender_acc_rate<<" swu:"<<savedTotalUsedWeight[SENDER]<<" swt:"<<mSenderTotalWeight<<" twr:"<<receiver_total_weights<<" racc:"<<receiver_acc_rate<<" rwu:"<<savedTotalUsedWeight[RECEIVER]<<" rwt:"<<mReceiverTotalWeight<<" a:"<<mAlpha<<" aw:"<<mAlphaWindowed<<" scap:"<<mSenderCapacity<<" rcap:"<<mReceiverCapacity<<" t:"<<(curtime-start).toSeconds()<<'\n');
         }
     }
 
@@ -268,7 +268,7 @@ void CSFQODPFlowScheduler::estimateAlpha(int32 packet_size, Time& arrival_time, 
             if (arrival_time < mCongestionStartTime + mCongestionWindow) {
                 if (mAlphaWindowed < label) mAlphaWindowed = label;
             } else {
-                mAlpha = mAlphaWindowed;
+                mAlpha = std::max(mAlphaWindowed,mAlpha);
                 mCongestionStartTime = arrival_time;
                 if (!queueExceedsLowWaterMark())
                     mAlpha = 0.;
@@ -277,6 +277,8 @@ void CSFQODPFlowScheduler::estimateAlpha(int32 packet_size, Time& arrival_time, 
             }
         }
     }
+    //CSFQLOG(error,"scap:"<<mSenderCapacity<<" stotw:"<<sender_total_weights<<" sfraccap:"<<sender_cap<<" rfraccap:"<<receiver_cap<<" cap:"<<cap<<" arrival_rate:"<<mArrivalRate.get()<<" cong:"<<mCongested<<" label:"<<label<<" alph:"<<mAlpha<<" alwin:"<<mAlphaWindowed<<'\n');
+
 }
 
 static CSFQODPFlowScheduler::Type null_response = NULL;

@@ -48,11 +48,12 @@ class DamagableObject;
 }
 class UnreliableHitPointScenario : public Scenario {
     double mNumPingsPerSecond;
+    int32 mNumFlowsPerPair;
     double mNumHitPointsPerSecond;
     int mPort;
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
-    Poller* mHPPoller;
+    //Poller* mHPPoller;
 
     Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
@@ -107,7 +108,7 @@ class UnreliableHitPointScenario : public Scenario {
     void generatePairs();
 public:
     Time mStartTime;
-
+    uint32 mHPSize;
     ObjectHostContext*mContext;
 
     UnreliableHitPointScenario(const String &options);

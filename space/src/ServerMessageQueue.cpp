@@ -99,10 +99,10 @@ double ServerMessageQueue::capacity() {
     // the system.  Otherwise, we overestimate so that upstream queues will try
     // to grow their bandwidth if they can.
     //return 7399147;
-    if (false&&mBlocked)
-        return mCapacityEstimator.get();
+    if (mBlocked)
+        return mCapacityEstimator.get() + 1;
     else
-        return mCapacityEstimator.get() + mCapacityOverestimate; // .5 Mbps overestimate
+        return mCapacityEstimator.get()*1.25 + 1;//500000;//mCapacityOverestimate; // .5 Mbps overestimate
 }
 
 void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, double used_weight) {
