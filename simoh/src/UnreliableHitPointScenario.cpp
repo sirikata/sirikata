@@ -394,7 +394,7 @@ void UnreliableHitPointScenario::delayedStart() {
             std::vector<Object* >allReceivers;
             for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
                 std::set<Object* > receivers;
-                for (int j=0;j<receiversPerServer*i*i;++j) {//square number of receivers per server
+                for (int j=0;j<receiversPerServer*i;++j) {//square number of receivers per server
                     Object * objB = mObjectTracker->randomObjectFromServer(i);
                     if (objB&&receivers.find(objB)==receivers.end()) {
                         receivers.insert(objB);
@@ -466,7 +466,7 @@ void UnreliableHitPointScenario::generatePairs() {
                 return;
             }
             Object* cur=first;
-            for (int nf=0;nf<this->mNumFlowsPerPair;++nf)
+            for (int nf=0;nf<this->mNumFlowsPerPair*(i+1);++nf)
             do {
                 //generate message from/to cur to a floodedObject
                 Object* dest=floodedObjects[rand()%floodedObjects.size()];

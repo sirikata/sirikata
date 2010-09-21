@@ -60,7 +60,7 @@ if __name__ == "__main__":
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
     #cs.region_weight = "const";
     #cs.region_weight_options = '--radius=false'
-    cs.region_weight_options = '--flatness=.001'
+    cs.region_weight_options = '--flatness=.005'
     cs.debug = True
 
     cs.valgrind = False
