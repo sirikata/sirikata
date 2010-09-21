@@ -239,7 +239,8 @@ main	(int argc, char *argv[])
   
 
 		treePsr	= EmersonTreeNew(nodes);
-		treePsr->program(treePsr);
+		char* program = treePsr->program(treePsr)->chars;
+		printf("program = %s\n", program);
 		
   
   

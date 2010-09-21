@@ -60,7 +60,7 @@
 #include <set>
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
-
+#include "emerson/EmersonUtil.h"
 
 
 
@@ -330,13 +330,30 @@ void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const std::str
 
 
 
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& script_str)
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
 {
     Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
     TryCatch try_catch;
+   
+    cout << " em script = \n" << em_script_str << "\n";
 
-    v8::Handle<v8::String> source = v8::String::New(script_str.c_str(), script_str.size());
+    // Just adding a new line in case there is none.
+				// A semi colon in the end also suffices, but adding a \n
+				// just to be safe
+
+    String em_script_str_new = em_script_str;
+
+    if(em_script_str.at(em_script_str.size() -1) != '\n')
+				{
+				  em_script_str_new.push_back('\n'); 
+				}
+				
+				String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+				cout << " js script = \n" <<js_script_str << "\n";
+
+     
+    v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
 
     // Compile
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
@@ -737,6 +754,8 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
     delete toDelete;
     toDelete = NULL;
 }
+
+
 
 
 
