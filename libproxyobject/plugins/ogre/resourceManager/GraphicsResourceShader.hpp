@@ -32,6 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_SHADER_HPP
 #define _GRAPHICS_RESOURCE_SHADER_HPP
 
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "../meruCompat/MeruDefs.hpp"
 #include "GraphicsResourceAsset.hpp"
 
@@ -39,8 +40,8 @@ namespace Meru {
 
 class GraphicsResourceShader : public GraphicsResourceAsset {
 public:
-  GraphicsResourceShader(const RemoteFileId &resourceID);
-  virtual ~GraphicsResourceShader();
+    GraphicsResourceShader(const URI &uri, Sirikata::ProxyObjectPtr proxy);
+    virtual ~GraphicsResourceShader();
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);

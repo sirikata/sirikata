@@ -94,7 +94,7 @@ public:
     void unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
 protected:
 
-    virtual void dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
+    virtual bool dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
 
 private:
 

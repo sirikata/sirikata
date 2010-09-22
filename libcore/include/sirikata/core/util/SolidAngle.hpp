@@ -33,8 +33,6 @@
 #ifndef _SIRIKATA_SOLID_ANGLE_HPP_
 #define _SIRIKATA_SOLID_ANGLE_HPP_
 
-#include "Vector3.hpp"
-
 namespace Sirikata {
 
 class SIRIKATA_EXPORT SolidAngle {
@@ -78,6 +76,8 @@ protected:
 
     float mSolidAngle;
 }; // class SolidAngle
+
+SIRIKATA_FUNCTION_EXPORT std::ostream & operator<<(std::ostream & os, const Sirikata::SolidAngle& sa);
 
 } // namespace Sirikata
 

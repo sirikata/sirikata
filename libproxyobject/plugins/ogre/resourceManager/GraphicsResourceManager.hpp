@@ -35,6 +35,11 @@
 #include "GraphicsResource.hpp"
 #include "../meruCompat/Singleton.hpp"
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
 
 namespace Sirikata {
 namespace Task {
@@ -48,6 +53,7 @@ class DependencyManager;
 
 class GraphicsResourceManager : public ManualSingleton<GraphicsResourceManager>
 {
+
 protected:
   struct GraphicsResourcePriorityLessThanFunctor
   {
@@ -69,8 +75,8 @@ public:
 
   void computeLoadedSet();
 
-  SharedResourcePtr getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity);
-  SharedResourcePtr getResourceAsset(const URI &id, GraphicsResource::Type resourceType);
+    SharedResourcePtr getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity, Sirikata::ProxyObjectPtr proxy);
+    SharedResourcePtr getResourceAsset(const URI &id, GraphicsResource::Type resourceType, Sirikata::ProxyObjectPtr proxy);
   SharedResourcePtr getResourceAssetByHash(const ResourceHash &id, GraphicsResource::Type resourceType);
 
   DependencyManager* getDependencyManager() {
@@ -93,8 +99,14 @@ public:
   void setEnabled(bool enabled) {
     mEnabled = enabled;
   }
+    std::tr1::shared_ptr<Transfer::TransferPool> transferPool();
+
 
 protected:
+  std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+  Sirikata::Task::WorkQueue* mWorkQueue;
+  Transfer::TransferMediator *mTransferMediator;
+
 
   WeakResourcePtr getResource(const String &id);
   EventResponse tick(const EventPtr &evtPtr);
@@ -111,8 +123,12 @@ protected:
   float mBudget;
   SubscriptionId mTickListener;
   bool mEnabled;
-};
 
+
+  private:
+    void initializeMediator();
+
+};
 }
 
 #endif

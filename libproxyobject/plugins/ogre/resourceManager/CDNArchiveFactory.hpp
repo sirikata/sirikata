@@ -51,7 +51,7 @@ class CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CD
 
   boost::mutex CDNArchiveMutex;
   std::map<unsigned int, std::vector <Ogre::String> > CDNArchivePackages;
-  std::map<Ogre::String, SparseData > CDNArchiveFiles;
+  std::tr1::unordered_map<std::string, SparseData > CDNArchiveFiles;
   int mCurArchive;
 
 public:
@@ -65,7 +65,7 @@ public:
   /**
    * Add a specific data stream to a package that will be hung onto until removeArchive is called
    */
-  void addArchiveData(unsigned int archiveName, const SHA256 &filename, const SparseData &rbuffer);
+  void addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer);
 
   /**
    * Adds a package to the CDNArchive that will stay open until all items are used
@@ -76,7 +76,7 @@ public:
   /**
    * Adds a package to the CDNArchive and one instance of filename/data
    */
-  unsigned int addArchive(const SHA256&filename, const SparseData &rbuffer);
+  unsigned int addArchive(const String& uri, const SparseData &rbuffer);
 
   /**
    * Removes a package from CDNArchive that may be later opened by ogre

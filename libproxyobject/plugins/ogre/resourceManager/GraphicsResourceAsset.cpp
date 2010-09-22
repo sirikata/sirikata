@@ -36,11 +36,14 @@
 #include "ResourceDownloadTask.hpp"
 #include "ResourceLoadTask.hpp"
 #include "ResourceUnloadTask.hpp"
+#include <stdio.h>
+
+using namespace std;
 
 namespace Meru {
 
-GraphicsResourceAsset::GraphicsResourceAsset(const RemoteFileId &resourceID, GraphicsResource::Type resourceType)
-: GraphicsResource(resourceID.fingerprint().convertToHexString(), resourceType), mResourceID(resourceID),
+GraphicsResourceAsset::GraphicsResourceAsset(const URI &uri, GraphicsResource::Type resourceType, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResource(uri.toString(), resourceType, proxy), mURI(uri),
   mLoadTask(NULL), mParseTask(NULL), mUnloadTask(NULL)
 {
 
@@ -75,7 +78,6 @@ void GraphicsResourceAsset::unloaded(bool success, unsigned int epoch)
 void GraphicsResourceAsset::doLoad()
 {
 //  assert(mLoadTask == NULL);
-
   if (mUnloadTask) {
     mUnloadTask->cancel();
     mUnloadTask = NULL;

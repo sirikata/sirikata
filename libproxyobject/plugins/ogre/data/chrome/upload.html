@@ -1,0 +1,61 @@
+<html>
+<head>
+
+<title>Upload Tool</title>
+
+<script type="text/javascript" src="includes/js/jquery-1.4.2.min.js"></script>
+
+<style type="text/css">
+	body {
+		margin: 0px;
+		padding: 0px;
+		font: 85% Verdana, Arial, sans-serif;
+		color: #000;
+	}
+	div#main-container {
+		margin: 0px;
+		padding: 0px;
+		width: 400px;
+		height: 200px;
+		overflow: auto;
+		background: #99CCFF;
+	}
+	h1 {
+		margin: 0px;
+		padding: 0px;
+	}
+</style>
+
+<script type="text/javascript">
+
+function submitHandler() {
+	var path = $('#resource-file-path').val();
+	var title = $('#resource-title').val();
+	var desc = $('#resource-description').val();
+	$('#main-container').html('<h1>Processing...</h1>');
+	chrome.send("event", [path,title,desc]);
+	return false;
+}
+
+$(document).ready(function() {
+	$('#resource-uploader').submit(submitHandler);
+});
+
+</script>
+
+</head>
+
+<body>
+<div id='main-container'>
+<h1>Upload Resource</h1>
+<form id='resource-uploader' name='resource-uploader'>
+	<span id='resource-file-path-label'>File Path:</span> <input type='text' name='resource-file-path' id='resource-file-path'/> <br/>
+	<span id='resource-title-label'>Title:</span> <input type='text' name='resource-title' id='resource-title'/> <br/>
+	<span id='resource-description-label'>Description:</span> <br/>
+	<textarea id='resource-description' rows='2' cols='20'></textarea> <br/>
+	<input type='submit'/>
+</form>
+</div>
+</body>
+
+</html>

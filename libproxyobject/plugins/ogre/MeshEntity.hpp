@@ -37,11 +37,16 @@
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
-
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
+
 #include "resourceManager/GraphicsResourceEntity.hpp"
 
 namespace Sirikata {
@@ -67,6 +72,9 @@ private:
     uint32 mRemainingDownloads; // Downloads remaining before loading can occur
     TextureBindingsMap mTextureFingerprints;
 
+    typedef std::vector<Ogre::Light*> LightList;
+    LightList mLights;
+
     String mURI;
 
     Ogre::Entity *getOgreEntity() const {
@@ -75,7 +83,12 @@ private:
 
     void fixTextures();
 
+    // Wrapper for createMesh which allows us to use a WorkQueue
+    bool createMeshWork(const Meshdata& md);
+
     void createMesh(const Meshdata& md);
+    bool mActiveCDNArchive;
+    unsigned int mCDNArchive;
 public:
     ProxyMeshObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
@@ -94,8 +107,12 @@ public:
 
     WebView *getWebView(int whichSubEnt);
 
+    void processMesh(URI const& newMesh);
+
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
+    void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<Transfer::DenseData> response, Meshdata& md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -117,23 +134,19 @@ public:
         mResource = resourcePtr;
     }
 
-    Task::EventResponse downloadFinished(Task::EventPtr evbase, Meshdata& md);
-
-/*
-    virtual bool loadMesh(const String&name){
-        return false;
-    }
-  */
+    void downloadMeshFile(URI const& uri);
 
     // interface from MeshListener
     public:
-        virtual void onSetMesh ( URI const& meshFile );
-        virtual void onMeshParsed (String const& hash, Meshdata& md);
-        virtual void onSetScale ( Vector3f const& scale );
-        virtual void onSetPhysical ( PhysicalParameters const& pp );
+
+        virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
+        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     protected:
 
+    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<Transfer::DenseData> response);
 };
 
 }

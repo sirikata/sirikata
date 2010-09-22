@@ -68,6 +68,13 @@ public:
 	        throw std::invalid_argument("Tried to create DenseData with length of 0");
 	}
 
+	DenseData(const Range& range, const std::vector<unsigned char>& data)
+        : Range(range), mData(data) {
+	    if(range.length() != data.size()) {
+	        throw std::invalid_argument("Tried to create DenseData with vector length not equal to Range");
+	    }
+	}
+
 	/// equals dataAt(startbyte()).
 	inline const unsigned char *data() const {
 	    if(mData.size() == 0)
@@ -108,8 +115,33 @@ public:
 	inline void setLength(size_t len, bool is_npos) {
 		Range::setLength(len, is_npos);
 		mData.resize(len);
-		//message1.reserve(size);
-		//std::copy(data, data+len, std::back_inserter(mData));
+	}
+
+	//Appends len bytes from data to internal data vector and adds to length of range
+	inline void append(const char* data, size_t len, bool is_npos) {
+	    if(len <= 0) return;
+	    size_t prev_end = length();
+	    Range::setLength(prev_end + len, is_npos);
+	    mData.resize(prev_end + len, 0);
+	    std::copy(data, data+len, writableData() + prev_end);
+	}
+
+	// Appends the entire contents of data to internal data vector and adds to length of Range
+	inline void append(const std::vector<unsigned char>& data, bool is_npos) {
+	    append(data, is_npos, data.begin(), data.end());
+	}
+
+	// Appends the range (begin->end) from data to internal data vector and adds to length of Range
+	inline void append(const std::vector<unsigned char>& data, bool is_npos,
+	        std::vector<unsigned char>::const_iterator begin, std::vector<unsigned char>::const_iterator end) {
+	   if (end - begin < 0) {
+	       throw std::invalid_argument("Tried to append to DenseData with invalid iterators");
+	   } else if(end - begin == 0) {
+	       return;
+	   }
+
+	   Range::setLength(length() + (end-begin), is_npos);
+	   mData.insert(mData.end(), begin, end);
 	}
 };
 

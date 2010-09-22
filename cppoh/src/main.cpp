@@ -43,157 +43,63 @@
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
-#include <sirikata/oh/TopLevelSpaceConnection.hpp>
-#include <sirikata/oh/SpaceConnection.hpp>
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/core/transfer/TransferManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/SpaceIDMap.hpp>
 #include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
-#include <sirikata/core/persistence/ObjectStorage.hpp>
-#include <sirikata/core/persistence/ReadWriteHandlerFactory.hpp>
 #include <Protocol_Persistence.pbj.hpp>
 #include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
+
+
+
 #include <sirikata/core/options/Options.hpp>
-namespace Sirikata {
+#include <sirikata/core/options/CommonOptions.hpp>
+#include "Options.hpp"
+#include <sirikata/oh/Trace.hpp>
 
-using Task::GenEventManager;
-using Transfer::TransferManager;
+#include <sirikata/core/network/ServerIDMap.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
 
-OptionValue *cdnConfigFile;
-OptionValue *floatExcept;
-OptionValue *dbFile;
-OptionValue *host;
-OptionValue *frameRate;
-InitializeGlobalOptions main_options("",
-//    simulationPlugins=new OptionValue("simulationPlugins","ogregraphics",OptionValueType<String>(),"List of plugins that handle simulation."),
-    cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
-    floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
-    dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
-    frameRate=new OptionValue("framerate","60",OptionValueType<double>(),"The desired framerate at which to run the object host"),
-    NULL
-);
+#include <sirikata/core/network/SSTImpl.hpp>
 
-class UUIDLister : public MessageService {
-    ObjectHost *mObjectHost;
-    SpaceID mSpace;
-    MessagePort mPort;
-    volatile bool mSuccess;
+#include <sirikata/oh/ObjectHostContext.hpp>
 
-public:
-    UUIDLister(ObjectHost*oh, const SpaceID &space)
-        : mObjectHost(oh), mSpace(space), mPort(Services::REGISTRATION) {
-        mObjectHost->registerService(mPort, this);
-    }
-    ~UUIDLister() {
-        mObjectHost->unregisterService(mPort);
-    }
-    bool forwardMessagesTo(MessageService *other) {
-        return false;
-    }
-    bool endForwardingMessagesTo(MessageService *other) {
-        return false;
-    }
-    void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
-        Persistence::Protocol::Response resp;
-        resp.ParseFromArray(body.data(), body.length());
-        if (hdr.has_return_status() || resp.has_return_status()) {
-            SILOG(cppoh,info,"Failed to connect to database: "<<hdr.has_return_status()<<", "<<resp.has_return_status());
-            mSuccess = true;
-            return;
-        }
-        Protocol::UUIDListProperty uuidList;
-        if (resp.reads(0).has_return_status()) {
-            SILOG(cppoh,info,"Failed to find ObjectList in database.");
-            mSuccess = true;
-            return;
-        }
-        uuidList.ParseFromString(resp.reads(0).data());
-        for (int i = 0; i < uuidList.value_size(); i++) {
-            SILOG(cppoh,info,"Loading object "<<ObjectReference(uuidList.value(i)));
-            HostedObjectPtr obj = HostedObject::construct<HostedObject>(mObjectHost, uuidList.value(i));
-            obj->initializeRestoreFromDatabase(mSpace, HostedObjectPtr());
-        }
-        mSuccess = true;
-    }
-    void go() {
-        mSuccess = false;
-        Persistence::Protocol::ReadWriteSet rws;
-        Persistence::Protocol::IStorageElement el = rws.add_reads();
-        el.set_field_name("ObjectList");
-//        el.set_object_uuid(UUID::null());
-//        el.set_field_id(0);
-        RoutableMessageHeader hdr;
-        hdr.set_source_object(ObjectReference::spaceServiceID());
-        hdr.set_source_port(mPort);
-        hdr.set_destination_port(Services::PERSISTENCE);
-        hdr.set_destination_object(ObjectReference::spaceServiceID());
-        std::string body;
-        rws.SerializeToString(&body);
-        mObjectHost->processMessage(hdr, MemoryReference(body));
-    }
-    void goWait(Network::IOService *ioServ, Task::WorkQueue *queue) {
-        mSuccess = false;
-        go();
-        while (!mSuccess) {
-            // needs to happen in one thread for now...
-            queue->dequeuePoll();
-            //Network::IOServiceFactory::pollService(ioServ); // kills ioservice if there's nothing to be processed...
-        }
-    }
-};
-
-}
+#include <sirikata/oh/ObjectFactory.hpp>
 
 #ifdef __GNUC__
 #include <fenv.h>
 #endif
 
-int main ( int argc,const char**argv ) {
-
-    int myargc = argc+2;
-    const char **myargv = new const char*[myargc];
-    memcpy(myargv, argv, argc*sizeof(const char*));
-    myargv[argc] = "--moduleloglevel";
-    myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
-
+int main (int argc, char** argv) {
     using namespace Sirikata;
-    OptionValue *ohOption;
-    OptionValue *spaceIdMapOption;
-    OptionValue *mainSpaceOption;
-    InitializeGlobalOptions gbo("",
-                                ohOption=new OptionValue("objecthost","",OptionValueType<String>(),"Options passed to the object host"),
-                                mainSpaceOption=new OptionValue("mainspace","12345678-1111-1111-1111-DEFA01759ACE",OptionValueType<UUID>(),"space which to connect default objects to"),
-                                spaceIdMapOption=new OptionValue("spaceidmap",
-                                                                 "12345678-1111-1111-1111-DEFA01759ACE:{127.0.0.1:5943}",
-                                                                 OptionValueType<std::map<std::string,std::string> >(),
-                                                                 "Map between space ID's and tcpsst ip's"),
-                                NULL);
+
+    InitOptions();
+    Trace::Trace::InitOptions();
+    OHTrace::InitOptions();
+    InitCPPOHOptions();
+
+    ParseOptions(argc, argv);
 
     PluginManager plugins;
-    const char* pluginNames[] = {
-        "tcpsst", "monoscript",
-#ifdef HAVE_JS_SCRIPTING
-        "scripting-js",
-#endif
-        "sqlite", "ogregraphics",
-#ifdef WANT_CRASHING
-        "bulletphysics",
-#endif
-        "colladamodels",
-        NULL
-    };
-    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
-        plugins.load( *plugin_name );
 
-    OptionSet::getOptions ( "" )->parse ( myargc,myargv );
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
+
+
+    String time_server = GetOptionValue<String>("time-server");
+    NTPTimeSync sync;
+    if (time_server.size() > 0)
+        sync.start(time_server);
 
 #ifdef __GNUC__
 #ifndef __APPLE__
-    if (floatExcept->as<bool>()) {
+    if (GetOptionValue<bool>(OPT_SIGFPE)) {
         feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
     }
 #endif
@@ -201,57 +107,71 @@ int main ( int argc,const char**argv ) {
 
     OptionMapPtr transferOptions (new OptionMap);
     {
-        std::string contents(cdnConfigFile->as<String>());
+        std::string contents( GetOptionValue<String>(OPT_CDN_CONFIG) );
         std::string::size_type pos(0);
         parseConfig(contents, transferOptions, transferOptions, pos);
         std::cout << *transferOptions;
     }
 
+    // FIXME: Initializes protocol handlers (http, rest, file, x-shasumofuri,
+    // x-hashed) in the Transfer system.  This seems like it should be handled
+    // automatically with plugins.
     initializeProtocols();
 
-    Network::IOService *ioServ = Network::IOServiceFactory::makeIOService();
+
+    ObjectHostID oh_id = GetOptionValue<ObjectHostID>("ohid");
+    String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
+    Trace::Trace* trace = new Trace::Trace(trace_file);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+
+    srand( GetOptionValue<uint32>("rand-seed") );
+
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
+
+    Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
+    Duration duration = Duration::zero(); // Indicates to run forever.
+    ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, trace, start_time, duration);
+
+
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
+
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     SpaceIDMap *spaceMap = new SpaceIDMap;
-    SpaceID mainSpace(mainSpaceOption->as<UUID>());
-    for (std::map<std::string,std::string>::iterator i=spaceIdMapOption->as<std::map<std::string,std::string> >().begin(),
-             ie=spaceIdMapOption->as<std::map<std::string,std::string> >().end();
+    SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
+    typedef std::map<std::string,std::string> SimpleSpaceIDMap;
+    SimpleSpaceIDMap spaceIdMap(GetOptionValue<SimpleSpaceIDMap>(OPT_SPACEID_MAP));
+    for (SimpleSpaceIDMap::iterator i = spaceIdMap.begin(),
+             ie=spaceIdMap.end();
          i!=ie;
          ++i) {
         SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
         spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
     }
-    String localDbFile=dbFile->as<String>();
-    if (localDbFile.length()&&localDbFile[0]!='/'&&localDbFile[0]!='\\') {
-        FILE * fp=fopen(localDbFile.c_str(),"rb");
-        for (int i=0;i<4&&fp==NULL;++i) {
-            localDbFile="../"+localDbFile;
-            fp=fopen(localDbFile.c_str(),"rb");
-        }
-        if (fp) fclose(fp);
-        else localDbFile=dbFile->as<String>();
-    }
-    Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
-        .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
 
-    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ, "");
-    oh->registerService(Services::PERSISTENCE, database);
+    ObjectHost *oh = new ObjectHost(ctx, spaceMap, workQueue, ios, "");
 
-    {
-        UUIDLister lister(oh, mainSpace);
-        lister.goWait(ioServ, workQueue);
+    // Add all the spaces to the ObjectHost.
+    // FIXME we're adding all spaces and having them use the same ServerIDMap
+    // because its difficult to encode this in the options.
+    // FIXME once this is working, the above SpaceIDMap (spaceMap) shouldn't be
+    // used the same way -- it was only mapping to a single address instead of
+    // an entire ServerIDMap.
+    for (SimpleSpaceIDMap::iterator i = spaceIdMap.begin(),
+             ie=spaceIdMap.end();
+         i!=ie;
+         ++i) {
+        SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
+        oh->addServerIDMap(newSpace, server_id_map);
     }
 
-    std::tr1::shared_ptr<ProxyManager> provider = oh->connectToSpace(mainSpace);
-    if (!provider) {
-        SILOG(cppoh,error,String("Unable to load database in ") + String(dbFile->as<String>()));
-        std::cout << "Press enter to continue" << std::endl;
-        std::cerr << "Press enter to continue" << std::endl;
-        fgetc(stdin);
-        return 1;
-    }
 
-    TransferManager *tm;
+    Transfer::TransferManager *tm;
     try {
         tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
     } catch (OptionDoesNotExist &err) {
@@ -261,7 +181,6 @@ int main ( int argc,const char**argv ) {
         fgetc(stdin);
         return 1;
     }
-    OptionSet::getOptions("")->parse(myargc,myargv);
 
     String graphicsCommandArguments;
     {
@@ -272,8 +191,17 @@ int main ( int argc,const char**argv ) {
         graphicsCommandArguments = os.str();
     }
 
+    // FIXME simple test example
+    // This is the camera.  We need it early on because other things depend on
+    // having its ObjectHostProxyManager.
+    HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
+    obj->init();
+    // Note: We currently just use the proxy manager for the default space. Not
+    // sure if we should do something about handling multiple spaces.
+    ProxyManagerPtr proxy_manager = obj->getProxyManager( mainSpace );
+
     // MCB: seems like a good place to initialize models system
-    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider.get(), graphicsCommandArguments ) );
+    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( proxy_manager.get(), graphicsCommandArguments ) );
 
     if ( mm )
     {
@@ -282,10 +210,6 @@ int main ( int argc,const char**argv ) {
     else
     {
         SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
-    }
-
-    if (!provider) {
-        SILOG(cppoh,error,"Failed to get TopLevelSpaceConnection for main space "<<mainSpace);
     }
 
     bool continue_simulation = true;
@@ -297,17 +221,16 @@ int main ( int argc,const char**argv ) {
         const char* name;
         bool required;
     };
-    const uint32 nSimRequests = 2;
+    const uint32 nSimRequests = 1;
     SimulationRequest simRequests[nSimRequests] = {
-        {"ogregraphics", true},
-        {"bulletphysics", false}
+        {"ogregraphics", true}
     };
     for(uint32 ir = 0; ir < nSimRequests && continue_simulation; ir++) {
         String simName = simRequests[ir].name;
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( provider.get(), provider->getTimeOffsetManager(), graphicsCommandArguments );
+            .getConstructor ( simName ) ( ctx, proxy_manager.get(), proxy_manager->getTimeOffsetManager(), graphicsCommandArguments );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -326,43 +249,47 @@ int main ( int argc,const char**argv ) {
             sims.push_back(sim);
         }
     }
-    Duration frameTime = Duration::seconds(1.0/frameRate->as<double>());
-    Task::LocalTime curTickTime(Task::LocalTime::now());
-    Task::LocalTime lastTickTime=curTickTime;
-    while ( continue_simulation ) {
-        for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
-            continue_simulation = continue_simulation && (*it)->tick();
-        }
-        oh->tick();
+    String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
+    // FIXME
+    obj->connect(
+        mainSpace,
+        Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
+        BoundingSphere3f(Vector3f::nil(), 1.f),
+        "",
+        SolidAngle(0.00000001f),
+        UUID::null(),
+        scriptFile,
+        scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
 
-        curTickTime=Task::LocalTime::now();
-        Duration frameSeconds=(curTickTime-lastTickTime);
-        if (frameSeconds<frameTime) {
-            //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
 
-            ioServ->post(
-                                                              (frameTime-frameSeconds),
-                                                              std::tr1::bind(&Network::IOService::stop,
-                                                                             ioServ)
-                                                              );
-            ioServ->run();
-            ioServ->reset();
-        }else {
-            ioServ->poll();
-        }
-        lastTickTime=curTickTime;
+    String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
+    String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
+    ObjectFactory* obj_factory = NULL;
+    if (!objfactory_type.empty()) {
+        obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
+        obj_factory->generate();
     }
 
-    provider.reset();
-    delete oh;
+    ///////////Go go go!! start of simulation/////////////////////
+    ctx->add(ctx);
+    ctx->add(oh);
+    ctx->add(sstConnMgr);
+    for(SimList::iterator it = sims.begin(); it != sims.end(); it++)
+        ctx->add(*it);
+    ctx->run(1);
 
-    // delete after OH in case objects want to do last-minute state flushes
-    delete database;
+
+    obj.reset();
+
+    ctx->cleanup();
+    trace->prepareShutdown();
+
+    proxy_manager.reset();
+    delete oh;
 
     destroyTransferManager(tm);
     delete eventManager;
     delete workQueue;
-    Network::IOServiceFactory::destroyIOService(ioServ);
 
     for(SimList::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
         delete *it;
@@ -373,7 +300,16 @@ int main ( int argc,const char**argv ) {
 
     delete spaceMap;
 
-    delete []myargv;
+    delete ctx;
+
+    trace->shutdown();
+    delete trace;
+    trace = NULL;
+
+    delete mainStrand;
+    Network::IOServiceFactory::destroyIOService(ios);
+
+    sync.stop();
 
     return 0;
 }

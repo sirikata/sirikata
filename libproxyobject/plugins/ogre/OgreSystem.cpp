@@ -57,8 +57,10 @@
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ManualMaterialLoader.hpp"
 #include "resourceManager/UploadTool.hpp"
+#include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
+
 using Meru::GraphicsResourceManager;
 using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
@@ -66,6 +68,9 @@ using Meru::SequentialWorkQueue;
 using Meru::MaterialScriptManager;
 
 #include <boost/filesystem.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include "WebView.hpp"
@@ -135,8 +140,10 @@ Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
-OgreSystem::OgreSystem()
-    : mLastFrameTime(Task::LocalTime::now()),
+OgreSystem::OgreSystem(Context* ctx)
+ : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
+   mContext(ctx),
+   mLastFrameTime(Task::LocalTime::now()),
      mQuitRequested(false),
      mFloatingPointOffset(0,0,0),
      mPrimaryCamera(NULL)
@@ -317,6 +324,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     std::list<CameraEntity*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
     if (renderTargetName.empty()) {
         mPrimaryCamera = entity;
+        dlPlanner->setCamera(entity);
         std::vector<String> cubeMapNames;
 
         std::vector<Vector3f> cubeMapOffsets;
@@ -336,6 +344,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     }
     return retval;
 }
+
 std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEntity*>::iterator entity) {
     if (entity != mAttachedCameras.end()) {
         if (mPrimaryCamera == *entity) {
@@ -351,6 +360,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mLocalTimeOffset=localTimeOffset;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
+
+    //initialize the Resource Download Planner
+    dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
+
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -413,7 +426,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             Meru::EventSource::sSingleton = ((Task::GenEventManager*)eventManager->as<void*>());
             new SequentialWorkQueue ((Task::WorkQueue*)workQueue->as<void*>());
-            new ResourceManager(mTransferManager);
+            new ResourceManager();
             new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
 
@@ -724,6 +737,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         } else if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
+            dlPlanner->addNewObject(p, mesh);
         }
     }
     if (!created) {
@@ -824,9 +838,10 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
                 Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
                 Ogre::Mesh *mesh = foundEntity->getMesh().get();
                 uint16 numSubMeshes = mesh->getNumSubMeshes();
+                std::vector<TriVertex> sharedVertices;
                 for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
                     Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
-                    OgreMesh ogreMesh(submesh, texcoord);
+                    OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
                     IntersectResult intRes;
                     ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
                     if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {
@@ -1002,17 +1017,18 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
     return continueRendering;
 }
 //static Task::LocalTime debugStartTime = Task::LocalTime::now();
-bool OgreSystem::tick(){
+void OgreSystem::poll(){
     GraphicsResourceManager::getSingleton().computeLoadedSet();
     Task::LocalTime curFrameTime(Task::LocalTime::now());
     Task::LocalTime finishTime(curFrameTime + desiredTickRate()); // arbitrary
 
     tickInputHandler(curFrameTime);
 
-    bool continueRendering=true;
     Duration frameTime=curFrameTime-mLastFrameTime;
-    if (mRenderTarget==sRenderTarget)
-        continueRendering=renderOneFrame(curFrameTime, frameTime);
+    if (mRenderTarget==sRenderTarget) {
+        if (!renderOneFrame(curFrameTime, frameTime))
+            quit();
+    }
     else if (sRenderTarget==NULL) {
         SILOG(ogre,warning,"No window set to render: skipping render phase");
     }
@@ -1022,9 +1038,7 @@ bool OgreSystem::tick(){
     Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
 
     if (mQuitRequested)
-        continueRendering = false;
-
-    return continueRendering;
+        mContext->shutdown();
 }
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
@@ -1048,6 +1062,11 @@ void OgreSystem::postFrame(Task::LocalTime current, Duration frameTime) {
         mCubeMap->frameEnded(evt);
     }
 
+}
+
+void OgreSystem::screenshot(const String& filename) {
+    if (mRenderTarget != NULL)
+        mRenderTarget->writeContentsToFile(filename);
 }
 
 // ConnectionEventListener Interface

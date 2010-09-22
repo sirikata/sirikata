@@ -62,8 +62,12 @@ DelegateService::~DelegateService() {
     }
 }
 
-Port* DelegateService::bindODPPort(SpaceID space, PortID port) {
-    PortMap* pm = getOrCreatePortMap(space);
+Port* DelegateService::bindODPPort(const SpaceID& space, const ObjectReference& objref, PortID port) {
+    return bindODPPort(SpaceObjectReference(space, objref), port);
+}
+
+Port* DelegateService::bindODPPort(const SpaceObjectReference& sor, PortID port) {
+    PortMap* pm = getOrCreatePortMap(sor);
 
     PortMap::iterator it = pm->find(port);
     if (it != pm->end()) {
@@ -71,21 +75,25 @@ Port* DelegateService::bindODPPort(SpaceID space, PortID port) {
         return NULL;
     }
 
-    DelegatePort* new_port = mCreator(this, space, port);
+    DelegatePort* new_port = mCreator(this, sor, port);
     if (new_port != NULL) {
         (*pm)[port] = new_port;
     }
     return new_port;
 }
 
-Port* DelegateService::bindODPPort(SpaceID space) {
+Port* DelegateService::bindODPPort(const SpaceID& space, const ObjectReference& objref) {
+    return bindODPPort(SpaceObjectReference(space, objref));
+}
+
+Port* DelegateService::bindODPPort(const SpaceObjectReference& sor) {
     // FIXME we should probably do some more intelligent tracking here, maybe
     // keeping track of free blocks of ports...
 
     // 10000 is completely arbitrary and probably too high...
     for(uint32 i = 0; i < 10000; i++) {
         PortID port_id = rand() % 32767;
-        Port* result = bindODPPort(space, port_id);
+        Port* result = bindODPPort(sor, port_id);
         if (result != NULL) return result;
     }
     return NULL;
@@ -95,9 +103,13 @@ void DelegateService::registerDefaultODPHandler(const MessageHandler& cb) {
     mDefaultHandler = cb;
 }
 
+void DelegateService::registerDefaultODPHandler(const OldMessageHandler& cb) {
+    mDefaultOldHandler = cb;
+}
+
 bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReference data) const {
     // Check from most to least specific
-    PortMap const* pm = getPortMap(header.destination_space());
+    PortMap const* pm = getPortMap( SpaceObjectReference(header.destination_space(), header.destination_object()));
     if (pm != NULL) {
         PortMap::const_iterator it = pm->find(header.destination_port());
         if (it != pm->end()) {
@@ -109,8 +121,33 @@ bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReferen
     }
 
     // And finally, the default handler
+    if (mDefaultOldHandler != 0) {
+        mDefaultOldHandler(header, data);
+        return true;
+    }
+
+    return false;
+}
+
+bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
+    // Check from most to least specific
+
+    PortMap const* pm = getPortMap(dst.spaceObject());
+    if (pm != NULL) {
+        PortMap::const_iterator it = pm->find(dst.port());
+        
+        if (it != pm->end())
+        {
+            DelegatePort* port = it->second;
+            bool delivered = port->deliver(src, dst, data);
+            if (delivered)
+                return true;
+        }
+    }
+
+    // And finally, the default handler
     if (mDefaultHandler != 0) {
-        mDefaultHandler(header, data);
+        mDefaultHandler(src, dst, data);
         return true;
     }
 
@@ -118,15 +155,15 @@ bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReferen
 }
 
 void DelegateService::deallocatePort(DelegatePort* port) {
-    PortMap* pm = getPortMap(port->endpoint().space());
+    PortMap* pm = getPortMap(port->endpoint().spaceObject());
     if (pm == NULL)
         return;
 
     pm->erase(port->endpoint().port());
 }
 
-DelegateService::PortMap* DelegateService::getPortMap(SpaceID space) const {
-    SpacePortMap::const_iterator it = mSpacePortMap.find(space);
+DelegateService::PortMap* DelegateService::getPortMap(const SpaceObjectReference& sor) const {
+    SpacePortMap::const_iterator it = mSpacePortMap.find(sor);
 
     if (it != mSpacePortMap.end())
         return it->second;
@@ -134,13 +171,13 @@ DelegateService::PortMap* DelegateService::getPortMap(SpaceID space) const {
     return NULL;
 }
 
-DelegateService::PortMap* DelegateService::getOrCreatePortMap(SpaceID space) {
-    PortMap* pm = getPortMap(space);
+DelegateService::PortMap* DelegateService::getOrCreatePortMap(const SpaceObjectReference& sor) {
+    PortMap* pm = getPortMap(sor);
     if (pm != NULL)
         return pm;
 
     PortMap* new_port_map = new PortMap();
-    mSpacePortMap[space] = new_port_map;
+    mSpacePortMap[sor] = new_port_map;
     return new_port_map;
 }
 

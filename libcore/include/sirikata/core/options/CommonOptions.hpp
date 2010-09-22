@@ -52,11 +52,18 @@ SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv);
 // because some types are defined per-library and won't dynamic_cast properly.
 // It is suggested that you use GetOptionValue where possible.
 SIRIKATA_FUNCTION_EXPORT OptionValue* GetOption(const char* name);
+SIRIKATA_FUNCTION_EXPORT OptionValue* GetOption(const char* klass, const char* name);
 
 template<typename T>
 T GetOptionValue(const char* name) {
     OptionValue* opt = GetOption(name);
     return opt->as<T>();
+}
+
+template<typename T>
+T GetOptionValue(const char* klass, const char* name) {
+    OptionValue* opt = GetOption(klass, name);
+    return opt->unsafeAs<T>(); // FIXME should be ->as<T>();
 }
 
 template<>
@@ -73,6 +80,12 @@ template<>
 SIRIKATA_FUNCTION_EXPORT Task::DeltaTime GetOptionValue<Task::DeltaTime>(const char* name);
 template<>
 SIRIKATA_FUNCTION_EXPORT uint32 GetOptionValue<uint32>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT int32 GetOptionValue<int32>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT uint64 GetOptionValue<uint64>(const char* name);
+template<>
+SIRIKATA_FUNCTION_EXPORT int64 GetOptionValue<int64>(const char* name);
 template<>
 SIRIKATA_FUNCTION_EXPORT bool GetOptionValue<bool>(const char* name);
 

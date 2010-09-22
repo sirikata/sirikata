@@ -45,12 +45,8 @@ void HttpManager::destroy() {
     AutoSingleton<HttpManager>::destroy();
 }
 
-std::tr1::shared_ptr<HttpManager::HttpResponse> HttpManager::mTempResponse =
-        std::tr1::shared_ptr<HttpManager::HttpResponse>();
-std::string HttpManager::mTempHeaderName = "";
-
 HttpManager::HttpManager()
-    : numOutstanding(0) {
+    : mNumTotalConnections(0) {
 
     EMPTY_PARSER_SETTINGS.on_message_begin = 0;
     EMPTY_PARSER_SETTINGS.on_header_field = 0;
@@ -77,6 +73,7 @@ HttpManager::HttpManager()
 }
 
 HttpManager::~HttpManager() {
+
     //Cancel any pending requests to resolve names and delete resolver
     mResolver->cancel();
     delete mResolver;
@@ -90,35 +87,113 @@ HttpManager::~HttpManager() {
     delete mServicePool;
 }
 
-void HttpManager::makeRequest(Sirikata::Network::Address addr, std::string req, HttpCallback cb) {
+void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb) {
 
-    http_parser_init(&mHttpParser, HTTP_REQUEST);
-    size_t nparsed = http_parser_execute(&mHttpParser, &EMPTY_PARSER_SETTINGS, req.c_str(), req.length());
-    if(nparsed != req.length()) {
+    http_parser reqParser;
+    http_parser_init(&reqParser, HTTP_REQUEST);
+    size_t nparsed = http_parser_execute(&reqParser, &EMPTY_PARSER_SETTINGS, req.c_str(), req.length());
+    if (nparsed != req.length()) {
         SILOG(transfer, warning, "Parsing http request failed");
         boost::system::error_code ec;
         cb(std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec);
     }
 
-    HttpRequest r(addr, req, cb);
-    mRequestQueue.push(r);
+    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, cb));
+    add_req(r);
     processQueue();
 }
 
 void HttpManager::processQueue() {
-    /*SILOG(transfer, debug, "processQueue called, numOutstanding = "
-            << numOutstanding << " and request queue size = " << mRequestQueue.size());*/
-    if(numOutstanding < MAX_CONCURRENT_REQUESTS && !mRequestQueue.empty()) {
-        HttpRequest r = mRequestQueue.front();
-        mRequestQueue.pop();
-        numOutstanding++;
-        TCPResolver::query query(r.addr.getHostName(), r.addr.getService());
-        mResolver->async_resolve(query, boost::bind(&HttpManager::handle_resolve, this, r,
-                                boost::asio::placeholders::error, boost::asio::placeholders::iterator));
+    /*SILOG(transfer, debug, "processQueue called, mNumTotalConnections = "
+            << mNumTotalConnections << " and recycle bin size = " << mRecycleBin.size()
+            << " and size of hosts = " << mNumConnsPerAddr.size()
+            << " and request queue size = " << mRequestQueue.size());*/
+
+    boost::unique_lock<boost::mutex> lockQueue(mRequestQueueLock);
+    boost::unique_lock<boost::mutex> lockNumConns(mNumConnsLock, boost::defer_lock);
+
+    for (RequestQueueType::iterator req = mRequestQueue.begin(); req != mRequestQueue.end(); ) {
+
+        std::tr1::shared_ptr<TCPSocket> sock;
+
+        //First check the recycle bin to see if there's a connection already open we can use
+        boost::unique_lock<boost::mutex> lockRB(mRecycleBinLock); {
+            RecycleBinType::iterator findRec = mRecycleBin.find((*req)->addr);
+            if (findRec != mRecycleBin.end()) {
+                sock = findRec->second.front();
+                findRec->second.pop();
+                if (findRec->second.size() == 0) {
+                    mRecycleBin.erase(findRec);
+                }
+            }
+        }
+        lockRB.unlock();
+
+        if (sock) {
+            //SILOG(transfer, debug, "Reusing a connection for " << (*req)->addr.toString());
+            write_request(sock, *req);
+            req = mRequestQueue.erase(req);
+        } else {
+
+            lockNumConns.lock(); {
+                //If nothing in the recycle bin, let's see if we can open a new connection
+                if (mNumTotalConnections < MAX_TOTAL_CONNECTIONS) {
+                    NumConnsType::iterator findNumC = mNumConnsPerAddr.find((*req)->addr);
+                    if (mNumTotalConnections < MAX_TOTAL_CONNECTIONS &&
+                            (findNumC == mNumConnsPerAddr.end() || findNumC->second < MAX_CONNECTIONS_PER_ENDPOINT)) {
+
+                        //We are safe to open a new connection, but increase counts first
+                        mNumTotalConnections++;
+                        if (findNumC == mNumConnsPerAddr.end()) {
+                           mNumConnsPerAddr[(*req)->addr] = 1;
+                        } else {
+                            mNumConnsPerAddr[(*req)->addr] = findNumC->second + 1;
+                        }
+
+                        //SILOG(transfer, debug, "Creating a new connection for " << (*req)->addr.toString());
+                        TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService());
+                        mResolver->async_resolve(query, boost::bind(&HttpManager::handle_resolve, this, *req,
+                                                boost::asio::placeholders::error, boost::asio::placeholders::iterator));
+
+                        req = mRequestQueue.erase(req);
+                    } else {
+                        //No available recycled connections, can't open a new one, so do nothing
+                        req++;
+                    }
+                } else {
+                    //No available recycled connections, can't open a new one, so do nothing
+                    req++;
+                }
+            } lockNumConns.unlock();
+        }
     }
+
+    lockQueue.unlock();
 }
 
-void HttpManager::handle_resolve(HttpRequest req, const boost::system::error_code& err,
+void HttpManager::decrement_connection(const Sirikata::Network::Address& addr) {
+    //SILOG(transfer, debug, "Reducing number of connections by 1 for " << addr.toString());
+    boost::unique_lock<boost::mutex> lockNumConns(mNumConnsLock); {
+        mNumTotalConnections--;
+        NumConnsType::iterator findNumC = mNumConnsPerAddr.find(addr);
+        if (findNumC != mNumConnsPerAddr.end()) {
+            if (findNumC->second == 1) {
+                mNumConnsPerAddr.erase(findNumC);
+            } else {
+                mNumConnsPerAddr[addr] = findNumC->second - 1;
+            }
+        }
+    }
+    lockNumConns.unlock();
+}
+
+void HttpManager::add_req(std::tr1::shared_ptr<HttpRequest> req) {
+    boost::unique_lock<boost::mutex> lockQueue(mRequestQueueLock);
+    mRequestQueue.push_back(req);
+    lockQueue.unlock();
+}
+
+void HttpManager::handle_resolve(std::tr1::shared_ptr<HttpRequest> req, const boost::system::error_code& err,
         TCPResolver::iterator endpoint_iterator) {
     if (!err) {
         TCPEndPoint endpoint = *endpoint_iterator;
@@ -128,21 +203,25 @@ void HttpManager::handle_resolve(HttpRequest req, const boost::system::error_cod
                 boost::asio::placeholders::error, ++endpoint_iterator));
     } else {
         SILOG(transfer, error, "Failed to resolve hostname. Error = " << err.message());
-        req.cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, err);
-        numOutstanding--;
+        decrement_connection(req->addr);
+        add_req(req);
         processQueue();
     }
 }
 
-void HttpManager::handle_connect(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
+void HttpManager::write_request(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req) {
+    std::tr1::shared_ptr<boost::asio::streambuf> request_ptr(new boost::asio::streambuf());
+    std::ostream request_stream(request_ptr.get());
+    request_stream << req->req;
+    boost::asio::async_write(*socket, *request_ptr, boost::bind(
+            &HttpManager::handle_write_request, this, socket, req,
+            boost::asio::placeholders::error, request_ptr));
+}
+
+void HttpManager::handle_connect(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req,
         const boost::system::error_code& err, TCPResolver::iterator endpoint_iterator) {
     if (!err) {
-        std::tr1::shared_ptr<boost::asio::streambuf> request_ptr(new boost::asio::streambuf());
-        std::ostream request_stream(request_ptr.get());
-        request_stream << req.req;
-        boost::asio::async_write(*socket, *request_ptr, boost::bind(
-                &HttpManager::handle_write_request, this, socket, req,
-                boost::asio::placeholders::error, request_ptr));
+        write_request(socket, req);
     } else if (endpoint_iterator != TCPResolver::iterator()) {
         socket->close();
         TCPEndPoint endpoint = *endpoint_iterator;
@@ -151,92 +230,257 @@ void HttpManager::handle_connect(std::tr1::shared_ptr<TCPSocket> socket, HttpReq
                 boost::asio::placeholders::error, ++endpoint_iterator));
     } else {
         SILOG(transfer, error, "Failed to connect. Error = " << err.message());
-        req.cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, err);
-        numOutstanding--;
+        decrement_connection(req->addr);
+        add_req(req);
         processQueue();
     }
 }
 
-void HttpManager::handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
+void HttpManager::handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req,
         const boost::system::error_code& err, std::tr1::shared_ptr<boost::asio::streambuf> request_stream) {
-    if (!err) {
-        std::tr1::shared_ptr<boost::asio::streambuf> response(new boost::asio::streambuf());
-        boost::asio::async_read(*socket, *response, boost::bind(
-                &HttpManager::handle_read, this, socket, req, response,
-                boost::asio::placeholders::error,
-                boost::asio::placeholders::bytes_transferred));
-    } else {
+
+    if (err) {
         socket->close();
         SILOG(transfer, error, "Failed to write. Error = " << err.message());
-        req.cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, err);
-        numOutstanding--;
+        decrement_connection(req->addr);
+        add_req(req);
         processQueue();
+        return;
     }
+
+    //Create a new response object
+    std::tr1::shared_ptr<HttpResponse> respPtr(new HttpResponse());
+
+    //Initiate an empty DenseData
+    std::tr1::shared_ptr<DenseData> emptyData(new DenseData(Range(true)));
+    respPtr->mData = emptyData;
+
+    //Initialize http parser settings callbacks
+    respPtr->mHttpSettings = EMPTY_PARSER_SETTINGS;
+    respPtr->mHttpSettings.on_header_field = &HttpManager::on_header_field;
+    respPtr->mHttpSettings.on_header_value = &HttpManager::on_header_value;
+    respPtr->mHttpSettings.on_body = &HttpManager::on_body;
+    respPtr->mHttpSettings.on_headers_complete = &HttpManager::on_headers_complete;
+    respPtr->mHttpSettings.on_message_complete = &HttpManager::on_message_complete;
+
+    //Initialize the parser for parsing a response
+    http_parser_init(&(respPtr->mHttpParser), HTTP_RESPONSE);
+
+    /*
+     * http-parser library uses this void * parameter to callbacks for user-defined data
+     * Store a pointer to the HttpResponse object so we can access it during static callbacks
+     */
+    respPtr->mHttpParser.data = static_cast<void *>(respPtr.get());
+
+    //Create a buffer for receiving from socket
+    std::tr1::shared_ptr<std::vector<unsigned char> > vecbuf(new std::vector<unsigned char>(SOCKET_BUFFER_SIZE));
+
+    //Read some data
+    socket->async_read_some(boost::asio::buffer(*vecbuf), boost::bind(
+            &HttpManager::handle_read, this, socket, req, vecbuf, respPtr,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred));
 }
 
-void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, HttpRequest req,
-        std::tr1::shared_ptr<boost::asio::streambuf> response, const boost::system::error_code& err,
-        std::size_t bytes_transferred) {
-    if (!err || err == boost::asio::error::eof) {
-        const char* resp_str = boost::asio::buffer_cast<const char*>(response->data());
+void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::shared_ptr<HttpRequest> req,
+        std::tr1::shared_ptr<std::vector<unsigned char> > vecbuf, std::tr1::shared_ptr<HttpResponse> respPtr,
+        const boost::system::error_code& err, std::size_t bytes_transferred) {
 
-        mHttpSettings = EMPTY_PARSER_SETTINGS;
-        mHttpSettings.on_header_field = &HttpManager::on_header_field;
-        mHttpSettings.on_header_value = &HttpManager::on_header_value;
-        mHttpSettings.on_body = &HttpManager::on_body;
-        mHttpSettings.on_headers_complete = &HttpManager::on_headers_complete;
+    /*SILOG(transfer, debug, "handle_read triggered with bytes_transferred = " << bytes_transferred << " EOF? "
+            << (err == boost::asio::error::eof ? "Y" : "N"));*/
 
-        http_parser_init(&mHttpParser, HTTP_RESPONSE);
-
-        std::tr1::shared_ptr<HttpResponse> respObj(new HttpResponse());
-        mTempResponse = respObj;
-        size_t responseSize = response->size();
-
-        size_t nparsed = http_parser_execute(&mHttpParser, &mHttpSettings, resp_str, responseSize);
-        boost::system::error_code ec;
-        if(nparsed != responseSize) {
-            SILOG(transfer, warning, "Failed to parse http response. nparsed=" << nparsed << " while responsesize=" << responseSize);
-            req.cb(std::tr1::shared_ptr<HttpResponse>(), RESPONSE_PARSING_FAILED, ec);
-        } else {
-            SILOG(transfer, debug, "Finished http transfer with content length of " << mTempResponse->getContentLength());
-            req.cb(mTempResponse, SUCCESS, ec);
-        }
-    } else {
+    if ((err || bytes_transferred == 0) && err != boost::asio::error::eof) {
         SILOG(transfer, error, "Failed to write. Error = " << err.message());
-        req.cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, err);
+        socket->close();
+        decrement_connection(req->addr);
+        add_req(req);
+        processQueue();
+        return;
     }
 
-    socket->close();
-    numOutstanding--;
-    processQueue();
+    //Parse the data we just got back from the socket
+    size_t nparsed = http_parser_execute(&(respPtr->mHttpParser), &(respPtr->mHttpSettings),
+            (const char *)(&((*vecbuf)[0])), bytes_transferred);
+
+    boost::system::error_code ec;
+    if (nparsed != bytes_transferred) {
+        SILOG(transfer, warning, "Failed to parse http response. nparsed=" << nparsed << " while bytes_transferred=" << bytes_transferred);
+        req->cb(std::tr1::shared_ptr<HttpResponse>(), RESPONSE_PARSING_FAILED, ec);
+        socket->close();
+        decrement_connection(req->addr);
+        processQueue();
+        return;
+    }
+
+    if (err == boost::asio::error::eof && bytes_transferred != 0) {
+        //Pass 0 as fourth parameter to parser to tell it that we got EOF
+        size_t nparsed = http_parser_execute(&(respPtr->mHttpParser), &(respPtr->mHttpSettings),
+                (const char *)(&((*vecbuf)[0])), 0);
+        if (nparsed != 0) {
+            SILOG(transfer, warning, "Failed to parse http response when giving EOF. nparsed=" << nparsed);
+            req->cb(std::tr1::shared_ptr<HttpResponse>(), RESPONSE_PARSING_FAILED, ec);
+            socket->close();
+            decrement_connection(req->addr);
+            processQueue();
+            return;
+        }
+
+    }
+
+    if ((req->method == HEAD && respPtr->mHeaderComplete) ||
+            (req->method == GET && respPtr->mMessageComplete)) {
+        //We're done
+
+        //If we didn't get any body data, erase the DenseData pointer
+        if (respPtr->mData->length() == 0) {
+            respPtr->mData.reset();
+        }
+
+        SILOG(transfer, debug, "Finished http transfer with content length of " << respPtr->getContentLength());
+        req->cb(respPtr, SUCCESS, ec);
+
+        //If this is Connection: Close, then close connection, otherwise recycle
+        if (respPtr->mHttpParser.flags & F_CONNECTION_CLOSE) {
+            socket->close();
+            decrement_connection(req->addr);
+        } else {
+            boost::unique_lock<boost::mutex> lockRB(mRecycleBinLock);
+            mRecycleBin[req->addr].push(socket);
+            lockRB.unlock();
+        }
+        processQueue();
+
+    } else if(err == boost::asio::error::eof || bytes_transferred == 0) {
+        SILOG(transfer, warning, "EOF was true or bytes_transferred==0 and the parser wasn't finished, so connection is broken");
+        socket->close();
+        decrement_connection(req->addr);
+        add_req(req);
+        processQueue();
+        return;
+    } else {
+        //Read some more data
+        socket->async_read_some(boost::asio::buffer(*vecbuf), boost::bind(
+                &HttpManager::handle_read, this, socket, req, vecbuf, respPtr,
+                boost::asio::placeholders::error,
+                boost::asio::placeholders::bytes_transferred));
+    }
+
 }
 
-int HttpManager::on_headers_complete(http_parser *_) {
+int HttpManager::on_headers_complete(http_parser* _) {
     //SILOG(transfer, debug, "headers complete. content length = " << _->content_length);
-    mTempResponse->mContentLength = _->content_length;
-    mTempResponse->mStatusCode = _->status_code;
+    HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
+    curResponse->mContentLength = _->content_length;
+    curResponse->mStatusCode = _->status_code;
+
+    //Check for last header that might not have been saved
+    if (curResponse->mLastCallback == HttpResponse::VALUE) {
+        curResponse->mHeaders[curResponse->mTempHeaderField] = curResponse->mTempHeaderValue;
+    }
+
+    //Check if Content-Encoding = gzip
+    std::map<std::string, std::string>::const_iterator it = curResponse->mHeaders.find("Content-Encoding");
+    if(it != curResponse->mHeaders.end() && it->second == "gzip") {
+        curResponse->mGzip = true;
+    }
+
+    curResponse->mHeaderComplete = true;
     return 0;
 }
 
-int HttpManager::on_header_field(http_parser *_, const char *at, size_t len) {
-    //SILOG(transfer, debug, "on_header_field called");
-    mTempHeaderName.clear();
-    mTempHeaderName.append(at, len);
+int HttpManager::on_header_field(http_parser* _, const char* at, size_t len) {
+    HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
+
+    //See http-parser documentation for why this is necessary
+    switch (curResponse->mLastCallback) {
+        case HttpResponse::VALUE:
+            //Previous header name/value is finished, so save
+            curResponse->mHeaders[curResponse->mTempHeaderField] = curResponse->mTempHeaderValue;
+            //Then continue on to the none case to make new values:
+        case HttpResponse::NONE:
+            //Clear strings and save header name
+            curResponse->mTempHeaderField.clear();
+            //Continue on to append:
+        case HttpResponse::FIELD:
+            //Field was called twice in a row, so append new data to previous name
+            curResponse->mTempHeaderField.append(at, len);
+            break;
+    }
+
+    curResponse->mLastCallback = curResponse->FIELD;
     return 0;
 }
 
-int HttpManager::on_header_value(http_parser *_, const char *at, size_t len) {
+int HttpManager::on_header_value(http_parser* _, const char* at, size_t len) {
     //SILOG(transfer, debug, "on_header_value called");
-    std::string val(at, len);
-    mTempResponse->mHeaders[mTempHeaderName] = val;
+    HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
+
+    //See http-parser documentation for why this is necessary
+    switch(curResponse->mLastCallback) {
+        case HttpResponse::FIELD:
+            //Field is finished, this is a new value so clear
+            curResponse->mTempHeaderValue.clear();
+            //Continue on to append data:
+        case HttpResponse::VALUE:
+            //May be a continued header value, so append
+            curResponse->mTempHeaderValue.append(at, len);
+            break;
+        case HttpResponse::NONE:
+            //Shouldn't happen
+            assert(false);
+            break;
+    }
+
+    curResponse->mLastCallback = curResponse->VALUE;
     return 0;
 }
 
-int HttpManager::on_body(http_parser *_, const char *at, size_t len) {
+int HttpManager::on_body(http_parser* _, const char* at, size_t len) {
     //SILOG(transfer, debug, "on_body called with length = " << len);
-    std::tr1::shared_ptr<DenseData> d(new DenseData(Range(0, len, LENGTH, true), at));
-    mTempResponse->mData = d;
+    HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
+
+    if(curResponse->mGzip) {
+        //Gzip encoding, so pass this buffer through a decoder
+        curResponse->mCompressedStream.write(at, len);
+    } else {
+        //Raw encoding, so append the bytes in current body pointer directly to the DenseData pointer in our response
+        curResponse->mData->append(at, len, true);
+    }
+
     return 0;
+}
+
+int HttpManager::on_message_complete(http_parser* _) {
+    //SILOG(transfer, debug, "message complete. content length = " << _->content_length);
+    HttpResponse* curResponse = static_cast<HttpResponse*>(_->data);
+
+    if(curResponse->mGzip) {
+        std::stringstream decompressed;
+        boost::iostreams::filtering_streambuf<boost::iostreams::input> out;
+        out.push(boost::iostreams::gzip_decompressor());
+        out.push(curResponse->mCompressedStream);
+        boost::iostreams::copy(out, decompressed);
+        curResponse->mCompressedStream.str("");
+        curResponse->mData->append(decompressed.str().c_str(), decompressed.str().length(), true);
+        curResponse->mContentLength = decompressed.str().length();
+    }
+
+    curResponse->mMessageComplete = true;
+    return 0;
+}
+
+void HttpManager::print_flags(std::tr1::shared_ptr<HttpResponse> resp) {
+    char flags = resp->mHttpParser.flags;
+    SILOG(transfer, debug, "Flags are: "
+            << (flags & F_CHUNKED ? "F_CHUNKED " : "")
+            << (flags & F_CONNECTION_KEEP_ALIVE ? "F_CONNECTION_KEEP_ALIVE " : "")
+            << (flags & F_CONNECTION_CLOSE ? "F_CONNECTION_CLOSE " : "")
+            << (flags & F_TRAILING ? "F_TRAILING " : "")
+            << (flags & F_UPGRADE ? "F_UPGRADE " : "")
+            << (flags & F_SKIPBODY ? "F_SKIPBODY " : "")
+            << (resp->mMessageComplete ? "MESSAGE_COMPLETE " : "")
+            << (resp->mHeaderComplete ? "HEADER_COMPLETE " : "")
+            );
 }
 
 }

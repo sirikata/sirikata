@@ -51,12 +51,14 @@
 #include <boost/filesystem/exception.hpp>
 #endif
 */
-#include <sirikata/core/transfer/TransferManager.hpp>
+
+using namespace std;
+
 namespace Meru {
 
 MANUAL_SINGLETON_STORAGE(ResourceManager);
-ResourceManager::ResourceManager(::Sirikata::Transfer::TransferManager*transferManager)
- :mTransferManager(transferManager) {
+ResourceManager::ResourceManager()
+{
 }
 ResourceManager::~ResourceManager(){
 }
@@ -116,17 +118,5 @@ void ResourceManager::handleExternalDownloadComplete(const EventPtr&transferEven
 }
 */
 
-Sirikata::Task::SubscriptionId ResourceManager::request (const RemoteFileId &request, const std::tr1::function<EventResponse(const EventPtr&)>&downloadFunctor, Transfer::Range range){
-    return mTransferManager->downloadByHash(request,downloadFunctor,range);
-}
-
-void ResourceManager::nameLookup(const URI &resource_id, std::tr1::function<void(const URI&,const ResourceHash*)>callback) {
-    mTransferManager->downloadName(resource_id,callback);
-}
-
-bool ResourceManager::nameLookup(const URI &resource_id, ResourceHash &result, std::tr1::function<void(const URI&,const ResourceHash*)>callback) {
-    mTransferManager->downloadName(resource_id,callback);
-    return false;
-}
 
 } // namespace Meru

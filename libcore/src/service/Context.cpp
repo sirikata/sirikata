@@ -34,6 +34,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <boost/asio.hpp>
 
 namespace Sirikata {
 
@@ -48,7 +49,8 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
    mSimDuration(simlen),
    mKillThread(),
    mKillService(NULL),
-   mKillTimer()
+   mKillTimer(),
+   mStopRequested(false)
 {
 }
 
@@ -56,24 +58,28 @@ Context::~Context() {
 }
 
 void Context::start() {
+    if (mSimDuration == Duration::zero())
+        return;
+
     Time t_now = simTime();
     Time t_end = simTime(mSimDuration);
     Duration wait_dur = t_end - t_now;
     mFinishedTimer->wait(
         wait_dur,
         mainStrand->wrap(
-            std::tr1::bind(&Context::stopSimulation, this)
+            std::tr1::bind(&Context::shutdown, this)
         )
     );
 }
 
-void Context::stopSimulation() {
+void Context::shutdown() {
     this->stop();
     for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
         (*it)->stop();
 }
 
 void Context::stop() {
+    mStopRequested = true;
     mFinishedTimer.reset();
     startForceQuitTimer();
 }

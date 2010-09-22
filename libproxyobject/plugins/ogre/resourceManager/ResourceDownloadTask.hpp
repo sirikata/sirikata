@@ -35,6 +35,11 @@
 #include "../meruCompat/MeruDefs.hpp"
 #include "../meruCompat/DependencyTask.hpp"
 #include "../meruCompat/Event.hpp"
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 
 namespace Meru {
 
@@ -52,8 +57,11 @@ class ResourceDownloadQueue {
 class ResourceDownloadTask : public DependencyTask
 {
 public:
+    typedef std::tr1::function<void(
+        std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<Transfer::DenseData> response)> DownloadCallback;
 
-  ResourceDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, ResourceRequestor* resourceRequestor);
+    ResourceDownloadTask(DependencyManager* mgr, const URI& uri, ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb);
   virtual ~ResourceDownloadTask();
 
   void setRange(const Transfer::Range &r) {
@@ -69,16 +77,24 @@ public:
   }
 
 protected:
-  void requestDownload();
+
   EventResponse downloadCompleteHandler(const EventPtr &event);
+  void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+            std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
+
+  void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
+
 
   bool mStarted;
-
-  const RemoteFileId mHash;
+  bool customCb;
+  const URI mURI;
   SubscriptionId mCurrentDownload;
   Transfer::Range mRange;
   ResourceRequestor* mResourceRequestor;
   Transfer::SparseData mMergeData;
+  double mPriority;
+  DownloadCallback cb;
 };
 
 }

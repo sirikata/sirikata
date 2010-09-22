@@ -63,23 +63,40 @@ public:
     virtual const Endpoint& endpoint() const;
     virtual bool send(const Endpoint& to, MemoryReference payload);
     virtual void receiveFrom(const Endpoint& from, const MessageHandler& cb);
+    virtual void receiveFrom(const Endpoint& from, const OldMessageHandler& cb);
+
+    /** Deliver a message via this port.  Returns true if a receiver was found
+     *  for the message, false if none was found and it was ignored.
+     *  \deprecated Prefer the version using ODP::Endpoints
+     */
+    bool deliver(const RoutableMessageHeader& header, MemoryReference data) const;
 
     /** Deliver a message via this port.  Returns true if a receiver was found
      *  for the message, false if none was found and it was ignored.
      */
-    bool deliver(const RoutableMessageHeader& header, MemoryReference data) const;
+    bool deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const;
 
 private:
     // Worker method for deliver, tries to deliver to the handler for this exact
     // endpoint.
-    bool tryDeliver(const Endpoint& ep, const RoutableMessageHeader& header, MemoryReference data) const;
+    // \deprecated Prefer the version using both ODP::Endpoints
+
+    bool tryDeliver(const Endpoint& match_ep, const Endpoint& real_ep, const RoutableMessageHeader& header, MemoryReference data) const;
+
+    // Worker method for deliver, tries to deliver to the handler for this exact
+    // endpoint.
+    // \deprecated Prefer the version using both ODP::Endpoints
+    bool tryDeliver(const Endpoint& src_match_ep, const Endpoint& src_real_ep, const Endpoint& dst, MemoryReference data) const;
+
 
     typedef std::tr1::unordered_map<Endpoint, MessageHandler, Endpoint::Hasher> ReceiveFromHandlers;
+    typedef std::tr1::unordered_map<Endpoint, OldMessageHandler, Endpoint::Hasher> ReceiveFromOldHandlers;
 
     DelegateService* mParent;
     Endpoint mEndpoint;
     SendFunction mSendFunc;
     ReceiveFromHandlers mFromHandlers;
+    ReceiveFromOldHandlers mFromOldHandlers;
 }; // class DelegatePort
 
 } // namespace ODP

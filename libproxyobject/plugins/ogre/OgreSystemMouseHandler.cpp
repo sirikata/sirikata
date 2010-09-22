@@ -35,6 +35,7 @@
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
 #include "LightEntity.hpp"
+#include "Lights.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
@@ -60,6 +61,10 @@
 #include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
+#include <sirikata/core/util/KnownMessages.hpp>
+#include <sirikata/core/util/KnownScriptTypes.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -121,6 +126,11 @@ class OgreSystem::MouseHandler {
     typedef std::multimap<InputDevice*, SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
 
+    uint32 mScreenshotID;
+    bool mPeriodicScreenshot;
+    Task::LocalTime mScreenshotStartTime;
+    Task::LocalTime mLastScreenshotTime;
+
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
@@ -164,11 +174,15 @@ class OgreSystem::MouseHandler {
     uint32 mCameraPathIndex;
     Task::DeltaTime mCameraPathTime;
     Task::LocalTime mLastCameraTime;
+    Task::LocalTime mLastFpsTime;
 
     typedef std::map<String, InputResponse*> InputResponseMap;
     InputResponseMap mInputResponses;
 
     InputBinding mInputBinding;
+
+    WebView* mUploadWebView;
+    WebView* mFPSWidgetView;
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -178,7 +192,7 @@ class OgreSystem::MouseHandler {
         Entity *mParentEntity;
         OgreSystem *mOgreSys;
         void findNext() {
-            while (!end() && !((*mIter).second->getProxy().getParent() == mParentEntity->id())) {
+            while (!end() && !((*mIter).second->getProxy().getParentProxy()->getObjectReference() == mParentEntity->id())) {
                 ++mIter;
             }
         }
@@ -269,8 +283,10 @@ class OgreSystem::MouseHandler {
             }
         }
         if (mouseOverEntity) {
-            while (!(mouseOverEntity->getProxy().getParent() == mCurrentGroup)) {
-                mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParent());
+            while (
+                mouseOverEntity->getProxy().getParentProxy() &&
+                !(mouseOverEntity->getProxy().getParentProxy()->getObjectReference() == mCurrentGroup)) {
+                mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParentProxy()->getObjectReference());
                 if (mouseOverEntity == NULL) {
                     return NULL; // FIXME: should try again.
                 }
@@ -295,6 +311,28 @@ public:
         mSelectedObjects.clear();
     }
 private:
+
+    static String fillZeroPrefix(const String& prefill, int32 nwide) {
+        String retval = prefill;
+        while(retval.size() < nwide)
+            retval = String("0") + retval;
+        return retval;
+    }
+
+    void screenshotAction() {
+        String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".png");
+        mParent->screenshot(fname);
+        mScreenshotID++;
+    }
+
+    void togglePeriodicScreenshotAction() {
+        mPeriodicScreenshot = !mPeriodicScreenshot;
+    }
+
+    void timedScreenshotAction(const Task::LocalTime& t) {
+        String fname = String("screenshot-") + fillZeroPrefix(boost::lexical_cast<String>((t - mScreenshotStartTime).toMilliseconds()), 8) + String(".png");
+        mParent->screenshot(fname);
+    }
 
     void quitAction() {
         mParent->quit();
@@ -418,6 +456,7 @@ private:
     }
 
     Entity *doCloneObject(Entity *ent, const ProxyObjectPtr &parentPtr, Time now) {
+/*
         SpaceObjectReference newId = SpaceObjectReference(ent->id().space(), ObjectReference(UUID::random()));
         Location loc = ent->getProxy().globalLocation(now);
         Location localLoc = ent->getProxy().extrapolateLocation(now);
@@ -473,6 +512,7 @@ private:
             }
         }
         return mParent->getEntity(newId);
+*/
     }
 
     void cloneObjectsAction() {
@@ -490,7 +530,7 @@ private:
             Entity *newEnt = doCloneObject(ent, ent->getProxy().getParentProxy(), objnow);
             Location loc (ent->getProxy().extrapolateLocation(objnow));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
-            newEnt->getProxy().resetLocation(objnow, loc);
+            //newEnt->getProxy().resetLocation(objnow, loc);
             newSelectedObjects.insert(newEnt->getProxyPtr());
             newEnt->setSelected(true);
             ent->setSelected(false);
@@ -518,9 +558,9 @@ private:
                 SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
                 return;
             }
-            if (!(ent->getProxy().getParent() == parentId)) {
+            if (!(ent->getProxy().getParentProxy()->getObjectReference() == parentId)) {
                 SILOG(input,error,"Multiple select "<< ent->id() <<
-                      " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
+                    " has parent  "<<ent->getProxy().getParentProxy()->getObjectReference() << " instead of " << mCurrentGroup);
                 return;
             }
         }
@@ -533,19 +573,19 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
+        //proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
         Entity *newParentEntity = mParent->getEntity(newParentId);
-        newParentEntity->getProxy().resetLocation(now, totalLocation);
+        //newParentEntity->getProxy().resetLocation(now, totalLocation);
 
         if (parentEntity) {
-            newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
+            //newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
             ProxyObjectPtr obj(iter->lock());
             Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!ent) continue;
-            ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
+            //ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
             ent->setSelected(false);
         }
         mSelectedObjects.clear();
@@ -565,12 +605,12 @@ private:
             }
             ProxyManager *proxyMgr = parentEnt->getProxy().getProxyManager();
             ProxyObjectPtr parentParent (parentEnt->getProxy().getParentProxy());
-            mCurrentGroup = parentEnt->getProxy().getParent(); // parentParent may be NULL.
+            mCurrentGroup = parentEnt->getProxy().getParentProxy()->getObjectReference(); // parentParent may be NULL.
             bool hasSubObjects = false;
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
                 Entity *ent = *subIter;
-                ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
+                //ent->getProxy().setParent(parentParent, Time::convertFrom(now,mParent->getLocalTimeOffset()->offset(ent->getProxy())));
                 newSelectedObjects.insert(ent->getProxyPtr());
                 ent->setSelected(true);
             }
@@ -633,7 +673,7 @@ private:
         mSelectedObjects.clear();
         Entity *ent = mParent->getEntity(mCurrentGroup);
         if (ent) {
-            mCurrentGroup = ent->getProxy().getParent();
+            mCurrentGroup = ent->getProxy().getParentProxy()->getObjectReference();
             Entity *parentEnt = mParent->getEntity(mCurrentGroup);
             if (parentEnt) {
                 mSelectedObjects.insert(parentEnt->getProxyPtr());
@@ -650,12 +690,13 @@ private:
         ui_wv->loadFile(ui_page);
     }
 
-    /** Create a UI element for interactively scripting an object. */
+    /** Create a UI element for interactively scripting an object.
+        Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
+        HostedObject. 
+     */
     void createScriptingUIAction() {
 
-        static bool bftm_onceInitialized = false;
-
-
+        static bool onceInitialized = false;
 
         // Ask all the objects to initialize scripting
         initScriptOnSelectedObjects();
@@ -679,9 +720,7 @@ private:
                 ui_info.scripting->show();
             }
             else {
-
-                //bftm
-                if (bftm_onceInitialized)
+                if (onceInitialized)
                 {
                     WebView* new_scripting_ui =
                         WebViewManager::getSingleton().createWebView(
@@ -695,7 +734,7 @@ private:
                     return;
                 }
 
-                //bftm
+
                 //name it something else, and put it in a different place
                 WebView* new_scripting_ui =
                     WebViewManager::getSingleton().createWebView(
@@ -706,13 +745,14 @@ private:
 
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
-                bftm_onceInitialized = true;
+                onceInitialized = true;
 
             }
         }
     }
 
     void LOCAL_createWebviewAction() {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -747,6 +787,7 @@ private:
         if (ent) {
             ent->setSelected(true);
         }
+*/
     }
 
     void createWebviewAction() {
@@ -780,6 +821,63 @@ private:
             Services::RPC,
             MemoryReference(serialized.data(), serialized.length())
         );
+    }
+
+    void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
+        /*
+        if (args.size() < 1) {
+            SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
+            return;
+        }
+
+        // We've passed all the checks, just convert everything and we're good to go
+    //    String name = args[0].toString();
+        String name((char*)args[0].data(), args[0].size());
+        JSArguments event_args;
+        event_args.insert(event_args.begin(), args.begin() + 1, args.end());
+
+        mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
+        */
+        printf("upload object event fired arg length = %d\n", args.size());
+        if (args.size() != 3) {
+            printf("expected 3 arguments, returning.\n");
+            return;
+        }
+
+        String file_path(args[0].data());
+        String title(args[1].data());
+        String description(args[2].data());
+
+        printf("Upload request. path = '%s' , title = '%s' , desc = '%s' .\n", file_path.c_str(), title.c_str(), description.c_str());
+        WebViewManager::getSingleton().destroyWebView(mUploadWebView);
+        mUploadWebView = NULL;
+    }
+
+    void startUploadObject() {
+        if(mUploadWebView) {
+            printf("startUploadObject called. Focusing existing.\n");
+            mUploadWebView->focus();
+        } else {
+            printf("startUploadObject called. Opening upload UI.\n");
+            mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", "upload_tool",404, 227,
+                    OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
+            mUploadWebView->bind("event", std::tr1::bind(&MouseHandler::onUploadObjectEvent, this, _1, _2));
+            mUploadWebView->loadFile("upload.html");
+        }
+    }
+
+    void handleFPSWidget() {
+        if(mFPSWidgetView) {
+            printf("closing fps widget\n");
+            WebViewManager::getSingleton().destroyWebView(mFPSWidgetView);
+            mFPSWidgetView = NULL;
+        } else {
+            printf("creating fps widget\n");
+            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", "fps_widget",114, 45,
+                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
+            mFPSWidgetView->loadFile("fps.html");
+            mFPSWidgetView->setTransparent(true);
+        }
     }
 
 
@@ -834,6 +932,12 @@ private:
         );
     }
 
+
+    /**
+       This function sends out a message on KnownServices port
+       LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
+       object receives the message and attaches a JSObjectScript to the HostedObject.
+     */
     void initScriptOnSelectedObjects() {
         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
              selectIter != mSelectedObjects.end(); ++selectIter) {
@@ -842,20 +946,35 @@ private:
             Protocol::ScriptingInit init_script;
 
             // Filter out the script type from rest of args
-            String script_type = "js"; // FIXME how to decide this?
-            init_script.set_script(script_type);
+            //String script_type = "js"; // FIXME how to decide this?
+            init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
 
             std::string serializedInitScript;
             init_script.SerializeToString(&serializedInitScript);
 
+            // RoutableMessageBody body;
+            // body.add_message("InitScript", serializedInitScript);
+            // std::string serialized;
+            // body.SerializeToString(&serialized);
+            
+            // obj->sendMessage(
+            //     Services::RPC,
+            //     MemoryReference(serialized.data(), serialized.length())
+            // );
+
+
             RoutableMessageBody body;
-            body.add_message("InitScript", serializedInitScript);
+            //body.add_message("InitScript", serializedInitScript);
+            body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
             std::string serialized;
             body.SerializeToString(&serialized);
+            
             obj->sendMessage(
-                Services::RPC,
+                Services::LISTEN_FOR_SCRIPT_BEGIN,
                 MemoryReference(serialized.data(), serialized.length())
             );
+
+            
         }
     }
 
@@ -865,9 +984,10 @@ private:
      *  The target of the command is determined implicitly based on
      *  the webview this is coming from.
      */
-    void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args) {
+    void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args)
+    {
         typedef std::tr1::unordered_map<String, String> StringMap;
-
+        
         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
         if (objit == mScriptingUIObjects.end())
             return;
@@ -877,7 +997,7 @@ private:
 
         StringMap::const_iterator command_it = args.find("Command");
         assert(command_it != args.end());
-
+        
         //Get Proxy
         Protocol::ScriptingMessage scripting_msg;
         Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
@@ -910,6 +1030,7 @@ private:
     }
 
     std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -933,7 +1054,7 @@ private:
             li.setLightFalloff(1,0,0.03);
             li.setLightSpotlightCone(30,40,1);
             li.setCastsShadow(true);
-            /* set li according to some sample light in the scene file! */
+            // set li according to some sample light in the scene file!
             newLightObject->update(li);
         }
 
@@ -953,6 +1074,8 @@ private:
             ent->setSelected(true);
         }
         return newLightObject;
+    */
+        return std::tr1::shared_ptr<ProxyLightObject>();
     }
     void createLightAction() {
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -967,42 +1090,79 @@ private:
 		}
 		return camProxy;
 	}
+
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
 
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-        Protocol::ObjLoc rloc;
-        rloc.set_velocity((orient * dir) * amount * WORLD_SCALE * .5);
-        rloc.set_angular_speed(0);
-        cam->requestLocation(now, rloc);
-    }
-    void rotateAction(Vector3f about, float amount) {
 
+        // Request updates from spcae
+        TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
+        SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
+        cam_vwobj->requestLocationUpdate(space, newloc);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setLocation(newloc);
+    }
+
+    void rotateAction(Vector3f about, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
+
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
-        Protocol::ObjLoc rloc;
-        rloc.set_rotational_axis(about);
-        rloc.set_angular_speed(amount);
-        cam->requestLocation(now, rloc);
+        // Request updates from spcae
+        TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
+        cam_vwobj->requestOrientationUpdate(space, neworient);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setOrientation(neworient);
     }
 
     void stableRotateAction(float dir, float amount) {
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam) return;
+
+        SpaceID space = cam->getObjectReference().space();
+
+        // Make sure the thing we're trying to move really is the thing
+        // connected to the world.
+        // FIXME We should have a real "owner" VWObject, even if it is possible
+        // for it to change over time.
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        // Get the updated position
         Time now(mParent->getLocalTimeOffset()->now(*cam));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
@@ -1014,10 +1174,11 @@ private:
         raxis.y = std::cos(p*DEG2RAD);
         raxis.z = -std::sin(p*DEG2RAD);
 
-        Protocol::ObjLoc rloc;
-        rloc.set_rotational_axis(raxis);
-        rloc.set_angular_speed(dir*amount);
-        cam->requestLocation(now, rloc);
+        // Request updates from spcae
+        TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
+        cam_vwobj->requestOrientationUpdate(space, neworient);
+        // And update our local Proxy's information, assuming the move will be successful
+        cam->setOrientation(neworient);
     }
 
     void setDragModeAction(const String& modename) {
@@ -1169,8 +1330,8 @@ private:
                 typestr = "spotlight";
             }
             float32 ambientPower, shadowPower;
-            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+            ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+            shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
             fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
                     loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
@@ -1463,8 +1624,14 @@ private:
         loc.setOrientation( orient );
         loc.setVelocity(Vector3f(0,0,0));
         loc.setAngularSpeed(0);
-
-        cam->setLocation(now, loc);
+        VWObjectPtr cam_vwobj = cam->getOwner();
+        SpaceID space = cam->getObjectReference().space();
+        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        Location oldloc = cam->extrapolateLocation(now);
+        cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))));
+        TimedMotionVector3f newplace(now,MotionVector3f(Vector3f(oldloc.getPosition()),Vector3f(pos-oldloc.getPosition())));
+        cam->setLocation(newplace);
+        cam_vwobj->requestLocationUpdate(space, newplace);
     }
 
     void cameraPathSetToKeyFrame(uint32 idx) {
@@ -1541,6 +1708,26 @@ private:
         }
     }
 
+    void fpsUpdateTick(const Task::LocalTime& t) {
+        if(mFPSWidgetView) {
+            Task::DeltaTime dt = t - mLastFpsTime;
+            if(dt.toSeconds() > 1) {
+                mLastFpsTime = t;
+                Ogre::RenderTarget::FrameStats stats = mParent->getRenderTarget()->getStatistics();
+                ostringstream os;
+                os << stats.avgFPS;
+                mFPSWidgetView->evaluateJS("update_fps(" + os.str() + ")");
+            }
+        }
+    }
+
+    void screenshotTick(const Task::LocalTime& t) {
+        if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.0))) {
+            timedScreenshotAction(t);
+            mLastScreenshotTime = t;
+        }
+    }
+
     /// WebView Actions
     void webViewNavigateAction(WebViewManager::NavigationAction action) {
         WebViewManager::getSingleton().navigate(action);
@@ -1602,8 +1789,15 @@ private:
 public:
     MouseHandler(OgreSystem *parent)
      : mParent(parent),
+       mScreenshotID(0),
+       mPeriodicScreenshot(false),
+       mScreenshotStartTime(Task::LocalTime::now()),
+       mLastScreenshotTime(Task::LocalTime::now()),
        mCurrentGroup(SpaceObjectReference::null()),
        mLastCameraTime(Task::LocalTime::now()),
+       mLastFpsTime(Task::LocalTime::now()),
+       mUploadWebView(NULL),
+       mFPSWidgetView(NULL),
        mWhichRayObject(0)
     {
         mLastHitCount=0;
@@ -1647,6 +1841,8 @@ public:
                 WebViewEvent::Id,
                 std::tr1::bind(&MouseHandler::webviewHandler, this, _1)));
 
+        mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::screenshotAction, this));
+        mInputResponses["togglePeriodicScreenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::togglePeriodicScreenshotAction, this));
         mInputResponses["quit"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::quitAction, this));
 
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
@@ -1718,8 +1914,16 @@ public:
 
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
+        //FIXME: commented out because wouldn't build on my system, because
+        //missing HAVE_BERKELIUM
+        //mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
+        //mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
+
         // Session
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
+
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I, Input::MOD_CTRL), mInputResponses["togglePeriodicScreenshot"]);
 
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
@@ -1730,6 +1934,8 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN, Input::MOD_SHIFT), mInputResponses["rotateXNeg"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["moveForward"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["moveBackward"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["moveUp"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Z), mInputResponses["moveDown"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RIGHT), mInputResponses["stableRotateNeg"]);
 
@@ -1741,13 +1947,17 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
+        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G), mInputResponses["groupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, Input::MOD_ALT), mInputResponses["ungroupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, Input::MOD_CTRL), mInputResponses["cloneObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
+
+        //FIXME: removed these bindings because don't have HAVE_BERKELIUM
+        // mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
+//         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
 
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
@@ -1765,15 +1975,15 @@ public:
         mInputBinding.add(InputBindingEvent::MouseClick(3), mInputResponses["selectObjectReverse"]);
 
         // Camera Path
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathLoad"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSave"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathNextKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathPreviousKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_P), mInputResponses["cameraPathInsertKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathDeleteKeyFrame"]);
-        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["cameraPathRun"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSpeedUp"]);
-        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSlowDown"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_1), mInputResponses["cameraPathLoad"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_2), mInputResponses["cameraPathSave"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_3), mInputResponses["cameraPathNextKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_4), mInputResponses["cameraPathPreviousKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_5), mInputResponses["cameraPathInsertKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_6), mInputResponses["cameraPathDeleteKeyFrame"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_7), mInputResponses["cameraPathRun"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_8), mInputResponses["cameraPathSpeedUp"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_9), mInputResponses["cameraPathSlowDown"]);
 
         // WebView Chrome
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navnewtab"), mInputResponses["webNewTab"]);
@@ -1822,6 +2032,8 @@ public:
 
     void tick(const Task::LocalTime& t) {
         cameraPathTick(t);
+        fpsUpdateTick(t);
+        screenshotTick(t);
     }
 };
 
@@ -1836,9 +2048,9 @@ void OgreSystem::destroyMouseHandler() {
 
 void OgreSystem::selectObject(Entity *obj, bool replace) {
     if (replace) {
-        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParent());
+        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParentProxy()->getObjectReference());
     }
-    if (mMouseHandler->getParentGroup() == obj->getProxy().getParent()) {
+    if (mMouseHandler->getParentGroup() == obj->getProxy().getParentProxy()->getObjectReference()) {
         mMouseHandler->addToSelection(obj->getProxyPtr());
         obj->setSelected(true);
     }

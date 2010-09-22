@@ -42,6 +42,13 @@
 #include "ResourceManager.hpp"
 #include "../meruCompat/Event.hpp"
 #include "../meruCompat/EventSource.hpp"
+#include "ResourceDownloadPlanner.hpp"
+#include <sirikata/core/util/Thread.hpp>
+#include <stdio.h>
+
+using namespace std;
+using namespace Sirikata;
+using namespace Sirikata::Transfer;
 
 using std::map;
 using std::set;
@@ -59,9 +66,23 @@ InitializeGlobalOptions graphicsresourcemanageropts("ogregraphics",
     NULL);
 
 
+void GraphicsResourceManager::initializeMediator() {
+  mTransferMediator = &(TransferMediator::getSingleton());
+
+  mTransferPool = mTransferMediator->registerClient("OgreGraphics");
+}
+
+TransferPoolPtr GraphicsResourceManager::transferPool()
+{
+    return mTransferPool;
+}
+
 GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue)
 : mEpoch(0), mEnabled(true)
 {
+  initializeMediator();
+
+
   this->mTickListener = EventSource::getSingleton().subscribeId(
     EventID(EventTypes::Tick),
       EVENT_CALLBACK(GraphicsResourceManager, tick, this)
@@ -87,14 +108,14 @@ WeakResourcePtr GraphicsResourceManager::getResource(const String &id)
   return itr->second;
 }
 
-SharedResourcePtr GraphicsResourceManager::getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity)
+SharedResourcePtr GraphicsResourceManager::getResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity, Sirikata::ProxyObjectPtr proxy)
 {
   WeakResourcePtr curWeakPtr = getResource(id.toString());
   SharedResourcePtr curSharedPtr = curWeakPtr.lock();
   if (curSharedPtr)
     return curSharedPtr;
   else {
-    curSharedPtr = GraphicsResource::construct<GraphicsResourceEntity>(id, graphicsEntity);
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceEntity>(id, graphicsEntity, proxy);
     mIDResourceMap[id.toString()] = curSharedPtr;
     mEntities.insert(curSharedPtr.get());
 
@@ -113,6 +134,7 @@ SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const Resource
     curSharedPtr = curWeakPtr.lock();
   }
   */
+/*
   if (curSharedPtr) {
     return curSharedPtr;
   }
@@ -137,10 +159,12 @@ SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const Resource
 
   mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
   mResources.insert(curSharedPtr.get());
-
+*/
   return curSharedPtr;
 }
-SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, GraphicsResource::Type resourceType)
+
+
+SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, GraphicsResource::Type resourceType, Sirikata::ProxyObjectPtr proxy)
 {
   bool isMHash = false;
   WeakResourcePtr curWeakPtr = getResource(id.toString());
@@ -149,7 +173,27 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
   if (curSharedPtr) {
     return curSharedPtr;
   }
-  curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType);
+  if (resourceType == GraphicsResource::NAME) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType, proxy);
+  }
+  else if (resourceType == GraphicsResource::MESH) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(id, proxy);
+  }
+  else if (resourceType == GraphicsResource::MODEL) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceModel>(id, proxy);
+  }
+  else if (resourceType == GraphicsResource::MATERIAL) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceMaterial>(id, proxy);
+  }
+  else if (resourceType == GraphicsResource::TEXTURE) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceTexture>(id, proxy);
+  }
+  else if (resourceType == GraphicsResource::SHADER) {
+      curSharedPtr = GraphicsResource::construct<GraphicsResourceShader>(id, proxy);
+  }
+  else {
+    assert(false);
+  }
 
   mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
   mResources.insert(curSharedPtr.get());
@@ -178,9 +222,10 @@ void GraphicsResourceManager::computeLoadedSet()
     GraphicsResource* resource = *itr;
 
     GraphicsResource::ParseState parseState = resource->getParseState();
-    if (parseState == GraphicsResource::PARSE_INVALID)
-      resource->parse();
 
+    if (parseState == GraphicsResource::PARSE_INVALID) {
+      resource->parse();
+    }
     resource->updateValue(mEpoch);
   }
 

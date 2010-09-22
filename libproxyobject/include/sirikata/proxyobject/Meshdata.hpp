@@ -30,9 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MESHDATA_HPP_
+#ifndef _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
+#define _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
 
-extern long Meshdata_counter;
+#include "LightInfo.hpp"
+
 
 namespace Sirikata {
 
@@ -40,27 +42,151 @@ struct SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
-    std::vector<Sirikata::Vector2f> texUVs;
-    std::vector<int> position_indices;
-    std::vector<int> normal_indices;
-    std::vector<int> texUV_indices;
+    std::vector<Sirikata::Vector3f> tangents;
+    std::vector<Sirikata::Vector4f> colors;
+    std::vector<unsigned int> influenceStartIndex;//a list of where a given position's joint weights start
+    std::vector<unsigned int> jointindices;
+    std::vector<float> weights;
+
+    std::vector<Sirikata::Matrix4x4f> inverseBindMatrices;
+
+    struct TextureSet {
+        unsigned int stride;
+        std::vector<float> uvs;
+    };
+    std::vector<TextureSet>texUVs;
+    struct Primitive {
+        std::vector<unsigned short> indices;
+        enum PrimitiveType {
+            TRIANGLES,
+            LINES,
+            POINTS,
+            LINESTRIPS,
+            TRISTRIPS,
+            TRIFANS
+        }primitiveType;
+        typedef size_t MaterialId;
+        MaterialId materialId;
+    };
+    BoundingBox3f3f aabb;
+    double radius;
+    std::vector<Primitive> primitives;
 };
-typedef std::vector<SubMeshGeometry*> SubMeshGeometryList;
-typedef std::vector<std::string> TextureList;
+struct GeometryInstance {
+    typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
+    MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
+    unsigned int geometryIndex; // Index in SubMeshGeometryList
+    Matrix4x4f transform;
+    BoundingBox3f3f aabb;//transformed aabb
+    double radius;//transformed radius
+    
+};
+
+struct LightInstance {
+    int lightIndex; // Index in LightInfoList
+    Matrix4x4f transform;
+};
+
+struct MaterialEffectInfo {
+    struct Texture {
+        std::string uri;
+        Vector4f color;//color while the texture is pulled in, or if the texture is 404'd
+        size_t texCoord;
+        enum Affecting {
+            DIFFUSE,
+            SPECULAR,
+            EMISSION,
+            AMBIENT,
+            REFLECTIVE,
+            OPACITY,
+
+        }affecting;
+        enum SamplerType
+        {
+			SAMPLER_TYPE_UNSPECIFIED, 
+			SAMPLER_TYPE_1D, 
+			SAMPLER_TYPE_2D, 
+			SAMPLER_TYPE_3D, 
+			SAMPLER_TYPE_CUBE, 
+			SAMPLER_TYPE_RECT,
+			SAMPLER_TYPE_DEPTH,
+			SAMPLER_TYPE_STATE
+		} samplerType;
+		enum SamplerFilter
+		{
+			SAMPLER_FILTER_UNSPECIFIED,
+			SAMPLER_FILTER_NONE,
+			SAMPLER_FILTER_NEAREST,
+			SAMPLER_FILTER_LINEAR,
+			SAMPLER_FILTER_NEAREST_MIPMAP_NEAREST,
+			SAMPLER_FILTER_LINEAR_MIPMAP_NEAREST,
+			SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR,
+			SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR
+		};
+        SamplerFilter minFilter;
+        SamplerFilter magFilter;
+		enum WrapMode
+		{
+			WRAP_MODE_UNSPECIFIED=0,
+			// NONE == GL_CLAMP_TO BORDER The defined behavior for NONE is 
+			// consistent with decal texturing where the border is black. 
+			// Mapping this calculation to GL_CLAMP_TO_BORDER is the best 
+			// approximation of this.
+			WRAP_MODE_NONE,
+			// WRAP == GL_REPEAT Ignores the integer part of texture coordinates, 
+			// using only the fractional part.
+			WRAP_MODE_WRAP, 
+			// MIRROR == GL_MIRRORED_REPEAT First mirrors the texture coordinate. 
+			// The mirrored coordinate is then clamped as described for CLAMP_TO_EDGE.
+			WRAP_MODE_MIRROR,
+			// CLAMP == GL_CLAMP_TO_EDGE Clamps texture coordinates at all 
+			// mipmap levels such that the texture filter never samples a 
+			// border texel. Note: GL_CLAMP takes any texels beyond the
+			// sampling border and substitutes those texels with the border 
+			// color. So CLAMP_TO_EDGE is more appropriate. This also works 
+			// much better with OpenGL ES where the GL_CLAMP symbol was removed 
+			// from the OpenGL ES specification.
+			WRAP_MODE_CLAMP,
+			// BORDER GL_CLAMP_TO_BORDER Clamps texture coordinates at all 
+			// MIPmaps such that the texture filter always samples border 
+			// texels for fragments whose corresponding texture coordinate
+			// is sufficiently far outside the range [0, 1].
+			WRAP_MODE_BORDER
+		};
+        WrapMode wrapS,wrapT,wrapU;
+        unsigned int maxMipLevel;
+        float mipBias;
+    };
+    typedef std::vector<Texture> TextureList;
+    TextureList textures;
+    float shininess;
+    float reflectivity;
+};
+
+
+
 
 struct Meshdata {
+    typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
+    typedef std::vector<LightInfo> LightInfoList;
+    typedef std::vector<std::string> TextureList;
+    typedef std::vector<GeometryInstance> GeometryInstanceList;
+    typedef std::vector<LightInstance> LightInstanceList;
+    typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
     SubMeshGeometryList geometry;
     TextureList textures;
+    LightInfoList lights;
+    MaterialEffectInfoList materials;
+
     std::string uri;
     int up_axis;
     long id;
 
-    Meshdata() {
-        id=Meshdata_counter++;
-    }
+    GeometryInstanceList instances;
+    LightInstanceList lightInstances;
+
 };
 
 } // namespace Sirikata
 
-#define _MESHDATA_HPP_ true
-#endif
+#endif //_SIRIKATA_PROXYOBJECT_MESHDATA_HPP_

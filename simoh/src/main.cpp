@@ -120,7 +120,6 @@ int main(int argc, char** argv) {
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
-    ctx->add(obj_host);
     ctx->add(obj_factory);
     ctx->add(scenario);
     ctx->add(sstConnMgr);

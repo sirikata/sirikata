@@ -40,6 +40,10 @@
 #include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
+#include "resourceManager/ResourceDownloadPlanner.hpp"
+#include "resourceManager/DistanceDownloadPlanner.hpp"
+#include "resourceManager/SAngleDownloadPlanner.hpp"
+
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
 #ifdef nil
@@ -80,6 +84,8 @@ class CubeMap;
 struct IntersectResult;
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedQueryableSimulation {
+    Context* mContext;
+
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
@@ -111,7 +117,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     static Ogre::Root *sRoot;
     static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
     bool loadBuiltinPlugins();
-    OgreSystem();
+    OgreSystem(Context* ctx);
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const TimeOffsetManager *localTimeOffset,
                     const String&options);
@@ -121,6 +127,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     ///all the things that should happen once the frame finishes
     void postFrame(Task::LocalTime, Duration);
     void destroyRenderTarget(Ogre::ResourcePtr &name);
+
+    void screenshot(const String& filename);
 
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();
@@ -173,10 +181,13 @@ public:
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
-    static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
-                                                  const TimeOffsetManager *localTimeOffset,
-                                                  const String&options){
-        OgreSystem*os= new OgreSystem;
+    static TimeSteppedQueryableSimulation* create(
+        Context* ctx,
+        Provider<ProxyCreationListener*>*proxyManager,
+        const TimeOffsetManager *localTimeOffset,
+        const String&options)
+    {
+        OgreSystem*os= new OgreSystem(ctx);
         if (os->initialize(proxyManager,localTimeOffset,options))
             return os;
         delete os;
@@ -217,7 +228,7 @@ public:
                      int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
-    virtual bool tick();
+    virtual void poll();
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();
@@ -230,6 +241,10 @@ public:
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);
 
     ~OgreSystem();
+
+private:
+    ResourceDownloadPlanner *dlPlanner;
+
 };
 
 

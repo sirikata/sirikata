@@ -242,6 +242,17 @@ namespace Graphics {
 		*/
 		int getRelativeY(int absY);
 
+        /**
+        * Returns true if given relative X,Y coordinate is inside the draggable region.
+        *
+        * @param    relX    The relative X-coordinate
+        * @param    relY    The relative Y-coordinate
+        *
+        * @return   Whether or not the coordinate is in the draggable region
+        */
+        bool inDraggableRegion(int relX, int relY);
+
+
 		/**
 		* Returns whether or not this WebView was created as a material.
 		*/

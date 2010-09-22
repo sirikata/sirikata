@@ -32,6 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_NAME_HPP_
 #define _GRAPHICS_RESOURCE_NAME_HPP_
 
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "GraphicsResource.hpp"
 #include "GraphicsResourceManager.hpp"
 #include "../meruCompat/MeruDefs.hpp"
@@ -41,7 +42,7 @@ namespace Meru {
 class GraphicsResourceName : public GraphicsResource
 {
 public:
-  GraphicsResourceName(const URI &resourceID, Type referencedType);
+    GraphicsResourceName(const URI &resourceID, Type referencedType, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceName();
 
   SharedResourcePtr getReference();

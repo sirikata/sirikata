@@ -101,12 +101,12 @@ const SpaceID&BulletObj::getSpaceID()const {
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 
-void BulletObj::onSetMesh (const URI &newMesh) {
+void BulletObj::onSetMesh (ProxyObjectPtr proxy, const URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    onSetMesh: " << newMesh << endl;)
     mMeshname = newMesh;
 }
 
-void BulletObj::onMeshParsed (String const& hash, Meshdata& md) {
+void BulletObj::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md) {
     mMeshdata = &md;
     if (!mActive) {
         if (mShape==BulletObj::ShapeMesh) {
@@ -115,7 +115,7 @@ void BulletObj::onMeshParsed (String const& hash, Meshdata& md) {
     }
 }
 
-void BulletObj::onSetScale (const Vector3f &newScale) {
+void BulletObj::onSetScale (ProxyObjectPtr proxy, const Vector3f &newScale) {
     if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (mSizeX==newScale.x && mSizeY==newScale.y && mSizeZ==newScale.z)
@@ -144,7 +144,7 @@ void BulletObj::onSetScale (const Vector3f &newScale) {
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
-void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
+void BulletObj::onSetPhysical(ProxyObjectPtr proxy, const PhysicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << (unsigned int)pp.mode
             << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
@@ -156,7 +156,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
     case PhysicalParameters::Disabled:
         DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: Disabled" << endl);
         mActive = false;
-        mMeshptr->setLocationAuthority(0);
         mDynamic = false;
         break;
     case PhysicalParameters::Static:
@@ -181,10 +180,9 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         break;
     }
     if (mMeshptr) {
-        if (mDynamic && (!mMeshptr->isLocal()) ) {      /// for now, physics ignores dynamic objects on other hosts
+        if (mDynamic) {
             DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: disabling dynamic&non-local" << endl);
             mActive = false;
-            mMeshptr->setLocationAuthority(0);
             return;
         }
     }
@@ -195,7 +193,6 @@ void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
         po.o = mMeshptr->getOrientation();
         Vector3f size = mMeshptr->getScale();
         system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, pp.hull, size.x, size.y, size.z);
-        mMeshptr->setLocationAuthority(this);
     }
 }
 
@@ -259,15 +256,68 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         if (meshbytes || is_collada) {
             mVertices.clear();
             mIndices.clear();
-            if (is_collada && mMeshdata->geometry.size() > 0) {
-                const SubMeshGeometry& subm = *(mMeshdata->geometry[0]);
-                for (i=0; i<subm.positions.size();i++) {
-                    mVertices.push_back((double)subm.positions[i][0]);
-                    mVertices.push_back((double)subm.positions[i][1]);
-                    mVertices.push_back((double)subm.positions[i][2]);
-                }
-                for (i=0; i<subm.position_indices.size();i++) {
-                    mIndices.push_back((double)subm.position_indices[i]);
+            if (is_collada) {
+                size_t offset=0;
+                for (size_t i=0;i<mMeshdata->geometry.size();++i) {
+                    const SubMeshGeometry& subm = mMeshdata->geometry[i];
+                    for (size_t j=0; j<subm.positions.size();j++) {
+                        mVertices.push_back((double)subm.positions[j][0]);
+                        mVertices.push_back((double)subm.positions[j][1]);
+                        mVertices.push_back((double)subm.positions[j][2]);
+                    }
+                    for(size_t j=0;j<subm.primitives.size();++j) {
+                        const SubMeshGeometry::Primitive *prim=&subm.primitives[j];
+                        switch(prim->primitiveType) {
+                          case SubMeshGeometry::Primitive::TRIANGLES:
+                            for (size_t k=0; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k]);
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::LINES:
+                            for (size_t k=0; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k]);
+                                if (k%2==1) {
+                                    mIndices.push_back(offset+prim->indices[k]);
+                                }
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::POINTS:
+                            for (size_t k=0; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k]);
+                                mIndices.push_back(offset+prim->indices[k]);
+                                mIndices.push_back(offset+prim->indices[k]);//degenerate
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::TRISTRIPS:
+                            for (size_t k=2; k<prim->indices.size(); ++k) {
+                                if (k%2==0) {
+                                    mIndices.push_back(offset+prim->indices[k-2]);
+                                    mIndices.push_back(offset+prim->indices[k-1]);
+                                    mIndices.push_back(offset+prim->indices[k]);
+                                }else {
+                                    mIndices.push_back(offset+prim->indices[k]);
+                                    mIndices.push_back(offset+prim->indices[k-1]);
+                                    mIndices.push_back(offset+prim->indices[k-2]);
+                                }
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::TRIFANS:
+                            for (size_t k=2; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[0]);
+                                mIndices.push_back(offset+prim->indices[k-1]);
+                                mIndices.push_back(offset+prim->indices[k]);
+                            }
+                            break;
+                          case SubMeshGeometry::Primitive::LINESTRIPS:
+                            for (size_t k=1; k<prim->indices.size(); ++k) {
+                                mIndices.push_back(offset+prim->indices[k-1]);
+                                mIndices.push_back(offset+prim->indices[k]);
+                                mIndices.push_back(offset+prim->indices[k]);//slivers
+                            }
+                            break;
+                        }
+                    }
+                    offset=mVertices.size();
                 }
             }
             else {
@@ -421,7 +471,7 @@ void BulletSystem::addPhysicalObject(BulletObj* obj,
     DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->mShape << endl);
     String fn = obj->mMeshptr->getMesh().toString();
     bool is_collada=false;
-    if (fn.rfind(".dae")==fn.size()-4) is_collada=true;
+    if (fn.rfind(".dae")==fn.size()-4||fn.rfind(".DAE")==fn.size()-4) is_collada=true;
     if (obj->mDynamic) {
         /// create the object now
         obj->buildBulletBody(NULL, 0, is_collada);                /// no mesh data
@@ -465,7 +515,7 @@ float btMagSq(const btVector3& v) {
            + v.z() * v.z();
 }
 
-bool BulletSystem::tick() {
+void BulletSystem::poll() {
     static Task::LocalTime lasttime = mStartTime;
     static Task::DeltaTime waittime = Task::DeltaTime::seconds(0.02);
     static int mode = 0;
@@ -524,7 +574,7 @@ bool BulletSystem::tick() {
                     Location loc (objects[i]->mMeshptr->globalLocation(remoteNow));
                     loc.setPosition(po.p);
                     loc.setOrientation(po.o);
-                    objects[i]->mMeshptr->setLocation(remoteNow, loc);
+                    //objects[i]->mMeshptr->setLocation(remoteNow, loc);
                 }
             }
 
@@ -639,7 +689,6 @@ bool BulletSystem::tick() {
         }
     }
     DEBUG_OUTPUT(cout << endl;)
-    return true;
 }
 
 void customDispatch::ActiveCollisionState::collide(BulletObj* first, BulletObj* second, btPersistentManifold *currentCollisionManifold) {
@@ -757,9 +806,12 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     return true;
 }
 
-BulletSystem::BulletSystem() :
-        mGravity(0, GRAVITY, 0),
-        mStartTime(Task::LocalTime::now()) {
+BulletSystem::BulletSystem(Context* ctx)
+ : TimeSteppedQueryableSimulation(ctx, Duration::milliseconds((int64)100), "Bullet Physics"),
+   mContext(ctx),
+   mGravity(0, GRAVITY, 0),
+   mStartTime(Task::LocalTime::now())
+{
     mLocalTimeOffset=NULL;
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }

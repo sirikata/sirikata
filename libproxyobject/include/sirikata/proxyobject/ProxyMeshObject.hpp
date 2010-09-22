@@ -37,11 +37,15 @@
 
 #include "MeshListener.hpp"
 #include "ProxyObject.hpp"
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
 
 typedef Provider< MeshListener* > MeshProvider;
+
+
 
 /** Represents any object with an attached mesh. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
@@ -52,8 +56,9 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
     public:
         typedef std::tr1::shared_ptr< MeshObject > ModelObjectPtr;
 
-        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, ODP::Service* odp_service );
+        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr ptr, const SpaceObjectReference& owner_sor);
 
+        
         void setModelObject ( ModelObjectPtr const& model );
         ModelObjectPtr const& getModelObject () const { return mModelObject; }
 
@@ -66,7 +71,11 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
     // interface from MeshObject
     public:
         virtual void setMesh ( URI const& rhs );
+
         virtual URI const& getMesh () const;
+
+        void meshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
 
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;
@@ -100,7 +109,9 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 };
 
 typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
-typedef std::tr1::weak_ptr<ProxyMeshObject> ProxyMeshObjectWPtr;
+
+//typedef std::tr1::weak_ptr<ProxyMeshObject> ProxyMeshObjectWPtr;
+
 
 } // namespace Sirikata
 

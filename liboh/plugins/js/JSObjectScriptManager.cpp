@@ -47,6 +47,9 @@
 
 #include "JSObjects/Addressable.hpp"
 #include "JSObjects/JSPresence.hpp"
+#include "JSObjects/JSFields.hpp"
+#include "JSSystemNames.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -64,8 +67,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     createSystemTemplate();
     createAddressableTemplate();
     createHandlerTemplate();
-	createPresenceTemplate();
-	
+    createPresenceTemplate();
 }
 
 
@@ -90,23 +92,24 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
 
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
+    system_templ->Set(v8::String::New("update_addressable"),v8::FunctionTemplate::New(JSSystem::ScriptUpdateAddressable));
 
-	system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
-	system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
     
-
+    system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
+    system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
+    
 
     //these are mutable fields
 	
-    system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
-    system_templ->SetAccessor(JS_STRING(scale), JSSystem::ScriptGetScale, JSSystem::ScriptSetScale);
+//    system_templ->SetAccessor(JS_STRING(visual), JSSystem::ScriptGetVisual, JSSystem::ScriptSetVisual);
+//    system_templ->SetAccessor(JS_STRING(scale), JSSystem::ScriptGetScale, JSSystem::ScriptSetScale);
 
-    system_templ->SetAccessor(JS_STRING(position), JSSystem::ScriptGetPosition, JSSystem::ScriptSetPosition);
-    system_templ->SetAccessor(JS_STRING(velocity), JSSystem::ScriptGetVelocity, JSSystem::ScriptSetVelocity);
-    system_templ->SetAccessor(JS_STRING(orientation), JSSystem::ScriptGetOrientation, JSSystem::ScriptSetOrientation);
+//    system_templ->SetAccessor(JS_STRING(position), JSSystem::ScriptGetPosition, JSSystem::ScriptSetPosition);
+//    system_templ->SetAccessor(JS_STRING(velocity), JSSystem::ScriptGetVelocity, JSSystem::ScriptSetVelocity);
+
+    //system_templ->SetAccessor(JS_STRING(orientation), JSSystem::ScriptGetOrientation, JSSystem::ScriptSetOrientation);
     system_templ->SetAccessor(JS_STRING(angularAxis), JSSystem::ScriptGetAxisOfRotation, JSSystem::ScriptSetAxisOfRotation);
     system_templ->SetAccessor(JS_STRING(angularVelocity), JSSystem::ScriptGetAngularSpeed, JSSystem::ScriptSetAngularSpeed);
-
 
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);
@@ -121,7 +124,14 @@ void JSObjectScriptManager::createSystemTemplate()
        FIXME: need to add way to remove a handler.
      **/
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-    mGlobalTemplate->Set(v8::String::New("system"), system_templ);
+    system_templ->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSSystem::ScriptSqrtFunction));
+    system_templ->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSSystem::ScriptAcosFunction));
+    system_templ->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSSystem::ScriptAsinFunction));
+    system_templ->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSSystem::ScriptCosFunction));
+    system_templ->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSSystem::ScriptSinFunction));
+    system_templ->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSSystem::ScriptRandFunction));
+    
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
 }
 
 
@@ -132,7 +142,7 @@ void JSObjectScriptManager::createAddressableTemplate()
     v8::HandleScope handle_scope;
     mAddressableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     // An internal field holds the external address of the addressable object
-    mAddressableTemplate->SetInternalFieldCount(3);
+    mAddressableTemplate->SetInternalFieldCount(ADDRESSABLE_FIELD_COUNT);
 
     //these function calls are defined in JSObjects/Addressable.hpp
     mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
@@ -146,25 +156,39 @@ void JSObjectScriptManager::createPresenceTemplate()
   
   // Ideally we want the addressable template to be a prototype of presencetemplate
   //All that can be done to presences can be done to the addressble too
-  /*
-  if(mAddressableTemplate.IsEmpty())
-  {
-    createAddressableTemplate();  
-  }
-  */
   
   mPresenceTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New()); 
-  
-  mPresenceTemplate->SetInternalFieldCount(2);
+  mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
 
   // add stuff to the presence template
   // something like setMesh
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
-  mPresenceTemplate->Set(v8::String::New("setMesh"), v8::FunctionTemplate::New(JSPresence::setMesh));
-  mPresenceTemplate->SetAccessor(JS_STRING(position), JSPresence::ScriptGetPosition, JSPresence::ScriptSetPosition);
- 
 
+  
+  mPresenceTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
+  mPresenceTemplate->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  //positions
+  mPresenceTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
+  mPresenceTemplate->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
+
+  //velocities
+  mPresenceTemplate->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
+  mPresenceTemplate->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
+
+  //orientations
+  mPresenceTemplate->Set(v8::String::New("setOrientation"),v8::FunctionTemplate::New(JSPresence::setOrientation));
+  mPresenceTemplate->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSPresence::getOrientation));
+
+  //orientation velocities
+  mPresenceTemplate->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
+  mPresenceTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
+
+ 
+  //FIXME:
+  //add function to check if presences are equal (point to same underlying object);
+  //add function to see if presence is valid (has been declared null);
 }
 
 
@@ -180,7 +204,7 @@ void JSObjectScriptManager::createHandlerTemplate()
 
     // one field is the JSObjectScript associated with it
     // the other field is a pointer to the associated JSEventHandler.
-    mHandlerTemplate->SetInternalFieldCount(2);
+    mHandlerTemplate->SetInternalFieldCount(JSHANDLER_FIELD_COUNT);
     mHandlerTemplate->Set(v8::String::New("printContents"), v8::FunctionTemplate::New(JSHandler::__printContents));
     mHandlerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSHandler::__suspend));
     mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::__isSuspended));

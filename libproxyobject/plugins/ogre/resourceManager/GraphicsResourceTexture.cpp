@@ -45,7 +45,7 @@ namespace Meru {
 class TextureDependencyTask : public ResourceDependencyTask
 {
 public:
-  TextureDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
+  TextureDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI &uri);
   virtual ~TextureDependencyTask();
 
   virtual void operator()();
@@ -54,7 +54,7 @@ public:
 class TextureLoadTask : public ResourceLoadTask
 {
 public:
-  TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int epoch);
+  TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const URI &uri, unsigned int epoch);
 
   virtual void doRun();
 
@@ -65,7 +65,7 @@ protected:
 class TextureUnloadTask : public ResourceUnloadTask
 {
 public:
-  TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch);
+  TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int epoch);
 
   virtual void doRun();
 
@@ -129,15 +129,16 @@ class TextureDownloadTask : public DependencyTask, public ResourceRequestor
     return !memcmp(data + which*4, checkAgainst, 4);
   }
 
+    Sirikata::ProxyObjectPtr mProxy;
   ResourceDownloadTask *mHeaderTask;
   ResourceDownloadTask *mDataTask;
   ResourceRequestor* mOrigResourceRequestor;
   unsigned int mMaxDimension;
-  RemoteFileId mHash;
 
   size_t determineDownloadRange(unsigned char *header);
 public:
-  TextureDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, unsigned int maxDim, ResourceRequestor* resourceRequestor);
+    const URI &mURI;
+    TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor, Sirikata::ProxyObjectPtr proxy);
   virtual ~TextureDownloadTask();
 
   virtual void operator()();
@@ -146,8 +147,8 @@ public:
 };
 
 
-GraphicsResourceTexture::GraphicsResourceTexture(const RemoteFileId &resourceID)
-  : GraphicsResourceAsset(resourceID, GraphicsResource::TEXTURE)
+GraphicsResourceTexture::GraphicsResourceTexture(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResourceAsset(uri, GraphicsResource::TEXTURE, proxy)
 {
 
 }
@@ -164,28 +165,28 @@ int GraphicsResourceTexture::maxDimension() const {
 
 DependencyTask* GraphicsResourceTexture::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-  return new TextureDownloadTask(manager, mResourceID, maxDimension(), resourceRequestor);
+    return new TextureDownloadTask(manager, mURI, maxDimension(), resourceRequestor, mProxy);
 }
 
 ResourceDependencyTask* GraphicsResourceTexture::createDependencyTask(DependencyManager *manager)
 {
-  return new TextureDependencyTask(manager, getWeakPtr(), mResourceID.toString());
+  return new TextureDependencyTask(manager, getWeakPtr(), mURI);
 }
 
 ResourceLoadTask* GraphicsResourceTexture::createLoadTask(DependencyManager *manager)
 {
-  return new TextureLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
+  return new TextureLoadTask(manager, getSharedPtr(), mURI, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceTexture::createUnloadTask(DependencyManager *manager)
 {
-  return new TextureUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mLoadEpoch);
+  return new TextureUnloadTask(manager, getWeakPtr(), mURI, mLoadEpoch);
 }
 
 /***************************** TEXTURE DEPENDENCY TASK *************************/
 
-TextureDependencyTask::TextureDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash)
-  : ResourceDependencyTask(mgr, resource, hash)
+TextureDependencyTask::TextureDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri)
+  : ResourceDependencyTask(mgr, resource, uri)
 {
 
 }
@@ -211,23 +212,23 @@ void TextureDependencyTask::operator()()
 
 /***************************** TEXTURE LOAD TASK *************************/
 
-TextureLoadTask::TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int epoch)
-: ResourceLoadTask(mgr, resourcePtr, hash, epoch)
+TextureLoadTask::TextureLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const URI &uri, unsigned int epoch)
+: ResourceLoadTask(mgr, resourcePtr, uri, epoch)
 {
 }
 
 void TextureLoadTask::doRun()
 {
-  mArchiveName = CDNArchiveFactory::getSingleton().addArchive(mHash, mBuffer);
-  Ogre::TextureManager::getSingleton().load(mHash.convertToHexString(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mArchiveName = CDNArchiveFactory::getSingleton().addArchive(mURI.toString(), mBuffer);
+  Ogre::TextureManager::getSingleton().load(mURI.toString(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
   CDNArchiveFactory::getSingleton().removeArchive(mArchiveName);
   mResource->loaded(true, mEpoch);
 }
 
 /***************************** TEXTURE UNLOAD TASK *************************/
 
-TextureUnloadTask::TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch)
-: ResourceUnloadTask(mgr, resource, hash, epoch)
+TextureUnloadTask::TextureUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int epoch)
+: ResourceUnloadTask(mgr, resource, uri, epoch)
 {
 
 }
@@ -245,9 +246,9 @@ void TextureUnloadTask::doRun()
   //    SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&TextureUnloadTask::mainThreadUnload, this, mHash));
 
   Ogre::TextureManager* textureManager = Ogre::TextureManager::getSingletonPtr();
-  textureManager->remove(mHash.convertToHexString());
+  textureManager->remove(mURI.toString());
 
-  Ogre::ResourcePtr textureResource = textureManager->getByName(mHash.convertToHexString());
+  Ogre::ResourcePtr textureResource = textureManager->getByName(mURI.toString());
   assert(textureResource.isNull());
 
   SharedResourcePtr resource = mResource.lock();
@@ -257,12 +258,12 @@ void TextureUnloadTask::doRun()
 
 /***************************** TEXTURE DOWNLOAD TASK *************************/
 
-TextureDownloadTask::TextureDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, unsigned int maxDim, ResourceRequestor* resourceRequestor)
-    : DependencyTask(mgr->getQueue()), mHash(hash)
+TextureDownloadTask::TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor, Sirikata::ProxyObjectPtr proxy)
+ : DependencyTask(mgr->getQueue()), mURI(uri), mProxy(proxy)
 {
-	mHeaderTask = new ResourceDownloadTask(mgr, hash, this);
+    mHeaderTask = new ResourceDownloadTask(mgr, uri, this, mProxy->priority, NULL);
     mHeaderTask->addDepender(this);
-    mDataTask = new ResourceDownloadTask(mgr, hash, this);
+    mDataTask = new ResourceDownloadTask(mgr, uri, this, mProxy->priority, NULL);
     mDataTask->addDepender(this);
 
 	mHeaderTask->setRange(Transfer::Range(0, DDSHEADER_BYTESIZE, Transfer::BOUNDS));
@@ -280,7 +281,7 @@ enum {DDPF_RGB = 0x00000040};
 size_t TextureDownloadTask::determineDownloadRange(unsigned char *header) {
     if (!checkFourCC(header, DDS_MAGIC, "DDS ")) {
         // attempt a normal download.
-        SILOG(resource,insane,"File "<<mHash.uri().toString()<<" not a dds: "<< (char)header[0]<<(char)header[1]<<(char)header[2]<<(char)header[3]<<(char)header[4]);
+        SILOG(resource,insane,"File "<<mURI.toString()<<" not a dds: "<< (char)header[0]<<(char)header[1]<<(char)header[2]<<(char)header[3]<<(char)header[4]);
         return 0;
     }
     if (getDWORD(header, DDS_SIZE) + 4 > DDSHEADER_BYTESIZE) {
@@ -363,10 +364,10 @@ void TextureDownloadTask::setResourceBuffer(const SparseData &sdata)
                 Transfer::Range range(DDSHEADER_BYTESIZE + dataToSkip, true);
                 mDataTask->setRange(range);
             } else {
-                SILOG(resource, insane, "Texture without mipmaps "<<mHash.uri().toString());
+                SILOG(resource, insane, "Texture without mipmaps "<<mURI.toString());
             }
         } else {
-            SILOG(resource, insane, "Texture does not contain header "<<mHash.uri().toString());
+            SILOG(resource, insane, "Texture does not contain header "<<mURI.toString());
         }
         mDataTask->go();
         return;

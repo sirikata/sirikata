@@ -65,7 +65,7 @@ private:
     void createAddressableTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();
-	void createPresenceTemplate();
+    void createPresenceTemplate();
     
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.

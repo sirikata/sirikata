@@ -30,68 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/models/MeshObject.hpp>
+#include <sirikata/proxyobject/models/MeshObject.hpp>
 
 namespace Sirikata {
+namespace Models {
 
 
-/////////////////////////////////////////////////////////////////////
-
-MeshObject::MeshObject ()
-    :   mMeshURI (),
-        mScale ( 1.0f, 1.0f, 1.0f ),
-        mPhysical ()
+void MeshObject::parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+    std::tr1::shared_ptr<Transfer::DenseData> response)
 {
 
 }
-
-//MeshObject::MeshObject ( MeshObject const& rhs )
-//{
-//
-//}
-
-//MeshObject::MeshObject& operator = ( MeshObject const& rhs )
-//{
-//
-//}
-
-MeshObject::~MeshObject ()
-{
-    // MCB: Might be memory leaks during integration
-}
-
-
-/////////////////////////////////////////////////////////////////////
-
-void MeshObject::setMesh ( URI const& rhs )
-{
-    mMeshURI = rhs;
-}
-
-URI const& MeshObject::getMesh () const
-{
-    return mMeshURI;
-}
-
-void MeshObject::setScale ( Vector3f const& rhs )
-{
-    mScale = rhs;
-}
-
-Vector3f const& MeshObject::getScale () const
-{
-    return mScale;
-}
-
-void MeshObject::setPhysical ( PhysicalParameters const& rhs )
-{
-    mPhysical = rhs;
-}
-
-PhysicalParameters const& MeshObject::getPhysical () const 
-{
-    return mPhysical;
-}
-
 
 } // namespace Sirikata
+}

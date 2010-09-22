@@ -32,7 +32,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
-#include <sirikata/oh/SpaceConnection.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include "MonoDomain.hpp"
 #include "MonoObject.hpp"

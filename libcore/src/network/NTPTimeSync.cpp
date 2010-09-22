@@ -141,7 +141,10 @@ void NTPTimeSync::start(const String& server) {
 }
 
 void NTPTimeSync::stop() {
-    assert(mSyncThread != NULL);
+    if (mSyncThread == NULL) {
+      return;
+    }
+
     printf("Stopping sync and waiting for sync thread to exit...\n"); fflush(stdout);
     mDone = true;
     mSyncThread->join();

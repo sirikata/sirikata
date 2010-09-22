@@ -46,3 +46,142 @@ message ChangeMessage {
 message LoadMessage {
     required float load = 1;
 }
+
+message LookupRequestMessage {
+    required float x = 1;
+    required float y = 2;
+    required float z = 3;
+}
+
+message LookupResponseMessage {
+    required uint32 server_id = 1;
+}
+
+message LookupBBoxRequestMessage {
+    required boundingbox3d3f bbox = 1;
+}
+
+message LookupBBoxResponseMessage {
+    repeated uint32 server_list = 1;
+}
+
+message NumServersRequestMessage {
+    required uint32 filler = 1;
+}
+
+message NumServersResponseMessage {
+    required uint32 num_servers = 1;
+}
+
+message ServerRegionRequestMessage {
+    required uint32 server_id = 1;
+}
+
+message ServerRegionResponseMessage {
+    repeated boundingbox3d3f bbox_list = 1;
+}
+
+message RegionRequestMessage {
+    required uint32 filler = 1;
+}
+
+message RegionResponseMessage {
+    required boundingbox3d3f bbox = 1;
+}
+
+message SegmentationListenMessage {
+    required string host = 1;
+    required uint16 port = 2;
+}
+
+message LoadReportMessage {
+    required uint32 server = 1;
+    required uint32 load_value = 2;
+    required boundingbox3d3f bbox = 3;
+}
+
+message LLLookupRequestMessage {
+    required vector3f lookup_vector = 1;
+    required boundingbox3d3f bbox = 2;
+}
+
+message LLLookupResponseMessage {
+    required uint32 server_id = 1;
+}
+
+message LLServerRegionRequestMessage {
+    required uint32 server_id = 1;
+}
+
+message LLServerRegionResponseMessage {
+    repeated boundingbox3d3f bboxes = 1;
+}
+
+message LLLoadReportMessage {
+    required boundingbox3d3f lower_root_box = 1;
+    required LoadReportMessage load_report_message = 2;
+}
+
+message LoadReportAckMessage {
+    required bool ack = 1;
+}
+
+message LLLookupBBoxRequestMessage {
+    required boundingbox3d3f bbox = 1;
+    repeated boundingbox3d3f candidate_boxes = 2;
+}
+
+message LLLookupBBoxResponseMessage {    
+    repeated uint32 server_id_list = 2;
+}
+
+
+message CSegMessage {
+
+    optional SplitRegion split_region_message = 1;
+    
+    optional ChangeMessage change_message = 2;
+    
+    optional LoadMessage load_message = 3;
+    
+    optional  LookupRequestMessage lookup_request_message = 4;    
+
+    optional LookupResponseMessage lookup_response_message = 5;
+    
+    optional LookupBBoxRequestMessage lookup_bbox_request_message = 6;    
+
+    optional LookupBBoxResponseMessage lookup_bbox_response_message = 7;
+    
+    optional NumServersRequestMessage num_servers_request_message = 8;
+
+    optional NumServersResponseMessage num_servers_response_message = 9;
+
+    optional ServerRegionRequestMessage server_region_request_message = 10;
+
+    optional ServerRegionResponseMessage server_region_response_message = 11;
+
+    optional RegionRequestMessage region_request_message = 12;
+
+    optional RegionResponseMessage region_response_message = 13;
+    
+    optional SegmentationListenMessage segmentation_listen_message = 14;
+
+    optional LoadReportMessage load_report_message = 15;
+
+    optional LLLookupRequestMessage ll_lookup_request_message = 16;
+
+    optional LLLookupResponseMessage ll_lookup_response_message = 17;   
+
+    optional LLServerRegionRequestMessage ll_server_region_request_message = 18;
+
+    optional LLServerRegionResponseMessage ll_server_region_response_message = 19;   
+
+    optional LLLoadReportMessage ll_load_report_message = 20;
+
+    optional LLLookupBBoxRequestMessage ll_lookup_bbox_request_message = 21;   
+
+    optional LLLookupBBoxResponseMessage ll_lookup_bbox_response_message = 22;
+
+    optional LoadReportAckMessage load_report_ack_message = 23;
+    
+}

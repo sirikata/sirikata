@@ -37,7 +37,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-
+#include "Platform.hpp"
 #include "Array.hpp"
 
 namespace Sirikata {

@@ -66,6 +66,11 @@ public:
         return &mTimeOffsetManager;
     }
 
+    ObjectHostProxyManager(const SpaceID& space)
+        : mSpaceID(space)
+    {}
+
+
     ~ObjectHostProxyManager();
     void initialize();
     void destroy();
@@ -74,13 +79,16 @@ public:
     void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
 
     //bftm
-    void getAllObjectReferences(std::vector<ObjectReference>& allObjReferences) const;
-    void getAllObjectReferences(std::vector<ObjectReference*>& allObjReferences) const;
+    void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
+    void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
     
     QueryTracker *getQueryTracker(const SpaceObjectReference &id);
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };
+
+typedef std::tr1::shared_ptr<ObjectHostProxyManager> ObjectHostProxyManagerPtr;
+typedef std::tr1::weak_ptr<ObjectHostProxyManager> ObjectHostProxyManagerWPtr;
 
 }
 

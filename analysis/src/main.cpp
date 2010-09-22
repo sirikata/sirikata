@@ -103,14 +103,11 @@ int main(int argc, char** argv) {
     uint32 max_space_servers = GetOptionValue<uint32>("max-servers");
     if (max_space_servers == 0)
       max_space_servers = layout.x * layout.y * layout.z;
-    uint32 num_oh_servers = GetOptionValue<uint32>("num-oh");
-    uint32 nservers = max_space_servers + num_oh_servers;
-
+    //uint32 num_oh_servers = GetOptionValue<uint32>("num-oh");
+    //uint32 nservers = max_space_servers + num_oh_servers;
+    uint32 nservers = GetOptionValue<uint32>(ANALYSIS_TOTAL_NUM_ALL_SERVERS);
+    
     srand( GetOptionValue<uint32>("rand-seed") );
-
-
-    String filehandle = GetOptionValue<String>("serverips");
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
 
     if ( GetOptionValue<bool>(ANALYSIS_LOC) ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);

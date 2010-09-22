@@ -40,6 +40,8 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         if 'object' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('object')
         if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
         if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
+        #if 'oseg-cumulative' not in self.cs.traces['space']: self.cs.traces['space'].append('oseg-cumulative');
+        
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
 
@@ -49,15 +51,7 @@ if __name__ == "__main__":
     
     nobjects = 1000#19000#326
     packname = '1a_objects.pack'
-    # If genpack is True, the sim will be run the first time with a
-    # single object host to generate data, dump it, and pull it down.
-    # Then run with genpack = False to push that pack up to all nodes
-    # and use it across multiple object hosts.
-    genpack = False
     numoh = 1
-
-    if (genpack):
-        numoh = 1
 
     cc = ClusterConfig()
     import math;
@@ -81,26 +75,11 @@ if __name__ == "__main__":
     cs.oseg_cache_entry_lifetime= "10000s"
 
 
-    
-    #if (genpack):
-    #    # Pack generation, run with 1 oh
-    #    assert(cs.num_oh == 1)
-    #    cs.num_random_objects = nobjects
-    #    cs.num_pack_objects = 0
-    #    cs.object_pack = ''
-    #    cs.pack_dump = packname
-    #elif (numoh > 1):
-    #    # Use pack across multiple ohs
-    #    cs.num_random_objects = 0
-    #    cs.num_pack_objects = nobjects / cs.num_oh
-    #    cs.object_pack = packname
-    #    cs.pack_dump = ''
-    #else:
-    #    # Only 1 oh, just use random
-    #    cs.num_random_objects = nobjects
-    #    cs.num_pack_objects = 0
-    #    cs.object_pack = ''
-    #    cs.pack_dump = ''
+    ## Use pack across multiple ohs
+    #cs.num_random_objects = 0
+    #cs.num_pack_objects = nobjects / cs.num_oh
+    #cs.object_pack = packname
+    #cs.pack_dump = True
     cs.num_random_objects = 0
     cs.object_sl_file='sl.trace.'+str(edgex)+'x'+str(edgey);
     cs.object_sl_center=(384,384,0);
@@ -116,6 +95,9 @@ if __name__ == "__main__":
     nobjectlist=[250,500,750,1000,1250,1500,1750,2000];#+=
     nobjectlist+=[2500,3000,3500,4000,4500]+range(5000,20000,1000)
     nobjectlist.reverse()
+
+    #nobjectlist = [5000];
+    
     #nobjectlist=[19000]
     caches=[256]*len(nobjectlist)
     #caches+=[250]*len(nobjectlist)

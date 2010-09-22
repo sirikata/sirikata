@@ -39,9 +39,12 @@
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-
+#include <sirikata/core/transfer/TransferManager.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/core/task/EventManager.hpp>
-
 #include <set>
 
 /////////////////////////////////////////////////////////////////////
@@ -63,11 +66,22 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
         static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
 //        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
-        void loadDocument ( Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject> proxy  );
+        void loadDocument(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<Transfer::DenseData> response);
+
+        // documents that have been transfered, parsed, and loaded.
+
+        std::tr1::shared_ptr<Transfer::TransferPool> transferPool();
 
     protected:
+	void metadataFinished(std::tr1::weak_ptr<ProxyMeshObject> proxy, std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+				     std::tr1::shared_ptr<Transfer::RemoteFileMetadata>response);
+	void chunkFinished(std::tr1::weak_ptr<ProxyMeshObject> proxy, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+				  std::tr1::shared_ptr<Transfer::DenseData> response);
+	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+	Transfer::TransferMediator *mTransferMediator;
 
-    private:
+  private:
         ColladaSystem (); // called by create()
         ColladaSystem ( ColladaSystem const& ); // not implemented
         ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
@@ -83,6 +97,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
 
         // documents that have been transfered, parsed, and loaded.
         // MCB: make this a map when/if a key becomes useful
+
         typedef std::set< ColladaDocumentPtr > DocumentSet;
         DocumentSet mDocuments;
 

@@ -40,7 +40,7 @@ namespace Meru {
 
 class GraphicsResourceMaterial : public GraphicsResourceAsset {
 public:
-  GraphicsResourceMaterial(const RemoteFileId &resourceID);
+    GraphicsResourceMaterial(const URI &uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceMaterial();
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
@@ -48,7 +48,7 @@ public:
   virtual ResourceLoadTask * createLoadTask(DependencyManager *manager);
   virtual ResourceUnloadTask * createUnloadTask(DependencyManager *manager);
 
-  virtual void resolveName(const URI& id, const ResourceHash& hash);
+  virtual void resolveName(const URI& id);
 
 protected:
   const unsigned int mArchiveName;

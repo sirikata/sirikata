@@ -32,6 +32,7 @@
 #ifndef _GRAPHICS_RESOURCE_MODEL_HPP
 #define _GRAPHICS_RESOURCE_MODEL_HPP
 
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "../meruCompat/MeruDefs.hpp"
 #include "GraphicsResourceAsset.hpp"
 
@@ -39,10 +40,10 @@ namespace Meru {
 
 class GraphicsResourceModel : public GraphicsResourceAsset {
 public:
-  GraphicsResourceModel(const RemoteFileId &resourceID);
+    GraphicsResourceModel(const URI &uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResourceModel();
 
-  virtual void resolveName(const URI& id, const ResourceHash& hash);
+  virtual void resolveName(const URI& id);
 
   virtual ResourceDownloadTask * createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor);
   virtual ResourceDependencyTask * createDependencyTask(DependencyManager *manager);
@@ -53,6 +54,8 @@ public:
 
 protected:
   std::map<String, String> mMaterialNames;
+
+
 };
 
 }

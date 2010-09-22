@@ -179,6 +179,37 @@ public:
                       getCol(2),
                       ROWS());
     }
+    Matrix3x3 inverse() const
+    {
+        Matrix3x3 inverted;
+        inverted.setCol(0, Vector3x(
+                (*this)(1,1)*(*this)(2,2) - (*this)(1,2)*(*this)(2,1),
+                (*this)(0,2)*(*this)(2,1) - (*this)(0,1)*(*this)(2,2),
+                (*this)(0,1)*(*this)(1,2) - (*this)(0,2)*(*this)(1,1)));
+        inverted.setCol(1, Vector3x(
+                (*this)(1,2)*(*this)(2,0) - (*this)(1,0)*(*this)(2,2),
+                (*this)(0,0)*(*this)(2,2) - (*this)(0,2)*(*this)(2,0),
+                (*this)(0,2)*(*this)(1,0) - (*this)(0,0)*(*this)(1,2)));
+        inverted.setCol(2, Vector3x(
+                (*this)(1,0)*(*this)(2,1) - (*this)(1,1)*(*this)(2,0),
+                (*this)(0,1)*(*this)(2,0) - (*this)(0,0)*(*this)(2,1),
+                (*this)(0,0)*(*this)(1,1) - (*this)(0,1)*(*this)(1,0)));
+
+        scalar fDet =
+            (*this)(0,0)*inverted(0,0) +
+            (*this)(0,1)*inverted(1,0)+
+            (*this)(0,2)*inverted(2,0);
+
+        scalar fInvDet = ((scalar)1.0)/fDet;
+        for (size_t iRow = 0; iRow < 3; iRow++)
+            for (size_t iCol = 0; iCol < 3; iCol++)
+                inverted(iRow,iCol) *= fInvDet;
+
+        return inverted;
+    }
+    Matrix3x3 inverseTranspose() const {
+        return inverse().transpose();
+    }
     ///@FIXME: should this be a double or a scalar
     double determinant() const {
         return mCol[0].x*(double)mCol[1].y*mCol[2].z-
@@ -210,5 +241,9 @@ template <typename T> Matrix3x3<T> operator *(T other, const Matrix3x3<T>&mat) {
 template <typename T> Matrix3x3<T> operator /(T other, const Matrix3x3<T>&mat) {
     return Matrix3x3<T>(other/mat.getCol(0),other/mat.getCol(1),other/mat.getCol(2),COLUMNS());
 }
+
+typedef Matrix3x3<float32> Matrix3x3f;
+typedef Matrix3x3<float64> Matrix3x3d;
+
 }
 #endif

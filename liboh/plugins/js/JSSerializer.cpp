@@ -61,14 +61,14 @@ std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
 
 std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
 {
-	if( v8Val->IsFunction())
-	{
-      return serializeFunction( v8::Local<v8::Function>::Cast(v8Val));
-	}
+    if( v8Val->IsFunction())
+    {
+        return serializeFunction( v8::Local<v8::Function>::Cast(v8Val));
+    }
 
-	v8::HandleScope handle_scope;
-	//otherwise assuming it is a v8 object for now
-	v8::Local<v8::Object> v8Obj = v8Val->ToObject();
+    v8::HandleScope handle_scope;
+    //otherwise assuming it is a v8 object for now
+    v8::Local<v8::Object> v8Obj = v8Val->ToObject();
     v8::Local<v8::Array> properties = v8Obj->GetPropertyNames();
 
     Sirikata::JS::Protocol::JSMessage jsmessage ;
@@ -140,6 +140,35 @@ bool JSSerializer::deserializeObject( std::string strDecode,v8::Local<v8::Object
 
     return true;
 }
+
+
+bool JSSerializer::deserializeObject( Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+{
+    for(int i = 0; i < jsmessage.fields_size(); i++)
+    {
+        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
+
+        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
+
+        const char* str = jsf.name().c_str();
+
+        v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
+        if(jsvalue.has_s_value())
+        {
+            const char* str1 = jsvalue.s_value().c_str();
+            v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
+            deserializeTo->Set(key, val);
+        }
+        else if(jsvalue.has_i_value())
+        {
+            v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
+            deserializeTo->Set(key, intval);
+        }
+    }
+
+    return true;
+}
+
 
 
 

@@ -70,7 +70,12 @@ public:
              const Quaternion&orientation,
              const Vector3<float32> &velocity,
              const Vector3<float32> angularVelocityAxis,
-             float32 angularVelocityRadians):Transform(position,orientation),mVelocity(velocity),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians) {}
+             float32 angularVelocityRadians)
+     :Transform(position,orientation),mVelocity(velocity),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians)
+    {
+    }
+
+    
     bool operator ==(const Location&other)const {
         bool eq=getPosition()==other.getPosition();
         bool veq=other.mVelocity==mVelocity;
@@ -83,6 +88,8 @@ public:
     const Vector3<float32>&getVelocity()const {
         return mVelocity;
     }
+
+    
     void setVelocity(const Vector3<float32> velocity) {
         mVelocity=velocity;
     }

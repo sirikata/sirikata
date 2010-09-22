@@ -43,13 +43,17 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyCameraObject
   : public CameraProvider,
     public ProxyObject {
 public:
-    ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, ODP::Service* odp_service);
+    ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
     virtual void destroy(const TemporalValue<Location>::Time& when);
     void attach(const String&renderTargetName,
                 uint32 width,
                 uint32 height);
     void detach();
 
+
 };
+
+typedef std::tr1::shared_ptr<ProxyCameraObject> ProxyCameraObjectPtr;
+
 }
 #endif

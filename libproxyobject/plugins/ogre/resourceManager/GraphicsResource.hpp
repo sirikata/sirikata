@@ -34,6 +34,12 @@
 
 #include "../meruCompat/MeruDefs.hpp"
 
+#include <stdio.h>
+#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+
+using namespace std;
+
 namespace Meru {
 
 class GraphicsResource;
@@ -73,7 +79,7 @@ public:
     LOAD_SWAPPABLE
   };
 
-  GraphicsResource(const String &id, Type type);
+    GraphicsResource(const String &id, Type type, Sirikata::ProxyObjectPtr proxy);
   virtual ~GraphicsResource();
 
   inline const String &getID() const {
@@ -95,7 +101,7 @@ public:
   virtual void loaded(bool success, unsigned int epoch);
   virtual void unloaded(bool success, unsigned int epoch);
 
-  virtual void resolveName(const URI& id, const ResourceHash& hash) {
+  virtual void resolveName(const URI& idh) {
   }
 
   void removeLoadDependencies(unsigned int epoch);
@@ -112,6 +118,8 @@ public:
 
   ParseState getParseState();
   LoadState getLoadState();
+
+    Sirikata::ProxyObjectPtr mProxy;
 
 protected:
   static unsigned int sCostPropEpoch;

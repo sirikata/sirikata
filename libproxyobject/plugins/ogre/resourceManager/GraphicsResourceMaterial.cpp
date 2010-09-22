@@ -45,16 +45,17 @@ namespace Meru {
 class MaterialDependencyTask : public ResourceDependencyTask
 {
 public:
-  MaterialDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
+    MaterialDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~MaterialDependencyTask();
 
   virtual void operator()();
+    Sirikata::ProxyObjectPtr mProxy;
 };
 
 class MaterialLoadTask : public ResourceLoadTask
 {
 public:
-  MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int archiveName, Ogre::NameValuePairList *textureAliases, unsigned int epoch);
+  MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const URI &uri, unsigned int archiveName, Ogre::NameValuePairList *textureAliases, unsigned int epoch);
 
   virtual void doRun();
 
@@ -66,7 +67,7 @@ protected:
 class MaterialUnloadTask : public ResourceUnloadTask
 {
 public:
-  MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch);
+  MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int archiveName, unsigned int epoch);
 
   virtual void doRun();
 
@@ -74,11 +75,11 @@ protected:
   const unsigned int mArchiveName;
 };
 
-GraphicsResourceMaterial::GraphicsResourceMaterial(const RemoteFileId &resourceID)
-  : GraphicsResourceAsset(resourceID, GraphicsResource::MATERIAL),
-  mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
+GraphicsResourceMaterial::GraphicsResourceMaterial(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+ : GraphicsResourceAsset(uri, GraphicsResource::MATERIAL, proxy),
+    mArchiveName(CDNArchiveFactory::getSingleton().addArchive())
 {
-  mTextureAliases[""] = resourceID.uri().toString();
+  mTextureAliases[""] = uri.toString();
 }
 
 GraphicsResourceMaterial::~GraphicsResourceMaterial()
@@ -87,35 +88,35 @@ GraphicsResourceMaterial::~GraphicsResourceMaterial()
     doUnload();
 }
 
-void GraphicsResourceMaterial::resolveName(const URI& id, const ResourceHash& hash)
+void GraphicsResourceMaterial::resolveName(const URI& id)
 {
-  mTextureAliases[id.toString()] = hash.fingerprint().convertToHexString();
+    //mTextureAliases[id.toString()] = hash.fingerprint().convertToHexString();
 }
 
 ResourceDownloadTask* GraphicsResourceMaterial::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-  return new ResourceDownloadTask(manager, mResourceID, resourceRequestor);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, mProxy->priority, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceMaterial::createDependencyTask(DependencyManager *manager)
 {
-  return new MaterialDependencyTask(manager, getWeakPtr(), mResourceID.toString());
+    return new MaterialDependencyTask(manager, getWeakPtr(), mURI, mProxy);
 }
 
 ResourceLoadTask* GraphicsResourceMaterial::createLoadTask(DependencyManager *manager)
 {
-  return new MaterialLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mArchiveName, &mTextureAliases, mLoadEpoch);
+    return new MaterialLoadTask(manager, getSharedPtr(), mURI, mArchiveName, &mTextureAliases, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceMaterial::createUnloadTask(DependencyManager *manager)
 {
-  return new MaterialUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mArchiveName, mLoadEpoch);
+    return new MaterialUnloadTask(manager, getWeakPtr(), mURI, mArchiveName, mLoadEpoch);
 }
 
 /***************************** MATERIAL DEPENDENCY TASK *************************/
 
-MaterialDependencyTask::MaterialDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash)
-  : ResourceDependencyTask(mgr, resource, hash)
+MaterialDependencyTask::MaterialDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, Sirikata::ProxyObjectPtr proxy)
+ : ResourceDependencyTask(mgr, resource, uri), mProxy(proxy)
 {
 
 }
@@ -238,7 +239,7 @@ void MaterialDependencyTask::operator()()
           Ogre::String dependencyName (start_index,midpoint);
           if (dependencyName.size()) {
             SILOG(resource,debug,"Found LEGACY dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL, mProxy);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -249,7 +250,7 @@ void MaterialDependencyTask::operator()()
         Ogre::String dependencyName(start_index, midpoint);
         if (dependencyName.size()) {
           SILOG(resource,debug,"Found Normal dependency "<<dependencyName);
-          SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
+          SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL, mProxy);
           resourcePtr->addDependency(hashResource);
         }
       }
@@ -265,7 +266,7 @@ void MaterialDependencyTask::operator()()
             {
               URI dependencyURI(dependencyName); ///////// NOTE: Not using URI Context!!!!
               if (!dependencyURI.proto().empty()) {
-                SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                  SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE, mProxy);
                 if (hashResource)
                   resourcePtr->addDependency(hashResource);
               }
@@ -297,7 +298,7 @@ void MaterialDependencyTask::operator()()
                   URI dependencyURI(dependencyName); /////////// NOTE: Not using URI Context!
                   if (!dependencyURI.proto().empty()) {
                     SILOG(resource,debug,"Found ANIM texture dependency "<<dependencyName);
-                    SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                    SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE, mProxy);
                     resourcePtr->addDependency(hashResource);
                   }
                 }
@@ -327,7 +328,7 @@ void MaterialDependencyTask::operator()()
                     URI dependencyURI(dependencyName); ////// NOTE: Not using uri context!
                     if (!dependencyURI.proto().empty()) {
                       SILOG(resource,debug,"Found CUBIC texture dependency "<<dependencyName);
-                      SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                      SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE, mProxy);
                       resourcePtr->addDependency(hashResource);
                     }
                   }
@@ -337,7 +338,7 @@ void MaterialDependencyTask::operator()()
           }
           if (what[3].matched) {
             SILOG(resource,debug,"Found what[3] dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::SHADER);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::SHADER, mProxy);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -348,7 +349,7 @@ void MaterialDependencyTask::operator()()
       if (dependencyName.size()) {
         // this is actually a material reference
         SILOG(resource,debug,"Found material dependency "<<dependencyName);
-        SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(myURIContext, dependencyName), GraphicsResource::MATERIAL, mProxy);
         resourcePtr->addDependency(hashResource);
       }
     }
@@ -361,15 +362,15 @@ void MaterialDependencyTask::operator()()
 
 /***************************** MATERIAL LOAD TASK *************************/
 
-MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256& hash, unsigned int archiveName, Ogre::NameValuePairList* textureAliases, unsigned int epoch)
-: ResourceLoadTask(mgr, resourcePtr, hash, epoch), mArchiveName(archiveName), mTextureAliases(textureAliases)
+MaterialLoadTask::MaterialLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const URI& uri, unsigned int archiveName, Ogre::NameValuePairList* textureAliases, unsigned int epoch)
+ : ResourceLoadTask(mgr, resourcePtr, uri, epoch), mArchiveName(archiveName), mTextureAliases(textureAliases)
 {
 }
 
 void MaterialLoadTask::doRun()
 {
-  CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mHash, mBuffer);
-  MaterialScriptManager::getSingleton().load(mHash.convertToHexString(),
+    CDNArchiveFactory::getSingleton().addArchiveData(mArchiveName, mURI.toString(), mBuffer);
+  MaterialScriptManager::getSingleton().load(mURI.toString(),
     Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
     false, 0, mTextureAliases);
 
@@ -378,8 +379,8 @@ void MaterialLoadTask::doRun()
 
 /***************************** MATERIAL UNLOAD TASK *************************/
 
-MaterialUnloadTask::MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int archiveName, unsigned int epoch)
-: ResourceUnloadTask(mgr, resource, hash, epoch), mArchiveName(archiveName)
+MaterialUnloadTask::MaterialUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int archiveName, unsigned int epoch)
+: ResourceUnloadTask(mgr, resource, uri, epoch), mArchiveName(archiveName)
 {
 
 }
@@ -397,9 +398,9 @@ void MaterialUnloadTask::doRun()
   //    SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MaterialUnloadTask::mainThreadUnload, this, mHash));
 
   MaterialScriptManager* materialManager = MaterialScriptManager::getSingletonPtr();
-  materialManager->remove(mHash.convertToHexString());
+  materialManager->remove(mURI.toString());
 
-  Ogre::ResourcePtr materialResource = materialManager->getByName(mHash.convertToHexString());
+  Ogre::ResourcePtr materialResource = materialManager->getByName(mURI.toString());
   assert(materialResource.isNull());
 
   CDNArchiveFactory::getSingleton().clearArchive(mArchiveName);

@@ -33,6 +33,9 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/task/DependencyTask.hpp>
+#include <stdio.h>
+
+using namespace std;
 
 namespace Sirikata {
 namespace Task {

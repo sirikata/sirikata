@@ -32,6 +32,9 @@
 
 #ifndef SIRIKATA_StreamListener_HPP__
 #define SIRIKATA_StreamListener_HPP__
+
+#include <sirikata/core/network/Stream.hpp>
+
 namespace Sirikata { namespace Network {
 /**
  * This class waits on a service and listens for incoming connections

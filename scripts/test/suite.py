@@ -8,7 +8,10 @@ import os.path
 import traceback
 import datetime
 from test import Test, ShellCommandTest
-from sim_test import ClusterSimTest, PacketLatencyByLoadTest, FlowFairnessTest
+from sim_test import ClusterSimTest
+from packet_latency_test import PacketLatencyByLoadTest
+from flow_fairness_test import FlowFairnessTest
+from pinto_test import PintoTest
 
 import sys
 # FIXME It would be nice to have a better way of making this script able to find
@@ -126,6 +129,35 @@ if __name__ == "__main__":
     flow_fairness_with_caching_settings = {'duration' : '300s', 'oseg_cache_entry_lifetime' : '300s', 'num_random_objects': 50}
     suite.add( FlowFairnessTest('flow_fairness_region_4x1_1000', 1000, scheme='region', payload=1000, settings=flow_fairness_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
     suite.add( FlowFairnessTest('flow_fairness_region_4x1_10000', 10000, scheme='region', payload=1000, settings=flow_fairness_with_caching_settings, space_layout=(4,1), time_limit=datetime.timedelta(minutes=10) ) )
+
+    pinto_settings = { 'duration' : '300s', 'oseg_cache_entry_lifetime' : '300s' }
+    suite.add(
+        PintoTest('pinto_100', # 100 *per server*
+                  400,
+                  .1,
+                  settings=pinto_settings,
+                  space_layout=(4,1),
+                  time_limit=datetime.timedelta(minutes=10)
+                  )
+        )
+    suite.add(
+        PintoTest('pinto_1000',
+                  4000,
+                  .1,
+                  settings=pinto_settings,
+                  space_layout=(4,1),
+                  time_limit=datetime.timedelta(minutes=10)
+                  )
+        )
+    suite.add(
+        PintoTest('pinto_5000',
+                  2000,
+                  .1,
+                  settings=pinto_settings,
+                  space_layout=(4,1),
+                  time_limit=datetime.timedelta(minutes=10)
+                  )
+        )
 
     if len(sys.argv) < 2:
         suite.clean()

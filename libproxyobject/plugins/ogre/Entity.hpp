@@ -32,7 +32,6 @@
 #ifndef SIRIKATA_GRAPHICS_ENTITY_HPP__
 #define SIRIKATA_GRAPHICS_ENTITY_HPP__
 
-#include "OgreSystem.hpp"
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/ProxyObjectListener.hpp>
@@ -89,22 +88,17 @@ public:
         return mScene;
     }
 
-    virtual void updateLocation(Time ti, const Location &newLocation);
-    virtual void resetLocation(Time ti, const Location &newLocation);
-    virtual void setParent(const ProxyObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation);
-    virtual void unsetParent(Time ti, const Location &newLocation);
+    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient);
 
     virtual void destroyed(const Time&);
 
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;
     }
-    Vector3d getOgrePosition() {
-        return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
-    }
-    Quaternion getOgreOrientation() {
-        return fromOgre(mSceneNode->getOrientation());
-    }
+    Vector3d getOgrePosition();
+
+    Quaternion getOgreOrientation();
+
     void extrapolateLocation(TemporalValue<Location>::Time current);
 
     virtual void setSelected(bool selected) {

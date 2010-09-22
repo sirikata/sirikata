@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
 #include "ColladaMeshObject.hpp"
 
 #include "ColladaSystem.hpp"
@@ -39,10 +40,12 @@
 #include "COLLADAFWGeometry.h"
 #include "COLLADAFWMesh.h"
 
+using namespace std;
+
 /////////////////////////////////////////////////////////////////////
 
 namespace Sirikata { namespace Models {
-    
+
     ColladaMeshObject::ColladaMeshObject ( ColladaSystem& system, std::tr1::shared_ptr<ProxyMeshObject>pp )
         :   MeshObject (),
         mSystem ( system ),
@@ -52,12 +55,12 @@ namespace Sirikata { namespace Models {
 
 //ColladaMeshObject::ColladaMeshObject ( ColladaMeshObject const& rhs )
 //{
-//    
+//
 //}
 
 //ColladaMeshObject::ColladaMeshObject& operator = ( ColladaMeshObject const& rhs )
 //{
-//    
+//
 //}
 
 ColladaMeshObject::~ColladaMeshObject ()
@@ -73,13 +76,13 @@ ColladaMeshObject::~ColladaMeshObject ()
 bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry )
 {
     assert((std::cout << "MCB: ColladaMeshObject::import(COLLADAFW::Geometry) entered" << std::endl,true));
-    
+
     bool ok = false;
-    
+
     if ( geometry.getType () == COLLADAFW::Geometry::GEO_TYPE_MESH )
     {
         COLLADAFW::Mesh const& asMesh = static_cast< COLLADAFW::Mesh const& > ( geometry );
-        
+
         ok = import ( importer, asMesh );
     }
     else // MCB: handle other types of geometry TODO
@@ -93,26 +96,34 @@ bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::G
 bool ColladaMeshObject::import ( ColladaDocumentImporter& importer, COLLADAFW::Mesh const& mesh )
 {
     assert((std::cout << "MCB: ColladaMeshObject::import(COLLADAFW::Mesh) entered" << std::endl,true));
-    
+
     bool ok = false;
 
     return ok;
 }
-    
+
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshObject
 
-void ColladaMeshObject::setMesh ( URI const& rhs )
+void ColladaMeshObject::parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+    std::tr1::shared_ptr<Transfer::DenseData> response)
 {
-    mMeshURI = rhs;
+    mMeshURI = request->getMetadata().getURI();
     // MCB: trigger importation of mesh content
-    
+
     /// dbm: this is what triggers Collada download.
     /// dbm: ColladaSystem::loadDocument initiates a download using transferManager;
     /// dbm: ColladaSystem:downloadFinished is the callback
-    mSystem.loadDocument ( rhs, mProxyPtr );
+    //mSystem.loadDocument ( rhs, mProxyPtr );
+
+    mSystem.loadDocument(mProxyPtr, request, response);
 }
-    
+
+void ColladaMeshObject::setMesh ( URI const& rhs ) {
+
+}
+
+
 URI const& ColladaMeshObject::getMesh () const
 {
     return mMeshURI;

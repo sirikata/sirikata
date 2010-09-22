@@ -33,6 +33,7 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/odp/Defs.hpp>
 #include <sirikata/core/odp/Exceptions.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
 
 namespace Sirikata {
 namespace ODP {
@@ -83,6 +84,16 @@ PortID::operator uint32() const {
 bool PortID::operator==(const PortID& rhs) const {
     return mValue == rhs.mValue;
 }
+
+
+bool PortID::operator==(const Services::Ports& compareTo) const{
+    return mValue == (uint32)compareTo;
+}
+
+bool PortID::operator!=(const Services::Ports& compareTo) const{
+    return mValue != (uint32)compareTo;
+}
+
 
 bool PortID::operator!=(const PortID& rhs) const {
     return mValue != rhs.mValue;
@@ -206,6 +217,16 @@ const PortID& Endpoint::port() const {
     return mPort;
 }
 
+String Endpoint::toString() const {
+    std::ostringstream ss;
+    ss << (*this);
+    return ss.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const Sirikata::ODP::Endpoint& ep) {
+    os << ep.space() << ":" << ep.object() << ":" << ep.port();
+    return os;
+}
 
 } // namespace ODP
 } // namespace Sirikata

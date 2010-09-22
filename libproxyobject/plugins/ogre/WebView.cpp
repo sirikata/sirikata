@@ -77,10 +77,10 @@ WebView::WebView(const std::string& name, const std::string& type, unsigned shor
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
-    mBorderLeft = DEFAULT_BORDER_LEFT;
-    mBorderRight = DEFAULT_BORDER_RIGHT;
-    mBorderTop = DEFAULT_BORDER_TOP;
-    mBorderBottom = DEFAULT_BORDER_BOTTOM;
+    mBorderLeft=2;
+    mBorderRight=2;
+    mBorderTop=25;
+    mBorderBottom=2;
 	createMaterial();
 
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
@@ -95,10 +95,11 @@ WebView::WebView(const std::string& name, const std::string& type, unsigned shor
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
-    mBorderLeft = DEFAULT_BORDER_LEFT;
-    mBorderRight = DEFAULT_BORDER_RIGHT;
-    mBorderTop = DEFAULT_BORDER_TOP;
-    mBorderBottom = DEFAULT_BORDER_BOTTOM;
+
+    mBorderLeft=2;
+    mBorderRight=2;
+    mBorderTop=25;
+    mBorderBottom=2;
 	viewName = name;
         viewType = type;
 	viewWidth = width;
@@ -547,6 +548,13 @@ void WebView::createMaterial()
          return 0;
      else
          return overlay->getRelativeY(absY);
+ }
+
+ bool WebView::inDraggableRegion(int relX, int relY) {
+     if(relY <= mBorderTop) {
+         return true;
+     }
+     return false;
  }
 
  bool WebView::isMaterialOnly()

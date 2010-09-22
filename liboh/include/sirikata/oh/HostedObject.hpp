@@ -34,7 +34,6 @@
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
-#include <sirikata/oh/TopLevelSpaceConnection.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
@@ -46,21 +45,28 @@
 #include <map>
 #include <utility>
 
+#include <sirikata/core/network/ObjectMessage.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
+
+#include <sirikata/core/transfer/URI.hpp>
+
+#include <sirikata/oh/ObjectHostProxyManager.hpp>
+
 namespace Sirikata {
+class ObjectHostContext;
 class ObjectHost;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
 class PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
 
 class ObjectScript;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
+class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRouter, public ObjectMessageDispatcher {
 //------- Private inner classes
     class PerSpaceData;
     struct PrivateCallbacks;
@@ -98,10 +104,13 @@ protected:
     };
 
 //------- Members
-  public:
-    typedef std::set<SpaceID> SpaceSet;
+    ObjectHostContext* mContext;
+
+
+    
   private:
-    SpaceSet mSpaces;
+    //SpaceSet mSpaces;
+
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
@@ -112,18 +121,19 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
+    bool mIsCamera; // FIXME hack so we can get a camera up and running, need
+                    // more flexible selection of proxy type
 
     ODP::DelegateService* mDelegateODPService;
+    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
-    QueryTracker* mDefaultTracker; // FIXME this is necessary because we're
-                                   // using messaging outside of spaces in order
-                                   // to communicate with the db, which is
-                                   // required for initialization....
-    //------- Constructors/Destructors
+
+//------- Constructors/Destructors
+
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    HostedObject(ObjectHost*parent, const UUID &uuid);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid, bool is_camera);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
@@ -132,24 +142,25 @@ public:
 
 private:
 //------- Private member functions:
-    PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
     ///When a message is destined for the RPC port of 0, split it into submessages and process those
     void handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
     ///When a message is destined for the persistence port, handle each persistence object accordingly
-    void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
-    ///makes a new object with the bare minimum--assumed that a script or persistence fills in the rest.
-    void sendNewObj(const Location&startingLocation, const BoundingSphere3f&meshBounds, const SpaceID&, const UUID&evidence);
+    //void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
 
     // When a connection to a space is setup, initialize it to handle default behaviors
     void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
 public:
 
     /** Get a set of spaces the object is currently connected to. */
-    const SpaceSet& spaces() const {
-        return mSpaces;
-    }
+    typedef std::set<SpaceObjectReference> SpaceObjRefSet;
+    void getSpaceObjRefs(SpaceObjRefSet& ss) const;
+
+    
 
 //------- Public member functions:
+    ObjectHostContext* context() { return mContext; }
+    const ObjectHostContext* context() const { return mContext; }
+
     ///makes a new object that is not in the persistence database.
     void initializeDefault(
             const String&mesh,
@@ -158,9 +169,21 @@ public:
             const Vector3f&meshScale,
             const PhysicalParameters&physicalParameters);
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    void initializeScript(const String&script, const std::map<String,String> &args);
+    //void initializeScript(const String&script, const std::map<String,String> &args);
+    void initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach="");
+    
+    bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    void processInitScriptMessage(MemoryReference& body);
+    bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    
     /// Attempt to restore this item from database including script
-    void initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
+    //void initializeRestoreFromDatabase(const SpaceID&spaceID);
+
+    /** Initializes this HostedObject, particularly to get it set up with the
+     *  underlying ObjectHost.
+     */
+    void init();
+
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
@@ -172,66 +195,56 @@ public:
     const Duration&getSpaceTimeOffset(const SpaceID&space);
     /// Gets the proxy object representing this HostedObject inside space.
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
+    ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
 
-    ObjectHostProxyManager *getProxyManager(const SpaceID &space) const {
-        ProxyObjectPtr obj = getProxy(space);
-        if (obj) {
-            return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
-        }
-        return 0;
-    }
 
-    //bftm
-    ObjectHostProxyManager *bftm_getProxyManager(const SpaceID &space) const {
-        ProxyObjectPtr obj = getProxy(space);
-        if (obj) {
-            return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
-        }
-        return 0;
-    }
     
 	/** These are properties related the object script 
 	    that would be attached to this hosted object in case
 		it is a scripted object
 	*/
 	
-	bool mHasScript;
-	String mScriptType;
-	ObjectScriptManager::Arguments mScriptArgs;
-	String mScriptName;
+    bool mHasScript;
+    String mScriptType;
+    ObjectScriptManager::Arguments mScriptArgs;
+    String mScriptName;
 
 
-	bool hasScript()
-	{
-	  return mHasScript;
-	}
+    bool hasScript()
+    {
+        return mHasScript;
+    }
 
-	void setHasScript(bool t)
-	{
-	  mHasScript = t;
-	}
-   
+    void setHasScript(bool t)
+    {
+        mHasScript = t;
+    }
+    
     void setScriptType(String s)
-	{
-	  mScriptType = s;
+    {
+        mScriptType = s;
+    }
 
-	}
-
-	void setScriptArgs(ObjectScriptManager::Arguments& args)
-	{
-	   mScriptArgs = args;
-	}
+    void setScriptArgs(ObjectScriptManager::Arguments& args)
+    {
+        mScriptArgs = args;
+    }
 
     String getScriptName()
-	{
-	  return mScriptName;
-	}
-	void setScriptName(String s)
-	{
-	  mScriptName = s;
-	}
+    {
+        return mScriptName;
+    }
+    void setScriptName(String s)
+    {
+        mScriptName = s;
+    }
 
     void attachScript(const String& );
+
+    // ObjectMessageRouter Interface
+    WARN_UNUSED
+    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
+
 protected:
 
     /// Checks for a public cached property named propName.
@@ -253,9 +266,6 @@ protected:
      */
     void unsetCachedPropertyAndSubscription(const String &propName);
 
-    //FIXME implement SpaceConnection& connect(const SpaceID&space);
-    //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
-
     struct SendService: public MessageService {
         HostedObject *ho;
         void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
@@ -265,17 +275,12 @@ protected:
         bool endForwardingMessagesTo(MessageService*) { return false; }
     } mSendService;
 
-    struct ReceiveService: public MessageService {
-        HostedObject *ho;
-        void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
-            assert(hdr.has_source_space());
-            ho->processRoutableMessage(hdr, body);
-        }
-        bool forwardMessagesTo(MessageService*) { return false; }
-        bool endForwardingMessagesTo(MessageService*) { return false; }
-    } mReceiveService;
-
 public:
+
+
+    ObjectReference getObjReference(const SpaceID& space);
+
+    
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
         persistence messages.
@@ -288,6 +293,8 @@ public:
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
     const QueryTracker*getTracker(const SpaceID& space) const;
 
+    virtual ProxyManagerPtr getProxyManager(const SpaceID& space);
+
     /** Called once per frame, at a certain framerate. */
     void tick();
 
@@ -296,23 +303,46 @@ public:
         message, however any other message must wait until you receive the RetObj
         for that space.
         @param spaceID  The UUID of the space you connect to.
-        @param spaceConnectionHint  Another nearby object; may be set to null HostedObjectPtr().
         @param startingLocation  The initial location of this object. Must be known at connection time?
         @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
         @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
     */
-    void connectToSpace(
+    void connect(
         const SpaceID&spaceID,
-        const HostedObjectPtr&spaceConnectionHint,
         const Location&startingLocation,
         const BoundingSphere3f&meshBounds,
-        const UUID&evidence);
+        const String& mesh,
+        const SolidAngle& queryAngle,
+        const UUID&evidence,
+        const String& scriptFile="",
+        const String& scriptType="");
+    
+    Location getLocation(const SpaceID& space);
 
+    void connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f&meshBounds,
+        const String& mesh,
+        const UUID&evidence,
+        const String& scriptFile="",
+        const String& scriptType="");
+
+    
+  private:
+    
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Location& startingLocation, const String& scriptFile, const String& scriptType,  const BoundingSphere3f& bnds);
+
+    void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
+    void handleStreamCreated(const SpaceObjectReference& spaceobj);
+
+  public:
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID&id);
 
-    /** Handles an incoming message, then passes the message to the scripting language. */
-    void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
+    /// Receive an ObjectMessage from the space via the ObjectHost. Translate it
+    /// to our runtime ODP structure and deliver it.
+    void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
 
   private:
     
@@ -345,28 +375,12 @@ public:
     */
     void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
 
+    bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    
   public:
+    //BFTM_FIXME: need to actually write this function.
+    void updateAddressable();
 
-    ProxyManager* getProxyManager(const SpaceID&space);
-    bool isLocal(const SpaceObjectReference&space)const;
-
-    // Location
-    virtual Location getLocation(const SpaceID& space);
-    virtual void setLocation(const SpaceID& space, const Location& loc);
-
-    //bftm Object Reference
-    ObjectReference getObjReference(const SpaceID& space);
-
-	void updateAddressable();
-
-    // Visual (mesh)
-    virtual Transfer::URI getVisual(const SpaceID& space);
-    virtual void setVisual(const SpaceID& space, const Transfer::URI& vis);
-    virtual Vector3f getVisualScale(const SpaceID& space);
-    virtual void setVisualScale(const SpaceID& space, const Vector3f& scale);
-
-    void removeQueryInterest(uint32 query_id, const ProxyObjectPtr&proxyObj, const SpaceObjectReference&proximateObjectId);
-    void addQueryInterest(uint32 query_id, const SpaceObjectReference&proximateObjectId);
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
@@ -376,13 +390,76 @@ public:
 
 
   public:
+    // Identification
+    virtual SpaceObjectReference id(const SpaceID& space) const;
+
     // ODP::Service Interface
-    virtual ODP::Port* bindODPPort(SpaceID space, ODP::PortID port);
-    virtual ODP::Port* bindODPPort(SpaceID space);
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
+
+    // Movement Interface
+    //note: location update services both position and velocity
+
+    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+
+    
+    virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
+    virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
+
+    virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
+    virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
+
+    //should re-name one or the other
+    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
+    virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
+    virtual void requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat);
+
+    virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
+    virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
+    virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
+
+    
+    virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
+    virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
+    
+
+    virtual void requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo);
+    virtual bool requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler);
+
+    
+
+    virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
+
+    
   private:
-    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, SpaceID space, ODP::PortID port);
+    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
+
+    // Handlers for substreams for space-managed updates
+    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
+    // Handlers for substream read events for space-managed updates
+    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+
+    // Handlers for core space-managed updates
+    bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
+    bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
+
+    // Helper for creating the correct type of proxy
+    
+
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, const Location& startingLoc, const BoundingSphere3f& bnds);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
+    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera);
+
+
+    // Helper for constructing and sending location update
+    void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
 };
 
 

@@ -67,30 +67,31 @@ unsigned int CDNArchiveFactory::addArchive()
   return mCurArchive++;
 }
 
-unsigned int CDNArchiveFactory::addArchive(const SHA256&filename, const SparseData &rbuffer)
+unsigned int CDNArchiveFactory::addArchive(const String& uri, const SparseData &rbuffer)
 {
   boost::mutex::scoped_lock lok(CDNArchiveMutex);
   CDNArchivePackages[mCurArchive]=std::vector<Ogre::String>();
-  addArchiveDataNoLock(mCurArchive, filename.convertToHexString(), rbuffer);
+  addArchiveDataNoLock(mCurArchive, uri, rbuffer);
   return mCurArchive++;
 }
 
-void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String&filename, const SparseData &rbuffer)
+void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String& uri, const SparseData &rbuffer)
 {
-  std::map<Ogre::String,SparseData>::iterator where=CDNArchiveFiles.find(filename);
+    std::tr1::unordered_map<std::string,SparseData>::iterator where=CDNArchiveFiles.find(uri);
   if (where!=CDNArchiveFiles.end()) {
-    SILOG(resource,error,"File "<<filename<<" Already exists in CDNArchive!!!");
+    SILOG(resource,error,"File "<<uri<<" Already exists in CDNArchive!!!");
   }
-  SILOG(resource,debug,"File "<<filename<<" Added to CDNArchive");
-  CDNArchiveFiles[filename]=rbuffer;
+  SILOG(resource,debug,"File "<<uri<<" Adding to CDNArchive "<<(size_t)this);
+  CDNArchiveFiles[uri]=rbuffer;
 
-  CDNArchivePackages[archiveName].push_back(filename);
+  CDNArchivePackages[archiveName].push_back(uri);
+  SILOG(resource,debug,"File "<<uri<<" Added to CDNArchive "<<(size_t)this<< " success "<<(CDNArchiveFiles.find(uri)!=CDNArchiveFiles.end())<<" archive size "<<CDNArchiveFiles.size());
 }
 
-void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const SHA256&filename, const SparseData &rbuffer)
+void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer)
 {
   boost::mutex::scoped_lock lok(CDNArchiveMutex);
-  addArchiveDataNoLock(archiveName,filename.convertToHexString(),rbuffer);
+  addArchiveDataNoLock(archiveName, uri,rbuffer);
 }
 
 void CDNArchiveFactory::clearArchive(unsigned int which)
@@ -99,7 +100,7 @@ void CDNArchiveFactory::clearArchive(unsigned int which)
   std::map<unsigned int, std::vector<Ogre::String> >::iterator where=CDNArchivePackages.find(which);
   if (where!=CDNArchivePackages.end()) {
     for (std::vector<Ogre::String>::iterator i=where->second.begin(),ie=where->second.end();i!=ie;++i) {
-      std::map<Ogre::String,SparseData>::iterator where2=CDNArchiveFiles.find(*i);
+      std::tr1::unordered_map<std::string,SparseData>::iterator where2=CDNArchiveFiles.find(*i);
       if (where2!=CDNArchiveFiles.end()) {
         // FIXME: clearArchive seems to get called too often, so texture files referenced in materials seem not to be found.
         //CDNArchiveFiles.erase(where2);

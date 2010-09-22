@@ -55,7 +55,7 @@ class Trace;
 class SIRIKATA_EXPORT Context : public Service {
 public:
 
-    Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen);
+    Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
     ~Context();
 
     Time epoch() const {
@@ -122,6 +122,11 @@ public:
         workerThreads.clear();
     }
 
+    // Stop the simulation
+    void shutdown();
+
+    bool stopped() const { return mStopRequested.read(); }
+
     // Call after run returns to ensure all resources get cleaned up.
     void cleanup();
 
@@ -136,7 +141,6 @@ protected:
 
     // Main Lifetime Management
     virtual void start();
-    void stopSimulation();
     virtual void stop();
     Network::IOTimerPtr mFinishedTimer;
 
@@ -162,6 +166,8 @@ protected:
     std::tr1::shared_ptr<Thread> mKillThread;
     Network::IOService* mKillService;
     Network::IOTimerPtr mKillTimer;
+
+    Sirikata::AtomicValue<bool> mStopRequested;
 }; // class ObjectHostContext
 
 } // namespace Sirikata

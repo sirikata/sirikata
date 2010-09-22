@@ -40,6 +40,8 @@
 #include <sirikata/core/task/EventManager.hpp> // for EventListener
 #include <sirikata/core/task/UniqueId.hpp>
 
+using namespace std;
+
 namespace Sirikata {
 namespace Transfer {
 
@@ -210,7 +212,7 @@ public:
 	 * @param listener  An EventListener to receive a DownloadEventPtr with the retrieved data.
 	 * @param range     What part of the file to retrieve, or Range(true) for the whole file.
 	 */
-	virtual SubscriptionId downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
+	virtual SubscriptionId downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {	  
 		listener(DownloadEventPtr(new DownloadEvent(FAIL_UNIMPLEMENTED, name, NULL)));
 		return SubscriptionIdClass::null();
 	}

@@ -107,6 +107,9 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
     bool operator==(const SpaceObjectReference& rhs) const{
         return space()==rhs.space()&&object()==rhs.object();
     }
+    bool operator!=(const SpaceObjectReference& rhs) const{
+        return space() != rhs.space() || object() != rhs.object();
+    }
     bool operator<(const SpaceObjectReference& rhs) const{
         if (space()==rhs.space()) return object()<rhs.object();
         return space()<rhs.space();

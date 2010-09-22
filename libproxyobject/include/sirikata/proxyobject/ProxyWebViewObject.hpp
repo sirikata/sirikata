@@ -44,15 +44,17 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyWebViewObject
 	: public ProxyMeshObject, public WebViewProvider
 {
 public:
-    ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id, ODP::Service* odp_service);
-	void loadURL(const std::string& url);
-	void loadFile(const std::string& filename);
-	void loadHTML(const std::string& html);
-	void evaluateJS(const std::string& javascript);
-	void setPosition(const OverlayPosition& position);
-	void hide();
-	void show();
-	void resize(int width, int height);
+    void loadURL(const std::string& url);
+    void loadFile(const std::string& filename);
+    void loadHTML(const std::string& html);
+    void evaluateJS(const std::string& javascript);
+    void setPosition(const OverlayPosition& position);
+    void hide();
+    void show();
+    void resize(int width, int height);
+
+private:
+    ProxyWebViewObject(ProxyManager* man, const SpaceObjectReference& id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
 };
 
 }

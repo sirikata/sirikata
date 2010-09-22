@@ -38,6 +38,9 @@
 #include "ResourceUnloadTask.hpp"
 #include <boost/bind.hpp>
 #include <OgreResourceBackgroundQueue.h>
+#include <stdio.h>
+
+using namespace std;
 
 namespace Meru {
 
@@ -50,16 +53,17 @@ InitializeGlobalOptions graphicsresourcemeshopts("ogregraphics",
 class MeshDependencyTask : public ResourceDependencyTask
 {
 public:
-  MeshDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
+    MeshDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy);
   virtual ~MeshDependencyTask();
 
   virtual void operator()();
+ Sirikata::ProxyObjectPtr mProxy;
 };
 
 class MeshLoadTask : public ResourceLoadTask
 {
 public:
-  MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const SHA256 &hash, unsigned int epoch);
+  MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const URI &uri, unsigned int epoch);
 
   virtual void doRun();
 };
@@ -67,7 +71,7 @@ public:
 class MeshUnloadTask : public ResourceUnloadTask
 {
 public:
-  MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch);
+  MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int epoch);
 
   virtual void doRun();
 
@@ -75,8 +79,8 @@ protected:
   //bool mainThreadUnload(String name);
 };
 
-GraphicsResourceMesh::GraphicsResourceMesh(const RemoteFileId &resourceID)
-: GraphicsResourceAsset(resourceID, GraphicsResource::MESH)
+GraphicsResourceMesh::GraphicsResourceMesh(const URI &uri, Sirikata::ProxyObjectPtr proxy)
+  : GraphicsResourceAsset(uri, GraphicsResource::MESH, proxy)
 {
 
 }
@@ -87,9 +91,8 @@ GraphicsResourceMesh::~GraphicsResourceMesh()
     doUnload();
 }
 
-void GraphicsResourceMesh::resolveName(const URI& id, const ResourceHash& hash)
+void GraphicsResourceMesh::resolveName(const URI& id)
 {
-  mMaterialNames[id.toString()] = hash.fingerprint().convertToHexString();
   if (mLoadState == LOAD_LOADED)
     setMaterialNames(this);
 }
@@ -122,28 +125,29 @@ void GraphicsResourceMesh::setMaterialNames(GraphicsResourceMesh* resourcePtr)
 
 ResourceDownloadTask* GraphicsResourceMesh::createDownloadTask(DependencyManager *manager, ResourceRequestor *resourceRequestor)
 {
-  return new ResourceDownloadTask(manager, mResourceID, resourceRequestor);
+    return new ResourceDownloadTask(manager, mURI, resourceRequestor, mProxy->priority, NULL);
 }
 
 ResourceDependencyTask* GraphicsResourceMesh::createDependencyTask(DependencyManager *manager)
 {
-  return new MeshDependencyTask(manager, getWeakPtr(), mResourceID.toString());
+    return new MeshDependencyTask(manager, getWeakPtr(), mURI, mProxy);
 }
 
 ResourceLoadTask* GraphicsResourceMesh::createLoadTask(DependencyManager *manager)
 {
-  return new MeshLoadTask(manager, getSharedPtr(), mResourceID.fingerprint(), mLoadEpoch);
+
+  return new MeshLoadTask(manager, getSharedPtr(), mURI, mLoadEpoch);
 }
 
 ResourceUnloadTask* GraphicsResourceMesh::createUnloadTask(DependencyManager *manager)
 {
-  return new MeshUnloadTask(manager, getWeakPtr(), mResourceID.fingerprint(), mLoadEpoch);
+  return new MeshUnloadTask(manager, getWeakPtr(), mURI, mLoadEpoch);
 }
 
 /***************************** MESH DEPENDENCY TASK *************************/
 
-MeshDependencyTask::MeshDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash)
-: ResourceDependencyTask(mgr, resource, hash)
+MeshDependencyTask::MeshDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri, Sirikata::ProxyObjectPtr proxy)
+ : ResourceDependencyTask(mgr, resource, uri), mProxy(proxy)
 {
 
 }
@@ -188,7 +192,7 @@ void MeshDependencyTask::operator()()
           ++itr;
         }
 
-        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL, mProxy);
         resourcePtr->addDependency(hashResource);
       }
     }
@@ -214,16 +218,16 @@ void MeshDependencyTask::operator()()
 
 /***************************** MESH LOAD TASK *************************/
 
-MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const SHA256 &hash, unsigned int epoch)
-: ResourceLoadTask(mgr, resourcePtr, hash, epoch)
+MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr, const URI &uri, unsigned int epoch)
+: ResourceLoadTask(mgr, resourcePtr, uri, epoch)
 {
 }
 
 void MeshLoadTask::doRun()
 {
-  String hash = mHash.convertToHexString(); //CDNArchive::canonicalMhashName(mHash);
-  int archive = CDNArchiveFactory::getSingleton().addArchive(mHash, mBuffer);
-  Ogre::MeshManager::getSingleton().load(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    String str = mURI.toString(); //CDNArchive::canonicalMhashName(mHash);
+  int archive = CDNArchiveFactory::getSingleton().addArchive(str, mBuffer);
+  Ogre::MeshManager::getSingleton().load(str, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
   CDNArchiveFactory::getSingleton().removeArchive(archive);
 
   //Ogre::SkeletonPtr skeletonPtr = Ogre::SkeletonManager::getSingleton().getByName(meshPtr->getSkeletonName());
@@ -238,8 +242,8 @@ void MeshLoadTask::doRun()
 
 /***************************** MESH UNLOAD TASK *************************/
 
-MeshUnloadTask::MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const SHA256 &hash, unsigned int epoch)
-: ResourceUnloadTask(mgr, resource, hash, epoch)
+MeshUnloadTask::MeshUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const URI &uri, unsigned int epoch)
+: ResourceUnloadTask(mgr, resource, uri, epoch)
 {
 
 }
@@ -256,11 +260,11 @@ void MeshUnloadTask::doRun()
   /*I REALLY wish this were true*/
   // SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshUnloadTask::mainThreadUnload, this, mHash));
 
-  String hash = mHash.convertToHexString(); //CDNArchive::canonicalMhashName(mHash);
+    String str = mURI.toString(); //CDNArchive::canonicalMhashName(mHash);
   Ogre::MeshManager* meshManager = Ogre::MeshManager::getSingletonPtr();
-  meshManager->remove(hash);
+  meshManager->remove(str);
 
-  Ogre::ResourcePtr meshResource = meshManager->getByName(hash);
+  Ogre::ResourcePtr meshResource = meshManager->getByName(str);
   assert(meshResource.isNull());
 
   SharedResourcePtr resource = mResource.lock();

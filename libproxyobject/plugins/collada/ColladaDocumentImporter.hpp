@@ -42,8 +42,16 @@
 #include "COLLADAFWMesh.h"
 #include "COLLADAFWImage.h"
 #include "COLLADAFWMaterial.h"
+#include "COLLADAFWMaterialBinding.h"
 #include "COLLADAFWFileInfo.h"
+#include "COLLADAFWNode.h"
+#include "COLLADAFWColorOrTexture.h"
+#include "COLLADAFWEffect.h"
+#include "COLLADAFWEffectCommon.h"
+#include "COLLADAFWSkinControllerData.h"
+#include "COLLADAFWSkinController.h"
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 /////////////////////////////////////////////////////////////////////
 
@@ -86,7 +94,15 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
-
+        //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
+        bool makeTexture (MaterialEffectInfo::Texture::Affecting type,
+                          const COLLADAFW::MaterialBinding * binding, 
+                          const COLLADAFW::EffectCommon * effect, 
+                          const COLLADAFW::ColorOrTexture & color,
+                          size_t geom_index,
+                          size_t prim_index,
+                          MaterialEffectInfo::TextureList&output, bool forceBlack=false);
+        size_t finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geom_index, size_t prim_index);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
     public:
@@ -111,7 +127,70 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         virtual bool writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene );
 
     protected:
+        String documentURI() const;
 
+        // The following keep track of the components of the scene, as
+        // identified by COLLADAFW::UniqueIds.  We use these to chase indirect
+        // references within the file.
+        COLLADAFW::UniqueId mVisualSceneId; // Currently support loading only a
+                                            // single scene
+
+        typedef std::map<COLLADAFW::UniqueId, const COLLADAFW::VisualScene*> VisualSceneMap;
+        VisualSceneMap mVisualScenes;
+
+        typedef std::map<COLLADAFW::UniqueId, const COLLADAFW::Node*> NodeMap;
+        NodeMap mLibraryNodes;
+        class UniqueIdHash{public:
+                size_t operator () (const COLLADAFW::UniqueId&id) const {
+                    return std::tr1::hash<std::string>()(std::string(id.toAscii()));
+                }
+        };
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMap;
+        typedef std::tr1::unordered_multimap<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMultimap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
+        
+        struct SkinControllerData {
+            Matrix4x4f bindShapeMatrix;
+            ///n+1 elements where n is the number of vertices, so that we can do simple subtraction to find out how many joints influence each vertex
+            std::vector<unsigned int> weightStartIndices;
+            std::vector<float> weights;
+            std::vector<unsigned int>jointIndices;
+            std::vector<Matrix4x4f> inverseBindMatrices;
+        };
+        struct SkinController {
+            COLLADAFW::UniqueId source;
+            COLLADAFW::UniqueId skinControllerData;
+            std::vector<COLLADAFW::UniqueId> joints;
+        };
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId,SkinControllerData, UniqueIdHash> SkinControllerDataMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId,SkinController, UniqueIdHash> SkinControllerMap;
+        SkinControllerDataMap mSkinControllerData;
+        SkinControllerMap mSkinController;
+        Meshdata::SubMeshGeometryList mGeometries;
+        IndicesMultimap mGeometryMap;
+        struct ExtraPrimitiveData {
+            std::map<size_t, size_t> uvSetMap;
+        };
+        struct ExtraGeometryData {
+            std::vector<ExtraPrimitiveData> primitives;
+        };
+        void setupPrim(SubMeshGeometry::Primitive* outputPrim,
+                       ExtraPrimitiveData&outputPrimExtra,
+                       const COLLADAFW::MeshPrimitive*prim);
+        std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
+        IndicesMap mLightMap;
+        Meshdata::LightInfoList mLights;
+        
+        IdMap mMaterialMap;
+        URIMap mTextureMap;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::Effect, UniqueIdHash> ColladaEffectMap;
+        ColladaEffectMap mColladaEffects;
+        std::vector <COLLADAFW::EffectCommon*> mColladaClonedCommonEffects;
+        //IndicesMap mEffectMap;
+        Meshdata::MaterialEffectInfoList mEffects;
+        
+        Meshdata * mMesh;
 };
 
 

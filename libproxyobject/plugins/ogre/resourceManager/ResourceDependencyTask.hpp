@@ -35,6 +35,9 @@
 #include "../meruCompat/DependencyTask.hpp"
 #include "GraphicsResource.hpp"
 #include "ResourceDownloadTask.hpp"
+#include <stdio.h>
+
+using namespace std;
 
 namespace Meru
 {
@@ -42,7 +45,7 @@ namespace Meru
 class ResourceDependencyTask : public DependencyTask, public ResourceRequestor
 {
 public:
-	ResourceDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash);
+	ResourceDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const URI& uri);
 	virtual ~ResourceDependencyTask();
 
 	virtual void operator()() = 0;

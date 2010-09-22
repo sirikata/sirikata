@@ -1,7 +1,7 @@
 /*  Sirikata
  *  main.cpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,123 +30,261 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/util/SpaceObjectReference.hpp>
-#include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/space/Space.hpp>
-#include <sirikata/core/task/EventManager.hpp>
-#include <sirikata/core/task/WorkQueue.hpp>
-#include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/options/CDNConfig.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp> // MCB:
-namespace Sirikata {
-//InitializeOptions main_options("verbose",
-void tickSim(Network::IOService*io,TimeSteppedSimulation*sim) {
-    sim->tick();
-    io->post(Duration::seconds(1./30.),std::tr1::bind(&tickSim,io,sim));
 
-}
-}
-int main(int argc,const char**argv) {
+
+#include <sirikata/core/util/Timer.hpp>
+#include <sirikata/core/network/NTPTimeSync.hpp>
+
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
+#include "SpaceNetwork.hpp"
+
+#include "Forwarder.hpp"
+
+#include <sirikata/space/LocationService.hpp>
+
+#include "Proximity.hpp"
+#include "Server.hpp"
+
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+#include "TCPSpaceNetwork.hpp"
+#include "FairServerMessageReceiver.hpp"
+#include "FairServerMessageQueue.hpp"
+#include <sirikata/core/network/ServerIDMap.hpp>
+#include "UniformCoordinateSegmentation.hpp"
+#include "CoordinateSegmentationClient.hpp"
+#include <sirikata/space/LoadMonitor.hpp>
+#include <sirikata/space/ObjectSegmentation.hpp>
+#include "caches/CommunicationCache.hpp"
+#include "caches/CacheLRUOriginal.hpp"
+
+#include <sirikata/space/SpaceContext.hpp>
+
+
+int main(int argc, char** argv) {
+
     using namespace Sirikata;
 
-    OptionValue *spaceOption;
-    OptionValue *loadGraphics;
-    OptionValue *loadPhysics;
-    InitializeGlobalOptions gbo("",spaceOption=new OptionValue("space","",OptionValueType<String>(),"Options passed to the space"),loadGraphics=new OptionValue("graphics","false",OptionValueType<bool>(),"Load the graphics plugin on the space"),loadPhysics=new OptionValue("physics","false",OptionValueType<bool>(),"Load the physics plugin on the space"),NULL);
+    InitOptions();
+    Trace::Trace::InitOptions();
+    SpaceTrace::InitOptions();
+    InitSpaceOptions();
+    ParseOptions(argc, argv);
 
-    OptionSet::getOptions("")->parse(argc,argv);
     PluginManager plugins;
+    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_SPACE_PLUGINS) );
 
-    const char* pluginNames[] = { "tcpsst", "prox-everyone", "colladamodels", "ogregraphics", "bulletphysics", NULL};
-    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++) {
-        if (strcmp(*plugin_name,"ogregraphics")!=0||loadGraphics->as<bool>())
-            if (strcmp(*plugin_name,"bulletphysics")!=0||loadPhysics->as<bool>())
-                plugins.load( *plugin_name );
+    std::string time_server=GetOptionValue<String>("time-server");
+    NTPTimeSync sync;
+    if (time_server.size() > 0)
+        sync.start(time_server);
+
+
+    ServerID server_id = GetOptionValue<ServerID>("id");
+    String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
+    Sirikata::Trace::Trace* gTrace = new Trace::Trace(trace_file);
+
+    // Compute the starting date/time
+    String start_time_str = GetOptionValue<String>("wait-until");
+    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
+    start_time += GetOptionValue<Duration>("wait-additional");
+
+    Duration duration = GetOptionValue<Duration>("duration");
+
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
+
+
+    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
+
+    Sirikata::SpaceNetwork* gNetwork = NULL;
+    String network_type = GetOptionValue<String>(NETWORK_TYPE);
+    if (network_type == "tcp")
+      gNetwork = new TCPSpaceNetwork(space_context);
+
+    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
+    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
+
+
+    srand( GetOptionValue<uint32>("rand-seed") );
+
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+
+    gNetwork->setServerIDMap(server_id_map);
+
+
+    Forwarder* forwarder = new Forwarder(space_context);
+
+
+    String cseg_type = GetOptionValue<String>(CSEG);
+    CoordinateSegmentation* cseg = NULL;
+    if (cseg_type == "uniform")
+        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
+    else if (cseg_type == "client") {
+      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
+    }
+    else {
+        assert(false);
+        exit(-1);
     }
 
-    Space::Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())),spaceOption->as<String>());
-    ProxyManager *provider=space.getProxyManager();
-    Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
-    Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
-    typedef std::vector<TimeSteppedSimulation*> SimList;
-    SimList sims;
-    Transfer::TransferManager *tm=NULL;
 
-    if (provider) {
-        try {
-            OptionMapPtr transferOptions(new OptionMap);
-            size_t offset=0;
-            parseConfig("cdn = ($import=cdn.txt)",transferOptions,transferOptions,offset);
-            tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
-        } catch (OptionDoesNotExist &err) {
-            SILOG(input,fatal,"Fatal Error: Failed to load CDN config: " << err.what());
-            std::cout << "Press enter to continue" << std::endl;
-            std::cerr << "Press enter to continue" << std::endl;
-            fgetc(stdin);
-            return 1;
-        }
-        initializeProtocols();
-        String graphicsCommandArguments;
-        {
-            std::ostringstream os;
-            os << "--transfermanager=" << tm << " ";
-            os << "--eventmanager=" << eventManager << " ";
-            os << "--workqueue=" << workQueue << " ";
-            graphicsCommandArguments = os.str();
-        }
+    String loc_update_type = GetOptionValue<String>(LOC_UPDATE);
+    String loc_update_opts = GetOptionValue<String>(LOC_UPDATE_OPTIONS);
+    LocationUpdatePolicy* loc_update_policy =
+        LocationUpdatePolicyFactory::getSingleton().getConstructor(loc_update_type)(loc_update_opts);
 
-        // MCB: seems like a good place to initialize models system
-        ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider, graphicsCommandArguments ) );
+    String loc_service_type = GetOptionValue<String>(LOC);
+    String loc_service_opts = GetOptionValue<String>(LOC_OPTIONS);
+    LocationService* loc_service =
+        LocationServiceFactory::getSingleton().getConstructor(loc_service_type)(space_context, loc_update_policy, loc_service_opts);
 
-        if ( mm )
-        {
-            SILOG(cppoh,info,"Created ModelsSystemFactory ");
-        }
-        else
-        {
-            SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
-        }
-            struct SimulationRequest {
-        const char* name;
-        bool required;
-    };
-    const uint32 nSimRequests = 0;
-	SimulationRequest simRequests[nSimRequests>0?nSimRequests:1] = {
-/*
-        {"ogregraphics", true},
-        {"bulletphysics", false}
-*/
-    };
-    bool continue_simulation=true;
-    for(uint32 ir = 0; ir < nSimRequests && continue_simulation; ir++) {
-        String simName = simRequests[ir].name;
-        SILOG(cppoh,info,String("Initializing ") + simName);
-        TimeSteppedSimulation *sim =
-            SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( provider, provider->getTimeOffsetManager(), graphicsCommandArguments );
-        if (!sim) {
-            if (simRequests[ir].required) {
-                SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
-            }
-            else {
-                SILOG(cppoh,info,String("Couldn't load ") + simName + String(" plugin."));
-            }
-        }
-        else {
-            SILOG(cppoh,info,String("Successfully initialized ") + simName);
-            sims.push_back(sim);
+    ServerMessageQueue* sq = NULL;
+    String server_queue_type = GetOptionValue<String>(SERVER_QUEUE);
+    if (server_queue_type == "fair") {
+        sq = new FairServerMessageQueue(
+            space_context, gNetwork,
+            (ServerMessageQueue::Sender*)forwarder);
+    }
+    else {
+        assert(false);
+        exit(-1);
+    }
+
+    ServerMessageReceiver* server_message_receiver = NULL;
+    String server_receiver_type = GetOptionValue<String>(SERVER_RECEIVER);
+    if (server_queue_type == "fair")
+        server_message_receiver =
+                new FairServerMessageReceiver(space_context, gNetwork, (ServerMessageReceiver::Listener*)forwarder);
+    else {
+        assert(false);
+        exit(-1);
+    }
+
+
+
+    LoadMonitor* loadMonitor = new LoadMonitor(space_context, cseg);
+
+
+    // OSeg Cache
+    OSegCache* oseg_cache = NULL;
+    std::string cacheSelector = GetOptionValue<String>(CACHE_SELECTOR);
+    uint32 cacheSize = GetOptionValue<uint32>(OSEG_CACHE_SIZE);
+    if (cacheSelector == CACHE_TYPE_COMMUNICATION) {
+        double cacheCommScaling = GetOptionValue<double>(CACHE_COMM_SCALING);
+        oseg_cache = new CommunicationCache(space_context, cacheCommScaling, cseg, cacheSize);
+    }
+    else if (cacheSelector == CACHE_TYPE_ORIGINAL_LRU) {
+        uint32 cacheCleanGroupSize = GetOptionValue<uint32>(OSEG_CACHE_CLEAN_GROUP_SIZE);
+        Duration entryLifetime = GetOptionValue<Duration>(OSEG_CACHE_ENTRY_LIFETIME);
+        oseg_cache = new CacheLRUOriginal(space_context, cacheSize, cacheCleanGroupSize, entryLifetime);
+    }
+    else {
+        std::cout<<"\n\nUNKNOWN CACHE TYPE SELECTED.  Please re-try.\n\n";
+        std::cout.flush();
+        assert(false);
+    }
+
+    //Create OSeg
+    std::string oseg_type = GetOptionValue<String>(OSEG);
+    std::string oseg_options = GetOptionValue<String>(OSEG_OPTIONS);
+    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
+    ObjectSegmentation* oseg =
+        OSegFactory::getSingleton().getConstructor(oseg_type)(space_context, osegStrand, cseg, oseg_cache, oseg_options);
+    //end create oseg
+
+
+    // We have all the info to initialize the forwarder now
+    forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
+
+
+    Proximity* prox = new Proximity(space_context, loc_service);
+
+
+    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));
+
+      prox->initialize(cseg);
+
+    // If we're one of the initial nodes, we'll have to wait until we hit the start time
+    {
+        Time now_time = Timer::now();
+        if (start_time > now_time) {
+            Duration sleep_time = start_time - now_time;
+            printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+            Sleep( sleep_time.toMilliseconds() );
+#else
+            usleep( sleep_time.toMicroseconds() );
+#endif
         }
     }
 
-    }
-    for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
+    ///////////Go go go!! start of simulation/////////////////////
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(space_context);
 
-        space.getIOService()->post(std::tr1::bind(&tickSim,space.getIOService(),*it));
+    space_context->add(space_context);
+    space_context->add(gNetwork);
+    space_context->add(cseg);
+    space_context->add(loc_service);
+    space_context->add(prox);
+    space_context->add(server);
+    space_context->add(oseg);
+    space_context->add(loadMonitor);
+    space_context->add(sstConnMgr);
+
+
+    space_context->run(2);
+
+    space_context->cleanup();
+
+    if (GetOptionValue<bool>(PROFILE)) {
+        space_context->profiler->report();
     }
-    space.run();
+
+    gTrace->prepareShutdown();
+    prox->shutdown();
+
+    delete server;
+    delete sq;
+    delete server_message_receiver;
+    delete prox;
+    delete server_id_map;
+
+
+    delete cseg;
+    delete oseg;
+    delete loc_service;
+    delete sstConnMgr;
+    delete forwarder;
+
+    delete gNetwork;
+    gNetwork=NULL;
+
+    gTrace->shutdown();
+    delete gTrace;
+    gTrace = NULL;
+
+
+    delete space_context;
+    space_context = NULL;
+
+    delete mainStrand;
+    delete osegStrand;
+
+    Network::IOServiceFactory::destroyIOService(ios);
+
+
+    sync.stop();
+
+    plugins.gc();
+
     return 0;
 }
