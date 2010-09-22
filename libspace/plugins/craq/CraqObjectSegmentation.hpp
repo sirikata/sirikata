@@ -139,14 +139,16 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
 
 
     //for lookups and sets respectively
-    AsyncCraqHybrid craqDhtGet;
-    AsyncCraqHybrid craqDhtSet;
+      AsyncCraqHybrid craqDhtGet1;
+      AsyncCraqHybrid craqDhtGet2;
+      AsyncCraqHybrid craqDhtSet;
 
 
-
-    int mAtomicTrackID;
-    boost::mutex atomic_track_id_m;
+      AtomicValue<int> mAtomicTrackID;
+    // int mAtomicTrackID;
+    // boost::mutex atomic_track_id_m;
     int getUniqueTrackID();
+
 
     Network::IOStrand* postingStrand;
     Network::IOStrand* mStrand;
@@ -187,6 +189,7 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
     void callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken);
 
+      bool shouldLog();
 
     SpaceContext* ctx;
     bool mReceivedStopRequest;
@@ -195,26 +198,28 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
       CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, char unique);
 
 
-    virtual ~CraqObjectSegmentation();
-    virtual OSegEntry lookup(const UUID& obj_id);
-    virtual OSegEntry cacheLookup(const UUID& obj_id);
-    virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
+      virtual ~CraqObjectSegmentation();
+      virtual OSegEntry lookup(const UUID& obj_id);
+      virtual OSegEntry cacheLookup(const UUID& obj_id);
+      virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
       virtual void addNewObject(const UUID& obj_id, float radius);
       virtual void addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool);
       virtual void removeObject(const UUID& obj_id);
-    virtual void receiveMessage(Message* msg);
-    virtual bool clearToMigrate(const UUID& obj_id);
-    virtual void craqGetResult(CraqOperationResult* cor);
-    virtual void craqSetResult(CraqOperationResult* cor);
-    virtual void stop();
+      virtual void receiveMessage(Message* msg);
+      virtual bool clearToMigrate(const UUID& obj_id);
+      virtual void craqGetResult(CraqOperationResult* cor);
+      virtual void craqSetResult(CraqOperationResult* cor);
+      virtual void stop();
+
+      virtual int getPushback();
+      
+      AtomicValue<int> mOSegQueueLen;//(0);
 
 
-
-
-    Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
-    void processMigrateMessageAcknowledge(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
-    void processMigrateMessageMove(const Sirikata::Protocol::OSeg::MigrateMessageMove& msg);
-    void processUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
+      Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
+      void processMigrateMessageAcknowledge(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
+      void processMigrateMessageMove(const Sirikata::Protocol::OSeg::MigrateMessageMove& msg);
+      void processUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
 
   };
 }

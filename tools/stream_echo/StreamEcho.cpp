@@ -40,6 +40,7 @@
 #include <sirikata/core/network/IOService.hpp>
 
 #include "Protocol_Empty.pbj.hpp"
+#include <sirikata/core/network/PBJDebug.hpp>
 
 void handleConnectionEvent(Sirikata::Network::Stream* strm, Sirikata::Network::Stream::ConnectionStatus, const std::string&reason);
 void handleSubstream(Sirikata::Network::Stream* substream, Sirikata::Network::Stream::SetCallbacks&);
@@ -96,42 +97,17 @@ void handleReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk& p
 
 void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk& payload, const Sirikata::Network::Stream::PauseReceiveCallback& pausecb) {
     printf("Received %d PBJ bytes: ", (int)payload.size());
+    bool parsed = Sirikata::printPBJMessageArray(payload);
 
-    Sirikata::Protocol::Empty msg;
-    if (!msg.ParseFromArray(payload.data(), payload.size())) {
-        printf(" parsing PBJ failed.\n");
+    if (!parsed) {
         // Indicate error to other side
         const char* error_msg = "Error"; // "Error" in base 64
         strm->send(Sirikata::MemoryReference(error_msg, strlen(error_msg)), Sirikata::Network::ReliableOrdered);
         return;
     }
 
-    printf("%d fields\n", msg.unknown_fields().field_count());
-
-    for(int i = 0; i < msg.unknown_fields().field_count(); i++) {
-#define __FIELD(i) msg.unknown_fields().field(i)
-        switch(__FIELD(i).type()) {
-          case ::google::protobuf::UnknownField::TYPE_VARINT:
-            printf(" %d varint %ld\n", __FIELD(i).number(), __FIELD(i).varint());
-            break;
-          case ::google::protobuf::UnknownField::TYPE_FIXED32:
-            printf(" %d fixed32 %d\n", __FIELD(i).number(), __FIELD(i).fixed32());
-            break;
-          case ::google::protobuf::UnknownField::TYPE_FIXED64:
-            printf(" %d fixed64 %ld\n", __FIELD(i).number(), __FIELD(i).fixed64());
-            break;
-          case ::google::protobuf::UnknownField::TYPE_LENGTH_DELIMITED:
-            printf(" %d length %d\n", __FIELD(i).number(), (int) __FIELD(i).length_delimited().size());
-            break;
-          case ::google::protobuf::UnknownField::TYPE_GROUP:
-            printf(" %d group\n", __FIELD(i).number());
-            // FIXME recurse
-            break;
-          default:
-            printf(" %d unknown\n", __FIELD(i).number());
-            break;
-        };
-    }
+    Sirikata::Protocol::Empty msg;
+    msg.ParseFromArray(&payload[0], payload.size());
 
     // Finally, reply. Reserialize to test encoding consistency.
     std::string return_payload;

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ObjectSegmentation.cpp
+ *  PBJDebug.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,21 +30,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/space/ObjectSegmentation.hpp>
+#ifndef _SIRIKATA_PBJ_DEBUG_HPP_
+#define _SIRIKATA_PBJ_DEBUG_HPP_
 
-AUTO_SINGLETON_INSTANCE(Sirikata::OSegFactory);
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata {
 
-OSegFactory& OSegFactory::getSingleton() {
-    return AutoSingleton<OSegFactory>::getSingleton();
-}
-
-void OSegFactory::destroy() {
-    AutoSingleton<OSegFactory>::destroy();
-}
-
-
-
+/** Print out the contents of an encoded PBJ message.  This uses only the data
+ * in the message, so the components need to be mapped to the specific message
+ * type manually.  However, it prints out full details, including if it is able
+ * to recurse and parse any submessages.
+ */
+SIRIKATA_FUNCTION_EXPORT bool printPBJMessageString(const std::string& msg);
+SIRIKATA_FUNCTION_EXPORT bool printPBJMessageArray(const Sirikata::Network::Chunk& msg);
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_PBJ_DEBUG_HPP_

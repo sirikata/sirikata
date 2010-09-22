@@ -192,8 +192,11 @@ namespace Sirikata
 
   void AsyncCraqGet::get(const CraqDataSetGet& dataToGet, OSegLookupTraceToken* traceToken)
   {
-    Duration beginGetEnqueueManager  = Time::local() - Time::epoch();
-    traceToken->getManagerEnqueueBegin = beginGetEnqueueManager.toMicroseconds();
+//    Duration beginGetEnqueueManager  = Time::local() - Time::epoch();
+//    traceToken->getManagerEnqueueBegin =
+//    beginGetEnqueueManager.toMicroseconds();
+
+      traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_MANAGER_ENQUEUE_BEGIN);
 
     CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
     QueueValue* qValue = new QueueValue;
@@ -201,9 +204,10 @@ namespace Sirikata
     qValue->traceToken = traceToken;
     pushQueue(qValue);
 
-    Duration endGetEnqueueManager = Time::local() - Time::epoch();
-    traceToken->getManagerEnqueueEnd = endGetEnqueueManager.toMicroseconds();
-
+    // Duration endGetEnqueueManager = Time::local() - Time::epoch();
+    // traceToken->getManagerEnqueueEnd = endGetEnqueueManager.toMicroseconds();
+    traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_MANAGER_ENQUEUE_END);
+    
     int numTries = 0;
     while((mQueue.size()!= 0) && (numTries < CRAQ_MAX_PUSH_GET))
     {
@@ -211,8 +215,6 @@ namespace Sirikata
       int rand_connection = rand() % STREAM_CRAQ_NUM_CONNECTIONS_GET;
       checkConnections(rand_connection);
     }
-
-
   }
 
 
@@ -293,9 +295,10 @@ bool AsyncCraqGet::checkConnections(int s)
 
       ++numOperations;
 
-      Duration dequeueManager  = Time::local() - Time::epoch();
-      qVal->traceToken->getManagerDequeued = dequeueManager.toMicroseconds();
-
+      // Duration dequeueManager  = Time::local() - Time::epoch();
+      // qVal->traceToken->getManagerDequeued = dequeueManager.toMicroseconds();
+      qVal->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_MANAGER_DEQUEUED);
+      
       if (cdSG->messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.

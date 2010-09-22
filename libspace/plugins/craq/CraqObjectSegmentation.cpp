@@ -60,16 +60,19 @@ namespace Sirikata
   */
 CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, char unique)
    : ObjectSegmentation(con, o_strand),
-   mCSeg (cseg),
-   craqDhtGet(con, o_strand, this),
-   craqDhtSet(con, o_strand, this),
-   postingStrand(con->mainStrand),
-   mStrand(o_strand),
-   mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
+     mCSeg (cseg),
+     craqDhtGet1(con, o_strand, this),
+     craqDhtGet2(con, o_strand, this),
+     craqDhtSet(con, o_strand, this),
+     postingStrand(con->mainStrand),
+     mStrand(o_strand),
+     mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
      mCraqCache(cache),
-   mFrontMigAck(NULL),
-   ctx(con),
-   mReceivedStopRequest(false)
+     mFrontMigAck(NULL),
+     ctx(con),
+     mReceivedStopRequest(false),
+     mAtomicTrackID(10),
+     mOSegQueueLen(0)
   {
 
       std::vector<CraqInitializeArgs> getInitArgs;
@@ -93,7 +96,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
     // Register a ServerMessage service for oseg
     mOSegServerMessageService = mContext->serverRouter()->createServerMessageService("craq-oseg");
 
-    craqDhtGet.initialize(getInitArgs);
+    craqDhtGet1.initialize(getInitArgs);
+    craqDhtGet2.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
 
     myUniquePrefixKey = unique;
@@ -111,7 +115,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
     checkOwnTimeDur   = 0;
     checkOwnTimeCount = 0;
 
-    mAtomicTrackID    = 10;
+//    mAtomicTrackID    = 10;
 
   }
 
@@ -119,8 +123,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
   void CraqObjectSegmentation::stop()
   {
     craqDhtSet.stop();
-    craqDhtGet.stop();
-
+    craqDhtGet1.stop();
+    craqDhtGet2.stop();
+    
     mReceivedStopRequest = true;
   }
 
@@ -169,14 +174,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
         numTimeElapsedCacheEviction,
         numMigrationNotCompleteYet);
 
-    /*
-    printf("\n\nREMAINING IN QUEUE GET:  %i     SET:  %i\n\n", (int) craqDhtGet.queueSize(),(int) craqDhtSet.queueSize());
-    fflush(stdout);
-    printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
-    fflush(stdout);
-
-    std::cout<<"\n\nCheckOwnTimeDur "<<checkOwnTimeDur<<"   checkOwnTimeCount  "<<checkOwnTimeCount<<"  avg: "<<((double)checkOwnTimeDur)/((double)checkOwnTimeCount)<<"\n\n";
-    */
   }
 
 
@@ -185,30 +182,16 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
   */
   bool CraqObjectSegmentation::checkOwn(const UUID& obj_id, float*radius)
   {
-    //    Duration beginningDur = mTimer.elapsed();
-    Duration beginningDur = Time::local() - Time::epoch();
     ObjectSet::iterator where=mObjects.find(obj_id);
     if (where == mObjects.end())
     {
       //means that the object isn't hosted on this space server
-
-      //      Duration endingDur = mTimer.elapsed();
-      Duration endingDur = Time::local() - Time::epoch();
-
-
-      checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
-      ++checkOwnTimeCount;
-
       return false;
     }
     *radius=where->second.radius();
     //means that the object *is* hosted on this space server
     //    Duration endingDur = mTimer.elapsed();
-    Duration endingDur = Time::local() - Time::epoch();
 
-
-    checkOwnTimeDur += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
-    ++ checkOwnTimeCount;
     return true;
   }
 
@@ -289,12 +272,15 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
 
   int CraqObjectSegmentation::getUniqueTrackID()
   {
-    atomic_track_id_m.lock();
       int returner = mAtomicTrackID;
       ++mAtomicTrackID;
-    atomic_track_id_m.unlock();
-
-    return returner;
+      if (returner == 0) //0 has a special meaning.
+      {
+          returner = mAtomicTrackID;
+          ++mAtomicTrackID;
+      }
+      
+      return returner;
   }
 
 
@@ -309,7 +295,6 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
 
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded  = generateAddedMessage(obj_id,radius);
-    //    tsrda.dur       = mTimer.elapsed();
     tsrda.dur = Time::local() - Time::epoch();
 
 
@@ -319,7 +304,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
   }
 
 void CraqObjectSegmentation::removeObject(const UUID& obj_id) {
-    SILOG(craqoseg, error, "CraqObjectSegmentation::removeObject not implemented.");
+    // SILOG(craqoseg, error, "CraqObjectSegmentation::removeObject not implemented.");
 }
 
 Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id, float radius)
@@ -344,6 +329,18 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
     return CraqEntry::null();
   }
 
+bool CraqObjectSegmentation::shouldLog()
+{
+    // static uint64 counter = 0;
+    // ++counter;
+    // return ((counter % 51) ==0);
+    return false;
+}
+
+int CraqObjectSegmentation::getPushback()
+{
+    return mOSegQueueLen;
+}
 
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
@@ -351,14 +348,14 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
   */
   OSegEntry CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
-    Duration beginDur = Time::local() - Time::epoch();
 
     if (mReceivedStopRequest)
       return CraqEntry::null();
 
 
-    OSegLookupTraceToken* traceToken = new OSegLookupTraceToken(obj_id);
-    traceToken->initialLookupTime    = beginDur.toMicroseconds();
+    OSegLookupTraceToken* traceToken = new OSegLookupTraceToken(obj_id,shouldLog());
+    traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_INITIAL_LOOKUP_TIME);
+
 
     ++numLookups;
     float radius=0;
@@ -382,9 +379,9 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
       return CraqEntry(mContext->id(),radius);
     }
 
-    Duration cacheBeginDur = Time::local() - Time::epoch();
-    traceToken->checkCacheLocalBegin = cacheBeginDur.toMicroseconds();
 
+    traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CHECK_CACHE_LOCAL_BEGIN);
+    
     CraqEntry cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
@@ -394,17 +391,18 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
       ++numCacheHits;
 
-      Duration cacheEndDur = Time::local() - Time::epoch();
-      traceToken->checkCacheLocalEnd = cacheEndDur.toMicroseconds();
-      //      mContext->trace()->osegCumulativeResponse(mContext->simTime(), traceToken);
+
+      traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CHECK_CACHE_LOCAL_END);
+
       delete traceToken;
       return cacheReturn;
     }
 
-    Duration cacheEndDur = Time::local() - Time::epoch();
-    traceToken->checkCacheLocalEnd = cacheEndDur.toMicroseconds();
 
+    traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CHECK_CACHE_LOCAL_END);
 
+    ++mOSegQueueLen;
+    traceToken->osegQLenPostQuery = mOSegQueueLen;
     oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id, traceToken));
 
     return CraqEntry::null();
@@ -415,24 +413,24 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken)
   {
-    if (mReceivedStopRequest)
-    {
-      delete traceToken;
-      return;
-    }
+      --mOSegQueueLen;
+      if (mReceivedStopRequest)
+      {
+          delete traceToken;
+          return;
+      }
 
-    Duration beginCraqDur  = Time::local() - Time::epoch();
-    traceToken->craqLookupBegin = beginCraqDur.toMicroseconds();
-
+    traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_BEGIN);
 
     UUID tmper = obj_id;
     InTransitMap::const_iterator iter = mInTransitOrLookup.find(tmper);
 
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
-      Duration beginCraqLookupNotAlreadyLookingUpDur = Time::local() - Time::epoch();
-      traceToken->craqLookupNotAlreadyLookingUpBegin  = beginCraqLookupNotAlreadyLookingUpDur.toMicroseconds();
-
+        //Duration beginCraqLookupNotAlreadyLookingUpDur = Time::local() - Time::epoch();
+        //traceToken->craqLookupNotAlreadyLookingUpBegin  = beginCraqLookupNotAlreadyLookingUpDur.toMicroseconds();
+        traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_BEGIN);
+      
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
       //add the mapping of a craqData Key to a uuid.
 
@@ -446,7 +444,6 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
-      //      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
 
       CONTEXT_SPACETRACE(objectSegmentationCraqLookupRequest,
           obj_id,
@@ -455,26 +452,27 @@ Sirikata::Protocol::OSeg::AddedObjectMessage* CraqObjectSegmentation::generateAd
       ++numLookingUpDebug;
 
       //puts object in transit or lookup.
-      //Duration timerDur = mTimer.elapsed();
-      Duration timerDur =  Time::local() - Time::epoch();
+      //Duration timerDur =  Time::local() - Time::epoch();
 
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CraqEntry::null();  //means that we're performing a lookup, rather than a migrate.
-      tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
+      //tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
+      tmpTransLookup.timeAdmitted = 0;
 
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
 
-      Duration endCraqDur  = Time::local() - Time::epoch();
-      traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
-      traceToken->craqLookupNotAlreadyLookingUpEnd = endCraqDur.toMicroseconds();
+      traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_END);
+      traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_END);
 
-      craqDhtGet.get(cdSetGet,traceToken); //calling the craqDht to do a get.
+      if ((numCraqLookups %2) == 0)
+          craqDhtGet1.get(cdSetGet,traceToken); //calling the craqDht to do a get
+      else
+          craqDhtGet2.get(cdSetGet,traceToken); //calling the craqDht to do a get.
     }
     else
     {
       ++numAlreadyLookingUp;
-      Duration endCraqDur  = Time::local() - Time::epoch();
-      traceToken->craqLookupEnd = endCraqDur.toMicroseconds();
+      traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_END);
       CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
       delete traceToken;
     }
@@ -520,7 +518,6 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
 
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id, radius, idServerAckTo);
-      //      tsrd.dur       = mTimer.elapsed();
       tsrd.dur =  Time::local() - Time::epoch();
 
       int trackID = getUniqueTrackID();
@@ -567,7 +564,6 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = CraqEntry(new_server_id);
 
-    //    Duration tmpDurer= mTimer.elapsed();
     Duration tmpDurer = Time::local() - Time::epoch();
 
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
@@ -602,13 +598,14 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
         delete traceToken;
       return;
     }
-
+    
+    mLookupListener->osegLookupCompleted(obj_id,sID);
+    
     if (traceToken != NULL) {
+        traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_END);
         CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
         delete traceToken;
     }
-
-    mLookupListener->osegLookupCompleted(obj_id,sID);
   }
 
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
@@ -791,7 +788,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
         indexer.append(nfd->obj_id.rawHexData());
 
         CraqDataSetGet cdSetGet (indexer,CraqEntry(NullServerID,0),false,CraqDataSetGet::GET); //bftm modified
-        craqDhtGet.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
+        craqDhtGet1.get(cdSetGet, nfd->traceToken); //calling the craqDht to do a get.
 
         mNfData.pop(); //remove the item from the queue.
 
@@ -804,10 +801,11 @@ void CraqObjectSegmentation::trySendMigAcks() {
   //gets posted to from asyncCraqGet.  Should get inside of o_strand from the post.
   void CraqObjectSegmentation::craqGetResult(CraqOperationResult* cor)
   {
-    Duration tmpDur = Time::local() - Time::epoch();
-
+      --mOSegQueueLen;
+      
     if (cor->traceToken != NULL)
-      cor->traceToken->lookupReturnBegin = tmpDur.toMicroseconds();
+        cor->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_BEGIN);
+        //cor->traceToken->lookupReturnBegin = tmpDur.toMicroseconds();
 
     if (mReceivedStopRequest)
     {
@@ -844,16 +842,6 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
     if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
     {
-      //log message stating that object was processed.
-      Duration timerDur = Time::local() - Time::epoch();
-
-      CONTEXT_SPACETRACE(objectSegmentationProcessedRequest,
-          tmper,
-          cor->servID.server(),
-          mContext->id(),
-          (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)),
-          (uint32) craqDhtGet.queueSize()  );
-
       if(iter->second.sID.isNull())
       {
         //means that after receiving a lookup request, we did not intermediarilly receive a migrate request.
@@ -863,9 +851,6 @@ void CraqObjectSegmentation::trySendMigAcks() {
     }
     inTransOrLookup_m.unlock();
 
-    Duration tmpDurEnd = Time::local() - Time::epoch();
-    if (cor->traceToken != NULL)
-      cor->traceToken->lookupReturnEnd = tmpDurEnd.toMicroseconds();
 
 
     callOsegLookupCompleted(tmper,cor->servID, cor->traceToken);
@@ -944,17 +929,6 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       //remove this object from mReceivingObjects,
       removeFromReceivingObjects(obj_id);
-
-      //log event
-      //      Duration procTrackedSetRes = mTimer.elapsed();
-      Duration procTrackedSetRes = Time::local() - Time::epoch();
-
-      Duration dur = procTrackedSetRes - trackingMessages[trackedSetResult->trackedMessage].dur;
-
-      CONTEXT_SPACETRACE(processOSegTrackedSetResults,
-          obj_id,
-          mContext->id(),
-          dur);
 
       //send an acknowledge message to space server that formerly hosted object.
       Message* to_send = new Message(

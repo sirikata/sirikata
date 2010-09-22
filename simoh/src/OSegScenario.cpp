@@ -1,5 +1,5 @@
 /*  Sirikata
- *  HitPointScenario.cpp
+ *  OSegScenario.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "HitPointScenario.hpp"
+#include "OSegScenario.hpp"
 #include "ScenarioFactory.hpp"
 #include "ObjectHost.hpp"
 #include "Object.hpp"
@@ -41,180 +41,20 @@
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
 
 namespace Sirikata {
+void DPSInitOptions(OSegScenario *thus) {
 
-
-char tohexdig(uint8 inp) {
-    if (inp<=9) return inp+'0';
-    return (inp-10)+'A';
-}
-String makeHexString(uint8*buffer, int length) {
-    String retval;
-    for (int i=0;i<length;++i) {
-        uint8 dat = buffer[i];
-        uint8 nibble0 = buffer[i]%16;
-        uint8 nibble1=  buffer[i]/16%16;
-        retval.push_back(tohexdig(nibble0));
-        retval.push_back(tohexdig(nibble1));
-        retval.push_back(' ');
-    }
-    return retval;
-}
-
-class DamagableObject {
-public:
-    Object *object;
-    class HPTYPE {
-        double hp;
-        unsigned char magicNumber[8];
-    public:
-        bool operator == (const HPTYPE & other) const {
-            return hp==other.hp&&memcmp(magicNumber,other.magicNumber,8)==0;
-        }
-        double read()const {
-            return hp;
-        }
-        HPTYPE(double hp) {
-            static char mag[8]={10,251,229,199,24,50,200,178};
-            memcpy(magicNumber,mag,8);
-            this->hp=hp;
-        }
-    };
-    HPTYPE mHP;
-    unsigned int mListenPort;
-    DamagableObject (Object *obj, HPTYPE hp, unsigned int listenPort):mHP(hp){
-        object=obj;
-        mListenPort = listenPort;
-    }
-    void update() {
-        for (size_t i=0;i<mDamageReceivers.size();++i) {
-            mDamageReceivers[i]->sendUpdate();
-        }
-    }
-    class ReceiveDamage {
-        UUID mID;
-        DamagableObject *mParent;
-        boost::shared_ptr<Stream<UUID> > mSendStream;
-        boost::shared_ptr<Stream<UUID> > mReceiveStream;
-        
-        uint8 mPartialUpdate[sizeof(HPTYPE)];
-        int mPartialCount;
-        
-        uint8 mPartialSend[sizeof(HPTYPE)*2];
-        int mPartialSendCount;
-        Object * mObj;
-        HitPointScenario *mContext;
-    public:
-        ReceiveDamage(DamagableObject*parent, HitPointScenario *ctx, Object * obj, UUID id) {
-            mContext = ctx;
-            mObj=obj;
-            mID=id;
-            mParent=parent;
-            mPartialCount=0;
-            mPartialSendCount=0;
-            memset(mPartialSend,0,sizeof(DamagableObject::HPTYPE)*2);
-            memset(mPartialUpdate,0,sizeof(DamagableObject::HPTYPE));
-            static int offset=0;
-            ++offset;
-            int port = parent->mListenPort+offset;
-            SILOG(hitpoint,error,"Listen/Connecting "<<mID.toString()<<" to "<<mParent->object->uuid().toString());
-            Stream<UUID>::listen(std::tr1::bind(&DamagableObject::ReceiveDamage::login,this,_1,_2),
-                                 EndPoint<UUID>(mID,parent->mListenPort));
-            Stream<UUID>::connectStream(mParent->object,
-                                        EndPoint<UUID>(mParent->object->uuid(),port),
-                                        EndPoint<UUID>(mID,parent->mListenPort),
-                                        std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
-            
-        }
-        void connectionCallback(int port, int err, boost::shared_ptr<Stream<UUID> > s) {
-            if (err != 0 ) {
-                SILOG(hitpoint,error,"Failed to connect two objects...Retry"<<mParent->object->uuid().toString()<<" - "<<mID.toString());
-                Stream<UUID>::connectStream(mParent->object,
-                                            EndPoint<UUID>(mParent->object->uuid(),port),
-                                            EndPoint<UUID>(mID,mParent->mListenPort),
-                                            std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
-
-            }else {
-                SILOG(hitpoint,error,"Got connection "<<mParent->object->uuid().toString()<<" - "<<mID.toString());
-                this->mSendStream = s;
-                s->registerReadCallback( std::tr1::bind( &DamagableObject::ReceiveDamage::senderShouldNotGetUpdate, this, _1, _2)  ) ;
-            }
-        }
-        void login(int err, boost::shared_ptr< Stream<UUID> > s) {
-            if (err != 0) {
-                SILOG(hitpoint,error,"Failed to listen on port for two objects\n");
-            }else {
-                s->registerReadCallback( std::tr1::bind( &DamagableObject::ReceiveDamage::getUpdate, this, _1, _2)  ) ;
-                mReceiveStream=s;
-            }
-        }
-        void sendUpdate() {
-            if (mSendStream) {
-                int tosend=sizeof(DamagableObject::HPTYPE);
-                if (mPartialSendCount) {
-                    memcpy(mPartialSend+sizeof(DamagableObject::HPTYPE),&mParent->mHP,sizeof(DamagableObject::HPTYPE));
-                    tosend*=2;
-                    tosend-=mPartialSendCount;
-                }else {
-                    memcpy(mPartialSend,&mParent->mHP,tosend);
-                }
-                //SILOG(hitpoint,error,"Sent buffer "<<makeHexString(mPartialSend+mPartialSendCount,tosend)<<" AT TIME ");
-                mPartialSendCount+=mSendStream->write(mPartialSend+mPartialSendCount,tosend);
-                if(mPartialSendCount>=sizeof(DamagableObject::HPTYPE)) {
-                    mPartialSendCount-=sizeof(DamagableObject::HPTYPE);
-                    memcpy(mPartialSend,mPartialSend+sizeof(DamagableObject::HPTYPE),sizeof(DamagableObject::HPTYPE));
-                }
-                if(mPartialSendCount>=sizeof(DamagableObject::HPTYPE)) {
-                    mPartialSendCount=0;
-                }
-                assert(mPartialSendCount<sizeof(DamagableObject::HPTYPE));
-            }
-        }
-        void senderShouldNotGetUpdate(uint8*buffer, int length) {
-            SILOG(hitpoint,error,"Should not receive updates from receiver");
-        }
-        void getUpdate(uint8*buffer, int length) {
-            //SILOG(hitpoint,error,"Received buffer "<<makeHexString(buffer,length));
-            while (length>0) {
-                
-                int datacopied = (length>sizeof(DamagableObject::HPTYPE)-mPartialCount?sizeof(DamagableObject::HPTYPE)-mPartialCount:length);
-                memcpy(mPartialUpdate+mPartialCount, buffer,datacopied);
-                mPartialCount+=datacopied;
-                if (mPartialCount==sizeof(DamagableObject::HPTYPE)) {
-                    DamagableObject::HPTYPE hp(0.0);
-                    memcpy(&hp,mPartialUpdate,mPartialCount);
-                    DamagableObject::HPTYPE test(hp.read());
-                    if (rand()%10==0)
-                        SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp.read()<<" Delay "<<(hp.read()-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
-                    assert(hp==test);
-                    
-                    mPartialCount=0;
-                }
-                buffer+=datacopied;
-                length-=datacopied;
-            }
-        }
-    };
-    std::vector<ReceiveDamage*> mDamageReceivers;
-    friend class ReceiveDamage;
-};
-
-void DPSInitOptions(HitPointScenario *thus) {
-
-    Sirikata::InitializeClassOptions ico("HitPointScenario",thus,
+    Sirikata::InitializeClassOptions ico("OSegScenario",thus,
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
-        new OptionValue("num-hp-per-second","100",Sirikata::OptionValueType<double>(),"Number of hp updaets performed per simulation second"),
         new OptionValue("prob-messages-uniform","1",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
-        new OptionValue("ping-size","8",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
-        new OptionValue("ping-big-chance",".5",Sirikata::OptionValueType<float>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
+        new OptionValue("ping-size","1024",Sirikata::OptionValueType<uint32>(),"Size of ping payloads.  Doesn't include any other fields in the ping or the object message headers."),
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         new OptionValue("source-flood-server","false",Sirikata::OptionValueType<bool>(),"This makes the flood server the source of all the packets rather than the destination, so that we can validate that egress routing gets proper fairness."),
         new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
-        new OptionValue("receivers-per-server","3",Sirikata::OptionValueType<int>(),"The number of folks listening for HP updates at each server"),
         NULL);
 }
 
-HitPointScenario::HitPointScenario(const String &options)
+OSegScenario::OSegScenario(const String &options)
  : mStartTime(Time::epoch())
 {
     mNumTotalPings=0;
@@ -222,13 +62,11 @@ HitPointScenario::HitPointScenario(const String &options)
     mObjectTracker = NULL;
     mPingID=0;
     DPSInitOptions(this);
-    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);
+    OptionSet* optionsSet = OptionSet::getOptions("OSegScenario",this);
     optionsSet->parse(options);
 
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
     mPingPayloadSize=optionsSet->referenceOption("ping-size")->as<uint32>();
-    mPingBigChance=optionsSet->referenceOption("ping-big-chance")->as<float>();
-    mNumHitPointsPerSecond=optionsSet->referenceOption("num-hp-per-second")->as<double>();
     mFloodServer = optionsSet->referenceOption("flood-server")->as<uint32>();
     mSourceFloodServer = optionsSet->referenceOption("source-flood-server")->as<bool>();
     mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
@@ -257,23 +95,23 @@ HitPointScenario::HitPointScenario(const String &options)
     // strand.  If we try to get to 100k, that can be up to 20ms which is very
     // long to block other things on the main strand.
 }
-HitPointScenario::~HitPointScenario(){
+OSegScenario::~OSegScenario(){
     SILOG(deluge,fatal,
-        "HitPoint: Generated: " << mNumGeneratedPings <<
+        "OSeg: Generated: " << mNumGeneratedPings <<
         " Sent: " << mNumTotalPings);
     delete mPings;
     delete mPingPoller;
     delete mPingProfiler;
 }
 
-HitPointScenario*HitPointScenario::create(const String&options){
-    return new HitPointScenario(options);
+OSegScenario*OSegScenario::create(const String&options){
+    return new OSegScenario(options);
 }
-void HitPointScenario::addConstructorToFactory(ScenarioFactory*thus){
-    thus->registerConstructor("hitpoint",&HitPointScenario::create);
+void OSegScenario::addConstructorToFactory(ScenarioFactory*thus){
+    thus->registerConstructor("osegflood",&OSegScenario::create);
 }
 
-void HitPointScenario::initialize(ObjectHostContext*ctx) {
+void OSegScenario::initialize(ObjectHostContext*ctx) {
     mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext=ctx;
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
@@ -281,23 +119,18 @@ void HitPointScenario::initialize(ObjectHostContext*ctx) {
     mPingProfiler = mContext->profiler->addStage("Object Host Send Pings");
     mPingPoller = new Poller(
         ctx->mainStrand,
-        std::tr1::bind(&HitPointScenario::sendPings, this),
+        std::tr1::bind(&OSegScenario::sendPings, this),
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
         Duration::seconds(1.0/mNumPingsPerSecond)
     );
-
-    mHPPoller = new Poller(
-        ctx->mainStrand,
-        std::tr1::bind(&HitPointScenario::sendHPs, this),
-        Duration::seconds(1./mNumHitPointsPerSecond));
 
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
     mGeneratePingsStrand = mContext->ioService->createStrand();
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
-        std::tr1::bind(&HitPointScenario::generatePings, this),
+        std::tr1::bind(&OSegScenario::generatePings, this),
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -305,59 +138,24 @@ void HitPointScenario::initialize(ObjectHostContext*ctx) {
     );
 }
 
-void HitPointScenario::start() {
+void OSegScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&HitPointScenario::delayedStart, this)
+        std::tr1::bind(&OSegScenario::delayedStart, this)
     );
 }
-void HitPointScenario::delayedStart() {
+void OSegScenario::delayedStart() {
     mStartTime = mContext->simTime();
-    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);    
-    int receiversPerServer = optionsSet->referenceOption("receivers-per-server")->as<int>();
-    int ss=mFloodServer;
-    if (mFloodServer ==0) {
-        ss=(rand() % mObjectTracker->numServerIDs())+1;
-    }
-    Object * objA = mObjectTracker->randomObjectFromServer(ss);
-    if (objA) {
-        static int a =14150;
-        mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
-        for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
-            std::set<Object* > receivers;
-            for (int j=0;j<receiversPerServer;++j) {
-                Object * objB = mObjectTracker->randomObjectFromServer(i);
-                if (objB&&receivers.find(objB)==receivers.end()) {
-                    receivers.insert(objB);
-                    mDamagableObjects.back()->mDamageReceivers.push_back(new DamagableObject::ReceiveDamage(mDamagableObjects.back(),
-                                                                                                            this,
-                                                                                                            objB,
-                                                                                                            objB->uuid()));
-                }
-            }
-        }
-        mGeneratePingPoller->start();
-        mHPPoller->start();
-        mPingPoller->start();
-    }else {
-        Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
-        connect_phase=connect_phase/16.0;
-        SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
-        mContext->mainStrand->post(
-            connect_phase,
-            std::tr1::bind(&HitPointScenario::delayedStart, this)
-            );
-        
-    }
-
+    mGeneratePingPoller->start();
+    mPingPoller->start();
 }
-void HitPointScenario::stop() {
+void OSegScenario::stop() {
     mPingPoller->stop();
     mGeneratePingPoller->stop();
 }
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
-void HitPointScenario::generatePairs() {
+void OSegScenario::generatePairs() {
 
     if (mSendCDF.empty()) {
         std::vector<Object*> floodedObjects;
@@ -428,7 +226,7 @@ void HitPointScenario::generatePairs() {
 
 }
 static unsigned int even=0;
-bool HitPointScenario::generateOnePing(const Time& t, PingInfo* result) {
+bool OSegScenario::generateOnePing(const Time& t, PingInfo* result) {
     generatePairs();
     double which =(rand()/(double)RAND_MAX);
     if (!mSendCDF.empty()) {
@@ -448,14 +246,14 @@ bool HitPointScenario::generateOnePing(const Time& t, PingInfo* result) {
         result->objA = where->dest;
         result->dist = where->dist;
         result->ping = new Sirikata::Protocol::Object::Ping();
-        mContext->objectHost->fillPing(result->dist, (rand()<mPingBigChance*RAND_MAX?1024:mPingPayloadSize), result->ping);
+        mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
         return true;
     }
 
     return false;
 }
 
-void HitPointScenario::generatePings() {
+void OSegScenario::generatePings() {
     mGeneratePingProfiler->started();
 
     Time t=mContext->simTime();
@@ -478,25 +276,7 @@ void HitPointScenario::generatePings() {
     mGeneratePingProfiler->finished();
 }
 
-double HitPointScenario::calcHp(const Time*t) {
-    if (t==NULL) {
-        return 1000-((mContext->simTime()-mStartTime).toSeconds());
-    }
-    return 1000-((*t-mStartTime).toSeconds());
-}
-
-void HitPointScenario::sendHPs() {
-    {
-        Time t(mContext->simTime());
-        DamagableObject::HPTYPE hp = calcHp(&t);
-        for (size_t index=0;index<mDamagableObjects.size();++index) {
-            mDamagableObjects[index]->mHP=hp;
-            mDamagableObjects[index]->update();
-        }
-    }
-}
-
-void HitPointScenario::sendPings() {
+void OSegScenario::sendPings() {
     mPingProfiler->started();
 
     Time newTime=mContext->simTime();

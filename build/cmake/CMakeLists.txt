@@ -776,6 +776,7 @@ SET(ProtocolBuffersSourcesCore
 SET(ProtocolBuffersSources
   # Core protocol messages
   ${SirikataProtocolRoot}/Empty
+  ${SirikataProtocolRoot}/Frame
 
   ${SirikataProtocolRoot}/ObjectMessage
   ${SirikataProtocolRoot}/Session
@@ -1049,6 +1050,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
         ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
         ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
+        ${LIBCORE_SOURCE_DIR}/network/PBJDebug.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1380,6 +1382,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/UnreliableHitPointScenario.cpp
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
+  ${SIMOH_SOURCE_DIR}/OSegScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/NullScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
