@@ -151,12 +151,12 @@ void FairServerMessageQueue::service() {
         delete next_msg;
     }
 
-    // Update capacity estimate.
-    mCapacityEstimator.estimate_rate(tcur, cum_sent_size);
 
     if (num_sent == MAX_MESSAGES_PER_ROUND) {
+        mBlocked = true;
         // We ran out of our budget, need to reschedule.
         scheduleServicing();
+        mStoppedBlocked++;
     }
     else {
         // There are 2 ways we could get here:
@@ -178,6 +178,8 @@ void FairServerMessageQueue::service() {
         }
     }
 
+    // Update capacity estimate.
+    mCapacityEstimator.estimate_rate(tcur, cum_sent_size);
     mProfiler->finished();
 }
 
