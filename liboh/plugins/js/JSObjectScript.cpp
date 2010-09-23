@@ -390,7 +390,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
 				{
 				  em_script_str_new.push_back('\n'); 
 				}
-				
+			 
+				emerson_init();
 				String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
 				cout << " js script = \n" <<js_script_str << "\n";
 

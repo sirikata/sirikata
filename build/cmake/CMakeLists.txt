@@ -1429,11 +1429,11 @@ SET(PINTO_SOURCES
   )
 
 SET(EMERSON_SOURCES
-  ${EMERSON_SOURCE_DIR}/EmersonLexer.c
-  ${EMERSON_SOURCE_DIR}/EmersonParser.c
-  ${EMERSON_SOURCE_DIR}/EmersonTree.c
-  ${EMERSON_SOURCE_DIR}/EmersonUtil.c
-		${EMERSON_SOURCE_DIR}/main.c
+  ${EMERSON_SOURCE_DIR}/EmersonLexer.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonTree.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp
+		${EMERSON_SOURCE_DIR}/main.cpp
   )
 
 

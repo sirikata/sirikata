@@ -24,7 +24,7 @@ options
   #include <stdlib.h>;
 		#include <string.h>;
 		#include <antlr3.h>;
- 
+  #include "EmersonUtil.h"; 
 	 #define APP(s) program_string->append(program_string, s);
 
 		pANTLR3_STRING program_string;
@@ -48,34 +48,30 @@ options
 	;
 	
  sourceElements
-		:(sourceElement{printf("\n"); APP("\n"); })+  // omitting the LT 
+		:(sourceElement{APP("\n"); })+  // omitting the LT 
 	;
 	
 	sourceElement
 	: functionDeclaration
-	| statement{printf(";");  APP(";"); }
+	| statement{ APP(";"); }
 	;
 	
 // functions
 functionDeclaration
 	: ^( FUNC_DECL
 	         {
-										  printf("function ");
+										  
 												APP("function ");
 										}
 	         Identifier
 	         {
-										  printf($Identifier.text->chars);
-	           printf("( ");
-
-												APP($Identifier.text->chars);
+										  
+												APP((const char*)$Identifier.text->chars);
 												APP("( ");
 										} 
 					formalParameterList 
 					     {
-										  printf(" )");
-												printf("\n{\n");
-            
+										              
 												APP(" )");
 												APP("\n{\n");
 
@@ -83,7 +79,6 @@ functionDeclaration
 					functionBody
 					     {
             
-										  printf("\n}");
 										  APP("\n}");
             
 
@@ -96,26 +91,21 @@ functionDeclaration
 functionExpression
 	: ^( FUNC_EXPR 
 	     {
-        printf("function ");
         APP("function ");
 
 						}
 						(			
 						 Identifier
 						 {
-							  printf($Identifier.text->chars);
-							  APP($Identifier.text->chars);
+							  APP((const char*)$Identifier.text->chars);
 							}
 						)?  
 						{
 						
-									printf("( ");
 									APP("( ");
 						}
 						formalParameterList 
 						  {
-								  printf("  )");
-										printf("\n{\n");
           
 										APP("  )");
 										APP("\n{\n");
@@ -123,7 +113,6 @@ functionExpression
 								}
 						functionBody
 						  {
-								  printf("\n}");
 								  APP("\n}");
 								}
 						)
@@ -133,8 +122,7 @@ formalParameterList
 	: ^( FUNC_PARAMS 
 	     (id1=Identifier
 									{
-						     printf("\%s ", $id1.text->chars);
-						     APP($id1.text->chars);
+						     APP((const char*)$id1.text->chars);
 											APP(" ");
 
 									}
@@ -142,9 +130,8 @@ formalParameterList
 						(
 						 id2=Identifier
 							{
-						   printf(", \%s ", $id2.text->chars);
 									APP(", ");
-						   APP($id2.text->chars);
+						   APP((const char*)$id2.text->chars);
 									APP(" ");
 							}
 						
@@ -179,7 +166,7 @@ statement
 	;
 	
 statementBlock
-	: {printf(" {\n "); APP(" {\n "); } statementList { printf(" }\n"); 
+	: {APP(" {\n "); } statementList {  
 	   APP(" }\n");
 	   }
 	;
@@ -189,7 +176,6 @@ statementList
 	      SLIST 
 							(statement
 							  {
-			        printf("; \n");					  
 			        APP("; \n");					  
 
 									}
@@ -203,7 +189,6 @@ variableStatement
 	:  ^( 
 	      VARLIST
 							  {
-									  printf("var ");
 									  APP("var ");
 									}
 	      variableDeclarationList
@@ -214,7 +199,6 @@ variableDeclarationList
 	: variableDeclaration 
 	  (
       {
-						  printf(", ");
 						  APP(", ");
 						}	
 	   variableDeclaration
@@ -232,13 +216,11 @@ variableDeclaration
 	    VAR
 	    Identifier 
 					  {
-							  printf($Identifier.text->chars);
-							  APP($Identifier.text->chars);
+							  APP((const char*)$Identifier.text->chars);
 							}
 					
 					(
 					  {
-							  printf(" = ");
 							  APP(" = ");
 							}
 					initialiser
@@ -253,13 +235,11 @@ variableDeclarationNoIn
 	    VAR
 	    Identifier 
 					  {
-							  printf($Identifier.text->chars);
-							  APP($Identifier.text->chars);
+							  APP((const char*)$Identifier.text->chars);
 							}
 					
 					(
 					  {
-							  printf(" = ");
 							  APP(" = ");
 							}
 					initialiserNoIn
@@ -289,8 +269,6 @@ expressionStatement
 ifStatement
 	: ^(IF 
 	    {
-					  printf(" if ");
-							printf(" ( ");
 
 							APP(" if ");
 							APP(" ( ");
@@ -299,7 +277,6 @@ ifStatement
 					}
 	   expression 
 				 {
-					  printf(" ) ");
 					  APP(" ) ");
 							
 					  //printf(" { \n");
@@ -312,7 +289,6 @@ ifStatement
      
 				(
 				 {
-					  printf("else");
 					  APP("else");
 					}
 				 statement
@@ -334,19 +310,16 @@ doWhileStatement
 	: ^( 
 	    DO
 					 {
-        printf(" do ");  						  
         APP(" do ");  						  
 						}    
 	    statement
 					{
-					  printf("while ( " );      
 					  APP("while ( " );      
 					}
 
 					expression 
 
 					{
-					  printf(" ) ");  
 					  APP(" ) ");  
 					}
 					
@@ -357,14 +330,12 @@ whileStatement
 	: ^(
 	   WHILE
 				  {
-						  printf(" while ( ");
 						  APP(" while ( ");
 						}
 	
 	   expression 
 
 			 {
-			   printf(" ) "); 
 			   APP(" ) "); 
 			 }
 			
@@ -376,23 +347,19 @@ forStatement
 	: ^(
 	     FOR 
 	     {
-						  printf(" for ( ");
 						  APP(" for ( ");
 						}
 	     (^(FORINIT forStatementInitialiserPart))?
 						{
-						  printf(" ; ");
 						  APP(" ; ");
 						}
 						(^(FORCOND expression))? 
 						{
-						  printf(" ; ");
 						  APP(" ; ");
 						}
 						(^(FORITER expression))?  
 						
       {
-						  printf(" ) ");
 						  APP(" ) ");
 						}
 						statement
@@ -418,15 +385,13 @@ continueStatement
 	: ^(
 	    CONTINUE 
 	    {
-					  printf("continue ");
 					  APP("continue ");
 					} 
 	   
 				 (
 					 Identifier
 					 {
-						  printf($Identifier.text->chars);
-						  APP($Identifier.text->chars);
+						  APP((const char*)$Identifier.text->chars);
 						}
 					)?
 
@@ -440,14 +405,12 @@ breakStatement
 	: ^(
 	    BREAK
 					{
-					  printf("break ");
 					  APP("break ");
 					}
 	     (
 						Identifier
 						{
-						  printf($Identifier.text->chars);
-						  APP($Identifier.text->chars);
+						  APP((const char*)$Identifier.text->chars);
 						}
 						)?
 						
@@ -458,7 +421,6 @@ returnStatement
 	: ^(
 	    RETURN 
 	     {
-						  printf("return ");
 						  APP("return ");
 						}
 				(		
@@ -481,8 +443,7 @@ labelledStatement
 
 					 {
 						  
-						  printf("\%s : \n", $Identifier.text->chars);
-						  APP($Identifier.text->chars);
+						  APP((const char*)$Identifier.text->chars);
 						  APP(" : \n");
 						}
 					statement
@@ -494,15 +455,12 @@ switchStatement
 	: ^(
 	    SWITCH 
 	     {
-						  printf(" switch ( ");
 						  APP(" switch ( ");
 								
 						}
 
 	    expression 
 			   {
-						  printf(" ) \n");
-								printf("{ \n");
 
 								APP(" ) \n");
 								APP("{ \n");
@@ -513,7 +471,6 @@ switchStatement
 			  caseBlock
 
 					 {
-						  printf("} \n");
 						  APP("} \n");
 						}
 			
@@ -551,7 +508,6 @@ msgSendStatement
 	     leftHandSideExpression 
 				  {
 
-						  printf(".sendMessage( ");
 						  APP(".sendMessage( ");
 						}
 				leftHandSideExpression 
@@ -559,7 +515,6 @@ msgSendStatement
 				(
 				
 				 {
-					  printf(", ");
 					  APP(", ");
 					}
 				memberExpression
@@ -569,7 +524,6 @@ msgSendStatement
 				)
 
 				{
-				  printf(" )" );
 				  APP(" )" );
 				}
 ;
@@ -578,28 +532,23 @@ msgRecvStatement
  : ^(
 	    MESSAGE_RECV
 	    {
-					  printf("system.registerHandler( callback = ");
 					  APP("system.registerHandler( callback = ");
 					}
 
 					memberExpression
      {
-					  printf(", null,"); // right now hardcoding the value to null
-					  printf(", pattern = ");
 					  APP(", pattern = ");
 					} 
      leftHandSideExpression
 
 					(
 					 {
-						  printf(", sender = ");
 						  APP(", sender = ");
 						}
 						memberExpression
 					)?
 				)
     {
-				  printf(") ");
 				  APP(") ");
 				}
 
@@ -608,13 +557,11 @@ msgRecvStatement
 catchClause
 	: ^(CATCH 
 	    {
-					  printf(" catch ( ");
 					  APP(" catch ( ");
 					}
 	    Identifier 
 					{
-					  printf("\%s ) ", $Identifier.text->chars);
-					  APP($Identifier.text->chars);
+					  APP((const char*)$Identifier.text->chars);
 					  APP(" ) ");
 
 					}
@@ -626,7 +573,6 @@ catchClause
 finallyClause
 	: ^( FINALLY 
 	   {
-				  printf(" finally ");
 				  APP(" finally ");
 
 				}
@@ -671,7 +617,6 @@ scope
 
 					leftHandSideExpression 
 					  {
-							  printf(" \%s ", $assignmentExpression::op);
 							  APP(" ");
 							  APP($assignmentExpression::op);
 							  APP(" ");
@@ -708,7 +653,6 @@ scope
      
 					leftHandSideExpression
      {
-					  printf(" \%s ", $assignmentExpressionNoIn::op);
 					  APP(" ");
 					  APP($assignmentExpressionNoIn::op);
 					  APP(" ");
@@ -734,7 +678,6 @@ memberExpression
 	| ^(
 	     NEW 
 						  {
-								  printf("new ");
 								  APP("new ");
 								}
 						memberExpression 
@@ -745,7 +688,6 @@ memberExpression
 	| ^(DOT 
 	      memberExpression
 							  {
-									  printf(".");
 									  APP(".");
 									}
 							memberExpression
@@ -754,12 +696,10 @@ memberExpression
 	    ARRAY_INDEX 
 					memberExpression 
 					    {
-           printf("[ ");
            APP("[ ");
 									}
 					memberExpression
 					    {
-									  printf(" ]");
 									  APP(" ]");
 									}
 					
@@ -789,7 +729,6 @@ callExpressionSuffix
 arguments
 	: ^(ARGLIST 
 	       {
-								  printf(" ( ");  
 								  APP(" ( ");  
 								}
 	    (
@@ -800,7 +739,6 @@ arguments
 				
 				)
 				{
-				  printf(" ) ");
 				  APP(" ) ");
 				}
 	;
@@ -822,24 +760,20 @@ conditionalExpression
 	|^(
 	    TERNARYOP
 					{
-					  printf( " ( ");
 					  APP( " ( ");
 					}
 	    logicalORExpression
 					{
-					  printf(" )  ? ( ");
 					  APP(" )  ? ( ");
 					}
 	    
 				 assignmentExpression 
 					{
-						  printf(" ) : ( ");
 						  APP(" ) : ( ");
 					}
 						
 						assignmentExpression
 						{
-						  printf(" ) ");
 						  APP(" ) ");
 						}
 
@@ -852,23 +786,19 @@ conditionalExpressionNoIn
 	|^(
 	   TERNARYOP
 				{
-				  printf(" ( ");
 				  APP(" ( ");
 				}
 	   logicalORExpressionNoIn 
 				{
-				  printf(" ) ? ( ");
 				  APP(" ) ? ( ");
 				}
     
 				 assignmentExpressionNoIn 
 			  {
-					  printf(" ) : ( ");
 					  APP(" ) : ( ");
 					}		
 					assignmentExpressionNoIn
 					{
-					  printf(" ) ");
 					  APP(" ) ");
 					}
 				)
@@ -877,70 +807,70 @@ conditionalExpressionNoIn
 
 logicalANDExpression
 	: bitwiseORExpression
-	|^(AND logicalANDExpression { printf(" && "); APP(" && ");} bitwiseORExpression)
+	|^(AND logicalANDExpression { APP(" && ");} bitwiseORExpression)
 	;
 
 
 logicalORExpression
 	: logicalANDExpression
-	|^(OR logicalORExpression { printf(" || "); APP(" || "); } logicalANDExpression)
+	|^(OR logicalORExpression { APP(" || "); } logicalANDExpression)
 	;
 	
 logicalORExpressionNoIn
 	: logicalANDExpressionNoIn
-	|^(OR logicalORExpressionNoIn{ printf(" || "); APP(" || ");}logicalANDExpressionNoIn) 
+	|^(OR logicalORExpressionNoIn{ APP(" || ");}logicalANDExpressionNoIn) 
 	;
 	
 
 logicalANDExpressionNoIn
 	: bitwiseORExpressionNoIn 
-	|^(AND logicalANDExpressionNoIn {printf(" && "); APP(" && ");} bitwiseORExpressionNoIn) 
+	|^(AND logicalANDExpressionNoIn {APP(" && ");} bitwiseORExpressionNoIn) 
 	;
 	
 bitwiseORExpression
 	: bitwiseXORExpression 
-	|^(BIT_OR bitwiseORExpression { printf(" | "); APP(" | "); } bitwiseXORExpression)
+	|^(BIT_OR bitwiseORExpression { APP(" | "); } bitwiseXORExpression)
 	;
 	
 bitwiseORExpressionNoIn
 	: bitwiseXORExpressionNoIn 
-	|^( BIT_OR bitwiseORExpressionNoIn { printf(" | "); APP(" | ");} bitwiseXORExpressionNoIn)
+	|^( BIT_OR bitwiseORExpressionNoIn {  APP(" | ");} bitwiseXORExpressionNoIn)
 	;
 	
 bitwiseXORExpression
 : bitwiseANDExpression 
-| ^( EXP e=bitwiseXORExpression { printf( " ^ "); APP(" ^ ");} bitwiseANDExpression)
+| ^( EXP e=bitwiseXORExpression { APP(" ^ ");} bitwiseANDExpression)
 ;
 	
 bitwiseXORExpressionNoIn
 	: bitwiseANDExpressionNoIn
-	|^( EXP e=bitwiseXORExpressionNoIn { printf( " ^ ") ; APP(" ^ ");}bitwiseANDExpressionNoIn) 
+	|^( EXP e=bitwiseXORExpressionNoIn { APP(" ^ ");}bitwiseANDExpressionNoIn) 
 	;
 	
 bitwiseANDExpression
 	: equalityExpression
-	| ^(BIT_AND e=bitwiseANDExpression { printf( " & " ); APP(" & ");} equalityExpression) 
+	| ^(BIT_AND e=bitwiseANDExpression { APP(" & ");} equalityExpression) 
 	;
 	
 bitwiseANDExpressionNoIn
 	: equalityExpressionNoIn 
-	| ^(BIT_AND e=bitwiseANDExpressionNoIn { printf(" & "); APP(" & ");} equalityExpressionNoIn)
+	| ^(BIT_AND e=bitwiseANDExpressionNoIn { APP(" & ");} equalityExpressionNoIn)
 	;
 	
 equalityExpression
 	: relationalExpression
-	| ^(EQUALS e=equalityExpression {printf(" == ") ; APP(" == ");} relationalExpression)
-	| ^(NOT_EQUALS e=equalityExpression {printf(" != "); APP(" == ");} relationalExpression)
-	| ^(IDENT e=equalityExpression { printf(" === "); APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {printf(" !== "); APP(" === ");} relationalExpression)
+	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
+	| ^(NOT_EQUALS e=equalityExpression {APP(" == ");} relationalExpression)
+	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
+	| ^(NOT_IDENT e=equalityExpression {APP(" === ");} relationalExpression)
 ;
 
 equalityExpressionNoIn
 : relationalExpressionNoIn
-| ^( EQUALS equalityExpressionNoIn {printf(" == "); APP(" == ");} relationalExpressionNoIn)
-| ^( NOT_EQUALS equalityExpressionNoIn { printf(" != ") ; APP(" != ");} relationalExpressionNoIn)
-| ^( IDENT equalityExpressionNoIn { printf(" === "); APP(" === "); } relationalExpressionNoIn)
-| ^( NOT_IDENT equalityExpressionNoIn { printf(" !== "); APP(" !== ");} relationalExpressionNoIn)
+| ^( EQUALS equalityExpressionNoIn { APP(" == ");} relationalExpressionNoIn)
+| ^( NOT_EQUALS equalityExpressionNoIn {  APP(" != ");} relationalExpressionNoIn)
+| ^( IDENT equalityExpressionNoIn { APP(" === "); } relationalExpressionNoIn)
+| ^( NOT_IDENT equalityExpressionNoIn { APP(" !== ");} relationalExpressionNoIn)
 
 ;
 	
@@ -1019,7 +949,6 @@ scope
 	| ^(shiftOps 
 	    e=shiftExpression 
 					 {
-						  printf(" \%s ", $shiftExpression::op);
 						  APP(" ");
 						  APP($shiftExpression::op);
 						  APP(" ");
@@ -1036,7 +965,6 @@ additiveExpression
 	     ADD 
 						e1=additiveExpression
 						{
-						  printf(" + ");
 						  APP(" + ");
 						}
 						multiplicativeExpression
@@ -1045,7 +973,6 @@ additiveExpression
 	     SUB 
 						e1=additiveExpression 
 						 {
-							  printf(" - ");
 							  APP(" - ");
 							}
 						multiplicativeExpression
@@ -1069,14 +996,13 @@ multiplicativeExpression
 	| ^( MULT 
 	    multiplicativeExpression 
 					{
-					  printf(" * ");
 					  APP(" * ");
 					 
 					} 
 					unaryExpression
 					)
-	| ^(DIV multiplicativeExpression {printf(" / "); APP(" / ");} unaryExpression)
-	| ^(MOD multiplicativeExpression {printf(" \% "); APP(" \% ");} unaryExpression)
+	| ^(DIV multiplicativeExpression { APP(" / ");} unaryExpression)
+	| ^(MOD multiplicativeExpression { APP(" \% ");} unaryExpression)
 	;
 
 unaryOps
@@ -1097,15 +1023,15 @@ unaryExpression
 	| ^(
 	
 	    (
-				   DELETE          { printf("delete"); APP("delete");}
-       | VOID          { printf("void") ;  APP("void");}
-       | TYPEOF        { printf("typeOf"); APP("typeOf");}
-       | PLUSPLUS      { printf("++"); APP("++");}
-       | MINUSMINUS    { printf("--"); APP("--");}
-       | UNARY_PLUS    { printf("+"); APP("+");}
-       | UNARY_MINUS   { printf("-"); APP("-");}
-       | COMPLEMENT    { printf("~"); APP("~");}
-       | NOT           { printf("!"); APP("!");}
+				   DELETE          {  APP("delete");}
+       | VOID          {   APP("void");}
+       | TYPEOF        {  APP("typeOf");}
+       | PLUSPLUS      {  APP("++");}
+       | MINUSMINUS    {  APP("--");}
+       | UNARY_PLUS    {  APP("+");}
+       | UNARY_MINUS   {  APP("-");}
+       | COMPLEMENT    {  APP("~");}
+       | NOT           {  APP("!");}
 	
 					)
 
@@ -1120,8 +1046,22 @@ postfixExpression
 	;
 
 primaryExpression
-	: 'this' {printf("this"); APP("this");}
-	| Identifier {printf($Identifier.text->chars); APP($Identifier.text->chars);}
+	: 'this' {APP("this");}
+	| Identifier 
+	  {
+					if(emerson_isAKeyword((char*)$Identifier.text->chars))
+					{
+					  printf("printing ideni");
+							APP("system.");
+							APP((const char*)$Identifier.text->chars);
+					}
+					else
+					{
+					  printf("printing else for (\%s) ", (const char*)$Identifier.text->chars);
+	      APP((const char*)$Identifier.text->chars);
+	    }
+
+	  }
 	| literal
 	| arrayLiteral
 	| objectLiteral
@@ -1132,7 +1072,6 @@ primaryExpression
 arrayLiteral
 	: ^(ARRAY_LITERAL
 	       {
-								  printf("[ ");
 								  APP("[ ");
 								}
 	       head=assignmentExpression? 
@@ -1140,7 +1079,6 @@ arrayLiteral
 	     tail=assignmentExpression*)
 
         {
-								  printf(" ] ");
 								  APP(" ] ");
 
 								}
@@ -1150,10 +1088,10 @@ arrayLiteral
 objectLiteral
 	:^(OBJ_LITERAL 
 	   
-				{ printf("{ "); APP("{ ");}
+				{ APP("{ ");}
 	   (head=propertyNameAndValue)? 
 				(tail=propertyNameAndValue)*
-				{ printf(" } "); APP(" } "); }
+				{ APP(" } "); }
 				
 				)
 	;
@@ -1161,22 +1099,22 @@ objectLiteral
 propertyNameAndValue
 	: ^(NAME_VALUE 
 	   propertyName 
-			{	printf(" : "); APP(" : ");}
+			{	APP(" : ");}
 				assignmentExpression)
 	;
 
 propertyName
-	: Identifier { printf($Identifier.text->chars); APP($Identifier.text->chars); }
-	| StringLiteral { printf($StringLiteral.text->chars); APP($StringLiteral.text->chars);  }
-	| NumericLiteral {printf($NumericLiteral.text->chars); APP($NumericLiteral.text->chars);}
+	: Identifier {  APP((const char*)$Identifier.text->chars); }
+	| StringLiteral { APP((const char*)$StringLiteral.text->chars);  }
+	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
 
 // primitive literal definition.
 literal
-	: 'null' { printf("null");  APP("null");}
-	| 'true' { printf("true");  APP("true"); }
-	| 'false'{ printf("false"); APP("false");}
-	| StringLiteral {printf($StringLiteral.text->chars); APP($StringLiteral.text->chars);}
-	| NumericLiteral {printf($NumericLiteral.text->chars); APP($NumericLiteral.text->chars);}
+	: 'null' {   APP("null");}
+	| 'true' {   APP("true"); }
+	| 'false'{  APP("false");}
+	| StringLiteral {APP((const char*)$StringLiteral.text->chars);}
+	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
 	
