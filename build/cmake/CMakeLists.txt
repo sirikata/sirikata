@@ -1051,6 +1051,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
         ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
         ${LIBCORE_SOURCE_DIR}/network/PBJDebug.cpp
+        ${LIBCORE_SOURCE_DIR}/network/Frame.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
