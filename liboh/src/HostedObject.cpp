@@ -1009,7 +1009,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     bool parse_success = frame.ParseFromString(payload);
     if (!parse_success) return false;
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    contents.ParseFromString(payload);
+    contents.ParseFromString(frame.payload());
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
