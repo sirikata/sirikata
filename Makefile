@@ -31,8 +31,8 @@ clean:
 DEPVC8REV=HEAD
 DEPVC9REV=10
 DEPOSXREV=30
-DEPSOURCE=21
-DEPARCHINDEP=6
+DEPSOURCE=25
+DEPARCHINDEP=7
 #========== Dependencies ===========
 
 distributions:

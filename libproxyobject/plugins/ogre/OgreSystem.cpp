@@ -541,7 +541,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler();
-    new WebViewManager(0, mInputManager, getChromeResourcesDir()); ///// FIXME: Initializing singleton class
+    new WebViewManager(0, mInputManager, getResourcesDir()); ///// FIXME: Initializing singleton class
 
 /*  // Test web view
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());

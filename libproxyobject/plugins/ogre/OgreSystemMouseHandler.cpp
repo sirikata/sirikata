@@ -783,7 +783,7 @@ private:
             mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", 404, 227,
                     OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
             mUploadWebView->bind("event", std::tr1::bind(&MouseHandler::onUploadObjectEvent, this, _1, _2));
-            mUploadWebView->loadFile("upload.html");
+            mUploadWebView->loadFile("chrome/upload.html");
         }
     }
 
@@ -796,7 +796,7 @@ private:
             printf("creating fps widget\n");
             mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 45,
                     OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
-            mFPSWidgetView->loadFile("fps.html");
+            mFPSWidgetView->loadFile("chrome/fps.html");
             mFPSWidgetView->setTransparent(true);
         }
     }
@@ -1687,7 +1687,7 @@ public:
 
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
 
-        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "../object/object.html"));
+        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "object/object.html"));
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
         mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
