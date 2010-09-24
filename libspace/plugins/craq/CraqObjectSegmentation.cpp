@@ -64,14 +64,14 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
      craqDhtGet1(con, o_strand, this),
      craqDhtGet2(con, o_strand, this),
      craqDhtSet(con, o_strand, this),
+     mAtomicTrackID(10),
      postingStrand(con->mainStrand),
      mStrand(o_strand),
-     mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
      mCraqCache(cache),
+     mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
      mFrontMigAck(NULL),
      ctx(con),
      mReceivedStopRequest(false),
-     mAtomicTrackID(10),
      mOSegQueueLen(0)
   {
 
@@ -125,7 +125,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
     craqDhtSet.stop();
     craqDhtGet1.stop();
     craqDhtGet2.stop();
-    
+
     mReceivedStopRequest = true;
   }
 
@@ -279,7 +279,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
           returner = mAtomicTrackID;
           ++mAtomicTrackID;
       }
-      
+
       return returner;
   }
 
@@ -381,7 +381,7 @@ int CraqObjectSegmentation::getPushback()
 
 
     traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CHECK_CACHE_LOCAL_BEGIN);
-    
+
     CraqEntry cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn.notNull()) && (cacheReturn.server() != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
@@ -430,7 +430,7 @@ int CraqObjectSegmentation::getPushback()
         //Duration beginCraqLookupNotAlreadyLookingUpDur = Time::local() - Time::epoch();
         //traceToken->craqLookupNotAlreadyLookingUpBegin  = beginCraqLookupNotAlreadyLookingUpDur.toMicroseconds();
         traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_BEGIN);
-      
+
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
       //add the mapping of a craqData Key to a uuid.
 
@@ -598,9 +598,9 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
         delete traceToken;
       return;
     }
-    
+
     mLookupListener->osegLookupCompleted(obj_id,sID);
-    
+
     if (traceToken != NULL) {
         traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_END);
         CONTEXT_SPACETRACE(osegCumulativeResponse, traceToken);
@@ -802,7 +802,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
   void CraqObjectSegmentation::craqGetResult(CraqOperationResult* cor)
   {
       --mOSegQueueLen;
-      
+
     if (cor->traceToken != NULL)
         cor->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_BEGIN);
         //cor->traceToken->lookupReturnBegin = tmpDur.toMicroseconds();
@@ -826,7 +826,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
 
       std::cout<<"\n\nWe have an object that does not exist in craq system.  This shouldn't have really been called.\n\n";
 
-      std::cout<<"Object:  "<<cor->objID<<"  server id:  "<<cor->servID.server()<<"  radius  "<<cor->servID.radius()<<"  tracking  "<<cor->tracking<<"  suceeded: "<<cor->succeeded<<"  GET or set:   "<<cor->whichOperation<<"\n\n";
+      std::cout<<"Object:  "<<cor->objID<<"  server id:  "<<cor->servID.server()<<"  radius  "<<cor->servID.radius()<<"  tracking  "<<cor->tracking<<"  suceeded: "<<cor->succeeded<<"  GET or set:   "<<(int)cor->whichOperation<<"\n\n";
 
       assert(false);
       return;

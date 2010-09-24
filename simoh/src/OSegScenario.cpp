@@ -161,7 +161,7 @@ void OSegScenario::generatePairs() {
         std::vector<Object*> floodedObjects;
         Time t=mContext->simTime();
 
-        for (int i=0;i<mObjectTracker->numServerIDs();++i) {
+        for (int i=0;i<(int)mObjectTracker->numServerIDs();++i) {
             if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {
                 return;
             }

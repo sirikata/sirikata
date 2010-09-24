@@ -530,7 +530,7 @@ void Proximity::writeSomeObjectResults(ProxStreamInfo* prox_stream) {
             // FIXME
             break;
         }
-        else if (bytes_written < framed_prox_msg.size()) {
+        else if (bytes_written < (int)framed_prox_msg.size()) {
             framed_prox_msg = framed_prox_msg.substr(bytes_written);
             break;
         }

@@ -95,10 +95,10 @@ public:
         DamagableObject *mParent;
         boost::shared_ptr<Stream<UUID> > mSendStream;
         boost::shared_ptr<Stream<UUID> > mReceiveStream;
-        
+
         uint8 mPartialUpdate[sizeof(HPTYPE)];
         int mPartialCount;
-        
+
         uint8 mPartialSend[sizeof(HPTYPE)*2];
         int mPartialSendCount;
         Object * mObj;
@@ -123,7 +123,7 @@ public:
                                         EndPoint<UUID>(mParent->object->uuid(),port),
                                         EndPoint<UUID>(mID,parent->mListenPort),
                                         std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
-            
+
         }
         void connectionCallback(int port, int err, boost::shared_ptr<Stream<UUID> > s) {
             if (err != 0 ) {
@@ -159,14 +159,14 @@ public:
                 }
                 //SILOG(hitpoint,error,"Sent buffer "<<makeHexString(mPartialSend+mPartialSendCount,tosend)<<" AT TIME ");
                 mPartialSendCount+=mSendStream->write(mPartialSend+mPartialSendCount,tosend);
-                if(mPartialSendCount>=sizeof(DamagableObject::HPTYPE)) {
+                if(mPartialSendCount>=(int)sizeof(DamagableObject::HPTYPE)) {
                     mPartialSendCount-=sizeof(DamagableObject::HPTYPE);
                     memcpy(mPartialSend,mPartialSend+sizeof(DamagableObject::HPTYPE),sizeof(DamagableObject::HPTYPE));
                 }
-                if(mPartialSendCount>=sizeof(DamagableObject::HPTYPE)) {
+                if(mPartialSendCount>=(int)sizeof(DamagableObject::HPTYPE)) {
                     mPartialSendCount=0;
                 }
-                assert(mPartialSendCount<sizeof(DamagableObject::HPTYPE));
+                assert(mPartialSendCount<(int)sizeof(DamagableObject::HPTYPE));
             }
         }
         void senderShouldNotGetUpdate(uint8*buffer, int length) {
@@ -175,8 +175,8 @@ public:
         void getUpdate(uint8*buffer, int length) {
             //SILOG(hitpoint,error,"Received buffer "<<makeHexString(buffer,length));
             while (length>0) {
-                
-                int datacopied = (length>sizeof(DamagableObject::HPTYPE)-mPartialCount?sizeof(DamagableObject::HPTYPE)-mPartialCount:length);
+
+                int datacopied = (length>(int)sizeof(DamagableObject::HPTYPE)-mPartialCount?sizeof(DamagableObject::HPTYPE)-mPartialCount:length);
                 memcpy(mPartialUpdate+mPartialCount, buffer,datacopied);
                 mPartialCount+=datacopied;
                 if (mPartialCount==sizeof(DamagableObject::HPTYPE)) {
@@ -186,7 +186,7 @@ public:
                     if (rand()%10==0)
                         SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp.read()<<" Delay "<<(hp.read()-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
                     assert(hp==test);
-                    
+
                     mPartialCount=0;
                 }
                 buffer+=datacopied;
@@ -314,7 +314,7 @@ void HitPointScenario::start() {
 }
 void HitPointScenario::delayedStart() {
     mStartTime = mContext->simTime();
-    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);    
+    OptionSet* optionsSet = OptionSet::getOptions("HitPointScenario",this);
     int receiversPerServer = optionsSet->referenceOption("receivers-per-server")->as<int>();
     int ss=mFloodServer;
     if (mFloodServer ==0) {
@@ -324,7 +324,7 @@ void HitPointScenario::delayedStart() {
     if (objA) {
         static int a =14150;
         mDamagableObjects.push_back(new DamagableObject(objA,1000, a++));
-        for (int i=1;i<=mObjectTracker->numServerIDs();++i) {
+        for (int i=1;i<=(int)mObjectTracker->numServerIDs();++i) {
             std::set<Object* > receivers;
             for (int j=0;j<receiversPerServer;++j) {
                 Object * objB = mObjectTracker->randomObjectFromServer(i);
@@ -348,7 +348,7 @@ void HitPointScenario::delayedStart() {
             connect_phase,
             std::tr1::bind(&HitPointScenario::delayedStart, this)
             );
-        
+
     }
 
 }
@@ -363,7 +363,7 @@ void HitPointScenario::generatePairs() {
         std::vector<Object*> floodedObjects;
         Time t=mContext->simTime();
 
-        for (int i=0;i<mObjectTracker->numServerIDs();++i) {
+        for (int i=0;i<(int)mObjectTracker->numServerIDs();++i) {
             if (mObjectTracker->numObjectsConnected(mObjectTracker->getServerID(i))<mNumObjectsPerServer) {
                 return;
             }

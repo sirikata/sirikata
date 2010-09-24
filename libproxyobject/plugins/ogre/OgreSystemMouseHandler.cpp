@@ -295,7 +295,7 @@ private:
 
     static String fillZeroPrefix(const String& prefill, int32 nwide) {
         String retval = prefill;
-        while(retval.size() < nwide)
+        while((int)retval.size() < nwide)
             retval = String("0") + retval;
         return retval;
     }
@@ -494,6 +494,7 @@ private:
         }
         return mParent->getEntity(newId);
 */
+        return NULL;
     }
 
     void cloneObjectsAction() {
@@ -758,7 +759,7 @@ private:
 
         mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
         */
-        printf("upload object event fired arg length = %d\n", args.size());
+        printf("upload object event fired arg length = %d\n", (int)args.size());
         if (args.size() != 3) {
             printf("expected 3 arguments, returning.\n");
             return;
@@ -802,7 +803,7 @@ private:
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
         typedef std::tr1::unordered_map<String, String> StringMap;
-        printf("createScriptedObjectAction: %d\n", args.size());
+        printf("createScriptedObjectAction: %d\n", (int)args.size());
         // Filter out the script type from rest of args
         String script_type = "";
         StringMap filtered_args = args;

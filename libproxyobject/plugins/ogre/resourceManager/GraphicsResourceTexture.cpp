@@ -259,7 +259,9 @@ void TextureUnloadTask::doRun()
 /***************************** TEXTURE DOWNLOAD TASK *************************/
 
 TextureDownloadTask::TextureDownloadTask(DependencyManager* mgr, const URI& uri, unsigned int maxDim, ResourceRequestor* resourceRequestor, Sirikata::ProxyObjectPtr proxy)
- : DependencyTask(mgr->getQueue()), mURI(uri), mProxy(proxy)
+ : DependencyTask(mgr->getQueue()),
+   mProxy(proxy),
+   mURI(uri)
 {
     mHeaderTask = new ResourceDownloadTask(mgr, uri, this, mProxy->priority, NULL);
     mHeaderTask->addDepender(this);

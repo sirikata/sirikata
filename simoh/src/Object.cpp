@@ -336,7 +336,7 @@ bool Object::proximityMessage(const std::string& payload) {
     parse_success = contents.ParseFromString(frame.payload());
     assert(parse_success);
 
-    for(uint32 idx = 0; idx < contents.update_size(); idx++) {
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {

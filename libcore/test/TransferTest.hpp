@@ -412,7 +412,7 @@ public:
             Transfer::DenseDataPtr uncompressedFlattened = uncompressedSparse.flatten();
             TS_ASSERT(*compressedFlattened == *uncompressedFlattened);
             TS_ASSERT(compressedFlattened->length() == uncompressedFlattened->length());
-            for(int i=0; i<compressedFlattened->length(); i++) {
+            for(uint32 i=0; i<compressedFlattened->length(); i++) {
                 TS_ASSERT(*(compressedFlattened->dataAt(i)) == *(uncompressedFlattened->dataAt(i)));
             }
         }

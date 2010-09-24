@@ -62,7 +62,7 @@ IncompleteStreamMap sIncompleteStreams;
 
 int64 getObscuredNumber(const std::string& key) {
     std::string filtered;
-    for(int32 i = 0; i < key.size(); i++)
+    for(int32 i = 0; i < (int)key.size(); i++)
         if (key[i] >= '0' && key[i] <= '9')
             filtered.push_back(key[i]);
     return boost::lexical_cast<int64>(filtered);
@@ -70,7 +70,7 @@ int64 getObscuredNumber(const std::string& key) {
 
 int64 getNumSpaces(const std::string& key) {
     int32 result = 0;
-    for(int32 i = 0; i < key.size(); i++)
+    for(int32 i = 0; i < (int)key.size(); i++)
         if (key[i] == ' ') result++;
     return result;
 }
@@ -129,9 +129,9 @@ void buildStream(TcpSstHeaderArray *buffer,
     // Parse headers
     UUID context;
     std::map<std::string, std::string> headers;
-    int offset = 0;
-    while(offset < (int)headers_str.size()) {
-        int last_offset = offset;
+    std::string::size_type offset = 0;
+    while(offset < headers_str.size()) {
+        std::string::size_type last_offset = offset;
         offset = headers_str.find("\r\n", offset);
         if (offset == std::string::npos) {
             SILOG(tcpsst,warning,"Error parsing headers.");
@@ -143,7 +143,7 @@ void buildStream(TcpSstHeaderArray *buffer,
 
         // Special case the initial GET line
         if (line.substr(0, 5) == "GET /") {
-            int uuid_end = line.find(' ', 5);
+            std::string::size_type uuid_end = line.find(' ', 5);
             if (uuid_end == std::string::npos) {
                 SILOG(tcpsst,warning,"Error parsing headers: invalid get line.");
                 delete socket;
@@ -162,7 +162,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             continue;
         }
 
-        int colon = line.find(":");
+        std::string::size_type colon = line.find(":");
         if (colon == std::string::npos) {
             SILOG(tcpsst,warning,"Error parsing headers: missing colon.");
             delete socket;

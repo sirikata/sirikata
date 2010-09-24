@@ -186,9 +186,9 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
    mTopLevelRegion(NULL),
    mLastUpdateTime(Time::null()),
    mLoadBalancer(this, nservers, perdim),
-   mSidMap(sidmap),
    mAvailableCSEGServers(GetOptionValue<uint16>("num-cseg-servers")),
-   mUpperTreeCSEGServers(GetOptionValue<uint16>("num-upper-tree-cseg-servers"))
+   mUpperTreeCSEGServers(GetOptionValue<uint16>("num-upper-tree-cseg-servers")),
+   mSidMap(sidmap)
 {
   std::cout << mAvailableCSEGServers << " : " << mUpperTreeCSEGServers  << "\n";
 
@@ -211,7 +211,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
   generateHierarchicalTrees(&mTopLevelRegion, 1, numLLTreesSoFar);
 
 
-  if (ctx->id() <= mUpperTreeCSEGServers) {
+  if ((int)ctx->id() <= mUpperTreeCSEGServers) {
       mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
     startAccepting();
   }

@@ -479,7 +479,7 @@ void TCPSpaceNetwork::connectionCallback(RemoteStreamWPtr wstream, const Sirikat
         handleConnectedStream(remote_stream);
     }
     else {
-        TCPNET_LOG(error,"Unhandled send stream connection status: " << status << " -- " << reason);
+        TCPNET_LOG(error,"Unhandled send stream connection status: " << (int)status << " -- " << reason);
     }
 }
 
