@@ -165,6 +165,12 @@ class OgreSystem::MouseHandler {
     WebView* mUploadWebView;
     WebView* mFPSWidgetView;
 
+    WebView* mQueryAngleWidgetView;
+    // To avoid too many messages, update only after a timeout
+    float mNewQueryAngle;
+    Network::IOTimerPtr mQueryAngleTimer;
+
+
     class SubObjectIterator {
         typedef Entity* value_type;
         //typedef ssize_t difference_type;
@@ -799,6 +805,29 @@ private:
             mFPSWidgetView->loadFile("chrome/fps.html");
             mFPSWidgetView->setTransparent(true);
         }
+    }
+
+    void handleQueryAngleWidget() {
+        if(mQueryAngleWidgetView) {
+            WebViewManager::getSingleton().destroyWebView(mQueryAngleWidgetView);
+            mQueryAngleWidgetView = NULL;
+        } else {
+            mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", 300, 100,
+                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
+            mQueryAngleWidgetView->bind("set_query_angle", std::tr1::bind(&MouseHandler::handleSetQueryAngle, this, _1, _2));
+            mQueryAngleWidgetView->loadFile("debug/query_angle.html");
+        }
+    }
+
+    void handleSetQueryAngle(WebView* webview, const JSArguments& args) {
+        assert(args.size() == 1);
+        mNewQueryAngle = boost::lexical_cast<float>(args[0].data());
+        mQueryAngleTimer->cancel();
+        mQueryAngleTimer->wait(Duration::seconds(1.f));
+    }
+
+    void handleSetQueryAngleTimeout() {
+        printf("New query angle: %f\n", mNewQueryAngle);
     }
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
@@ -1621,6 +1650,9 @@ public:
        mLastFpsTime(Task::LocalTime::now()),
        mUploadWebView(NULL),
        mFPSWidgetView(NULL),
+       mQueryAngleWidgetView(NULL),
+       mNewQueryAngle(0.f),
+       mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&MouseHandler::handleSetQueryAngleTimeout, this)) ),
        mWhichRayObject(0)
     {
         mLastHitCount=0;
@@ -1734,6 +1766,7 @@ public:
 
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
         mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
+        mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
 
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
@@ -1771,6 +1804,7 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
 
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
