@@ -368,7 +368,7 @@ Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectIn
     switch(w) {
       case MaterialEffectInfo::Texture::WRAP_MODE_CLAMP:
         printf ("CLAMPING");
-        return Ogre::TextureUnitState::TAM_CLAMP;        
+        return Ogre::TextureUnitState::TAM_CLAMP;
       case MaterialEffectInfo::Texture::WRAP_MODE_MIRROR:
         printf ("MIRRORING");
         return Ogre::TextureUnitState::TAM_MIRROR;
@@ -383,7 +383,7 @@ void fixupTextureUnitState(Ogre::TextureUnitState*tus, const MaterialEffectInfo:
     tus->setTextureAddressingMode(translateWrapMode(tex.wrapS),
                                   translateWrapMode(tex.wrapT),
                                   translateWrapMode(tex.wrapU));
-    
+
 }
 class MaterialManualLoader : public Ogre::ManualResourceLoader {
     MaterialEffectInfo mMat;
@@ -391,7 +391,7 @@ class MaterialManualLoader : public Ogre::ManualResourceLoader {
     String mURI;
     MeshEntity::TextureBindingsMap mTextureFingerprints;
 public:
-    MaterialManualLoader(const std::string &name, 
+    MaterialManualLoader(const std::string &name,
                          const MaterialEffectInfo&mat,
                          const std::string uri,
                          const MeshEntity::TextureBindingsMap& textureFingerprints):mTextureFingerprints(textureFingerprints) {
@@ -436,7 +436,7 @@ public:
                 pass=tech->createPass();
                 ++valid_passes;
             }
-*/          
+*/
             if (tex.uri.length()==0) {
                 switch (tex.affecting) {
                 case MaterialEffectInfo::Texture::DIFFUSE:
@@ -527,7 +527,7 @@ public:
 */
                         //pass->setIlluminationStage(IS_PER_LIGHT);
                         tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
-                        fixupTextureUnitState(tus,tex);                        
+                        fixupTextureUnitState(tus,tex);
                         tus->setColourOperation(LBO_MODULATE);
 
                         break;
@@ -556,7 +556,7 @@ public:
                         fixupTextureUnitState(tus,tex);
 //                        pass->setSelfIllumination(ColourValue(1,1,1,1));
                         tus->setColourOperation(LBO_ADD);
-                    
+
                         //pass->setIlluminationStage(IS_DECAL);
                         break;
                       case MaterialEffectInfo::Texture::SPECULAR:
@@ -570,8 +570,8 @@ public:
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         //pass->setIlluminationStage(IS_PER_LIGHT);
-                        
-                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);                    
+
+                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
                         fixupTextureUnitState(tus,tex);
                         tus->setColourOperation(LBO_MODULATE);
                         pass->setSpecular(ColourValue(1,1,1,1));
@@ -582,7 +582,7 @@ public:
                 }
             }
         }
-    }    
+    }
 
 };
 
@@ -810,6 +810,8 @@ public:
                                 break;
                             }
 
+                            assert( i*stride < submesh.texUVs[tc].uvs.size() );
+
                             memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
                             float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
                             UVHACK=1.0-UVHACK;
@@ -888,10 +890,10 @@ void MeshEntity::createMesh(const Meshdata& md) {
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
                 matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (matname,*mat, mURI, mTextureFingerprints)));
-                
+
                 reload->prepareResource(&*matPtr);
                 reload->loadResource(&*matPtr);
-                
+
             }
         }
         Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
@@ -1014,7 +1016,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
 
 void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
     std::tr1::shared_ptr<const DenseData> response, Meshdata& md) {
-    
+
     mTextureFingerprints[request->getURI().toString()] = request->getIdentifier();
     if (mActiveCDNArchive) {
         String id = request->getIdentifier();
