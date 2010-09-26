@@ -245,7 +245,7 @@ ASIOReadBuffer::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const
         whichSocket,id,newChunk,
         std::tr1::bind(ASIOReadBufferUtil::_mark_pause_bool_true, &user_paused_stream, pauseReceive)
     );
-    if (!user_paused_stream) {
+    if (user_paused_stream) {
         mCachedRejectedChunk=new Chunk;
         mCachedRejectedChunk->swap(newChunk);
         mNewChunkID=id;
