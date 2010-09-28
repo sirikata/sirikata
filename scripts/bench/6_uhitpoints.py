@@ -22,16 +22,19 @@ import flow_fairness
 
 class FlowPairFairness(flow_fairness.FlowFairness):
     def _setup_cluster_sim(self, rate, io):
-        self.cs.scenario = 'delugepair'
+        self.cs.scenario = 'unreliablehitpoint'
 
         if self.local: localval = 'true'
         else: localval = 'false'
-        self.cs.object_simple='false'
+        self.cs.object_simple='true'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
-             '--prob-messages-uniform=1.0',
+             '--num-hp-per-second=' + str(1350),#6999
+             '--prob-messages-uniform=0.999',
+             '--receivers-per-server=1',
              '--num-objects-per-server=20',
-             '--ping-size=' + str(self.payload_size),
+             '--hp-size=128',# + str(self.payload_size),
+             '--ping-size=1024',# + str(self.payload_size),
              '--local=' + localval,
              ]
             )
@@ -49,12 +52,13 @@ if __name__ == "__main__":
     nss=9
     nobjects = 1500*nss
     packname = '1a_objects.pack'
-    numoh = 2
+    numoh = 4
 
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
-
-    cs.region_weight_options = '--flatness=8'
+    #cs.region_weight = "const";
+    #cs.region_weight_options = '--radius=false'
+    cs.region_weight_options = '--flatness=.005'
     cs.debug = True
 
     cs.valgrind = False
@@ -68,6 +72,7 @@ if __name__ == "__main__":
     cs.oseg_cache_size=65536;
     cs.oseg_cache_clean_group=25;
     cs.oseg_cache_entry_lifetime= "1000s"
+    cs.oseg_lookup_queue_size = 50; #for now
 
     # Use pack across multiple ohs
     cs.num_random_objects = 0
@@ -80,8 +85,7 @@ if __name__ == "__main__":
     cs.object_static = 'static'
     cs.object_query_frac = 0.0
 
-    cs.duration = '400s'
-
+    cs.duration = '256s'
     rates = sys.argv[1:]
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)
     for rate in rates:

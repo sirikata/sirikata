@@ -2,7 +2,6 @@
 "mesh","graphiconly","tetrahedron",,,,0,0,0,0,.86,0,-.5,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///ewencp/lights.dae",,,,,,,,,,,,,,,,,,,,
 "mesh","graphiconly","tetrahedron",,,,0,-100,-100,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///danielrh/ground.DAE",,,,,,,,,,,,,,,,,,1000,,
 "mesh","graphiconly","tetrahedron",,,,-100,-36,35,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///danielrh/roof_zinc.DAE",,,,,,,,,,,,,,,,,,35,,
-"mesh","graphiconly","tetrahedron",,,,-100,-27,35,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///danielrh/wall_tier01_ext_and_int.DAE",,,,,,,,,,,,,,,,,,30,,
 "mesh","graphiconly","tetrahedron",,,,-95,-10,-7,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///danielrh/Insect-Bird.dae",,,,,,,,,,,,,,,,,,20,,
 "mesh","graphiconly","tetrahedron",,,,-11,-10,-5,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///danielrh/Poisonbird.dae",,,,,,,,,,,,,,,,,,,,
 "mesh","graphiconly","tetrahedron",,,,-15,-10,-5,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///danielrh/Poisonbird.dae",,,,,,,,,,,,,,,,,,,,

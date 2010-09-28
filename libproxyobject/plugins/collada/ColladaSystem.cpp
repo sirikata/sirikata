@@ -75,7 +75,7 @@ ColladaSystem::~ColladaSystem ()
 /////////////////////////////////////////////////////////////////////
 
 void ColladaSystem::chunkFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<ChunkRequest> request,
-				  std::tr1::shared_ptr<DenseData> response)
+				  std::tr1::shared_ptr<const DenseData> response)
 {
   if (response != NULL) {
 
@@ -116,7 +116,7 @@ void ColladaSystem::metadataFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy),
 
 void ColladaSystem::loadDocument (std::tr1::weak_ptr<ProxyMeshObject>(proxy),
     std::tr1::shared_ptr<ChunkRequest> request,
-    std::tr1::shared_ptr<DenseData> response)
+    std::tr1::shared_ptr<const DenseData> response)
 {
     if (response != NULL) {
 

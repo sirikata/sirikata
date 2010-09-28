@@ -65,6 +65,8 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 
+#include <sirikata/core/network/Frame.hpp>
+#include "Protocol_Frame.pbj.hpp"
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
@@ -1170,7 +1172,9 @@ void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj,
 }
 
 void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
+    std::stringstream** prevdataptr = new std::stringstream*;
+    *prevdataptr = new std::stringstream();
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, prevdataptr, _1, _2) );
 }
 
 void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
@@ -1185,22 +1189,35 @@ void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& space
     }
 }
 
-void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream** prevdataptr, uint8* buffer, int length) {
+    std::stringstream* prevdata = *prevdataptr;
     prevdata->write((const char*)buffer, length);
-    if (handleProximityMessage(spaceobj, prevdata->str())) {
-        // FIXME we should be getting a callback on stream close instead of
-        // relying on this parsing as an indicator
-        delete prevdata;
-        // Clear out callback so we aren't responsible for any remaining
-        // references to s
-        s->registerReadCallback(0);
+
+    while(true) {
+        std::string msg = Network::Frame::parse(*prevdata);
+        if (prevdata->eof()) {
+            delete prevdata;
+            prevdata = new std::stringstream();
+            *prevdataptr = prevdata;
+        }
+
+        // If we don't have a full message, just wait for more
+        if (msg.empty()) return;
+
+        // Otherwise, try to handle it
+        handleProximityMessage(spaceobj, msg);
     }
+
+    // FIXME we should be getting a callback on stream close so we can clean up!
+    //s->registerReadCallback(0);
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    bool parse_success = contents.ParseFromString(payload);
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
     if (!parse_success) return false;
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
+    contents.ParseFromString(frame.payload());
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
@@ -1255,9 +1272,10 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (!getProxyManager(proximateID.space())->getProxyObject(proximateID)) {
                 TimedMotionQuaternion orient(addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
-                // FIXME use weak_ptr instead of raw
                 URI meshuri;
                 if (addition.has_mesh()) meshuri = URI(addition.mesh());
+
+                // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
             }
@@ -1275,7 +1293,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
         }
     }
-
     return true;
 }
 

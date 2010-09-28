@@ -78,7 +78,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
 
     public:
         void parseFile(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<Transfer::DenseData> response);
+            std::tr1::shared_ptr<const Transfer::DenseData> response);
         void setMesh ( URI const& rhs );
         virtual URI const& getMesh () const;
 

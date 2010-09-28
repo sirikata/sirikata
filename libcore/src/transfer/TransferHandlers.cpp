@@ -64,6 +64,8 @@ void HttpChunkHandler::destroy() {
 }
 const char HttpChunkHandler::CDN_HOST_NAME [] = "cdn.sirikata.com";
 const char HttpChunkHandler::CDN_SERVICE [] = "http";
+const unsigned int HttpChunkHandler::DISK_LRU_CACHE_SIZE = 1024 * 1024 * 1024; //1GB
+const unsigned int HttpChunkHandler::MEMORY_LRU_CACHE_SIZE = 1024 * 1024 * 50; //50MB
 
 
 HttpNameHandler::HttpNameHandler()
@@ -187,10 +189,32 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
 HttpChunkHandler::HttpChunkHandler()
     : mCdnAddr(CDN_HOST_NAME, CDN_SERVICE) {
 
+    //Use LRU for eviction
+    mDiskCachePolicy = new LRUPolicy(DISK_LRU_CACHE_SIZE);
+    mMemoryCachePolicy = new LRUPolicy(MEMORY_LRU_CACHE_SIZE);
+
+    //Make a disk cache as the bottom cache layer
+    CacheLayer* diskCache = new DiskCacheLayer(mDiskCachePolicy, "HttpChunkHandlerCache", NULL);
+    mCacheLayers.push_back(diskCache);
+
+    //Make a mem cache on top of the disk cache
+    CacheLayer* memCache = new MemoryCacheLayer(mMemoryCachePolicy, diskCache);
+    mCacheLayers.push_back(memCache);
+
+    //Store top memory cache as the one we'll use
+    mCache = memCache;
 }
 
 HttpChunkHandler::~HttpChunkHandler() {
+    //Delete all the cache layers we created
+    for (std::vector<CacheLayer*>::reverse_iterator it = mCacheLayers.rbegin(); it != mCacheLayers.rend(); it++) {
+        delete (*it);
+    }
+    mCacheLayers.clear();
 
+    //And delete LRU cache policies
+    delete mDiskCachePolicy;
+    delete mMemoryCachePolicy;
 }
 
 void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
@@ -223,20 +247,33 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
         return;
     }
 
-    std::ostringstream request_stream;
-    bool chunkReq = false;
-    request_stream << "GET /files/global/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
-    if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
-        chunkReq = true;
-        request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
-    }
-    request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
-    request_stream << "Accept: */*\r\n";
-    request_stream << "Accept-Encoding: deflate, gzip\r\n";
-    request_stream << "\r\n";
+    //Check to see if it's in the cache first
+    RemoteFileId tempId(file->getFingerprint(), URIContext());
+    mCache->getData(tempId, chunk->getRange(), std::tr1::bind(
+            &HttpChunkHandler::cache_check_callback, this, _1, file, chunk, callback));
+}
 
-    HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
-            &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));
+void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
+            std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
+    if (data) {
+        std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
+        callback(flattened);
+    } else {
+        std::ostringstream request_stream;
+        bool chunkReq = false;
+        request_stream << "GET /files/global/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
+        if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
+            chunkReq = true;
+            request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
+        }
+        request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Accept-Encoding: deflate, gzip\r\n";
+        request_stream << "\r\n";
+
+        HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
+                &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));
+    }
 }
 
 void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
@@ -331,6 +368,9 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         callback(bad);
         return;
     }
+
+    SILOG(transfer, debug, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
+    mCache->addToCache(file->getFingerprint(), response->getData());
 
     callback(response->getData());
     SILOG(transfer, debug, "done http chunk handler request_finished");

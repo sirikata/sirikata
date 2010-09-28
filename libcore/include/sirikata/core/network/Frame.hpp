@@ -1,7 +1,7 @@
-/*  CBR
- *  SSTHeader.pbj
+/*  Sirikata
+ *  Frame.hpp
  *
- *  Copyright (c) 2009, Tahir Azim
+ *  Copyright (c) 2010, Ewen Cheslack-Postava.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,45 +30,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-"pbj-0.0.3"
+#ifndef _SIRIKATA_LIBCORE_NETWORK_FRAME_HPP_
+#define _SIRIKATA_LIBCORE_NETWORK_FRAME_HPP_
 
+#include <sirikata/core/util/Platform.hpp>
 
+namespace Sirikata {
+namespace Network {
 
-package Sirikata.Protocol.SST;
+/** A collection of simpling framing routines for network messages you want to
+ *  send on a stream. This just provides utilities for writing a frame around
+ *  the data and reading them back, avoiding duplicated error-prone code.
+ */
+struct SIRIKATA_EXPORT Frame {
+    /** Writes the data to the stream as a message. */
+    static std::string write(const void* data, uint32 len);
+    static std::string write(const std::string& data);
 
-message SSTChannelHeader {
-	required uint8 channel_id = 1;
-	required uint64 transmit_sequence_number = 2;
-	required uint8 ack_count = 3;
-	required uint64 ack_sequence_number = 4;
+    /** Checks if a full message is available. Returns the contents and removes
+     *  them from the argument if it has a whole packet; returns an empty string
+     *  and does nothing to the argument if it does not have a whole packet.
+     */
+    static std::string parse(std::string& data);
 
-	optional bytes payload = 5;
-}
+    /** Checks if a full message is available. Returns the contents and removes
+     *  them from the argument if it has a whole packet; returns an empty string
+     *  and does nothing to the argument if it does not have a whole packet.
+     */
+    static std::string parse(std::stringstream& data);
+};
 
-message SSTStreamHeader {
-        enum StreamPacketType {
-    	      INIT = 1;
-	      REPLY = 2;
-	      DATA = 3;
-	      ACK = 4;
-	      DATAGRAM = 5;
-        }
+} // namespace Network
+} // namespace Frame
 
-        flags8 Flags {
-              CONTINUES = 1; // Datagram has additional data
-        }
-
-        required  uint16 lsid = 1;
-	required  uint8 type = 2;
-	required  Flags flags = 3;
-	required  uint8 window = 4;
-
-	required uint16 src_port = 5;
-	required uint16 dest_port = 6;
-
-	optional uint16 psid = 7;
-	optional uint16	rsid = 8;
-	optional uint32 bsn = 9;
-
-	optional bytes payload = 10;
-}
+#endif //_SIRIKATA_LIBCORE_NETWORK_FRAME_HPP_

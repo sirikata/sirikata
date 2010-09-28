@@ -121,6 +121,7 @@ public:
         return mConnectedTo;
     }
     bool connected();
+    bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 private:
 
     // Initiate a connection
@@ -135,11 +136,11 @@ private:
     void handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s);
     void handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
-    void handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length);
+    void handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
 
-    void locationMessage(uint8* buffer, int len);
-    void proximityMessage(uint8* buffer, int len);
+    bool locationMessage(const std::string& payload);
+    bool proximityMessage(const std::string& payload);
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(const SpaceID& space, const ObjectReference&, ServerID sid);
@@ -149,7 +150,6 @@ private:
 
     bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
-    bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
     void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 
     // THREAD SAFE:

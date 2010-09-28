@@ -13,3 +13,6 @@
 [submodule "externals/http-parser"]
 	path = externals/http-parser
 	url = git://github.com/ry/http-parser.git
+[submodule "externals/sirikata-protocol"]
+	path = externals/sirikata-protocol
+	url = git://github.com/sirikata/sirikata-protocol.git

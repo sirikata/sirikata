@@ -97,6 +97,9 @@ Event* Event::parse(uint16 type_hint, const std::string& record, const ServerID&
     else if (type_hint == ObjectPingTag) {
         PARSE_PBJ_RECORD(Trace::Ping::Sent);
     }
+    else if (type_hint == ObjectHitPointTag) {
+        PARSE_PBJ_RECORD(Trace::Ping::HitPoint);
+    }
     else if (type_hint == MessageCreationTimestampTag) {
               MessageCreationTimestampEvent *pevt = new MessageCreationTimestampEvent;
               record_is.read((char*)&pevt->time, sizeof(pevt->time));
@@ -2275,7 +2278,8 @@ void OSegCumulativeTraceAnalysis::generateAllData()
   generateOSegQLenQuery();
   generateOSegQLenReturn();
   generateRunTime();
-
+  generateBeginTime();
+  
   sortByCompleteLookupTime();
 }
 
@@ -2370,6 +2374,12 @@ void OSegCumulativeTraceAnalysis::printDataHuman(std::ostream &fileOut)
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->runTime << ",";
 
+  //what time it was when the query began
+  fileOut << "\n\n System when began time";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->beginTime << ",";
+
+  
   fileOut <<"\n\n\n";
 }
 
@@ -2444,6 +2454,12 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->runTime << ",";
 
+  //what time it was when the query began
+  fileOut << "\n";
+  for (int s=0; s < untilVariable; ++s)
+    fileOut  << mCumData[s]->beginTime << ",";
+  
+  
   fileOut <<"\n\n\n";
 }
 
@@ -2539,8 +2555,7 @@ void OSegCumulativeTraceAnalysis::generateGetCraqLookupPostTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.craq_lookup_begin() -  allTraces[s]->data.check_cache_local_end();
-
-    mCumData[s]->craqLookupPostTime = toPush;
+      mCumData[s]->craqLookupPostTime = toPush;
   }
 
 }
@@ -2591,8 +2606,7 @@ void OSegCumulativeTraceAnalysis::generateManagerDequeueTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.get_manager_dequeued() - allTraces[s]->data.get_manager_enqueue_end();
-
-    mCumData[s]->managerDequeueTime = toPush;
+      mCumData[s]->managerDequeueTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
@@ -2601,8 +2615,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionPostTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.get_connection_network_begin() - allTraces[s]->data.get_manager_dequeued();
-
-    mCumData[s]->connectionPostTime = toPush;
+      mCumData[s]->connectionPostTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
@@ -2611,8 +2624,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkQueryTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.get_connection_network_end() - allTraces[s]->data.get_connection_network_begin();
-
-    mCumData[s]->connectionNetworkQueryTime = toPush;
+      mCumData[s]->connectionNetworkQueryTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
@@ -2621,8 +2633,7 @@ void OSegCumulativeTraceAnalysis::generateConnectionNetworkTime()
   for (int s= 0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.get_connection_network_received() - allTraces[s]->data.get_connection_network_end();
-
-    mCumData[s]->connectionsNetworkTime = toPush;
+      mCumData[s]->connectionsNetworkTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateReturnPostTime()
@@ -2631,8 +2642,7 @@ void OSegCumulativeTraceAnalysis::generateReturnPostTime()
   for (int s=0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.lookup_return_begin() - allTraces[s]->data.get_connection_network_received();
-
-    mCumData[s]->returnPostTime = toPush;
+      mCumData[s]->returnPostTime = toPush;
   }
 }
 void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
@@ -2641,7 +2651,7 @@ void OSegCumulativeTraceAnalysis::generateLookupReturnTime()
   for(int s= 0; s < (int) allTraces.size();++s)
   {
       toPush = allTraces[s]->data.lookup_return_end() - allTraces[s]->data.lookup_return_begin();
-    mCumData[s]->lookupReturnsTime = toPush;
+      mCumData[s]->lookupReturnsTime = toPush;
   }
 }
 
@@ -2651,7 +2661,7 @@ void OSegCumulativeTraceAnalysis::generateCompleteLookupTime()
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
       toPush = allTraces[s]->data.lookup_return_end() - allTraces[s]->data.initial_lookup_time();
-    mCumData[s]->completeLookupTime = toPush;
+      mCumData[s]->completeLookupTime = toPush;
   }
 }
 
@@ -2670,7 +2680,7 @@ void OSegCumulativeTraceAnalysis::generateOSegQLenReturn()
   for(int s= 0; s < (int) allTraces.size(); ++s)
   {
       toPush = (uint64)(allTraces[s]->data.qlen_post_return());
-    mCumData[s]->osegQLenPostReturn = toPush;
+      mCumData[s]->osegQLenPostReturn = toPush;
   }
 }
 
@@ -2683,6 +2693,17 @@ void OSegCumulativeTraceAnalysis::generateRunTime()
     mCumData[s]->runTime = toPush;
   }
 }
+
+void OSegCumulativeTraceAnalysis::generateBeginTime()
+{
+  uint64 toPush;
+  for(int s= 0; s < (int) allTraces.size(); ++s)
+  {
+      toPush =((uint64)allTraces[s]->data.check_cache_local_begin()) - mInitialTime;
+      mCumData[s]->beginTime = toPush;
+  }
+}
+
 
 
 } // namespace Sirikata

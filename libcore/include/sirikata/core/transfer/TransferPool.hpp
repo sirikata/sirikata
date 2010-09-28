@@ -179,7 +179,7 @@ class ChunkRequest : public MetadataRequest {
 public:
     typedef std::tr1::function<void(
             std::tr1::shared_ptr<ChunkRequest> request,
-            std::tr1::shared_ptr<DenseData> response)> ChunkCallback;
+            std::tr1::shared_ptr<const DenseData> response)> ChunkCallback;
 
 	ChunkRequest(const URI &uri, const RemoteFileMetadata &metadata, const Chunk &chunk,
 	        PriorityType priority, ChunkCallback cb)
@@ -212,23 +212,25 @@ public:
                 &ChunkRequest::execute_finished, this, _1, cb));
 	}
 
-	inline void execute_finished(std::tr1::shared_ptr<DenseData> response, ExecuteFinished cb) {
+	inline void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
+	    SILOG(transfer, debug, "execute_finished in ChunkRequest called");
         mDenseData = response;
-        cb();
+        HttpManager::getSingleton().postCallback(cb);
         SILOG(transfer, debug, "done ChunkRequest execute_finished");
 	}
 
     inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
         std::tr1::shared_ptr<ChunkRequest> fromC =
                 std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
-        mCallback(fromC, fromC->mDenseData);
+        HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, fromC, fromC->mDenseData));
+        SILOG(transfer, debug, "done ChunkRequest notifyCaller");
     }
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
     std::string mUniqueID;
     std::tr1::shared_ptr<Chunk> mChunk;
-    std::tr1::shared_ptr<DenseData> mDenseData;
+    std::tr1::shared_ptr<const DenseData> mDenseData;
     ChunkCallback mCallback;
 
 };

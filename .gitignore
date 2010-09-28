@@ -83,3 +83,6 @@ docs/html
 
 *.changes.patch
 *.commits.patch
+
+# Ogre data
+libproxyobject/plugins/ogre/data/jquery

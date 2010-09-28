@@ -1,7 +1,7 @@
-/*  CBR
- *  Prox.pbj
+/*  Sirikata
+ *  Frame.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,58 +30,63 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-"pbj-0.0.3"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/network/Frame.hpp>
 
-import "TimedMotionVector.pbj";
-import "TimedMotionQuaternion.pbj";
+// htonl, ntohl
+#include <sirikata/core/network/Asio.hpp>
 
-package Sirikata.Protocol.Prox;
+namespace Sirikata {
+namespace Network {
 
-// Queries
+/** Writes the data to the stream as a message. */
+std::string Frame::write(const void* data, uint32 len) {
+    std::string result(len + sizeof(uint32), '\0');
 
-message ServerQuery {
-    enum Action {
-        AddOrUpdate = 1;
-        Remove = 2;
+    uint32 encoded_len = htonl(len);
+
+    memcpy(&(result[0]), &encoded_len, sizeof(uint32));
+    memcpy(&(result[sizeof(uint32)]), data, len);
+
+    return result;
+}
+
+std::string Frame::write(const std::string& data) {
+    return Frame::write(&(data[0]), data.size());
+}
+
+std::string Frame::parse(std::string& data) {
+    std::string result;
+
+    if (data.size() < sizeof(uint32)) return result;
+
+    // Try to parse the length
+    uint32 len;
+    memcpy(&len, &(data[0]), sizeof(uint32));
+    len = ntohl(len);
+
+    // Make sure we have the full packet
+    if (data.size() < sizeof(uint32) + len) return result;
+
+    // Extract it
+    result = data.substr(sizeof(uint32), len);
+    // Remove it
+    data = data.substr(sizeof(uint32) + len);
+
+    return result;
+}
+
+std::string Frame::parse(std::stringstream& data) {
+    std::string so_far = data.str();
+    std::string result = parse(so_far);
+
+    if (!result.empty()) {
+        // Read off the right amount of data from the stringstream
+        data.ignore( sizeof(uint32) + result.size() );
     }
 
-    required Action action = 1;
-    optional Sirikata.Protocol.TimedMotionVector location = 2;
-    optional boundingsphere3f bounds = 3;
-    optional float min_angle = 4;
+    return result;
 }
 
-// Object migration data - shipped between space nodes when object migration occurs
-message ObjectMigrationData {
-    optional float min_angle = 1;
-}
-
-// Query Results
-
-message ObjectAddition {
-    required uuid object = 1;
-    required Sirikata.Protocol.TimedMotionVector location = 2;
-    required Sirikata.Protocol.TimedMotionQuaternion orientation = 3;
-    required boundingsphere3f bounds = 4;
-    optional string mesh = 5;
-}
-
-message ObjectRemoval {
-    required uuid object = 1;
-}
-
-// "Atomic" update to proximity results
-message ProximityUpdate {
-    repeated ObjectAddition addition = 1;
-    repeated ObjectRemoval removal = 2;
-}
-
-message ProximityResults {
-    required time t = 1;
-    repeated ProximityUpdate update = 2;
-}
-
-message Container {
-    optional ServerQuery query = 1;
-    optional ProximityResults result = 2;
-}
+} // namespace Network
+} // namespace Frame

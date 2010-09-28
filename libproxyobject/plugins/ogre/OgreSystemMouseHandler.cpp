@@ -184,6 +184,12 @@ class OgreSystem::MouseHandler {
     WebView* mUploadWebView;
     WebView* mFPSWidgetView;
 
+    WebView* mQueryAngleWidgetView;
+    // To avoid too many messages, update only after a timeout
+    float mNewQueryAngle;
+    Network::IOTimerPtr mQueryAngleTimer;
+
+
     class SubObjectIterator {
         typedef Entity* value_type;
         //typedef ssize_t difference_type;
@@ -314,7 +320,7 @@ private:
 
     static String fillZeroPrefix(const String& prefill, int32 nwide) {
         String retval = prefill;
-        while(retval.size() < nwide)
+        while((int)retval.size() < nwide)
             retval = String("0") + retval;
         return retval;
     }
@@ -513,6 +519,7 @@ private:
         }
         return mParent->getEntity(newId);
 */
+        return NULL;
     }
 
     void cloneObjectsAction() {
@@ -838,7 +845,7 @@ private:
 
         mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
         */
-        printf("upload object event fired arg length = %d\n", args.size());
+        printf("upload object event fired arg length = %d\n", (int)args.size());
         if (args.size() != 3) {
             printf("expected 3 arguments, returning.\n");
             return;
@@ -862,7 +869,7 @@ private:
             mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", "upload_tool",404, 227,
                     OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
             mUploadWebView->bind("event", std::tr1::bind(&MouseHandler::onUploadObjectEvent, this, _1, _2));
-            mUploadWebView->loadFile("upload.html");
+            mUploadWebView->loadFile("chrome/upload.html");
         }
     }
 
@@ -875,9 +882,33 @@ private:
             printf("creating fps widget\n");
             mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", "fps_widget",114, 45,
                     OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
-            mFPSWidgetView->loadFile("fps.html");
+            mFPSWidgetView->loadFile("chrome/fps.html");
             mFPSWidgetView->setTransparent(true);
         }
+    }
+
+
+    void handleQueryAngleWidget() {
+        if(mQueryAngleWidgetView) {
+            WebViewManager::getSingleton().destroyWebView(mQueryAngleWidgetView);
+            mQueryAngleWidgetView = NULL;
+        } else {
+            mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", 300, 100,
+                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
+            mQueryAngleWidgetView->bind("set_query_angle", std::tr1::bind(&MouseHandler::handleSetQueryAngle, this, _1, _2));
+            mQueryAngleWidgetView->loadFile("debug/query_angle.html");
+        }
+    }
+
+    void handleSetQueryAngle(WebView* webview, const JSArguments& args) {
+        assert(args.size() == 1);
+        mNewQueryAngle = boost::lexical_cast<float>(args[0].data());
+        mQueryAngleTimer->cancel();
+        mQueryAngleTimer->wait(Duration::seconds(1.f));
+    }
+
+    void handleSetQueryAngleTimeout() {
+        printf("New query angle: %f\n", mNewQueryAngle);
     }
 
 
@@ -1798,6 +1829,9 @@ public:
        mLastFpsTime(Task::LocalTime::now()),
        mUploadWebView(NULL),
        mFPSWidgetView(NULL),
+       mQueryAngleWidgetView(NULL),
+       mNewQueryAngle(0.f),
+       mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&MouseHandler::handleSetQueryAngleTimeout, this)) ),
        mWhichRayObject(0)
     {
         mLastHitCount=0;
@@ -1864,8 +1898,10 @@ public:
 
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
 
-        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "../object/object.html"));
+
         mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptingUIAction, this));
+        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "object/object.html"));
+
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
         mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
@@ -1914,10 +1950,11 @@ public:
 
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
-        //FIXME: commented out because wouldn't build on my system, because
-        //missing HAVE_BERKELIUM
-        //mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
-        //mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
+
+        mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
+        mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
+        mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
+
 
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
@@ -1955,9 +1992,10 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
 
-        //FIXME: removed these bindings because don't have HAVE_BERKELIUM
-        // mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
-//         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
+
 
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);

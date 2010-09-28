@@ -104,10 +104,13 @@ namespace Sirikata
 
   void AsyncConnectionGet::outputLargeOutstanding()
   {
+      //don't do anything in this function any longer
+      return;
+      
     MultiOutstandingQueries::iterator it;
     Duration dur = Time::local() - Time::epoch();
-
     uint64 currentTime = dur.toMilliseconds();
+
 
     for (it = allOutstandingQueries.begin(); it != allOutstandingQueries.end(); ++it)
     {
@@ -173,8 +176,6 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 
       mPostErrorsStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
 
-
-      //      std::cout<<"\n\nSending error\n\n";
 
       if (outQueriesIter->second->deadline_timer != NULL)
       {
@@ -370,32 +371,13 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
     return;
   }
 
-  Duration beginningDur = Time::local() - Time::epoch();
-  traceToken->getConnectionNetworkGetBegin = beginningDur.toMicroseconds();
+  //Duration beginningDur = Time::local() - Time::epoch();
+  //traceToken->getConnectionNetworkGetBegin = beginningDur.toMicroseconds();
+  traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_GET_BEGIN);
 
+  
   assert(mReady==PROCESSING);
-/*******************************************
-Ready needs to be set as soon as the posting thread posts the set message so that nothing else gets posted to be async_writ'd afterwards
-  if (mReady != READY)
-  {
-      assert(false);
-    traceToken->notReady = true;
 
-    CraqOperationResult* cor = new CraqOperationResult (CraqEntry(NullServerID,0),
-                                                        dataToGet,
-                                                        0,
-                                                        false, //means that the operation has failed
-                                                        CraqOperationResult::GET,
-                                                        false, //false means that we weren't tracking it anyways.
-                                                        traceToken);
-
-
-
-
-    mPostErrorsStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
-    return;
-  }
-************************************/
   IndividualQueryData* iqd = new IndividualQueryData;
   iqd->is_tracking = false;
   iqd->tracking_number = 0;
@@ -404,9 +386,10 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
   strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
   iqd->gs = IndividualQueryData::GET;
 
-  Duration dur = Time::local() - Time::epoch();
-  iqd->time_admitted = dur.toMilliseconds();
-
+  
+  iqd->time_admitted = 0;
+  
+  
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
 
@@ -418,14 +401,12 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
 
   iqd->traceToken = traceToken;
 
+  
   getQuery(dataToGet);
 
 
-  Duration endingDur = Time::local() - Time::epoch();
-  getTime += endingDur.toMilliseconds() - beginningDur.toMilliseconds();
-  ++numGets;
+  traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_GET_END);
 
-  traceToken->getConnectionNetworkGetEnd = endingDur.toMicroseconds();
 }
 
 
@@ -435,7 +416,8 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
   }
 
 
-void AsyncConnectionGet::setProcessing() {
+void AsyncConnectionGet::setProcessing()
+{
     mReady=PROCESSING;
 }
 
@@ -730,6 +712,11 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
     {
       outQueriesIter->second->traceToken->notFound = true;
 
+      //ugly: this should not be here.
+      ++mOSeg->mOSegQueueLen;
+      outQueriesIter->second->traceToken->osegQLenPostReturn = mOSeg->mOSegQueueLen;
+
+      
       //says that this is a get.
       CraqOperationResult* cor  = new CraqOperationResult (CraqEntry(NullServerID,0),
                                                            outQueriesIter->second->currentlySearchingFor,
@@ -740,6 +727,7 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
                                                            outQueriesIter->second->traceToken); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
+
 
       mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor));
 
@@ -873,9 +861,13 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry&
   {
     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to
     {
-      Duration gotItDur = Time::local() - Time::epoch();
-      outQueriesIter->second->traceToken->getConnectionNetworkReceived = gotItDur.toMicroseconds();
-
+        //Duration gotItDur = Time::local() - Time::epoch();
+        //outQueriesIter->second->traceToken->getConnectionNetworkReceived = gotItDur.toMicroseconds();
+        outQueriesIter->second->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_RECEIVED);
+        
+      //ugly: this should not be here.
+      ++mOSeg->mOSegQueueLen;
+      outQueriesIter->second->traceToken->osegQLenPostReturn = mOSeg->mOSegQueueLen;
 
 
       CraqOperationResult* cor  = new CraqOperationResult (sID,
@@ -887,6 +879,7 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry&
                                                            outQueriesIter->second->traceToken);
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
+
 
 
       mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor));

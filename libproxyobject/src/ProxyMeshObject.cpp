@@ -84,7 +84,7 @@ URI const& ProxyMeshObject::getMesh () const
 }
 
 void ProxyMeshObject::meshDownloaded(std::tr1::shared_ptr<ChunkRequest>request,
-    std::tr1::shared_ptr<DenseData> response)
+    std::tr1::shared_ptr<const DenseData> response)
 {
     if (hasModelObject()){
         mModelObject->parseFile(request, response);

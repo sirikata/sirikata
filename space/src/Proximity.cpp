@@ -38,9 +38,13 @@
 
 #include <sirikata/space/QueryHandlerFactory.hpp>
 
+#include "Protocol_Frame.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_ServerProx.pbj.hpp"
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/Frame.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
@@ -319,12 +323,15 @@ void Proximity::removeRelevantServer(ServerID sid) {
 
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
-    mLocService->addLocalAggregateObject(
-        objid,
-        TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
-        TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
-        BoundingSphere3f(),
-        ""
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LocationService::addLocalAggregateObject, mLocService,
+            objid,
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
+            TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
+            BoundingSphere3f(),
+            ""
+        )
     );
 }
 
@@ -341,20 +348,39 @@ void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bn
 
 void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     // Loc cares only about this chance to update state of aggregate
-    updateAggregateLoc(objid, bnds);
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &Proximity::updateAggregateLoc, this,
+            objid, bnds
+        )
+    );
 }
 
 void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     // Loc cares only about this chance to update state of aggregate
-    updateAggregateLoc(objid, bnds);
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &Proximity::updateAggregateLoc, this,
+            objid, bnds
+        )
+    );
 }
 
 void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
-    updateAggregateLoc(objid, bnds);
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &Proximity::updateAggregateLoc, this,
+            objid, bnds
+        )
+    );
 }
 
 void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
-    mLocService->removeLocalAggregateObject(objid);
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LocationService::removeLocalAggregateObject, mLocService, objid
+        )
+    );
 }
 
 void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
@@ -453,6 +479,100 @@ void Proximity::removeObjectSize(const UUID& obj) {
     }
 }
 
+void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_stream) {
+    using std::tr1::placeholders::_1;
+
+    ProxStreamPtr base_stream = mContext->getObjectStream(objid);
+    if (!base_stream) {
+        mContext->mainStrand->post(
+            Duration::milliseconds((int64)5),
+            std::tr1::bind(&Proximity::requestProxSubstream, this, objid, prox_stream)
+        );
+        return;
+    }
+
+    base_stream->createChildStream(
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&Proximity::proxSubstreamCallback, this, _1, _2, prox_stream)
+        ),
+        (void*)NULL, 0,
+        OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
+    );
+    prox_stream->iostream_requested = true;
+}
+
+void Proximity::proxSubstreamCallback(int x, ProxStreamPtr substream, ProxStreamInfo* prox_stream_info) {
+    if (!substream)
+        PROXLOG(error,"Unhandled error when opening substream.");
+
+    prox_stream_info->iostream = substream;
+    assert(!prox_stream_info->writing);
+    writeSomeObjectResults(prox_stream_info);
+}
+
+void Proximity::writeSomeObjectResults(ProxStreamInfo* prox_stream) {
+    static Duration retry_rate = Duration::milliseconds((int64)1);
+
+    prox_stream->writing = true;
+
+    if (!prox_stream->iostream) {
+        // We're still waiting on the iostream, proxSubstreamCallback will call
+        // us when it gets the iostream.
+        prox_stream->writing = false;
+        return;
+    }
+
+    // Otherwise, keep sending until we run out or
+    while(!prox_stream->outstanding.empty()) {
+        std::string& framed_prox_msg = prox_stream->outstanding.front();
+        int bytes_written = prox_stream->iostream->write((const uint8*)framed_prox_msg.data(), framed_prox_msg.size());
+        if (bytes_written < 0) {
+            // FIXME
+            break;
+        }
+        else if (bytes_written < (int)framed_prox_msg.size()) {
+            framed_prox_msg = framed_prox_msg.substr(bytes_written);
+            break;
+        }
+        else {
+            prox_stream->outstanding.pop();
+        }
+    }
+
+    if (prox_stream->outstanding.empty())
+        prox_stream->writing = false;
+    else
+        mContext->mainStrand->post(retry_rate, prox_stream->writecb);
+}
+
+void Proximity::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    // Try to find stream info for the object
+    ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(msg->dest_object());
+    if (prox_stream_it == mObjectProxStreams.end()) {
+        prox_stream_it = mObjectProxStreams.insert( ObjectProxStreamMap::value_type(msg->dest_object(), ProxStreamInfo()) ).first;
+        prox_stream_it->second.writecb = std::tr1::bind(
+            &Proximity::writeSomeObjectResults, this, &(prox_stream_it->second)
+        );
+    }
+    ProxStreamInfo& prox_stream = prox_stream_it->second;
+
+    // If we don't have a stream yet, try to build it
+    if (!prox_stream.iostream_requested)
+        requestProxSubstream(msg->dest_object(), &prox_stream);
+
+    // Build the result and push it into the stream
+    // FIXME this is an infinite sized queue, but we don't really want to drop
+    // proximity results....
+    prox_stream.outstanding.push(Network::Frame::write(msg->payload()));
+
+    // If writing isn't already in progress, start it up
+    if (!prox_stream.writing)
+        writeSomeObjectResults(&prox_stream);
+}
+
 void Proximity::poll() {
     // Update server-to-server angles if necessary
     sendQueryRequests();
@@ -478,20 +598,8 @@ void Proximity::poll() {
     bool object_sent = true;
     while(object_sent && !mObjectResultsToSend.empty()) {
         Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
-        boost::shared_ptr<Stream<UUID> > proxStream = mContext->getObjectStream(msg_front->dest_object());
-        std::string proxMsg = msg_front->payload();
-
-        if (proxStream != boost::shared_ptr<Stream<UUID> >()) {
-          proxStream->createChildStream(NULL, (void*)proxMsg.data(), proxMsg.size(),
-              OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY);
-          object_sent = true;
-        }
-        else {
-          object_sent = false;
-        }
-
-        if (object_sent)
-            mObjectResultsToSend.pop_front();
+        sendObjectResult(msg_front);
+        mObjectResultsToSend.pop_front();
     }
 }
 
@@ -526,22 +634,22 @@ void Proximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void Proximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     updateObjectSize(uuid, bounds.radius());
 }
-void Proximity::localObjectRemoved(const UUID& uuid) {
+void Proximity::localObjectRemoved(const UUID& uuid, bool agg) {
     removeObjectSize(uuid);
 }
-void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void Proximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle);
 }
-void Proximity::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void Proximity::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
 }
-void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void Proximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle);
     updateObjectSize(uuid, newval.radius());
 }
-void Proximity::localMeshUpdated(const UUID& uuid, const String& newval) {
+void Proximity::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
 }
 void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
 }

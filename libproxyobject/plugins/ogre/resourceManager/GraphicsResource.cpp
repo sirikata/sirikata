@@ -39,10 +39,20 @@ namespace Meru {
 unsigned int GraphicsResource::sCostPropEpoch = 0;
 
 GraphicsResource::GraphicsResource(const String &id, Type type, Sirikata::ProxyObjectPtr proxy)
-: mID(id), mParseState(PARSE_INVALID), mLoadState(LOAD_NEW),
-  mType(type), mProxy(proxy), mCostEpoch(0), mLoadEpoch(0), mRemoveEpoch(0),
-  mCostPropEpoch(0), mBenefit(0), mDepBenefit(0),
-  mCurCost(0), mCost(0), mDepCost(0)
+: mProxy(proxy),
+  mID(id),
+  mParseState(PARSE_INVALID),
+  mLoadState(LOAD_NEW),
+  mType(type),
+  mCostEpoch(0),
+  mLoadEpoch(0),
+  mRemoveEpoch(0),
+  mCostPropEpoch(0),
+  mBenefit(0),
+  mDepBenefit(0),
+  mCurCost(0),
+  mCost(0),
+  mDepCost(0)
 {
 
 }

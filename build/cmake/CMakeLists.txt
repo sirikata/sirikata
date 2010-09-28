@@ -74,6 +74,13 @@ SET( CMAKE_C_FLAGS_DEFAULT "-g -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_
 
 ELSE()
 
+SET( CMAKE_C_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+SET( CMAKE_CXX_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+
 IF(NOT CMAKE_BUILD_TYPE)
 #the below lines work around a bug when cmake first is configured without <CONFIG>
   SET(FORCE_USE_DEBUG_LOCATION "TRUE")
@@ -776,30 +783,40 @@ ENDFOREACH()
 
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
+SET(SirikataProtocolRoot ${TOP_LEVEL}/externals/sirikata-protocol)
 # protocol files
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(ProtocolBuffersSourcesCore
-  TimedMotionVector
-  TimedMotionQuaternion
+  ${SirikataProtocolRoot}/TimedMotionVector
+  ${SirikataProtocolRoot}/TimedMotionQuaternion
 )
 SET(ProtocolBuffersSources
-  Persistence
-  Sirikata
-  Time
-  Subscription
-  Test
-  ObjectMessage
-  SSTHeader
+  # Core protocol messages
+  ${SirikataProtocolRoot}/Empty
+  ${SirikataProtocolRoot}/Frame
 
-  Loc
-  Prox
-  MasterPinto
-  Session
-  CSeg
-  ServerMessage
-  Migration
-  OSeg
-  Forwarder
+  ${SirikataProtocolRoot}/ObjectMessage
+  ${SirikataProtocolRoot}/Session
+  ${SirikataProtocolRoot}/SSTHeader
+  ${SirikataProtocolRoot}/Loc
+  ${SirikataProtocolRoot}/Prox
+
+
+  # Additional internal stuff
+  ${ProtocolBuffersRoot}/Persistence
+  ${ProtocolBuffersRoot}/MessageHeader
+  ${ProtocolBuffersRoot}/Sirikata
+  ${ProtocolBuffersRoot}/Time
+  ${ProtocolBuffersRoot}/Subscription
+  ${ProtocolBuffersRoot}/Test
+
+  ${ProtocolBuffersRoot}/ServerProx
+  ${ProtocolBuffersRoot}/MasterPinto
+  ${ProtocolBuffersRoot}/CSeg
+  ${ProtocolBuffersRoot}/ServerMessage
+  ${ProtocolBuffersRoot}/Migration
+  ${ProtocolBuffersRoot}/OSeg
+  ${ProtocolBuffersRoot}/Forwarder
   )
 
 # Based on dependencies, generate arguments for protocol buffers generation
@@ -817,7 +834,7 @@ SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(
   ${ProtocolBuffersSourcesCore}
-  INPUTDIR ${ProtocolBuffersRoot}
+  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -827,9 +844,9 @@ ADD_PBJ_TARGET(
   GENERATE_CPP
 )
 ADD_PBJ_TARGET(
-  MessageHeader ${ProtocolBuffersSources}
+  ${ProtocolBuffersSources}
   DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
-  INPUTDIR ${ProtocolBuffersRoot}
+  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -1063,6 +1080,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
         ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
         ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
+        ${LIBCORE_SOURCE_DIR}/network/PBJDebug.cpp
+        ${LIBCORE_SOURCE_DIR}/network/Frame.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1391,8 +1410,10 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
   ${SIMOH_SOURCE_DIR}/PingDelugeScenario.cpp
   ${SIMOH_SOURCE_DIR}/HitPointScenario.cpp
+  ${SIMOH_SOURCE_DIR}/UnreliableHitPointScenario.cpp
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
+  ${SIMOH_SOURCE_DIR}/OSegScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/NullScenario.cpp
   ${SIMOH_SOURCE_DIR}/ObjectHost.cpp

@@ -43,6 +43,7 @@
 #include "../asyncCraqScheduler.hpp"
 #include <sirikata/space/OSegLookupTraceToken.hpp>
 
+
 namespace Sirikata
 {
 
@@ -80,7 +81,6 @@ public:
   void getBound(const CraqObjectID& obj_dataToGet, OSegLookupTraceToken* traceToken);
 
 
-
   ~AsyncConnectionGet();
     AsyncConnectionGet(SpaceContext* con, Network::IOStrand* str, Network::IOStrand* error_strand, Network::IOStrand* result_strand, AsyncCraqScheduler* master, CraqObjectSegmentation* oseg, const std::tr1::function<void()> &readyStateChangedCb );
 
@@ -99,7 +99,6 @@ public:
 private:
 
   int mAllResponseCount;
-
   std::vector<double> mTimesTaken;
 
   int mTimesBetweenResults;
@@ -112,7 +111,7 @@ private:
 
   void outputLargeOutstanding();
 
-  typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
+    typedef std::tr1::unordered_multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
 
   volatile ConnectionState mReady;

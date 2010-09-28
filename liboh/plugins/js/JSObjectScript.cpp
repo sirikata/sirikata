@@ -534,29 +534,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 
 
-// v8::Handle<v8::String> JSObjectScript::getVisual() {
-//     FIXME_GET_SPACE();
-
-//     String url_string = mParent->getVisual(space).toString();
-//     return v8::String::New( url_string.c_str(), url_string.size() );
-// }
-
-// void JSObjectScript::setVisual(v8::Local<v8::Value>& newvis) {
-//     // Can/should we do anything about a failure here?
-//     if (!newvis->IsString())
-//         return;
-
-//     v8::String::Utf8Value newvis_str(newvis);
-//     if (! *newvis_str)
-//         return; // FIXME failure?
-//     Transfer::URI vis_uri(*newvis_str);
-
-//     FIXME_GET_SPACE();
-//     mParent->setVisual(space, vis_uri);
-// }
-
-
-
 
 
 #define CreateLocationAccessorHandlersWithSpace(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \

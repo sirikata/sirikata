@@ -253,9 +253,9 @@ namespace Sirikata
       mScoreFunc(scoreFunc),
       mScoreFuncPrint(scoreFuncPrint),
       ctx(spctx),
+      mCraqEntry(OSegEntry::null()),
       MAX_SIZE_CACHE_PROPER (CACHE_MAX_SIZE),
-      cacheProper(spctx, MAX_SIZE_CACHE_PROPER),
-      mCraqEntry(OSegEntry::null())
+      cacheProper(spctx, MAX_SIZE_CACHE_PROPER)
   {
   }
 
@@ -265,9 +265,9 @@ namespace Sirikata
       mScoreFunc(scoreFunc),
       mScoreFuncPrint(scoreFuncPrint),
       ctx(spctx),
+      mCraqEntry(OSegEntry::null()),
       MAX_SIZE_CACHE_PROPER (CACHE_SIZE),
-      cacheProper(spctx, CACHE_SIZE),
-      mCraqEntry(OSegEntry::null())
+      cacheProper(spctx, CACHE_SIZE)
   {
   }
 

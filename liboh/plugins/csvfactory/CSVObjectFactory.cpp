@@ -80,7 +80,8 @@ void CSVObjectFactory::generate() {
 
         // Split into parts
         StringList line_parts;
-        int last_comma = -1, next_comma = 0;
+        int last_comma = -1;
+        String::size_type next_comma = 0;
         while(next_comma != String::npos) {
             next_comma = line.find(',', last_comma+1);
 
@@ -102,7 +103,7 @@ void CSVObjectFactory::generate() {
 
 
         if (is_first) {
-            for(int idx = 0; idx < line_parts.size(); idx++) {
+            for(uint32 idx = 0; idx < line_parts.size(); idx++) {
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
                 if (line_parts[idx] == "pos_x") pos_idx = idx;
                 if (line_parts[idx] == "orient_x") orient_idx = idx;

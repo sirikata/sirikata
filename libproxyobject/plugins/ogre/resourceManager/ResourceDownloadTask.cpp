@@ -103,7 +103,7 @@ void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
 
 
 void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
-            std::tr1::shared_ptr<DenseData> response)
+            std::tr1::shared_ptr<const DenseData> response)
 {
     if (response != NULL) {
       if (customCb == false) {

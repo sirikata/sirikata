@@ -664,7 +664,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             mObjectConnections.handleConnectError(obj);
         }
         else {
-            OH_LOG(error,"Unknown connection response code: " << conn_resp.response());
+            OH_LOG(error,"Unknown connection response code: " << (int)conn_resp.response());
         }
     }
 

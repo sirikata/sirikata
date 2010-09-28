@@ -1,5 +1,5 @@
 /*  Sirikata
- *  DelugePairScenario.cpp
+ *  OSegScenario.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "DelugePairScenario.hpp"
+#include "OSegScenario.hpp"
 #include "ScenarioFactory.hpp"
 #include "ObjectHost.hpp"
 #include "Object.hpp"
@@ -41,9 +41,9 @@
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
 
 namespace Sirikata {
-void DPSInitOptions(DelugePairScenario *thus) {
+void DPSInitOptions(OSegScenario *thus) {
 
-    Sirikata::InitializeClassOptions ico("DelugePairScenario",thus,
+    Sirikata::InitializeClassOptions ico("OSegScenario",thus,
         new OptionValue("num-pings-per-second","1000",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("prob-messages-uniform","1",Sirikata::OptionValueType<double>(),"Number of pings launched per simulation second"),
         new OptionValue("num-objects-per-server","1000",Sirikata::OptionValueType<uint32>(),"The number of objects that should be connected before the pinging begins"),
@@ -54,7 +54,7 @@ void DPSInitOptions(DelugePairScenario *thus) {
         NULL);
 }
 
-DelugePairScenario::DelugePairScenario(const String &options)
+OSegScenario::OSegScenario(const String &options)
  : mStartTime(Time::epoch())
 {
     mNumTotalPings=0;
@@ -62,7 +62,7 @@ DelugePairScenario::DelugePairScenario(const String &options)
     mObjectTracker = NULL;
     mPingID=0;
     DPSInitOptions(this);
-    OptionSet* optionsSet = OptionSet::getOptions("DelugePairScenario",this);
+    OptionSet* optionsSet = OptionSet::getOptions("OSegScenario",this);
     optionsSet->parse(options);
 
     mNumPingsPerSecond=optionsSet->referenceOption("num-pings-per-second")->as<double>();
@@ -95,23 +95,23 @@ DelugePairScenario::DelugePairScenario(const String &options)
     // strand.  If we try to get to 100k, that can be up to 20ms which is very
     // long to block other things on the main strand.
 }
-DelugePairScenario::~DelugePairScenario(){
+OSegScenario::~OSegScenario(){
     SILOG(deluge,fatal,
-        "DelugePair: Generated: " << mNumGeneratedPings <<
+        "OSeg: Generated: " << mNumGeneratedPings <<
         " Sent: " << mNumTotalPings);
     delete mPings;
     delete mPingPoller;
     delete mPingProfiler;
 }
 
-DelugePairScenario*DelugePairScenario::create(const String&options){
-    return new DelugePairScenario(options);
+OSegScenario*OSegScenario::create(const String&options){
+    return new OSegScenario(options);
 }
-void DelugePairScenario::addConstructorToFactory(ScenarioFactory*thus){
-    thus->registerConstructor("delugepair",&DelugePairScenario::create);
+void OSegScenario::addConstructorToFactory(ScenarioFactory*thus){
+    thus->registerConstructor("osegflood",&OSegScenario::create);
 }
 
-void DelugePairScenario::initialize(ObjectHostContext*ctx) {
+void OSegScenario::initialize(ObjectHostContext*ctx) {
     mGenPhase=GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext=ctx;
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
@@ -119,7 +119,7 @@ void DelugePairScenario::initialize(ObjectHostContext*ctx) {
     mPingProfiler = mContext->profiler->addStage("Object Host Send Pings");
     mPingPoller = new Poller(
         ctx->mainStrand,
-        std::tr1::bind(&DelugePairScenario::sendPings, this),
+        std::tr1::bind(&OSegScenario::sendPings, this),
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -130,7 +130,7 @@ void DelugePairScenario::initialize(ObjectHostContext*ctx) {
     mGeneratePingsStrand = mContext->ioService->createStrand();
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
-        std::tr1::bind(&DelugePairScenario::generatePings, this),
+        std::tr1::bind(&OSegScenario::generatePings, this),
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -138,24 +138,24 @@ void DelugePairScenario::initialize(ObjectHostContext*ctx) {
     );
 }
 
-void DelugePairScenario::start() {
+void OSegScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&DelugePairScenario::delayedStart, this)
+        std::tr1::bind(&OSegScenario::delayedStart, this)
     );
 }
-void DelugePairScenario::delayedStart() {
+void OSegScenario::delayedStart() {
     mStartTime = mContext->simTime();
     mGeneratePingPoller->start();
     mPingPoller->start();
 }
-void DelugePairScenario::stop() {
+void OSegScenario::stop() {
     mPingPoller->stop();
     mGeneratePingPoller->stop();
 }
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
-void DelugePairScenario::generatePairs() {
+void OSegScenario::generatePairs() {
 
     if (mSendCDF.empty()) {
         std::vector<Object*> floodedObjects;
@@ -226,7 +226,7 @@ void DelugePairScenario::generatePairs() {
 
 }
 static unsigned int even=0;
-bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
+bool OSegScenario::generateOnePing(const Time& t, PingInfo* result) {
     generatePairs();
     double which =(rand()/(double)RAND_MAX);
     if (!mSendCDF.empty()) {
@@ -242,8 +242,8 @@ bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
         if (where==mSendCDF.end()) {
             --where;
         }
-        result->objA = where->source;
-        result->objB = where->dest;
+        result->objB = where->source;
+        result->objA = where->dest;
         result->dist = where->dist;
         result->ping = new Sirikata::Protocol::Object::Ping();
         mContext->objectHost->fillPing(result->dist, mPingPayloadSize, result->ping);
@@ -253,7 +253,7 @@ bool DelugePairScenario::generateOnePing(const Time& t, PingInfo* result) {
     return false;
 }
 
-void DelugePairScenario::generatePings() {
+void OSegScenario::generatePings() {
     mGeneratePingProfiler->started();
 
     Time t=mContext->simTime();
@@ -276,7 +276,7 @@ void DelugePairScenario::generatePings() {
     mGeneratePingProfiler->finished();
 }
 
-void DelugePairScenario::sendPings() {
+void OSegScenario::sendPings() {
     mPingProfiler->started();
 
     Time newTime=mContext->simTime();

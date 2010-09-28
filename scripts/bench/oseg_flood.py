@@ -22,7 +22,7 @@ import flow_fairness
 
 class FlowPairFairness(flow_fairness.FlowFairness):
     def _setup_cluster_sim(self, rate, io):
-        self.cs.scenario = 'delugepair'
+        self.cs.scenario = 'osegflood'
 
         if self.local: localval = 'true'
         else: localval = 'false'
@@ -39,7 +39,7 @@ class FlowPairFairness(flow_fairness.FlowFairness):
 
         if 'object' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('object')
         if 'ping' not in self.cs.traces['simoh']: self.cs.traces['simoh'].append('ping')
-        #if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
+        if 'message' not in self.cs.traces['all']: self.cs.traces['all'].append('message')
 
         cluster_sim = ClusterSim(self.cc, self.cs, io=io)
         return cluster_sim
@@ -69,6 +69,8 @@ if __name__ == "__main__":
     cs.oseg_cache_clean_group=25;
     cs.oseg_cache_entry_lifetime= "1000s"
 
+    cs.oseg_lookup_queue_size = 50; #for now
+    
     # Use pack across multiple ohs
     cs.num_random_objects = 0
     cs.num_pack_objects = nobjects / cs.num_oh
@@ -80,7 +82,7 @@ if __name__ == "__main__":
     cs.object_static = 'static'
     cs.object_query_frac = 0.0
 
-    cs.duration = '400s'
+    cs.duration = '200s'
 
     rates = sys.argv[1:]
     plan = FlowPairFairness(cc, cs, scheme='csfq', payload=1024)

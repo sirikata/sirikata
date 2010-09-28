@@ -43,15 +43,36 @@ namespace Sirikata
 
   struct SIRIKATA_SPACE_EXPORT OSegLookupTraceToken
   {
-    OSegLookupTraceToken(const UUID& uID);
-    OSegLookupTraceToken();
+      enum OSegTraceStage
+      {
+          OSEG_TRACE_INITIAL_LOOKUP_TIME,
+          OSEG_TRACE_CHECK_CACHE_LOCAL_BEGIN,
+          OSEG_TRACE_CHECK_CACHE_LOCAL_END,
+          OSEG_TRACE_CRAQ_LOOKUP_BEGIN,
+          OSEG_TRACE_CRAQ_LOOKUP_END,
+          OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_BEGIN,
+          OSEG_TRACE_CRAQ_LOOKUP_NOT_ALREADY_LOOKING_UP_END,
+          OSEG_TRACE_GET_MANAGER_ENQUEUE_BEGIN,
+          OSEG_TRACE_GET_MANAGER_ENQUEUE_END,
+          OSEG_TRACE_GET_MANAGER_DEQUEUED,
+          OSEG_TRACE_GET_CONNECTION_NETWORK_GET_BEGIN,
+          OSEG_TRACE_GET_CONNECTION_NETWORK_GET_END,
+          OSEG_TRACE_GET_CONNECTION_NETWORK_RECEIVED,
+          OSEG_TRACE_LOOKUP_RETURN_BEGIN,
+          OSEG_TRACE_LOOKUP_RETURN_END
+      };
+
+      
+      OSegLookupTraceToken(const UUID& uID,bool loggingOn);
+      OSegLookupTraceToken(bool loggingOn);
 
     /*****Additional***/
     UUID mID;
     ServerID lookerUpper;
     ServerID locatedOn;
 
-
+    bool mLoggingOn;
+    
     /********FLAGS********/
     //AsyncConnectionGet::get
     bool notReady;
@@ -114,6 +135,7 @@ namespace Sirikata
     uint64 lookupReturnEnd;
 
     void printCumulativeTraceToken();
+    void stamp(OSegTraceStage osts);
   };
 }
 

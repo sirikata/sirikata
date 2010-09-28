@@ -261,7 +261,7 @@ if __name__ == "__main__":
     # Some commands are simple shorthands for others and can just be
     # expanded into their long forms
     filter_rules = {
-        'deploy' : ['patchset_revert', 'patchset_create', 'patchset_apply', 'clean', 'build'],
+        'deploy' : ['patchset_revert', 'patchset_create', 'patchset_apply', 'build'],
         'update_dependencies' : ['dependencies']
         }
     filtered_args = []

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  HitPointScenario.hpp
+ *  DelugePairScenario.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _HIT_POINT_SCENARIO_HPP_
-#define _HIT_POINT_SCENARIO_HPP_
+#ifndef _OSEG_SCENARIO_HPP_
+#define _OSEG_SCENARIO_HPP_
 
 #include "Scenario.hpp"
 #include <sirikata/core/queue/CountResourceMonitor.hpp>
@@ -43,15 +43,12 @@ namespace Sirikata {
 class ScenarioFactory;
 class ConnectedObjectTracker;
 class RegionWeightCalculator;
-class DamagableObject;
-class HitPointScenario : public Scenario {
+class OSegScenario : public Scenario {
     double mNumPingsPerSecond;
-    double mNumHitPointsPerSecond;
 
     ObjectHostContext*mContext;
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
-    Poller* mHPPoller;
 
     Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
@@ -68,7 +65,6 @@ class HitPointScenario : public Scenario {
 
     unsigned int mPingID;
     uint32 mPingPayloadSize;
-    float mPingBigChance;
     Time mStartTime;
     int64 mNumTotalPings;
     int64 mMaxPingsPerRound;
@@ -100,20 +96,16 @@ class HitPointScenario : public Scenario {
     void generatePings();
 
     void sendPings();
-    void sendHPs();
     RegionWeightCalculator* mWeightCalculator;
-    static HitPointScenario*create(const String&options);
+    static OSegScenario*create(const String&options);
     void generatePairs();
 public:
-    double calcHp(const Time*t=NULL);
-
-    HitPointScenario(const String &options);
-    ~HitPointScenario();
+    OSegScenario(const String &options);
+    ~OSegScenario();
     virtual void initialize(ObjectHostContext*);
     void start();
     void stop();
     static void addConstructorToFactory(ScenarioFactory*);
-    std::vector<DamagableObject*> mDamagableObjects;
 };
 
 } // namespace Sirikata

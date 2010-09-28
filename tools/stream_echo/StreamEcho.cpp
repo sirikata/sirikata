@@ -39,15 +39,26 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 
+#include "Protocol_Empty.pbj.hpp"
+#include <sirikata/core/network/PBJDebug.hpp>
+
 void handleConnectionEvent(Sirikata::Network::Stream* strm, Sirikata::Network::Stream::ConnectionStatus, const std::string&reason);
 void handleSubstream(Sirikata::Network::Stream* substream, Sirikata::Network::Stream::SetCallbacks&);
+void handlePBJSubstream(Sirikata::Network::Stream* substream, Sirikata::Network::Stream::SetCallbacks&);
 void handleReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk& payload, const Sirikata::Network::Stream::PauseReceiveCallback& pausecb);
+void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk& payload, const Sirikata::Network::Stream::PauseReceiveCallback& pausecb);
 void handleReadySend(Sirikata::Network::Stream* strm);
 
 void handleNewConnection(Sirikata::Network::Stream* strm, Sirikata::Network::Stream::SetCallbacks& sc) {
     printf("Received connection\n");
     // Do same for main connection stream and substreams
     handleSubstream(strm, sc);
+}
+
+void handleNewPBJConnection(Sirikata::Network::Stream* strm, Sirikata::Network::Stream::SetCallbacks& sc) {
+    printf("Received PBJ connection\n");
+    // Do same for main connection stream and substreams
+    handlePBJSubstream(strm, sc);
 }
 
 void handleConnectionEvent(Sirikata::Network::Stream* strm, Sirikata::Network::Stream::ConnectionStatus status, const std::string&reason) {
@@ -67,9 +78,41 @@ void handleSubstream(Sirikata::Network::Stream* substream, Sirikata::Network::St
     );
 }
 
+void handlePBJSubstream(Sirikata::Network::Stream* substream, Sirikata::Network::Stream::SetCallbacks& sc) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    printf("New PBJ substream\n");
+    sc(
+        std::tr1::bind(handleConnectionEvent, substream, _1, _2),
+        std::tr1::bind(handlePBJReceived, substream, _1, _2),
+        std::tr1::bind(handleReadySend, substream)
+    );
+}
+
 void handleReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk& payload, const Sirikata::Network::Stream::PauseReceiveCallback& pausecb) {
     printf("Received %d bytes\n", (int)payload.size());
     strm->send(payload, Sirikata::Network::ReliableOrdered);
+}
+
+void handlePBJReceived(Sirikata::Network::Stream* strm, Sirikata::Network::Chunk& payload, const Sirikata::Network::Stream::PauseReceiveCallback& pausecb) {
+    printf("Received %d PBJ bytes: ", (int)payload.size());
+    bool parsed = Sirikata::printPBJMessageArray(payload);
+
+    if (!parsed) {
+        // Indicate error to other side
+        const char* error_msg = "Error"; // "Error" in base 64
+        strm->send(Sirikata::MemoryReference(error_msg, strlen(error_msg)), Sirikata::Network::ReliableOrdered);
+        return;
+    }
+
+    Sirikata::Protocol::Empty msg;
+    msg.ParseFromArray(&payload[0], payload.size());
+
+    // Finally, reply. Reserialize to test encoding consistency.
+    std::string return_payload;
+    bool serialized_success = msg.SerializeToString(&return_payload);
+    strm->send(Sirikata::MemoryReference(return_payload.data(), return_payload.size()), Sirikata::Network::ReliableOrdered);
 }
 
 void handleReadySend(Sirikata::Network::Stream* strm) {
@@ -102,6 +145,20 @@ int main(int argc, char** argv) {
     listener->listen(
         addr,
         std::tr1::bind(handleNewConnection,_1,_2)
+    );
+
+
+    Sirikata::Network::StreamListener* pbj_listener =
+        Sirikata::Network::StreamListenerFactory::getSingleton()
+        .getConstructor(stream_type)
+        (ios,
+            Sirikata::Network::StreamListenerFactory::getSingleton()
+            .getOptionParser(stream_type)
+            (stream_opts));
+    Sirikata::Network::Address pbj_addr("localhost", "9998");
+    pbj_listener->listen(
+        pbj_addr,
+        std::tr1::bind(handleNewPBJConnection,_1,_2)
     );
 
     ios->run();

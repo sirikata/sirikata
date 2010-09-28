@@ -278,10 +278,10 @@ void MultiplexedSocket::initFromSockets(const std::vector<TCPSocket*>&sockets, s
         mSockets.back().bindFunctions(getSharedPtr());
     }
 }
-void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol){
+void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::map<TCPSocket*,std::string>& responses){
     unsigned int numSockets=(unsigned int)thus->mSockets.size();
     for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
-        i->sendServerProtocolHeader(thus,origin,host,port,resource_name,subprotocol);
+        i->sendServerProtocolHeader(thus,origin,host,port,resource_name,subprotocol,responses.find(&(i->getSocket()))->second);
     }
     boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
     thus->mSocketConnectionPhase=CONNECTED;

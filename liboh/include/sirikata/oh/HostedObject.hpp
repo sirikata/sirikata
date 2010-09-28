@@ -444,7 +444,7 @@ public:
     void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
     // Handlers for substream read events for space-managed updates
     void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
-    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream** prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);

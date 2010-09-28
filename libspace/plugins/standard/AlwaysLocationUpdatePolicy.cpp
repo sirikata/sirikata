@@ -34,6 +34,8 @@
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/options/Options.hpp>
 
+#include "Protocol_Frame.pbj.hpp"
+
 namespace Sirikata {
 
 void InitAlwaysLocationUpdatePolicyOptions() {
@@ -79,30 +81,30 @@ void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
 }
 
 
-void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     // Ignore, initial additions will be handled by a prox update
 }
 
-void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid) {
+void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid, bool agg) {
     // Ignore, removals will be handled by a prox update
 }
 
-void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     mServerSubscriptions.locationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
     mServerSubscriptions.orientationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     mServerSubscriptions.boundsUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, const String& newval) {
+void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
     mServerSubscriptions.meshUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.meshUpdated(uuid, newval, mLocService);
 }
@@ -137,6 +139,11 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
+static void locSubstreamCallback(int x, boost::shared_ptr<Stream<UUID> > substream) {
+    if (!substream)
+        SILOG(always_loc,error,"Unhandled error when opening substream.");
+}
+
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
   std::string bluMsg = serializePBJMessage(blu);
@@ -144,7 +151,11 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Proto
 
   bool sent = false;
   if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
-    locServiceStream->createChildStream(NULL, (void*)bluMsg.data(), bluMsg.size(),
+      Sirikata::Protocol::Frame msg_frame;
+      msg_frame.set_payload(bluMsg);
+      std::string framed_loc_msg = serializePBJMessage(msg_frame);
+
+    locServiceStream->createChildStream(locSubstreamCallback, (void*)framed_loc_msg.data(), framed_loc_msg.size(),
         OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION);
     sent = true;
   }

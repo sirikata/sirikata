@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _HIT_POINT_SCENARIO_HPP_
-#define _HIT_POINT_SCENARIO_HPP_
+#ifndef _YHIT_POINT_SCENARIO_HPP_
+#define _YHIT_POINT_SCENARIO_HPP_
 
 #include "Scenario.hpp"
 #include <sirikata/core/queue/CountResourceMonitor.hpp>
@@ -43,15 +43,17 @@ namespace Sirikata {
 class ScenarioFactory;
 class ConnectedObjectTracker;
 class RegionWeightCalculator;
+namespace AWESOME {
 class DamagableObject;
-class HitPointScenario : public Scenario {
+}
+class UnreliableHitPointScenario : public Scenario {
     double mNumPingsPerSecond;
+    int32 mNumFlowsPerPair;
     double mNumHitPointsPerSecond;
-
-    ObjectHostContext*mContext;
+    int mPort;
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
-    Poller* mHPPoller;
+    //Poller* mHPPoller;
 
     Network::IOStrand* mGeneratePingsStrand;
     Poller* mGeneratePingPoller;
@@ -68,9 +70,8 @@ class HitPointScenario : public Scenario {
 
     unsigned int mPingID;
     uint32 mPingPayloadSize;
-    float mPingBigChance;
-    Time mStartTime;
     int64 mNumTotalPings;
+    int64 mNumTotalHPs;
     int64 mMaxPingsPerRound;
     TimeProfiler::Stage* mPingProfiler;
 
@@ -79,6 +80,7 @@ class HitPointScenario : public Scenario {
     bool mLocalTraffic;
     bool mSourceFloodServer;
     double mFractionMessagesUniform;
+    void hpReturn(const Sirikata::Protocol::Object::ObjectMessage&msg);
     struct MessageFlow {
         float cumulativeProbability;
         float dist;
@@ -102,18 +104,21 @@ class HitPointScenario : public Scenario {
     void sendPings();
     void sendHPs();
     RegionWeightCalculator* mWeightCalculator;
-    static HitPointScenario*create(const String&options);
+    static UnreliableHitPointScenario*create(const String&options);
     void generatePairs();
 public:
-    double calcHp(const Time*t=NULL);
+    Time mStartTime;
+    uint32 mHPSize;
+    ObjectHostContext*mContext;
 
-    HitPointScenario(const String &options);
-    ~HitPointScenario();
+    UnreliableHitPointScenario(const String &options);
+    ~UnreliableHitPointScenario();
     virtual void initialize(ObjectHostContext*);
     void start();
     void stop();
     static void addConstructorToFactory(ScenarioFactory*);
-    std::vector<DamagableObject*> mDamagableObjects;
+    typedef std::tr1::unordered_map<UUID,AWESOME::DamagableObject*,UUID::Hasher> DamagableObjectMap;
+    DamagableObjectMap mDamagableObjects;
 };
 
 } // namespace Sirikata

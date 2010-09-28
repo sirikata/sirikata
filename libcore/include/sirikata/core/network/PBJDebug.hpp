@@ -1,7 +1,7 @@
-/*  CBR
- *  Loc.pbj
+/*  Sirikata
+ *  PBJDebug.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-"pbj-0.0.3"
+#ifndef _SIRIKATA_PBJ_DEBUG_HPP_
+#define _SIRIKATA_PBJ_DEBUG_HPP_
 
-import "TimedMotionVector.pbj";
-import "TimedMotionQuaternion.pbj";
+#include <sirikata/core/util/Platform.hpp>
 
-package Sirikata.Protocol.Loc;
+namespace Sirikata {
 
-message LocationUpdate {
-    required uuid object = 1;
-    optional Sirikata.Protocol.TimedMotionVector location = 2;
-    optional Sirikata.Protocol.TimedMotionQuaternion orientation = 3;
-    optional boundingsphere3f bounds = 4;
-    optional string mesh = 5;
-}
+/** Print out the contents of an encoded PBJ message.  This uses only the data
+ * in the message, so the components need to be mapped to the specific message
+ * type manually.  However, it prints out full details, including if it is able
+ * to recurse and parse any submessages.
+ */
+SIRIKATA_FUNCTION_EXPORT bool printPBJMessageString(const std::string& msg);
+SIRIKATA_FUNCTION_EXPORT bool printPBJMessageArray(const Sirikata::Network::Chunk& msg);
 
-message BulkLocationUpdate {
-    repeated LocationUpdate update = 1;
-}
+} // namespace Sirikata
 
-
-// Payload for request from an object to space to update its location.
-// This should be sent from object -> Space(Loc) in an
-// ObjectMessage.
-message LocationUpdateRequest {
-    optional Sirikata.Protocol.TimedMotionVector location = 1;
-    optional Sirikata.Protocol.TimedMotionQuaternion orientation = 2;
-    optional boundingsphere3f bounds = 3;
-    optional string mesh = 4;
-}
-
-message Container {
-    optional LocationUpdateRequest update_request = 1;
-}
+#endif //_SIRIKATA_PBJ_DEBUG_HPP_

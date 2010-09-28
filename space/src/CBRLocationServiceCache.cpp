@@ -46,7 +46,7 @@ CBRLocationServiceCache::CBRLocationServiceCache(Network::IOStrand* strand, Loca
    mWithReplicas(replicas)
 {
     assert(mLoc != NULL);
-    mLoc->addListener(this, false);
+    mLoc->addListener(this, true);
 }
 
 CBRLocationServiceCache::~CBRLocationServiceCache() {
@@ -159,71 +159,71 @@ const String& CBRLocationServiceCache::mesh(const ObjectID& id) const {
     return it->second.mesh;
 }
 
-void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
-    objectAdded(uuid, loc, orient, bounds, mesh);
+void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+    objectAdded(uuid, agg, loc, orient, bounds, mesh);
 }
 
-void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid) {
-    objectRemoved(uuid);
+void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid, bool agg) {
+    objectRemoved(uuid, agg);
 }
 
-void CBRLocationServiceCache::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    locationUpdated(uuid, newval);
+void CBRLocationServiceCache::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
+    locationUpdated(uuid, agg, newval);
 }
 
-void CBRLocationServiceCache::localOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
-    orientationUpdated(uuid, newval);
+void CBRLocationServiceCache::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
+    orientationUpdated(uuid, agg, newval);
 }
 
-void CBRLocationServiceCache::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-    boundsUpdated(uuid, newval);
+void CBRLocationServiceCache::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+    boundsUpdated(uuid, agg, newval);
 }
 
-void CBRLocationServiceCache::localMeshUpdated(const UUID& uuid, const String& newval) {
-    meshUpdated(uuid, newval);
+void CBRLocationServiceCache::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
+    meshUpdated(uuid, agg, newval);
 }
 
 void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     if (mWithReplicas)
-        objectAdded(uuid, loc, orient, bounds, mesh);
+        objectAdded(uuid, false, loc, orient, bounds, mesh);
 }
 
 void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
     if (mWithReplicas)
-        objectRemoved(uuid);
+        objectRemoved(uuid, false);
 }
 
 void CBRLocationServiceCache::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mWithReplicas)
-        locationUpdated(uuid, newval);
+        locationUpdated(uuid, false, newval);
 }
 
 void CBRLocationServiceCache::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
     if (mWithReplicas)
-        orientationUpdated(uuid, newval);
+        orientationUpdated(uuid, false, newval);
 }
 
 void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     if (mWithReplicas)
-        boundsUpdated(uuid, newval);
+        boundsUpdated(uuid, false, newval);
 }
 
 void CBRLocationServiceCache::replicaMeshUpdated(const UUID& uuid, const String& newval) {
     if (mWithReplicas)
-        meshUpdated(uuid, newval);
+        meshUpdated(uuid, false, newval);
 }
 
 
-void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
-            uuid, loc, orient, bounds, mesh
+            uuid, agg, loc, orient, bounds, mesh
         )
     );
 }
 
-void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     if (mObjects.find(uuid) != mObjects.end())
         return;
 
@@ -237,60 +237,63 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMo
     data.tracking = false;
     mObjects[uuid] = data;
 
-    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationConnected(uuid, loc, data.region, data.maxSize);
+    if (!agg)
+        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+            (*it)->locationConnected(uuid, loc, data.region, data.maxSize);
 }
 
-void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
+void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectRemoved, this,
-            uuid
+            uuid, agg
         )
     );
 }
 
-void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid) {
+void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid, bool agg) {
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
     if (data_it == mObjects.end()) return;
 
     if (data_it->second.tracking == false)
         mObjects.erase(data_it);
 
-    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationDisconnected(uuid);
+    if (!agg)
+        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+            (*it)->locationDisconnected(uuid);
 }
 
-void CBRLocationServiceCache::locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void CBRLocationServiceCache::locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processLocationUpdated, this,
-            uuid, newval
+            uuid, agg, newval
         )
     );
 }
 
-void CBRLocationServiceCache::processLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+void CBRLocationServiceCache::processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
     TimedMotionVector3f oldval = it->second.location;
     it->second.location = newval;
 
-    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationPositionUpdated(uuid, oldval, newval);
+    if (!agg)
+        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+            (*it)->locationPositionUpdated(uuid, oldval, newval);
 }
 
-void CBRLocationServiceCache::orientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void CBRLocationServiceCache::orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processOrientationUpdated, this,
-            uuid, newval
+            uuid, agg, newval
         )
     );
 }
 
-void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
@@ -298,16 +301,16 @@ void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, const 
     it->second.orientation = newval;
 }
 
-void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processBoundsUpdated, this,
-            uuid, newval
+            uuid, agg, newval
         )
     );
 }
 
-void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
@@ -319,22 +322,24 @@ void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const Bound
     float32 old_maxSize = it->second.maxSize;
     it->second.maxSize = newval.radius();
 
-    for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
-        (*listen_it)->locationRegionUpdated(uuid, old_region, it->second.region);
-        (*listen_it)->locationMaxSizeUpdated(uuid, old_maxSize, it->second.maxSize);
+    if (!agg) {
+        for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
+            (*listen_it)->locationRegionUpdated(uuid, old_region, it->second.region);
+            (*listen_it)->locationMaxSizeUpdated(uuid, old_maxSize, it->second.maxSize);
+        }
     }
 }
 
-void CBRLocationServiceCache::meshUpdated(const UUID& uuid, const String& newval) {
+void CBRLocationServiceCache::meshUpdated(const UUID& uuid, bool agg, const String& newval) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processMeshUpdated, this,
-            uuid, newval
+            uuid, agg, newval
         )
     );
 }
 
-void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, const String& newval) {
+void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
     String oldval = it->second.mesh;

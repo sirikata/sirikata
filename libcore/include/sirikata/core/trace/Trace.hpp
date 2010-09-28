@@ -83,6 +83,7 @@ struct Drops {
 #define ObjectSegmentationProcessedRequestAnalysisTag 16
 #define ObjectPingTag 17
 #define ObjectPingCreatedTag 32
+#define ObjectHitPointTag 34
 
 #define OSegTrackedSetResultAnalysisTag   19
 #define OSegShutdownEventTag              20

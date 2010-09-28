@@ -41,6 +41,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/bind.hpp>
 
+#include "Protocol_Frame.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
 
@@ -268,25 +269,44 @@ void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg
 }
 
 void Object::handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&Object::handleLocationSubstreamRead, this, s, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&Object::handleLocationSubstreamRead, this, s, new std::stringstream(), _1, _2) );
 }
 
 void Object::handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
-    s->registerReadCallback( std::tr1::bind(&Object::handleProximitySubstreamRead, this, s, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&Object::handleProximitySubstreamRead, this, s, new std::stringstream(), _1, _2) );
 }
 
-void Object::handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    locationMessage(buffer, length);
+void Object::handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (locationMessage(prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
-void Object::handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, uint8* buffer, int length) {
-    proximityMessage(buffer, length);
+void Object::handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (proximityMessage(prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
 
-void Object::locationMessage(uint8* buffer, int len) {
+bool Object::locationMessage(const std::string& payload) {
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
+    if (!parse_success) return false;
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    bool parse_success = contents.ParseFromArray(buffer, len);
+    parse_success = contents.ParseFromString(frame.payload());
     assert(parse_success);
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
@@ -303,15 +323,20 @@ void Object::locationMessage(uint8* buffer, int len) {
 
         // FIXME do something with the data
     }
+    return true;
 }
 
-void Object::proximityMessage(uint8* buffer, int len) {
-    //assert(msg.source_object() == UUID::null()); // Should originate at space server
+bool Object::proximityMessage(const std::string& payload) {
+    //assert(msg.source_object() == UUID::null()); // Should originate at space
+    //server
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
+    if (!parse_success) return false;
     Sirikata::Protocol::Prox::ProximityResults contents;
-    bool parse_success = contents.ParseFromArray(buffer, len);
+    parse_success = contents.ParseFromString(frame.payload());
     assert(parse_success);
 
-    for(uint32 idx = 0; idx < contents.update_size(); idx++) {
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
@@ -338,6 +363,8 @@ void Object::proximityMessage(uint8* buffer, int len) {
             );
         }
     }
+
+    return true;
 }
 
 } // namespace Sirikata

@@ -111,7 +111,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 
         /*chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         FILE * testfile=NULL;
-        chromeWebView->loadFile("navbar.html");*/
+        chromeWebView->loadFile("chrome/navbar.html");*/
 
         /*
         WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);

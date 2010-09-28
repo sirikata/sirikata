@@ -70,10 +70,10 @@ namespace Sirikata
 
 
   const int STREAM_CRAQ_NUM_CONNECTIONS_SET        = 30;
-  const int STREAM_CRAQ_NUM_CONNECTIONS_GET        = 8;
+  const int STREAM_CRAQ_NUM_CONNECTIONS_GET        = 50;
 
-  const int STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS  = 560; //this is in ms
-  const int STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS  = 40000; //essentially infinity
+  const int STREAM_ASYNC_GET_TIMEOUT_MILLISECONDS  = 400000; //this is in ms
+  const int STREAM_ASYNC_SET_TIMEOUT_MILLISECONDS  = 400000; //essentially infinity
 
   const char STREAM_CRAQ_READ_RESULT_UNTIL_REGEX[] = "YY\r\n";
   const char STREAM_CRAQ_READ_ERROR_RESULT_UNTIL_REGEX[] = "ERROR\r\n";
