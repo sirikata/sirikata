@@ -751,6 +751,7 @@ public:
                         assert(totalVerticesCopied<65536||vertcount==0);//should be checked by other code
                     }
                     totalVerticesCopied+=vertcount;
+                    bool warn_texcoords = false;
                     for (int i=0;i<vertcount; ++i) {
                         Vector3f v = fixUp(up, submesh.positions[i]);
                         Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
@@ -810,14 +811,25 @@ public:
                                 break;
                             }
 
-                            assert( i*stride < submesh.texUVs[tc].uvs.size() );
+                            // This should be:
+                            //assert( i*stride < submesh.texUVs[tc].uvs.size() );
+                            // but so many models seem to get this
+                            // wrong that we need to hack around it.
+                            if ( i*stride < submesh.texUVs[tc].uvs.size() )
+                                memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
+                            else { // The hack: just zero out the data
+                                warn_texcoords = true;
+                                memset(pData, 0, sizeof(float)*stride);
+                            }
 
-                            memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
                             float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
                             UVHACK=1.0-UVHACK;
                             memcpy(pData+sizeof(float),&UVHACK,sizeof(float));
                             pData += VertexElement::getTypeSize(vet);
                         }
+                    }
+                    if (warn_texcoords) {
+                        SILOG(ogre,warn,"Out of bounds texture coordinates on " << md.uri);
                     }
                     if (!useSharedBuffer)
                         vbuf->unlock();
