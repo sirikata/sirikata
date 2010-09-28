@@ -1020,8 +1020,24 @@ void MeshEntity::createMesh(const Meshdata& md) {
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
         if (!light->isAttached()) {
             mLights.push_back(light);
-            mSceneNode->attachObject(light);
-//            light->setDebugDisplayEnabled(true);
+
+            // The light has an extra scene node to handle the specific transformation
+            Ogre::SceneNode* xformnode = mScene->getSceneManager()->createSceneNode();
+            // FIXME Our current approach to this is problematic. Ogre doesn't
+            // want a full transformation, but we want to flatten
+            // transformations in the loader so we don't have to replicate
+            // entire scene graphs from, e.g., collada. We really need a more
+            // generic interface for transformations that can extract the
+            // components.
+            //
+            // Currently, just extract the rotation and apply that.
+            Quaternion qrot(pos_xform.extract3x3());
+            xformnode->rotate(toOgre(qrot));
+
+            xformnode->attachObject(light);
+
+            mSceneNode->addChild(xformnode);
+            //light->setDebugDisplayEnabled(true);
         }
     }
 }

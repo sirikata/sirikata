@@ -136,6 +136,10 @@ public:
                                                          COLUMNS()));
 
     }
+    Quaternion (const Matrix3x3<Quaternion::scalar>& kRot) {
+        FromRotationMatrix(*this, kRot);
+    }
+
     static Quaternion identity() {
         Quaternion retval;
         retval.w=1.0;
