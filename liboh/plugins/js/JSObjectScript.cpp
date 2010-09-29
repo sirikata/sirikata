@@ -65,10 +65,6 @@
 #include "JSPresenceStruct.hpp"
 
 
-// #define FIXME_GET_SPACE() \
-//     const HostedObject::SpaceSet& spaces = mParent->spaces(); \
-//     assert(spaces.size() == 1);                               \
-//     SpaceID space = *(spaces.begin());
 
 #define FIXME_GET_SPACE() \
     HostedObject::SpaceObjRefSet spaceobjrefs;              \

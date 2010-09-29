@@ -1901,13 +1901,6 @@ bool HostedObject::requestCurrentScale(const SpaceID& space, const ObjectReferen
     std::cout<<"\n\nThe requestCurrentScale function does not work\n\n";
     assert(false);
     return false;
-    //lkjs;
-    // ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    // ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
-    
-    // if (proxy_mesh_obj )
-    //     return false;
-    // return proxy_mesh_obj->getBounds();
 }
 
 

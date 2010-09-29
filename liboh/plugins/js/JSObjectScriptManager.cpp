@@ -165,7 +165,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
 
-  
+  //meshes
   mPresenceTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
   mPresenceTemplate->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
 
