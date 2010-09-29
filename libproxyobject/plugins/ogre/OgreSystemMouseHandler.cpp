@@ -893,7 +893,7 @@ private:
             WebViewManager::getSingleton().destroyWebView(mQueryAngleWidgetView);
             mQueryAngleWidgetView = NULL;
         } else {
-            mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", 300, 100,
+            mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", "query_angle_widget",300, 100,
                     OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
             mQueryAngleWidgetView->bind("set_query_angle", std::tr1::bind(&MouseHandler::handleSetQueryAngle, this, _1, _2));
             mQueryAngleWidgetView->loadFile("debug/query_angle.html");
