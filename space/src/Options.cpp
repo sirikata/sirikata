@@ -82,6 +82,8 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(PROX_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
 
+        .addOption(new OptionValue(OPT_PROX_QUERY_RANGE, "100", Sirikata::OptionValueType<float32>(), "The range of queries when using range queries instead of solid angle queries."))
+
         .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
         .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
 

@@ -70,6 +70,7 @@
 #define OPT_PINTO                  "pinto"
 #define OPT_PINTO_OPTIONS          "pinto-options"
 
+#define OPT_PROX_QUERY_RANGE       "prox.range"
 #define PROX_MAX_PER_RESULT        "prox.max-per-result"
 
 #define OPT_PROX_SERVER_QUERY_HANDLER_TYPE         "prox.server.handler"

@@ -220,6 +220,10 @@ private:
 
     Router<Message*>* mProxServerMessageService;
 
+    // The distance to use when doing range queries instead of solid angle queries.
+    // FIXME we should have this configurable somehow
+    float32 mDistanceQueryDistance;
+
     // Tracks object query angles for quick access in the main thread
     // NOTE: It really sucks that we're duplicating this information
     // but we'd have to provide a safe query map and query angle accessor
@@ -265,6 +269,7 @@ private:
     InvertedServerQueryMap mInvertedServerQueries;
     CBRLocationServiceCache* mLocalLocCache;
     ProxQueryHandler* mServerQueryHandler;
+    bool mServerDistance; // Using distance queries
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
@@ -272,6 +277,7 @@ private:
     InvertedObjectQueryMap mInvertedObjectQueries;
     CBRLocationServiceCache* mGlobalLocCache;
     ProxQueryHandler* mObjectQueryHandler;
+    bool mObjectDistance; // Using distance queries
 
     // Threads: Thread-safe data used for exchange between threads
     Sirikata::ThreadSafeQueue<Message*> mServerResults; // server query results that need to be sent

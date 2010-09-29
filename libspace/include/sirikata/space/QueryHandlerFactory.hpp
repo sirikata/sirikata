@@ -64,6 +64,10 @@ Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, co
     if (type == "brute") {
         return new Prox::BruteForceQueryHandler<SimulationTraits>();
     }
+    else if (type == "dist") { // We just use brute force and special case the
+                               // queries in Proximity
+        return new Prox::BruteForceQueryHandler<SimulationTraits>();
+    }
     else if (type == "rtree") {
         return new Prox::RTreeQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>());
     }

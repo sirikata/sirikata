@@ -65,6 +65,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mServerQuerier(NULL),
    mLocService(locservice),
    mCSeg(NULL),
+   mDistanceQueryDistance(0.f),
    mMinObjectQueryAngle(SolidAngle::Max),
    mProxThread(NULL),
    mProxService(NULL),
@@ -72,9 +73,11 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mServerQueries(),
    mLocalLocCache(NULL),
    mServerQueryHandler(NULL),
+   mServerDistance(false),
    mObjectQueries(),
    mGlobalLocCache(NULL),
-   mObjectQueryHandler(NULL)
+   mObjectQueryHandler(NULL),
+   mObjectDistance(false)
 {
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
@@ -87,6 +90,9 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
     mServerQuerier->addListener(this);
 
+    // Generic query parameters
+    mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
+
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
     String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
@@ -94,6 +100,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mServerQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
     mServerQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mServerQueryHandler->initialize(mLocalLocCache);
+    if (server_handler_type == "dist") mServerDistance = true;
 
     // Object Queries
     mGlobalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
@@ -102,6 +109,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mObjectQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
     mObjectQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mObjectQueryHandler->initialize(mGlobalLocCache);
+    if (object_handler_type == "dist") mObjectDistance = true;
 
     mLocService->addListener(this, false);
 
@@ -851,7 +859,9 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
         BoundingSphere3f region(bounds.center(), 0);
         float ms = bounds.radius();
 
-        Query* q = mServerQueryHandler->registerQuery(loc, region, ms, angle);
+        Query* q = mServerDistance ?
+            mServerQueryHandler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+            mServerQueryHandler->registerQuery(loc, region, ms, angle) ;
         q->setEventListener(this);
         mServerQueries[server] = q;
         mInvertedServerQueries[q] = server;
@@ -894,7 +904,9 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
             BoundingSphere3f region(bounds.center(), 0);
             float ms = bounds.radius();
 
-            Query* q = mObjectQueryHandler->registerQuery(loc, region, ms, angle);
+            Query* q = mObjectDistance ?
+                mObjectQueryHandler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+                mObjectQueryHandler->registerQuery(loc, region, ms, angle);
             q->setEventListener(this);
             mObjectQueries[object] = q;
             mInvertedObjectQueries[q] = object;
