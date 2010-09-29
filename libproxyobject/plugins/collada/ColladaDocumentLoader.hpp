@@ -66,7 +66,7 @@ class ColladaErrorHandler;
 class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
 {
     public:
-        explicit ColladaDocumentLoader ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp  );
+    explicit ColladaDocumentLoader ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp  );
         ~ColladaDocumentLoader ();
 
         bool load ( char const* buffer, size_t bufferLength );

@@ -295,14 +295,7 @@ void MeshEntity::setSelected(bool selected) {
 
 void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<const DenseData> response)
 {
-    String fn = request->getURI().filename();
-    if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
-        ProxyObject *obj = mProxy.get();
-        ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
-        if (meshProxy) {
-            meshProxy->meshDownloaded(request, response);
-        }
-    }
+    Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::tryInstantiateExistingMesh, this, request, response));
 }
 
 void MeshEntity::downloadMeshFile(URI const& uri)
@@ -640,7 +633,7 @@ public:
     void prepareResource(Ogre::Resource*r){}
     void loadResource(Ogre::Resource *r) {
         using namespace Ogre;
-        SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
+        SHA256 sha = md.hash;
         String hash = sha.convertToHexString();
         bool useSharedBuffer = true;
         size_t totalVertexCount=0;
@@ -742,6 +735,7 @@ public:
                         assert(totalVerticesCopied<65536||vertcount==0);//should be checked by other code
                     }
                     totalVerticesCopied+=vertcount;
+                    bool warn_texcoords = false;
                     for (int i=0;i<vertcount; ++i) {
                         Vector3f v = fixUp(up, submesh.positions[i]);
                         Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
@@ -801,14 +795,25 @@ public:
                                 break;
                             }
 
-                            assert( i*stride < submesh.texUVs[tc].uvs.size() );
+                            // This should be:
+                            //assert( i*stride < submesh.texUVs[tc].uvs.size() );
+                            // but so many models seem to get this
+                            // wrong that we need to hack around it.
+                            if ( i*stride < submesh.texUVs[tc].uvs.size() )
+                                memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
+                            else { // The hack: just zero out the data
+                                warn_texcoords = true;
+                                memset(pData, 0, sizeof(float)*stride);
+                            }
 
-                            memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
                             float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
                             UVHACK=1.0-UVHACK;
                             memcpy(pData+sizeof(float),&UVHACK,sizeof(float));
                             pData += VertexElement::getTypeSize(vet);
                         }
+                    }
+                    if (warn_texcoords) {
+                        SILOG(ogre,warn,"Out of bounds texture coordinates on " << md.uri);
                     }
                     if (!useSharedBuffer)
                         vbuf->unlock();
@@ -867,9 +872,29 @@ public:
 
 
 
+bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, ConstDenseDataPtr response) {
+    SHA256 sha = request->getMetadata().getFingerprint();
+    String hash = sha.convertToHexString();
+    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(hash);
+    if (!mp.isNull()) {
+        loadMesh(hash);
+    }
+    else {
+        // Otherwise, follow the rest of the normal process.
+        String fn = request->getURI().filename();
+        if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
+            ProxyObject *obj = mProxy.get();
+            ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
+            if (meshProxy) {
+                meshProxy->meshDownloaded(request, response);
+            }
+        }
+    }
+    return true;
+}
 
 void MeshEntity::createMesh(const Meshdata& md) {
-    SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
+    SHA256 sha = md.hash;
     String hash = sha.convertToHexString();
 
     if (!md.instances.empty()) {
@@ -999,8 +1024,24 @@ void MeshEntity::createMesh(const Meshdata& md) {
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
         if (!light->isAttached()) {
             mLights.push_back(light);
-            mSceneNode->attachObject(light);
-//            light->setDebugDisplayEnabled(true);
+
+            // The light has an extra scene node to handle the specific transformation
+            Ogre::SceneNode* xformnode = mScene->getSceneManager()->createSceneNode();
+            // FIXME Our current approach to this is problematic. Ogre doesn't
+            // want a full transformation, but we want to flatten
+            // transformations in the loader so we don't have to replicate
+            // entire scene graphs from, e.g., collada. We really need a more
+            // generic interface for transformations that can extract the
+            // components.
+            //
+            // Currently, just extract the rotation and apply that.
+            Quaternion qrot(pos_xform.extract3x3());
+            xformnode->rotate(toOgre(qrot));
+
+            xformnode->attachObject(light);
+
+            mSceneNode->addChild(xformnode);
+            //light->setDebugDisplayEnabled(true);
         }
     }
 }

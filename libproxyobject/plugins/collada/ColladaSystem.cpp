@@ -79,7 +79,7 @@ void ColladaSystem::chunkFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy), st
 {
   if (response != NULL) {
 
-      ColladaDocumentLoader loader(request->getMetadata().getURI(), proxy);
+      ColladaDocumentLoader loader(request->getMetadata().getURI(), request->getMetadata().getFingerprint(), proxy);
 
       SparseData data = SparseData();
       data.addValidData(response);
@@ -120,7 +120,7 @@ void ColladaSystem::loadDocument (std::tr1::weak_ptr<ProxyMeshObject>(proxy),
 {
     if (response != NULL) {
 
-      ColladaDocumentLoader loader(request->getMetadata().getURI(), proxy);
+        ColladaDocumentLoader loader(request->getMetadata().getURI(), request->getMetadata().getFingerprint(), proxy);
 
       SparseData data = SparseData();
       data.addValidData(response);
@@ -163,6 +163,8 @@ void ColladaSystem::loadDocument (std::tr1::weak_ptr<ProxyMeshObject>(proxy),
 Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what,
         std::tr1::weak_ptr<ProxyMeshObject>(proxy) )
 {
+    assert(false && "Shouldn't be using the old style TransferManager callback anymore.");
+
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast< Transfer::DownloadEvent > ( evbase );
 
     assert((std::cout << "MCB: ColladaSystem::downloadFinished()"
@@ -178,7 +180,7 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
 
         // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
         // MCB: Serialized because OpenCOLLADA thread safety is unknown
-        ColladaDocumentLoader loader ( what, proxy );
+        ColladaDocumentLoader loader ( what, SHA256::null(), proxy );
 //        loader.setProxyPtr(proxy);
 
         char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );

@@ -49,7 +49,7 @@
 namespace Sirikata { namespace Models {
 
 
-ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp )
+ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp )
     :   mDocument ( new ColladaDocument ( uri ) ),
         mState ( IDLE ),
         mProxyPtr(pp)
@@ -62,6 +62,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, std
 //    lastURIString = uri.toString();
     mMesh = new Meshdata();
     mMesh->uri = uri.toString();
+    mMesh->hash = hash;
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()

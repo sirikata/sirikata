@@ -119,12 +119,12 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord, std::vecto
                     texvec = Ogre::Vector2(u, v);
                     pTexVert += texbuffer->getVertexSize();
                 }
-                
+
                 lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
-                
+
                 pVert += buffer->getVertexSize();
             }
-        
+
             buffer->unlock();
         }
         // find and lock buffer containg vertex indices
@@ -139,12 +139,13 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord, std::vecto
             {
                 for (size_t index = indexData->indexStart; index < indexData->indexCount; )
                 {
-                    
+
                     uint16 *uint16Buffer = (uint16 *) pIndex;
                     uint16 v1 = uint16Buffer[index++];
                     uint16 v2 = uint16Buffer[index++];
                     uint16 v3 = uint16Buffer[index++];
-                    mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
+                    if (v1 < lvertices.size() && v2 < lvertices.size() && v3 < lvertices.size())
+                        mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
                 }
             }
             else if (indexBuffer->getType() == HardwareIndexBuffer::IT_32BIT)
@@ -155,8 +156,8 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord, std::vecto
                     uint32 v1 = uint16Buffer[index++];
                     uint32 v2 = uint16Buffer[index++];
                     uint32 v3 = uint16Buffer[index++];
-
-                    mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
+                    if (v1 < lvertices.size() && v2 < lvertices.size() && v3 < lvertices.size())
+                        mTriangles.push_back(Triangle(lvertices[v1], lvertices[v2], lvertices[v3]));
                 }
             }
             else

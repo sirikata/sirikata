@@ -1735,6 +1735,7 @@ private:
 
 	boost::mutex::scoped_lock lock(mQueueMutex);
 
+        bool sentSomething = false;
 	while ( !mQueuedBuffers.empty() ) {
 	  boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
@@ -1747,6 +1748,7 @@ private:
 					    buffer->mOffset
 					    );
           buffer->mTransmitTime = curTime;
+          sentSomething = true;
 
 	  if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
 	    mChannelToBufferMap[channelID] = buffer;
@@ -1762,8 +1764,10 @@ private:
 	  mNumOutstandingBytes += buffer->mBufferLength;
 	}
 
-        getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds), 
+        if (sentSomething) {
+          getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds), 
                                          std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+        }
       }
     }
 
