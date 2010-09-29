@@ -48,27 +48,27 @@
 #include <iostream>
 
 namespace Sirikata { namespace Models {
-    
-ColladaDocumentLoader::ColladaDocumentLoader ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp  )
+
+ColladaDocumentLoader::ColladaDocumentLoader ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp  )
     :   mErrorHandler ( new ColladaErrorHandler ),
         mSaxLoader ( new COLLADASaxFWL::Loader ( mErrorHandler ) ),
-        mDocumentImporter ( new ColladaDocumentImporter ( uri, pp ) ),
+        mDocumentImporter ( new ColladaDocumentImporter ( uri, hash, pp ) ),
         mFramework ( new COLLADAFW::Root ( mSaxLoader, mDocumentImporter ) )
 {
     assert((std::cout << "MCB: ColladaDocumentLoader::ColladaDocumentLoader() entered" << std::endl,true));
-    
+
 }
-    
+
 ColladaDocumentLoader::~ColladaDocumentLoader ()
 {
     assert((std::cout << "MCB: ColladaDocumentLoader::~ColladaDocumentLoader() entered" << std::endl,true));
-    
+
     delete mFramework;
     delete mDocumentImporter;
     delete mSaxLoader;
     delete mErrorHandler;
 }
-    
+
 /////////////////////////////////////////////////////////////////////
 
 bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength )

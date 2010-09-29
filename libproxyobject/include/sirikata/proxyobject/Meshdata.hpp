@@ -79,7 +79,7 @@ struct GeometryInstance {
     Matrix4x4f transform;
     BoundingBox3f3f aabb;//transformed aabb
     double radius;//transformed radius
-    
+
 };
 
 struct LightInstance {
@@ -103,11 +103,11 @@ struct MaterialEffectInfo {
         }affecting;
         enum SamplerType
         {
-			SAMPLER_TYPE_UNSPECIFIED, 
-			SAMPLER_TYPE_1D, 
-			SAMPLER_TYPE_2D, 
-			SAMPLER_TYPE_3D, 
-			SAMPLER_TYPE_CUBE, 
+			SAMPLER_TYPE_UNSPECIFIED,
+			SAMPLER_TYPE_1D,
+			SAMPLER_TYPE_2D,
+			SAMPLER_TYPE_3D,
+			SAMPLER_TYPE_CUBE,
 			SAMPLER_TYPE_RECT,
 			SAMPLER_TYPE_DEPTH,
 			SAMPLER_TYPE_STATE
@@ -128,27 +128,27 @@ struct MaterialEffectInfo {
 		enum WrapMode
 		{
 			WRAP_MODE_UNSPECIFIED=0,
-			// NONE == GL_CLAMP_TO BORDER The defined behavior for NONE is 
-			// consistent with decal texturing where the border is black. 
-			// Mapping this calculation to GL_CLAMP_TO_BORDER is the best 
+			// NONE == GL_CLAMP_TO BORDER The defined behavior for NONE is
+			// consistent with decal texturing where the border is black.
+			// Mapping this calculation to GL_CLAMP_TO_BORDER is the best
 			// approximation of this.
 			WRAP_MODE_NONE,
-			// WRAP == GL_REPEAT Ignores the integer part of texture coordinates, 
+			// WRAP == GL_REPEAT Ignores the integer part of texture coordinates,
 			// using only the fractional part.
-			WRAP_MODE_WRAP, 
-			// MIRROR == GL_MIRRORED_REPEAT First mirrors the texture coordinate. 
+			WRAP_MODE_WRAP,
+			// MIRROR == GL_MIRRORED_REPEAT First mirrors the texture coordinate.
 			// The mirrored coordinate is then clamped as described for CLAMP_TO_EDGE.
 			WRAP_MODE_MIRROR,
-			// CLAMP == GL_CLAMP_TO_EDGE Clamps texture coordinates at all 
-			// mipmap levels such that the texture filter never samples a 
+			// CLAMP == GL_CLAMP_TO_EDGE Clamps texture coordinates at all
+			// mipmap levels such that the texture filter never samples a
 			// border texel. Note: GL_CLAMP takes any texels beyond the
-			// sampling border and substitutes those texels with the border 
-			// color. So CLAMP_TO_EDGE is more appropriate. This also works 
-			// much better with OpenGL ES where the GL_CLAMP symbol was removed 
+			// sampling border and substitutes those texels with the border
+			// color. So CLAMP_TO_EDGE is more appropriate. This also works
+			// much better with OpenGL ES where the GL_CLAMP symbol was removed
 			// from the OpenGL ES specification.
 			WRAP_MODE_CLAMP,
-			// BORDER GL_CLAMP_TO_BORDER Clamps texture coordinates at all 
-			// MIPmaps such that the texture filter always samples border 
+			// BORDER GL_CLAMP_TO_BORDER Clamps texture coordinates at all
+			// MIPmaps such that the texture filter always samples border
 			// texels for fragments whose corresponding texture coordinate
 			// is sufficiently far outside the range [0, 1].
 			WRAP_MODE_BORDER
@@ -179,6 +179,7 @@ struct Meshdata {
     MaterialEffectInfoList materials;
 
     std::string uri;
+    SHA256 hash;
     int up_axis;
     long id;
 

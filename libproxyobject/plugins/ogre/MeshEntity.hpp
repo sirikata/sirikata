@@ -146,7 +146,12 @@ public:
 
     protected:
 
+    typedef std::tr1::shared_ptr<const Transfer::DenseData> ConstDenseDataPtr;
+
     void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
+    // After a mesh is downloaded, try instantiating it from an existing mesh,
+    // i.e. in case this URI/underlying hash has already been loaded.
+    bool tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, ConstDenseDataPtr response);
 };
 
 }

@@ -304,14 +304,7 @@ void MeshEntity::setSelected(bool selected) {
 
 void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<const DenseData> response)
 {
-    String fn = request->getURI().filename();
-    if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
-        ProxyObject *obj = mProxy.get();
-        ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
-        if (meshProxy) {
-            meshProxy->meshDownloaded(request, response);
-        }
-    }
+    Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::tryInstantiateExistingMesh, this, request, response));
 }
 
 void MeshEntity::downloadMeshFile(URI const& uri)
@@ -649,7 +642,7 @@ public:
     void prepareResource(Ogre::Resource*r){}
     void loadResource(Ogre::Resource *r) {
         using namespace Ogre;
-        SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
+        SHA256 sha = md.hash;
         String hash = sha.convertToHexString();
         bool useSharedBuffer = true;
         size_t totalVertexCount=0;
@@ -888,9 +881,29 @@ public:
 
 
 
+bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, ConstDenseDataPtr response) {
+    SHA256 sha = request->getMetadata().getFingerprint();
+    String hash = sha.convertToHexString();
+    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(hash);
+    if (!mp.isNull()) {
+        loadMesh(hash);
+    }
+    else {
+        // Otherwise, follow the rest of the normal process.
+        String fn = request->getURI().filename();
+        if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
+            ProxyObject *obj = mProxy.get();
+            ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
+            if (meshProxy) {
+                meshProxy->meshDownloaded(request, response);
+            }
+        }
+    }
+    return true;
+}
 
 void MeshEntity::createMesh(const Meshdata& md) {
-    SHA256 sha = SHA256::computeDigest(md.uri);    /// rest of system uses hash
+    SHA256 sha = md.hash;
     String hash = sha.convertToHexString();
 
     if (!md.instances.empty()) {

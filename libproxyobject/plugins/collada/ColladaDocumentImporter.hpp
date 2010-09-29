@@ -75,7 +75,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     :   public COLLADAFW::IWriter
 {
     public:
-        explicit ColladaDocumentImporter ( Transfer::URI const& uri, std::tr1::weak_ptr<ProxyMeshObject>pp );
+    explicit ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp );
         ~ColladaDocumentImporter ();
 
         ColladaDocumentPtr getDocument () const;
@@ -96,8 +96,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
         //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
         bool makeTexture (MaterialEffectInfo::Texture::Affecting type,
-                          const COLLADAFW::MaterialBinding * binding, 
-                          const COLLADAFW::EffectCommon * effect, 
+                          const COLLADAFW::MaterialBinding * binding,
+                          const COLLADAFW::EffectCommon * effect,
                           const COLLADAFW::ColorOrTexture & color,
                           size_t geom_index,
                           size_t prim_index,
@@ -149,7 +149,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         typedef std::tr1::unordered_multimap<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMultimap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
-        
+
         struct SkinControllerData {
             Matrix4x4f bindShapeMatrix;
             ///n+1 elements where n is the number of vertices, so that we can do simple subtraction to find out how many joints influence each vertex
@@ -181,7 +181,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
         IndicesMap mLightMap;
         Meshdata::LightInfoList mLights;
-        
+
         IdMap mMaterialMap;
         URIMap mTextureMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::Effect, UniqueIdHash> ColladaEffectMap;
@@ -189,7 +189,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         std::vector <COLLADAFW::EffectCommon*> mColladaClonedCommonEffects;
         //IndicesMap mEffectMap;
         Meshdata::MaterialEffectInfoList mEffects;
-        
+
         Meshdata * mMesh;
 };
 
