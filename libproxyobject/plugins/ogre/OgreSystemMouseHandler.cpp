@@ -734,7 +734,7 @@ private:
                             String("__scripting") + objid.toString(), "__scripting", 300, 300,
                             OverlayPosition(RP_BOTTOMCENTER)
                         );
-                    new_scripting_ui->loadFile("../scripting/prompt.html");
+                    new_scripting_ui->loadFile("scripting/prompt.html");
 
                     ui_info.scripting = new_scripting_ui;
                     mScriptingUIObjects[new_scripting_ui] = obj;
@@ -748,7 +748,7 @@ private:
                         String("__scripting") + objid.toString(), "__scripting", 300, 300,
                         OverlayPosition(RP_TOPLEFT)
                     );
-                new_scripting_ui->loadFile("../scripting/prompt.html");
+                new_scripting_ui->loadFile("scripting/prompt.html");
 
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
