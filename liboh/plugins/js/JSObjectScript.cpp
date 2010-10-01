@@ -65,6 +65,8 @@
 #include "JSPresenceStruct.hpp"
 
 
+//#define __EMERSON_COMPILE_ON__
+
 
 #define FIXME_GET_SPACE() \
     HostedObject::SpaceObjRefSet spaceobjrefs;              \
@@ -361,14 +363,12 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std
     ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
     MemoryReference toSend(msgBody);
 
-    //mMessagingPort->send(dest,MemoryReference(msgBody));
     mMessagingPort->send(dest,toSend);
 }
 
 
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
-
 {
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
@@ -382,31 +382,32 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
     cout << " em script = \n" << em_script_str << "\n";
 
     // Just adding a new line in case there is none.
-				// A semi colon in the end also suffices, but adding a \n
-				// just to be safe
+    // A semi colon in the end also suffices, but adding a \n
+    // just to be safe
 
+    #ifdef __EMERSON_COMPILE_ON__
+    
     String em_script_str_new = em_script_str;
 
     if(em_script_str.at(em_script_str.size() -1) != '\n')
-				{
-				  em_script_str_new.push_back('\n'); 
-				}
+    {
+        em_script_str_new.push_back('\n'); 
+    }
 			 
-				emerson_init();
-				String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-				cout << " js script = \n" <<js_script_str << "\n";
-
-     
+    emerson_init();
+    String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+    cout << " js script = \n" <<js_script_str << "\n";
+    
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
     
-		// assume the input string to be a valid js rather than emerson
+    // assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
     #endif
 
 
-
+    
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
