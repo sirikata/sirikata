@@ -150,6 +150,6 @@ int main	(int argc, char *argv[])
 				}
 				
 
-				char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str());
+				char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr);
     return 0;
 }

@@ -21,12 +21,18 @@ options
 
 @header
 {
-  #include <stdlib.h>;
-		#include <string.h>;
-		#include <antlr3.h>;
-  #include "EmersonUtil.h"; 
+  #include <stdlib.h>
+		#include <string.h>
+		#include <antlr3.h>
+  #include "EmersonUtil.h" 
 	 #define APP(s) program_string->append(program_string, s);
 
+	//	pANTLR3_STRING program_string;
+}
+
+@members
+{
+  
 		pANTLR3_STRING program_string;
 }
 
@@ -61,8 +67,8 @@ functionDeclaration
 	: ^( FUNC_DECL
 	         {
 										  
-												APP("function ");
-										}
+						 APP("function ");
+					 }
 	         Identifier
 	         {
 										  
@@ -532,25 +538,47 @@ msgRecvStatement
  : ^(
 	    MESSAGE_RECV
 	    {
-					  APP("system.registerHandler( callback = ");
-					}
+					  APP("system.registerHandler( ");
+			}
 
 					memberExpression
      {
-					  APP(", pattern = ");
+            APP(", null");
+					  APP(", ");
 					} 
      leftHandSideExpression
 
-					(
+			)
+    {
+				  APP(", null) ");  // No sender case
+				}
+   
+ |^(
+	    MESSAGE_RECV
+	    {
+					  APP("system.registerHandler( ");
+			}
+
+					memberExpression
+     {
+            APP(", null");
+					  APP(", ");
+					} 
+     leftHandSideExpression
+
+					
 					 {
-						  APP(", sender = ");
+						  APP(", ");
 						}
+
 						memberExpression
-					)?
+					
 				)
     {
-				  APP(") ");
+				  APP(") "); // Case with sender
 				}
+
+
 
 ;
 
@@ -896,7 +924,6 @@ scope
 	   relationalOps 
 				e=relationalExpression
 				{
-				  printf( " \%s ", $relationalExpression::op );
 				  APP(" ");
 				  APP($relationalExpression::op );
 				  APP(" ");
@@ -924,7 +951,6 @@ scope
 	     relationalOpsNoIn
 						relationalExpressionNoIn
 						{
-						  printf(" \%s ", $relationalExpressionNoIn::op);
 						  APP(" ");
 						  APP($relationalExpressionNoIn::op);
 						  APP(" ");
@@ -1051,13 +1077,11 @@ primaryExpression
 	  {
 					if(emerson_isAKeyword((char*)$Identifier.text->chars))
 					{
-					  printf("printing ideni");
 							APP("system.");
 							APP((const char*)$Identifier.text->chars);
 					}
 					else
 					{
-					  printf("printing else for (\%s) ", (const char*)$Identifier.text->chars);
 	      APP((const char*)$Identifier.text->chars);
 	    }
 

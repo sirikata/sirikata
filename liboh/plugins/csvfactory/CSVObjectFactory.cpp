@@ -77,7 +77,12 @@ void CSVObjectFactory::generate() {
     while(fp) {
         String line;
         std::getline(fp, line);
-
+        // First char is # and not the first non whitespace char
+	// then this is a comment
+        if(line.length() > 0 && line.at(0) == '#')
+       {
+         continue;   
+       } 
         // Split into parts
         StringList line_parts;
         int last_comma = -1;

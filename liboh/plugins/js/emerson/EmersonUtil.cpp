@@ -21,7 +21,7 @@ int emerson_init()
 
 void insertKeywords()
 {
-  cout << "insertKeywords() called\n";
+  //cout << "insertKeywords() called\n";
   emerson_sysKeys->insert(keypair("print", "print"));
   emerson_sysKeys->insert(keypair("presences", "presences"));
 
@@ -225,10 +225,10 @@ if (psr->pParser->rec->state->errorCount > 0)
  return js_str;
 }
 
-char* emerson_compile_diag(const char* em_script_str)
+char* emerson_compile_diag(const char* em_script_str, FILE* dbg)
 {
 
- printf("Trying to compile \n %s\n", em_script_str);
+ fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 	
 
 
@@ -245,12 +245,14 @@ char* emerson_compile_diag(const char* em_script_str)
 	if (input == NULL)
  {
 	 fprintf(stderr, "Unable to create input stream");
+	 fprintf(dbg, "Unable to create input stream");
 			exit(ANTLR3_ERR_NOMEM);
  }
  lxr	    = EmersonLexerNew(input);
  if ( lxr == NULL )
  {
 			fprintf(stderr, "Unable to create the lexer due to malloc() failure1\n");
+			fprintf(dbg, "Unable to create the lexer due to malloc() failure1\n");
 			exit(ANTLR3_ERR_NOMEM);
  }
   tstream = antlr3CommonTokenStreamSourceNew(ANTLR3_SIZE_HINT, TOKENSOURCE(lxr));
@@ -258,6 +260,7 @@ char* emerson_compile_diag(const char* em_script_str)
  if (tstream == NULL)
  {
 	  fprintf(stderr, "Out of memory trying to allocate token stream\n");
+	  fprintf(dbg, "Out of memory trying to allocate token stream\n");
 		 exit(ANTLR3_ERR_NOMEM);
  }
 
@@ -266,6 +269,7 @@ char* emerson_compile_diag(const char* em_script_str)
  if (psr == NULL)
  {
    fprintf(stderr, "Out of memory trying to allocate parser\n");
+   fprintf(dbg, "Out of memory trying to allocate parser\n");
 		 exit(ANTLR3_ERR_NOMEM);
  }
 
@@ -273,17 +277,18 @@ char* emerson_compile_diag(const char* em_script_str)
 if (psr->pParser->rec->state->errorCount > 0)
 	{
 		fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
+		fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
 
 	}
 	else
 	{
 
-   printf("Emerson Tree after parsing \n%s\n", emerson_printAST(emersonAST.tree)->chars);
+   fprintf(dbg, "Emerson Tree after parsing \n%s\n", emerson_printAST(emersonAST.tree)->chars);
    nodes	= antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE HINT WILL SOON BE DEPRECATED!!
    treePsr	= EmersonTreeNew(nodes);
 		 js_str = (char*)treePsr->program(treePsr)->chars;
    
-			printf("The generated code is \n %s \n", js_str);
+			fprintf(dbg, "The generated code is \n %s \n", js_str);
 
 
 		 nodes   ->free  (nodes);	    nodes	= NULL;
@@ -333,9 +338,10 @@ int  emerson_isAKeyword(const char* word)
 {
   // Check if the keyword is one of the emerson keywords
 
+  /*
   if( strcmp(word, "print") == 0)
 		{
-		  cout << "word is print\n";
+		  //cout << "word is print\n";
 		
 		}
 	 keymap::iterator it = emerson_sysKeys->find(word);	
@@ -345,6 +351,7 @@ int  emerson_isAKeyword(const char* word)
 		  cout << "Returning 1\n";
 		  return 1;
 		}
+		*/
 		
   return 0;
 }

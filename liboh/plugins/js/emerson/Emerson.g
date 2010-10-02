@@ -309,11 +309,16 @@ finallyClause
 
 
 msgSendStatement
- : (e1=leftHandSideExpression  '->'  e2=leftHandSideExpression -> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
+ : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
 ;
 
-msgRecvStatement
- : (e1=memberExpression '<-' e2=leftHandSideExpression -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression -> ^($msgRecvStatement $e3) )? 
+// There is an ambiguity here
+//msgRecvStatement
+// : (e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' )? -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression (LTERM | ';')-> ^($msgRecvStatement $e3) )? 
+
+ msgRecvStatement
+ : e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
+ | e1=memberExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memberExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
 
 ;
 // expressions
