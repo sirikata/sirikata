@@ -142,14 +142,23 @@ public:
     double toSeconds () const {
         return mDeltaTime/1000000.;
     }
+    double seconds() const {
+        return toSeconds();
+    }
 	/// Convert to an integer in milliseconds.
 	int64 toMilliseconds() const {
 		return mDeltaTime/1000;
 	}
+        int64 milliseconds() const {
+            return toMilliseconds();
+        }
 	/// Convert to an integer in microseconds.
 	int64 toMicroseconds() const {
 		return mDeltaTime;
 	}
+        int64 microseconds() const {
+            return toMicroseconds();
+        }
 	/// Convert to an integer in microseconds.
 	int64 toMicro() const {
         return toMicroseconds();
@@ -202,7 +211,7 @@ public:
     uint64 raw() const {
         return mTime;
     }
-    
+
 	/// Equality comparison (same as (*this - other) == 0)
     inline bool operator== (const LocalTime &other) const {
 		return (mTime == other.mTime);

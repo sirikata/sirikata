@@ -99,7 +99,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
     mServerQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
     mServerQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
-    mServerQueryHandler->initialize(mLocalLocCache);
+    bool server_static_objects = false;
+    mServerQueryHandler->initialize(mLocalLocCache, server_static_objects);
     if (server_handler_type == "dist") mServerDistance = true;
 
     // Object Queries
@@ -108,7 +109,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
     mObjectQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
     mObjectQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
-    mObjectQueryHandler->initialize(mGlobalLocCache);
+    bool object_static_objects = false;
+    mObjectQueryHandler->initialize(mGlobalLocCache, object_static_objects);
     if (object_handler_type == "dist") mObjectDistance = true;
 
     mLocService->addListener(this, false);
