@@ -90,6 +90,12 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
     mServerQuerier->addListener(this);
 
+    // Deal with static/dynamic split
+    mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
+    mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
+    mObjectClassIndex[STATIC] = 0;
+    mObjectClassIndex[DYNAMIC] = (mSeparateDynamicObjects ? 1 : 0);
+
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
 
@@ -698,6 +704,7 @@ void Proximity::proxThreadMain() {
 
 void Proximity::tickQueryHandler(ProxQueryHandler* qh) {
     Time simT = mContext->simTime();
+    printf("proxtick: %f\n", (float)(simT - Time::null()).seconds());
     qh->tick(simT);
 }
 

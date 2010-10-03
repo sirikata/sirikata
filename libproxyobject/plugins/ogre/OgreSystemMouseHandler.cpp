@@ -343,7 +343,7 @@ private:
     void selectObjectAction(Vector2f p, int direction) {
         if (!mParent||!mParent->mPrimaryCamera) return;
         CameraEntity *camera = mParent->mPrimaryCamera;
-        Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
+        Time time = Time::local(); // FIXME #116, #117
         if (!camera) {
             return;
         }
@@ -848,7 +848,7 @@ private:
 
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (!camera) return;
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = Time::local(); // FIXME #116, #117
         Location curLoc (camera->getProxy().globalLocation(now));
         Protocol::CreateObject creator;
         Protocol::IConnectToSpace space = creator.add_space_properties();
@@ -959,7 +959,7 @@ private:
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
-        Time now(mParent->getLocalTimeOffset()->now(*cam));
+        Time now = Time::local(); // FIXME #116, #117
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -987,7 +987,7 @@ private:
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
-        Time now(mParent->getLocalTimeOffset()->now(*cam));
+        Time now = Time::local(); // FIXME #116, #117
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -1015,7 +1015,7 @@ private:
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
-        Time now(mParent->getLocalTimeOffset()->now(*cam));
+        Time now = Time::local(); // FIXME #116, #117
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -1328,7 +1328,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
+            Time time = Time::local(); // FIXME #116, #117
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
         }
@@ -1351,7 +1351,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
+            Time time = Time::local(); // FIXME #116, #117
             int lhc=mLastHitCount;
             hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
             mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
@@ -1379,7 +1379,7 @@ private:
         }
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
+            Time time = Time::local(); // FIXME #116, #117
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
         }
@@ -1413,7 +1413,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = mParent->getLocalTimeOffset()->now(camera->getProxy());
+            Time time = Time::local(); // FIXME #116, #117
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
         }

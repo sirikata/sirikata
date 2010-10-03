@@ -213,6 +213,19 @@ private:
 
     PintoServerQuerier* mServerQuerier;
 
+    // To support a static/dynamic split but also support mixing them for
+    // comparison purposes track which we are doing and, for most places, use a
+    // simple index to control whether they point to different query handlers or
+    // the same one.
+    enum ObjectClass {
+        STATIC = 0,
+        DYNAMIC = 1,
+        NUM_OBJECT_CLASSES = 2
+    };
+    bool mSeparateDynamicObjects;
+    int mNumQueryHandlers;
+    int mObjectClassIndex[NUM_OBJECT_CLASSES];
+
     // MAIN Thread - Should only be accessed in methods used by the main thread
 
     LocationService* mLocService;
