@@ -1114,7 +1114,7 @@ objectLiteral
 	   
 				{ APP("{ ");}
 	   (head=propertyNameAndValue)? 
-				(tail=propertyNameAndValue)*
+				( { APP(", "); } tail=propertyNameAndValue)*
 				{ APP(" } "); }
 				
 				)
