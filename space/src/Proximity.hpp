@@ -213,7 +213,7 @@ private:
     void generateObjectQueryEvents(Query* query);
 
     // Decides whether a query handler should handle a particular object.
-    bool handlerShouldHandleObject(bool is_static_handler, const UUID& obj_id, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
+    bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
     // The real handler for moving objects between static/dynamic
     void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
     void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandler* handlers[NUM_OBJECT_CLASSES]);
@@ -288,11 +288,12 @@ private:
     Network::IOStrand* mProxStrand;
     Sirikata::AtomicValue<bool> mShutdownProxThread;
 
+    CBRLocationServiceCache* mLocCache;
+
     // These track local objects and answer queries from other
     // servers.
     ServerQueryMap mServerQueries[NUM_OBJECT_CLASSES];
     InvertedServerQueryMap mInvertedServerQueries;
-    CBRLocationServiceCache* mLocalLocCache;
     ProxQueryHandler* mServerQueryHandler[NUM_OBJECT_CLASSES];
     bool mServerDistance; // Using distance queries
 
@@ -300,7 +301,6 @@ private:
     // answer queries for objects connected to this server.
     ObjectQueryMap mObjectQueries[NUM_OBJECT_CLASSES];
     InvertedObjectQueryMap mInvertedObjectQueries;
-    CBRLocationServiceCache* mGlobalLocCache;
     ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
 

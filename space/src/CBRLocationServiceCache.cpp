@@ -61,7 +61,7 @@ LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const UUID
     ObjectDataMap::iterator it = mObjects.find(id);
     assert(it != mObjects.end());
 
-    it->second.tracking = true;
+    it->second.tracking++;
 
     return Iterator( new IteratorData(id, it) );
 }
@@ -78,9 +78,10 @@ void CBRLocationServiceCache::stopTracking(const Iterator& id) {
         printf("Warning: stopped tracking unknown object\n");
         return;
     }
-    if (it->second.tracking == false) {
+    if (it->second.tracking <= 0) {
         printf("Warning: stopped tracking untracked object\n");
     }
+    it->second.tracking--;
     tryRemoveObject(it);
 }
 
@@ -115,6 +116,16 @@ float32 CBRLocationServiceCache::maxSize(const Iterator& id) const {
     assert(it != mObjects.end());
     return it->second.maxSize;
 }
+
+bool CBRLocationServiceCache::isLocal(const Iterator& id) const {
+    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    // Max size is just the size of the object.
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
+    assert(it != mObjects.end());
+    return it->second.isLocal;
+}
+
 
 const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) const {
     IteratorData* itdat = (IteratorData*)id.data;
@@ -163,7 +174,7 @@ const String& CBRLocationServiceCache::mesh(const ObjectID& id) const {
 }
 
 void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
-    objectAdded(uuid, agg, loc, orient, bounds, mesh);
+    objectAdded(uuid, true, agg, loc, orient, bounds, mesh);
 }
 
 void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid, bool agg) {
@@ -188,7 +199,7 @@ void CBRLocationServiceCache::localMeshUpdated(const UUID& uuid, bool agg, const
 
 void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     if (mWithReplicas)
-        objectAdded(uuid, false, loc, orient, bounds, mesh);
+        objectAdded(uuid, false, false, loc, orient, bounds, mesh);
 }
 
 void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
@@ -217,16 +228,16 @@ void CBRLocationServiceCache::replicaMeshUpdated(const UUID& uuid, const String&
 }
 
 
-void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
-            uuid, agg, loc, orient, bounds, mesh
+            uuid, islocal, agg, loc, orient, bounds, mesh
         )
     );
 }
 
-void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
     if (mObjects.find(uuid) != mObjects.end())
         return;
 
@@ -237,13 +248,14 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool agg, con
     data.region = BoundingSphere3f(bounds.center(), 0.f);
     data.maxSize = bounds.radius();
     data.mesh = mesh;
+    data.isLocal = islocal;
     data.exists = true;
-    data.tracking = false;
+    data.tracking = 0;
     mObjects[uuid] = data;
 
     if (!agg)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-            (*it)->locationConnected(uuid, loc, data.region, data.maxSize);
+            (*it)->locationConnected(uuid, islocal, loc, data.region, data.maxSize);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
@@ -353,7 +365,7 @@ void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, bool agg, con
 }
 
 bool CBRLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
-    if (obj_it->second.tracking  || obj_it->second.exists)
+    if (obj_it->second.tracking > 0  || obj_it->second.exists)
         return false;
 
     mObjects.erase(obj_it);

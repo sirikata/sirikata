@@ -92,17 +92,17 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mProxThread(NULL),
    mProxService(NULL),
    mProxStrand(NULL),
+   mLocCache(NULL),
    mServerQueries(),
-   mLocalLocCache(NULL),
    mServerDistance(false),
    mObjectQueries(),
-   mGlobalLocCache(NULL),
    mObjectDistance(false)
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
+    using std::tr1::placeholders::_5;
 
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
@@ -124,8 +124,10 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
 
+    // Location cache, for both types of queries
+    mLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
+
     // Server Queries
-    mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
     String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
     String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
@@ -137,14 +139,13 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
         mServerQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i]->initialize(
-            mLocalLocCache, server_static_objects,
-            std::tr1::bind(&Proximity::handlerShouldHandleObject, this, server_static_objects, _1, _2, _3, _4)
+            mLocCache, server_static_objects,
+            std::tr1::bind(&Proximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
         );
     }
     if (server_handler_type == "dist") mServerDistance = true;
 
     // Object Queries
-    mGlobalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
     String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
     String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
@@ -156,8 +157,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
         mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i]->initialize(
-            mGlobalLocCache, object_static_objects,
-            std::tr1::bind(&Proximity::handlerShouldHandleObject, this, object_static_objects, _1, _2, _3, _4)
+            mLocCache, object_static_objects,
+            std::tr1::bind(&Proximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
         );
     }
     if (object_handler_type == "dist") mObjectDistance = true;
@@ -177,11 +178,12 @@ Proximity::~Proximity() {
 
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
 
-    delete mObjectQueryHandler;
-    delete mGlobalLocCache;
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        delete mObjectQueryHandler[i];
+        delete mServerQueryHandler[i];
+    }
 
-    delete mServerQueryHandler;
-    delete mLocalLocCache;
+    delete mLocCache;
 
     delete mServerQuerier;
 
@@ -789,7 +791,7 @@ void Proximity::generateServerQueryEvents(Query* query) {
             // removals
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 UUID objid = evt.additions()[aidx].id();
-                if (mLocalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
+                if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
 
                     mContext->mainStrand->post(
@@ -799,20 +801,20 @@ void Proximity::generateServerQueryEvents(Query* query) {
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                     addition.set_object( objid );
 
-                    TimedMotionVector3f loc = mLocalLocCache->location(objid);
+                    TimedMotionVector3f loc = mLocCache->location(objid);
                     Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
                     msg_loc.set_t(loc.updateTime());
                     msg_loc.set_position(loc.position());
                     msg_loc.set_velocity(loc.velocity());
 
-                    TimedMotionQuaternion orient = mLocalLocCache->orientation(objid);
+                    TimedMotionQuaternion orient = mLocCache->orientation(objid);
                     Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
                     msg_orient.set_t(orient.updateTime());
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mLocalLocCache->bounds(objid) );
-                    const String& mesh = mLocalLocCache->mesh(objid);
+                    addition.set_bounds( mLocCache->bounds(objid) );
+                    const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
                 }
@@ -864,7 +866,7 @@ void Proximity::generateObjectQueryEvents(Query* query) {
 
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 UUID objid = evt.additions()[aidx].id();
-                if (mGlobalLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
+                if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
                     mContext->mainStrand->post(
                         std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
@@ -874,19 +876,19 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                     addition.set_object( objid );
 
                     Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                    TimedMotionVector3f loc = mGlobalLocCache->location(objid);
+                    TimedMotionVector3f loc = mLocCache->location(objid);
                     motion.set_t(loc.updateTime());
                     motion.set_position(loc.position());
                     motion.set_velocity(loc.velocity());
 
-                    TimedMotionQuaternion orient = mGlobalLocCache->orientation(objid);
+                    TimedMotionQuaternion orient = mLocCache->orientation(objid);
                     Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
                     msg_orient.set_t(orient.updateTime());
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mGlobalLocCache->bounds(objid) );
-                    const String& mesh = mGlobalLocCache->mesh(objid);
+                    addition.set_bounds( mLocCache->bounds(objid) );
+                    const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
                 }
@@ -1019,7 +1021,7 @@ void Proximity::handleRemoveObjectQuery(const UUID& object) {
     );
 }
 
-bool Proximity::handlerShouldHandleObject(bool is_static_handler, const UUID& obj_id, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+bool Proximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
     // We just need to decide whether the query handler should handle the object.
 
     // If we're not doing the static/dynamic split, then this is a non-issue

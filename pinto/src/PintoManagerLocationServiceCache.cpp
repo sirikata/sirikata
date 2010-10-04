@@ -54,7 +54,7 @@ void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedM
     mServers[sid].removable = true;
 
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationConnected(sid, loc, region, ms);
+        (*it)->locationConnected(sid, false, loc, region, ms);
 }
 
 void PintoManagerLocationServiceCache::updateSpaceServerLocation(ServerID sid, const TimedMotionVector3f& loc) {
@@ -147,6 +147,11 @@ const BoundingSphere3f& PintoManagerLocationServiceCache::region(const Iterator&
 float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) const {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
     return dat.maxSize;
+}
+
+bool PintoManagerLocationServiceCache::isLocal(const Iterator& id) const {
+    // non-sensical here
+    return false;
 }
 
 const ServerID& PintoManagerLocationServiceCache::iteratorID(const Iterator& id) const {
