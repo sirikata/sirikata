@@ -115,7 +115,7 @@ void CSVObjectFactory::generate() {
             is_first = false;
         }
         else {
-            assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
+            assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {
                 Vector3d pos(
@@ -123,32 +123,45 @@ void CSVObjectFactory::generate() {
                     safeLexicalCast<double>(line_parts[pos_idx+1]),
                     safeLexicalCast<double>(line_parts[pos_idx+2])
                 );
-                Quaternion orient(
-                    safeLexicalCast<float>(line_parts[orient_idx+0]),
-                    safeLexicalCast<float>(line_parts[orient_idx+1]),
-                    safeLexicalCast<float>(line_parts[orient_idx+2]),
-                    safeLexicalCast<float>(line_parts[orient_idx+3]),
-                    Quaternion::XYZW()
-                );
-                Vector3f vel(
-                    safeLexicalCast<float>(line_parts[vel_idx+0]),
-                    safeLexicalCast<float>(line_parts[vel_idx+1]),
-                    safeLexicalCast<float>(line_parts[vel_idx+2])
-                );
+                Quaternion orient =
+                    orient_idx == -1 ?
+                    Quaternion(0, 0, 0, 1) :
+                    Quaternion(
+                        safeLexicalCast<float>(line_parts[orient_idx+0]),
+                        safeLexicalCast<float>(line_parts[orient_idx+1]),
+                        safeLexicalCast<float>(line_parts[orient_idx+2]),
+                        safeLexicalCast<float>(line_parts[orient_idx+3]),
+                        Quaternion::XYZW()
+                    );
+                Vector3f vel =
+                    vel_idx == -1 ?
+                    Vector3f(0, 0, 0) :
+                    Vector3f(
+                        safeLexicalCast<float>(line_parts[vel_idx+0]),
+                        safeLexicalCast<float>(line_parts[vel_idx+1]),
+                        safeLexicalCast<float>(line_parts[vel_idx+2])
+                    );
 
-                Vector3f rot_axis(
-                    safeLexicalCast<float>(line_parts[quat_vel_idx+0]),
-                    safeLexicalCast<float>(line_parts[quat_vel_idx+1]),
-                    safeLexicalCast<float>(line_parts[quat_vel_idx+2])
-                );
+                Vector3f rot_axis =
+                    quat_vel_idx == -1 ?
+                    Vector3f(0, 0, 0) :
+                    Vector3f(
+                        safeLexicalCast<float>(line_parts[quat_vel_idx+0]),
+                        safeLexicalCast<float>(line_parts[quat_vel_idx+1]),
+                        safeLexicalCast<float>(line_parts[quat_vel_idx+2])
+                    );
 
-                float angular_speed = safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
+                float angular_speed =
+                    quat_vel_idx == -1 ?
+                    0 :
+                    safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
 
                 String mesh( line_parts[mesh_idx] );
 
-                float scale = 1.f;
-                if (scale_idx != -1)
-                    scale = safeLexicalCast<float>(line_parts[scale_idx], 1.f);
+                float scale =
+                    scale_idx == -1 ?
+                    1.f :
+                    safeLexicalCast<float>(line_parts[scale_idx], 1.f);
 
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
