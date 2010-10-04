@@ -374,6 +374,11 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
     v8::HandleScope handle_scope;
     TryCatch try_catch;
    
+	  
+    // Special casing emerson compilation
+
+    #ifdef _EMERSON_COMPILE_
+
     cout << " em script = \n" << em_script_str << "\n";
 
     // Just adding a new line in case there is none.
@@ -393,6 +398,14 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
 
      
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+    #else
+    
+		// assume the input string to be a valid js rather than emerson
+    v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
+    #endif
+
+
 
     // Compile
     //note, because using compile command, will run in the mContext context
