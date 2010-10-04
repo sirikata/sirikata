@@ -59,6 +59,28 @@ static BoundingBox3f aggregateBBoxes(const BoundingBoxList& bboxes) {
     return bbox;
 }
 
+static bool velocityIsStatic(const Vector3f& vel) {
+    // These values are arbitrary, just meant to indicate that the object is,
+    // for practical purposes, not moving.
+    return (
+        vel.x < .05f &&
+        vel.y < .05f &&
+        vel.z < .05f
+    );
+}
+
+const String& Proximity::ObjectClassToString(ObjectClass c) {
+    static String static_ = "static";
+    static String dynamic_ = "dynamic";
+    static String unknown_ = "unknown";
+
+    switch(c) {
+      case OBJECT_CLASS_STATIC: return static_; break;
+      case OBJECT_CLASS_DYNAMIC: return dynamic_; break;
+      default: return unknown_; break;
+    }
+}
+
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
    mContext(ctx),
@@ -72,13 +94,16 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mProxStrand(NULL),
    mServerQueries(),
    mLocalLocCache(NULL),
-   mServerQueryHandler(NULL),
    mServerDistance(false),
    mObjectQueries(),
    mGlobalLocCache(NULL),
-   mObjectQueryHandler(NULL),
    mObjectDistance(false)
 {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+    using std::tr1::placeholders::_3;
+    using std::tr1::placeholders::_4;
+
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
     mProxService = Network::IOServiceFactory::makeIOService();
@@ -93,8 +118,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
     mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
-    mObjectClassIndex[STATIC] = 0;
-    mObjectClassIndex[DYNAMIC] = (mSeparateDynamicObjects ? 1 : 0);
+    mObjectClassIndex[OBJECT_CLASS_STATIC] = 0;
+    mObjectClassIndex[OBJECT_CLASS_DYNAMIC] = (mSeparateDynamicObjects ? 1 : 0);
 
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
@@ -103,20 +128,38 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mLocalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, false);
     String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
     String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
-    mServerQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
-    mServerQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
-    bool server_static_objects = false;
-    mServerQueryHandler->initialize(mLocalLocCache, server_static_objects);
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (i >= mNumQueryHandlers) {
+            mServerQueryHandler[i] = NULL;
+            continue;
+        }
+        mServerQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
+        mServerQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
+        bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
+        mServerQueryHandler[i]->initialize(
+            mLocalLocCache, server_static_objects,
+            std::tr1::bind(&Proximity::handlerShouldHandleObject, this, server_static_objects, _1, _2, _3, _4)
+        );
+    }
     if (server_handler_type == "dist") mServerDistance = true;
 
     // Object Queries
     mGlobalLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
     String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
     String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
-    mObjectQueryHandler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
-    mObjectQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
-    bool object_static_objects = false;
-    mObjectQueryHandler->initialize(mGlobalLocCache, object_static_objects);
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (i >= mNumQueryHandlers) {
+            mObjectQueryHandler[i] = NULL;
+            continue;
+        }
+        mObjectQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+        mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
+        bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
+        mObjectQueryHandler[i]->initialize(
+            mGlobalLocCache, object_static_objects,
+            std::tr1::bind(&Proximity::handlerShouldHandleObject, this, object_static_objects, _1, _2, _3, _4)
+        );
+    }
     if (object_handler_type == "dist") mObjectDistance = true;
 
     mLocService->addListener(this, false);
@@ -495,6 +538,12 @@ void Proximity::removeObjectSize(const UUID& obj) {
     }
 }
 
+void Proximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+    mProxStrand->post(
+        std::tr1::bind(&Proximity::handleCheckObjectClass, this, is_local, objid, newval)
+    );
+}
+
 void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_stream) {
     using std::tr1::placeholders::_1;
 
@@ -640,7 +689,10 @@ void Proximity::handleRemoveAllServerLocSubscription(const ServerID& subscriber)
 }
 
 void Proximity::queryHasEvents(Query* query) {
-    if (query->handler() == mServerQueryHandler)
+    if (
+        query->handler() == mServerQueryHandler[OBJECT_CLASS_STATIC] ||
+        query->handler() == mServerQueryHandler[OBJECT_CLASS_DYNAMIC]
+    )
         generateServerQueryEvents(query);
     else
         generateObjectQueryEvents(query);
@@ -658,6 +710,8 @@ void Proximity::localObjectRemoved(const UUID& uuid, bool agg) {
 }
 void Proximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle);
+    if (mSeparateDynamicObjects)
+        checkObjectClass(true, uuid, newval);
 }
 void Proximity::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
 }
@@ -672,6 +726,8 @@ void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& 
 void Proximity::replicaObjectRemoved(const UUID& uuid) {
 }
 void Proximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    if (mSeparateDynamicObjects)
+        checkObjectClass(false, uuid, newval);
 }
 void Proximity::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
 }
@@ -702,10 +758,12 @@ void Proximity::proxThreadMain() {
     mProxService->run();
 }
 
-void Proximity::tickQueryHandler(ProxQueryHandler* qh) {
+void Proximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
     Time simT = mContext->simTime();
-    printf("proxtick: %f\n", (float)(simT - Time::null()).seconds());
-    qh->tick(simT);
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (qh[i] != NULL)
+            qh[i]->tick(simT);
+    }
 }
 
 void Proximity::generateServerQueryEvents(Query* query) {
@@ -861,41 +919,49 @@ void Proximity::generateObjectQueryEvents(Query* query) {
 
 
 void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle) {
-    ServerQueryMap::iterator it = mServerQueries.find(server);
-    if (it == mServerQueries.end()) {
-        PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat());
+    BoundingSphere3f region(bounds.center(), 0);
+    float ms = bounds.radius();
 
-        BoundingSphere3f region(bounds.center(), 0);
-        float ms = bounds.radius();
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mServerQueryHandler[i] == NULL) continue;
 
-        Query* q = mServerDistance ?
-            mServerQueryHandler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
-            mServerQueryHandler->registerQuery(loc, region, ms, angle) ;
-        q->setEventListener(this);
-        mServerQueries[server] = q;
-        mInvertedServerQueries[q] = server;
-    }
-    else {
-        PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat());
+        ServerQueryMap::iterator it = mServerQueries[i].find(server);
+        if (it == mServerQueries[i].end()) {
+            PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i));
 
-        Query* q = it->second;
-        q->position(loc);
-        q->region( BoundingSphere3f(bounds.center(), 0) );
-        q->maxSize( bounds.radius() );
-        q->angle(angle);
+            Query* q = mServerDistance ?
+                mServerQueryHandler[i]->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+                mServerQueryHandler[i]->registerQuery(loc, region, ms, angle) ;
+            q->setEventListener(this);
+            mServerQueries[i][server] = q;
+            mInvertedServerQueries[q] = server;
+        }
+        else {
+            PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i));
+
+            Query* q = it->second;
+            q->position(loc);
+            q->region( region );
+            q->maxSize( ms );
+            q->angle(angle);
+        }
     }
 }
 
 void Proximity::handleRemoveServerQuery(const ServerID& server) {
     PROXLOG(debug,"Remove server query from " << server);
 
-    ServerQueryMap::iterator it = mServerQueries.find(server);
-    if (it == mServerQueries.end()) return;
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mServerQueryHandler[i] == NULL) continue;
 
-    Query* q = it->second;
-    mServerQueries.erase(it);
-    mInvertedServerQueries.erase(q);
-    delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+        ServerQueryMap::iterator it = mServerQueries[i].find(server);
+        if (it == mServerQueries[i].end()) continue;
+
+        Query* q = it->second;
+        mServerQueries[i].erase(it);
+        mInvertedServerQueries.erase(q);
+        delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+    }
 
     mContext->mainStrand->post(
         std::tr1::bind(&Proximity::handleRemoveAllServerLocSubscription, this, server)
@@ -903,46 +969,102 @@ void Proximity::handleRemoveServerQuery(const ServerID& server) {
 }
 
 void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle) {
-    ObjectQueryMap::iterator it = mObjectQueries.find(object);
+    BoundingSphere3f region(bounds.center(), 0);
+    float ms = bounds.radius();
 
-    if (it == mObjectQueries.end()) {
-        // We only add if we actually have all the necessary info, most importantly a real minimum angle.
-        // This is necessary because we get this update for all location updates, even those for objects
-        // which don't have subscriptions.
-        if (angle != NoUpdateSolidAngle) {
-            BoundingSphere3f region(bounds.center(), 0);
-            float ms = bounds.radius();
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mObjectQueryHandler[i] == NULL) continue;
 
-            Query* q = mObjectDistance ?
-                mObjectQueryHandler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
-                mObjectQueryHandler->registerQuery(loc, region, ms, angle);
-            q->setEventListener(this);
-            mObjectQueries[object] = q;
-            mInvertedObjectQueries[q] = object;
+        ObjectQueryMap::iterator it = mObjectQueries[i].find(object);
+
+        if (it == mObjectQueries[i].end()) {
+            // We only add if we actually have all the necessary info, most importantly a real minimum angle.
+            // This is necessary because we get this update for all location updates, even those for objects
+            // which don't have subscriptions.
+            if (angle != NoUpdateSolidAngle) {
+                Query* q = mObjectDistance ?
+                    mObjectQueryHandler[i]->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+                    mObjectQueryHandler[i]->registerQuery(loc, region, ms, angle);
+                q->setEventListener(this);
+                mObjectQueries[i][object] = q;
+                mInvertedObjectQueries[q] = object;
+            }
         }
-    }
-    else {
-        Query* query = it->second;
-        query->position(loc);
-        query->region( BoundingSphere3f(bounds.center(), 0) );
-        query->maxSize( bounds.radius() );
-        if (angle != NoUpdateSolidAngle)
-            query->angle(angle);
+        else {
+            Query* query = it->second;
+            query->position(loc);
+            query->region( region );
+            query->maxSize( ms );
+            if (angle != NoUpdateSolidAngle)
+                query->angle(angle);
+        }
     }
 }
 
 void Proximity::handleRemoveObjectQuery(const UUID& object) {
-    ObjectQueryMap::iterator it = mObjectQueries.find(object);
-    if (it == mObjectQueries.end()) return;
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mServerQueryHandler[i] == NULL) continue;
 
-    Query* q = it->second;
-    mObjectQueries.erase(it);
-    mInvertedObjectQueries.erase(q);
-    delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+        ObjectQueryMap::iterator it = mObjectQueries[i].find(object);
+        if (it == mObjectQueries[i].end()) continue;
+
+        Query* q = it->second;
+        mObjectQueries[i].erase(it);
+        mInvertedObjectQueries.erase(q);
+        delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+    }
 
     mContext->mainStrand->post(
         std::tr1::bind(&Proximity::handleRemoveAllObjectLocSubscription, this, object)
     );
+}
+
+bool Proximity::handlerShouldHandleObject(bool is_static_handler, const UUID& obj_id, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+    // We just need to decide whether the query handler should handle the object.
+
+    // If we're not doing the static/dynamic split, then this is a non-issue
+    if (!mSeparateDynamicObjects) return true;
+
+    // If we are splitting them, check velocity against is_static_handler. The
+    // value here as arbitrary, just meant to indicate such small movement that
+    // the object is effectively
+    bool is_static = velocityIsStatic(pos.velocity());
+    if ((is_static && is_static_handler) ||
+        (!is_static && !is_static_handler))
+        return true;
+    else
+        return false;
+}
+
+void Proximity::handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandler* handlers[NUM_OBJECT_CLASSES]) {
+    if ( (is_static && handlers[OBJECT_CLASS_STATIC]->containsObject(objid)) ||
+        (!is_static && handlers[OBJECT_CLASS_DYNAMIC]->containsObject(objid)) )
+        return;
+
+    // Validate that the other handler has the object.
+    assert(
+        (is_static && handlers[OBJECT_CLASS_DYNAMIC]->containsObject(objid)) ||
+        (!is_static && handlers[OBJECT_CLASS_STATIC]->containsObject(objid))
+    );
+
+    // If it wasn't in the right place, switch it.
+    int swap_out = is_static ? OBJECT_CLASS_DYNAMIC : OBJECT_CLASS_STATIC;
+    int swap_in = is_static ? OBJECT_CLASS_STATIC : OBJECT_CLASS_DYNAMIC;
+    PROXLOG(debug, "Swapping " << objid.toString() << " from " << ObjectClassToString((ObjectClass)swap_out) << " to " << ObjectClassToString((ObjectClass)swap_in));
+    handlers[swap_out]->removeObject(objid);
+    handlers[swap_in]->addObject(objid);
+}
+
+void Proximity::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+    assert(mSeparateDynamicObjects == true);
+
+    // Basic approach: we need to check if the object has switched between
+    // static/dynamic. We need to do this for both the local (object query) and
+    // global (server query) handlers.
+    bool is_static = velocityIsStatic(newval.velocity());
+    handleCheckObjectClassForHandlers(objid, is_static, mObjectQueryHandler);
+    if (is_local)
+        handleCheckObjectClassForHandlers(objid, is_static, mServerQueryHandler);
 }
 
 } // namespace Sirikata

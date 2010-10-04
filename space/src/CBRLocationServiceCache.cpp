@@ -74,11 +74,14 @@ void CBRLocationServiceCache::stopTracking(const Iterator& id) {
     IteratorData* itdat = (IteratorData*)id.data;
 
     ObjectDataMap::iterator it = mObjects.find(itdat->objid);
-    if (it == mObjects.end() || it->second.tracking == false) {
+    if (it == mObjects.end()) {
         printf("Warning: stopped tracking unknown object\n");
         return;
     }
-    mObjects.erase(it);
+    if (it->second.tracking == false) {
+        printf("Warning: stopped tracking untracked object\n");
+    }
+    tryRemoveObject(it);
 }
 
 bool CBRLocationServiceCache::tracking(const UUID& id) const {
@@ -234,6 +237,7 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool agg, con
     data.region = BoundingSphere3f(bounds.center(), 0.f);
     data.maxSize = bounds.radius();
     data.mesh = mesh;
+    data.exists = true;
     data.tracking = false;
     mObjects[uuid] = data;
 
@@ -255,8 +259,10 @@ void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid, bool agg) {
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
     if (data_it == mObjects.end()) return;
 
-    if (data_it->second.tracking == false)
-        mObjects.erase(data_it);
+    assert(data_it->second.exists);
+    data_it->second.exists = false;
+
+    tryRemoveObject(data_it);
 
     if (!agg)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
@@ -344,6 +350,14 @@ void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, bool agg, con
     if (it == mObjects.end()) return;
     String oldval = it->second.mesh;
     it->second.mesh = newval;
+}
+
+bool CBRLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
+    if (obj_it->second.tracking  || obj_it->second.exists)
+        return false;
+
+    mObjects.erase(obj_it);
+    return true;
 }
 
 } // namespace Sirikata

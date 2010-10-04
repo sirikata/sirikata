@@ -126,6 +126,13 @@ public:
     virtual void aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers);
 private:
 
+    enum ObjectClass {
+        OBJECT_CLASS_STATIC = 0,
+        OBJECT_CLASS_DYNAMIC = 1,
+        NUM_OBJECT_CLASSES = 2
+    };
+    static const std::string& ObjectClassToString(ObjectClass c);
+
     typedef boost::shared_ptr<Stream<UUID> > ProxStreamPtr;
     struct ProxStreamInfo {
     public:
@@ -174,6 +181,9 @@ private:
     void updateObjectSize(const UUID& obj, float rad);
     void removeObjectSize(const UUID& obj);
 
+    // Takes care of switching objects between static/dynamic
+    void checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+
     // Setup all known servers for a server query update
     void addAllServersForUpdate();
 
@@ -202,6 +212,13 @@ private:
     void generateServerQueryEvents(Query* query);
     void generateObjectQueryEvents(Query* query);
 
+    // Decides whether a query handler should handle a particular object.
+    bool handlerShouldHandleObject(bool is_static_handler, const UUID& obj_id, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
+    // The real handler for moving objects between static/dynamic
+    void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+    void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandler* handlers[NUM_OBJECT_CLASSES]);
+
+
     typedef std::set<UUID> ObjectSet;
     typedef std::tr1::unordered_map<ServerID, Query*> ServerQueryMap;
     typedef std::tr1::unordered_map<Query*, ServerID> InvertedServerQueryMap;
@@ -217,11 +234,6 @@ private:
     // comparison purposes track which we are doing and, for most places, use a
     // simple index to control whether they point to different query handlers or
     // the same one.
-    enum ObjectClass {
-        STATIC = 0,
-        DYNAMIC = 1,
-        NUM_OBJECT_CLASSES = 2
-    };
     bool mSeparateDynamicObjects;
     int mNumQueryHandlers;
     int mObjectClassIndex[NUM_OBJECT_CLASSES];
@@ -269,7 +281,7 @@ private:
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
-    void tickQueryHandler(ProxQueryHandler* qh);
+    void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
 
     Thread* mProxThread;
     Network::IOService* mProxService;
@@ -278,18 +290,18 @@ private:
 
     // These track local objects and answer queries from other
     // servers.
-    ServerQueryMap mServerQueries;
+    ServerQueryMap mServerQueries[NUM_OBJECT_CLASSES];
     InvertedServerQueryMap mInvertedServerQueries;
     CBRLocationServiceCache* mLocalLocCache;
-    ProxQueryHandler* mServerQueryHandler;
+    ProxQueryHandler* mServerQueryHandler[NUM_OBJECT_CLASSES];
     bool mServerDistance; // Using distance queries
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
-    ObjectQueryMap mObjectQueries;
+    ObjectQueryMap mObjectQueries[NUM_OBJECT_CLASSES];
     InvertedObjectQueryMap mInvertedObjectQueries;
     CBRLocationServiceCache* mGlobalLocCache;
-    ProxQueryHandler* mObjectQueryHandler;
+    ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
 
     // Threads: Thread-safe data used for exchange between threads

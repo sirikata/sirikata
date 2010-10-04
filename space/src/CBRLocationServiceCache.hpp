@@ -113,6 +113,7 @@ private:
     void processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
 
+
     CBRLocationServiceCache();
 
     Network::IOStrand* mStrand;
@@ -135,11 +136,14 @@ private:
         // MaxSize is the size of the object, stored upon bounding region updates.
         float32 maxSize;
         String mesh;
-        bool tracking;
+        bool exists; // Exists, i.e. xObjectRemoved hasn't been called
+        bool tracking; // Tracked by *someone*
     };
     typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
+
+    bool tryRemoveObject(ObjectDataMap::iterator& obj_it);
 
     // Data contained in our Iterators. We maintain both the UUID and the
     // iterator because the iterator can become invalidated due to ordering of
