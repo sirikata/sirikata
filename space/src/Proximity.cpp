@@ -574,7 +574,7 @@ void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_str
 
     base_stream->createChildStream(
         mContext->mainStrand->wrap(
-            std::tr1::bind(&Proximity::proxSubstreamCallback, this, _1, _2, prox_stream)
+            std::tr1::bind(&Proximity::proxSubstreamCallback, this, _1, base_stream, _2, prox_stream)
         ),
         (void*)NULL, 0,
         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
@@ -582,9 +582,21 @@ void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_str
     prox_stream->iostream_requested = true;
 }
 
-void Proximity::proxSubstreamCallback(int x, ProxStreamPtr substream, ProxStreamInfo* prox_stream_info) {
-    if (!substream)
-        PROXLOG(error,"Unhandled error when opening substream.");
+void Proximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfo* prox_stream_info) {
+    if (!substream) {
+        // Retry
+        PROXLOG(warn,"Error opening Prox substream, retrying...");
+
+        parent_stream->createChildStream(
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Proximity::proxSubstreamCallback, this, _1, parent_stream, _2, prox_stream_info)
+            ),
+            (void*)NULL, 0,
+            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
+        );
+
+        return;
+    }
 
     prox_stream_info->iostream = substream;
     assert(!prox_stream_info->writing);
