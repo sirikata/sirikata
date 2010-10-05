@@ -124,6 +124,7 @@ void CSVObjectFactory::generate() {
         else {
             //note: script_file is not required, so not checking it witht he assert
             assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
+            //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {
                 Vector3d pos(
@@ -131,48 +132,62 @@ void CSVObjectFactory::generate() {
                     safeLexicalCast<double>(line_parts[pos_idx+1]),
                     safeLexicalCast<double>(line_parts[pos_idx+2])
                 );
-                Quaternion orient(
-                    safeLexicalCast<float>(line_parts[orient_idx+0]),
-                    safeLexicalCast<float>(line_parts[orient_idx+1]),
-                    safeLexicalCast<float>(line_parts[orient_idx+2]),
-                    safeLexicalCast<float>(line_parts[orient_idx+3]),
-                    Quaternion::XYZW()
-                );
-                Vector3f vel(
-                    safeLexicalCast<float>(line_parts[vel_idx+0]),
-                    safeLexicalCast<float>(line_parts[vel_idx+1]),
-                    safeLexicalCast<float>(line_parts[vel_idx+2])
-                );
+                Quaternion orient =
+                    orient_idx == -1 ?
+                    Quaternion(0, 0, 0, 1) :
+                    Quaternion(
+                        safeLexicalCast<float>(line_parts[orient_idx+0]),
+                        safeLexicalCast<float>(line_parts[orient_idx+1]),
+                        safeLexicalCast<float>(line_parts[orient_idx+2]),
+                        safeLexicalCast<float>(line_parts[orient_idx+3]),
+                        Quaternion::XYZW()
+                    );
+                Vector3f vel =
+                    vel_idx == -1 ?
+                    Vector3f(0, 0, 0) :
+                    Vector3f(
+                        safeLexicalCast<float>(line_parts[vel_idx+0]),
+                        safeLexicalCast<float>(line_parts[vel_idx+1]),
+                        safeLexicalCast<float>(line_parts[vel_idx+2])
+                    );
 
-                Vector3f rot_axis(
-                    safeLexicalCast<float>(line_parts[quat_vel_idx+0]),
-                    safeLexicalCast<float>(line_parts[quat_vel_idx+1]),
-                    safeLexicalCast<float>(line_parts[quat_vel_idx+2])
-                );
-                
-                float angular_speed = safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
+                Vector3f rot_axis =
+                    quat_vel_idx == -1 ?
+                    Vector3f(0, 0, 0) :
+                    Vector3f(
+                        safeLexicalCast<float>(line_parts[quat_vel_idx+0]),
+                        safeLexicalCast<float>(line_parts[quat_vel_idx+1]),
+                        safeLexicalCast<float>(line_parts[quat_vel_idx+2])
+                    );
+
+                float angular_speed =
+                    quat_vel_idx == -1 ?
+                    0 :
+                    safeLexicalCast<float>(line_parts[quat_vel_idx+3]);
 
                 String mesh( line_parts[mesh_idx] );
 
-
                 String scriptFile = "";
-                String scriptType = "";
-                if (script_file_idx != -1)
-                {
-                    std::cout<<"\n\nLength of line_parts: "<<line_parts.size();
-                    std::cout<<"\n\nIndex: "<<script_file_idx<<"\n\n";
-                    std::cout.flush();
-                    if (script_file_idx<line_parts.size()) {
-                        scriptFile = line_parts[script_file_idx];
-                        std::cout<<"\n\nGot a script file:  "<<scriptFile<<"\n\n";
-                        scriptType = line_parts[script_file_idx+1];
-                    }
-                }
+								String scriptType = "";
+								if(script_file_idx != -1)
+								{
+								
+								  std::cout << "\n\nLength of line_parts: " <<line_parts.size();
+									std::cout <<"\n\nIndex: "<<script_file_idx<<"\n\n";
+									std::cout.flush();
 
+									if(script_file_idx < line_parts.size())
+									{
+									  scriptFile = line_parts[script_file_idx];
+										std::cout << "\n\n Gor a script file: " << scriptFile<<"\n\n";
+										scriptType = line_parts[script_file_idx + 1];
+									}
+								}
 
-                float scale = 1.f;
-                if (scale_idx != -1)
-                    scale = safeLexicalCast<float>(line_parts[scale_idx], 1.f);
+                float scale =
+                    scale_idx == -1 ?
+                    1.f :
+                    safeLexicalCast<float>(line_parts[scale_idx], 1.f);
 
 
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);

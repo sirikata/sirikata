@@ -239,6 +239,9 @@ variableDeclarationNoIn
 	: 
 	^(
 	    VAR
+			{
+			  APP("var ");
+			}
 	    Identifier 
 					  {
 							  APP((const char*)$Identifier.text->chars);
@@ -379,7 +382,24 @@ forStatementInitialiserPart
 	;
 	
 forInStatement
-	: ^(FORIN forInStatementInitialiserPart expression statement)
+	: ^(
+	     FORIN 
+	     {
+			   APP(" for ( ");
+			 }
+
+	     forInStatementInitialiserPart 
+		   {
+		     APP(" in ");
+		   }
+		   expression 
+       {
+			   APP(" ) ");
+			 }
+		 
+		   statement
+		 
+		 )
 	;
 	
 forInStatementInitialiserPart

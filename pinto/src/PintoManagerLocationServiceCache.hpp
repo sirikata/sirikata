@@ -58,6 +58,7 @@ public:
     virtual const TimedMotionVector3f& location(const Iterator& id) const;
     virtual const BoundingSphere3f& region(const Iterator& id) const;
     virtual float32 maxSize(const Iterator& id) const;
+    virtual bool isLocal(const Iterator& id) const;
 
     virtual const ObjectID& iteratorID(const Iterator& id) const;
 

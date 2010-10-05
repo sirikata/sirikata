@@ -150,6 +150,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
 public:
     class Transfer::TransferManager *mTransferManager;          /// FIXME: need a better way to get this
     const TimeOffsetManager *getLocalTimeOffset() {
+        assert(false && "DO NOT USE GET LOCAL TIME OFFSET. IT IS BROKEN.");
         return mLocalTimeOffset;
     }
 

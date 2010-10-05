@@ -67,6 +67,7 @@ public:
     virtual const TimedMotionVector3f& location(const Iterator& id) const;
     virtual const BoundingSphere3f& region(const Iterator& id) const;
     virtual float32 maxSize(const Iterator& id) const;
+    virtual bool isLocal(const Iterator& id) const;
 
     virtual const UUID& iteratorID(const Iterator& id) const;
 
@@ -97,7 +98,7 @@ public:
 private:
 
     // These generate and queue up updates from the main thread
-    void objectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     void objectRemoved(const UUID& uuid, bool agg);
     void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
@@ -106,12 +107,13 @@ private:
 
     // These do the actual work for the LocationServiceListener methods.  Local versions always
     // call these, replica versions only call them if replica tracking is on
-    void processObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    void processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     void processObjectRemoved(const UUID& uuid, bool agg);
     void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     void processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
+
 
     CBRLocationServiceCache();
 
@@ -134,12 +136,17 @@ private:
         BoundingSphere3f region;
         // MaxSize is the size of the object, stored upon bounding region updates.
         float32 maxSize;
+        // Whether the object is local or a replica
+        bool isLocal;
         String mesh;
-        bool tracking;
+        bool exists; // Exists, i.e. xObjectRemoved hasn't been called
+        int16 tracking; // Ref count to support multiple users
     };
     typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
+
+    bool tryRemoveObject(ObjectDataMap::iterator& obj_it);
 
     // Data contained in our Iterators. We maintain both the UUID and the
     // iterator because the iterator can become invalidated due to ordering of
