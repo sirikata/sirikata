@@ -381,10 +381,19 @@ void Proximity::removeRelevantServer(ServerID sid) {
     mServersQueried.erase(sid);
 }
 
+void Proximity::scheduleAggregateEventHandler() {
+    mContext->mainStrand->post(std::tr1::bind(&Proximity::invokeAggregateEventHandler, this));
+}
+
+void Proximity::invokeAggregateEventHandler() {
+    AggregateEventHandler evt;
+    if (!mAggregateEventHandlers.pop(evt)) return;
+    evt();
+}
 
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
-    mContext->mainStrand->post(
+    mAggregateEventHandlers.push(
         std::tr1::bind(
             &LocationService::addLocalAggregateObject, mLocService,
             objid,
@@ -394,6 +403,7 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
             ""
         )
     );
+    scheduleAggregateEventHandler();
 }
 
 void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
@@ -409,39 +419,43 @@ void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bn
 
 void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     // Loc cares only about this chance to update state of aggregate
-    mContext->mainStrand->post(
+    mAggregateEventHandlers.push(
         std::tr1::bind(
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
     );
+    scheduleAggregateEventHandler();
 }
 
 void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     // Loc cares only about this chance to update state of aggregate
-    mContext->mainStrand->post(
+    mAggregateEventHandlers.push(
         std::tr1::bind(
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
     );
+    scheduleAggregateEventHandler();
 }
 
 void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
-    mContext->mainStrand->post(
+    mAggregateEventHandlers.push(
         std::tr1::bind(
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
     );
+    scheduleAggregateEventHandler();
 }
 
 void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
-    mContext->mainStrand->post(
+    mAggregateEventHandlers.push(
         std::tr1::bind(
             &LocationService::removeLocalAggregateObject, mLocService, objid
         )
     );
+    scheduleAggregateEventHandler();
 }
 
 void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
