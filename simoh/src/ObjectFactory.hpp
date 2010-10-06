@@ -62,11 +62,14 @@ class ObjectFactory : public Service {
     typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;
 
 public:
-    ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration);
+    ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration, double forceRadius=0, int forceNumRandomObjects=0);
     ~ObjectFactory();
 
+    //UUID::null gets you the first object
+    Object *getNextObject(const UUID&next);
 private:
     Object* object(const UUID& id);
+    
 
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
@@ -74,7 +77,7 @@ private:
     virtual void start();
     virtual void stop();
 
-    void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);
+    void generateRandomObjects(const BoundingBox3f& region, const Duration& duration, double forceRadius=0, int forceNumRandomObjects=0);
     void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
     void generateStaticTraceObjects(const BoundingBox3f& region, const Duration& duration);
 

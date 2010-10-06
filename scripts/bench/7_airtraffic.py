@@ -22,7 +22,7 @@ import flow_fairness
 
 class FlowPairFairness(flow_fairness.FlowFairness):
     def _setup_cluster_sim(self, rate, io):
-        self.cs.scenario = 'unreliablehitpoint'
+        self.cs.scenario = 'airtraffic'
 
         if self.local: localval = 'true'
         else: localval = 'false'
@@ -31,9 +31,9 @@ class FlowPairFairness(flow_fairness.FlowFairness):
             ['--num-pings-per-second=' + str(rate),
              '--num-hp-per-second=' + str(1350),#6999
              '--prob-messages-uniform=0.999',
-             '--receivers-per-server=1',
+             '--receivers-per-server=3',
              '--num-objects-per-server=20',
-             '--hp-size=128',# + str(self.payload_size),
+             '--hp-size=1200',# + str(self.payload_size),
              '--ping-size=1200',# + str(self.payload_size),
              '--local=' + localval,
              ]

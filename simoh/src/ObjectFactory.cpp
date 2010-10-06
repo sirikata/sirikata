@@ -66,15 +66,17 @@ static UUID pack2UUID(const uint64 packid) {
     return id;
 }
 
-ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration)
+ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration, double forceRadius, int forceNumRandomObjects)
  : Service(),
    mContext(ctx),
    mLocalIDSource(0)
 {
     // Note: we do random second in order make sure they get later connect times
-    generatePackObjects(region, duration);
-    generateRandomObjects(region, duration);
-    generateStaticTraceObjects(region, duration);
+    generateRandomObjects(region, duration, forceRadius, forceNumRandomObjects);
+    if (!forceNumRandomObjects) {
+        generatePackObjects(region, duration);
+        generateStaticTraceObjects(region, duration);
+    }
     setConnectTimes();
 
     // Possibly dump pack data.
@@ -96,12 +98,26 @@ ObjectFactory::~ObjectFactory() {
     }
 }
 
-void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Duration& duration) {
+Object*ObjectFactory::getNextObject(const UUID&objid){
+    if (mObjects.empty()) return NULL;
+    ObjectMap::iterator where=(mObjects.find(objid));
+    if (where!=mObjects.end()) {
+        ++where;
+        if (where!=mObjects.end())
+            return where->second;
+        return NULL;
+    }
+    return mObjects.begin()->second;
+}
+
+void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Duration& duration, double forceRadius, int forceNumRandomObjects) {
     Time start(Time::null());
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
     uint32 nobjects              = GetOptionValue<uint32>(OBJECT_NUM_RANDOM);
+    if (forceNumRandomObjects)
+        nobjects=forceNumRandomObjects;
     if (nobjects == 0) return;
     bool simple                  =   GetOptionValue<bool>(OBJECT_SIMPLE);
     bool only_2d                 =       GetOptionValue<bool>(OBJECT_2D);
@@ -122,7 +138,10 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
 
         Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, (only_2d ? 0.5 : randFloat())*region_extents.z);
 
-        float bounds_radius = (simple ? 10.f : (randFloat()*20));
+        double radval = forceRadius;
+        if (!radval)
+            radval=10;
+        float bounds_radius = (simple ? radval : (randFloat()*2*radval));
 
         inputs->localID = mLocalIDSource++;
 

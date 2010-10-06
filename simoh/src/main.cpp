@@ -82,7 +82,6 @@ int main(int argc, char** argv) {
 
 
     Duration duration = GetOptionValue<Duration>("duration");
-
     // Get the starting time
     String start_time_str = GetOptionValue<String>("wait-until");
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );

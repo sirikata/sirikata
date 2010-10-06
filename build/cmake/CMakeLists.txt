@@ -1410,6 +1410,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/DistributionPingScenario.cpp
   ${SIMOH_SOURCE_DIR}/PingDelugeScenario.cpp
   ${SIMOH_SOURCE_DIR}/HitPointScenario.cpp
+  ${SIMOH_SOURCE_DIR}/AirTrafficControllerScenario.cpp
   ${SIMOH_SOURCE_DIR}/UnreliableHitPointScenario.cpp
   ${SIMOH_SOURCE_DIR}/LoadPacketTrace.cpp
   ${SIMOH_SOURCE_DIR}/DelugePairScenario.cpp
