@@ -46,7 +46,7 @@ void InitOptions() {
         .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohstreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
-        .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
+        .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=16384 --parallel-sockets=1 --no-delay=false",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
 
         .addOption(new OptionValue(OPT_REGION_WEIGHT, "sqr", Sirikata::OptionValueType<String>(), "Type of region weight calculator to use, which affects communication falloff."))
         .addOption(new OptionValue(OPT_REGION_WEIGHT_ARGS, "--flatness=8 --const-cutoff=64", Sirikata::OptionValueType<String>(), "Arguments to region weight calculator."))

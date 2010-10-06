@@ -40,7 +40,7 @@
 #include "HitPointScenario.hpp"
 #include "UnreliableHitPointScenario.hpp"
 #include "OSegScenario.hpp"
-
+#include "AirTrafficControllerScenario.hpp"
 AUTO_SINGLETON_INSTANCE(Sirikata::ScenarioFactory);
 namespace Sirikata {
 ScenarioFactory::ScenarioFactory(){
@@ -53,6 +53,7 @@ ScenarioFactory::ScenarioFactory(){
     NullScenario::addConstructorToFactory(this);
     HitPointScenario::addConstructorToFactory(this);
     UnreliableHitPointScenario::addConstructorToFactory(this);
+    AirTrafficControllerScenario::addConstructorToFactory(this);
 }
 ScenarioFactory::~ScenarioFactory(){}
 ScenarioFactory&ScenarioFactory::getSingleton(){

@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         exit(0);
     }
     else if ( GetOptionValue<bool>(ANALYSIS_MESSAGE_LATENCY) ) {
-        uint16 ping_port=OBJECT_PORT_PING;
+        uint16 ping_port=14050;//OBJECT_PORT_PING;
         uint32 unservers=nservers;
         MessageLatencyFilters filter(&ping_port,&unservers,//filter by created @ object host
                        &unservers);//filter by destroyed @ object host
