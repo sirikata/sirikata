@@ -407,6 +407,8 @@ void ColladaDocumentImporter::setupPrim(SubMeshGeometry::Primitive* outputPrim,
         outputPrimExtra.uvSetMap[prim->getUVCoordIndices(uvSet)->getSetIndex()]=uvSet;
     }
     switch(prim->getPrimitiveType()) {
+      case COLLADAFW::MeshPrimitive::POLYGONS:
+      case COLLADAFW::MeshPrimitive::POLYLIST:
       case COLLADAFW::MeshPrimitive::TRIANGLE_FANS:
         outputPrim->primitiveType = SubMeshGeometry::Primitive::TRIFANS;break;
       case COLLADAFW::MeshPrimitive::TRIANGLE_STRIPS:
@@ -473,8 +475,8 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         COLLADAFW::MeshPrimitive * prim = primitives[prim_index];
         if (prim->getPrimitiveType()==COLLADAFW::MeshPrimitive::POLYLIST||
             prim->getPrimitiveType()==COLLADAFW::MeshPrimitive::POLYGONS) {
-            COLLADA_LOG(error,"ERROR: we do not support COLLADA POLYGONS\n");
-            continue;
+            COLLADA_LOG(error,"ERROR: we do not support concave COLLADA POLYGONS\n");
+            //continue;
         }
         size_t groupedVertexElementCount;
         bool multiPrim;
