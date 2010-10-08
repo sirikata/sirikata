@@ -377,7 +377,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
 	  
     // Special casing emerson compilation
 
-    #ifdef _EMERSON_COMPILE_
+    #ifdef EMERSON_COMPILE
 
     cout << " em script = \n" << em_script_str << "\n";
 

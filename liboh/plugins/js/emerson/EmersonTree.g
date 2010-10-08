@@ -779,13 +779,19 @@ arguments
 	       {
 								  APP(" ( ");  
 								}
-	    (
-					  
+			(
+			  assignmentExpression
+	      (
+			   {
+					  APP(", ");
+					}
 					  assignmentExpression
 					   	
 					)*
 				
-				)
+				)*
+      )
+				
 				{
 				  APP(" ) ");
 				}
