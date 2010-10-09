@@ -34,21 +34,34 @@
 #define _SIRIKATA_CSV_OBJECT_FACTORY_HPP_
 
 #include <sirikata/oh/ObjectFactory.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 
 namespace Sirikata {
 
 /** CSVObjectFactory generates objects from an input CSV file. */
 class CSVObjectFactory : public ObjectFactory {
 public:
-    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
+    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 connect_rate);
     virtual ~CSVObjectFactory() {}
 
     virtual void generate();
 private:
+    // Connects one batch of objects and sets up another callback for more
+    // additions if necessary.
+    void connectObjects();
+
     ObjectHostContext* mContext;
     ObjectHost* mOH;
     SpaceID mSpace;
     String mFilename;
+    struct ObjectConnectInfo {
+        HostedObjectPtr object;
+        Location loc;
+        BoundingSphere3f bounds;
+        String mesh;
+    };
+    std::queue<ObjectConnectInfo> mIncompleteObjects;
+    int32 mConnectRate;
 };
 
 } // namespace Sirikata

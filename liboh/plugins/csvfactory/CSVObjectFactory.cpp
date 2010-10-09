@@ -31,15 +31,15 @@
  */
 
 #include "CSVObjectFactory.hpp"
-#include <sirikata/oh/HostedObject.hpp>
 
 namespace Sirikata {
 
-CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename)
+CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 connect_rate)
  : mContext(ctx),
    mOH(oh),
    mSpace(space),
-   mFilename(filename)
+   mFilename(filename),
+   mConnectRate(connect_rate)
 {
 }
 
@@ -192,20 +192,44 @@ void CSVObjectFactory::generate() {
 
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
-                obj->connect(
-                    mSpace,
-                    Location( pos, orient, vel, rot_axis, angular_speed),
-                    BoundingSphere3f(Vector3f::nil(), scale),
-                    mesh,
-                    UUID::null(),
-                    scriptFile,
-                    scriptType);
+
+                ObjectConnectInfo oci;
+                oci.object = obj;
+                oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
+                oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
+                oci.mesh = mesh;
+                mIncompleteObjects.push(oci);
+
             }
         }
     }
 
     fp.close();
+
+    connectObjects();
+
     return;
+}
+
+void CSVObjectFactory::connectObjects() {
+    if (mContext->stopped())
+        return;
+
+    for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
+        ObjectConnectInfo oci = mIncompleteObjects.front();
+        mIncompleteObjects.pop();
+        oci.object->connect(
+            mSpace,
+            oci.loc, oci.bounds, oci.mesh,
+            UUID::null()
+        );
+    }
+
+    if (!mIncompleteObjects.empty())
+        mContext->mainStrand->post(
+            Duration::seconds(1.f),
+            std::tr1::bind(&CSVObjectFactory::connectObjects, this)
+        );
 }
 
 }
