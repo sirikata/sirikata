@@ -34,11 +34,12 @@
 
 namespace Sirikata {
 
-CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 connect_rate)
+CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate)
  : mContext(ctx),
    mOH(oh),
    mSpace(space),
    mFilename(filename),
+   mMaxObjects(max_objects),
    mConnectRate(connect_rate)
 {
 }
@@ -73,8 +74,11 @@ void CSVObjectFactory::generate() {
     int scale_idx = -1;
 
 
+    int count = 0;
+
+
     // For each line
-    while(fp) {
+    while(fp && count < mMaxObjects) {
         String line;
         std::getline(fp, line);
         // First char is # and not the first non whitespace char
@@ -199,6 +203,8 @@ void CSVObjectFactory::generate() {
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
                 mIncompleteObjects.push(oci);
+
+                count++;
 
             }
         }

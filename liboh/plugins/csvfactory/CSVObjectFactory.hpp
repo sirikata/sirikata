@@ -41,7 +41,7 @@ namespace Sirikata {
 /** CSVObjectFactory generates objects from an input CSV file. */
 class CSVObjectFactory : public ObjectFactory {
 public:
-    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 connect_rate);
+    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate);
     virtual ~CSVObjectFactory() {}
 
     virtual void generate();
@@ -54,6 +54,7 @@ private:
     ObjectHost* mOH;
     SpaceID mSpace;
     String mFilename;
+    int32 mMaxObjects;
     struct ObjectConnectInfo {
         HostedObjectPtr object;
         Location loc;
