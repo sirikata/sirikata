@@ -265,7 +265,7 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-  boost::shared_ptr<BaseDatagramLayer<EndPointType> > mDatagramLayer; 
+  boost::shared_ptr<BaseDatagramLayer<EndPointType> > mDatagramLayer;
 
   int mState;
   uint16 mRemoteChannelID;
@@ -366,12 +366,12 @@ private:
     if (mState == CONNECTION_DISCONNECTED) {
         boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-            getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup, 
+            getContext()->mainStrand->post(Duration::seconds(0.01),
+                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
                                                           thus) );
         }else {
             SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
-        }        
+        }
         return false;
     }
     else if (mState == CONNECTION_PENDING_DISCONNECT) {
@@ -381,8 +381,8 @@ private:
         mState = CONNECTION_DISCONNECTED;
         boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-            getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup, 
+            getContext()->mainStrand->post(Duration::seconds(0.01),
+                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
                                                           thus ));
         }else {
             SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
@@ -431,19 +431,19 @@ private:
       }
     }
     else {
-      
+
 
       if (mState == CONNECTION_PENDING_CONNECT) {
         boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
 
-            getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup, 
+            getContext()->mainStrand->post(Duration::seconds(0.01),
+                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
                                                           thus) );
         }else {
-            SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");            
+            SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
-        
+
         return false; //the connection was unable to contact the other endpoint.
       }
 
@@ -601,6 +601,7 @@ private:
       boost::shared_ptr<Stream<EndPointType> >
       ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid,
 				 initial_data, length, false, 0, cb) );
+    stream->mWeakThis = stream;
 
     mOutgoingSubstreamMap[lsid]=stream;
   }
@@ -639,7 +640,7 @@ private:
         pushedIntoQueue = true;
 
         if (inSendingMode) {
-          getContext()->mainStrand->post(Duration::seconds(0.01), 
+          getContext()->mainStrand->post(Duration::seconds(0.01),
                                          std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this, mWeakThis.lock()) );
         }
       }
@@ -945,25 +946,25 @@ private:
 
   static void cleanup(boost::shared_ptr<Connection<EndPointType> > conn) {
     int connState = conn->mState;
-    
+
     if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
       //Deal with the connection not getting connected with the remote endpoint.
       //This is in contrast to the case where the connection got connected, but
       //the connection's root stream was unable to do so.
-      
+
       boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
       ConnectionReturnCallbackFunction cb = NULL;
       if (sConnectionReturnCallbackMap.find(conn->localEndPoint()) != sConnectionReturnCallbackMap.end()) {
         cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
       }
-      
+
       boost::shared_ptr<Connection>  failed_conn = conn;
-      
+
       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
       sConnectionMap.erase(conn->localEndPoint());
-      
+
       lock.unlock();
-      
+
       if (connState == CONNECTION_PENDING_CONNECT && cb != NULL)
         cb(SST_IMPL_FAILURE, failed_conn);
     }
@@ -1360,8 +1361,8 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-      getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+      getContext()->mainStrand->post(Duration::seconds(0.01),
+          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
 
       return len;
     }
@@ -1384,8 +1385,8 @@ public:
 	count++;
       }
 
-      getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+      getContext()->mainStrand->post(Duration::seconds(0.01),
+          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
 
       return currOffset;
     }
@@ -1460,11 +1461,11 @@ public:
     if (force) {
       mConnected = false;
       mState = DISCONNECTED;
-      
+
       boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       if (conn)
         conn->eraseDisconnectedStream(this);
-      
+
       return true;
     }
     else {
@@ -1655,7 +1656,7 @@ private:
      unable to connect. In that case, the connection for this stream needs to
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
-  bool serviceStream() {
+  bool serviceStream(boost::shared_ptr<Stream<EndPointType> > strm, boost::shared_ptr<Connection<EndPointType> > conn) {
     const Time curTime = Timer::now();
 
     if (mState != CONNECTED && mState != DISCONNECTED) {
@@ -1697,8 +1698,8 @@ private:
         mState = DISCONNECTED;
 
         if (!retVal) {
-          getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                         std::tr1::bind(&Connection<EndPointType>::cleanup, 
+          getContext()->mainStrand->post(Duration::seconds(0.01),
+                                         std::tr1::bind(&Connection<EndPointType>::cleanup,
                                                         conn) );
         }
 
@@ -1765,8 +1766,8 @@ private:
 	}
 
         if (sentSomething) {
-          getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds), 
-                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+          getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
+              std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
         }
       }
     }
@@ -1793,8 +1794,8 @@ private:
        }
      }
 
-    getContext()->mainStrand->post(Duration::seconds(0.01), 
-                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+    getContext()->mainStrand->post(Duration::seconds(0.01),
+        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
 
 
 
@@ -2007,8 +2008,8 @@ private:
     assert(conn);
     conn->sendData( buffer.data(), buffer.size(), false );
 
-    getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds), 
-                                         std::tr1::bind(&Stream<EndPointType>::serviceStream, this) );
+    getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
+        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
   }
 
   void sendAckPacket() {
@@ -2127,6 +2128,8 @@ private:
   uint16 mInitialDataLength;
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
+
+  boost::weak_ptr<Stream<EndPointType> > mWeakThis;
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
