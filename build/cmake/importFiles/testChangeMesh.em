@@ -24,12 +24,15 @@ function callback_change_mesh()
         onOriginalMesh = true;
         system.presences[0].setMesh(originalMesh);
     }
+        
+
 }
+
 
 
 var changeMeshPattern = new system.Pattern("changeMesh");
 
-
+//var handler = system.registerHandler(changeMeshPattern, null, callback_change_mesh, null);
 var handler = system.registerHandler(callback_change_mesh,null,changeMeshPattern,null);
 
 
