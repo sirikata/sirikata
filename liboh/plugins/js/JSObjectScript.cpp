@@ -271,20 +271,6 @@ bool JSObjectScript::valid() const
 void JSObjectScript::test() const
 {
     FIXME_GET_SPACE();
-
-    
-//     Location loc = mParent->getLocation( space );
-//     //loc.setPosition( loc.getPosition() + Vector3<float64>(.5f, .5f, .5f) );
-//     loc.setOrientation( loc.getOrientation() * Quaternion(Vector3<float32>(0.0f, 0.0f, 1.0f), 3.14159/18.0) );
-//     loc.setAxisOfRotation( Vector3<float32>(0.0f, 0.0f, 1.0f) );
-//     loc.setAngularSpeed(3.14159/10.0);
-//     mParent->setLocation( space, loc );
-
-//     //    mParent->setVisual(space, Transfer::URI(" http://www.sirikata.com/content/assets/tetra.dae"));
-//     mParent->setVisualScale(space, Vector3f(1.f, 1.f, 2.f) );
-
-//     printf("\n\n\n\n\nI GOT HERE\n\n\n");
-//     //doing a simple testSendMessage
     bftm_testSendMessageBroadcast("default message");
 }
 
@@ -596,12 +582,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 #define NOOP_CAST(X) X
 
-//bftm FIXME
-// CreateLocationAccessorHandlers(Vector3d, Position, Object, ObjectCast, Vec3Validate, Vec3Extract)
-// CreateLocationAccessorHandlers(Vector3f, Velocity, Object, ObjectCast, Vec3Validate, Vec3Extract)
-// CreateLocationAccessorHandlers(Quaternion, Orientation, Object, ObjectCast, QuaternionValidate, QuaternionExtract)
-// CreateLocationAccessorHandlers(Vector3f, AxisOfRotation, Object, ObjectCast, Vec3Validate, Vec3Extract)
-// CreateLocationAccessorHandlers(double, AngularSpeed, Value, NOOP_CAST, NumericValidate, NumericExtract)
 
 
 //dealing with presence positions etc.

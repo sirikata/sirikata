@@ -116,10 +116,20 @@ function createSubscriberObject()
 //note: may need to special-case the system object as self
 function createSubscriberSetupFunction()
 {
-    var returner = function(toModify)
+    //assume that toModify has a field called scopeKey
+    var returner = function(sender,toModify)
     {
         toModify.monitoredData = toMonitor;
+        
         lkjs;
+
+
+        boxed message;
+
+        var subscriptionFinish = new Object();
+        subscriptionFinish.scopeKey = toModify.scopeKey;
+        sender.sendMessage(subscriptionFinish);
+        
 
     };
 
