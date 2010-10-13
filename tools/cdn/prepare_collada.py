@@ -19,12 +19,21 @@ import glob
 import xml.dom.minidom
 import subprocess
 import zipfile
+import tempfile
+import shutil
 
 if sys.argv < 4:
-    print "Usage: prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_dir output_dir"
+    print "Usage: prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_zip_or_dir [output_dir]"
     sys.exit(-1)
 
-remote_path, collada_dir, output_dir = sys.argv[1:4]
+remote_path, collada_dir = sys.argv[1:3]
+if len(sys.argv) > 4:
+    output_dir = sys.argv[4]
+    cleanup_output = False
+else:
+    output_dir = tempfile.mkdtemp()
+    cleanup_output = True
+
 # Get just username+server and remote directory individually
 username_at_server, remote_dir = remote_path.split(':')
 # Get username and server individually
@@ -59,7 +68,7 @@ class ColladaDirectory:
         return open(fname, 'r')
 
     def copy_file(self, fname, dest):
-        subprocess.call(['cp', fname, dest])
+        shutil.copy(fname, dest)
 
 class ColladaZip:
     def __init__(self, zf):
@@ -98,7 +107,19 @@ dae_xml = xml.dom.minidom.parse( collada.get_file(dae) )
 
 # Get the name we'll use as a base. For this we use the name of the
 # output directory specified
-dae_name = os.path.basename(output_dir).rsplit('.', 1)[0]
+def get_title(instr):
+    split_instr = os.path.basename(instr).rsplit('.', 1);
+    if len(split_instr) == 1:
+        return split_instr[0]
+    if len(split_instr[1]) < 4: # probably an extension
+        return split_instr[0]
+    # If nothing else works, use the whole thing
+    return instr
+
+if cleanup_output: # If its a random name, use the input path
+    dae_name = get_title(collada_dir)
+else:
+    dae_name = get_title(output_dir)
 
 def filter_images(node):
     if node.nodeType == node.ELEMENT_NODE and node.tagName == 'image':
@@ -125,6 +146,7 @@ filter_images(dae_xml)
 dae_xml.writexml( open(os.path.join(output_dir, dae_name + '.dae'), 'w') )
 
 
+
 # Part 2 - Pushing to the CDN.  We've got all the files in the output
 # directory, so now we just need to push them all up.
 cdn_files = glob.glob( os.path.join(output_dir, '*') )
@@ -140,3 +162,7 @@ add_cmd_cmds = ['./add_to_cdn %s %s' % (username, x) for x in cdn_files_base]
 add_cmd_cmds.insert(0, 'cd ' + remote_dir)
 add_cmd.append('; '.join(add_cmd_cmds))
 subprocess.call(add_cmd);
+
+# And clean up
+if cleanup_output:
+    shutil.rmtree(output_dir)
