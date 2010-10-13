@@ -18,6 +18,7 @@ import os.path
 import glob
 import xml.dom.minidom
 import subprocess
+import zipfile
 
 if sys.argv < 4:
     print "Usage: prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_dir output_dir"
@@ -44,8 +45,44 @@ output_dir = remove_empty_filename(output_dir)
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+
+# Define classes to abstract away the particular source of the data -
+# could be a zip file or an actual directory on disk
+class ColladaDirectory:
+    def __init__(self, cdir):
+        self.cdir = cdir
+
+    def find_daes(self):
+        return glob.glob( os.path.join(collada_dir, 'models', '*.dae') )
+
+    def get_file(self, fname):
+        return open(fname, 'r')
+
+    def copy_file(self, fname, dest):
+        subprocess.call(['cp', fname, dest])
+
+class ColladaZip:
+    def __init__(self, zf):
+        self.zf = zipfile.ZipFile(zf)
+
+    def find_daes(self):
+        return [x for x in self.zf.namelist() if x.endswith('.dae')]
+
+    def get_file(self, fname):
+        return self.zf.open(fname)
+
+    def copy_file(self, fname, dest):
+        data = self.zf.read(os.path.normpath(fname))
+        with file(dest, 'w') as f:
+            f.write(data)
+
 # Find the collada file
-daes = glob.glob( os.path.join(collada_dir, 'models', '*.dae') )
+if os.path.isdir(collada_dir):
+    collada = ColladaDirectory(collada_dir)
+else:
+    collada = ColladaZip(collada_dir)
+
+daes = collada.find_daes()
 if len(daes) == 0:
     print "Couldn't find any .dae files."
     exit(-1)
@@ -57,7 +94,7 @@ if len(daes) > 1:
 dae_dir = os.path.dirname(dae)
 
 # Parse, looking for image files
-dae_xml = xml.dom.minidom.parse(dae)
+dae_xml = xml.dom.minidom.parse( collada.get_file(dae) )
 
 # Get the name we'll use as a base. For this we use the name of the
 # output directory specified
@@ -76,7 +113,7 @@ def filter_images(node):
             # Copy data
             local_file = os.path.join(dae_dir, image_fname)
             local_copy = os.path.join(output_dir, renamed_image_base)
-            subprocess.call(['cp', local_file, local_copy])
+            collada.copy_file(local_file, local_copy)
 
     for child in node.childNodes:
         filter_images(child)
