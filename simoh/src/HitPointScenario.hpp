@@ -47,8 +47,9 @@ class DamagableObject;
 class HitPointScenario : public Scenario {
     double mNumPingsPerSecond;
     double mNumHitPointsPerSecond;
-
+public:
     ObjectHostContext*mContext;
+
     ConnectedObjectTracker* mObjectTracker;
     Poller* mPingPoller;
     Poller* mHPPoller;

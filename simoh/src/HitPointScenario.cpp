@@ -183,8 +183,26 @@ public:
                     DamagableObject::HPTYPE hp(0.0);
                     memcpy(&hp,mPartialUpdate,mPartialCount);
                     DamagableObject::HPTYPE test(hp.read());
-                    if (rand()%10==0)
-                        SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp.read()<<" Delay "<<(hp.read()-mContext->calcHp())<<" distance "<<(mObj->location().position()-mParent->object->location().position()).length());
+                    double old=hp.read();
+                    double newish=mContext->calcHp();
+                    Time sampTime (mContext->mContext->simTime());
+                    Time sentTime (sampTime-Duration::seconds(fabs(old-newish)));
+                    double distance=(mObj->location().position()-mParent->object->location().position()).length();
+                    if (rand()%100==0)
+                        SILOG(hitpoint,error,"Got hitpoint update for "<<mID.toString()<<" as "<<hp.read()<<" Delay "<<(old-newish)<<" distance "<<distance);
+                    ObjectHostContext *mContext=this->mContext->mContext;
+                    CONTEXT_OHTRACE_NO_TIME(hitpoint,
+                                            sentTime,
+                                            mObj->uuid(),
+                                            sampTime,
+                                            mParent->object->uuid(),
+                                            hp.read(),
+                                            newish,
+                                            distance,
+                                            mObj->bounds().radius(),
+                                            mParent->object->bounds().radius(),
+                                            length);
+
                     assert(hp==test);
 
                     mPartialCount=0;
