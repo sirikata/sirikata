@@ -29,12 +29,12 @@ class FlowPairFairness(flow_fairness.FlowFairness):
         self.cs.object_simple='true'
         self.cs.scenario_options = ' '.join(
             ['--num-pings-per-second=' + str(rate),
-             '--num-hp-per-second=' + str(1350),#6999
+             '--num-hp-per-second=' + str(800),#6999
              '--prob-messages-uniform=0.999',
-             '--receivers-per-server=3',
+             '--num-receivers=8',
              '--num-objects-per-server=20',
-             '--hp-size=1200',# + str(self.payload_size),
-             '--ping-size=1200',# + str(self.payload_size),
+             '--hp-size=720',# + str(self.payload_size),
+             '--ping-size=780',# + str(self.payload_size),
              '--local=' + localval,
              ]
             )
@@ -56,9 +56,9 @@ if __name__ == "__main__":
 
     cc = ClusterConfig()
     cs = ClusterSimSettings(cc, nss, (nss,1), numoh)
-    #cs.region_weight = "const";
-    #cs.region_weight_options = '--radius=false'
-    cs.region_weight_options = '--flatness=.0055'
+    cs.region_weight = "const";
+    cs.region_weight_options = '--radius=false'
+    #cs.region_weight_options = '--flatness=.0085'
     cs.debug = True
 
     cs.valgrind = False

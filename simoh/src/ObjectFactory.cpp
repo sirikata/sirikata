@@ -142,7 +142,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         if (!radval)
             radval=10;
         float bounds_radius = (simple ? radval : (randFloat()*2*radval));
-
+        //SILOG(oh,error,"Creating "<<id.toString()<<" radius "<<bounds_radius);
         inputs->localID = mLocalIDSource++;
 
         if (motion_path_type == "static")//static
@@ -236,7 +236,7 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
 
         Vector3f startpos((float)x, (float)y, (float)z);
         float bounds_radius = (float)rad;
-
+        //SILOG(oh,error,"Preating "<<id.toString()<<" radius "<<bounds_radius);
         inputs->localID = mLocalIDSource++;
         inputs->motion = new StaticMotionPath(start, startpos);
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
@@ -307,7 +307,7 @@ void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, cons
     char uuid[256];
     while( !feof(pack_file) && fscanf(pack_file, "%s %f %f %f %d %f", uuid, &ent.pos.x, &ent.pos.y, &ent.pos.z, &ent.t, &ent.rad) ) {
         ent.uuid = UUID(std::string(uuid), UUID::HumanReadable());
-
+        //SILOG(oh,error,"Preating "<<ent.uuid.toString()<<" radius "<<ent.rad);
         TraceObjectMap::iterator obj_it = trace_objects.find(ent.uuid);
         if (obj_it == trace_objects.end()) {
             trace_objects[ent.uuid] = ObjectUpdateList();

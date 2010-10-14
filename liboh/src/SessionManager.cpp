@@ -82,6 +82,9 @@ void SessionManager::ObjectConnections::add(const UUID& objid, ConnectingInfo ci
 {
     // Make sure we have this object's info stored
     ObjectInfoMap::iterator it = mObjectInfo.find(objid);
+    if (it != mObjectInfo.end()) {
+        SILOG(oh,error,"Uh oh: this object connected twice "<<objid.toString());
+    }
     assert (it == mObjectInfo.end());
     it = mObjectInfo.insert( ObjectInfoMap::value_type( objid, ObjectInfo() ) ).first;
     ObjectInfo& obj_info = it->second;

@@ -158,7 +158,7 @@ bool CSFQODPFlowScheduler::push(Sirikata::Protocol::Object::ObjectMessage* msg, 
         if (true) {
             double prob_drop = std::max(0.0, label ? 1.0 - mAlpha / label : 0);
             static Time start(curtime);
-            //CSFQLOG(error,"p:"<<prob_drop<<" r:"<<flow_rate<<" w:"<<w_norm<<" tws:"<<sender_total_weights<<" sacc:"<<sender_acc_rate<<" swu:"<<savedTotalUsedWeight[SENDER]<<" swt:"<<mSenderTotalWeight<<" twr:"<<receiver_total_weights<<" racc:"<<receiver_acc_rate<<" rwu:"<<savedTotalUsedWeight[RECEIVER]<<" rwt:"<<mReceiverTotalWeight<<" a:"<<mAlpha<<" aw:"<<mAlphaWindowed<<" scap:"<<mSenderCapacity<<" rcap:"<<mReceiverCapacity<<" t:"<<(curtime-start).toSeconds()<<'\n');
+            //CSFQLOG(error,"p:"<<prob_drop<<" r:"<<flow_rate<<" w:"<<w_norm<<" wei:"<<weight<<" sz:"<<packet_size<<" tws:"<<sender_total_weights<<" sacc:"<<sender_acc_rate<<" swu:"<<savedTotalUsedWeight[SENDER]<<" swt:"<<mSenderTotalWeight<<" twr:"<<receiver_total_weights<<" racc:"<<receiver_acc_rate<<" rwu:"<<savedTotalUsedWeight[RECEIVER]<<" rwt:"<<mReceiverTotalWeight<<" a:"<<mAlpha<<" aw:"<<mAlphaWindowed<<" scap:"<<mSenderCapacity<<" rcap:"<<mReceiverCapacity<<" t:"<<(curtime-start).toSeconds()<<'\n');
         }
     }
 
