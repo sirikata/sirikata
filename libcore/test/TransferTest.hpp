@@ -41,9 +41,6 @@
 #include <sirikata/core/transfer/CachedServiceLookup.hpp>
 
 #include <sirikata/core/transfer/ServiceManager.hpp>
-#include <sirikata/core/transfer/NameLookupManager.hpp>
-
-#include <sirikata/core/transfer/NetworkCacheLayer.hpp>
 
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
