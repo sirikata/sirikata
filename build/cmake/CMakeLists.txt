@@ -448,7 +448,7 @@ ELSE(WIN32)
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
-  
+
   STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_iostreams" Boost_IOSTREAMS_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
@@ -1042,9 +1042,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
         ${Protocol_PBJ_CPP_FILES}
         ${TRACE_PBJ_CPP_FILES}
-	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferMediator.cpp
-	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
@@ -1062,8 +1060,6 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
         ${LIBCORE_SOURCE_DIR}/odp/DelegatePort.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
-   	${LIBCORE_SOURCE_DIR}/options/Config.cpp
-   	${LIBCORE_SOURCE_DIR}/options/CDNConfig.cpp
    	${LIBCORE_SOURCE_DIR}/options/CommonOptions.cpp
         ${LIBCORE_SOURCE_DIR}/network/Address4.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
@@ -1321,9 +1317,7 @@ ${GFX}/resourceManager/SAngleDownloadPlanner.cpp
 ${GFX}/resourceManager/ResourceLoadTask.cpp
 ${GFX}/resourceManager/ResourceLoadingQueue.cpp
 ${GFX}/resourceManager/ResourceManager.cpp
-${GFX}/resourceManager/ResourceTransfer.cpp
 ${GFX}/resourceManager/ResourceUnloadTask.cpp
-${GFX}/resourceManager/UploadTool.cpp
 ${GFX}/ViewportOverlay.cpp
 ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp
@@ -1994,11 +1988,11 @@ IF(CHROME_FOUND)
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
 
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
-      
+
       ${TOP_LEVEL}/cdn.txt
       ${CMAKE_CURRENT_BINARY_DIR}/scene.db
       )
-    
+
     # FIXME for some reason, the links inside the .app aren't working
     # here, even though they seem to work fine for Berkelium
     ADD_CUSTOM_TARGET(cppoh_app_help

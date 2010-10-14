@@ -43,9 +43,7 @@
 #include <vector>
 #include <string>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/core/task/EventManager.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 #include <sirikata/proxyobject/Meshdata.hpp>
 
@@ -472,9 +470,6 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
     Context* mContext;
     Vector3f mGravity;
     double groundlevel;
-    OptionValue* mTempTferManager;
-    OptionValue* mWorkQueue;
-    OptionValue* mEventManager;
     Task::LocalTime mStartTime;
     const TimeOffsetManager *mLocalTimeOffset;
     ///local bullet stuff:
@@ -493,7 +488,6 @@ public:
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<BulletObj*>objects;
 //    btAlignedObjectArray<btCollisionShape*> collisionShapes;
-    Transfer::TransferManager*transferManager;
     void addPhysicalObject(BulletObj* obj, positionOrientation po,
                            float density, float friction, float bounce, Vector3f hull,
                            float sizx, float sizy, float sizz);
@@ -538,7 +532,6 @@ public:
     virtual Duration desiredTickRate()const {
         return Duration::seconds(0.1);
     };
-    Task::EventResponse downloadFinished(Task::EventPtr evbase, BulletObj* bullobj);
 
     virtual void poll();
 

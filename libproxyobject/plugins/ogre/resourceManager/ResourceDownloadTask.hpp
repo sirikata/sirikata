@@ -34,7 +34,6 @@
 
 #include "../meruCompat/MeruDefs.hpp"
 #include "../meruCompat/DependencyTask.hpp"
-#include "../meruCompat/Event.hpp"
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
@@ -48,10 +47,6 @@ public:
     virtual ~ResourceRequestor();
 
   virtual void setResourceBuffer(const SparseData& buffer) = 0;
-};
-
-class ResourceDownloadQueue {
-
 };
 
 class ResourceDownloadTask : public DependencyTask
@@ -78,7 +73,6 @@ public:
 
 protected:
 
-  EventResponse downloadCompleteHandler(const EventPtr &event);
   void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 

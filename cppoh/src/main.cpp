@@ -33,18 +33,15 @@
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/proxyobject/ModelsSystemFactory.hpp> // MCB:
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
-#include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
 #include <sirikata/core/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
-#include <sirikata/core/options/CDNConfig.hpp>
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/SpaceIDMap.hpp>
 #include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
@@ -55,8 +52,6 @@
 #include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
-
-
 
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
@@ -105,19 +100,6 @@ int main (int argc, char** argv) {
 #endif
 #endif
 
-    OptionMapPtr transferOptions (new OptionMap);
-    {
-        std::string contents( GetOptionValue<String>(OPT_CDN_CONFIG) );
-        std::string::size_type pos(0);
-        parseConfig(contents, transferOptions, transferOptions, pos);
-        std::cout << *transferOptions;
-    }
-
-    // FIXME: Initializes protocol handlers (http, rest, file, x-shasumofuri,
-    // x-hashed) in the Transfer system.  This seems like it should be handled
-    // automatically with plugins.
-    initializeProtocols();
-
 
     ObjectHostID oh_id = GetOptionValue<ObjectHostID>("ohid");
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
@@ -154,7 +136,7 @@ int main (int argc, char** argv) {
         spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
     }
 
-    ObjectHost *oh = new ObjectHost(ctx, spaceMap, workQueue, ios, "");
+    ObjectHost *oh = new ObjectHost(ctx, spaceMap, ios, "");
 
     // Add all the spaces to the ObjectHost.
     // FIXME we're adding all spaces and having them use the same ServerIDMap
@@ -171,21 +153,10 @@ int main (int argc, char** argv) {
     }
 
 
-    Transfer::TransferManager *tm;
-    try {
-        tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
-    } catch (OptionDoesNotExist &err) {
-        SILOG(input,fatal,"Fatal Error: Failed to load CDN config: " << err.what());
-        std::cout << "Press enter to continue" << std::endl;
-        std::cerr << "Press enter to continue" << std::endl;
-        fgetc(stdin);
-        return 1;
-    }
-
     String graphicsCommandArguments;
     {
         std::ostringstream os;
-        os << "--transfermanager=" << tm << " ";
+
         os << "--eventmanager=" << eventManager << " ";
         os << "--workqueue=" << workQueue << " ";
         graphicsCommandArguments = os.str();
@@ -201,7 +172,7 @@ int main (int argc, char** argv) {
     ProxyManagerPtr proxy_manager = obj->getProxyManager( mainSpace );
 
     // MCB: seems like a good place to initialize models system
-    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( proxy_manager.get(), graphicsCommandArguments ) );
+    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( proxy_manager.get(), "" ) );
 
     if ( mm )
     {
@@ -289,7 +260,6 @@ int main (int argc, char** argv) {
     proxy_manager.reset();
     delete oh;
 
-    destroyTransferManager(tm);
     delete eventManager;
     delete workQueue;
 

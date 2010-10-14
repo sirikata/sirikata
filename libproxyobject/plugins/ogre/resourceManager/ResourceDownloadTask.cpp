@@ -35,7 +35,6 @@
 #include "../meruCompat/EventSource.hpp"
 #include "../meruCompat/Event.hpp"
 #include "ResourceDownloadTask.hpp"
-#include "ResourceTransfer.hpp"
 #include "../meruCompat/DependencyManager.hpp"
 #include <stdio.h>
 #include "GraphicsResourceManager.hpp"
@@ -68,29 +67,6 @@ ResourceDownloadTask::~ResourceDownloadTask()
 
   //EventSource::getSingleton().unsubscribe(mCurrentDownload);
 }
-
-//Old Download completion callback, used with the TransferManager, no longer
-//necessary if all downloads go through the TransferMediator
-/*
-EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& event)
-{
-  std::tr1::shared_ptr<DownloadCompleteEvent> transferEvent = DowncastEvent<DownloadCompleteEvent>(event);
-  if (transferEvent->success()) {
-    Transfer::SparseData finishedData = transferEvent->data();
-    for (Transfer::DenseDataList::const_iterator iter = mMergeData.Transfer::DenseDataList::begin();
-         iter != mMergeData.Transfer::DenseDataList::end();
-         ++iter) {
-      iter->addToList<Transfer::DenseDataList>(iter.std::list<Transfer::DenseDataPtr>::const_iterator::operator*(), finishedData);
-    }
-    mResourceRequestor->setResourceBuffer(finishedData);
-  }
-  else {
-    //assert(false); // ???
-  }
-  finish(transferEvent->success());
-  return EventResponse::del();
-}
-*/
 
 void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
   for (Transfer::DenseDataList::const_iterator iter =
@@ -155,12 +131,5 @@ void ResourceDownloadTask::operator()()
 
   TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
    pool->addRequest(req);
-
-  //Old code that launches a download through the TransferManager, no longer
-  //necessary if download is triggered through the TransferMediator
- /* mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
-       std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1),
-       mRange);*/
-
 }
 }

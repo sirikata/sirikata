@@ -37,7 +37,6 @@
 #include <sirikata/proxyobject/TimeOffsetManager.hpp>
 //#include <oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 #include "btBulletCollisionCommon.h"
 #include "BulletSystem.hpp"
@@ -52,6 +51,8 @@ static int core_plugin_refcount = 0;
 
 //#define DEBUG_OUTPUT(x) x
 #define DEBUG_OUTPUT(x)
+
+#define BULLET_LOG(lvl,msg) SILOG(bullet, lvl, "[BULLET] " << msg)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -436,24 +437,6 @@ void BulletObj::requestLocation(TemporalValue<Location>::Time timeStamp, const P
     }
 }
 
-Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, BulletObj* bullobj) {
-    Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
-    DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << (int)ev->getStatus()
-                  << " success: " << (int)Transfer::TransferManager::SUCCESS
-                  << " bullet obj: " << bullobj
-                  << " length = " << (int)ev->data().length() << endl);
-    if (!ev->getStatus()==Transfer::TransferManager::SUCCESS) {
-        cout << "BulletSystem::downloadFinished failed, bullet object will not be built" << endl;
-    }
-    else {
-        Transfer::DenseDataPtr flatData = ev->data().flatten();
-        const unsigned char* realData = flatData->data();
-        DEBUG_OUTPUT (cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl);
-        bullobj->buildBulletBody(realData, ev->data().length(), false);
-    }
-    return Task::EventResponse::del();
-}
-
 void BulletSystem::addPhysicalObject(BulletObj* obj,
                                      positionOrientation po,
                                      float density, float friction, float bounce, Vector3f hull,
@@ -486,8 +469,9 @@ void BulletSystem::addPhysicalObject(BulletObj* obj,
         }
         else {
             /// set up a mesh download; callback (downloadFinished) calls buildBulletBody and completes object
-            transferManager->download(obj->mMeshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
-                                  this, _1, obj), Transfer::Range(true));
+            BULLET_LOG(error, "Download of meshes using TransferMediator not implemented.");
+            //transferManager->download(obj->mMeshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
+            //                      this, _1, obj), Transfer::Range(true));
         }
     }
 }
@@ -761,13 +745,8 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     mLocalTimeOffset=offset;
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
-    mTempTferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
-    mWorkQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
-    mEventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
-    InitializeClassOptions("bulletphysics",this, mTempTferManager, mWorkQueue, mEventManager, NULL);
+    InitializeClassOptions("bulletphysics",this, NULL);
     OptionSet::getOptions("bulletphysics",this)->parse(options);
-    Transfer::TransferManager* tm = (Transfer::TransferManager*)mTempTferManager->as<void*>();
-    this->transferManager = tm;
 
     groundlevel = 0.0;
     btTransform groundTransform;
@@ -800,9 +779,6 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     proxyManager->addListener(this);
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
     /// we don't delete these, the ProxyManager does (I think -- someone does anyway)
-//    delete mTempTferManager;
-//    delete mWorkQueue;
-//    delete mEventManager;
     return true;
 }
 

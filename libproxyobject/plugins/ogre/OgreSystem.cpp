@@ -37,7 +37,6 @@
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
 #include <sirikata/core/task/Event.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 #include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
@@ -56,7 +55,6 @@
 #include "resourceManager/ResourceManager.hpp"
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ManualMaterialLoader.hpp"
-#include "resourceManager/UploadTool.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
@@ -375,7 +373,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
-    OptionValue*transferManager,*workQueue,*eventManager;
+    OptionValue*workQueue,*eventManager;
     OptionValue*grabCursor;
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
@@ -399,15 +397,12 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
-                           transferManager=new OptionValue("transfermanager","0",OptionValueType<void*>(),"Memory address of the TransferManager instance for downloading assets."),
                            workQueue=new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue"),
                            eventManager=new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>"),
                            NULL);
     bool userAccepted=true;
 
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
-
-    mTransferManager = (Transfer::TransferManager*)transferManager->as<void*>();
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
@@ -532,9 +527,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
         } else
             throw e;
     }
-    mInputManager->subscribe(
-        Input::DragAndDropEvent::getId(),
-        std::tr1::bind(&OgreSystem::performUpload,this,_1));
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
@@ -887,93 +879,6 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
     }
     resultCount=count;
     return toReturn;
-}
-
-typedef const std::map<Meru::ResourceFileUpload,Meru::ResourceUploadStatus> UploadStatusMap;
-void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
-
-/*
-,
-    const std::map<String,int>& user_interface_choices,
-    const std::set<String>& usernames_to_logout
-*/
-{
-    int nummesh=0;
-    for (UploadStatusMap::const_iterator iter = uploadStatus.begin(); iter != uploadStatus.end(); ++iter) {
-        bool success = (*iter).second == Transfer::TransferManager::SUCCESS;
-        if (success) {
-            SILOG(ogre,debug,"Upload of " << (*iter).first.mID << " (hash "<<(*iter).first.mHash << ") was successful.");
-            /* FIXME Creating proxy meshes out of nowhere makes no sense.  If
-               you want to put a mesh in place, fix this to create a new
-               HostedObject that uses that mesh.
-            if ((*iter).first.mType == Meru::MESH) {
-                Time now(mLocalTimeOffset->now(mPrimaryCamera->getProxy()));
-                SpaceObjectReference newId = SpaceObjectReference(mPrimaryCamera->id().space(), ObjectReference(UUID::random()));
-                Location loc (mPrimaryCamera->getProxy().globalLocation(now).getPosition(), Quaternion::identity(),
-                              Vector3f::nil(), Vector3f(0,1,0), 0);
-                float scale = mInputManager->mWorldScale->as<float>();
-                loc.setPosition(loc.getPosition()+Vector3d(-scale*loc.getOrientation().zAxis())); // z-axis is backwards.
-                ProxyManager *proxyMgr = mPrimaryCamera->getProxy().getProxyManager();
-                std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
-                proxyMgr->createObject(newMeshObject,mPrimaryCamera->getProxy().getQueryTracker());
-                newMeshObject->setMesh((*iter).first.mID);
-                newMeshObject->resetLocation(now, loc);
-                selectObject(getEntity(newMeshObject));
-                nummesh++;
-            }
-            */
-        } else {
-            SILOG(ogre,warn,"Failed to upload " << (*iter).first.mID <<  " (hash "<<(*iter).first.mHash << "). Status = "<<(int)((*iter).second));
-        }
-    }
-}
-
-struct UploadRequest {
-    Meru::ReplaceMaterialOptions opts;
-    std::vector<Meru::DiskFile> filenames;
-    OgreSystem *parent;
-    Transfer::TransferManager *mTransferManager;
-    void perform() {
-        std::vector<Meru::ResourceFileUpload> allDeps =
-            Meru::ProcessOgreMeshMaterialDependencies(filenames, opts);
-        Meru::UploadFilesAndConfirmReplacement(mTransferManager,
-                                           allDeps,
-                                           opts.uploadHashContext,
-                                           std::tr1::bind(&OgreSystem::uploadFinished,parent,_1));
-        delete this;
-    }
-};
-
-Task::EventResponse OgreSystem::performUpload(Task::EventPtr ev) {
-    std::tr1::shared_ptr<Input::DragAndDropEvent> dndev(
-        std::tr1::dynamic_pointer_cast<Input::DragAndDropEvent>(ev));
-    UploadRequest *uploadreq = new UploadRequest;
-    uploadreq->opts.uploadHashContext = Transfer::URIContext("mhash:///");
-    uploadreq->opts.uploadNameContext = Transfer::URIContext("meru:///");
-    for (std::vector<std::string>::const_iterator iter = dndev->mFilenames.begin(); iter != dndev->mFilenames.end(); ++iter) {
-		std::string filename = *iter;
-		struct stat st;
-		if (stat((*iter).c_str(), &st)==0) {
-			if (filename.length()>2 && ((st.st_mode & S_IFDIR)==S_IFDIR)) {
-				// if directory, look in dirname/models/dirname.mesh
-				std::string::size_type lastslash = filename.rfind('/',filename.length()-2);
-				if (lastslash != std::string::npos) {
-					std::string meshname = filename.substr(lastslash+1);
-					std::string::size_type endslash = meshname.find('/');
-					if (endslash != std::string::npos) {
-						meshname = meshname.substr(0, endslash);
-					}
-					filename += "/models/"+meshname+".mesh";
-				}
-			}
-		}
-		uploadreq->filenames.push_back(Meru::DiskFile::makediskfile(filename));
-	}
-    uploadreq->parent = this;
-    uploadreq->mTransferManager = mTransferManager;
-    Thread th(std::tr1::bind(&UploadRequest::perform, uploadreq));
-    th.detach(); // let it do processing in the background.
-    return Task::EventResponse::nop();
 }
 
 Duration OgreSystem::desiredTickRate()const{

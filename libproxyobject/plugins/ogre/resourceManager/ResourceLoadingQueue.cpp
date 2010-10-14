@@ -36,7 +36,6 @@
 #include <OgreResourceBackgroundQueue.h>
 #include <OgreResourceManager.h>
 #include "../meruCompat/EventSource.hpp"
-#include "ResourceTransfer.hpp"
 #include "ResourceManager.hpp"
 #include <sirikata/core/util/UUID.hpp>
 

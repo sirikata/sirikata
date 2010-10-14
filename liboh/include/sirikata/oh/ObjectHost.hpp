@@ -92,11 +92,10 @@ public:
     /** Caller is responsible for starting a thread
      *
      * @param spaceIDMap space ID map used to resolve space IDs to servers
-     * @param messageQueue a work queue to run this object host on
      * @param ioServ IOService to run this object host on
      * @param options a string containing the options to pass to the object host
      */
-    ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ, const String&options);
+    ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceIDMap, Network::IOService*ioServ, const String&options);
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
 
