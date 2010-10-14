@@ -212,7 +212,7 @@ void DPSInitOptions(AirTrafficControllerScenario *thus) {
         new OptionValue("flood-server","1",Sirikata::OptionValueType<uint32>(),"The index of the server to flood.  Defaults to 1 so it will work with all layouts. To flood all servers, specify 0."),
         new OptionValue("source-flood-server","true",Sirikata::OptionValueType<bool>(),"This makes the flood server the source of all the packets rather than the destination, so that we can validate that egress routing gets proper fairness."),
         new OptionValue("local","false",Sirikata::OptionValueType<bool>(),"If true, generated traffic will all be local, i.e. will all originate at the flood-server.  Otherwise, it will always originate from other servers."),
-        new OptionValue("receivers-per-server","3",Sirikata::OptionValueType<int>(),"The number of folks listening for HP updates at each server"),
+        new OptionValue("num-receivers","24",Sirikata::OptionValueType<int>(),"The number of folks listening for HP updates at each server"),
         NULL);
 }
 }
@@ -354,14 +354,16 @@ void AirTrafficControllerScenario::initialize(ObjectHostContext*ctx) {
 
 
     mObjectTracker = new ConnectedObjectTracker(mContext->objectHost);
-
-    OptionSet* optionsSet = OptionSet::getOptions("AirTrafficControllerScenario",this);
-    mAirplanes = new ObjectFactory(ctx, region, duration, 250, optionsSet->referenceOption("receivers-per-server")->as<int>()*mObjectTracker->numServerIDs());
-  
-    mControlTower= new ObjectFactory(ctx, BoundingBox3f(region.min(),region.min())/*make sure airport is at the edge of the scene*/, duration, 550,2);
-    ctx->add(mAirplanes);
-    ctx->add(mControlTower);
-
+    if (mNumHitPointsPerSecond) {
+        OptionSet* optionsSet = OptionSet::getOptions("AirTrafficControllerScenario",this);
+        mAirplanes = new ObjectFactory(ctx, region, duration, 200, optionsSet->referenceOption("num-receivers")->as<int>());
+        
+        mControlTower= new ObjectFactory(ctx, BoundingBox3f(Vector3f(0,0,0),Vector3f(0,0,0))/*make sure airport is at the edge of the scene*/, duration,550,2);
+        ctx->add(mAirplanes);
+        ctx->add(mControlTower);
+    }else {
+        mAirplanes=mControlTower=NULL;
+    }
     mContext->objectHost->registerService(mPort,std::tr1::bind(&AirTrafficControllerScenario::hpReturn,this,_1));
 
     mPingProfiler = mContext->profiler->addStage("Object Host Send Pings");
@@ -402,20 +404,20 @@ void AirTrafficControllerScenario::start() {
 void AirTrafficControllerScenario::delayedStart() {
     mStartTime = mContext->simTime();
     OptionSet* optionsSet = OptionSet::getOptions("AirTrafficControllerScenario",this);
-    int receiversPerServer = optionsSet->referenceOption("receivers-per-server")->as<int>();
+
     int ss=mFloodServer;
     if (mFloodServer ==0) {
         ss=(rand() % mObjectTracker->numServerIDs())+1;
     }
-    Object * objA = mControlTower->getNextObject(UUID::null());
-    if (!objA->connected()) {
-        objA = mControlTower->getNextObject(objA->uuid());
-    }
-    if (!objA->connected()) {
-        SILOG(oh,error,"Air traffic controller: error, tower not connected\n");
-    }
-    if (objA) {
-        if (mNumHitPointsPerSecond) {
+    if (mNumHitPointsPerSecond) {
+        Object * objA = mControlTower->getNextObject(UUID::null());
+        if (!objA->connected()) {
+            objA = mControlTower->getNextObject(objA->uuid());
+        }
+        if (!objA->connected()) {
+            SILOG(oh,error,"Air traffic controller: error, tower not connected\n");
+        }
+        if (objA) {
             DamagableObject * d=(mDamagableObjects[objA->uuid()]=new DamagableObject(objA,1000, mPort, mHPSize));
             std::vector<Object* >allReceivers;
             Object  * objB=NULL;
@@ -425,31 +427,32 @@ void AirTrafficControllerScenario::delayedStart() {
                     d->mDamageReceivers[objB->uuid()]=NULL;
                 }
             }
-
+            
             SILOG(oh,error,"Pinging "<<allReceivers.size()<<" objects ");
-
+            
             for (size_t i=0;i<allReceivers.size();++i) {
                 d->mDamageReceivers[allReceivers[i]->uuid()]=(new DamagableObject::ReceiveDamage(d,
                                                                                                  this,
                                                                                                  allReceivers[i],
                                                                                                  allReceivers[i]->uuid()));
+            }
+            
+            
+        }else {
+            Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
+            connect_phase=connect_phase/16.0;
+            SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
+            mContext->mainStrand->post(
+                connect_phase,
+                std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this)
+                );
+            
         }
-
-
-        }
-        mGeneratePingPoller->start();
-        //mHPPoller->start();
-        mPingPoller->start();
-    }else {
-        Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
-        connect_phase=connect_phase/16.0;
-        SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
-        mContext->mainStrand->post(
-            connect_phase,
-            std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this)
-            );
-
     }
+    mGeneratePingPoller->start();
+    //mHPPoller->start();
+    mPingPoller->start();
+
 
 }
 void AirTrafficControllerScenario::stop() {

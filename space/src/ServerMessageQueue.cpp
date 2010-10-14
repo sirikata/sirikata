@@ -102,7 +102,7 @@ double ServerMessageQueue::capacity() {
     if (mBlocked)
         return mCapacityEstimator.get() + 1;
     else
-        return mCapacityEstimator.get() + 1;//mCapacityOverestimate; // .5 Mbps overestimate
+        return mCapacityEstimator.get() + 500000;//mCapacityOverestimate; // .5 Mbps overestimate
 }
 
 void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, double used_weight) {

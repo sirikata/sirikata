@@ -99,7 +99,6 @@ int main(int argc, char** argv) {
 
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
     Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOptionValue<String>("scenario"))(GetOptionValue<String>("scenario-options"));
-    scenario->initialize(ctx);
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
 
@@ -120,6 +119,7 @@ int main(int argc, char** argv) {
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
     ctx->add(obj_factory);
+    scenario->initialize(ctx);
     ctx->add(scenario);
     ctx->add(sstConnMgr);
     ctx->run(2);
