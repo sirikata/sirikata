@@ -36,9 +36,6 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
-#include <sirikata/core/task/EventManager.hpp>
-#include <sirikata/core/task/WorkQueue.hpp>
-
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
@@ -122,8 +119,6 @@ int main (int argc, char** argv) {
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
 
-    Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
-    Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     SpaceIDMap *spaceMap = new SpaceIDMap;
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
     typedef std::map<std::string,std::string> SimpleSpaceIDMap;
@@ -152,15 +147,6 @@ int main (int argc, char** argv) {
         oh->addServerIDMap(newSpace, server_id_map);
     }
 
-
-    String graphicsCommandArguments;
-    {
-        std::ostringstream os;
-
-        os << "--eventmanager=" << eventManager << " ";
-        os << "--workqueue=" << workQueue << " ";
-        graphicsCommandArguments = os.str();
-    }
 
     // FIXME simple test example
     // This is the camera.  We need it early on because other things depend on
@@ -201,7 +187,7 @@ int main (int argc, char** argv) {
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( ctx, proxy_manager.get(), proxy_manager->getTimeOffsetManager(), graphicsCommandArguments );
+            .getConstructor ( simName ) ( ctx, proxy_manager.get(), proxy_manager->getTimeOffsetManager(), "" );
         if (!sim) {
             if (simRequests[ir].required) {
                 SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -259,9 +245,6 @@ int main (int argc, char** argv) {
 
     proxy_manager.reset();
     delete oh;
-
-    delete eventManager;
-    delete workQueue;
 
     for(SimList::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
         delete *it;
