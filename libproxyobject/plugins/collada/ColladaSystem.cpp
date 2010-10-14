@@ -137,70 +137,6 @@ void ColladaSystem::loadDocument (std::tr1::weak_ptr<ProxyMeshObject>(proxy),
             std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
       }
   } else std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
-
-
- /* TransferRequestPtr req(new MetadataRequest(what, 1, std::tr1::bind(&ColladaSystem::metadataFinished, this, proxy,
-								    std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-
-
-                                                                    mTransferPool->addRequest(req);*/
-
-
-  // Use our TransferManager to async download the data into memory.
-  /* Transfer::TransferManager* transferManager = static_cast< Transfer::TransferManager* > ( mTransferManager->as< void* > () );
-
-    if ( transferManager )
-    {
-        Transfer::TransferManager::EventListener listener ( std::tr1::bind ( &ColladaSystem::downloadFinished, this, _1, what, proxy ) );
-
-        transferManager->download ( what, listener, Transfer::Range ( true ) );
-    }
-    else
-        throw std::logic_error ( "ColladaSystem::loadDocument() needs a TransferManager" );*/
-}
-
-Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what,
-        std::tr1::weak_ptr<ProxyMeshObject>(proxy) )
-{
-    assert(false && "Shouldn't be using the old style TransferManager callback anymore.");
-
-    Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast< Transfer::DownloadEvent > ( evbase );
-
-    assert((std::cout << "MCB: ColladaSystem::downloadFinished()"
-            << " status: " <<  (int)(ev->getStatus ())
-            << " length: " <<  ev->data ().length ()
-            << " what: " << what
-            << std::endl,true));
-
-   if ( ev->getStatus () == Transfer::TransferManager::SUCCESS )
-    {
-        Transfer::DenseDataPtr flatData = ev->data ().flatten ();
-
-
-        // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
-        // MCB: Serialized because OpenCOLLADA thread safety is unknown
-        ColladaDocumentLoader loader ( what, SHA256::null(), proxy );
-//        loader.setProxyPtr(proxy);
-
-        char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );
-
-
-        if ( loader.load ( buffer , flatData->length () ) )
-        {
-            // finally we can add the Product to our set of completed documents
-            mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
-        }
-        else
-        {
-            std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
-        }
-    }
-    else
-    {
-        std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
-    }
-    return Task::EventResponse::del ();
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -220,11 +156,7 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
 {
     assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
 
-    mEventManager = new OptionValue ( "eventmanager", "0", OptionValueType< void* > (), "Memory address of the EventManager<Event>" );
-    mTransferManager = new OptionValue ( "transfermanager", "0", OptionValueType< void* > (), "Memory address of the TransferManager" );
-    mWorkQueue = new OptionValue ( "workqueue", "0", OptionValueType< void* > (), "Memory address of the WorkQueue" );
-
-    InitializeClassOptions ( "colladamodels", this, mTransferManager, mWorkQueue, mEventManager, NULL );
+    InitializeClassOptions ( "colladamodels", this, NULL );
     OptionSet::getOptions ( "colladamodels", this )->parse ( options );
 
 

@@ -31,7 +31,6 @@
  */
 
 #include "ResourceManager.hpp"
-#include "ResourceTransfer.hpp"
 #include "../meruCompat/EventSource.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 

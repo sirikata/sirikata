@@ -40,7 +40,6 @@
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "WebView.hpp"
 #include <sirikata/core/util/Sha256.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"

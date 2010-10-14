@@ -42,7 +42,6 @@
 
 #include <sirikata/core/transfer/ServiceManager.hpp>
 #include <sirikata/core/transfer/NameLookupManager.hpp>
-#include <sirikata/core/transfer/HTTPDownloadHandler.hpp>
 
 #include <sirikata/core/transfer/NetworkCacheLayer.hpp>
 

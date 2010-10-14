@@ -42,7 +42,6 @@
 #define OPT_MAIN_SPACE           "mainspace"
 #define OPT_SPACEID_MAP          "spaceidmap"
 
-#define OPT_CDN_CONFIG           "cdnConfig"
 #define OPT_SIGFPE               "sigfpe"
 
 #define OPT_OBJECT_FACTORY       "object-factory"

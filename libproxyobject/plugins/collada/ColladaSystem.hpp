@@ -39,12 +39,10 @@
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/transfer/TransferManager.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/Range.hpp>
-#include <sirikata/core/task/EventManager.hpp>
 #include <set>
 
 /////////////////////////////////////////////////////////////////////
@@ -87,13 +85,6 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
         ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
 
         bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
-
-        Task::EventResponse downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what, std::tr1::weak_ptr<ProxyMeshObject>(proxy) );
-
-        // things we need to integrate with Sirikata
-        OptionValue* mEventManager; // MCB: managed object
-        OptionValue* mTransferManager; // MCB: managed object
-        OptionValue* mWorkQueue; // MCB: managed object
 
         // documents that have been transfered, parsed, and loaded.
         // MCB: make this a map when/if a key becomes useful

@@ -52,8 +52,6 @@
 
 namespace Meru {
 class CDNArchivePlugin;
-class ResourceFileUpload;
-typedef int ResourceUploadStatus;
 }
 
 namespace Ogre {
@@ -66,14 +64,6 @@ class TimeOffsetManager;
 class ProxyObject;
 namespace Input {
 class SDLInputManager;
-}
-namespace Task {
-class EventResponse;
-class Event;
-typedef std::tr1::shared_ptr<Event> EventPtr;
-}
-namespace Transfer {
-class TransferManager;
 }
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
@@ -90,7 +80,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
     const TimeOffsetManager *mLocalTimeOffset;
-    Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
@@ -148,7 +137,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
 public:
-    class Transfer::TransferManager *mTransferManager;          /// FIXME: need a better way to get this
     const TimeOffsetManager *getLocalTimeOffset() {
         assert(false && "DO NOT USE GET LOCAL TIME OFFSET. IT IS BROKEN.");
         return mLocalTimeOffset;
@@ -194,7 +182,6 @@ public:
         delete os;
         return NULL;
     }
-    void uploadFinished(const std::map<Meru::ResourceFileUpload,Meru::ResourceUploadStatus>&);
     Entity* getEntity(const SpaceObjectReference &proxyId) const {
         SceneEntitiesMap::const_iterator iter = mSceneEntities.find(proxyId);
         if (iter != mSceneEntities.end()) {

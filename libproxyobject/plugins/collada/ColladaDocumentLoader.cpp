@@ -35,11 +35,6 @@
 #include "ColladaErrorHandler.hpp"
 #include "ColladaDocumentImporter.hpp"
 
-//#include "ColladaMeshObject.hpp"
-
-//#include <options/Options.hpp>
-//#include <transfer/TransferManager.hpp>
-
 // OpenCOLLADA headers
 #include "COLLADAFWRoot.h"
 #include "COLLADASaxFWLLoader.h"

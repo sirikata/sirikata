@@ -52,7 +52,7 @@
 
 namespace Sirikata {
 
-ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options)
+ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Network::IOService *ioServ, const String&options)
  : PollingService(ctx->mainStrand, Duration::seconds(1.f/30.f), ctx, "Object Host Poll"),
    mContext(ctx)
 {

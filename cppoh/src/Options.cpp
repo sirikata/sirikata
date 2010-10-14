@@ -58,7 +58,6 @@ void InitCPPOHOptions() {
                 OptionValueType<std::map<std::string,std::string> >(),
                 "Map between space ID's and TCPSST IPs."))
 
-        .addOption(new OptionValue(OPT_CDN_CONFIG,"cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."))
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
 
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
