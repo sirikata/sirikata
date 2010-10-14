@@ -1449,7 +1449,6 @@ libcore/test/TransferTest.hpp
 libcore/test/AnyTest.hpp
 libcore/test/AtomicTest.hpp
 #libcore/test/CacheLayerTest.hpp
-libcore/test/DownloadTest.hpp
 libcore/test/EventTest.hpp
 libcore/test/ExtrapolationTest.hpp
 libcore/test/FactoryTest.hpp
@@ -1457,7 +1456,6 @@ libcore/test/FairQueueTest.hpp
 libcore/test/ListenerTest.hpp
 libcore/test/Matrix3Test.hpp
 libcore/test/MinitransactionHandlerTest.hpp
-libcore/test/NameLookupTest.hpp
 libcore/test/ObjectStorageTest.hpp
 libcore/test/OptionTest.hpp
 #libcore/test/ProxTest.hpp
@@ -1468,7 +1466,6 @@ libcore/test/TCPSSTConnectTest.hpp
 libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
-#libcore/test/UploadTest.hpp
 libcore/test/Vector3Test.hpp
  )
 IF(NOT WIN32)
