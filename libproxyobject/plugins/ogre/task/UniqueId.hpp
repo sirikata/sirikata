@@ -33,6 +33,7 @@
 #ifndef SIRIKATA_UniqueId_HPP__
 #define SIRIKATA_UniqueId_HPP__
 
+#include <sirikata/core/util/Platform.hpp>
 #include <typeinfo>
 
 

@@ -30,13 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Standard.hh>
-#include <sirikata/core/task/EventManager.hpp>
-#include <sirikata/core/task/UniqueId.hpp>
-#include <sirikata/core/task/Event.hpp>
+#include "EventManager.hpp"
+#include "UniqueId.hpp"
+#include "Event.hpp"
 
 #include <sirikata/core/task/WorkQueue.hpp>
-#include <sirikata/core/task/TimerQueue.hpp>
 
 #include <iostream>
 

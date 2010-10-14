@@ -50,9 +50,9 @@
 #include "WebView.hpp"
 #include "InputResponse.hpp"
 #include "InputBinding.hpp"
-#include <sirikata/core/task/Event.hpp>
+#include "task/Event.hpp"
+#include "task/EventManager.hpp"
 #include <sirikata/core/task/Time.hpp>
-#include <sirikata/core/task/EventManager.hpp>
 #include <SDL_keysym.h>
 #include <set>
 

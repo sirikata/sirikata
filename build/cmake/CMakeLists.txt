@@ -1050,10 +1050,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
-	${LIBCORE_SOURCE_DIR}/task/EventManager.cpp
 	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
-	${LIBCORE_SOURCE_DIR}/task/Event.cpp
-	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
         ${LIBCORE_SOURCE_DIR}/odp/Defs.cpp
@@ -1278,6 +1275,9 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/InputBinding.cpp
   ${GFX}/InputBindingEvent.cpp
   ${GFX}/InputResponse.cpp
+  ${GFX}/task/EventManager.cpp
+  ${GFX}/task/Event.cpp
+  ${GFX}/task/UniqueId.cpp
   ${INPUT}/SDLInputManager.cpp
   ${INPUT}/InputEventDescriptor.cpp
   ${INPUT}/InputEvents.cpp
@@ -1487,7 +1487,6 @@ libcore/test/TransferTest.hpp
 libcore/test/AnyTest.hpp
 libcore/test/AtomicTest.hpp
 #libcore/test/CacheLayerTest.hpp
-libcore/test/EventTest.hpp
 libcore/test/ExtrapolationTest.hpp
 libcore/test/FactoryTest.hpp
 libcore/test/FairQueueTest.hpp

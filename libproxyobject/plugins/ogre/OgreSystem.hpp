@@ -44,7 +44,7 @@
 #include "resourceManager/DistanceDownloadPlanner.hpp"
 #include "resourceManager/SAngleDownloadPlanner.hpp"
 
-#include <sirikata/core/task/EventManager.hpp>
+#include "task/EventManager.hpp"
 #include <sirikata/core/task/WorkQueue.hpp>
 
 //Thank you Apple:

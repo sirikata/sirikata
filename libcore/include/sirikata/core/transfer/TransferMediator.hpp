@@ -61,7 +61,6 @@
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/util/Thread.hpp>
 #include <sirikata/core/util/Singleton.hpp>
-#include <sirikata/core/task/EventManager.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -216,7 +215,6 @@ public:
 	/*
 	 * Used to register a client that has a pool of requests it needs serviced by the transfer mediator
 	 * @param clientID	Should be a string that uniquely identifies the client
-	 * @param listener	An EventListener to receive a TransferEventPtr with the retrieved data.
 	 */
 	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID);
 

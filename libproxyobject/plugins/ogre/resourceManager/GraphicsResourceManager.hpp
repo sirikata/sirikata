@@ -35,7 +35,7 @@
 #include "GraphicsResource.hpp"
 #include "../meruCompat/Singleton.hpp"
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/core/task/EventManager.hpp>
+#include "../task/EventManager.hpp"
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/core/transfer/TransferPool.hpp>
