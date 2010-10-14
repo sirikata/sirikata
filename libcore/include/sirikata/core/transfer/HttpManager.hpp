@@ -205,8 +205,6 @@ private:
 
     IOServicePool* mServicePool;
     TCPResolver* mResolver;
-    IOWork* mIOWork;
-    IOWork* mIOWork2;
 
     http_parser_settings EMPTY_PARSER_SETTINGS;
 

@@ -49,7 +49,7 @@ class SIRIKATA_EXPORT IOServicePool {
     IOServicePool(uint32 nthreads);
     ~IOServicePool();
 
-    /** Run the */
+    /** Run the thread pool. */
     void run();
 
     /** Reset stopped state */
@@ -58,20 +58,24 @@ class SIRIKATA_EXPORT IOServicePool {
     /** Block until all the child threads exit. */
     void join();
 
+    /** Add work to keep the service busy. */
+    void startWork();
+
+    /** Remove work so the service can complete and exit. */
+    void stopWork();
+
     /** Get the IOService corresponding to the given thread.  Note that
      *  you rarely need a specific service, so requesting the default
      *  is sufficient.
      *  \param thr the index of the thread to retrieve the IOService for
      */
-    IOService* service(uint32 thr = 0);
+    IOService* service();
 
   private:
-    struct ThreadData {
-        Thread* thread;
-        IOService* ios;
-    };
-    typedef std::vector<ThreadData> ThreadList;
+    IOService* mIO;
+    typedef std::vector<Thread*> ThreadList;
     ThreadList mThreads;
+    IOWork* mWork;
 };
 
 } // namespace Network
