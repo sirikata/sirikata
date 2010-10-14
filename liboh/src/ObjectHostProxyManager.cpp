@@ -105,8 +105,6 @@ ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference
 
 
 
-
-//bftm
 //runs through all object references held by this particular object host proxy
 //manager and returns them in vecotr form.
 void ObjectHostProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const

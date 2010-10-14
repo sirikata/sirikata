@@ -1822,6 +1822,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVec3.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSMath.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp

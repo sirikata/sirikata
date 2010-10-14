@@ -871,9 +871,9 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 
 
 
-void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc)
+void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc)
 {
-    sendLocUpdateRequest(space, &loc, NULL, NULL, NULL);
+    sendLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL);
 }
 
 //only update the position of the object, leave the velocity and orientation unaffected
@@ -883,7 +883,7 @@ void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectRefer
     TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(pos,curVel));
 //FIXME: re-write the requestLocationUpdate function so that takes in object
 //reference as well
-    requestLocationUpdate(space,tmv);
+    requestLocationUpdate(space,oref,tmv);
 }
 
 //only update the velocity of the object, leave the position and the orientation
@@ -896,7 +896,7 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
     //FIXME: re-write the requestLocationUpdate function so that takes in object
     //reference as well
 
-    requestLocationUpdate(space,tmv);
+    requestLocationUpdate(space,oref,tmv);
 }
 
 //send a request to update the orientation of this object
@@ -904,7 +904,7 @@ void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const
 {
     Quaternion curQuatVel = requestCurrentQuatVel(space,oref);
     TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(quat,curQuatVel));
-    requestOrientationUpdate(space, tmq);
+    requestOrientationUpdate(space,oref, tmq);
 }
 
 
@@ -920,8 +920,6 @@ Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const O
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
     Location curLoc = proxy_obj->extrapolateLocation(Time::local());
     return curLoc.getOrientation();
-    // return proxy_obj->getOrientation();
-    // lkjs;
 }
 
 Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref)
@@ -934,7 +932,7 @@ void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const 
 {
     Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
     TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(curOrientQuat,quat));
-    requestOrientationUpdate(space, tmq);
+    requestOrientationUpdate(space, oref,tmq);
 }
 
 
@@ -959,7 +957,7 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
 {
     
     ProxyManagerPtr proxy_manager = getProxyManager(space);
-    ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+    ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
 
     //this cast does not work.
@@ -1000,12 +998,12 @@ Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const Object
     return (Vector3f)proxy_obj->getVelocity();
 }
 
-void HostedObject::requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient) {
-    sendLocUpdateRequest(space, NULL, &orient, NULL, NULL);
+void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
+    sendLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL);
 }
 
-void HostedObject::requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) {
-    sendLocUpdateRequest(space, NULL, NULL, &bounds, NULL);
+void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
+    sendLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL);
 }
 
 void HostedObject::requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo)
@@ -1022,12 +1020,12 @@ bool HostedObject::requestCurrentScale(const SpaceID& space, const ObjectReferen
 }
 
 
-void HostedObject::requestMeshUpdate(const SpaceID& space, const String& mesh)
+void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh)
 {
-    sendLocUpdateRequest(space, NULL, NULL, NULL, &mesh);
+    sendLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh);
 }
 
-void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh) {
+void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh) {
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
@@ -1052,6 +1050,7 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
 
     std::string payload = serializePBJMessage(container);
 
+    std::cout<<"\n\nBFTM: fix.  Calling getUUID, may make changes to the wrong oref in sendLocUpdateRequest\n\n";
     boost::shared_ptr<Stream<UUID> > spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
         boost::shared_ptr<Connection<UUID> > conn = spaceStream->connection().lock();

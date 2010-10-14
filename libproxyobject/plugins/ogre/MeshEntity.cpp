@@ -824,7 +824,7 @@ public:
                             //assert( i*stride < submesh.texUVs[tc].uvs.size() );
                             // but so many models seem to get this
                             // wrong that we need to hack around it.
-                            if ( i*stride < submesh.texUVs[tc].uvs.size() )
+                            if ( i*stride < (int)submesh.texUVs[tc].uvs.size() )
                                 memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
                             else { // The hack: just zero out the data
                                 warn_texcoords = true;

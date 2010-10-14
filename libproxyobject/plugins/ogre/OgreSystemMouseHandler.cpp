@@ -1140,7 +1140,8 @@ private:
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
-
+        ObjectReference oref = cam->getObjectReference().object();
+        
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1156,7 +1157,7 @@ private:
         // Request updates from spcae
         TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
         SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
-        cam_vwobj->requestLocationUpdate(space, newloc);
+        cam_vwobj->requestLocationUpdate(space, oref,newloc);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setLocation(newloc);
     }
@@ -1168,7 +1169,8 @@ private:
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
-
+        ObjectReference oref = cam->getObjectReference().object();
+        
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1183,7 +1185,7 @@ private:
 
         // Request updates from spcae
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
-        cam_vwobj->requestOrientationUpdate(space, neworient);
+        cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setOrientation(neworient);
     }
@@ -1196,7 +1198,8 @@ private:
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
-
+        ObjectReference oref = cam->getObjectReference().object();
+        
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1218,7 +1221,7 @@ private:
 
         // Request updates from spcae
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
-        cam_vwobj->requestOrientationUpdate(space, neworient);
+        cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setOrientation(neworient);
     }
@@ -1668,12 +1671,14 @@ private:
         loc.setAngularSpeed(0);
         VWObjectPtr cam_vwobj = cam->getOwner();
         SpaceID space = cam->getObjectReference().space();
+        ObjectReference oref = cam->getObjectReference().object();
+        
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
         Location oldloc = cam->extrapolateLocation(now);
         cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))));
         TimedMotionVector3f newplace(now,MotionVector3f(Vector3f(oldloc.getPosition()),Vector3f(pos-oldloc.getPosition())));
         cam->setLocation(newplace);
-        cam_vwobj->requestLocationUpdate(space, newplace);
+        cam_vwobj->requestLocationUpdate(space, oref,newplace);
     }
 
     void cameraPathSetToKeyFrame(uint32 idx) {

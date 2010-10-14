@@ -178,7 +178,6 @@ private:
     v8::Persistent<v8::Context> mContext;
     
 
-
     Handle<Object> getSystemObject();
     Handle<Object> getGlobalObject();
 
@@ -186,7 +185,8 @@ private:
     void printAllHandlerLocations();
     void populatePresences(Handle<Object>& system_obj );
     void populateSystemObject(Handle<Object>& system_obj );
-
+    void populateMath(Handle<Object>& system_obj);
+    
     
     void initializePresences(Handle<Object>& system_obj);
     void clearAllPresences(Handle<Object>& system_obj);

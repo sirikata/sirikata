@@ -288,9 +288,9 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
     v8::Local<v8::Array> arrayObj= v8::Array::New();
 
 
+    //Right now, we have multiple presences, but only designate one as "self"
+    //should we have multiple selves as well?
     FIXME_GET_SPACE();
-
-    
     SpaceObjectReference mSporef = mParent->id(space);
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
@@ -351,7 +351,6 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std
 
     mMessagingPort->send(dest,toSend);
 }
-
 
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
@@ -422,28 +421,24 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
 
 
 //this function gets a list of all objects that are messageable
-//FIXME: want to return full id including space instead of just
-//objectreferences: may want to message in other spaces as well.
 void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferences) const
 {
-    //FIXME: likely getAllMessageable in all spaces rather than just first space.
-    FIXME_GET_SPACE();
+    allAvailableObjectReferences.clear();
     
-    
-    //get a list of all object references through prox
-    ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(space);
+    HostedObject::SpaceObjRefSet allSporefs;
+    mParent->getSpaceObjRefs(allSporefs);
 
-    //FIX ME: May need to check if get back null ptr.
-
-    proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
+    SpaceObjRefSet::iterator sporefIt = allSporefs.begin();
+    for (SpaceObjRefSet::iteraotr sporefIt = allSporefs.begin(); sporefIt != allSporefs.end(); ++ sporefIt)
+    {
+        ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(*sporefIt);
+        proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
+    }
 
     std::cout<<"\n\nBFTM:  this is the number of objects that are messageable:  "<<allAvailableObjectReferences.size()<<"\n\n";
 
     if (allAvailableObjectReferences.empty())
-    {
         printf("\n\nBFTM: No object references available for sending messages");
-        return;
-    }
 }
 
 
@@ -532,24 +527,24 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 
 
-#define CreateLocationAccessorHandlersWithSpace(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
-    v8::Handle<v8::Value> JSObjectScript::get##PropName(SpaceID& space) {             \
-        /*FIXME_GET_SPACE(); */                                             \
-        return CreateJSResult(mContext, mParent->getLocation(space).get##PropName()); \
-    }                                                                   \
-                                                                        \
-    void JSObjectScript::set##PropName(SpaceID& space, v8::Local<v8::Value>& newval) {  \
-        Handle<SubType> val_obj = SubTypeCast(newval);                  \
-        if (!Validator(val_obj))                                        \
-            return;                                                     \
-                                                                        \
-        PropType native_val(Extractor(val_obj));                        \
-                                                                        \
-        /* FIXME_GET_SPACE(); */                                           \
-        Location loc = mParent->getLocation(space);                     \
-        loc.set##PropName( native_val);                                  \
-        mParent->setLocation(space, loc);                               \
-    } \
+// #define CreateLocationAccessorHandlersWithSpace(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
+//     v8::Handle<v8::Value> JSObjectScript::get##PropName(SpaceID& space) {             \
+//         /*FIXME_GET_SPACE(); */                                             \
+//         return CreateJSResult(mContext, mParent->getLocation(space).get##PropName()); \
+//     }                                                                   \
+//                                                                         \
+//     void JSObjectScript::set##PropName(SpaceID& space, v8::Local<v8::Value>& newval) {  \
+//         Handle<SubType> val_obj = SubTypeCast(newval);                  \
+//         if (!Validator(val_obj))                                        \
+//             return;                                                     \
+//                                                                         \
+//         PropType native_val(Extractor(val_obj));                        \
+//                                                                         \
+//         /* FIXME_GET_SPACE(); */                                           \
+//         Location loc = mParent->getLocation(space);                     \
+//         loc.set##PropName( native_val);                                  \
+//         mParent->setLocation(space, loc);                               \
+//     } \
 
 
 
@@ -561,121 +556,32 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 
 
-#define CreateLocationAccessorHandlers(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
-    v8::Handle<v8::Value> JSObjectScript::get##PropName() {             \
-        FIXME_GET_SPACE();                                              \
-        return CreateJSResult(mContext, mParent->getLocation(space).get##PropName()); \
-    }                                                                   \
-                                                                        \
-    void JSObjectScript::set##PropName(v8::Local<v8::Value>& newval) {  \
-        Handle<SubType> val_obj = SubTypeCast(newval);                  \
-        if (!Validator(val_obj))                                        \
-            return;                                                     \
-                                                                        \
-        PropType native_val(Extractor(val_obj));                        \
-                                                                        \
-        FIXME_GET_SPACE();                                            \
-        Location loc = mParent->getLocation(space);                     \
-        loc.set##PropName(native_val);                                  \
-        mParent->setLocation(space, loc);                               \
-    }
+// #define CreateLocationAccessorHandlers(PropType, PropName, SubType, SubTypeCast, Validator, Extractor) \
+//     v8::Handle<v8::Value> JSObjectScript::get##PropName() {             \
+//         FIXME_GET_SPACE();                                              \
+//         return CreateJSResult(mContext, mParent->getLocation(space).get##PropName()); \
+//     }                                                                   \
+//                                                                         \
+//     void JSObjectScript::set##PropName(v8::Local<v8::Value>& newval) {  \
+//         Handle<SubType> val_obj = SubTypeCast(newval);                  \
+//         if (!Validator(val_obj))                                        \
+//             return;                                                     \
+//                                                                         \
+//         PropType native_val(Extractor(val_obj));                        \
+//                                                                         \
+//         FIXME_GET_SPACE();                                            \
+//         Location loc = mParent->getLocation(space);                     \
+//         loc.set##PropName(native_val);                                  \
+//         mParent->setLocation(space, loc);                               \
+//     }
 
-#define NOOP_CAST(X) X
+// #define NOOP_CAST(X) X
 
 
 
 //dealing with presence positions etc.
 
 //position
-void JSObjectScript::setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec)
-{
-    mParent->requestPositionUpdate(sporef->space(),sporef->object(),posVec);
-}
-
-v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceObjectReference* sporef)
-{
-    Vector3d vec3 = mParent->requestCurrentPosition(sporef->space(),sporef->object());
-    return CreateJSResult(mContext,vec3);
-}
-
-//velocity
-void JSObjectScript::setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec)
-{
-    mParent->requestVelocityUpdate(sporef->space(),sporef->object(),velVec);
-}
-
-v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectReference* sporef)
-{
-    Vector3f vec3f = mParent->requestCurrentVelocity(sporef->space(),sporef->object());
-    return CreateJSResult(mContext,vec3f);
-}
-
-
-
-//orientation
-void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
-{
-    mParent->requestOrientationDirectionUpdate(sporef->space(),sporef->object(),quat);
-}
-
-v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectReference* sporef)
-{
-    Quaternion curOrientation = mParent->requestCurrentOrientation(sporef->space(),sporef->object());
-
-    return CreateJSResult(mContext,curOrientation);
-}
-
-
-//scale
-//FIXME: need to return the right space here.
-//lkjs; need to return the visuals for a particular space.;
-v8::Handle<v8::Value> JSObjectScript::getVisualScaleFunction(const SpaceObjectReference* sporef)
-{
-    //FIXME: actually need to write this function.
-    assert(false);
-    return v8::Undefined();
-    //lkjs;
-    //FIXME_GET_SPACE();
-    //return CreateJSResult(mContext, mParent->getVisualScale(space));
-}
-
-void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newscale)
-{
-    Handle<Object> scale_obj = ObjectCast(newscale);
-    if (!Vec3Validate(scale_obj))
-        return;
-
-    Vector3f native_scale(Vec3Extract(scale_obj));
-    FIXME_GET_SPACE();
-    assert(false);
-    //lkjs;
-    //FIXME: write this function.
-    //mParent->setVisualScale(space, native_scale);
-}
-
-
-//mesh
-v8::Handle<v8::Value> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
-{
-    Transfer::URI uri_returner;
-    bool hasMesh = mParent->requestMeshUri(sporef->space(),sporef->object(),uri_returner);
-
-    if (! hasMesh)
-        return v8::Undefined();
-    
-    std::string string_returner = uri_returner.toString();
-    return v8::String::New(string_returner.c_str(), string_returner.size());
-}
-
-
-
-//FIXME: May want to have an error handler for this function.
-void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
-{
-    //FIXME: need to also pass in the object reference
-    mParent->requestMeshUpdate(sporef->space(),newMeshString);
-}
-
 
 
 // need to ensure that the sender object is an addressable of type spaceobject reference rather than just having an object reference;
@@ -1011,14 +917,29 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
    HandleScope handle_scope;
    //takes care of the addressable array in sys.
    
-   system_obj->SetInternalField(0, External::New(this));
-
+   system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD, External::New(this));
    
    //FIXME: May need an initialize addressable
    populateAddressable(system_obj);
    
    initializePresences(system_obj);
+
+   populateMath(system_obj);
 }
+
+
+void JSObjectScript::populateMath(Handle<Object>& system_obj)
+{
+    v8::Context::Scope context_scope(mContext);
+
+    Local<Object> mathObject = mManager->mMathTemplate->NewInstance();
+    //no internal field to set for math object
+
+    //attach math object to system object.
+    system_obj->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME),mathObject);
+}
+
+
 
 
 void JSObjectScript::attachScript(const String& script_name)
@@ -1050,28 +971,116 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
 //FIXME: Hard coded default mesh below
 void JSObjectScript::create_presence(const SpaceID& new_space)
 {
+    std::cout<<"\n\nThis function does not exist yet.\n\n");
+    assert(false);
     create_presence(new_space,"http://www.sirikata.com/content/assets/tetra.dae");
 }
 
-v8::Handle<v8::Value> JSObjectScript::getAxisOfRotation()
+
+
+
+void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef,const Quaternion& quat)
 {
-  return v8::Undefined();
+    mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
 }
 
-void JSObjectScript::setAxisOfRotation(v8::Local<v8::Value>& newval)
-{}
-
-v8::Handle<v8::Value> JSObjectScript::getAngularSpeed()
+v8::Handle<v8::Value> JSObjectScript::getOrientationVelFunction(const SpaceObjectReference* sporef)
 {
-  return v8::Undefined();
+    Quaternion returner = mParent->requestCurrentOrientationVel(sporef->space(),sporef->object());
+    return CreateJSResult(mContext, returner);
 }
 
-void JSObjectScript::setAngularSpeed(v8::Local<v8::Value>& newval)
-{}
 
-v8::Handle<v8::Value> JSObjectScript::getOrientationVelFunction(const SpaceObjectReference* sporef){ return v8::Undefined();}
 
-void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat){}
+void JSObjectScript::setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec)
+{
+    mParent->requestPositionUpdate(sporef->space(),sporef->object(),posVec);
+}
+
+v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceObjectReference* sporef)
+{
+    Vector3d vec3 = mParent->requestCurrentPosition(sporef->space(),sporef->object());
+    return CreateJSResult(mContext,vec3);
+}
+
+//velocity
+void JSObjectScript::setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec)
+{
+    mParent->requestVelocityUpdate(sporef->space(),sporef->object(),velVec);
+}
+
+v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectReference* sporef)
+{
+    Vector3f vec3f = mParent->requestCurrentVelocity(sporef->space(),sporef->object());
+    return CreateJSResult(mContext,vec3f);
+}
+
+
+
+//orientation
+void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
+{
+    mParent->requestOrientationDirectionUpdate(sporef->space(),sporef->object(),quat);
+}
+
+v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectReference* sporef)
+{
+    Quaternion curOrientation = mParent->requestCurrentOrientation(sporef->space(),sporef->object());
+    return CreateJSResult(mContext,curOrientation);
+}
+
+
+//scale
+//FIXME: need to return the right space here.
+//lkjs; need to return the visuals for a particular space.;
+v8::Handle<v8::Value> JSObjectScript::getVisualScaleFunction(const SpaceObjectReference* sporef)
+{
+    //FIXME: actually need to write this function.
+    assert(false);
+    return v8::Undefined();
+
+    //return CreateJSResult(mContext, mParent->getVisualScale(space));
+}
+
+void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newscale)
+{
+    Handle<Object> scale_obj = ObjectCast(newscale);
+    if (!Vec3Validate(scale_obj))
+        return;
+
+    Vector3f native_scale(Vec3Extract(scale_obj));
+    FIXME_GET_SPACE();
+    assert(false);
+    //lkjs;
+    //FIXME: write this function.
+    //mParent->setVisualScale(space, native_scale);
+}
+
+
+//mesh
+v8::Handle<v8::Value> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
+{
+    Transfer::URI uri_returner;
+    bool hasMesh = mParent->requestMeshUri(sporef,uri_returner);
+
+    if (! hasMesh)
+        return v8::Undefined();
+    
+    std::string string_returner = uri_returner.toString();
+    return v8::String::New(string_returner.c_str(), string_returner.size());
+}
+
+
+
+//FIXME: May want to have an error handler for this function.
+void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
+{
+    //FIXME: need to also pass in the object reference
+    mParent->requestMeshUpdate(sporef->space(),sporef->object(),newMeshString);
+}
+
+
+
 
 
 

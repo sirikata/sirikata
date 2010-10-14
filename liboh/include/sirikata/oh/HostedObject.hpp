@@ -331,7 +331,7 @@ public:
     // Movement Interface
     //note: location update services both position and velocity
 
-    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+    virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref,const TimedMotionVector3f& loc);
 
     
     virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
@@ -340,8 +340,9 @@ public:
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
 
-    //should re-name one or the other
-    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
+
+    virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
+
     virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
     virtual void requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat);
 
@@ -350,17 +351,15 @@ public:
     virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
 
     
-    virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
-    virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
+    virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
+    virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
     
 
     virtual void requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo);
     virtual bool requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler);
 
-    
-
     virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
-
+    
     
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
@@ -384,7 +383,7 @@ public:
 
 
     // Helper for constructing and sending location update
-    void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
+    void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
 };
 
 
