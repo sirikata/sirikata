@@ -34,8 +34,6 @@
 #include <cxxtest/TestSuite.h>
 
 #include <sirikata/core/util/Thread.hpp>
-#include <sirikata/core/task/EventManager.hpp>
-#include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/CachedServiceLookup.hpp>
@@ -636,14 +634,6 @@ class TransferTest : public CxxTest::TestSuite {
 	//for ease of use
 	typedef Transfer::URIContext URIContext;
 
-	//Event-based / Thread stuff
-	Task::WorkQueue* mWorkQueue;
-	Task::GenEventManager* mEventSystem;
-	Thread* mEventProcessThread;
-
-	//Set to true when event manager should shut down
-	volatile bool mDestroyEventManager;
-
 	//Mediates transfers between subsystems (graphics, physics, etc)
 	Transfer::TransferMediator& mTransferMediator;
 
@@ -664,14 +654,6 @@ public:
 	}
 
 	void setUp() {
-		mDestroyEventManager = false;
-
-		//Initialize main worker thread for event-based stuff
-		mWorkQueue = new Task::ThreadSafeWorkQueue;
-		mEventSystem = new Task::GenEventManager(mWorkQueue);
-		mEventProcessThread = new Thread(std::tr1::bind(
-			&TransferTest::sleep_processEventQueue, this));
-
 		//5 urls
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list1;
 		list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
@@ -709,15 +691,6 @@ public:
 	}
 
 	void tearDown() {
-	    //Bring down the event manager thread
-	    mDestroyEventManager = true;
-	    mWorkQueue->enqueue(NULL);
-        mEventProcessThread->join();
-
-        delete mEventProcessThread;
-        delete mEventSystem;
-        delete mWorkQueue;
-
         //Make sure clients have exited
 	    mClientThread1->join();
         mClientThread2->join();
@@ -725,12 +698,6 @@ public:
 
         //Wait for transfer mediator thread to exit
         mTransferMediator.cleanup();
-	}
-
-	void sleep_processEventQueue() {
-		while (!mDestroyEventManager) {
-			mWorkQueue->dequeueBlocking();
-		}
 	}
 
 	void testTransferRequests() {
