@@ -373,7 +373,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
-    OptionValue*workQueue,*eventManager;
     OptionValue*grabCursor;
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
@@ -397,8 +396,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
-                           workQueue=new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue"),
-                           eventManager=new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>"),
                            NULL);
     bool userAccepted=true;
 
@@ -417,10 +414,12 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 false
 #endif
                 ;
+
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
-            Meru::EventSource::sSingleton = ((Task::GenEventManager*)eventManager->as<void*>());
-            new SequentialWorkQueue ((Task::WorkQueue*)workQueue->as<void*>());
+            mWorkQueue = new Task::LockFreeWorkQueue;
+            Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
+            new SequentialWorkQueue(mWorkQueue);
             new ResourceManager();
             new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
@@ -692,6 +691,9 @@ OgreSystem::~OgreSystem() {
     }
     destroyMouseHandler();
     delete mInputManager;
+
+    delete mEventManager;
+    delete mWorkQueue;
 }
 
 static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {

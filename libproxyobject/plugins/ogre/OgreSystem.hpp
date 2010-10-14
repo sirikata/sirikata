@@ -44,6 +44,9 @@
 #include "resourceManager/DistanceDownloadPlanner.hpp"
 #include "resourceManager/SAngleDownloadPlanner.hpp"
 
+#include <sirikata/core/task/EventManager.hpp>
+#include <sirikata/core/task/WorkQueue.hpp>
+
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
 #ifdef nil
@@ -83,6 +86,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     void allocMouseHandler();
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
+
+    Task::WorkQueue* mWorkQueue;
+    Task::GenEventManager* mEventManager;
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
