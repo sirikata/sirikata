@@ -37,7 +37,7 @@
 #include "ViewportOverlay.hpp"
 #include "input/InputEvents.hpp"
 #include "input/InputManager.hpp"
-#include <sirikata/core/task/EventManager.hpp>
+#include "task/EventManager.hpp"
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"

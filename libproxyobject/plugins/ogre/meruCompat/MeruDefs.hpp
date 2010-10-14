@@ -58,8 +58,8 @@
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/core/util/Vector3.hpp>
-#include <sirikata/core/task/Event.hpp>
-#include <sirikata/core/task/UniqueId.hpp>
+#include "../task/Event.hpp"
+#include "../task/UniqueId.hpp"
 #include <sirikata/core/transfer/TransferData.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/options/Options.hpp>

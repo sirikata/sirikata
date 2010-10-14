@@ -39,7 +39,7 @@
 #include "ColladaMeshObject.hpp"
 
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-//#include <options/Options.hpp>
+#include <sirikata/core/options/Options.hpp>
 
 // OpenCOLLADA headers
 

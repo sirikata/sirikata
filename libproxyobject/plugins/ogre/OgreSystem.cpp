@@ -36,7 +36,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
-#include <sirikata/core/task/Event.hpp>
+#include "task/Event.hpp"
 #include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>

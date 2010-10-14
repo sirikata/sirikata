@@ -32,7 +32,7 @@
 extern "C" typedef struct SDL_Surface SDL_Surface;
 extern "C" typedef Sirikata::uint32 SDL_WindowID;
 extern "C" typedef void* SDL_GLContext;
-#include <sirikata/core/task/EventManager.hpp>
+#include "../task/EventManager.hpp"
 #include "InputManager.hpp"
 namespace Sirikata { namespace Input {
 

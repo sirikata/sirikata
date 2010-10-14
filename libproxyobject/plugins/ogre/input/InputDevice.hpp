@@ -35,8 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
-#include <sirikata/core/task/EventManager.hpp>
-#include <sirikata/core/task/Event.hpp>
+#include "../task/EventManager.hpp"
+#include "../task/Event.hpp"
 
 namespace Sirikata {
 namespace Input {

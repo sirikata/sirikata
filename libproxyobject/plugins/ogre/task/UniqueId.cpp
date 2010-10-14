@@ -30,8 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Standard.hh>
-#include <sirikata/core/task/UniqueId.hpp>
+#include "UniqueId.hpp"
 
 namespace Sirikata {
 namespace Task {
