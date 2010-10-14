@@ -99,7 +99,7 @@ void MigrationMonitor::service() {
         // NOTE: its possible the object wanders out of the region covered by *all* servers,
         // which is not properly handled by Loc yet.  Therefore we have secondary check which
         // ensures the object has moved into *some other server's* region as well as out of ours.
-        if (mCSeg->region().contains(obj_pos, 0.0f))
+        if (!mCSeg->region().degenerate() && mCSeg->region().contains(obj_pos, 0.0f))
             mCB(it->objid);
 
         // NOTE: Objects stay in the index until they are removed by an actual migration --
@@ -134,6 +134,7 @@ bool MigrationMonitor::onThisServer(const Vector3f& pos) const {
 bool MigrationMonitor::inRegion(const Vector3f& pos) const {
     for(BoundingBoxList::const_iterator it = mBoundingRegions.begin(); it != mBoundingRegions.end(); it++) {
         BoundingBox3f bb = *it;
+        if (bb.degenerate()) return true;
         if (bb.contains(pos, 0.0f)) return true;
     }
 
@@ -155,8 +156,13 @@ Time MigrationMonitor::computeNextEventTime(const UUID& obj, const TimedMotionVe
     Vector3f curpos = newloc.position(curt);
     BoundingBox3f curbox;
     bool foundbox = false;
+    bool degenerate = false;
     for(BoundingBoxList::const_iterator it = mBoundingRegions.begin(); it != mBoundingRegions.end(); it++) {
         BoundingBox3f bb = *it;
+        if (bb.degenerate()) {
+            degenerate = true;
+            break;
+        }
         if (bb.contains(curpos, 0.0f)) {
             curbox = bb;
             foundbox = true;
@@ -164,10 +170,16 @@ Time MigrationMonitor::computeNextEventTime(const UUID& obj, const TimedMotionVe
         }
     }
 
-    if (!foundbox)
+    if (!foundbox && !degenerate)
         return curt; // Couldn't find the bounding box its in, must not be any, force check on next round
 
+
     // Otherwise, we can now compute when an edge will be hit
+
+    // For degenerate bboxes, they are covering the whole world.  Return a long
+    // time from now
+    if (degenerate)
+        return curt + Duration::seconds(100); // Effectively infinite time
 
     Vector3f curdir = newloc.velocity();
 
