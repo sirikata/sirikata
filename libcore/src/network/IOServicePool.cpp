@@ -34,25 +34,24 @@
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-IOServicePool::IOServicePool(uint32 nthreads) {
-    for(uint32 i = 0; i < nthreads; i++) {
-        ThreadData data;
-        data.ios = IOServiceFactory::makeIOService();
-        data.thread = NULL;
-        mThreads.push_back(data);
-    }
+IOServicePool::IOServicePool(uint32 nthreads)
+ : mIO(IOServiceFactory::makeIOService()),
+   mThreads(nthreads, NULL),
+   mWork(NULL)
+{
 }
 
 IOServicePool::~IOServicePool() {
-    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++) {
-        delete it->thread;
-        IOServiceFactory::destroyIOService(it->ios);
-    }
+    if (mWork) stopWork();
+    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
+        delete *it;
+    IOServiceFactory::destroyIOService(mIO);
 }
 
 namespace {
@@ -61,22 +60,36 @@ void runWrapper(IOService* ios) {
 }
 }
 void IOServicePool::reset() {
-    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
-        it->ios->reset();
+    mIO->reset();
 }
 void IOServicePool::run() {
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
-        it->thread = new Thread( std::tr1::bind(runWrapper, it->ios) );
+        (*it) = new Thread( std::tr1::bind(runWrapper, mIO) );
 }
 
 void IOServicePool::join() {
+    // Other threads won't work if they still have work
+    stopWork();
+
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
-        it->thread->join();
+        (*it)->join();
 }
 
-IOService* IOServicePool::service(uint32 thr) {
-    assert(thr < mThreads.size());
-    return mThreads[thr].ios;
+void IOServicePool::startWork() {
+    if (mWork) return;
+    mWork = new IOWork(*mIO);
+}
+
+void IOServicePool::stopWork() {
+    if (!mWork) return;
+
+    delete mWork;
+    mWork = NULL;
+}
+
+
+IOService* IOServicePool::service() {
+    return mIO;
 }
 
 } // namespace Network

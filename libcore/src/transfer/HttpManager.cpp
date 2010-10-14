@@ -63,14 +63,13 @@ HttpManager::HttpManager()
     mServicePool = new IOServicePool(2);
 
     //Add a dummy IOWork so that the IOService stays running
-    mIOWork = new IOWork(*(mServicePool->service(0)));
-    mIOWork2 = new IOWork(*(mServicePool->service(1)));
+    mServicePool->startWork();
 
     //This runs an IOService in a new thread
     mServicePool->run();
 
     //Used to resolve host:port names to IP addresses
-    mResolver = new TCPResolver(*(mServicePool->service(0)));
+    mResolver = new TCPResolver(*(mServicePool->service()));
 }
 
 HttpManager::~HttpManager() {
@@ -80,18 +79,15 @@ HttpManager::~HttpManager() {
     delete mResolver;
 
     //Stop the IOService and make sure its thread exist
-    mServicePool->service(0)->stop();
-    mServicePool->service(1)->stop();
     mServicePool->join();
 
     //Delete dummy worker and service pool
-    delete mIOWork;
-    delete mIOWork2;
+    mServicePool->stopWork();
     delete mServicePool;
 }
 
 void HttpManager::postCallback(IOCallback cb) {
-    mServicePool->service(1)->post(cb);
+    mServicePool->service()->post(cb);
 }
 
 void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb) {
