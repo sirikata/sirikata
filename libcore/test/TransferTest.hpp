@@ -377,7 +377,7 @@ public:
 
             //now loop through uncompressed headers
             for(HeaderMapType::const_iterator it = uncompressedHeaders.begin(); it != uncompressedHeaders.end(); it++) {
-                if(it->first != "Content-Encoding" && it->first != "Vary" && it->first != "Content-Length") {
+                if(it->first != "Content-Encoding" && it->first != "Vary" && it->first != "Content-Length" && it->first != "Date") {
                     HeaderMapType::const_iterator findOther = compressedHeaders.find(it->first);
                     TS_ASSERT(findOther != compressedHeaders.end());
                     if(findOther == compressedHeaders.end()) {
