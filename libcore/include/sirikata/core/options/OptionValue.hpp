@@ -38,6 +38,24 @@
 namespace Sirikata {
 class OptionSet;
 
+// Strings
+
+template <class T> class OptionValueType {public:
+    static Any lexical_cast(const std::string &value){
+        T retval=T();
+        std::istringstream ss(value);
+        ss>>retval;
+        return retval;
+    }
+};
+template <> class OptionValueType<std::string> {public:
+    static Any lexical_cast(const std::string &value){
+        return value;
+    }
+};
+
+// Maps
+
 template <class T> class OptionValueMap {public:
     /// makes a map out of an option like  "a:{b},c:{d}" mapping a->b c->d
     static Any lexical_cast(const std::string &value){
@@ -71,24 +89,72 @@ template <class T> class OptionValueMap {public:
     }
 };
 
-template <class T> class OptionValueType {public:
-    static Any lexical_cast(const std::string &value){
-        T retval=T();
-        std::istringstream ss(value);
-        ss>>retval;
-        return retval;
-    }
-};
-template <> class OptionValueType<std::string> {public:
-    static Any lexical_cast(const std::string &value){
-        return value;
-    }
-};
-
 template <> class OptionValueType<std::map<std::string,std::string> > :public OptionValueMap<std::map<std::string,std::string> > {public:
 };
 template <> class OptionValueType<std::tr1::unordered_map<std::string,std::string> > :public OptionValueMap<std::tr1::unordered_map<std::string,std::string> > {public:
 };
+
+// Lists
+
+template <class T>
+class OptionValueList {
+public:
+    /// Makes a list [a, b, c, d] out of an option of the form "a,b,c,d" or "[a,b,c,d]"
+    static Any lexical_cast(const std::string &value){
+        T retval;
+
+        // Strip any [] around the list
+        int32 list_start = 0, list_end = value.size();
+        while(list_start < value.size()) {
+            if (value[list_start] == '[') {
+                list_start++;
+                break;
+            }
+            else if (value[list_start] == ' ' || value[list_start] == '\t')
+                list_start++;
+            else
+                break;
+        }
+        while(list_end >= 0) {
+            if (value[list_end-1] == ']') {
+                list_end--;
+                break;
+            }
+            else if (value[list_end-1] == ' ' || value[list_end-1] == '\t')
+                list_end--;
+            else
+                break;
+        }
+
+        if (list_end - list_start <= 0) return retval;
+
+        int32 comma = list_start, last_comma = list_start-1;
+
+        while(true) {
+            comma = (int32)value.find(',', last_comma+1);
+            if (comma > list_end || comma == std::string::npos)
+                comma = list_end;
+            std::string elem = value.substr(last_comma+1, (comma-(last_comma+1)));
+            if (elem.size() > 0)
+                retval.push_back(elem);
+
+            // If we hit the end of the string, finish up
+            if (comma >= list_end)
+                break;
+
+            last_comma = comma;
+        }
+        return retval;
+    }
+};
+
+template <> class OptionValueType<std::vector<std::string> > :public OptionValueList<std::vector<std::string> > {public:
+};
+template <> class OptionValueType<std::list<std::string> > :public OptionValueList<std::list<std::string> > {public:
+};
+
+// Bool
+
 template <> class OptionValueType<bool> {public:
     static Any lexical_cast(const std::string &value){
         bool retval=false;
