@@ -167,36 +167,24 @@ int main (int argc, char** argv) {
         SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
     }
 
-    bool continue_simulation = true;
-
     typedef std::vector<TimeSteppedSimulation*> SimList;
     SimList sims;
 
-    struct SimulationRequest {
-        const char* name;
-        bool required;
-    };
-    const uint32 nSimRequests = 1;
-    SimulationRequest simRequests[nSimRequests] = {
-        {"ogregraphics", true}
-    };
-    for(uint32 ir = 0; ir < nSimRequests && continue_simulation; ir++) {
-        String simName = simRequests[ir].name;
+    typedef std::list<String> StringList;
+    StringList oh_sims(GetOptionValue<StringList>(OPT_OH_SIMS));
+    for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
+        SILOG(cppoh,error,*it);
+    for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++) {
+        String simName = *it;
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
             .getConstructor ( simName ) ( ctx, proxy_manager.get(), proxy_manager->getTimeOffsetManager(), "" );
         if (!sim) {
-            if (simRequests[ir].required) {
-                SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
-                std::cout << "Press enter to continue" << std::endl;
-                std::cerr << "Press enter to continue" << std::endl;
-                fgetc(stdin);
-                continue_simulation = false;
-            }
-            else {
-                SILOG(cppoh,info,String("Couldn't load ") + simName + String(" plugin."));
-            }
+            SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
+            std::cerr << "Press enter to continue" << std::endl;
+            fgetc(stdin);
+            exit(0);
         }
         else {
             oh->addListener(sim);

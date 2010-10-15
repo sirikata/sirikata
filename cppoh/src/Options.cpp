@@ -63,6 +63,7 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
 
+        .addOption(new OptionValue(OPT_OH_SIMS, "ogregraphics", OptionValueType<std::list<String> >(), "Simulations to try to load and run."))
         ;
 }
 
