@@ -36,47 +36,33 @@
 namespace Sirikata {
 namespace Input {
 
-IdPair::Primary WindowEvent::Shown("WindowShown");
-IdPair::Primary WindowEvent::Hidden("WindowHidden");
-IdPair::Primary WindowEvent::Exposed("WindowExposed");
-IdPair::Primary WindowEvent::Moved("WindowMoved");
-IdPair::Primary WindowEvent::Resized("WindowResized");
-IdPair::Primary WindowEvent::Minimized("WindowMinimized");
-IdPair::Primary WindowEvent::Maximized("WindowMaximized");
-IdPair::Primary WindowEvent::Restored("WindowRestored");
-IdPair::Primary WindowEvent::MouseEnter("MouseEnter");
-IdPair::Primary WindowEvent::MouseLeave("MouseLeave");
-IdPair::Primary WindowEvent::FocusGained("WindowFocused");
-IdPair::Primary WindowEvent::FocusLost("WindowUnfocused");
-IdPair::Primary WindowEvent::Quit("Quit");
-
 EventDescriptor WindowEvent::getDescriptor() const {
     WindowEventType t = (WindowEventType)-1;
-    if (getId().primary() == Shown)
+    if (getId().primary() == Shown())
         t = WindowShown;
-    else if (getId().primary() == Hidden)
+    else if (getId().primary() == Hidden())
         t = WindowHidden;
-    else if (getId().primary() == Exposed)
+    else if (getId().primary() == Exposed())
         t = WindowExposed;
-    else if (getId().primary() == Moved)
+    else if (getId().primary() == Moved())
         t = WindowMoved;
-    else if (getId().primary() == Resized)
+    else if (getId().primary() == Resized())
         t = WindowResized;
-    else if (getId().primary() == Minimized)
+    else if (getId().primary() == Minimized())
         t = WindowMinimized;
-    else if (getId().primary() == Maximized)
+    else if (getId().primary() == Maximized())
         t = WindowMaximized;
-    else if (getId().primary() == Restored)
+    else if (getId().primary() == Restored())
         t = WindowRestored;
-    else if (getId().primary() == MouseEnter)
+    else if (getId().primary() == MouseEnter())
         t = WindowMouseEnter;
-    else if (getId().primary() == MouseLeave)
+    else if (getId().primary() == MouseLeave())
         t = WindowMouseLeave;
-    else if (getId().primary() == FocusGained)
+    else if (getId().primary() == FocusGained())
         t = WindowFocusGained;
-    else if (getId().primary() == FocusLost)
+    else if (getId().primary() == FocusLost())
         t = WindowFocusLost;
-    else if (getId().primary() == Quit)
+    else if (getId().primary() == Quit())
         t = WindowQuit;
     else
         assert(false);
@@ -84,23 +70,18 @@ EventDescriptor WindowEvent::getDescriptor() const {
     return EventDescriptor::Window(t);
 }
 
-IdPair::Primary DragAndDropEvent::Id("DragAndDrop");
 
-
-
-IdPair::Primary WebViewEvent::Id("WebView");
-
-WebViewEvent::WebViewEvent(Graphics::WebView* _wv, const String &wvName, const String& _name, const std::vector<String>& _args)
- : InputEvent(InputDeviceWPtr(), IdPair(Id, _name)),
-   wv(_wv),
+WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std::vector<String>& _args)
+ : InputEvent(InputDeviceWPtr(), IdPair(getEventId(), _name)),
    webview(wvName),
    name(_name),
    args(_args)
 {
 }
 
-WebViewEvent::WebViewEvent(Graphics::WebView* _wv, const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
- : InputEvent(InputDeviceWPtr(), IdPair(Id,
+
+WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
+ : InputEvent(InputDeviceWPtr(), IdPair(getEventId(),
        jsargs.empty()?std::string():std::string(jsargs[0].data(), jsargs[0].length()))),
    wv(_wv),
    webview(wvName)

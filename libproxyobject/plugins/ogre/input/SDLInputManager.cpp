@@ -70,38 +70,39 @@
 
 namespace Sirikata { namespace Input {
 
-IdPair::Primary unknownId("UnknownWindowEvent");
-
 static const IdPair::Primary &getWindowEventId(SDL_WindowEventID sdlId) {
+
+    static IdPair::Primary unknownId("UnknownWindowEvent");
+
     switch (sdlId) {
       case SDL_WINDOWEVENT_NONE:
         return unknownId;
       case SDL_WINDOWEVENT_SHOWN:
-        return WindowEvent::Shown;
+        return WindowEvent::Shown();
       case SDL_WINDOWEVENT_HIDDEN:
-        return WindowEvent::Hidden;
+        return WindowEvent::Hidden();
       case SDL_WINDOWEVENT_EXPOSED:
-        return WindowEvent::Exposed;
+        return WindowEvent::Exposed();
       case SDL_WINDOWEVENT_MOVED:
-        return WindowEvent::Moved;
+        return WindowEvent::Moved();
       case SDL_WINDOWEVENT_RESIZED:
-        return WindowEvent::Resized;
+        return WindowEvent::Resized();
       case SDL_WINDOWEVENT_MINIMIZED:
-        return WindowEvent::Minimized;
+        return WindowEvent::Minimized();
       case SDL_WINDOWEVENT_MAXIMIZED:
-        return WindowEvent::Maximized;
+        return WindowEvent::Maximized();
       case SDL_WINDOWEVENT_RESTORED:
-        return WindowEvent::Restored;
+        return WindowEvent::Restored();
       case SDL_WINDOWEVENT_ENTER:
-        return WindowEvent::MouseEnter;
+        return WindowEvent::MouseEnter();
       case SDL_WINDOWEVENT_LEAVE:
-        return WindowEvent::MouseLeave;
+        return WindowEvent::MouseLeave();
       case SDL_WINDOWEVENT_FOCUS_GAINED:
-        return WindowEvent::FocusGained;
+        return WindowEvent::FocusGained();
       case SDL_WINDOWEVENT_FOCUS_LOST:
-        return WindowEvent::FocusLost;
+        return WindowEvent::FocusLost();
       case SDL_WINDOWEVENT_CLOSE:
-        return WindowEvent::Quit;
+        return WindowEvent::Quit();
     }
     return unknownId;
 }
@@ -399,7 +400,7 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
             break;
 
           case SDL_QUIT:
-            fire(Task::EventPtr(new WindowEvent(WindowEvent::Quit, -1, -1)));
+            fire(Task::EventPtr(new WindowEvent(WindowEvent::Quit(), -1, -1)));
             // FIXME: Quit only when the event has been successfully processed
             // and only if nobody has canceled it (i.e. a confirmation dialog)
             SILOG(ogre,debug,"quitting\n");

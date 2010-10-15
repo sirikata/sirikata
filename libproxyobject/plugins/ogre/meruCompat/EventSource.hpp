@@ -47,6 +47,8 @@ public:
         return *sSingleton;
     }
     EventSource();
+
+    static void InitializeEventTypes();
 };
 
 typedef EventSource::EventListener EventListener;
