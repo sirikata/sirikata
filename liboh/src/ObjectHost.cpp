@@ -53,8 +53,7 @@
 namespace Sirikata {
 
 ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Network::IOService *ioServ, const String&options)
- : PollingService(ctx->mainStrand, Duration::seconds(1.f/30.f), ctx, "Object Host Poll"),
-   mContext(ctx)
+ : mContext(ctx)
 {
     mScriptPlugins=new PluginManager;
     mSpaceIDMap = spaceMap;
@@ -181,15 +180,10 @@ boost::shared_ptr<Stream<UUID> > ObjectHost::getSpaceStream(const SpaceID& space
 }
 
 
-void ObjectHost::poll() {
-    for (HostedObjectMap::iterator iter = mHostedObjects.begin(); iter != mHostedObjects.end(); ++iter) {
-        iter->second->tick();
-    }
+void ObjectHost::start() {
 }
 
 void ObjectHost::stop() {
-    PollingService::stop();
-
     for(SpaceSessionManagerMap::iterator it = mSessionManagers.begin(); it != mSessionManagers.end(); it++) {
         SessionManager* sm = it->second;
         sm->stop();

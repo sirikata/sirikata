@@ -68,46 +68,12 @@ class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRou
     struct PrivateCallbacks;
 protected:
 
-    struct PropertyCacheValue {
-    private:
-        /// TODO: Make this be a set of spaces with an associated subscription.
-        bool mHasSubscription;
-        int mSubscriptionID;
-    public:
-        String mData;
-        Duration mTTL;
-        PropertyCacheValue() : mHasSubscription(false), mTTL(Duration::zero()) {}
-        PropertyCacheValue(String data, Duration TTL)
-            : mHasSubscription(false), mData(data), mTTL(TTL) {
-        }
-        bool hasSubscriptionID() {
-            return mHasSubscription;
-        }
-        int getSubscriptionID() {
-            if (!mHasSubscription) {
-                SILOG(cppoh,fatal,"getSubscriptionID called with no subscription!");
-                return 0;
-            }
-            return mSubscriptionID;
-        }
-        void setSubscriptionID(int newID) {
-            mHasSubscription=true;
-            mSubscriptionID=newID;
-        }
-        void clearSubscriptionID() {
-            mHasSubscription=false;
-        }
-    };
-
 //------- Members
     ObjectHostContext* mContext;
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
-    // name -> encoded property message
-    typedef std::tr1::unordered_map<String, PropertyCacheValue> PropertyMap;
-    PropertyMap mProperties;
     int mNextSubscriptionID;
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
@@ -143,11 +109,6 @@ public:
 
 private:
 //------- Private member functions:
-    ///When a message is destined for the RPC port of 0, split it into submessages and process those
-    void handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
-    ///When a message is destined for the persistence port, handle each persistence object accordingly
-    //void handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData);
-
     // When a connection to a space is setup, initialize it to handle default behaviors
     void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
 public:
@@ -155,13 +116,6 @@ public:
     ObjectHostContext* context() { return mContext; }
     const ObjectHostContext* context() const { return mContext; }
 
-    ///makes a new object that is not in the persistence database.
-    void initializeDefault(
-            const String&mesh,
-            const LightInfo *lightInfo,
-            const String&webViewURL,
-            const Vector3f&meshScale,
-            const PhysicalParameters&physicalParameters);
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
 
@@ -191,25 +145,6 @@ public:
     virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 protected:
 
-    /// Checks for a public cached property named propName.
-    bool hasProperty(const String &propName) const;
-    /// Gets the protobuf encoded value of a public cached property named propName.
-    const String &getProperty(const String &propName) const;
-
-    /** Gets a modifiable value in the cache for a (often new) public property.
-        Is usually used in conjunction with google::protobuf::message::SerializeToString:
-        myMessage.SerializeToString(propertyPtr("SomeProperty"));
-        -- Note: this will not update the Subscription --
-    */
-    String *propertyPtr(const String &propName, Duration ttl);
-    /** Sets a cached property with an optional encoded value.
-        -- Note: this will not update the Subscription --
-     */
-    void setProperty(const String &propName, Duration ttl, const String &encodedValue=String());
-    /** Deletes a public property from this object cache. It may still remain in the database.
-     */
-    void unsetCachedPropertyAndSubscription(const String &propName);
-
     struct SendService: public MessageService {
         HostedObject *ho;
         void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
@@ -233,9 +168,6 @@ public:
     const QueryTracker*getTracker(const SpaceID& space) const;
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space);
-
-    /** Called once per frame, at a certain framerate. */
-    void tick();
 
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
@@ -290,19 +222,6 @@ public:
         @param body  An encoded RoutableMessageBody.
     */
     void send(const RoutableMessageHeader &header, MemoryReference body);
-
-    /** Handles a single RPC out of a received message.
-        @param msg  A ReceivedMessage struct with sender, message_name, and
-                    arguments.
-        @param name the name of the RPC to invoke
-        @param args the serialized RPC arguments
-        @param returnValue  A serialized message indicating a return value.
-               If NULL, no ID was passed, and no response will be sent.
-               If non-NULL, a message is expected to be encoded, but the empty
-               string is a valid message if a return value does not apply.
-        @see ReceivedMessage
-    */
-    void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
 
   public:
 
