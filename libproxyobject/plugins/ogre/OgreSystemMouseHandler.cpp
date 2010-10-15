@@ -440,6 +440,7 @@ private:
     ///////////////// KEYBOARD HANDLERS /////////////////
 
     void deleteObjectsAction() {
+/*
         Task::LocalTime now(Task::LocalTime::now());
         while (doUngroupObjects(now)) {
         }
@@ -459,6 +460,7 @@ private:
             );
         }
         mSelectedObjects.clear();
+*/
     }
 
     Entity *doCloneObject(Entity *ent, const ProxyObjectPtr &parentPtr, Time now) {
@@ -798,6 +800,7 @@ private:
     }
 
     void createWebviewAction() {
+/*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -828,6 +831,7 @@ private:
             Services::RPC,
             MemoryReference(serialized.data(), serialized.length())
         );
+*/
     }
 
     void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
@@ -913,6 +917,7 @@ private:
 
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
+/*
         typedef std::tr1::unordered_map<String, String> StringMap;
         printf("createScriptedObjectAction: %d\n", (int)args.size());
         // Filter out the script type from rest of args
@@ -961,6 +966,7 @@ private:
             Services::RPC,
             MemoryReference(serialized.data(), serialized.length())
         );
+*/
     }
 
 

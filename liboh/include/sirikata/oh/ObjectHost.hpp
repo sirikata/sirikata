@@ -39,7 +39,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SessionManager.hpp>
 
 namespace Sirikata {
@@ -62,7 +62,7 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
 
-class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public PollingService {
+class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public Service {
     ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
 
@@ -175,7 +175,7 @@ public:
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
 
-    virtual void poll();
+    virtual void start();
     virtual void stop();
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
