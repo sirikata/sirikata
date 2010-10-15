@@ -158,9 +158,8 @@ void MaterialScript::unprepareImpl()
     }
 */
 }
-namespace EventTypes {
-const EventType MaterialLoaded = "MaterialLoaded";
-}
+
+EventType* MaterialLoadedEvent::MaterialLoaded = NULL;
 
 class LoadPreparedMaterial : public Sirikata::Task::WorkItem {
     Ogre::String mMaterialScriptName;

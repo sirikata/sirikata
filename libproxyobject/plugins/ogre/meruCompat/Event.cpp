@@ -35,22 +35,22 @@
 namespace Meru {
 
 namespace EventTypes {
-const EventType WorkQueue="WorkQueue";
-const EventType Tick="Tick";
-const EventType AvatarCreated="AvatarCreated";
-const EventType ObjectDatabaseRestored="ObjectDatabaseRestored";
+EventType* WorkQueue = NULL;
+EventType* Tick = NULL;
+EventType* AvatarCreated = NULL;
+EventType* ObjectDatabaseRestored = NULL;
 
-const EventType ObjectCreated="ObjectCreated";
-const EventType ObjectRestored="ObjectRestored";
-const EventType ObjectDestroyed="ObjectDestroyed";
+EventType* ObjectCreated = NULL;
+EventType* ObjectRestored = NULL;
+EventType* ObjectDestroyed = NULL;
 
-const EventType NamedProxyCreated="NamedProxyCreated";
-const EventType NamedProxyDeleted="NamedProxyDeleted";
-const EventType PositionUpdate="PositionUpdate";
-const EventType LocalPositionUpdate="LocalPositionUpdate";
-const EventType ProxySelected="ProxySelected";
-const EventType ProxyDeselected="ProxyDeselected";
-const EventType Quit="Quit";
+EventType* NamedProxyCreated = NULL;
+EventType* NamedProxyDeleted = NULL;
+EventType* PositionUpdate = NULL;
+EventType* LocalPositionUpdate = NULL;
+EventType* ProxySelected = NULL;
+EventType* ProxyDeselected = NULL;
+EventType* Quit = NULL;
 }
 
 TickEvent::TickEvent(const Time& t, const Duration& dt)

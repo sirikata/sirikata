@@ -38,4 +38,23 @@ namespace Meru {
 
 ::Sirikata::Task::GenEventManager *EventSource::sSingleton;
 
+void EventSource::InitializeEventTypes() {
+    EventTypes::WorkQueue = new EventType("WorkQueue");
+    EventTypes::Tick = new EventType("Tick");
+    EventTypes::AvatarCreated = new EventType("AvatarCreated");
+    EventTypes::ObjectDatabaseRestored = new EventType("ObjectDatabaseRestored");
+
+    EventTypes::ObjectCreated = new EventType("ObjectCreated");
+    EventTypes::ObjectRestored = new EventType("ObjectRestored");
+    EventTypes::ObjectDestroyed = new EventType("ObjectDestroyed");
+
+    EventTypes::NamedProxyCreated = new EventType("NamedProxyCreated");
+    EventTypes::NamedProxyDeleted = new EventType("NamedProxyDeleted");
+    EventTypes::PositionUpdate = new EventType("PositionUpdate");
+    EventTypes::LocalPositionUpdate = new EventType("LocalPositionUpdate");
+    EventTypes::ProxySelected = new EventType("ProxySelected");
+    EventTypes::ProxyDeselected = new EventType("ProxyDeselected");
+    EventTypes::Quit = new EventType("Quit");
+}
+
 } // namespace Meru

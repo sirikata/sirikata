@@ -42,7 +42,16 @@ namespace EventTypes {
 }
 class MaterialLoadedEvent:public Event {
 public:
-    MaterialLoadedEvent(const String&material_script_name):Event(EventID(EventTypes::MaterialLoaded,material_script_name)) {}
+    MaterialLoadedEvent(const String&material_script_name)
+     : Event(
+         EventID(
+             *(MaterialLoaded == NULL ? (MaterialLoaded = new EventType("MaterialLoaded")) : MaterialLoaded),
+             material_script_name
+         )
+     )
+    {}
+private:
+    static EventType* MaterialLoaded;
 };
 class LoadPreparedMaterial;
 class MaterialScript : public Ogre::Resource

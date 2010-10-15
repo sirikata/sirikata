@@ -1693,7 +1693,7 @@ public:
                 std::tr1::bind(&MouseHandler::textInputHandler, this, _1)));
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
-                WebViewEvent::Id,
+                WebViewEvent::getEventId(),
                 std::tr1::bind(&MouseHandler::webviewHandler, this, _1)));
 
         mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::screenshotAction, this));

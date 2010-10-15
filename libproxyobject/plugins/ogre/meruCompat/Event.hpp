@@ -75,22 +75,22 @@ private:
 
 namespace EventTypes {
 
-extern const EventType WorkQueue;
-extern const EventType Tick;
-extern const EventType AvatarCreated;
-extern const EventType ObjectDatabaseRestored;
+extern EventType* WorkQueue;
+extern EventType* Tick;
+extern EventType* AvatarCreated;
+extern EventType* ObjectDatabaseRestored;
 
-extern const EventType ObjectCreated;
-extern const EventType ObjectRestored;
-extern const EventType ObjectDestroyed;
+extern EventType* ObjectCreated;
+extern EventType* ObjectRestored;
+extern EventType* ObjectDestroyed;
 
-extern const EventType NamedProxyCreated;
-extern const EventType NamedProxyDeleted;
-extern const EventType PositionUpdate;
-extern const EventType LocalPositionUpdate;
-extern const EventType ProxySelected;
-extern const EventType ProxyDeselected;
-extern const EventType Quit;
+extern EventType* NamedProxyCreated;
+extern EventType* NamedProxyDeleted;
+extern EventType* PositionUpdate;
+extern EventType* LocalPositionUpdate;
+extern EventType* ProxySelected;
+extern EventType* ProxyDeselected;
+extern EventType* Quit;
 
 } // namespace EventTypes
 

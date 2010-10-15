@@ -212,10 +212,16 @@ public:
 	explicit IdPair(const Primary &pri)
 		: mPriId(pri), mSecId(Secondary::null()) {
 	}
+	explicit IdPair(const Primary* pri)
+		: mPriId(*pri), mSecId(Secondary::null()) {
+	}
 
 	/// Create based on an already existing Primary and Secondary ID.
 	IdPair(const Primary &pri, const Secondary &sec)
 		: mPriId(pri), mSecId(sec) {
+	}
+	IdPair(const Primary* pri, const Secondary &sec)
+		: mPriId(*pri), mSecId(sec) {
 	}
 	/// Create a (string, string) ID.
 	IdPair(const std::string &pri, const std::string &sec)
