@@ -36,9 +36,6 @@
 #include <sirikata/core/util/Thread.hpp>
 
 #include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/transfer/CachedServiceLookup.hpp>
-
-#include <sirikata/core/transfer/ServiceManager.hpp>
 
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
