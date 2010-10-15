@@ -34,7 +34,6 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/Time.hpp>
 
-
 namespace Sirikata {
 
 void InitOptions() {
@@ -73,7 +72,16 @@ void InitOptions() {
 
 
         .addOption(new OptionValue(PROFILE, "false", Sirikata::OptionValueType<bool>(), "Whether to report profiling information."))
+
+        .addOption(new OptionValue(OPT_CDN_HOST, "cdn.sirikata.com", Sirikata::OptionValueType<String>(), "Hostname for CDN server."))
+        .addOption(new OptionValue(OPT_CDN_SERVICE, "http", Sirikata::OptionValueType<String>(), "Service to access CDN by."))
       ;
+}
+
+void FakeParseOptions() {
+    OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
+    int argc = 1; char* argv[2] = { "bogus", NULL };
+    options->parse(argc, argv);
 }
 
 void ParseOptions(int argc, char** argv) {

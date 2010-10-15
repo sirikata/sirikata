@@ -98,8 +98,8 @@ class SIRIKATA_EXPORT HttpNameHandler
 
 private:
 	//TODO: should get these from settings
-	static const char CDN_HOST_NAME [];
-	static const char CDN_SERVICE [];
+    const std::string CDN_HOST_NAME;
+    const std::string CDN_SERVICE;
 	const Network::Address mCdnAddr;
 
 public:
@@ -130,8 +130,8 @@ class SIRIKATA_EXPORT HttpChunkHandler
 
 private:
     //TODO: should get these from settings
-    static const char CDN_HOST_NAME [];
-    static const char CDN_SERVICE [];
+    const std::string CDN_HOST_NAME;
+    const std::string CDN_SERVICE;
     const Network::Address mCdnAddr;
     static const unsigned int DISK_LRU_CACHE_SIZE;
     static const unsigned int MEMORY_LRU_CACHE_SIZE;
