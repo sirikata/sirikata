@@ -1493,6 +1493,7 @@ libcore/test/ListenerTest.hpp
 libcore/test/Matrix3Test.hpp
 libcore/test/MinitransactionHandlerTest.hpp
 libcore/test/ObjectStorageTest.hpp
+libcore/test/OptionValueListTest.hpp
 libcore/test/OptionTest.hpp
 #libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp

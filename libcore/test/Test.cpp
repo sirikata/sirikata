@@ -49,6 +49,7 @@ public:
     int run(const char * singleSuite) {
 
     	bool foundTest = false;
+
     	if (singleSuite != NULL) {
 			RealWorldDescription wd;
 
