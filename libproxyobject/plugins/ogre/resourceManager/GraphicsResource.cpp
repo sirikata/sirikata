@@ -89,7 +89,7 @@ void GraphicsResource::addDepBenefit(float benefit, unsigned int epoch)
   mCurCost = mCost + mDepCost;
 
   if (mLoadState != LOAD_NEW && mLoadState != LOAD_FAILED
-   && (mType == MESH || mType == ENTITY))
+   && (mType == ENTITY))
     GraphicsResourceManager::getSingleton().registerLoad(this, oldValue);
 
   if (mCost == 0.0f && mDependencies.size() == 1) { // we can trickle up benefit
@@ -126,7 +126,7 @@ void GraphicsResource::updateCurCost(float cost, unsigned int epoch)
     float oldValue = value();
     mCurCost -= cost;
 
-    if (mType == MESH || mType == ENTITY)
+    if (mType == ENTITY)
       GraphicsResourceManager::getSingleton().updateLoadValue(this, oldValue);
 
     set<WeakResourcePtr>::iterator itr, eitr;

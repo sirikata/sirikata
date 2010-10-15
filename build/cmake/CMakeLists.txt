@@ -1271,7 +1271,6 @@ ${GFX}/resourceManager/GraphicsResourceAsset.cpp
 ${GFX}/resourceManager/GraphicsResourceEntity.cpp
 ${GFX}/resourceManager/GraphicsResourceManager.cpp
 ${GFX}/resourceManager/GraphicsResourceMaterial.cpp
-${GFX}/resourceManager/GraphicsResourceMesh.cpp
 ${GFX}/resourceManager/GraphicsResourceModel.cpp
 ${GFX}/resourceManager/GraphicsResourceName.cpp
 ${GFX}/resourceManager/GraphicsResourceShader.cpp
