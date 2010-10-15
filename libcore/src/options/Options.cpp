@@ -417,8 +417,10 @@ void OptionSet::addOptionNoLock(OptionValue*option) {
     if (where==mNames.end()) {
         mNames[option->mName]=option;
     }else {
-		OptionSet::initializationSet(where->second,*option);
-        delete option;
+        if (where->second != option) {
+            OptionSet::initializationSet(where->second,*option);
+            delete option;
+        }
     }
 }
 void OptionSet::addOption(OptionValue *option) {
