@@ -111,7 +111,7 @@ void BulletObj::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata
     mMeshdata = &md;
     if (!mActive) {
         if (mShape==BulletObj::ShapeMesh) {
-            buildBulletBody(0, 0, true);
+            buildBulletBody();
         }
     }
 }
@@ -126,7 +126,7 @@ void BulletObj::onSetScale (ProxyObjectPtr proxy, const Vector3f &newScale) {
     mSizeZ = newScale.z;
     float mass;
     btVector3 localInertia(0,0,0);
-    buildBulletShape(NULL, 0, mass, mMeshdata!=0);        /// null, 0 means re-use original vertices
+    buildBulletShape(mass);        /// null, 0 means re-use original vertices
     if (mDynamic) {                          /// inertia meaningless for static objects
         if (!mShape==ShapeMesh) {
             mColShape->calculateLocalInertia(mass,localInertia);
@@ -220,7 +220,7 @@ void BulletObj::setBulletState(positionOrientation po) {
     mBulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
-void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass, bool is_collada) {
+void BulletObj::buildBulletShape(float &mass) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
     if (mColShape) delete mColShape;
     if (mDynamic) {
@@ -254,77 +254,70 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         mBtVertices=NULL;
         unsigned int i,j;
 
-        if (meshbytes || is_collada) {
-            mVertices.clear();
-            mIndices.clear();
-            if (is_collada) {
-                size_t offset=0;
-                for (size_t i=0;i<mMeshdata->geometry.size();++i) {
-                    const SubMeshGeometry& subm = mMeshdata->geometry[i];
-                    for (size_t j=0; j<subm.positions.size();j++) {
-                        mVertices.push_back((double)subm.positions[j][0]);
-                        mVertices.push_back((double)subm.positions[j][1]);
-                        mVertices.push_back((double)subm.positions[j][2]);
+        mVertices.clear();
+        mIndices.clear();
+
+        size_t offset=0;
+        for (size_t i=0;i<mMeshdata->geometry.size();++i) {
+            const SubMeshGeometry& subm = mMeshdata->geometry[i];
+            for (size_t j=0; j<subm.positions.size();j++) {
+                mVertices.push_back((double)subm.positions[j][0]);
+                mVertices.push_back((double)subm.positions[j][1]);
+                mVertices.push_back((double)subm.positions[j][2]);
+            }
+            for(size_t j=0;j<subm.primitives.size();++j) {
+                const SubMeshGeometry::Primitive *prim=&subm.primitives[j];
+                switch(prim->primitiveType) {
+                  case SubMeshGeometry::Primitive::TRIANGLES:
+                    for (size_t k=0; k<prim->indices.size(); ++k) {
+                        mIndices.push_back(offset+prim->indices[k]);
                     }
-                    for(size_t j=0;j<subm.primitives.size();++j) {
-                        const SubMeshGeometry::Primitive *prim=&subm.primitives[j];
-                        switch(prim->primitiveType) {
-                          case SubMeshGeometry::Primitive::TRIANGLES:
-                            for (size_t k=0; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[k]);
-                            }
-                            break;
-                          case SubMeshGeometry::Primitive::LINES:
-                            for (size_t k=0; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[k]);
-                                if (k%2==1) {
-                                    mIndices.push_back(offset+prim->indices[k]);
-                                }
-                            }
-                            break;
-                          case SubMeshGeometry::Primitive::POINTS:
-                            for (size_t k=0; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[k]);
-                                mIndices.push_back(offset+prim->indices[k]);
-                                mIndices.push_back(offset+prim->indices[k]);//degenerate
-                            }
-                            break;
-                          case SubMeshGeometry::Primitive::TRISTRIPS:
-                            for (size_t k=2; k<prim->indices.size(); ++k) {
-                                if (k%2==0) {
-                                    mIndices.push_back(offset+prim->indices[k-2]);
-                                    mIndices.push_back(offset+prim->indices[k-1]);
-                                    mIndices.push_back(offset+prim->indices[k]);
-                                }else {
-                                    mIndices.push_back(offset+prim->indices[k]);
-                                    mIndices.push_back(offset+prim->indices[k-1]);
-                                    mIndices.push_back(offset+prim->indices[k-2]);
-                                }
-                            }
-                            break;
-                          case SubMeshGeometry::Primitive::TRIFANS:
-                            for (size_t k=2; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[0]);
-                                mIndices.push_back(offset+prim->indices[k-1]);
-                                mIndices.push_back(offset+prim->indices[k]);
-                            }
-                            break;
-                          case SubMeshGeometry::Primitive::LINESTRIPS:
-                            for (size_t k=1; k<prim->indices.size(); ++k) {
-                                mIndices.push_back(offset+prim->indices[k-1]);
-                                mIndices.push_back(offset+prim->indices[k]);
-                                mIndices.push_back(offset+prim->indices[k]);//slivers
-                            }
-                            break;
+                    break;
+                  case SubMeshGeometry::Primitive::LINES:
+                    for (size_t k=0; k<prim->indices.size(); ++k) {
+                        mIndices.push_back(offset+prim->indices[k]);
+                        if (k%2==1) {
+                            mIndices.push_back(offset+prim->indices[k]);
                         }
                     }
-                    offset=mVertices.size();
+                    break;
+                  case SubMeshGeometry::Primitive::POINTS:
+                    for (size_t k=0; k<prim->indices.size(); ++k) {
+                        mIndices.push_back(offset+prim->indices[k]);
+                        mIndices.push_back(offset+prim->indices[k]);
+                        mIndices.push_back(offset+prim->indices[k]);//degenerate
+                    }
+                    break;
+                  case SubMeshGeometry::Primitive::TRISTRIPS:
+                    for (size_t k=2; k<prim->indices.size(); ++k) {
+                        if (k%2==0) {
+                            mIndices.push_back(offset+prim->indices[k-2]);
+                            mIndices.push_back(offset+prim->indices[k-1]);
+                            mIndices.push_back(offset+prim->indices[k]);
+                        }else {
+                            mIndices.push_back(offset+prim->indices[k]);
+                            mIndices.push_back(offset+prim->indices[k-1]);
+                            mIndices.push_back(offset+prim->indices[k-2]);
+                        }
+                    }
+                    break;
+                  case SubMeshGeometry::Primitive::TRIFANS:
+                    for (size_t k=2; k<prim->indices.size(); ++k) {
+                        mIndices.push_back(offset+prim->indices[0]);
+                        mIndices.push_back(offset+prim->indices[k-1]);
+                        mIndices.push_back(offset+prim->indices[k]);
+                    }
+                    break;
+                  case SubMeshGeometry::Primitive::LINESTRIPS:
+                    for (size_t k=1; k<prim->indices.size(); ++k) {
+                        mIndices.push_back(offset+prim->indices[k-1]);
+                        mIndices.push_back(offset+prim->indices[k]);
+                        mIndices.push_back(offset+prim->indices[k]);//slivers
+                    }
+                    break;
                 }
             }
-            else {
-                parseOgreMesh parser;
-                parser.parseData(meshdata, meshbytes, mVertices, mIndices, bounds);
-            }
+            offset=mVertices.size();
         }
         DEBUG_OUTPUT (cout << "dbm:mesh " << mVertices.size() << " vertices:" << endl);
         mBtVertices=(btScalar*)btAlignedAlloc(mVertices.size()/3*sizeof(btScalar)*4,16);
@@ -376,13 +369,13 @@ BulletObj::~BulletObj() {
     if (mBulletBodyPtr!=NULL) delete mBulletBodyPtr;
 }
 
-void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes, bool is_collada) {
+void BulletObj::buildBulletBody() {
     float mass;
     btTransform startTransform;
     btVector3 localInertia(0,0,0);
     btRigidBody* body;
 
-    buildBulletShape(meshdata, meshbytes, mass, is_collada);
+    buildBulletShape(mass);
 
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
     if (mDynamic) {
@@ -453,26 +446,23 @@ void BulletSystem::addPhysicalObject(BulletObj* obj,
     obj->mHull = hull;
     DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->mShape << endl);
     String fn = obj->mMeshptr->getMesh().toString();
-    bool is_collada=false;
-    if (fn.rfind(".dae")==fn.size()-4||fn.rfind(".DAE")==fn.size()-4) is_collada=true;
     if (obj->mDynamic) {
         /// create the object now
-        obj->buildBulletBody(NULL, 0, is_collada);                /// no mesh data
+        obj->buildBulletBody();                /// no mesh data
     }
     else {
-        if (is_collada) {
-            /// FIXME: not threadsafe -- need a lock.  This can race with onMeshParsed and no one calls buildBulletBody
-            /// but -- DH says it's OK, we're always called from a single thread, so whatever
-            if (obj->mMeshdata) {
-                obj->buildBulletBody(0, 0, true);
-            }
-        }
-        else {
-            /// set up a mesh download; callback (downloadFinished) calls buildBulletBody and completes object
-            BULLET_LOG(error, "Download of meshes using TransferMediator not implemented.");
-            //transferManager->download(obj->mMeshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
-            //                      this, _1, obj), Transfer::Range(true));
-        }
+        /// set up a mesh download; callback (downloadFinished) calls buildBulletBody and completes object
+        BULLET_LOG(error, "Download of meshes using TransferMediator not implemented.");
+        //transferManager->download(obj->mMeshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
+        //                      this, _1, obj), Transfer::Range(true));
+
+        /// FIXME: not threadsafe -- need a lock.  This can race with onMeshParsed and no one calls buildBulletBody
+        /// but -- DH says it's OK, we're always called from a single thread, so
+        /// whatever
+        // FIXME add back when download is complete
+        //if (obj->mMeshdata) {
+        //obj->buildBulletBody();
+        //}
     }
 }
 

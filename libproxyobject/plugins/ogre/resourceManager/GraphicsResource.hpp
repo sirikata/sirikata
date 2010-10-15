@@ -52,7 +52,6 @@ public:
   enum Type {
     NAME,
     ENTITY,
-    MESH,
     MATERIAL,
     SKELETON,
     TEXTURE,

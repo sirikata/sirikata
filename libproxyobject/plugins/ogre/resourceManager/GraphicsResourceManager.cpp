@@ -32,7 +32,6 @@
 #include "../meruCompat/DependencyManager.hpp"
 #include "GraphicsResourceManager.hpp"
 #include "GraphicsResourceMaterial.hpp"
-#include "GraphicsResourceMesh.hpp"
 #include "GraphicsResourceModel.hpp"
 #include "GraphicsResourceName.hpp"
 #include "GraphicsResourceEntity.hpp"
@@ -128,38 +127,6 @@ SharedResourcePtr GraphicsResourceManager::getResourceAssetByHash(const Resource
   bool isMHash = true;
   WeakResourcePtr curWeakPtr = getResource(resourceId.fingerprint().convertToHexString());
   SharedResourcePtr curSharedPtr = curWeakPtr.lock();
-  /*
-  if (!curSharedPtr) {
-    curWeakPtr = getResource(id.uri().toString());
-    curSharedPtr = curWeakPtr.lock();
-  }
-  */
-/*
-  if (curSharedPtr) {
-    return curSharedPtr;
-  }
-  if (resourceType == GraphicsResource::MESH) {
-    curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(resourceId);
-  }
-  else if (resourceType == GraphicsResource::MODEL) {
-    curSharedPtr = GraphicsResource::construct<GraphicsResourceModel>(resourceId);
-  }
-  else if (resourceType == GraphicsResource::MATERIAL) {
-    curSharedPtr = GraphicsResource::construct<GraphicsResourceMaterial>(resourceId);
-  }
-  else if (resourceType == GraphicsResource::TEXTURE) {
-    curSharedPtr = GraphicsResource::construct<GraphicsResourceTexture>(resourceId);
-  }
-  else if (resourceType == GraphicsResource::SHADER) {
-    curSharedPtr = GraphicsResource::construct<GraphicsResourceShader>(resourceId);
-  }
-  else {
-    assert(false);
-  }
-
-  mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
-  mResources.insert(curSharedPtr.get());
-*/
   return curSharedPtr;
 }
 
@@ -175,9 +142,6 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
   }
   if (resourceType == GraphicsResource::NAME) {
       curSharedPtr = GraphicsResource::construct<GraphicsResourceName>(id, resourceType, proxy);
-  }
-  else if (resourceType == GraphicsResource::MESH) {
-      curSharedPtr = GraphicsResource::construct<GraphicsResourceMesh>(id, proxy);
   }
   else if (resourceType == GraphicsResource::MODEL) {
       curSharedPtr = GraphicsResource::construct<GraphicsResourceModel>(id, proxy);

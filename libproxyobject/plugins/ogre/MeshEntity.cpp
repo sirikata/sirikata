@@ -321,18 +321,10 @@ void MeshEntity::processMesh(URI const& meshFile)
     // MCB: responsibility to load model meshes must move to MeshObject plugin
     /// hack to support collada mesh -- eventually this should be smarter
     String fn = meshFile.filename();
-    bool is_collada=false;
-    if (fn.rfind(".dae")==fn.size()-4 || fn.rfind(".DAE")==fn.size()-4) is_collada=true;
-    if (is_collada) {
-        Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
-        Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MODEL, mProxy);
-        mResource->setMeshResource ( newModelPtr );
-    }
-    else {
-        Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
-        Meru::SharedResourcePtr newMeshPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MESH, mProxy);
-        mResource->setMeshResource ( newMeshPtr );
-    }
+
+    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
+    Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MODEL, mProxy);
+    mResource->setMeshResource ( newModelPtr );
 }
 
 Vector3f fixUp(int up, Vector3f v) {
@@ -896,12 +888,10 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, C
     else {
         // Otherwise, follow the rest of the normal process.
         String fn = request->getURI().filename();
-        if (fn.rfind(".dae") == fn.size() - 4 || fn.rfind(".DAE") == fn.size() - 4 ) {
-            ProxyObject *obj = mProxy.get();
-            ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
-            if (meshProxy) {
-                meshProxy->meshDownloaded(request, response);
-            }
+        ProxyObject *obj = mProxy.get();
+        ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
+        if (meshProxy) {
+            meshProxy->meshDownloaded(request, response);
         }
     }
     return true;

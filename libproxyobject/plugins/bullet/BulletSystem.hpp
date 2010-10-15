@@ -358,8 +358,8 @@ public:
     const SpaceID& getSpaceID()const;
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
-    void buildBulletBody(const unsigned char*, int, bool is_collada);
-    void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass, bool is_collada);
+    void buildBulletBody();
+    void buildBulletShape(float& mass);
     BulletSystem * getBulletSystem() {
         return system;
     }
