@@ -44,6 +44,8 @@
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
 
+#include <sirikata/core/options/CommonOptions.hpp>
+
 #include <string>
 
 using namespace Sirikata;
@@ -61,7 +63,8 @@ public:
     int mNumCbs;
 
     void setUp() {
-
+        InitOptions();
+        FakeParseOptions();
     }
 
     void tearDown() {
@@ -632,7 +635,7 @@ class TransferTest : public CxxTest::TestSuite {
 	typedef Transfer::URIContext URIContext;
 
 	//Mediates transfers between subsystems (graphics, physics, etc)
-	Transfer::TransferMediator& mTransferMediator;
+	Transfer::TransferMediator* mTransferMediator;
 
 	SampleClient* mSampleClient1;
 	SampleClient* mSampleClient2;
@@ -646,8 +649,10 @@ class TransferTest : public CxxTest::TestSuite {
 public:
 
 	TransferTest()
-        : mTransferMediator(Transfer::TransferMediator::getSingleton()) {
-	    CxxTest::TestSuite();
+         : CxxTest::TestSuite() {
+            InitOptions(); // For CDN settings
+            FakeParseOptions();
+            mTransferMediator = &Transfer::TransferMediator::getSingleton();
 	}
 
 	void setUp() {
@@ -678,9 +683,9 @@ public:
 		                6246,
 		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
 
-		mSampleClient1 = new SampleClient(mTransferMediator, "sample1", list1);
-		mSampleClient2 = new SampleClient(mTransferMediator, "sample2", list2);
-		mSampleClient3 = new SampleClient(mTransferMediator, "sample3", list3);
+		mSampleClient1 = new SampleClient(*mTransferMediator, "sample1", list1);
+		mSampleClient2 = new SampleClient(*mTransferMediator, "sample2", list2);
+		mSampleClient3 = new SampleClient(*mTransferMediator, "sample3", list3);
 
 		mClientThread1 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient1));
 		mClientThread2 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient2));
@@ -694,7 +699,7 @@ public:
         mClientThread3->join();
 
         //Wait for transfer mediator thread to exit
-        mTransferMediator.cleanup();
+        mTransferMediator->cleanup();
 	}
 
 	void testTransferRequests() {

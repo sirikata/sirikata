@@ -38,6 +38,8 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferHandlers.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <boost/bind.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpNameHandler);
@@ -52,8 +54,6 @@ HttpNameHandler& HttpNameHandler::getSingleton() {
 void HttpNameHandler::destroy() {
     AutoSingleton<HttpNameHandler>::destroy();
 }
-const char HttpNameHandler::CDN_HOST_NAME [] = "cdn.sirikata.com";
-const char HttpNameHandler::CDN_SERVICE [] = "http";
 
 
 HttpChunkHandler& HttpChunkHandler::getSingleton() {
@@ -62,15 +62,15 @@ HttpChunkHandler& HttpChunkHandler::getSingleton() {
 void HttpChunkHandler::destroy() {
     AutoSingleton<HttpChunkHandler>::destroy();
 }
-const char HttpChunkHandler::CDN_HOST_NAME [] = "cdn.sirikata.com";
-const char HttpChunkHandler::CDN_SERVICE [] = "http";
 const unsigned int HttpChunkHandler::DISK_LRU_CACHE_SIZE = 1024 * 1024 * 1024; //1GB
 const unsigned int HttpChunkHandler::MEMORY_LRU_CACHE_SIZE = 1024 * 1024 * 50; //50MB
 
 
 HttpNameHandler::HttpNameHandler()
-    : mCdnAddr(CDN_HOST_NAME, CDN_SERVICE) {
-
+ : CDN_HOST_NAME(GetOptionValue<String>(OPT_CDN_HOST)),
+   CDN_SERVICE(GetOptionValue<String>(OPT_CDN_SERVICE)),
+   mCdnAddr(CDN_HOST_NAME, CDN_SERVICE)
+{
 }
 
 HttpNameHandler::~HttpNameHandler() {
@@ -187,7 +187,10 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
 }
 
 HttpChunkHandler::HttpChunkHandler()
-    : mCdnAddr(CDN_HOST_NAME, CDN_SERVICE) {
+ : CDN_HOST_NAME(GetOptionValue<String>(OPT_CDN_HOST)),
+   CDN_SERVICE(GetOptionValue<String>(OPT_CDN_SERVICE)),
+   mCdnAddr(CDN_HOST_NAME, CDN_SERVICE)
+{
 
     //Use LRU for eviction
     mDiskCachePolicy = new LRUPolicy(DISK_LRU_CACHE_SIZE);

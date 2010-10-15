@@ -43,10 +43,15 @@
 #define OPT_REGION_WEIGHT        "region-weight"
 #define OPT_REGION_WEIGHT_ARGS   "region-weight-args"
 
+#define OPT_CDN_HOST             "cdn.host"
+#define OPT_CDN_SERVICE          "cdn.service"
+
 namespace Sirikata {
 
 SIRIKATA_FUNCTION_EXPORT void InitOptions();
 SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv);
+// Parses empty options to get options properly initialized
+SIRIKATA_FUNCTION_EXPORT void FakeParseOptions();
 
 // Be careful with GetOption.  Using it and ->as() directly can be dangerous
 // because some types are defined per-library and won't dynamic_cast properly.
