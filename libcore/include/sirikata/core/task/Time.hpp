@@ -208,6 +208,10 @@ protected:
 	}
 
 public:
+    LocalTime()
+        : mTime(0)
+    {}
+
     uint64 raw() const {
         return mTime;
     }

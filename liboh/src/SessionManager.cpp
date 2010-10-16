@@ -41,6 +41,8 @@
 
 #include <sirikata/core/options/CommonOptions.hpp>
 
+#include <sirikata/core/odp/DelegatePort.hpp>
+
 #include "Protocol_Session.pbj.hpp"
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
@@ -204,7 +206,8 @@ UUID SessionManager::ObjectConnections::getInternalID(const ObjectReference& spa
 // SessionManager Implementation
 
 SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb, ObjectMessageHandlerCallback msg_cb)
- : mContext( ctx ),
+ : ODP::DelegateService( std::tr1::bind(&SessionManager::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,  std::tr1::placeholders::_3) ),
+   mContext( ctx ),
    mSpace(space),
    mIOService( Network::IOServiceFactory::makeIOService() ),
    mIOStrand( mIOService->createStrand() ),
@@ -215,6 +218,7 @@ SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, Ser
    mObjectMigratedCallback(mig_cb),
    mObjectMessageHandlerCallback(msg_cb),
    mObjectConnections(this),
+   mTimeSyncClient(NULL),
    mShuttingDown(false)
 {
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOptionValue<String>("ohstreamlib"))(GetOptionValue<String>("ohstreamoptions"));
@@ -225,6 +229,8 @@ SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, Ser
 
 
 SessionManager::~SessionManager() {
+    delete mTimeSyncClient;
+
     // Close all connections
     for (ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
         SpaceNodeConnection* conn = it->second;
@@ -413,6 +419,30 @@ void SessionManager::openConnectionStartMigration(const UUID& obj_id, ServerID s
     // FIXME do something on failure
 }
 
+ODP::DelegatePort* SessionManager::createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    ODP::Endpoint port_ep(sor, port);
+    return new ODP::DelegatePort(
+        (ODP::DelegateService*)this,
+        port_ep,
+        std::tr1::bind(
+            &SessionManager::delegateODPPortSend, this, port_ep, _1, _2
+        )
+    );
+}
+
+bool SessionManager::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
+    // Create new ObjectMessage
+    return send(
+        source_ep.object().getAsUUID(), (uint16)source_ep.port(),
+        dest_ep.object().getAsUUID(), (uint16)dest_ep.port(),
+        String((char*)payload.data(), payload.size())
+    );
+}
+
+
 bool SessionManager::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -421,7 +451,12 @@ bool SessionManager::send(const UUID& src, const uint16 src_port, const UUID& de
 
     if (dest_server == NullServerID) {
         // Try looking it up
-        dest_server = mObjectConnections.getConnectedServer(src);
+        // Special case TIMESYNC messages. Just use any space server to try
+        // syncing with.
+        if (dest_port == OBJECT_PORT_TIMESYNC && !mConnections.empty())
+            dest_server = mConnections.begin()->first;
+        else
+            dest_server = mObjectConnections.getConnectedServer(src);
         // And if we still don't have something, give up
         if (dest_server == NullServerID) {
             OH_LOG(error,"Tried to send message when not connected.");
@@ -564,6 +599,18 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
     }
 
     OH_LOG(debug,"Successfully connected to " << sid);
+
+    // Try to setup time syncing if it isn't on yet.
+    if (mTimeSyncClient == NULL) {
+        // The object IDs and ports used are bogus since the space server just
+        // ignores them
+        mTimeSyncClient = new TimeSyncClient(
+            mContext, this->bindODPPort(mSpace, ObjectReference(UUID::random()), OBJECT_PORT_TIMESYNC),
+            ODP::Endpoint(mSpace, ObjectReference::spaceServiceID(), OBJECT_PORT_TIMESYNC),
+            Duration::seconds(5)
+        );
+        mContext->add(mTimeSyncClient);
+    }
 }
 
 void SessionManager::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
@@ -601,6 +648,17 @@ void SessionManager::handleServerMessage(ObjectMessage* msg) {
     // As a special case, messages dealing with sessions are handled by the object host
     if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
         handleSessionMessage(msg);
+    }
+    else if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_TIMESYNC) {
+        // A second special case, messages dealing with OH <-> Space time
+        // synchronization, shared between all objects connected to a space
+        printf("Delivering timesync message.\n");
+        // Deliver it via this DelegateService
+        this->deliver(
+            ODP::Endpoint(mSpace, ObjectReference(msg->source_object()), ODP::PortID(msg->source_port())),
+            ODP::Endpoint(mSpace, ObjectReference(msg->dest_object()), ODP::PortID(msg->dest_port())),
+            MemoryReference(msg->payload())
+        );
     }
     else {
         // Look up internal ID so the OH can find the right object without

@@ -1,7 +1,7 @@
-/*  Sirikata libspace -- Known Service Ports
- *  KnownServices.hpp
+/*  Sirikata
+ *  TimeSyncServer.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,20 +29,30 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_KNOWN_SERVICES_HPP_
-#define SIRIKATA_KNOWN_SERVICES_HPP_
+
+#ifndef _SIRIKATA_CORE_SYNC_TIME_SYNC_SERVER_HPP_
+#define _SIRIKATA_CORE_SYNC_TIME_SYNC_SERVER_HPP_
+
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/core/odp/Service.hpp>
+
 namespace Sirikata {
-namespace Services{
-enum Ports{
-    REGISTRATION=1,
-    LOC=2,
-    GEOM=3, // Proximity service: Also known as PROX
-    ROUTER=4,
-	PHYSICS=6,
-    SUBSCRIPTION=9,
-    BROADCAST=10,
-    OBJECT_CONNECTIONS=16383
-};
-}
-}
-#endif
+
+/** TimeSyncServer implements the server for a simple time synchronization
+ *  protocol. You give it a Context to get time information and it returns the
+ *  payload for a response message -- simply package it up in a container frame
+ *  and send it back to the client.
+ */
+class SIRIKATA_EXPORT TimeSyncServer {
+public:
+    TimeSyncServer(Context* ctx);
+    ~TimeSyncServer();
+
+    String getResponse(MemoryReference payload);
+private:
+    Context* mContext;
+}; // class TimeSyncServer
+
+} // namespace Sirikata
+
+#endif //_SIRIKATA_CORE_SYNC_TIME_SYNC_SERVER_HPP_

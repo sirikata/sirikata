@@ -1,7 +1,7 @@
-/*  Sirikata libspace -- Known Service Ports
- *  KnownServices.hpp
+/*  Sirikata
+ *  TimeSyncClient.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,20 +29,41 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_KNOWN_SERVICES_HPP_
-#define SIRIKATA_KNOWN_SERVICES_HPP_
+
+#ifndef _SIRIKATA_CORE_SYNC_TIME_SYNC_CLIENT_HPP_
+#define _SIRIKATA_CORE_SYNC_TIME_SYNC_CLIENT_HPP_
+
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/odp/Service.hpp>
+
 namespace Sirikata {
-namespace Services{
-enum Ports{
-    REGISTRATION=1,
-    LOC=2,
-    GEOM=3, // Proximity service: Also known as PROX
-    ROUTER=4,
-	PHYSICS=6,
-    SUBSCRIPTION=9,
-    BROADCAST=10,
-    OBJECT_CONNECTIONS=16383
-};
-}
-}
-#endif
+
+/** TimeSyncClient communicates with a server for simple time synchronization.
+ *  protocol. You give it a Context to get time information from, an
+ *  ODP::Port to handle messaging, and an ODP::Endpoint for the server to
+ *  sync with.
+ */
+class SIRIKATA_EXPORT TimeSyncClient : public PollingService {
+public:
+    TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval);
+    ~TimeSyncClient();
+private:
+
+    virtual void poll();
+
+    void handleSyncMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload);
+
+    Context* mContext;
+    ODP::Port* mPort;
+    ODP::Endpoint mSyncServer;
+    uint8 mSeqno;
+    Time mRequestTimes[256];
+
+    Duration mOffset;
+
+}; // class TimeSyncServer
+
+} // namespace Sirikata
+
+#endif //_SIRIKATA_CORE_SYNC_TIME_SYNC_CLIENT_HPP_

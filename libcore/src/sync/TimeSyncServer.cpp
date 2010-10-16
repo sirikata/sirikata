@@ -1,7 +1,7 @@
-/*  Sirikata Network Utilities
- *  TimeSync.hpp
+/*  Sirikata
+ *  TimeSyncServer.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,29 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SIRIKATA_TimeSync_HPP__
-#define SIRIKATA_TimeSync_HPP__
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/sync/TimeSyncServer.hpp>
 
+#include <Protocol_TimeSync.pbj.hpp>
+#include <sirikata/core/network/Message.hpp> //serializePBJMessage
 namespace Sirikata {
-namespace Network {
-class TimeSync {
-protected:
-    Duration mOffset;
-    static void defaultCallback(const Duration&offset){
-        SILOG(objecthost,debug,"New offset is "<<offset);
-    }
 
-public:
-    virtual void setCallback(const std::tr1::function<void(const Duration&)>&)=0;
-    const Duration&getOffset() const{
-        return mOffset;
-    }
-    TimeSync():mOffset(Duration::seconds(0)){ 
-    }
-    virtual ~TimeSync(){}
-};
-
-
+TimeSyncServer::TimeSyncServer(Context* ctx)
+ : mContext(ctx)
+{
 }
+
+TimeSyncServer::~TimeSyncServer() {
 }
-#endif
+
+String TimeSyncServer::getResponse(MemoryReference payload) {
+    Sirikata::Protocol::TimeSync sync_msg;
+    bool parse_success = sync_msg.ParseFromArray(payload.data(), payload.size());
+    assert(parse_success);
+
+    // Our only job is to take the existing message, fill in a timestamp, and
+    // send it back.
+    sync_msg.set_t(mContext->simTime());
+
+    String resp = serializePBJMessage(sync_msg);
+    return resp;
+}
+
+} // namespace Sirikata

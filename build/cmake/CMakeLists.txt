@@ -778,6 +778,8 @@ SET(ProtocolBuffersSources
   ${SirikataProtocolRoot}/Empty
   ${SirikataProtocolRoot}/Frame
 
+  ${SirikataProtocolRoot}/TimeSync
+
   ${SirikataProtocolRoot}/ObjectMessage
   ${SirikataProtocolRoot}/Session
   ${SirikataProtocolRoot}/SSTHeader
@@ -1068,6 +1070,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
+	${LIBCORE_SOURCE_DIR}/sync/TimeSyncServer.cpp
+	${LIBCORE_SOURCE_DIR}/sync/TimeSyncClient.cpp
 )
 
 #precompiled header
