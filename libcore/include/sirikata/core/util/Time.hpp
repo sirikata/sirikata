@@ -40,6 +40,10 @@ class Time : private Task::LocalTime{
 
     }
   public:
+    Time ()
+     : LocalTime()
+    {}
+
     uint64 raw() const {
         return static_cast<const LocalTime*>(this)->raw();
     }

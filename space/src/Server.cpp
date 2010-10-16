@@ -53,11 +53,15 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#include <sirikata/core/odp/DelegatePort.hpp>
+#include <sirikata/core/util/KnownServices.hpp>
+
 namespace Sirikata
 {
 
 Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
- : mContext(ctx),
+ : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
+   mContext(ctx),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
@@ -71,6 +75,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     mContext->mCSeg = mCSeg;
+
+    mTimeSyncServer = new TimeSyncServer(mContext);
 
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
@@ -140,6 +146,37 @@ Server::~Server()
 
     delete mObjectHostConnectionManager;
     delete mLocalForwarder;
+
+    delete mTimeSyncServer;
+}
+
+ODP::DelegatePort* Server::createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    ODP::Endpoint port_ep(sor, port);
+    return new ODP::DelegatePort(
+        (ODP::DelegateService*)this,
+        port_ep,
+        std::tr1::bind(
+            &Server::delegateODPPortSend, this, port_ep, _1, _2
+        )
+    );
+}
+
+bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
+    // Create new ObjectMessage
+    Sirikata::Protocol::Object::ObjectMessage* msg = new Sirikata::Protocol::Object::ObjectMessage();
+    msg->set_source_object(source_ep.object().getAsUUID());
+    msg->set_source_port(source_ep.port());
+    msg->set_dest_object(dest_ep.object().getAsUUID());
+    msg->set_dest_port(dest_ep.port());
+    msg->set_payload(String((char*)payload.data(), payload.size()));
+
+    // This call needs to be thread safe, and we shouldn't be using this
+    // ODP::Service to communicate with any non-local objects, so just use the
+    // local forwarder.
+    return mLocalForwarder->tryForward(msg);
 }
 
 bool Server::isObjectConnected(const UUID& object_id) const {
@@ -201,6 +238,26 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
         SILOG(cbr,error,"Got message from object host claiming to be from space.");
         delete obj_msg;
         return true;
+    }
+
+    // If it is is TimeSync message, dispatch immediately
+    bool timesync_msg = (obj_msg->dest_port() == OBJECT_PORT_TIMESYNC);
+    if (timesync_msg)
+    {
+        bool space_dest = (obj_msg->dest_object() == spaceID);
+        if (space_dest) {
+            String response_payload = mTimeSyncServer->getResponse(MemoryReference(obj_msg->payload()));
+            Sirikata::Protocol::Object::ObjectMessage* sync_response = createObjectMessage(
+                mContext->id(),
+                UUID::null(), OBJECT_PORT_TIMESYNC,
+                obj_msg->source_object(), OBJECT_PORT_TIMESYNC,
+                response_payload
+            );
+            mObjectHostConnectionManager->send(conn_id, sync_response);
+
+            delete obj_msg;
+            return true;
+        }
     }
 
     // 5. Otherwise, we're going to have to ship this to the main thread, either

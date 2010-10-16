@@ -41,6 +41,9 @@
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
+#include <sirikata/core/odp/DelegateService.hpp>
+#include <sirikata/core/sync/TimeSyncClient.hpp>
+
 namespace Sirikata {
 
 class ServerIDMap;
@@ -49,8 +52,11 @@ class ServerIDMap;
  * object hosts. It uses internal object host IDs (UUIDs) to track objects
  * requests and open sessions, and also handles migrating connections between
  * space servers.
+ *
+ *  Internally, SessionManager masquerades as an ODP::Service. This ODP::Service
+ *  is only used for communication with the space server.
  */
-class SIRIKATA_OH_EXPORT SessionManager : public Service {
+class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateService {
   public:
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
@@ -133,7 +139,6 @@ private:
     void handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
     void retryOpenConnection(const UUID&uuid,ServerID sid);
 
-
     // Utility method which keeps trying to resend a message
     void sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
 
@@ -168,6 +173,12 @@ private:
     // Callback that indicates we have a connection to the new server and can now start the migration to it.
     void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
 
+
+    /** Time Sync related utilities **/
+
+    // ODP::DelegateService dependencies
+    ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
+    bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     // Currently the SST code requires an ObjectMessageRouter per connection,
     // which used to be handled by the Object.  Since SessionManager has no
@@ -292,6 +303,8 @@ private:
     };
     ObjectConnections mObjectConnections;
     friend class ObjectConnections;
+
+    TimeSyncClient* mTimeSyncClient;
 
     bool mShuttingDown;
 

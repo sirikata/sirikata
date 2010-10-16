@@ -88,9 +88,6 @@ public:
     SpaceObjectReference id() const { return SpaceObjectReference(space, object); }
 
 
-    typedef std::map<uint32, std::set<ObjectReference> > ProxQueryMap;
-    ProxQueryMap mProxQueryMap; ///< indexed by ProxCall::query_id()
-
     PerSpaceData(HostedObject* _parent, const SpaceID& _space)
      : parent(_parent),
        space(_space),
