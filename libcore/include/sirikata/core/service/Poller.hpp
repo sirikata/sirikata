@@ -62,6 +62,7 @@ public:
      */
     virtual void stop();
 private:
+    void setupNextTimeout();
     void handleExec();
 
     Network::IOStrand* mStrand;

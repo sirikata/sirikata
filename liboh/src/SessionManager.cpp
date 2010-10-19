@@ -121,7 +121,7 @@ SessionManager::ConnectedCallback& SessionManager::ObjectConnections::getConnect
     return mObjectInfo[objid].connectedCB;
 }
 
-ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj) {
+ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj, bool do_cb) {
     if (mObjectInfo[obj].connectingTo != NullServerID) { // We were connecting to a server
         ServerID connectedTo = mObjectInfo[obj].connectingTo;
         OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
@@ -130,7 +130,18 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectServerMap[connectedTo].push_back(obj);
 
         mObjectInfo[obj].connectedAs = SpaceObjectReference(parent->mSpace, ObjectReference(obj));
-        mObjectInfo[obj].connectedCB(parent->mSpace, ObjectReference(obj), connectedTo);
+
+        if (do_cb) {
+            mObjectInfo[obj].connectedCB(parent->mSpace, ObjectReference(obj), connectedTo);
+        }
+        else {
+            mDeferredCallbacks.push_back(
+                std::tr1::bind(
+                    mObjectInfo[obj].connectedCB,
+                    parent->mSpace, ObjectReference(obj), connectedTo
+                )
+            );
+        }
 
         // FIXME shoudl be setting internal/external ID maps here
         // Look up internal ID so the OH can find the right object without
@@ -165,8 +176,18 @@ void SessionManager::ObjectConnections::handleConnectError(const UUID& objid) {
     mObjectInfo[objid].connectedCB(parent->mSpace, ObjectReference(objid), NullServerID);
 }
 
-void SessionManager::ObjectConnections::handleConnectStream(const UUID& objid) {
-  mObjectInfo[objid].streamCreatedCB( mObjectInfo[objid].connectedAs );
+void SessionManager::ObjectConnections::handleConnectStream(const UUID& objid, bool do_cb) {
+    if (do_cb) {
+        mObjectInfo[objid].streamCreatedCB( mObjectInfo[objid].connectedAs );
+    }
+    else {
+        mDeferredCallbacks.push_back(
+            std::tr1::bind(
+                mObjectInfo[objid].streamCreatedCB,
+                mObjectInfo[objid].connectedAs
+            )
+        );
+    }
 }
 
 void SessionManager::ObjectConnections::remove(const UUID& objid) {
@@ -201,6 +222,12 @@ UUID SessionManager::ObjectConnections::getInternalID(const ObjectReference& spa
         return UUID::null();
     }
     return it->second;
+}
+
+void SessionManager::ObjectConnections::invokeDeferredCallbacks() {
+    for(DeferredCallbackList::iterator it = mDeferredCallbacks.begin(); it != mDeferredCallbacks.end(); it++)
+        (*it)();
+    mDeferredCallbacks.clear();
 }
 
 // SessionManager Implementation
@@ -442,6 +469,10 @@ bool SessionManager::delegateODPPortSend(const ODP::Endpoint& source_ep, const O
     );
 }
 
+void SessionManager::timeSyncUpdated() {
+    assert( mTimeSyncClient->valid() );
+    mObjectConnections.invokeDeferredCallbacks();
+}
 
 bool SessionManager::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
@@ -607,7 +638,8 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         mTimeSyncClient = new TimeSyncClient(
             mContext, this->bindODPPort(mSpace, ObjectReference(UUID::random()), OBJECT_PORT_TIMESYNC),
             ODP::Endpoint(mSpace, ObjectReference::spaceServiceID(), OBJECT_PORT_TIMESYNC),
-            Duration::seconds(5)
+            Duration::seconds(5),
+            std::tr1::bind(&SessionManager::timeSyncUpdated, this)
         );
         mContext->add(mTimeSyncClient);
     }
@@ -652,7 +684,6 @@ void SessionManager::handleServerMessage(ObjectMessage* msg) {
     else if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_TIMESYNC) {
         // A second special case, messages dealing with OH <-> Space time
         // synchronization, shared between all objects connected to a space
-        printf("Delivering timesync message.\n");
         // Deliver it via this DelegateService
         this->deliver(
             ODP::Endpoint(mSpace, ObjectReference(msg->source_object()), ODP::PortID(msg->source_port())),
@@ -688,7 +719,12 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         UUID obj = msg->dest_object();
 
         if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success) {
-	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj);
+            // If we've got proper time syncing setup, we can dispatch the callback
+            // immediately.  Otherwise, we need to delay the callback
+            assert(mTimeSyncClient != NULL);
+            bool time_synced = mTimeSyncClient->valid();
+
+	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj, time_synced);
 
             // Initialize a new router for SST
             mObjectConnectionRouters[obj] = new ObjectConnectionRouter(this, obj);
@@ -705,11 +741,11 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 				Duration::seconds(0.05)
 				);
 
-	    Stream<UUID>::connectStream(mObjectConnectionRouters[obj],
-                                EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
-                                EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
-					std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
-                                        );
+            Stream<UUID>::connectStream(mObjectConnectionRouters[obj],
+                EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
+                EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
+                std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
+            );
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -766,7 +802,9 @@ void SessionManager::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUI
 
   mObjectToSpaceStreams[obj] = s;
 
-  mObjectConnections.handleConnectStream(obj);
+  assert(mTimeSyncClient != NULL);
+  bool time_synced = mTimeSyncClient->valid();
+  mObjectConnections.handleConnectStream(obj, time_synced);
 }
 
 } // namespace Sirikata
