@@ -240,7 +240,7 @@ void DistributedCoordinateSegmentation::llIOServicingLoop() {
   mLLIOService.run();
 }
 
-ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
+ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos, BoundingBox3f& server_bbox) {
   ServerID sid;
 
   Time start_time = Timer::now();
@@ -274,6 +274,8 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
       //printf("local lookup returned %d\n", segRegion->mServer);
 
       sid = segRegion->mServer;
+
+      server_bbox = segRegion->mBoundingBox;
     }
     else {
       it =  mLowerLevelTrees.find(bbox_hash);
@@ -284,6 +286,8 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
         //printf("local lookup returned %d\n", segRegion->mServer);
 
         sid = segRegion->mServer;
+
+        server_bbox = segRegion->mBoundingBox;
       }
       else {
         sid = 0;
@@ -293,7 +297,7 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
   else {
     //remote function call to the relevant server
     std::cout << "local_processing_time: " << (Timer::now() - start_time).toMicroseconds() << "\n";
-    sid= callLowerLevelCSEGServer(topLevelIdx, searchVec, segRegion->mBoundingBox);
+    sid = callLowerLevelCSEGServer(topLevelIdx, searchVec, segRegion->mBoundingBox, server_bbox);
     std::cout << "Total_time: " << (Timer::now() - start_time).toMicroseconds() << "\n";
     fflush(stdout);
     return sid;
@@ -622,11 +626,17 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
   boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex);
 
   if (csegMessage.has_lookup_request_message()) {
+    BoundingBox3f bbox;
+
     csegResponseMessage.mutable_lookup_response_message().set_server_id(
                            lookup(Vector3f(csegMessage.lookup_request_message().x(),
                                            csegMessage.lookup_request_message().y(),
-                                           csegMessage.lookup_request_message().z()))
-                                                                        );
+                                           csegMessage.lookup_request_message().z()
+                                           ), bbox
+                           )
+    );
+
+    csegResponseMessage.mutable_lookup_response_message().set_server_bbox(bbox);
 
     writeCSEGMessage(socket, csegResponseMessage);
   }
@@ -705,7 +715,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
 
   boost::shared_lock<boost::shared_mutex> mCSEGExclusiveWriteLock(mCSEGReadWriteMutex);
 
-  if (csegMessage.has_ll_lookup_request_message() )   {
+  if ( csegMessage.has_ll_lookup_request_message() )   {
     BoundingBox3f bbox = csegMessage.ll_lookup_request_message().bbox();
     Vector3f vect = csegMessage.ll_lookup_request_message().lookup_vector();
 
@@ -713,13 +723,16 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
     std::map<String, SegmentedRegion*>::iterator it=  mLowerLevelTrees.find(bbox_hash);
 
     ServerID retval = 0;
+    BoundingBox3f leaf_bbox;
     if (it != mLowerLevelTrees.end()) {
       const SegmentedRegion*segRegion = (*it).second->lookup(vect);
 
       retval = segRegion->mServer;
+      leaf_bbox = segRegion->mBoundingBox;
     }
 
     csegResponseMessage.mutable_ll_lookup_response_message().set_server_id(retval);
+    csegResponseMessage.mutable_ll_lookup_response_message().set_leaf_bbox(leaf_bbox);
 
     writeCSEGMessage(socket, csegResponseMessage);
   }
@@ -1044,7 +1057,8 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundi
 
 ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID server_id,
 								      const Vector3f& searchVec,
-								      const BoundingBox3f& boundingBox)
+								      const BoundingBox3f& boundingBox,
+                                                                      BoundingBox3f& leafBBox)
 {
   SocketContainer socketContainer = getSocketToCSEGServer(server_id);
 
@@ -1067,6 +1081,10 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
   readCSEGMessage(socket, csegMessage);
 
   ServerID retval = csegMessage.ll_lookup_response_message().server_id();
+
+  if (csegMessage.ll_lookup_response_message().has_leaf_bbox()) {
+    leafBBox = csegMessage.ll_lookup_response_message().leaf_bbox();
+  }
 
   boost::upgrade_lock<boost::shared_mutex> lock(mSocketsToCSEGServersMutex);
   mLeasedSocketsToCSEGServers[server_id]->push(socketContainer, false);

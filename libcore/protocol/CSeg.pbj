@@ -55,6 +55,8 @@ message LookupRequestMessage {
 
 message LookupResponseMessage {
     required uint32 server_id = 1;
+
+    optional boundingbox3d3f server_bbox = 2;
 }
 
 message LookupBBoxRequestMessage {
@@ -107,6 +109,8 @@ message LLLookupRequestMessage {
 
 message LLLookupResponseMessage {
     required uint32 server_id = 1;
+
+    optional boundingbox3d3f leaf_bbox = 2;
 }
 
 message LLServerRegionRequestMessage {
