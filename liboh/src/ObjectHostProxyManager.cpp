@@ -38,6 +38,7 @@
 #include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <vector>
 
+
 namespace Sirikata {
 
 void ObjectHostProxyManager::initialize() {
@@ -46,7 +47,7 @@ void ObjectHostProxyManager::destroy() {
     for (ProxyMap::iterator iter = mProxyMap.begin();
          iter != mProxyMap.end();
          ++iter) {
-        iter->second.obj->destroy(SpaceTimeOffsetManager::getSingleton().now(mSpaceID));
+        iter->second.obj->destroy();
     }
     mProxyMap.clear();
 }
@@ -76,7 +77,7 @@ void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj, QueryTr
         }
         viewiter = iter->second.viewers.find(viewer);
         if (viewiter == iter->second.viewers.end()) {
-            iter->second.obj->destroy(SpaceTimeOffsetManager::getSingleton().now(mSpaceID));
+            iter->second.obj->destroy();
             notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
             mProxyMap.erase(iter);
         }

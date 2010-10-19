@@ -37,7 +37,6 @@
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
 #include "task/Event.hpp"
-#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
@@ -147,7 +146,6 @@ OgreSystem::OgreSystem(Context* ctx)
      mSuspended(false),
      mPrimaryCamera(NULL)
 {
-    mLocalTimeOffset=NULL;
     increfcount();
     mCubeMap=NULL;
     mInputManager=NULL;
@@ -240,6 +238,11 @@ void OgreSystem::destroyRenderTarget(const String&name) {
             destroyRenderTarget(renderTargetTexture);
     }
 }
+
+Time OgreSystem::simTime() {
+    return mContext->simTime();
+}
+
 void OgreSystem::suspend() {
   mSuspended = !mSuspended;
 }
@@ -358,8 +361,7 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     }
     return mAttachedCameras.end();
 }
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const TimeOffsetManager *localTimeOffset, const String&options) {
-    mLocalTimeOffset=localTimeOffset;
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     ++sNumOgreSystems;
     proxyManager->addListener(this);
 
@@ -960,8 +962,8 @@ void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
         Entity *current = *iter;
         ++iter;
         SpaceID space(current->getProxy().getObjectReference().space());
-        Time cur_space_time = current->getProxy().getOwner()->currentSpaceTime(space);
-        current->extrapolateLocation(cur_space_time);
+        Time cur_time = simTime();
+        current->extrapolateLocation(cur_time);
     }
 }
 

@@ -62,8 +62,8 @@ ProxyObject::~ProxyObject() {
     delete mDefaultPort;
 }
 
-void ProxyObject::destroy(const TemporalValue<Location>::Time& when) {
-    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed,when);
+void ProxyObject::destroy() {
+    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
 
@@ -79,12 +79,6 @@ bool ProxyObject::UpdateNeeded::operator() (
 
 bool ProxyObject::isStatic() const {
     return mLoc.velocity() == Vector3f::nil() && mOrientation.velocity() == Quaternion::identity();
-}
-
-// protected:
-// Notification that the Parent has been destroyed
-void ProxyObject::destroyed(const TemporalValue<Location>::Time& when) {
-    //unsetParent(when);
 }
 
 QueryTracker *ProxyObject::getQueryTracker() const {

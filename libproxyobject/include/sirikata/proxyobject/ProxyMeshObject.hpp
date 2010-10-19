@@ -104,7 +104,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
         virtual bool hasModelObject () const;
 
     protected:
-//        virtual void destroyed ();
 
 };
 

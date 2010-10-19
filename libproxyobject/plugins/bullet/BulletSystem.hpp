@@ -52,8 +52,6 @@
 using namespace std;
 namespace Sirikata {
 
-class TimeOffsetManager;
-
 /*
                  dead simple, brute-force parsing of ogre.mesh to get the precious vertex data for physics
 */
@@ -465,13 +463,11 @@ public:
 
 class BulletSystem: public TimeSteppedQueryableSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
-                    const TimeOffsetManager*offset,
                     const String&options);
     Context* mContext;
     Vector3f mGravity;
     double groundlevel;
     Task::LocalTime mStartTime;
-    const TimeOffsetManager *mLocalTimeOffset;
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;
     customDispatch* dispatcher;
@@ -495,10 +491,9 @@ public:
 
     static TimeSteppedQueryableSimulation* create(Context* ctx,
         Provider<ProxyCreationListener*>*proxyManager,
-        const TimeOffsetManager *offset,
             const String&options) {
         BulletSystem*os= new BulletSystem(ctx);
-        if (os->initialize(proxyManager,offset,options))
+        if (os->initialize(proxyManager,options))
             return os;
         delete os;
         return NULL;

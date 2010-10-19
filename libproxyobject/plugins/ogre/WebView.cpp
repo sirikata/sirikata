@@ -150,7 +150,7 @@ WebView::~WebView()
 	setProxyObject(std::tr1::shared_ptr<ProxyWebViewObject>());
 }
 
-void WebView::destroyed(const Time&) {
+void WebView::destroyed() {
 	WebViewManager::getSingleton().destroyWebView(this);
 }
 

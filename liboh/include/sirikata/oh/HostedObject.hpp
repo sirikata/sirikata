@@ -93,11 +93,6 @@ protected:
     ODP::DelegateService* mDelegateODPService;
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
-    virtual Time spaceTime(const SpaceID& space, const Time& t);
-    virtual Time currentSpaceTime(const SpaceID& space);
-    virtual Time localTime(const SpaceID& space, const Time& t);
-    virtual Time currentLocalTime();
-
 //------- Constructors/Destructors
 
 private:
@@ -125,6 +120,11 @@ public:
 //------- Public member functions:
     ObjectHostContext* context() { return mContext; }
     const ObjectHostContext* context() const { return mContext; }
+
+    virtual Time spaceTime(const SpaceID& space, const Time& t);
+    virtual Time currentSpaceTime(const SpaceID& space);
+    virtual Time localTime(const SpaceID& space, const Time& t);
+    virtual Time currentLocalTime();
 
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     //void initializeScript(const String&script, const std::map<String,String> &args);

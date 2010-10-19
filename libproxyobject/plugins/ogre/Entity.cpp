@@ -159,7 +159,7 @@ void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedM
     }
 }
 
-void Entity::destroyed(const Time&) {
+void Entity::destroyed() {
     delete this;
 }
 void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {

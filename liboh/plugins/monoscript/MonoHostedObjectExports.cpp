@@ -34,7 +34,6 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
-#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include "MonoDefs.hpp"
@@ -85,7 +84,8 @@ static void Mono_HostedObject_iLocalTime(Mono::CSharpTime* mono_result) {
 
 static void Mono_HostedObject_iTime(Mono::CSharpUUID* mono_space, Mono::CSharpTime* mono_result) {
     SpaceID space( Mono::UUIDFromMono(mono_space) );
-    Time cur = SpaceTimeOffsetManager::getSingleton().now(space);
+    HostedObjectPtr ho = MonoContext::getSingleton().getVWObject();
+    Time cur = ho->currentSpaceTime(space);
     Mono::ConvertTime(cur, mono_result);
 }
 
