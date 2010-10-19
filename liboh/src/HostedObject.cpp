@@ -40,12 +40,8 @@
 #include <Protocol_Subscription.pbj.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
-<<<<<<< HEAD
-
 #include <sirikata/core/persistence/PersistenceSentMessage.hpp>
-=======
 #include <sirikata/core/util/KnownServices.hpp>
->>>>>>> Big clean up of dead code in HostedObject.
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/oh/HostedObject.hpp>
@@ -91,58 +87,7 @@ public:
 
     SpaceObjectReference id() const { return SpaceObjectReference(space, object); }
 
-<<<<<<< HEAD
-    void locationWasReset(Time timestamp, Location loc) {
-        loc.setVelocity(Vector3f::nil());
-        loc.setAngularSpeed(0);
-        mUpdatedLocation.resetValue(timestamp, loc);
-    }
 
-
-    void locationWasSet(const Protocol::ObjLoc &msg) {
-        Time timestamp = msg.timestamp();
-        Location loc = mUpdatedLocation.extrapolate(timestamp);
-        //ProxyObject::updateLocationWithObjLoc(loc, msg);
-        loc.setVelocity(Vector3f::nil());
-        loc.setAngularSpeed(0);
-        mUpdatedLocation.updateValue(timestamp, loc);
-    }
-
-
-    void updateLocation(HostedObject *ho) {
-        if (!mProxyObject) {
-            return;
-        }
-        SpaceID space = mProxyObject->getObjectReference().space();
-        Time now = Time::now(ho->getSpaceTimeOffset(space));
-        Location realLocation = mProxyObject->globalLocation(now);
-
-        if (mUpdatedLocation.needsUpdate(now, realLocation)) {
-            Protocol::ObjLoc toSet;
-            toSet.set_position(realLocation.getPosition());
-            toSet.set_velocity(realLocation.getVelocity());
-
-            toSet.set_orientation(realLocation.getOrientation());
-            toSet.set_rotational_axis(realLocation.getAxisOfRotation());
-            toSet.set_angular_speed(realLocation.getAngularSpeed());
-
-            RoutableMessageBody body;
-            toSet.SerializeToString(body.add_message("ObjLoc"));
-            RoutableMessageHeader header;
-            header.set_destination_port(Services::LOC);
-            header.set_destination_object(ObjectReference::spaceServiceID());
-            header.set_destination_space(space);
-            std::string bodyStr;
-            body.SerializeToString(&bodyStr);
-            // Avoids waiting a loop.
-            ho->sendViaSpace(header, MemoryReference(bodyStr));
-
-            locationWasSet(toSet);
-        }
-    }
-
-=======
->>>>>>> Big clean up of dead code in HostedObject.
     typedef std::map<uint32, std::set<ObjectReference> > ProxQueryMap;
     ProxQueryMap mProxQueryMap; ///< indexed by ProxCall::query_id()
 
@@ -281,292 +226,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
 }
 
 
-<<<<<<< HEAD
-
-void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
-{
-    if (mSpaceData == NULL)
-    {
-        std::cout<<"\n\n\nCalling getSpaceObjRefs when not connected to any spaces.  This really shouldn't happen\n\n\n";
-        assert(false);
-    }
-
-    SpaceDataMap::const_iterator smapIter;
-    for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
-        ss.insert(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
-}
-
-
-
-
-
-void HostedObject::handleRPCMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
-    HostedObject *realThis=this;
-    /// Parse message_names and message_arguments.
-
-    // FIXME: Transitional. There are two ways this data could be
-    // stored. The old way is directly in the bodyData.  The other is
-    // in the payload section of bodyData.  Either way, we parse the
-    // body, but in the former, we need to parse a *secondary*
-    // RoutableMessageBody in the payload field.  Eventually this
-    // should just be in the "header", i.e. the entire packet should
-    // just be unified.
-    RoutableMessageBody msg;
-    RoutableMessageBody outer_msg;
-    outer_msg.ParseFromArray(bodyData.data(), bodyData.length());
-    if (outer_msg.has_payload()) {
-        assert( outer_msg.message_size() == 0 );
-        msg.ParseFromString(outer_msg.payload());
-    }
-    else {
-        msg = outer_msg;
-    }
-
-    int numNames = msg.message_size();
-    if (numNames <= 0) {
-        // Invalid message!
-        RoutableMessageHeader replyHeader = header.createReply();
-        replyHeader.set_return_status(RoutableMessageHeader::PROTOCOL_ERROR);
-        sendViaSpace(replyHeader, MemoryReference::null());
-        return;
-    }
-
-    RoutableMessageBody responseMessage;
-    for (int i = 0; i < numNames; ++i) {
-        std::string name = msg.message_names(i);
-        MemoryReference body(msg.message_arguments(i));
-
-        if (header.has_id()) {
-            std::string response;
-            /// Pass response parameter if we expect a response.
-            realThis->processRPC(header, name, body, &response);
-            responseMessage.add_message_reply(response);
-        } else {
-            /// Return value not needed.
-            realThis->processRPC(header, name, body, NULL);
-        }
-    }
-
-    if (header.has_id()) {
-        std::string serializedResponse;
-        responseMessage.SerializeToString(&serializedResponse);
-        RoutableMessageHeader replyHeader = header.createReply();
-        realThis->sendViaSpace(replyHeader, MemoryReference(serializedResponse));
-    }
-}
-
-/* NOTE: Broken because mDefaultTracker no longer exists.
-void HostedObject::handlePersistenceMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
-        using namespace Persistence::Protocol;
-        HostedObject *realThis=this;
-        ReadWriteSet rws;
-        rws.ParseFromArray(bodyData.data(), bodyData.length());
-
-        Response immedResponse;
-        int immedIndex = 0;
-
-        SpaceID space = header.destination_space();
-        // FIXME this should use: getTracker(space); but that makes things break
-        // because the space identifiers are getting removed when sending to
-        // Persistence, causing the replies to just get lost.
-        QueryTracker* space_query_tracker = mDefaultTracker;
-
-        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(space_query_tracker,std::tr1::bind(&PrivateCallbacks::handlePersistenceResponse, realThis, header, _1, _2, _3));
-        int outIndex = 0;
-        ReadWriteSet &outMessage = persistenceMsg->body();
-        if (rws.has_options()) {
-            outMessage.set_options(rws.options());
-        }
-        SILOG(cppoh,debug,"Got a Persistence message: reads size = "<<rws.reads_size()<<
-              " writes size = "<<rws.writes_size());
-
-        for (int i = 0, rwsIndex=0 ; i < rws.reads_size(); i++, rwsIndex++) {
-            if (rws.reads(i).has_index()) {
-                rwsIndex = rws.reads(i).index();
-            }
-            std::string name;
-            if (rws.reads(i).has_field_name()) {
-                name = rws.reads(i).field_name();
-            }
-            bool fail = false;
-            if (name.empty() || name[0] == '_') {
-                SILOG(cppoh,debug,"Invalid GetProp: "<<name);
-                fail = true;
-            } else {
-                if (realThis->hasProperty(name)) {
-                    PropertyCacheValue &cachedProp = realThis->mProperties[name];
-                    // Cached property--respond immediately.
-                    SILOG(cppoh,debug,"Cached GetProp: "<<name<<" = "<<realThis->getProperty(name));
-                    IStorageElement el = immedResponse.add_reads();
-                    if (immedIndex != rwsIndex) {
-                        el.set_index(rwsIndex);
-                    }
-                    immedIndex = rwsIndex+1;
-                    if (rws.options() & ReadWriteSet::RETURN_READ_NAMES) {
-                        el.set_field_name(rws.reads(i).field_name());
-                    }
-                    el.set_ttl(cachedProp.mTTL);
-                    el.set_data(cachedProp.mData);
-                    if (!cachedProp.hasSubscriptionID() && PrivateCallbacks::needsSubscription(cachedProp)) {
-                        cachedProp.setSubscriptionID(mNextSubscriptionID++);
-                    }
-                    if (cachedProp.hasSubscriptionID()) {
-                        el.set_subscription_id(cachedProp.getSubscriptionID());
-                    }
-                } else {
-                    SILOG(cppoh,debug,"Forward GetProp: "<<name<<" to Persistence");
-                    IStorageElement el = outMessage.add_reads();
-                    if (outIndex != rwsIndex) {
-                        el.set_index(rwsIndex);
-                    }
-                    outIndex = rwsIndex+1;
-                    el.set_field_name(rws.reads(i).field_name());
-                    el.set_object_uuid(realThis->getUUID());
-                }
-            }
-            if (fail) {
-                IStorageElement el = immedResponse.add_reads();
-                if (immedIndex != rwsIndex) {
-                    el.set_index(rwsIndex);
-                }
-                immedIndex = rwsIndex+1;
-                if (rws.options() & ReadWriteSet::RETURN_READ_NAMES) {
-                    el.set_field_name(rws.reads(i).field_name());
-                }
-                el.set_return_status(StorageElement::KEY_MISSING);
-            }
-        }
-        outIndex = 0;
-        for (int i = 0, rwsIndex=0 ; i < rws.writes_size(); i++, rwsIndex++) {
-            if (rws.writes(i).has_index()) {
-                rwsIndex = rws.writes(i).index();
-            }
-            std::string name;
-            if (rws.writes(i).has_field_name()) {
-                name = rws.writes(i).field_name();
-            }
-            bool fail = false;
-            if (name.empty() || name[0] == '_') {
-                SILOG(cppoh,debug,"Invalid SetProp: "<<name);
-                fail = true;
-            } else {
-                if (rws.writes(i).has_data()) {
-                    Duration ttl = rws.writes(i).has_ttl() ? rws.writes(i).ttl() : defaultTTL->as<Duration>();
-                    realThis->setProperty(name, ttl, rws.writes(i).data());
-                    PropertyCacheValue &cachedProp = mProperties[name];
-                    if (cachedProp.hasSubscriptionID()) {
-                        SpaceDataMap::const_iterator spaceiter = mSpaceData->begin();
-                        for (;spaceiter != mSpaceData->end(); ++spaceiter) {
-                            int subID = cachedProp.getSubscriptionID();
-                            ::Sirikata::Protocol::Broadcast subMsg;
-                            std::string subStr;
-                            subMsg.set_broadcast_name(subID);
-                            subMsg.set_data(cachedProp.mData);
-                            subMsg.SerializeToString(&subStr);
-                            RoutableMessageHeader header;
-                            header.set_destination_port(Services::BROADCAST);
-                            header.set_destination_space(spaceiter->first);
-                            header.set_destination_object(ObjectReference::spaceServiceID());
-                            sendViaSpace(header, MemoryReference(subStr.data(), subStr.length()));
-                        }
-                    }
-                    SpaceDataMap::iterator iter;
-                    for (iter = realThis->mSpaceData->begin();
-                         iter != realThis->mSpaceData->end();
-                         ++iter) {
-                        realThis->receivedPropertyUpdate(iter->second.mProxyObject, name, rws.writes(i).data());
-                    }
-                } else {
-                    if (name != "LightInfo" && name != "MeshURI" && name != "IsCamera" && name != "WebViewURL") {
-                        // changing the type of this object has to wait until we reload from database.
-                        realThis->unsetCachedPropertyAndSubscription(name);
-                    }
-                }
-                SILOG(cppoh,debug,"Forward SetProp: "<<name<<" to Persistence");
-                IStorageElement el = outMessage.add_writes();
-                if (outIndex != rwsIndex) {
-                    el.set_index(rwsIndex);
-                }
-                outIndex = rwsIndex+1;
-                el.set_field_name(rws.writes(i).field_name());
-                if (rws.writes(i).has_data()) {
-                    el.set_data(rws.writes(i).data());
-                }
-                el.set_object_uuid(realThis->getUUID());
-            }
-            // what to do if a write fails?
-        }
-
-        if (immedResponse.reads_size()) {
-            SILOG(cppoh,debug,"ImmedResponse: "<<immedResponse.reads_size());
-            std::string respStr;
-            immedResponse.SerializeToString(&respStr);
-            RoutableMessageHeader replyHeader = header.createReply();
-            realThis->sendViaSpace(replyHeader, MemoryReference(respStr));
-        }
-        if (outMessage.reads_size() || outMessage.writes_size()) {
-            SILOG(cppoh,debug,"ForwardToPersistence: "<<outMessage.reads_size()<<
-                  " reads and "<<outMessage.writes_size()<<"writes");
-            persistenceMsg->header().set_destination_space(SpaceID::null());
-            persistenceMsg->header().set_destination_object(ObjectReference::spaceServiceID());
-            persistenceMsg->header().set_destination_port(Services::PERSISTENCE);
-
-            persistenceMsg->serializeSend();
-        } else {
-            delete persistenceMsg;
-        }
-    }
-*/
-
-static String nullProperty;
-bool HostedObject::hasProperty(const String &propName) const {
-    PropertyMap::const_iterator iter = mProperties.find(propName);
-    return (iter != mProperties.end());
-}
-const String &HostedObject::getProperty(const String &propName) const {
-    PropertyMap::const_iterator iter = mProperties.find(propName);
-    if (iter != mProperties.end()) {
-        return (*iter).second.mData;
-    }
-    return nullProperty;
-}
-String *HostedObject::propertyPtr(const String &propName, Duration ttl) {
-    PropertyCacheValue &pcv = mProperties[propName];
-    pcv.mTTL = ttl;
-    return &(pcv.mData);
-}
-void HostedObject::setProperty(const String &propName, Duration ttl, const String &encodedValue) {
-    PropertyMap::iterator iter = mProperties.find(propName);
-    if (iter == mProperties.end()) {
-        iter = mProperties.insert(PropertyMap::value_type(propName,
-            PropertyCacheValue(encodedValue, ttl))).first;
-    }
-}
-void HostedObject::unsetCachedPropertyAndSubscription(const String &propName) {
-    PropertyMap::iterator iter = mProperties.find(propName);
-    if (iter != mProperties.end()) {
-        if (iter->second.hasSubscriptionID()) {
-            SpaceDataMap::const_iterator spaceiter = mSpaceData->begin();
-            for (;spaceiter != mSpaceData->end(); ++spaceiter) {
-                int subID = iter->second.getSubscriptionID();
-                Protocol::Broadcast subMsg;
-                std::string subStr;
-                subMsg.set_broadcast_name(subID);
-                subMsg.SerializeToString(&subStr);
-                RoutableMessageHeader header;
-                header.set_destination_port(Services::BROADCAST);
-                header.set_destination_space(spaceiter->first);
-                header.set_destination_object(ObjectReference::spaceServiceID());
-                sendViaSpace(header, MemoryReference(subStr.data(), subStr.length()));
-            }
-        }
-        mProperties.erase(iter);
-    }
-}
-
-
-=======
->>>>>>> Big clean up of dead code in HostedObject.
 static ProxyObjectPtr nullPtr;
 const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
     SpaceDataMap::const_iterator iter = mSpaceData->find(space);
@@ -973,15 +632,20 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
+        
+        //std::cout << "update.mesh(): " << update.mesh() << "\n";
+        //std::cout << "Received location message about: " << update.object().toString() << "\n";
 
         ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(), ObjectReference(update.object())));
         if (!proxy_obj) continue;
 
+
         if (update.has_location())
         {
             Sirikata::Protocol::TimedMotionVector update_loc = update.location();
             TimedMotionVector3f loc(convertToApproxLocalTime(update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
+            
             proxy_obj->setLocation(loc);
 
             CONTEXT_OHTRACE(objectLoc,
@@ -996,6 +660,19 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
             TimedMotionQuaternion orient(convertToApproxLocalTime(update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
             proxy_obj->setOrientation(orient);
         }
+        
+        if (update.has_mesh()) {
+          std::string mesh = update.mesh();
+          ProxyMeshObject *meshObj = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+         
+          if (meshObj && mesh != "") {
+            //std::cout << "MESH UPDATE: " << mesh  << "!!!\n";
+            meshObj->setMesh(Transfer::URI(mesh));
+          }
+          else if (mesh != ""){
+            //std::cout << "MESH UPDATE but no proxy object!\n";
+          }
+        }
     }
 
     return true;
@@ -1006,11 +683,16 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
 
+
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
-            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);            
+
+            //std::cout << "Proximity addition: " << addition.object().toString()  << " , "
+            //          << addition.mesh() << " , "  <<  addition.location().position()  << "\n";
+
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
             TimedMotionVector3f loc(convertToApproxLocalTime(addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
@@ -1031,12 +713,35 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 BoundingSphere3f bnds = addition.bounds();
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
             }
+            else {
+              ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
+              ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
+                                                                     ObjectReference(addition.object())));
+              if (!proxy_obj) continue;
+              
+              ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+              if (mesh) {
+                mesh->setMesh( Transfer::URI(addition.mesh()));
+              }
+            }
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-            HO_LOG(debug,"Proximity removal."); // Remove when properly handled
+            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
+            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
+                                                                     ObjectReference(removal.object())));
+            if (!proxy_obj) continue;
+
+            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+            if (mesh) {
+              mesh->setMesh( Transfer::URI(""));
+            }
+            else continue;
+
+            //std::cout << "Proximity removal: " << removal.object().toString()  <<  "\n";
+            
             CONTEXT_OHTRACE(prox,
                 getUUID(),
                 removal.object(),
@@ -1045,6 +750,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
         }
     }
+
     return true;
 }
 

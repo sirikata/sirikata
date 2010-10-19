@@ -47,6 +47,8 @@
 
 #include <sirikata/space/PintoServerQuerier.hpp>
 
+#include "AggregateManager.hpp"
+
 
 namespace Sirikata {
 
@@ -312,6 +314,8 @@ private:
     // Threads: Thread-safe data used for exchange between threads
     Sirikata::ThreadSafeQueue<Message*> mServerResults; // server query results that need to be sent
     Sirikata::ThreadSafeQueue<Sirikata::Protocol::Object::ObjectMessage*> mObjectResults; // object query results that need to be sent
+
+    AggregateManager* mAggregateManager;
 
 }; //class Proximity
 

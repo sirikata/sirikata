@@ -140,6 +140,8 @@ void GraphicsResourceEntity::doUnload()
 
 void GraphicsResourceEntity::setMeshResource(SharedResourcePtr newMeshPtr)
 {
+  mDepCost = 0;
+
   if(mDependencies.size() != 0) {
     SILOG(resource,warn,"GraphicsResourceEntity::setMeshResource called again before finished loading.");
   }

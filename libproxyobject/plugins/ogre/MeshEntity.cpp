@@ -68,6 +68,7 @@ MeshEntity::MeshEntity(OgreSystem *scene,
                  id.length()?id:ogreMeshName(pmo->getObjectReference()),
                  NULL)
 {
+    mRemainingDownloads = 0;
     mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
@@ -237,7 +238,7 @@ void MeshEntity::loadMesh(const String& meshname)
       }
     } catch (...) {
         SILOG(ogre,error,"Failed to load mesh "<<getProxy().getMesh()<< " (id "<<id()<<")!");
-        new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
+        return;
     }
     SILOG(ogre,debug,"Bounding box: " << new_entity->getBoundingBox());
     if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {
@@ -316,6 +317,23 @@ void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
 
 void MeshEntity::processMesh(URI const& meshFile)
 {
+    
+
+    Ogre::Entity * meshObj=getOgreEntity();
+
+    if (meshObj && meshFile.filename() == "" ) {
+      meshObj->setVisible(false);
+
+      //std::cout << mURI  <<" : Mesh UNLOADED!!\n";
+      return;
+    }
+    else if (meshObj) {
+      meshObj->setVisible(true);
+      return;
+    }
+
+    mURI = meshFile.toString();
+
     downloadMeshFile(meshFile);
 
     // MCB: responsibility to load model meshes must move to MeshObject plugin
@@ -898,6 +916,7 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, C
 }
 
 void MeshEntity::createMesh(const Meshdata& md) {
+    
     SHA256 sha = md.hash;
     String hash = sha.convertToHexString();
 
@@ -917,10 +936,10 @@ void MeshEntity::createMesh(const Meshdata& md) {
             }
         }
         Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
-        for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++) {
-            std::string matname = hash + "_texture_" + *tex_it;
+        for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++){
+          std::string matname = hash + "_texture_" + (*tex_it);
             Ogre::MaterialPtr mat = base_mat->clone(matname);
-            String texURI = mURI.substr(0, mURI.rfind("/")+1) + *tex_it;
+            String texURI = mURI.substr(0, mURI.rfind("/")+1) + (*tex_it);
             String ogreTextureName = "Cache/" + mTextureFingerprints[texURI];
             mat->getTechnique(0)->getPass(0)->createTextureUnitState(ogreTextureName,0);
         }
@@ -1008,6 +1027,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
         }
 
         bool check = mm.resourceExists(hash);
+
         loadMesh(hash);                     /// this is here because we removed
                                             /// mResource->loaded(true, mEpoch) in
                                             /// ModelLoadTask::doRun
@@ -1067,9 +1087,10 @@ void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
 }
 
 void MeshEntity::onMeshParsed(ProxyObjectPtr proxy, String const& uri, Meshdata& md) {
-    mURI = uri;
+    if (uri != mURI) return;
 
-    mRemainingDownloads = md.textures.size();
+
+    mRemainingDownloads += md.textures.size();
 
     // Special case for no dependent downloads
     if (mRemainingDownloads == 0) {
@@ -1078,7 +1099,7 @@ void MeshEntity::onMeshParsed(ProxyObjectPtr proxy, String const& uri, Meshdata&
     }
 
     for(Meshdata::TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
-        String texURI = uri.substr(0, uri.rfind("/")+1) + *it;
+      String texURI = uri.substr(0, uri.rfind("/")+1) + (*it);
 
         ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL, mProxy->priority,
            std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));

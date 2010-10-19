@@ -75,9 +75,15 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 {
     public:
     explicit ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp );
+    explicit ColladaDocumentImporter ( std::vector<Transfer::URI> uriList, std::tr1::weak_ptr<ProxyMeshObject>pp );
+
         ~ColladaDocumentImporter ();
 
         ColladaDocumentPtr getDocument () const;
+
+        std::tr1::shared_ptr<Meshdata> getMeshdata() {
+          return std::tr1::shared_ptr<Meshdata>(mMesh);
+        }
 
     protected:
 
@@ -147,7 +153,6 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMap;
         typedef std::tr1::unordered_multimap<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndicesMultimap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::UniqueId, UniqueIdHash> IdMap;
-        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
 
         struct SkinControllerData {
             Matrix4x4f bindShapeMatrix;
@@ -182,9 +187,12 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         Meshdata::LightInfoList mLights;
 
         IdMap mMaterialMap;
-        URIMap mTextureMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::Effect, UniqueIdHash> ColladaEffectMap;
         ColladaEffectMap mColladaEffects;
+
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
+        URIMap mTextureMap;
+
         std::vector <COLLADAFW::EffectCommon*> mColladaClonedCommonEffects;
         //IndicesMap mEffectMap;
         Meshdata::MaterialEffectInfoList mEffects;

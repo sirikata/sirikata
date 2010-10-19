@@ -325,6 +325,10 @@ private:
         return retval;
     }
 
+  void suspendAction() {
+    mParent->suspend();
+  }
+
     void screenshotAction() {
         String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".png");
         mParent->screenshot(fname);
@@ -429,7 +433,7 @@ private:
             if (mouseOver) {
                 mSelectedObjects.insert(mouseOver->getProxyPtr());
                 mouseOver->setSelected(true);
-                SILOG(input,info,"Replaced selection with " << mouseOver->id());
+                SILOG(input,info,"Replaced selection with " << mouseOver->id() << " : " << mouseOver->getOgrePosition() );
                 // Fire selected event.
             }
             mLastShiftSelected = SpaceObjectReference::null();
@@ -1883,6 +1887,7 @@ public:
 
         mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::screenshotAction, this));
         mInputResponses["togglePeriodicScreenshot"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::togglePeriodicScreenshotAction, this));
+        mInputResponses["suspend"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::suspendAction, this));
         mInputResponses["quit"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::quitAction, this));
 
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
@@ -1963,6 +1968,8 @@ public:
 
 
         // Session
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["suspend"]);
+        
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
 
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);

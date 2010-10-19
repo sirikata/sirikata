@@ -33,7 +33,16 @@
 #ifndef _SIRIKATA_MODELS_SYSTEM_
 #define _SIRIKATA_MODELS_SYSTEM_
 
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
+
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/Range.hpp>
+
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
 
@@ -49,12 +58,20 @@ class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
         ModelsSystem () {}
         ModelsSystem ( ModelsSystem const& rhs ); // not implemented
         ModelsSystem& operator = ( ModelsSystem const& rhs ); // not implemented
+
+    public:
         virtual ~ModelsSystem () {}
 
-    // interface from ProxyCreationListener
-    public:
+        // Interface from ProxyCreationListener
         virtual void onCreateProxy ( ProxyObjectPtr object ) = 0;
         virtual void onDestroyProxy ( ProxyObjectPtr object ) = 0;
+
+        /** Load a mesh into a Meshdata object. */
+        virtual MeshdataPtr load(const Transfer::URI& uri, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<const Transfer::DenseData> response) = 0;
+
+        /** Convert a Meshdata to the format for this ModelsSystem. */
+        virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename) = 0;
 
     protected:
 

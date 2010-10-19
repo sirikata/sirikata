@@ -46,6 +46,8 @@
 #include "COLLADAFWRoot.h"
 #include "COLLADASaxFWLLoader.h"
 
+#include "MeshdataToCollada.hpp"
+
 
 #include <iostream>
 #include <fstream>
@@ -156,11 +158,15 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
 {
     assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
 
+    
     InitializeClassOptions ( "colladamodels", this, NULL );
     OptionSet::getOptions ( "colladamodels", this )->parse ( options );
+   
 
+    OptionSet::getOptions ( "colladamodels", this )->parse ( options );
 
-    proxyManager->addListener ( this );
+    if (proxyManager != NULL)
+        proxyManager->addListener ( this );
 
     return true;
 }
@@ -212,6 +218,29 @@ void ColladaSystem::onDestroyProxy ( ProxyObjectPtr proxy )
     {
         std::cout << "MCB: onDestroyProxy (" << asMesh << ") entered for mesh URI: " << asMesh->getMesh () << std::endl;
     }
+}
+
+MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<const Transfer::DenseData> response) 
+{
+      ColladaDocumentLoader loader(request->getMetadata().getURI(), request->getMetadata().getFingerprint(),  std::tr1::weak_ptr<ProxyMeshObject>() );
+
+      SparseData data = SparseData();
+      data.addValidData(response);
+
+      Transfer::DenseDataPtr flatData = data.flatten();
+
+      char const* buffer = reinterpret_cast<char const*>(flatData->begin());
+
+
+      loader.load(buffer, flatData->length());
+
+
+      return loader.getMeshdata();
+}
+
+void ColladaSystem::convertMeshdata(const Meshdata& meshdata, const std::string& filename) {
+    meshdataToCollada(meshdata, filename);
 }
 
 

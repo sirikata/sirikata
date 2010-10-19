@@ -72,6 +72,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
         bool load ( char const* buffer, size_t bufferLength );
         ColladaDocumentPtr getDocument () const;
 
+        std::tr1::shared_ptr<Meshdata> getMeshdata() const;
+
     protected:
 
     private:
