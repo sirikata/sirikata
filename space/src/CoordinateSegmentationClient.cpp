@@ -66,8 +66,9 @@ using Sirikata::Network::TCPSocket;
 using Sirikata::Network::TCPListener;
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, ServerIDMap* sidmap)
-  : CoordinateSegmentation(ctx),  mRegion(region), mTopLevelRegion(NULL),  mBSPTreeValid(false),
-    mAvailableServersCount(0), mIOService(Network::IOServiceFactory::makeIOService()),
+  : CoordinateSegmentation(ctx),  mBSPTreeValid(false), 
+    mAvailableServersCount(0), mTopLevelRegion(NULL), 
+    mIOService(Network::IOServiceFactory::makeIOService()),
     mSidMap(sidmap), mLeaseExpiryTime(Timer::now() + Duration::milliseconds(60000.0))
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
@@ -86,14 +87,18 @@ void CoordinateSegmentationClient::startAccepting() {
   mAcceptor->async_accept(*mSocket, boost::bind(&CoordinateSegmentationClient::accept_handler,this));
 }
 
-void CoordinateSegmentationClient::accept_handler() { 
+void CoordinateSegmentationClient::accept_handler() {
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
 
   readCSEGMessage(mSocket, csegMessage);
 
+  mSocket->close();
+
+  boost::mutex::scoped_lock lock(mCacheMutex);
+  mLookupCache.clear();
   mTopLevelRegion.destroy();
   mServerRegionCache.clear();
-  
+  lock.unlock();
  
   std::map<ServerID, SegmentationInfo> segmentationInfoMap;
 
@@ -117,8 +122,7 @@ void CoordinateSegmentationClient::accept_handler() {
   }
 
   notifyListeners(segInfoVector);
-
-  mSocket->close();
+  
   startAccepting();
 }
 
@@ -126,8 +130,7 @@ CoordinateSegmentationClient::~CoordinateSegmentationClient() {
 
 }
 
-void CoordinateSegmentationClient::sendSegmentationListenMessage() {
-  
+void CoordinateSegmentationClient::sendSegmentationListenMessage() {  
   Address4* addy = mSidMap->lookupInternal(mContext->id());
 
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
@@ -211,7 +214,23 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
 }
 
 ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
-  Sirikata::Protocol::CSeg::CSegMessage csegMessage;  
+  {
+    boost::mutex::scoped_lock cachelock(mCacheMutex);
+    for (uint i=0 ; i<mLookupCache.size(); i++) {
+      if (mLookupCache[i].bbox.contains(pos)) {
+        
+        assert(mLookupCache[i].sid >= 1 && mLookupCache[i].sid <= 5);
+        
+        //std::cout << "pos=" << pos   <<" , mLookupCache[i].sid: " << mLookupCache[i].sid << "\n";
+        //fflush(stdout);
+        
+        return mLookupCache[i].sid;
+      }
+    }
+  }
+  
+
+  Sirikata::Protocol::CSeg::CSegMessage csegMessage;
 
   csegMessage.mutable_lookup_request_message().set_x(pos.x);
   csegMessage.mutable_lookup_request_message().set_y(pos.y);
@@ -230,18 +249,28 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   readCSEGMessage(socket, csegMessage);  
 
   ServerID retval = csegMessage.lookup_response_message().server_id();
+
+  if (retval != 0 && csegMessage.lookup_response_message().has_server_bbox()) {
+    boost::mutex::scoped_lock cachelock(mCacheMutex);
+    
+    mLookupCache.push_back( LookupCacheEntry(retval, csegMessage.lookup_response_message().server_bbox()) );    
+  }
   
   return retval;
 }
 
 BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& server)
 {
-  BoundingBoxList boundingBoxList;
-
+  boost::mutex::scoped_lock cachelock(mCacheMutex);
   if (mServerRegionCache.find(server) != mServerRegionCache.end()) {
     // Returning cached serverRegion...
+
+    //std::cout << server  << " : " << mServerRegionCache[server][0] << "\n";fflush(stdout);
     return mServerRegionCache[server];
   } 
+  cachelock.unlock();
+
+  BoundingBoxList boundingBoxList;
 
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
   csegMessage.mutable_server_region_request_message().set_server_id(server);
@@ -268,21 +297,26 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
     boundingBoxList.push_back(bbox);
   }
   
-
+  cachelock.lock();
   mServerRegionCache[server] = boundingBoxList;
+  cachelock.unlock();
  
+  //std::cout << server  << " : " << boundingBoxList[0] << "\n";fflush(stdout);
+
   return boundingBoxList;
 }
 
 BoundingBox3f CoordinateSegmentationClient::region()  {
+  boost::mutex::scoped_lock cachelock(mCacheMutex);
 
   if ( mTopLevelRegion.mBoundingBox.min().x  != mTopLevelRegion.mBoundingBox.max().x ) {
     //Returning cached region
     return mTopLevelRegion.mBoundingBox;
   }
 
-  //Going to server for region
+  cachelock.unlock();
 
+  //Going to server for region
 
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
   csegMessage.mutable_region_request_message().set_filler(1);
@@ -300,21 +334,26 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
 
   
   readCSEGMessage(socket, csegMessage);
-  //Received reply from cseg server for region
-  
+  //Received reply from cseg server for region  
 
   BoundingBox3f bbox = csegMessage.region_response_message().bbox();
 
+  cachelock.lock();
   mTopLevelRegion.mBoundingBox = bbox;
+  cachelock.unlock();
 
   return bbox;
 }
 
 uint32 CoordinateSegmentationClient::numServers()  {
+  boost::mutex::scoped_lock cachelock(mCacheMutex);
+  
   if (mAvailableServersCount > 0) {
     //Returning cached numServers 
     return mAvailableServersCount;
   }
+
+  cachelock.unlock();
 
   //Going to server for numServers
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
@@ -337,7 +376,10 @@ uint32 CoordinateSegmentationClient::numServers()  {
   // Received reply from cseg server for numservers
 
   uint32 retval = csegMessage.num_servers_response_message().num_servers();
+
+  cachelock.lock();
   mAvailableServersCount = retval;
+  cachelock.unlock();
 
   return retval;
 }

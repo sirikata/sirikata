@@ -33,7 +33,7 @@
 #include "LoadBalancer.hpp"
 #include "DistributedCoordinateSegmentation.hpp"
 
-#define OVERLOAD_THRESHOLD 1000
+#define OVERLOAD_THRESHOLD 2000
 #define UNDERLOAD_THRESHOLD 50
 
 namespace Sirikata {
@@ -170,10 +170,10 @@ void LoadBalancer::service() {
       std::cout << overloadedRegion->mServer << " : " << overloadedRegion->mLeftChild->mBoundingBox << "\n";
       std::cout << availableServer << " : " << overloadedRegion->mRightChild->mBoundingBox << "\n";
       
-      mCSeg->mWholeTreeServerRegionMap.erase(overloadedRegion->mServer);
-      mCSeg->mLowerTreeServerRegionMap.erase(availableServer);
+      mCSeg->mWholeTreeServerRegionMap.erase(overloadedRegion->mServer);      
       mCSeg->mWholeTreeServerRegionMap.erase(availableServer);
       mCSeg->mLowerTreeServerRegionMap.erase(overloadedRegion->mServer);
+      mCSeg->mLowerTreeServerRegionMap.erase(availableServer);
 
 
       std::vector<SegmentationInfo> segInfoVector;

@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_COORDINATE_SEGMENTATION_CLIENT_HPP_
 #define _SIRIKATA_COORDINATE_SEGMENTATION_CLIENT_HPP_
 
+
+
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
@@ -50,7 +52,7 @@ class ServerIDMap;
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
 class CoordinateSegmentationClient : public CoordinateSegmentation {
 public:
-  CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
+    CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
 				ServerIDMap* sidmap );
     virtual ~CoordinateSegmentationClient();
 
@@ -69,20 +71,31 @@ public:
 
 private:
     virtual void service();
-
-    BoundingBox3f mRegion;
+    
     void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void downloadUpdatedBSPTree();
-
-    SegmentedRegion mTopLevelRegion;
+    
     bool mBSPTreeValid;
 
-    Trace::Trace* mTrace;
+    Trace::Trace* mTrace;    
 
-    std::map<ServerID, BoundingBoxList> mServerRegionCache;
+    typedef struct LookupCacheEntry {
+      LookupCacheEntry(ServerID sid, const BoundingBox3f& bbox) {
+        this->bbox = bbox;
+        this->sid = sid;
+      }
 
+      BoundingBox3f bbox;
+      ServerID sid;
+
+    } LookupCacheEntry;
+
+    boost::mutex mCacheMutex;
+    std::vector<LookupCacheEntry> mLookupCache;
     uint16 mAvailableServersCount;
+    std::map<ServerID, BoundingBoxList> mServerRegionCache;
+    SegmentedRegion mTopLevelRegion;
 
     Network::IOService* mIOService;  //creates an io service
     boost::shared_ptr<Network::TCPListener> mAcceptor;
@@ -107,7 +120,6 @@ private:
 
     void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
                          Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
-
 
 
 }; // class CoordinateSegmentation

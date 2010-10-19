@@ -87,7 +87,7 @@ public:
     DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int, ServerIDMap * );
     virtual ~DistributedCoordinateSegmentation();
 
-    virtual ServerID lookup(const Vector3f& pos) ;
+    virtual ServerID lookup(const Vector3f& pos, BoundingBox3f& bbox);
     virtual BoundingBoxList serverRegion(const ServerID& server);
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
@@ -113,8 +113,7 @@ private:
     boost::asio::io_service mLLIOService;  //creates an io service
 
     boost::shared_ptr<tcp::acceptor> mAcceptor;
-    boost::shared_ptr<tcp::socket> mSocket;
-    boost::unordered_map<uint8, uint32> mMessageSizes;
+    boost::shared_ptr<tcp::socket> mSocket;    
     
 
     boost::shared_ptr<tcp::acceptor> mLLTreeAcceptor;
@@ -151,7 +150,9 @@ private:
     /* Functions to contact another CSEG server, create sockets to them and/or forward calls to them.
        These should go away later when calls to CSEG no longer remain recursive. */    
     
-    ServerID callLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, const BoundingBox3f& boundingBox);
+    ServerID callLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, 
+                                      const BoundingBox3f& boundingBox,
+                                      BoundingBox3f& returningBBox);
     void callLowerLevelCSEGServersForServerRegions(ServerID server_id, BoundingBoxList&);
     void sendLoadReportToLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, 
                                               const BoundingBox3f& boundingBox,
@@ -213,7 +214,7 @@ private:
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;
     std::map<ServerID, BoundingBoxList > mLowerTreeServerRegionMap;
 
-    boost::shared_mutex mCSEGReadWriteMutex;    
+    boost::shared_mutex mCSEGReadWriteMutex;
 
     boost::shared_mutex mSocketsToCSEGServersMutex;
     std::map<ServerID, SocketQueuePtr > mLeasedSocketsToCSEGServers;
