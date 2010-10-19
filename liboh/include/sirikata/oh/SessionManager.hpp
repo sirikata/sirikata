@@ -180,6 +180,8 @@ private:
     ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
+    void timeSyncUpdated();
+
     // Currently the SST code requires an ObjectMessageRouter per connection,
     // which used to be handled by the Object.  Since SessionManager has no
     // access to that outside state, we instead construct an ObjectMessageRouter
@@ -256,12 +258,13 @@ private:
         WARN_UNUSED
         ConnectedCallback& getConnectCallback(const UUID& objid);
 
-        // Marks as connected and returns the server connected to
-        ServerID handleConnectSuccess(const UUID& obj);
+        // Marks as connected and returns the server connected to. do_cb
+        // specifies whether the callback should be invoked or deferred
+        ServerID handleConnectSuccess(const UUID& obj, bool do_cb);
 
         void handleConnectError(const UUID& objid);
 
-        void handleConnectStream(const UUID& objid);
+        void handleConnectStream(const UUID& objid, bool do_cb);
 
         void remove(const UUID& obj);
 
@@ -271,6 +274,12 @@ private:
         ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
 
         UUID getInternalID(const ObjectReference& space_objid) const;
+
+        // We have to defer some callbacks sometimes for time
+        // synchronization. This invokes them, allowing the connection process
+        // to continue.
+        void invokeDeferredCallbacks();
+
     private:
         SessionManager* parent;
 
@@ -300,6 +309,10 @@ private:
         // A reverse index allows us to lookup an objects internal ID
         typedef std::tr1::unordered_map<ObjectReference, UUID, ObjectReference::Hasher> InternalIDMap;
         InternalIDMap mInternalIDs;
+
+        typedef std::tr1::function<void()> DeferredCallback;
+        typedef std::vector<DeferredCallback> DeferredCallbackList;
+        DeferredCallbackList mDeferredCallbacks;
     };
     ObjectConnections mObjectConnections;
     friend class ObjectConnections;
@@ -311,7 +324,6 @@ private:
     std::map<UUID, ObjectConnectionRouter*> mObjectConnectionRouters;
     void spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> > s, UUID obj);
     std::map<UUID, boost::shared_ptr<Stream<UUID> > > mObjectToSpaceStreams;
-
 }; // class SessionManager
 
 } // namespace Sirikata

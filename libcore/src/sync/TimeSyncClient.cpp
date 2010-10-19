@@ -37,13 +37,15 @@
 #include <sirikata/core/network/Message.hpp> //serializePBJMessage
 namespace Sirikata {
 
-TimeSyncClient::TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval)
+TimeSyncClient::TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval, UpdatedCallback cb)
  : PollingService(ctx->mainStrand, polling_interval, ctx, "TimeSync"),
    mContext(ctx),
    mPort(odp_port),
    mSyncServer(sync_server),
    mSeqno(0),
-   mOffset(Duration::zero())
+   mHasBeenInitialized(false),
+   mOffset(Duration::zero()),
+   mCB(cb)
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
@@ -91,6 +93,9 @@ void TimeSyncClient::handleSyncMessage(const ODP::Endpoint &src, const ODP::Endp
 
     // FIXME use averaging, falloff, etc instead of just replacing the value outright
     mOffset = server_t - (local_start_t + (rtt/2.f));
+    mHasBeenInitialized = true;
+    if (mCB)
+        mCB();
 }
 
 } // namespace Sirikata

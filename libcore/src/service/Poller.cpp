@@ -48,6 +48,11 @@ Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Dura
 }
 
 void Poller::start() {
+    // Always make the first callback run immediately
+    mStrand->post(mCB);
+}
+
+void Poller::setupNextTimeout() {
     if (mMaxRate != Duration::microseconds(0)) {
         mTimer->wait(mMaxRate);
     }
@@ -64,7 +69,7 @@ void Poller::handleExec() {
     mUserCB();
 
     if (!mUnschedule)
-        start();
+        setupNextTimeout();
 }
 
 } // namespace Sirikata

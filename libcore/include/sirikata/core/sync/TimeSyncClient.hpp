@@ -46,8 +46,14 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT TimeSyncClient : public PollingService {
 public:
-    TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval);
+    typedef std::tr1::function<void()> UpdatedCallback;
+
+    TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval, UpdatedCallback cb = 0);
     ~TimeSyncClient();
+
+    bool valid() const { return mHasBeenInitialized; }
+    const Duration& offset() const { return mOffset; }
+
 private:
 
     virtual void poll();
@@ -60,8 +66,10 @@ private:
     uint8 mSeqno;
     Time mRequestTimes[256];
 
+    bool mHasBeenInitialized;
     Duration mOffset;
 
+    UpdatedCallback mCB;
 }; // class TimeSyncServer
 
 } // namespace Sirikata
