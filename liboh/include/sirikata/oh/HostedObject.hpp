@@ -93,18 +93,10 @@ protected:
     ODP::DelegateService* mDelegateODPService;
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
-    // FIXME this is a hack to make movement (velocity-based extrapolation) sort
-    // of work until we have proper time synchronization.
-    Time mStartedTime;
-    Time convertToApproxServerTime(const Time& t) {
-        return Time::null() + (t - mStartedTime);
-    }
-    Time getApproxServerTime() {
-        return convertToApproxServerTime(Time::local());
-    }
-    Time convertToApproxLocalTime(const Time& t) {
-        return t + (mStartedTime-Time::null());
-    }
+    Time convertToApproxServerTime(const SpaceID& space, const Time& t);
+    Time getApproxServerTime(const SpaceID& space);
+    Time convertToApproxLocalTime(const SpaceID& space, const Time& t);
+
 //------- Constructors/Destructors
 
 private:
@@ -273,8 +265,14 @@ public:
 
     
   private:
-    
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,const Time& start_time, const Location& startingLocation, const String& scriptFile, const String& scriptType,  const BoundingSphere3f& bnds);
+
+    // Because IOStrand->wrap() can't handle > 5 parameters (because the
+    // underlying boost impementation doesnt), we need to handle wrapping
+    // connection callbacks manually.
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,
+        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server,
+        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
 
@@ -379,9 +377,7 @@ public:
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
     // Helper for creating the correct type of proxy
-    
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, const Time& start_time, const Location& startingLoc, const BoundingSphere3f& bnds);
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
     ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera);
 

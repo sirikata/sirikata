@@ -191,14 +191,14 @@ void Object::connect() {
         mContext->objectHost->connect(
             this,
             mQueryAngle,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3) ),
+            std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3),
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) )
         );
     else
         mContext->objectHost->connect(
             this,
-            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3) ),
+            std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3),
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
         );
@@ -214,6 +214,13 @@ void Object::disconnect() {
 }
 
 void Object::handleSpaceConnection(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
+    // We need to manually wrap this for the main strand because IOStrand
+    // doesn't support > 5 arguments, which the original callback has
+    mContext->mainStrand->post(
+        std::tr1::bind(&Object::handleSpaceConnectionIndirect, this, space, obj, sid)
+    );
+}
+void Object::handleSpaceConnectionIndirect(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
     if (sid == 0) {
         OBJ_LOG(error,"Failed to open connection for object " << mID.toString());
         return;

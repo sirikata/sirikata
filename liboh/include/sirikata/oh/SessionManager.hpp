@@ -59,8 +59,9 @@ class ServerIDMap;
 class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateService {
   public:
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
-    // Callback indicating that a connection to the server was made and it is available for sessions
-    typedef SessionCallback ConnectedCallback;
+    // Callback indicating that a connection to the server was made
+    // and it is available for sessions
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
@@ -93,6 +94,15 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     );
     /** Disconnect the object from the space. */
     void disconnect(const UUID& id);
+
+    /** Get offset of server time from client time for the given space. Should
+     * only be called by objects with an active connection to that space.
+     */
+    Duration serverTimeOffset() const;
+    /** Get offset of client time from server time for the given space. Should
+     * only be called by objects with an active connection to that space. This
+     * is just a utility, is always -serverTimeOffset(). */
+    Duration clientTimeOffset() const;
 
     // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
     // The allow_connecting parameter allows you to use a connection over which the object is still opening
@@ -137,6 +147,12 @@ private:
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
     void handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
+
+    // This gets invoked when the connection really is ready -- after
+    // successful response and we have time sync info. It does some
+    // additional setup work (sst stream) and then invokes the real callback
+    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, ConnectedCallback real_cb);
+
     void retryOpenConnection(const UUID&uuid,ServerID sid);
 
     // Utility method which keeps trying to resend a message
@@ -260,7 +276,7 @@ private:
 
         // Marks as connected and returns the server connected to. do_cb
         // specifies whether the callback should be invoked or deferred
-        ServerID handleConnectSuccess(const UUID& obj, bool do_cb);
+        ServerID handleConnectSuccess(const UUID& obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, bool do_cb);
 
         void handleConnectError(const UUID& objid);
 

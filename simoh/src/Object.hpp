@@ -144,6 +144,9 @@ private:
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(const SpaceID& space, const ObjectReference&, ServerID sid);
+    // We need to manually wrap this for the main strand because IOStrand
+    // doesn't support > 5 arguments, which the original callback has
+    void handleSpaceConnectionIndirect(const SpaceID& space, const ObjectReference&, ServerID sid);
     // Handle a migration to a new space server
     void handleSpaceMigration(const SpaceID& space, const ObjectReference&, ServerID sid);
     void handleSpaceStreamCreated();

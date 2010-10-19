@@ -105,6 +105,8 @@ void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFil
 
 double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 {
+    if (camera == NULL) return 0;
+
     Vector3d cameraLoc = camera->getOgrePosition();
     Vector3d objLoc = proxy->getPosition();
     Vector3d diff = cameraLoc - objLoc;

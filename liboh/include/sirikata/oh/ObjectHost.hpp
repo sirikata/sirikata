@@ -80,7 +80,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEv
 public:
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
-    typedef SessionCallback ConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
@@ -117,6 +117,15 @@ public:
 
     /** Disconnect the object from the space. */
     void disconnect(HostedObjectPtr obj, const SpaceID& space);
+
+    /** Get offset of server time from client time for the given space. Should
+     * only be called by objects with an active connection to that space.
+     */
+    Duration serverTimeOffset(const SpaceID& space) const;
+    /** Get offset of client time from server time for the given space. Should
+     * only be called by objects with an active connection to that space. This
+     * is just a utility, is always -serverTimeOffset(). */
+    Duration clientTimeOffset(const SpaceID& space) const;
 
     /** Primary ODP send function. */
     bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
