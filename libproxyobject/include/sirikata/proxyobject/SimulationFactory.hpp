@@ -36,17 +36,15 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
-#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 
 namespace Sirikata{
 
 ///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
 class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
-      public Factory4<TimeSteppedQueryableSimulation*,
+      public Factory3<TimeSteppedQueryableSimulation*,
                       Context*,
                       Provider<ProxyCreationListener*>*,//the ProxyManager
-                      const TimeOffsetManager*,//so we can get any local time offset for objects
                       const String&> //options string for the graphics system
 {
 public:

@@ -34,8 +34,6 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/TimeOffsetManager.hpp>
-//#include <oh/SpaceTimeOffsetManager.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "btBulletDynamicsCommon.h"
 #include "btBulletCollisionCommon.h"
@@ -544,11 +542,11 @@ void BulletSystem::poll() {
                     po = objects[i]->getBulletState();
                     DEBUG_OUTPUT(cout << "    dbm: object, " << objects[i]->mName << ", delta, "
                                  << delta.toSeconds() << ", newpos, " << po.p << "obj: " << objects[i] << endl);
-                    Time remoteNow=Time::convertFrom(now,mLocalTimeOffset->offset(*objects[i]->mMeshptr));
-                    Location loc (objects[i]->mMeshptr->globalLocation(remoteNow));
+                    Time now = mContext->simTime();
+                    Location loc (objects[i]->mMeshptr->globalLocation(now));
                     loc.setPosition(po.p);
                     loc.setOrientation(po.o);
-                    //objects[i]->mMeshptr->setLocation(remoteNow, loc);
+                    //objects[i]->mMeshptr->setLocation(now, loc);
                 }
             }
 
@@ -575,7 +573,7 @@ void BulletSystem::poll() {
                 BulletObj* b1=i->first.getHigher();
                 ObjectReference b0id=b0->getObjectReference();
                 ObjectReference b1id=b1->getObjectReference();
-                Time spaceNow=Time::convertFrom(now,mLocalTimeOffset->offset(*b0->mMeshptr));
+                Time spaceNow = mContext->simTime();
 
                 if (i->second.collidedThisFrame()) {             /// recently colliding; send msg & change mode
                     if (!i->second.collidedLastFrame()) {
@@ -731,8 +729,7 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
     }
 }
 
-bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const TimeOffsetManager* offset, const String&options) {
-    mLocalTimeOffset=offset;
+bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
     InitializeClassOptions("bulletphysics",this, NULL);
@@ -778,7 +775,6 @@ BulletSystem::BulletSystem(Context* ctx)
    mGravity(0, GRAVITY, 0),
    mStartTime(Task::LocalTime::now())
 {
-    mLocalTimeOffset=NULL;
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }
 

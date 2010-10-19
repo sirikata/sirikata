@@ -38,7 +38,6 @@
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include "DragActions.hpp"
-#include <sirikata/proxyobject/TimeOffsetManager.hpp>
 #include <sirikata/core/task/Time.hpp>
 
 namespace Sirikata {
@@ -121,7 +120,7 @@ Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, fl
 
 
 void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
-    Time now(camera->getScene()->getLocalTimeOffset()->now(camera->getProxy()));
+    Time now = camera->getScene()->simTime();
 
     Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
     Quaternion dragStart (camera->getProxy().extrapolateLocation(now).getOrientation());
@@ -134,7 +133,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 }
 
     void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
-        Time now(camera->getScene()->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = camera->getScene()->simTime();
 
         Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
 
@@ -158,7 +157,7 @@ public:
         : mSelectedObjects(info.objects.begin(), info.objects.end()) {
         camera = info.camera;
         mParent = info.sys;
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
         float moveDistance = 0.f; // Will be reset on first foundObject
         bool foundObject = false;
         Location cameraLoc = camera->getProxy().globalLocation(now);
@@ -187,7 +186,7 @@ public:
             SILOG(input,insane,"moveSelection: Found no selected objects");
             return;
         }
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
 
         /// dbm new way: ignore camera, just move along global axes
         Vector3d toMove(0,0,0);
@@ -248,7 +247,7 @@ public:
         camera = info.camera;
         mOriginalRotation.reserve(mSelectedObjects.size());
         mOriginalPosition.reserve(mSelectedObjects.size());
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
             ProxyObjectPtr obj (mSelectedObjects[i].lock());
             if (obj) {
@@ -262,7 +261,7 @@ public:
         }
     }
     void mouseMoved(MouseDragEventPtr ev) {
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
 
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
@@ -339,7 +338,7 @@ public:
             mTotalScale(1.0) {
         camera = info.camera;
         mOriginalPosition.reserve(mSelectedObjects.size());
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
 
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
             ProxyObjectPtr obj(mSelectedObjects[i].lock());
@@ -349,7 +348,7 @@ public:
         dragMultiplier = mParent->getInputManager()->mDragMultiplier->as<float>();
     }
     void mouseMoved(MouseDragEventPtr ev) {
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
         Vector3d avgPos(0,0,0);
         if (ev->deltaLastY() != 0) {
             float scaleamt = exp(dragMultiplier*ev->deltaLastY());
@@ -420,7 +419,7 @@ public:
         double distance;
         int subent;
         Vector3f normal;
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
         Location cameraLoc = camera->getProxy().globalLocation(now);
         toMove = Vector3f(
             pixelToDirection(camera, cameraLoc.getOrientation(), info.ev->mXStart, info.ev->mYStart));
@@ -442,7 +441,7 @@ public:
         }
     }
     void mouseMoved(MouseDragEventPtr ev) {
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
         Location cameraLoc = camera->getProxy().globalLocation(now);
         if (mPanDistance) {
             float radianX, radianY;
@@ -466,7 +465,7 @@ void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraE
 void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent) {
     SILOG(input,debug,"zoom "<<value);
 
-    Time now(parent->getLocalTimeOffset()->now(camera->getProxy()));
+    Time now = parent->simTime();
     Location cameraLoc = camera->getProxy().extrapolateLocation(now);
     Location cameraGlobalLoc = camera->getProxy().globalLocation(now);
     Vector3d toMove;
@@ -556,7 +555,7 @@ public:
         camera = info.camera;
     }
     void mouseMoved(MouseDragEventPtr ev) {
-        Time now(mParent->getLocalTimeOffset()->now(camera->getProxy()));
+        Time now = mParent->simTime();
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3d amount (ev->deltaX(), ev->deltaY(), 0);
 /*

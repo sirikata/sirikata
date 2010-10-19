@@ -68,8 +68,7 @@ typedef Provider<PositionListener*> PositionProvider;
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
       public ProxyObjectProvider,
-      public PositionProvider,
-      protected ProxyObjectListener // Parent death notification. FIXME: or should we leave the parent here, but ignore it in globalLocation()???
+      public PositionProvider
 {
 
 public:
@@ -93,10 +92,6 @@ private:
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
                              // this ProxyObject represents
 
-protected:
-    /// Notification that the Parent has been destroyed.
-    virtual void destroyed(const TemporalValue<Location>::Time& when);
-
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -114,7 +109,7 @@ public:
     virtual bool hasModelObject () const { return true; }
 
     /// Subclasses can do any necessary cleanup first.
-    virtual void destroy(const TemporalValue<Location>::Time& when);
+    virtual void destroy();
 
     /// Gets a class that can send messages to this Object.
     QueryTracker *getQueryTracker() const;

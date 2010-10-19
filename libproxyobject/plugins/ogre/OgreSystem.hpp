@@ -63,7 +63,6 @@ class SubEntity;
 }
 
 namespace Sirikata {
-class TimeOffsetManager;
 class ProxyObject;
 namespace Input {
 class SDLInputManager;
@@ -82,7 +81,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
-    const TimeOffsetManager *mLocalTimeOffset;
     void allocMouseHandler();
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
@@ -114,7 +112,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
-                    const TimeOffsetManager *localTimeOffset,
                     const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
@@ -147,17 +144,15 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
 public:
-    const TimeOffsetManager *getLocalTimeOffset() {
-        assert(false && "DO NOT USE GET LOCAL TIME OFFSET. IT IS BROKEN.");
-        return mLocalTimeOffset;
-    }
-
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
     std::list<CameraEntity*> mAttachedCameras;
     CameraEntity *mPrimaryCamera;
+
+    // For classes that only have access to OgreSystem and not a Context
+    Time simTime();
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     std::list<CameraEntity*>::iterator attachCamera(const String&renderTargetName,CameraEntity*);
@@ -183,11 +178,10 @@ public:
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
         Provider<ProxyCreationListener*>*proxyManager,
-        const TimeOffsetManager *localTimeOffset,
         const String&options)
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(proxyManager,localTimeOffset,options))
+        if (os->initialize(proxyManager,options))
             return os;
         delete os;
         return NULL;

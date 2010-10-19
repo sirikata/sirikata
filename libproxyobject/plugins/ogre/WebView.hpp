@@ -72,7 +72,9 @@ namespace Graphics {
 	{
 	public:
 
-		void destroyed(const Time&); // From ProxyObjectListener
+            // ProxyObjectListener Interface
+            void destroyed();
+
 
 		void setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject);
 

@@ -41,7 +41,6 @@
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/SpaceIDMap.hpp>
-#include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
@@ -179,7 +178,7 @@ int main (int argc, char** argv) {
         SILOG(cppoh,info,String("Initializing ") + simName);
         TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( ctx, proxy_manager.get(), proxy_manager->getTimeOffsetManager(), "" );
+            .getConstructor ( simName ) ( ctx, proxy_manager.get(), "" );
         if (!sim) {
             SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
             std::cerr << "Press enter to continue" << std::endl;

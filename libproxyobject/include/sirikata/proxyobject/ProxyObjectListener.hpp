@@ -39,7 +39,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
 public:
     virtual ~ProxyObjectListener(){}
 
-    virtual void destroyed(const TemporalValue<Location>::Time&/*when it happened*/) = 0;
+    virtual void destroyed() = 0;
 };
 }
 #endif

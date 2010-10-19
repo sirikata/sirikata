@@ -90,7 +90,7 @@ public:
 
     virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient);
 
-    virtual void destroyed(const Time&);
+    virtual void destroyed();
 
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;
