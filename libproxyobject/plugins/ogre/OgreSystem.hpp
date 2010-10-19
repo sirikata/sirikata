@@ -125,10 +125,14 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
 
     void screenshot(const String& filename);
 
+    void suspend();
+
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();
 
     bool mQuitRequested;
+
+    bool mSuspended;
 
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;

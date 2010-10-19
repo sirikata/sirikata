@@ -68,6 +68,8 @@ ColladaDocumentLoader::~ColladaDocumentLoader ()
 
 bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength )
 {
+ 
+
     bool ok = mFramework->loadDocument ( getDocument()->getURI().toString(), buffer, bufferLength );
 
     return ok;
@@ -77,6 +79,11 @@ bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength )
 ColladaDocumentPtr ColladaDocumentLoader::getDocument () const
 {
     return mDocumentImporter->getDocument ();
+}
+
+std::tr1::shared_ptr<Meshdata> ColladaDocumentLoader::getMeshdata() const
+{
+  return mDocumentImporter->getMeshdata();
 }
 
 /////////////////////////////////////////////////////////////////////

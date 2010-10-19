@@ -1361,8 +1361,10 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-      getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
+      boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+      if (conn) 
+        getContext()->mainStrand->post(Duration::seconds(0.01),
+          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
 
       return len;
     }
@@ -1385,8 +1387,10 @@ public:
 	count++;
       }
 
-      getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
+      boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+      if (conn)
+        getContext()->mainStrand->post(Duration::seconds(0.01),
+          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
 
       return currOffset;
     }
@@ -1766,8 +1770,10 @@ private:
 	}
 
         if (sentSomething) {
-          getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-              std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
+          boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+          if (conn)
+            getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
+              std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
         }
       }
     }
@@ -1794,8 +1800,10 @@ private:
        }
      }
 
-    getContext()->mainStrand->post(Duration::seconds(0.01),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
+    boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+    if (conn)
+      getContext()->mainStrand->post(Duration::seconds(0.01),
+        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
 
 
 
@@ -2005,11 +2013,13 @@ private:
     std::string buffer = serializePBJMessage(sstMsg);
 
     boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-    assert(conn);
+
+    if (!conn) return;
+
     conn->sendData( buffer.data(), buffer.size(), false );
 
     getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), mConnection.lock()) );
+        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
   }
 
   void sendAckPacket() {

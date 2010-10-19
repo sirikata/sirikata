@@ -44,10 +44,12 @@
 #include "COLLADAFWLight.h"
 #include "COLLADAFWEffect.h"
 
+#include "MeshdataToCollada.hpp"
+
+
 #define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
 
 namespace Sirikata { namespace Models {
-
 
 ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp )
     :   mDocument ( new ColladaDocument ( uri ) ),
@@ -60,9 +62,19 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, con
 //    lastURIString = hash.convertToHexString();
 
 //    lastURIString = uri.toString();
-    mMesh = new Meshdata();
+
+    Meshdata* meshdata = new Meshdata();
+    mMesh = meshdata;
+
     mMesh->uri = uri.toString();
     mMesh->hash = hash;
+}
+
+ColladaDocumentImporter::ColladaDocumentImporter ( std::vector<Transfer::URI> uriList, std::tr1::weak_ptr<ProxyMeshObject>pp ) {
+  assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uriListLen: " << uriList.size() << std::endl,true));
+
+  //mMesh = new Meshdata();
+
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()
@@ -186,8 +198,10 @@ void ColladaDocumentImporter::finish ()
 
 
     mMesh->geometry.swap(mGeometries);
-    mMesh->lights.swap(mLights);
+    mMesh->lights.swap( mLights);
 
+    std::cout << mMesh->geometry.size() << " : mMesh->geometry.size()\n";
+    std::cout << mVisualScenes.size() << " : mVisualScenes\n";
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -206,6 +220,7 @@ void ColladaDocumentImporter::finish ()
             node_stack.pop();
 
             if (curnode.mode == NodeState::Geo) {
+
                 // Transformation
                 COLLADABU::Math::Matrix4 additional_xform = curnode.node->getTransformationMatrix();
                 curnode.matrix = curnode.matrix * additional_xform;
@@ -296,6 +311,7 @@ void ColladaDocumentImporter::finish ()
                 curnode.mode = NodeState::InstNodes;
             }
             if (curnode.mode == NodeState::InstNodes) {
+
                 // Instance Nodes
                 if ((size_t)curnode.child >= (size_t)curnode.node->getInstanceNodes().getCount()) {
                     curnode.child = 0;
@@ -325,12 +341,15 @@ void ColladaDocumentImporter::finish ()
         }
     }
 
-    mMesh->materials.swap(mEffects);//effects is built up during the above run
+    mMesh->materials.swap(mEffects);
 
     // Finally, if we actually have anything for the user, ship the parsed mesh
     if (mMesh->instances.size() > 0 || mMesh->lightInstances.size()) {
-        std::tr1::shared_ptr<ProxyMeshObject>(spp)(mProxyPtr);
+      std::tr1::shared_ptr<ProxyMeshObject> spp = mProxyPtr.lock();
+
+      if (spp != std::tr1::shared_ptr<ProxyMeshObject>() ) {
         spp->meshParsed( mDocument->getURI().toString(), mMesh );
+      }
     }
     mState = FINISHED;
 }
@@ -354,6 +373,8 @@ bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 
 bool ColladaDocumentImporter::writeVisualScene ( COLLADAFW::VisualScene const* visualScene )
 {
+    std::cout << "WriteVisualScene\n";
+
     mVisualScenes[visualScene->getUniqueId()] = visualScene;
     return true;
 }
@@ -740,7 +761,7 @@ bool ColladaDocumentImporter::makeTexture
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << eff << ") entered" << std::endl,true));
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << eff << ") entered" << std::endl,true));
     mColladaEffects.insert(ColladaEffectMap::value_type(eff->getUniqueId(),*eff));
     COLLADAFW::Effect *effect = &mColladaEffects.find(eff->getUniqueId())->second;
     COLLADAFW::CommonEffectPointerArray &commonEffect=effect->getCommonEffects();
@@ -826,6 +847,7 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
     std::string imageUri = image->getImageURI().getURIString();
     assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << imageUri << ") entered" << std::endl,true));
     mTextureMap[image->getUniqueId()]=imageUri;
+    mMesh->textureMap[image->getUniqueId().toAscii()] = imageUri;
     mMesh->textures.push_back(imageUri);
     return true;
 }

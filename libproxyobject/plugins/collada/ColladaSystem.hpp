@@ -101,6 +101,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
         virtual void onCreateProxy ( ProxyObjectPtr object );
         virtual void onDestroyProxy ( ProxyObjectPtr object );
 
+        virtual MeshdataPtr load(const Transfer::URI& uri, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+            std::tr1::shared_ptr<const Transfer::DenseData> response);
+        virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename);
     protected:
 
 };

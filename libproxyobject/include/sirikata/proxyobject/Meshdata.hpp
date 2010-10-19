@@ -40,7 +40,13 @@ namespace Sirikata {
 
 struct SubMeshGeometry {
     std::string name;
-    std::vector<Sirikata::Vector3f> positions;
+    std::vector<Sirikata::Vector3f> positions; 
+
+  //used only during simplification
+  std::vector< Matrix4x4f  > positionQs;
+  
+
+
     std::vector<Sirikata::Vector3f> normals;
     std::vector<Sirikata::Vector3f> tangents;
     std::vector<Sirikata::Vector4f> colors;
@@ -57,6 +63,7 @@ struct SubMeshGeometry {
     std::vector<TextureSet>texUVs;
     struct Primitive {
         std::vector<unsigned short> indices;
+      
         enum PrimitiveType {
             TRIANGLES,
             LINES,
@@ -71,6 +78,9 @@ struct SubMeshGeometry {
     BoundingBox3f3f aabb;
     double radius;
     std::vector<Primitive> primitives;
+
+
+  
 };
 struct GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
@@ -133,7 +143,7 @@ struct MaterialEffectInfo {
 			// Mapping this calculation to GL_CLAMP_TO_BORDER is the best
 			// approximation of this.
 			WRAP_MODE_NONE,
-			// WRAP == GL_REPEAT Ignores the integer part of texture coordinates,
+ 			// WRAP == GL_REPEAT Ignores the integer part of texture coordinates,
 			// using only the fractional part.
 			WRAP_MODE_WRAP,
 			// MIRROR == GL_MIRRORED_REPEAT First mirrors the texture coordinate.
@@ -170,11 +180,14 @@ struct Meshdata {
     typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
     typedef std::vector<LightInfo> LightInfoList;
     typedef std::vector<std::string> TextureList;
+    typedef std::tr1::unordered_map<std::string, std::string> URIMap;
+
     typedef std::vector<GeometryInstance> GeometryInstanceList;
     typedef std::vector<LightInstance> LightInstanceList;
     typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
     SubMeshGeometryList geometry;
     TextureList textures;
+    URIMap textureMap;
     LightInfoList lights;
     MaterialEffectInfoList materials;
 
@@ -186,7 +199,11 @@ struct Meshdata {
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
+    
+
 };
+
+typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
 
 } // namespace Sirikata
 

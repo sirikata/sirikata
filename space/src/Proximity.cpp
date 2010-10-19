@@ -103,6 +103,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
+    mAggregateManager = new AggregateManager(ctx, locservice);
 
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
@@ -169,6 +170,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
 
+    
+
     // Start the processing thread
     mProxThread = new Thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
@@ -190,6 +193,8 @@ Proximity::~Proximity() {
     delete mProxStrand;
     Network::IOServiceFactory::destroyIOService(mProxService);
     mProxService = NULL;
+
+    delete mAggregateManager;
 }
 
 
@@ -392,6 +397,8 @@ void Proximity::invokeAggregateEventHandler() {
 }
 
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
+  
+
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
     mAggregateEventHandlers.push(
         std::tr1::bind(
@@ -404,17 +411,23 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
         )
     );
     scheduleAggregateEventHandler();
+
+
+    mAggregateManager->addAggregate(objid);
 }
 
 void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+  
+  if (mLocService->contains(objid)) {
     mLocService->updateLocalAggregateLocation(
         objid,
         TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
     );
     mLocService->updateLocalAggregateBounds(
         objid,
-        BoundingSphere3f(Vector3f(0,0,0), bnds.radius())
+        BoundingSphere3f(bnds.center(), bnds.radius())
     );
+  }
 }
 
 void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
@@ -426,6 +439,8 @@ void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid
         )
     );
     scheduleAggregateEventHandler();
+
+    mAggregateManager->addChild(objid, child);
 }
 
 void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
@@ -437,6 +452,8 @@ void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& obj
         )
     );
     scheduleAggregateEventHandler();
+
+    mAggregateManager->removeChild(objid, child);
 }
 
 void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
@@ -447,6 +464,9 @@ void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& ob
         )
     );
     scheduleAggregateEventHandler();
+      
+    if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
+      mAggregateManager->generateAggregateMesh(objid, Duration::seconds(2400.0+rand()%2040));
 }
 
 void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
@@ -456,6 +476,8 @@ void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid)
         )
     );
     scheduleAggregateEventHandler();
+    mAggregateManager->removeAggregate(objid);
+
 }
 
 void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
@@ -694,6 +716,8 @@ void Proximity::poll() {
         sendObjectResult(msg_front);
         mObjectResultsToSend.pop_front();
     }
+
+    
 }
 
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {

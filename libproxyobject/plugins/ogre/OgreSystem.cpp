@@ -144,6 +144,7 @@ OgreSystem::OgreSystem(Context* ctx)
    mLastFrameTime(Task::LocalTime::now()),
      mQuitRequested(false),
      mFloatingPointOffset(0,0,0),
+     mSuspended(false),
      mPrimaryCamera(NULL)
 {
     mLocalTimeOffset=NULL;
@@ -238,6 +239,9 @@ void OgreSystem::destroyRenderTarget(const String&name) {
         if (!renderTargetTexture.isNull())
             destroyRenderTarget(renderTargetTexture);
     }
+}
+void OgreSystem::suspend() {
+  mSuspended = !mSuspended;
 }
 void OgreSystem::destroyRenderTarget(Ogre::ResourcePtr&name) {
     Ogre::TextureManager::getSingleton().remove(name);
@@ -894,7 +898,9 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
     }
     Ogre::WindowEventUtilities::messagePump();
 //    if (mPrimaryCamera) {
+    if (!mSuspended) {
         Ogre::Root::getSingleton().renderOneFrame();
+    }
 //    }
     Task::LocalTime postFrameTime = Task::LocalTime::now();
     Duration postFrameDelta = postFrameTime-mLastFrameTime;

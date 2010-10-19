@@ -468,14 +468,19 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
+        
+        //std::cout << "update.mesh(): " << update.mesh() << "\n";
+        //std::cout << "Received location message about: " << update.object().toString() << "\n";
 
         ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(), ObjectReference(update.object())));
         if (!proxy_obj) continue;
 
         if (update.has_location()) {
+            
             Sirikata::Protocol::TimedMotionVector update_loc = update.location();
             TimedMotionVector3f loc(convertToApproxLocalTime(update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
+            
             proxy_obj->setLocation(loc);
 
             CONTEXT_OHTRACE(objectLoc,
@@ -490,6 +495,19 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
             TimedMotionQuaternion orient(convertToApproxLocalTime(update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
             proxy_obj->setOrientation(orient);
         }
+        
+        if (update.has_mesh()) {
+          std::string mesh = update.mesh();
+          ProxyMeshObject *meshObj = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+         
+          if (meshObj && mesh != "") {
+            //std::cout << "MESH UPDATE: " << mesh  << "!!!\n";
+            meshObj->setMesh(Transfer::URI(mesh));
+          }
+          else if (mesh != ""){
+            //std::cout << "MESH UPDATE but no proxy object!\n";
+          }
+        }
     }
 
     return true;
@@ -500,11 +518,16 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
 
+
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
-            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);            
+
+            //std::cout << "Proximity addition: " << addition.object().toString()  << " , "
+            //          << addition.mesh() << " , "  <<  addition.location().position()  << "\n";
+
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
             TimedMotionVector3f loc(convertToApproxLocalTime(addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
@@ -525,12 +548,35 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 BoundingSphere3f bnds = addition.bounds();
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
             }
+            else {
+              ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
+              ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
+                                                                     ObjectReference(addition.object())));
+              if (!proxy_obj) continue;
+              
+              ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+              if (mesh) {
+                mesh->setMesh( Transfer::URI(addition.mesh()));
+              }
+            }
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-            HO_LOG(debug,"Proximity removal."); // Remove when properly handled
+            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
+            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
+                                                                     ObjectReference(removal.object())));
+            if (!proxy_obj) continue;
+
+            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
+            if (mesh) {
+              mesh->setMesh( Transfer::URI(""));
+            }
+            else continue;
+
+            //std::cout << "Proximity removal: " << removal.object().toString()  <<  "\n";
+            
             CONTEXT_OHTRACE(prox,
                 getUUID(),
                 removal.object(),
@@ -539,6 +585,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
         }
     }
+
     return true;
 }
 
