@@ -189,6 +189,13 @@ class OgreSystem::MouseHandler {
     float mNewQueryAngle;
     Network::IOTimerPtr mQueryAngleTimer;
 
+    Time currentSpaceTime() {
+        if (!mParent || !mParent->mPrimaryCamera) return Time::null();
+
+        return mParent->mPrimaryCamera->getProxy().getOwner()->currentSpaceTime(
+            mParent->mPrimaryCamera->getProxy().getObjectReference().space()
+        );
+    }
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -366,7 +373,7 @@ private:
     void selectObjectAction(Vector2f p, int direction) {
         if (!mParent||!mParent->mPrimaryCamera) return;
         CameraEntity *camera = mParent->mPrimaryCamera;
-        Time time = Time::local(); // FIXME #116, #117
+        Time time = currentSpaceTime();
         if (!camera) {
             return;
         }
@@ -939,7 +946,7 @@ private:
 
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (!camera) return;
-        Time now = Time::local(); // FIXME #116, #117
+        Time now = currentSpaceTime();
         Location curLoc (camera->getProxy().globalLocation(now));
         Protocol::CreateObject creator;
         Protocol::IConnectToSpace space = creator.add_space_properties();
@@ -1148,7 +1155,7 @@ private:
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
-        Time now = Time::local(); // FIXME #116, #117
+        Time now = currentSpaceTime();
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -1176,7 +1183,7 @@ private:
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
-        Time now = Time::local(); // FIXME #116, #117
+        Time now = currentSpaceTime();
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -1204,7 +1211,7 @@ private:
         if (cam_vwobj->id(space) != cam->getObjectReference()) return;
 
         // Get the updated position
-        Time now = Time::local(); // FIXME #116, #117
+        Time now = currentSpaceTime();
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -1517,7 +1524,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = Time::local(); // FIXME #116, #117
+            Time time = currentSpaceTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
         }
@@ -1540,7 +1547,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = Time::local(); // FIXME #116, #117
+            Time time = currentSpaceTime();
             int lhc=mLastHitCount;
             hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
             mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
@@ -1568,7 +1575,7 @@ private:
         }
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = Time::local(); // FIXME #116, #117
+            Time time = currentSpaceTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
         }
@@ -1602,7 +1609,7 @@ private:
 
         if (mParent->mPrimaryCamera) {
             CameraEntity *camera = mParent->mPrimaryCamera;
-            Time time = Time::local(); // FIXME #116, #117
+            Time time = currentSpaceTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
         }
@@ -1969,7 +1976,7 @@ public:
 
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["suspend"]);
-        
+
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
 
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);

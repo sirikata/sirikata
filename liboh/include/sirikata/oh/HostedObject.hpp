@@ -93,9 +93,10 @@ protected:
     ODP::DelegateService* mDelegateODPService;
     boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
 
-    Time convertToApproxServerTime(const SpaceID& space, const Time& t);
-    Time getApproxServerTime(const SpaceID& space);
-    Time convertToApproxLocalTime(const SpaceID& space, const Time& t);
+    virtual Time spaceTime(const SpaceID& space, const Time& t);
+    virtual Time currentSpaceTime(const SpaceID& space);
+    virtual Time localTime(const SpaceID& space, const Time& t);
+    virtual Time currentLocalTime();
 
 //------- Constructors/Destructors
 
@@ -149,7 +150,7 @@ public:
         See getProxy(space)->getProxyManger() for the per-space object.
     */
     ObjectHost *getObjectHost()const {return mObjectHost;}
-    const Duration&getSpaceTimeOffset(const SpaceID&space);
+
     /// Gets the proxy object representing this HostedObject inside space.
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);

@@ -196,16 +196,20 @@ struct HostedObject::PrivateCallbacks {
     }
 };
 
-Time HostedObject::convertToApproxServerTime(const SpaceID& space, const Time& t) {
+Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
     return t + mObjectHost->serverTimeOffset(space);
 }
 
-Time HostedObject::getApproxServerTime(const SpaceID& space) {
-    return convertToApproxServerTime(space, Time::local());
+Time HostedObject::currentSpaceTime(const SpaceID& space) {
+    return spaceTime(space, mContext->simTime());
 }
 
-Time HostedObject::convertToApproxLocalTime(const SpaceID& space, const Time& t) {
+Time HostedObject::localTime(const SpaceID& space, const Time& t) {
     return t + mObjectHost->clientTimeOffset(space);
+}
+
+Time HostedObject::currentLocalTime() {
+    return mContext->simTime();
 }
 
 
@@ -378,8 +382,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
     SpaceObjectReference self_objref(space, obj);
     // Convert back to local time
-    TimedMotionVector3f local_loc(convertToApproxLocalTime(space, loc.updateTime()), loc.value());
-    TimedMotionQuaternion local_orient(convertToApproxLocalTime(space, orient.updateTime()), orient.value());
+    TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
+    TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, URI(), mIsCamera, local_loc, local_orient, bnds);
 
 
@@ -661,7 +665,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
         if (update.has_location()) {
 
             Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-            TimedMotionVector3f loc(convertToApproxLocalTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
+            TimedMotionVector3f loc(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
             proxy_obj->setLocation(loc);
 
@@ -674,7 +678,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
         if (update.has_orientation()) {
             Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
-            TimedMotionQuaternion orient(convertToApproxLocalTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
+            TimedMotionQuaternion orient(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
             proxy_obj->setOrientation(orient);
         }
 
@@ -711,7 +715,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             //          << addition.mesh() << " , "  <<  addition.location().position()  << "\n";
 
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
-            TimedMotionVector3f loc(convertToApproxLocalTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
+            TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
                 getUUID(),
@@ -721,7 +725,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
 
             if (!getProxyManager(proximateID.space())->getProxyObject(proximateID)) {
-                TimedMotionQuaternion orient(convertToApproxLocalTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+                TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
                 URI meshuri;
                 if (addition.has_mesh()) meshuri = URI(addition.mesh());
@@ -804,17 +808,6 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     return proxy_obj;
 }
 
-const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
-    static Duration nil(Duration::seconds(0));
-    SpaceDataMap::iterator where=mSpaceData->find(space);
-    if (where!=mSpaceData->end()) {
-        //bftm FIXME: uncomment the next line (but not the line below it).
-
-        //SILOG(ho,warn,"Hit missing time sync in HostedObject.");
-        //return where->second.mSpaceConnection.getTopLevelStream()->getServerTimeOffset();
-    }
-    return nil;
-}
 
 // Identification
 SpaceObjectReference HostedObject::id(const SpaceID& space) const {
@@ -887,7 +880,7 @@ void HostedObject::requestLocationUpdate(const SpaceID& space, const TimedMotion
 void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos)
 {
     Vector3f curVel = requestCurrentVelocity(space,oref);
-    TimedMotionVector3f tmv (getApproxServerTime(space),MotionVector3f(pos,curVel));
+    TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(pos,curVel));
 //FIXME: re-write the requestLocationUpdate function so that takes in object
 //reference as well
     requestLocationUpdate(space,tmv);
@@ -898,7 +891,7 @@ void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectRefer
 void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectReference& oref, const Vector3f& vel)
 {
     Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
-    TimedMotionVector3f tmv (getApproxServerTime(space),MotionVector3f(curPos,vel));
+    TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(curPos,vel));
 
     //FIXME: re-write the requestLocationUpdate function so that takes in object
     //reference as well
@@ -1040,13 +1033,13 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
     if (loc != NULL) {
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
-        requested_loc.set_t( convertToApproxServerTime(space, loc->updateTime()) );
+        requested_loc.set_t( spaceTime(space, loc->updateTime()) );
         requested_loc.set_position(loc->position());
         requested_loc.set_velocity(loc->velocity());
     }
     if (orient != NULL) {
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
-        requested_orient.set_t( convertToApproxServerTime(space, orient->updateTime()) );
+        requested_orient.set_t( spaceTime(space, orient->updateTime()) );
         requested_orient.set_position(orient->position());
         requested_orient.set_velocity(orient->velocity());
     }
