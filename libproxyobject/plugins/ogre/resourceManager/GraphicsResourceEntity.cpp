@@ -74,12 +74,17 @@ float GraphicsResourceEntity::calcBenefit()
     for (; systemIter != systemend; ++systemIter) {
 
       OgreSystem *system = *systemIter;
-      Location curLoc = mGraphicsEntity->getProxy().extrapolateLocation(Time::local());// FIXME #116,#117
+
+      Time cur_space_time =
+          mGraphicsEntity->getProxy().getOwner()->currentSpaceTime(
+              mGraphicsEntity->getProxy().getObjectReference().space()
+          );
+      Location curLoc = mGraphicsEntity->getProxy().extrapolateLocation(cur_space_time);
       std::list<CameraEntity*>::const_iterator cameraIter = system->mAttachedCameras.begin(),
         cameraEnd = system->mAttachedCameras.end();
       for (; cameraIter != cameraEnd; ++cameraIter) {
         CameraEntity *camera = *cameraIter;
-        Location avatarLoc = camera->getProxy().extrapolateLocation(Time::local());// FIXME #116,#117
+        Location avatarLoc = camera->getProxy().extrapolateLocation(cur_space_time);
         float dist = (curLoc.getPosition() - avatarLoc.getPosition()).length();
         float radius = mGraphicsEntity->getBoundingInfo().radius();
 

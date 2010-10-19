@@ -200,17 +200,6 @@ void ObjectHost::stop() {
     }
 }
 
-const Duration&ObjectHost::getSpaceTimeOffset(const SpaceID&id)const{
-    NOT_IMPLEMENTED(oh);
-    static Duration nil(Duration::seconds(0));
-    return nil;
-}
-const Duration&ObjectHost::getSpaceTimeOffset(const Network::Address&id)const{
-    NOT_IMPLEMENTED(oh);
-    static Duration nil(Duration::seconds(0));
-    return nil;
-}
-
 ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
     DEPRECATED();
     NOT_IMPLEMENTED(oh);

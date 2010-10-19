@@ -956,18 +956,12 @@ void OgreSystem::poll(){
 }
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
-    //Time lastTime(Time::epoch());
-    //SpaceID lastSpace(SpaceID::null());
-    // FIXME #116 and #117 time synchronization
-    Time curtime = Time::local();
     for (iter = mMovingEntities.begin(); iter != mMovingEntities.end();) {
         Entity *current = *iter;
         ++iter;
-//        SILOG(ogre,debug,"Extrapolating "<<current<<" for time "<<(float64)(currentTime-debugStartTime));
         SpaceID space(current->getProxy().getObjectReference().space());
-        //current->extrapolateLocation(lastSpace==space?lastTime:(lastTime=Time::convertFrom(currentTime,mLocalTimeOffset->offset(current->getProxy()))));
-        current->extrapolateLocation(curtime);
-        //lastSpace=space;
+        Time cur_space_time = current->getProxy().getOwner()->currentSpaceTime(space);
+        current->extrapolateLocation(cur_space_time);
     }
 }
 
