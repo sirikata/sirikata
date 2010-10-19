@@ -138,6 +138,16 @@ void ObjectHost::disconnect(HostedObjectPtr obj, const SpaceID& space) {
     mSessionManagers[space]->disconnect(obj->getUUID());
 }
 
+Duration ObjectHost::serverTimeOffset(const SpaceID& space) const {
+    assert(mSessionManagers.find(space) != mSessionManagers.end());
+    return mSessionManagers.find(space)->second->serverTimeOffset();
+}
+
+Duration ObjectHost::clientTimeOffset(const SpaceID& space) const {
+    assert(mSessionManagers.find(space) != mSessionManagers.end());
+    return mSessionManagers.find(space)->second->clientTimeOffset();
+}
+
 bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
 

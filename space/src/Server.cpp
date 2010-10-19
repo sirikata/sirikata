@@ -409,7 +409,9 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     assert( !isObjectConnected(obj_id) );
 
     // If the requested location isn't on this server, redirect
-    TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
+    // Note: on connections, we always ignore the specified time and just use
+    // our local time.  The client is aware of this and handles it properly.
+    TimedMotionVector3f loc( mContext->simTime(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     Vector3f curpos = loc.extrapolate(mContext->simTime()).position();
     bool in_server_region = mMigrationMonitor->onThisServer(curpos);
     ServerID loc_server = mCSeg->lookup(curpos);
@@ -491,12 +493,17 @@ void Server::finishAddObject(const UUID& obj_id)
   {
     StoredConnection sc = mStoredConnectionData[obj_id];
 
-    TimedMotionVector3f loc( sc.conn_msg.loc().t(), MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
+    // Note: we always use local time for connections. The client
+    // accounts for by using the values we return in the response
+    // instead of the original values sent with the connection
+    // request.
+    Time local_t = mContext->simTime();
+    TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
     TimedMotionQuaternion orient(
-        sc.conn_msg.orientation().t(),
+        local_t,
         MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
     );
-
+    BoundingSphere3f bnds = sc.conn_msg.bounds();
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
@@ -509,7 +516,7 @@ void Server::finishAddObject(const UUID& obj_id)
 
     // Add object as local object to LocationService
     String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
-    mLocationService->addLocalObject(obj_id, loc, orient, sc.conn_msg.bounds(), obj_mesh);
+    mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh);
 
     // Register proximity query
     if (sc.conn_msg.has_query_angle())
@@ -522,6 +529,15 @@ void Server::finishAddObject(const UUID& obj_id)
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
     response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
+    Sirikata::Protocol::ITimedMotionVector resp_loc = response.mutable_loc();
+    resp_loc.set_t( loc.updateTime() );
+    resp_loc.set_position( loc.position() );
+    resp_loc.set_velocity( loc.velocity() );
+    Sirikata::Protocol::ITimedMotionQuaternion resp_orient = response.mutable_orientation();
+    resp_orient.set_t( orient.updateTime() );
+    resp_orient.set_position( orient.position() );
+    resp_orient.set_velocity( orient.velocity() );
+    response.set_bounds(bnds);
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),

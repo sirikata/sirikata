@@ -121,7 +121,7 @@ SessionManager::ConnectedCallback& SessionManager::ObjectConnections::getConnect
     return mObjectInfo[objid].connectedCB;
 }
 
-ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj, bool do_cb) {
+ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, bool do_cb) {
     if (mObjectInfo[obj].connectingTo != NullServerID) { // We were connecting to a server
         ServerID connectedTo = mObjectInfo[obj].connectingTo;
         OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
@@ -132,13 +132,13 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
         mObjectInfo[obj].connectedAs = SpaceObjectReference(parent->mSpace, ObjectReference(obj));
 
         if (do_cb) {
-            mObjectInfo[obj].connectedCB(parent->mSpace, ObjectReference(obj), connectedTo);
+            mObjectInfo[obj].connectedCB(parent->mSpace, ObjectReference(obj), connectedTo, loc, orient, bnds);
         }
         else {
             mDeferredCallbacks.push_back(
                 std::tr1::bind(
                     mObjectInfo[obj].connectedCB,
-                    parent->mSpace, ObjectReference(obj), connectedTo
+                    parent->mSpace, ObjectReference(obj), connectedTo, loc, orient, bnds
                 )
             );
         }
@@ -173,7 +173,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const UUID& obj
 
 void SessionManager::ObjectConnections::handleConnectError(const UUID& objid) {
     mObjectInfo[objid].connectingTo = NullServerID;
-    mObjectInfo[objid].connectedCB(parent->mSpace, ObjectReference(objid), NullServerID);
+    mObjectInfo[objid].connectedCB(parent->mSpace, ObjectReference(objid), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f());
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const UUID& objid, bool do_cb) {
@@ -301,6 +301,11 @@ void SessionManager::connect(
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+    using std::tr1::placeholders::_3;
+    using std::tr1::placeholders::_4;
+    using std::tr1::placeholders::_5;
+    using std::tr1::placeholders::_6;
 
     ConnectingInfo ci;
     ci.loc = init_loc;
@@ -310,7 +315,16 @@ void SessionManager::connect(
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
 
-    mObjectConnections.add(objid, ci, connect_cb, migrate_cb, stream_created_cb);
+    // connect_cb gets wrapped so we can start some automatic steps (initial
+    // connection of sst stream to space) at the correc time
+    mObjectConnections.add(
+        objid, ci,
+        std::tr1::bind(&SessionManager::handleObjectFullyConnected, this,
+            _1, _2, _3, _4, _5, _6,
+            connect_cb
+        ),
+        migrate_cb, stream_created_cb
+    );
 
     // Get a connection to request
     getAnySpaceConnection(
@@ -337,6 +351,16 @@ void SessionManager::disconnect(const UUID& objid) {
     mObjectConnections.remove(objid);
 }
 
+Duration SessionManager::serverTimeOffset() const {
+    assert(mTimeSyncClient != NULL);
+    return mTimeSyncClient->offset();
+}
+
+Duration SessionManager::clientTimeOffset() const {
+    assert(mTimeSyncClient != NULL);
+    return -(mTimeSyncClient->offset());
+}
+
 void SessionManager::retryOpenConnection(const UUID&uuid,ServerID sid) {
     using std::tr1::placeholders::_1;
 
@@ -351,7 +375,7 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
         // FIXME disconnect? retry?
-        mObjectConnections.getConnectCallback(uuid)(mSpace, ObjectReference::null(), NullServerID);
+        mObjectConnections.getConnectCallback(uuid)(mSpace, ObjectReference::null(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f());
         return;
     }
 
@@ -719,12 +743,22 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         UUID obj = msg->dest_object();
 
         if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success) {
+            TimedMotionVector3f loc(
+                conn_resp.loc().t(),
+                MotionVector3f(conn_resp.loc().position(), conn_resp.loc().velocity())
+            );
+            TimedMotionQuaternion orient(
+                conn_resp.orientation().t(),
+                MotionQuaternion( conn_resp.orientation().position(), conn_resp.orientation().velocity() )
+            );
+            BoundingSphere3f bnds = conn_resp.bounds();
+
             // If we've got proper time syncing setup, we can dispatch the callback
             // immediately.  Otherwise, we need to delay the callback
             assert(mTimeSyncClient != NULL);
             bool time_synced = mTimeSyncClient->valid();
 
-	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj, time_synced);
+	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj, loc, orient, bnds, time_synced);
 
             // Initialize a new router for SST
             mObjectConnectionRouters[obj] = new ObjectConnectionRouter(this, obj);
@@ -740,12 +774,6 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 				mContext->mainStrand,
 				Duration::seconds(0.05)
 				);
-
-            Stream<UUID>::connectStream(mObjectConnectionRouters[obj],
-                EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
-                EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
-                std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
-            );
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -772,6 +800,16 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
     }
 
     delete msg;
+}
+
+void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, ConnectedCallback real_cb) {
+    Stream<UUID>::connectStream(mObjectConnectionRouters[obj.getAsUUID()],
+        EndPoint<UUID>(obj.getAsUUID(), OBJECT_SPACE_PORT),
+        EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
+        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj.getAsUUID())
+    );
+
+    real_cb(space, obj, server, loc, orient, bnds);
 }
 
 boost::shared_ptr<Stream<UUID> > SessionManager::getSpaceStream(const UUID& objectID) {
