@@ -402,11 +402,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
             SpaceDataMap::value_type(self_objref, PerPresenceData(this, space, obj))
         );
     }
-    
-    // Create
 
 
-    SpaceObjectReference self_objref(space, obj);
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
@@ -755,8 +752,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
 
 
-            if (!getProxyManager(proximateID.space())->getProxyObject(proximateID)) {
-                TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+            if (!getProxyManager(proximateID.space(),proximateID.object())->getProxyObject(proximateID)) {
+                TimedMotionQuaternion orient(convertToApproxLocalTime(addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
                 URI meshuri;
                 if (addition.has_mesh()) meshuri = URI(addition.mesh());
