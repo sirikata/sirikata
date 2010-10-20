@@ -83,11 +83,6 @@ void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFil
 
 }
 
-void ResourceDownloadPlanner::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata &md)
-{
-
-}
-
 void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, Vector3f const &scale)
 {
 

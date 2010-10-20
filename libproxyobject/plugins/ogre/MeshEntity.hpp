@@ -75,7 +75,8 @@ private:
     typedef std::vector<Ogre::Light*> LightList;
     LightList mLights;
 
-    String mURI;
+    Transfer::URI mURI;
+    String mURIString;
 
     Ogre::Entity *getOgreEntity() const {
         return static_cast<Ogre::Entity*const>(mOgreObject);
@@ -84,9 +85,9 @@ private:
     void fixTextures();
 
     // Wrapper for createMesh which allows us to use a WorkQueue
-    bool createMeshWork(const Meshdata& md);
+    bool createMeshWork(MeshdataPtr md);
 
-    void createMesh(const Meshdata& md);
+    void createMesh(MeshdataPtr md);
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
 public:
@@ -112,7 +113,7 @@ public:
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
     void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<const Transfer::DenseData> response, Meshdata& md);
+        std::tr1::shared_ptr<const Transfer::DenseData> response, MeshdataPtr md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -138,20 +139,18 @@ public:
 
     // interface from MeshListener
     public:
-
         virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
-        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
         virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     protected:
 
-    typedef std::tr1::shared_ptr<const Transfer::DenseData> ConstDenseDataPtr;
+    void handleMeshParsed(MeshdataPtr md);
 
     void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
     // After a mesh is downloaded, try instantiating it from an existing mesh,
     // i.e. in case this URI/underlying hash has already been loaded.
-    bool tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, ConstDenseDataPtr response);
+    bool tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
 };
 
 }

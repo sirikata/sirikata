@@ -47,6 +47,8 @@
 #include "task/EventManager.hpp"
 #include <sirikata/core/task/WorkQueue.hpp>
 
+#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
 #ifdef nil
@@ -109,6 +111,10 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
     static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
+
+    // FIXME need to support multiple parsers, see #124
+    ModelsSystem* mModelParser;
+
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
@@ -197,6 +203,19 @@ public:
     Entity* getEntity(const ProxyObjectPtr &proxy) const {
         return getEntity(proxy->getObjectReference());
     }
+
+    /** Tries to parse a mesh. Can handle different types of meshes and tries to
+     *  find the right parser using magic numbers.  If it is unable to find the
+     *  right parser, returns NULL.  Otherwise, returns the parsed mesh as a
+     *  Meshdata object.
+     *  \param orig_uri original URI, used to construct correct relative paths
+     *                  for dependent resources
+     *  \param fp the fingerprint of the data, used for unique naming and passed
+     *            through to the resulting mesh data
+     *  \param data the contents of the
+     */
+    MeshdataPtr parseMesh(const URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,

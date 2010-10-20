@@ -36,9 +36,6 @@
 #include "ColladaDocumentImporter.hpp"
 #include "ColladaDocumentLoader.hpp"
 
-#include "ColladaMeshObject.hpp"
-
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/options/Options.hpp>
 
 // OpenCOLLADA headers
@@ -63,9 +60,6 @@ ColladaSystem::ColladaSystem ()
     :   mDocuments ()
 {
     assert((std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl,true));
-  mTransferMediator = &(TransferMediator::getSingleton());
-
-  mTransferPool = mTransferMediator->registerClient("ColladaGraphics");
 }
 
 ColladaSystem::~ColladaSystem ()
@@ -74,99 +68,23 @@ ColladaSystem::~ColladaSystem ()
 
 }
 
-/////////////////////////////////////////////////////////////////////
-
-void ColladaSystem::chunkFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<ChunkRequest> request,
-				  std::tr1::shared_ptr<const DenseData> response)
-{
-  if (response != NULL) {
-
-      ColladaDocumentLoader loader(request->getMetadata().getURI(), request->getMetadata().getFingerprint(), proxy);
-
-      SparseData data = SparseData();
-      data.addValidData(response);
-
-      Transfer::DenseDataPtr flatData = data.flatten();
-
-      char const* buffer = reinterpret_cast<char const*>(flatData->begin());
-
-
-      if (loader.load(buffer, flatData->length())) {
-            // finally we can add the Product to our set of completed documents
-            mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
-      } else {
-            std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
-      }
-  } else std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
-}
-
-void ColladaSystem::metadataFinished(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<MetadataRequest> request,
-				     std::tr1::shared_ptr<RemoteFileMetadata>response)
-{
-  if (response != NULL) {
-
-    const Chunk *chunk = new Chunk(response->getFingerprint(), Range(true));
-    const RemoteFileMetadata metadata = *response;
-
-    TransferRequestPtr req(new Transfer::ChunkRequest(response->getURI(), metadata, *chunk, 1.0,
-						    std::tr1::bind(&ColladaSystem::chunkFinished, this, proxy, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-    mTransferPool->addRequest(req);
-  }
-}
-
-
-void ColladaSystem::loadDocument (std::tr1::weak_ptr<ProxyMeshObject>(proxy),
-    std::tr1::shared_ptr<ChunkRequest> request,
-    std::tr1::shared_ptr<const DenseData> response)
-{
-    if (response != NULL) {
-
-        ColladaDocumentLoader loader(request->getMetadata().getURI(), request->getMetadata().getFingerprint(), proxy);
-
-      SparseData data = SparseData();
-      data.addValidData(response);
-
-      Transfer::DenseDataPtr flatData = data.flatten();
-
-      char const* buffer = reinterpret_cast<char const*>(flatData->begin());
-
-
-      if (loader.load(buffer, flatData->length())) {
-            // finally we can add the Product to our set of completed documents
-            mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
-      } else {
-            std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
-      }
-  } else std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
-}
-
-/////////////////////////////////////////////////////////////////////
-
-ColladaSystem* ColladaSystem::create ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
+ColladaSystem* ColladaSystem::create (String const& options)
 {
     assert((std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl,true));
     ColladaSystem* system ( new ColladaSystem );
 
-    if ( system->initialize ( proxyManager, options ) )
+    if ( system->initialize (options ) )
         return system;
     delete system;
     return 0;
 }
 
-bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
+bool ColladaSystem::initialize(String const& options)
 {
     assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
 
-    
     InitializeClassOptions ( "colladamodels", this, NULL );
     OptionSet::getOptions ( "colladamodels", this )->parse ( options );
-   
-
-    OptionSet::getOptions ( "colladamodels", this )->parse ( options );
-
-    if (proxyManager != NULL)
-        proxyManager->addListener ( this );
 
     return true;
 }
@@ -174,61 +92,15 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
 /////////////////////////////////////////////////////////////////////
 // overrides from ModelsSystem
 
-
-/////////////////////////////////////////////////////////////////////
-// overrides from ProxyCreationListener
-
-void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
+MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+            std::tr1::shared_ptr<const Transfer::DenseData> data)
 {
-    assert((std::cout << "MCB: onCreateProxy (" << proxy << ") entered for ID: " << proxy->getObjectReference () << std::endl,true));
+    ColladaDocumentLoader loader(uri, fp);
 
-    std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
+      SparseData data_reflatten = SparseData();
+      data_reflatten.addValidData(data);
 
-    if ( asMesh )
-    {
-        assert((std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl,true));
-
-        ColladaMeshObject* cmo = new ColladaMeshObject ( *this, std::tr1::shared_ptr<ProxyMeshObject>(asMesh) );
-        ProxyMeshObject::ModelObjectPtr mesh ( cmo );
-
-        // try to supply the proxy with a data model
-        if ( ! proxy->hasModelObject () )
-        {
-            asMesh->setModelObject ( mesh );  // MCB: hoist to a common base class? with overloads??
-        }
-        else
-        {
-            // some other ModelsSystem has registered already or it's a legacy proxy
-            std::cout << "MCB: onCreateProxy (" << proxy << ") claims it already has a data model?" << std::endl;
-            // MCB: by listening we can peek and remap the data (usefull?)
-//            asMesh->MeshProvider::addListener ( mesh );
-        }
-    }
-    else
-    {
-        // MCB: check other types
-    }
-}
-
-void ColladaSystem::onDestroyProxy ( ProxyObjectPtr proxy )
-{
-    std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
-
-    if ( asMesh )
-    {
-        std::cout << "MCB: onDestroyProxy (" << asMesh << ") entered for mesh URI: " << asMesh->getMesh () << std::endl;
-    }
-}
-
-MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<const Transfer::DenseData> response) 
-{
-      ColladaDocumentLoader loader(request->getMetadata().getURI(), request->getMetadata().getFingerprint(),  std::tr1::weak_ptr<ProxyMeshObject>() );
-
-      SparseData data = SparseData();
-      data.addValidData(response);
-
-      Transfer::DenseDataPtr flatData = data.flatten();
+      Transfer::DenseDataPtr flatData = data_reflatten.flatten();
 
       char const* buffer = reinterpret_cast<char const*>(flatData->begin());
 

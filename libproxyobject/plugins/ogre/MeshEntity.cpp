@@ -327,7 +327,7 @@ void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
 
 void MeshEntity::processMesh(URI const& meshFile)
 {
-    
+
 
     Ogre::Entity * meshObj=getOgreEntity();
 
@@ -342,7 +342,8 @@ void MeshEntity::processMesh(URI const& meshFile)
       return;
     }
 
-    mURI = meshFile.toString();
+    mURI = meshFile;
+    mURIString = meshFile.toString();
 
     downloadMeshFile(meshFile);
 
@@ -372,7 +373,7 @@ BoundingBox3f3f fixUp(int up, const BoundingBox3f3f& aabb) {
 }
 
 
-bool MeshEntity::createMeshWork(const Meshdata& md) {
+bool MeshEntity::createMeshWork(MeshdataPtr md) {
     createMesh(md);
     return true;
 }
@@ -906,7 +907,7 @@ public:
 
 
 
-bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, ConstDenseDataPtr response) {
+bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
     SHA256 sha = request->getMetadata().getFingerprint();
     String hash = sha.convertToHexString();
     Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(hash);
@@ -915,18 +916,15 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, C
     }
     else {
         // Otherwise, follow the rest of the normal process.
-        String fn = request->getURI().filename();
-        ProxyObject *obj = mProxy.get();
-        ProxyMeshObject *meshProxy = dynamic_cast<ProxyMeshObject *>(obj);
-        if (meshProxy) {
-            meshProxy->meshDownloaded(request, response);
-        }
+        MeshdataPtr mesh_data = mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response);
+        handleMeshParsed(mesh_data);
     }
     return true;
 }
 
-void MeshEntity::createMesh(const Meshdata& md) {
-    
+void MeshEntity::createMesh(MeshdataPtr mdptr) {
+    const Meshdata& md = *mdptr;
+
     SHA256 sha = md.hash;
     String hash = sha.convertToHexString();
 
@@ -938,7 +936,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
-                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (matname,*mat, mURI, mTextureFingerprints)));
+                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (matname,*mat, mURIString, mTextureFingerprints)));
 
                 reload->prepareResource(&*matPtr);
                 reload->loadResource(&*matPtr);
@@ -949,7 +947,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
         for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++){
           std::string matname = hash + "_texture_" + (*tex_it);
             Ogre::MaterialPtr mat = base_mat->clone(matname);
-            String texURI = mURI.substr(0, mURI.rfind("/")+1) + (*tex_it);
+            String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*tex_it);
             String ogreTextureName = "Cache/" + mTextureFingerprints[texURI];
             mat->getTechnique(0)->getPass(0)->createTextureUnitState(ogreTextureName,0);
         }
@@ -1083,7 +1081,7 @@ void MeshEntity::createMesh(const Meshdata& md) {
 }
 
 void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
-    std::tr1::shared_ptr<const DenseData> response, Meshdata& md) {
+    std::tr1::shared_ptr<const DenseData> response, MeshdataPtr md) {
 
     mTextureFingerprints[request->getURI().toString()] = request->getIdentifier();
     if (mActiveCDNArchive) {
@@ -1096,11 +1094,8 @@ void MeshEntity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
         Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::createMeshWork, this, md));
 }
 
-void MeshEntity::onMeshParsed(ProxyObjectPtr proxy, String const& uri, Meshdata& md) {
-    if (uri != mURI) return;
-
-
-    mRemainingDownloads += md.textures.size();
+void MeshEntity::handleMeshParsed(MeshdataPtr md) {
+    mRemainingDownloads += md->textures.size();
 
     // Special case for no dependent downloads
     if (mRemainingDownloads == 0) {
@@ -1108,8 +1103,8 @@ void MeshEntity::onMeshParsed(ProxyObjectPtr proxy, String const& uri, Meshdata&
         return;
     }
 
-    for(Meshdata::TextureList::const_iterator it = md.textures.begin(); it != md.textures.end(); it++) {
-      String texURI = uri.substr(0, uri.rfind("/")+1) + (*it);
+    for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+      String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
 
         ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL, mProxy->priority,
            std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));

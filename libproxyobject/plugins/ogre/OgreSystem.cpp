@@ -141,6 +141,8 @@ OgreSystem::OgreSystem(Context* ctx)
  : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
    mContext(ctx),
    mLastFrameTime(Task::LocalTime::now()),
+    // FIXME need to support multiple parsers, see #124
+   mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( "" ) ),
      mQuitRequested(false),
      mFloatingPointOffset(0,0,0),
      mSuspended(false),
@@ -701,6 +703,8 @@ OgreSystem::~OgreSystem() {
 
     delete mEventManager;
     delete mWorkQueue;
+
+    delete mModelParser;
 }
 
 static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
@@ -756,6 +760,11 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
 
 }
+
+MeshdataPtr OgreSystem::parseMesh(const URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+    return mModelParser->load(orig_uri, fp, data);
+}
+
 struct RayTraceResult {
     Ogre::Real mDistance;
     Ogre::MovableObject *mMovableObject;

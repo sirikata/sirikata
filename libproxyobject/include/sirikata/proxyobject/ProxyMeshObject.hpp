@@ -33,8 +33,6 @@
 #ifndef _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 #define _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 
-#include <sirikata/proxyobject/models/MeshObject.hpp>
-
 #include "MeshListener.hpp"
 #include "ProxyObject.hpp"
 #include <sirikata/core/transfer/TransferMediator.hpp>
@@ -47,61 +45,26 @@ typedef Provider< MeshListener* > MeshProvider;
 
 /** Represents any object with an attached mesh. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
-:   public Models::MeshObject,
-    public MeshProvider,
-    public ProxyObject
+    : public MeshProvider,
+      public ProxyObject
 {
     public:
-        typedef std::tr1::shared_ptr< MeshObject > ModelObjectPtr;
-
         ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr ptr, const SpaceObjectReference& owner_sor);
 
-        void setModelObject ( ModelObjectPtr const& model );
-        ModelObjectPtr const& getModelObject () const { return mModelObject; }
-
-    protected:
-
-    private:
-        // MCB: private data for proxy (mediator) operations only
-        ModelObjectPtr mModelObject;
-
     // interface from MeshObject
-    public:
         virtual void setMesh ( URI const& rhs );
 
         virtual URI const& getMesh () const;
-
-        void meshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request,
-            std::tr1::shared_ptr<const Transfer::DenseData> response);
 
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;
 
         virtual void setPhysical ( PhysicalParameters const& rhs );
         virtual PhysicalParameters const& getPhysical () const;
-
-        void meshParsed(String s, Meshdata* md);
-
-    protected:
-
-    // interface from MeshProvider
-    // MCB: Provider needs to supply a listener typedef
-    public:
-//        virtual void addListener ( MeshListener* p );
-//        virtual void removeListener ( MeshListener* p );
-
-    protected:
-//        virtual void listenerAdded ( MeshListener* p );
-//        virtual void listenerRemoved ( MeshListener* p );
-//        virtual void firstListenerAdded ( MeshListener* p );
-//        virtual void lastListenerRemoved ( MeshListener* p );
-
-    // interface from ProxyObject
-    public:
-        virtual bool hasModelObject () const;
-
-    protected:
-
+  private:
+        URI mMeshURI;
+        Vector3f mScale;
+        PhysicalParameters mPhysical;
 };
 
 typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;

@@ -51,10 +51,9 @@
 
 namespace Sirikata { namespace Models {
 
-ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp )
+ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash )
     :   mDocument ( new ColladaDocument ( uri ) ),
-        mState ( IDLE ),
-        mProxyPtr(pp)
+        mState ( IDLE )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri << std::endl,true));
 
@@ -70,7 +69,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, con
     mMesh->hash = hash;
 }
 
-ColladaDocumentImporter::ColladaDocumentImporter ( std::vector<Transfer::URI> uriList, std::tr1::weak_ptr<ProxyMeshObject>pp ) {
+ColladaDocumentImporter::ColladaDocumentImporter ( std::vector<Transfer::URI> uriList ) {
   assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uriListLen: " << uriList.size() << std::endl,true));
 
   //mMesh = new Meshdata();
@@ -342,15 +341,6 @@ void ColladaDocumentImporter::finish ()
     }
 
     mMesh->materials.swap(mEffects);
-
-    // Finally, if we actually have anything for the user, ship the parsed mesh
-    if (mMesh->instances.size() > 0 || mMesh->lightInstances.size()) {
-      std::tr1::shared_ptr<ProxyMeshObject> spp = mProxyPtr.lock();
-
-      if (spp != std::tr1::shared_ptr<ProxyMeshObject>() ) {
-        spp->meshParsed( mDocument->getURI().toString(), mMesh );
-      }
-    }
     mState = FINISHED;
 }
 
