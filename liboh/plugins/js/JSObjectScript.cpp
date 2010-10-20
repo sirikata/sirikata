@@ -428,8 +428,8 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
     HostedObject::SpaceObjRefSet allSporefs;
     mParent->getSpaceObjRefs(allSporefs);
 
-    SpaceObjRefSet::iterator sporefIt = allSporefs.begin();
-    for (SpaceObjRefSet::iteraotr sporefIt = allSporefs.begin(); sporefIt != allSporefs.end(); ++ sporefIt)
+
+    for (HostedObject::SpaceObjRefSet::iterator sporefIt = allSporefs.begin(); sporefIt != allSporefs.end(); ++ sporefIt)
     {
         ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(*sporefIt);
         proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);

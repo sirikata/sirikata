@@ -68,7 +68,7 @@ typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRouter, public ObjectMessageDispatcher {
 //------- Private inner classes
-    class PerSpaceData;
+    class PerPresenceData;
     struct PrivateCallbacks;
 protected:
 
@@ -80,7 +80,7 @@ protected:
   private:
     //SpaceSet mSpaces;
 
-    typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
+    typedef std::map<SpaceObjectReference, PerPresenceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
     int mNextSubscriptionID;
@@ -108,7 +108,7 @@ public:
 private:
 //------- Private member functions:
     // When a connection to a space is setup, initialize it to handle default behaviors
-    void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
+    void initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
 public:
 
     /** Get a set of spaces the object is currently connected to. */
@@ -152,8 +152,9 @@ public:
     ObjectHost *getObjectHost()const {return mObjectHost;}
 
     /// Gets the proxy object representing this HostedObject inside space.
-    const ProxyObjectPtr &getProxy(const SpaceID &space) const;
+    ///const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
+    const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
 
 
     
@@ -228,11 +229,15 @@ public:
         return mInternalObjectReference;
     }
     /// Returns QueryTracker object that tracks of message ids awaiting reply.
-    QueryTracker* getTracker(const SpaceID& space);
+    QueryTracker* getTracker(const SpaceID& space, const ObjectReference& oref);
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
-    const QueryTracker*getTracker(const SpaceID& space) const;
+    const QueryTracker*getTracker(const SpaceID& space, const ObjectReference& oref) const;
 
-    virtual ProxyManagerPtr getProxyManager(const SpaceID& space);
+    virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
+
+    
+    /** Called once per frame, at a certain framerate. */
+    void tick();
 
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj

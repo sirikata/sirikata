@@ -74,7 +74,17 @@
 
 namespace Sirikata {
 
-class HostedObject::PerSpaceData {
+
+typedef SentMessageBody<RoutableMessageBody> RPCMessage;
+
+OptionValue *defaultTTL;
+
+InitializeGlobalOptions hostedobject_props("",
+    defaultTTL=new OptionValue("defaultTTL",".1",OptionValueType<Duration>(),"Default TTL for HostedObject properties"),
+    NULL
+);
+
+class HostedObject::PerPresenceData {
 public:
     HostedObject* parent;
     SpaceID space;
@@ -88,10 +98,11 @@ public:
     SpaceObjectReference id() const { return SpaceObjectReference(space, object); }
 
 
-    PerSpaceData(HostedObject* _parent, const SpaceID& _space)
+    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref)
      : parent(_parent),
        space(_space),
-       object(ObjectReference::null()),
+       object(_oref),
+       //object(ObjectReference::null()),
        mUpdatedLocation(
             Duration::seconds(.1),
             TemporalValue<Location>::Time::null(),
@@ -167,7 +178,7 @@ void HostedObject::destroy() {
     for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
          iter != mSpaceData->end();
          ++iter) {
-        iter->second.destroy(getTracker(iter->first));
+        iter->second.destroy(getTracker(iter->first.space(),iter->first.object()));
     }
     mSpaceData->clear();
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
@@ -177,11 +188,14 @@ struct HostedObject::PrivateCallbacks {
     static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
         std::tr1::shared_ptr<HostedObject>thus=weak_thus.lock();
         if (thus) {
-            SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
-            if (where!=thus->mSpaceData->end()) {
-                where->second.destroy(thus->getTracker(sid));
-                thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
-            }
+            //FIXME: need to pass object reference here as well.
+            assert(false);
+            
+            // SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
+            // if (where!=thus->mSpaceData->end()) {
+            //     where->second.destroy(thus->getTracker(sid));
+            //     thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
+            // }
         }
     }
 
@@ -213,34 +227,36 @@ Time HostedObject::currentLocalTime() {
 }
 
 
-QueryTracker* HostedObject::getTracker(const SpaceID& space) {
-    SpaceDataMap::iterator it = mSpaceData->find(space);
+QueryTracker* HostedObject::getTracker(const SpaceID& space, const ObjectReference& oref) {
+    SpaceDataMap::iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
     if (it == mSpaceData->end()) return NULL;
     return it->second.tracker;
 }
 
-const QueryTracker* HostedObject::getTracker(const SpaceID& space) const {
-    SpaceDataMap::const_iterator it = mSpaceData->find(space);
+const QueryTracker* HostedObject::getTracker(const SpaceID& space, const ObjectReference& oref) const {
+    SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
     if (it == mSpaceData->end()) return NULL;
     return it->second.tracker;
 }
 
-ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
-    SpaceDataMap::const_iterator it = mSpaceData->find(space);
+ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
+{
+    SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
     if (it == mSpaceData->end())
     {
-        
         it = mSpaceData->insert(
-            SpaceDataMap::value_type( space, PerSpaceData(this, space) )
+            SpaceDataMap::value_type( SpaceObjectReference(space,oref), PerPresenceData(this, space,oref) )
         ).first;
     }
     return it->second.proxyManager;
 }
 
 
+
 static ProxyObjectPtr nullPtr;
-const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
-    SpaceDataMap::const_iterator iter = mSpaceData->find(space);
+const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const ObjectReference& oref) const
+{
+    SpaceDataMap::const_iterator iter = mSpaceData->find(SpaceObjectReference(space,oref));
     if (iter == mSpaceData->end()) {
         return nullPtr;
     }
@@ -249,7 +265,7 @@ const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
 
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
 {
-    ProxyManagerPtr proxy_manager = getProxyManager(space);
+    ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj;
 }
@@ -356,9 +372,13 @@ void HostedObject::connect(
     );
 
 
-    if(mSpaceData->find(spaceID) == mSpaceData->end()) {
+    lkjs;
+    may need to have some notion of object reference before calling connect;
+
+        
+    if(mSpaceData->find(SpaceObjectReference(spaceID,object_uuid_evidence) == mSpaceData->end()) {
         mSpaceData->insert(
-            SpaceDataMap::value_type( spaceID, PerSpaceData(this, spaceID))
+            SpaceDataMap::value_type( SpaceObjectReference(spaceID,object_uuid_evidence), PerPresenceData(this, spaceID))
         );
     }
 }
@@ -389,7 +409,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(space);
-    PerSpaceData& psd = psd_it->second;
+    PerPresenceData& psd = psd_it->second;
     initializePerSpaceData(psd, self_proxy);
 
     // Special case for camera
@@ -428,7 +448,7 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
     }
 }
 
-void HostedObject::initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy) {
+void HostedObject::initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
 }
 
