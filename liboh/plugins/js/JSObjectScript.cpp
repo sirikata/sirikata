@@ -68,11 +68,12 @@
 //#define __EMERSON_COMPILE_ON__
 
 
-#define FIXME_GET_SPACE() \
+#define FIXME_GET_SPACE_OREF() \
     HostedObject::SpaceObjRefSet spaceobjrefs;              \
     mParent->getSpaceObjRefs(spaceobjrefs);                 \
     assert(spaceobjrefs.size() == 1);                 \
-    SpaceID space = (spaceobjrefs.begin())->space();
+    SpaceID space = (spaceobjrefs.begin())->space(); \
+    ObjectReference oref = (spaceobjrefs.begin())->object();
 
 
 using namespace v8;
@@ -175,7 +176,7 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& m
   // body.SerializeToString(&serialized);
 
 
-  FIXME_GET_SPACE();
+  FIXME_GET_SPACE_OREF();
   // const HostedObject::SpaceSet& spaces = mParent->spaces();
   // SpaceID spaceider = *(spaces.begin());
 
@@ -183,7 +184,7 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& m
   //The .object call to SpaceObjectReference gets out the ObjectReference.
 //  ODP::Endpoint dest (space,(mParent->id(space)).object(),Services::RPC);
 
-  ODP::Endpoint dest (space,mParent->getObjReference(space),Services::CREATE_ENTITY);
+  ODP::Endpoint dest (space,oref,Services::CREATE_ENTITY);
   //mCreateEntityPort->send(dest, MemoryReference(serialized.data(),
   //serialized.length()));
   mCreateEntityPort->send(dest, MemoryReference(serializedCreate));
@@ -270,7 +271,6 @@ bool JSObjectScript::valid() const
 
 void JSObjectScript::test() const
 {
-    FIXME_GET_SPACE();
     bftm_testSendMessageBroadcast("default message");
 }
 
@@ -290,8 +290,8 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
     //Right now, we have multiple presences, but only designate one as "self"
     //should we have multiple selves as well?
-    FIXME_GET_SPACE();
-    SpaceObjectReference mSporef = mParent->id(space);
+    FIXME_GET_SPACE_OREF();
+    SpaceObjectReference mSporef = SpaceObjectReference(space,oref);
 
     for (int s=0;s < (int)mAddressableList.size(); ++s)
     {
@@ -431,7 +431,7 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
 
     for (HostedObject::SpaceObjRefSet::iterator sporefIt = allSporefs.begin(); sporefIt != allSporefs.end(); ++ sporefIt)
     {
-        ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(*sporefIt);
+        ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(sporefIt->space(),sporefIt->object());
         proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
     }
 
@@ -481,9 +481,9 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
 {
     // FIXME using the raw pointer isn't safe
-    FIXME_GET_SPACE();
+    FIXME_GET_SPACE_OREF();
     
-    mParent->getTracker(space)->getIOService()->post(
+    mParent->getTracker(space,oref)->getIOService()->post(
         dur,
         std::tr1::bind(
             &JSObjectScript::handleTimeout,
@@ -899,7 +899,7 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
         
         mPresenceList.push_back(presToAdd);
         
-        tmpObj->SetInternalField(PRESENCE_FIELD,External::New(presToAdd));
+        tmpObj->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
     }
@@ -952,13 +952,13 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
   // const HostedObject::SpaceSet& spaces = mParent->spaces();
   // SpaceID spaceider = *(spaces.begin());
 
-  FIXME_GET_SPACE();
+  FIXME_GET_SPACE_OREF();
   const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
 
   //mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
 
   //FIXME: may want to start in a different place.
-  Location startingLoc = mParent->getLocation(space);
+  Location startingLoc = mParent->getLocation(space,oref);
 
   mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
   
@@ -971,7 +971,7 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
 //FIXME: Hard coded default mesh below
 void JSObjectScript::create_presence(const SpaceID& new_space)
 {
-    std::cout<<"\n\nThis function does not exist yet.\n\n");
+    std::cout<<"\n\nThis function does not exist yet.\n\n";
     assert(false);
     create_presence(new_space,"http://www.sirikata.com/content/assets/tetra.dae");
 }
@@ -1049,7 +1049,7 @@ void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, 
         return;
 
     Vector3f native_scale(Vec3Extract(scale_obj));
-    FIXME_GET_SPACE();
+    FIXME_GET_SPACE_OREF();
     assert(false);
     //lkjs;
     //FIXME: write this function.
@@ -1061,7 +1061,7 @@ void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, 
 v8::Handle<v8::Value> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
 {
     Transfer::URI uri_returner;
-    bool hasMesh = mParent->requestMeshUri(sporef,uri_returner);
+    bool hasMesh = mParent->requestMeshUri(sporef->space(),sporef->object(),uri_returner);
 
     if (! hasMesh)
         return v8::Undefined();

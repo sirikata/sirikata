@@ -217,7 +217,6 @@ protected:
 
 public:
 
-
     ObjectReference getObjReference(const SpaceID& space);
 
     
@@ -228,13 +227,15 @@ public:
     const UUID &getUUID() const {
         return mInternalObjectReference;
     }
+    
     /// Returns QueryTracker object that tracks of message ids awaiting reply.
     QueryTracker* getTracker(const SpaceID& space, const ObjectReference& oref);
     /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
     const QueryTracker*getTracker(const SpaceID& space, const ObjectReference& oref) const;
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
-
+    virtual ProxyManagerPtr getDefaultProxyManager(const SpaceID& space);
+    virtual ProxyObjectPtr  getDefaultProxyObject(const SpaceID& space);
     
     /** Called once per frame, at a certain framerate. */
     void tick();
@@ -258,7 +259,7 @@ public:
         const String& scriptFile="",
         const String& scriptType="");
     
-    Location getLocation(const SpaceID& space);
+    Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
     void connect(
         const SpaceID&spaceID,
@@ -284,8 +285,8 @@ public:
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
-    void disconnectFromSpace(const SpaceID&id);
-
+    void disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref);
+    
     /// Receive an ObjectMessage from the space via the ObjectHost. Translate it
     /// to our runtime ODP structure and deliver it.
     void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
@@ -323,7 +324,7 @@ public:
 
   public:
     // Identification
-    virtual SpaceObjectReference id(const SpaceID& space) const;
+    // virtual SpaceObjectReference id(const SpaceID& space) const;
 
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);

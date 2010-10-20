@@ -65,7 +65,7 @@ static void Mono_HostedObject_iObjectReference(Mono::CSharpUUID* mono_space, Mon
         return;
     }
 
-    ProxyObjectPtr proxy = vwobj->getProxy(space);
+    ProxyObjectPtr proxy = vwobj->getDefaultProxyObject(space);
     if (!proxy) {
         Mono::ConvertUUID(UUID::null(), mono_result);
         return;

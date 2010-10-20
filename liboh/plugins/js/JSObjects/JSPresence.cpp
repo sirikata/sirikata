@@ -23,9 +23,9 @@ namespace Sirikata
             // itself.
             v8::Local<v8::External> wrap;
             if (self->InternalFieldCount() > 0)
-                wrap = v8::Local<v8::External>::Cast(self->GetInternalField(PRESENCE_FIELD));
+                wrap = v8::Local<v8::External>::Cast(self->GetInternalField(PRESENCE_FIELD_PRESENCE));
             else
-                wrap = v8::Local<v8::External>::Cast(v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(PRESENCE_FIELD));
+                wrap = v8::Local<v8::External>::Cast(v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
 
             void* ptr = wrap->Value();
             return static_cast<JSPresenceStruct*>(ptr);
@@ -239,12 +239,12 @@ namespace Sirikata
             if (v8Object->InternalFieldCount() > 0)
             {
                 wrapJSPresStructObj = v8::Local<v8::External>::Cast(
-                    v8Object->GetInternalField(PRESENCE_FIELD));
+                    v8Object->GetInternalField(PRESENCE_FIELD_PRESENCE));
             }
             else
             {
                 wrapJSPresStructObj = v8::Local<v8::External>::Cast(
-                    v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD));
+                    v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
             }			  
             void* ptr = wrapJSPresStructObj->Value();
             JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);

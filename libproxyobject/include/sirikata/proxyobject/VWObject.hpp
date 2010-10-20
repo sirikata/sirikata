@@ -56,10 +56,10 @@ public:
     virtual ~VWObject();
 
     ///The tracker managing state for outstanding requests this object has made
-    virtual QueryTracker*getTracker(const SpaceID& space)=0;
+    virtual QueryTracker*getTracker(const SpaceID& space, const ObjectReference&)=0;
 
     // Identification
-    virtual SpaceObjectReference id(const SpaceID& space) const = 0;
+    //virtual SpaceObjectReference id(const SpaceID& space) const = 0;
 
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) = 0;

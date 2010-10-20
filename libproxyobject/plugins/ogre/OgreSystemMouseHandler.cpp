@@ -1147,7 +1147,9 @@ private:
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
 
         // Get the updated position
         Time now = mParent->simTime();
@@ -1176,8 +1178,10 @@ private:
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
+        
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1205,8 +1209,10 @@ private:
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
+        
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1672,8 +1678,10 @@ private:
         VWObjectPtr cam_vwobj = cam->getOwner();
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
         Location oldloc = cam->extrapolateLocation(now);
         cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))));
         TimedMotionVector3f newplace(now,MotionVector3f(Vector3f(oldloc.getPosition()),Vector3f(pos-oldloc.getPosition())));

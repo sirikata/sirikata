@@ -372,15 +372,12 @@ void HostedObject::connect(
     );
 
 
-    lkjs;
-    may need to have some notion of object reference before calling connect;
-
-        
-    if(mSpaceData->find(SpaceObjectReference(spaceID,object_uuid_evidence) == mSpaceData->end()) {
-        mSpaceData->insert(
-            SpaceDataMap::value_type( SpaceObjectReference(spaceID,object_uuid_evidence), PerPresenceData(this, spaceID))
-        );
-    }
+    ///NOTE: moved creation of mSpaceData entry to handleConnected.
+    // if(mSpaceData->find(spaceID) == mSpaceData->end()) {
+    //     mSpaceData->insert(
+    //         SpaceDataMap::value_type(spaceID, PerPresenceData(this, spaceID))
+    //     );
+    // }
 }
 
 
@@ -398,7 +395,16 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
         return;
     }
 
+    SpaceObjectReference self_objref(space, obj);
+    
+    if(mSpaceData->find(self_objref) == mSpaceData->end()) {
+        mSpaceData->insert(
+            SpaceDataMap::value_type(self_objref, PerPresenceData(this, space, obj))
+        );
+    }
+    
     // Create
+
 
     SpaceObjectReference self_objref(space, obj);
     // Convert back to local time
@@ -408,7 +414,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
 
     // Use to initialize PerSpaceData
-    SpaceDataMap::iterator psd_it = mSpaceData->find(space);
+    SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
     initializePerSpaceData(psd, self_proxy);
 
@@ -452,11 +458,12 @@ void HostedObject::initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr s
     psd.initializeAs(selfproxy);
 }
 
-void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
+void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref)
+{
     SpaceDataMap::iterator where;
-    where=mSpaceData->find(spaceID);
+    where=mSpaceData->find(SpaceObjectReference(spaceID, oref));
     if (where!=mSpaceData->end()) {
-        where->second.destroy(getTracker(spaceID));
+        where->second.destroy(getTracker(spaceID,oref));
         mSpaceData->erase(where);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
@@ -465,8 +472,11 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
 
 bool HostedObject::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
     DEPRECATED(); // We need a SpaceID in here
-    assert( mSpaceData->size() == 1);
-    SpaceID space = mSpaceData->begin()->first;
+    //std::cout<<"\n\nThis is the size of mSpaceData:  "<<mSpaceData->size()<<"\n\n\n";
+    //assert( mSpaceData->size() == 1);
+    assert(mSpaceData->size() != 0);
+    std::cout<<"\n\nPotentially incorrect: arbitrarily routing through first space in route\n\n";
+    SpaceID space = mSpaceData->begin()->first.space();
     return mObjectHost->send(getSharedPtr(), space, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
 }
 
@@ -597,7 +607,8 @@ void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryRefe
     ///// MessageService::processMessage
     assert(hdrOrig.has_destination_object());
     assert(hdrOrig.has_destination_space());
-    SpaceDataMap::iterator where=mSpaceData->find(hdrOrig.destination_space());
+    assert(hdrOrig.has_source_object());
+    SpaceDataMap::iterator where=mSpaceData->find(SpaceObjectReference(hdrOrig.destination_space(), hdrOrig.source_object()));
     if (where!=mSpaceData->end()) {
         mObjectHost->send(getSharedPtr(), hdrOrig.destination_space(), hdrOrig.source_port(), hdrOrig.destination_object().getAsUUID(), hdrOrig.destination_port(), body);
     }
@@ -675,9 +686,8 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-        //std::cout << "update.mesh(): " << update.mesh() << "\n";
-        //std::cout << "Received location message about: " << update.object().toString() << "\n";
 
+        ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(), ObjectReference(update.object())));
         if (!proxy_obj) continue;
 
@@ -743,6 +753,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 true,
                 loc
             );
+
 
             if (!getProxyManager(proximateID.space())->getProxyObject(proximateID)) {
                 TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
@@ -815,7 +826,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 //initilize position and quaternion correctly
 ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera)
 {
-    ProxyManagerPtr proxy_manager = getProxyManager(objref.space());
+    ProxyManagerPtr proxy_manager = getProxyManager(objref.space(), objref.object());
     ProxyObjectPtr proxy_obj;
 
     if (is_camera) proxy_obj = ProxyObject::construct<ProxyCameraObject>
@@ -824,17 +835,36 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
 // The call to createObject must occur before trying to do any other
 // operations so that any listeners will be set up.
-    proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
+    proxy_manager->createObject(proxy_obj, getTracker(objref.space(),objref.object()));
     return proxy_obj;
 }
 
+ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
+{
+    std::cout<<"\n\nINCORRECT in getDefaultProxyManager: should try to match space!!!\n\n";
+    ObjectReference oref = mSpaceData->begin()->first.object();
+    return  getProxyManager(space, oref);
+}
+
+ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
+{
+    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match space!!!\n\n";
+    ObjectReference oref = mSpaceData->begin()->first.object();
+    return  getProxy(space, oref);
+}
+
+
+
 
 // Identification
-SpaceObjectReference HostedObject::id(const SpaceID& space) const {
-    SpaceDataMap::const_iterator it = mSpaceData->find(space);
-    if (it == mSpaceData->end()) return SpaceObjectReference::null();
-    return it->second.id();
-}
+// SpaceObjectReference HostedObject::id(const SpaceID& space) const
+// {
+//     SpaceDataMap::const_iterator it = mSpaceData->find(space);
+//     if (it == mSpaceData->end()) return SpaceObjectReference::null();
+//     return it->second.id();
+// }
+
+
 
 // ODP::Service Interface
 ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) {
@@ -976,7 +1006,7 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
 bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri)
 {
     
-    ProxyManagerPtr proxy_manager = getProxyManager(space);
+    ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
 
@@ -995,21 +1025,22 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
 
 //FIXME: may need to do some checking to ensure that actually still connected to
 //this space.
-ObjectReference HostedObject::getObjReference(const SpaceID& space)
-{
-    SpaceDataMap::const_iterator space_data_it = mSpaceData->find(space);
+//should be using id anyways.
+// ObjectReference HostedObject::getObjReference(const SpaceID& space)
+// {
+//     SpaceDataMap::const_iterator space_data_it = mSpaceData->find(space);
 
-    if (space_data_it == mSpaceData->end())
-    {
-        std::cout<<"\n\n";
-        std::cout<<"Not connected to this space";
-        std::cout<<"\n\n";
-        std::cout.flush();
-        assert(false);
-    }
+//     if (space_data_it == mSpaceData->end())
+//     {
+//         std::cout<<"\n\n";
+//         std::cout<<"Not connected to this space";
+//         std::cout<<"\n\n";
+//         std::cout.flush();
+//         assert(false);
+//     }
    
-    return space_data_it->second.object;
-}
+//     return space_data_it->second.object;
+// }
 
 
 Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
@@ -1082,9 +1113,9 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 }
 
 
-Location HostedObject::getLocation(const SpaceID& space)
+Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& oref)
 {
-    ProxyObjectPtr proxy = getProxy(space);
+    ProxyObjectPtr proxy = getProxy(space, oref);
     assert(proxy);
     Time tnow = proxy->getProxyManager()->getTimeOffsetManager()->now(*proxy);
     Location currentLoc = proxy->globalLocation(tnow);

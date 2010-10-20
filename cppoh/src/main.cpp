@@ -153,7 +153,7 @@ int main (int argc, char** argv) {
     obj->init();
     // Note: We currently just use the proxy manager for the default space. Not
     // sure if we should do something about handling multiple spaces.
-    ProxyManagerPtr proxy_manager = obj->getProxyManager( mainSpace );
+    ProxyManagerPtr proxy_manager = obj->getDefaultProxyManager( mainSpace );
 
     typedef std::vector<TimeSteppedSimulation*> SimList;
     SimList sims;

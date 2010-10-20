@@ -9,7 +9,7 @@
 #include "Addressable.hpp"
 #include <math.h>
 
-#include <core/util/Random.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 
 
