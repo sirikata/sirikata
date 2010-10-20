@@ -40,6 +40,7 @@
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "../CameraEntity.hpp"
 #include <vector>
 
@@ -63,7 +64,6 @@ public:
 
     //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
-    virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
     virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 

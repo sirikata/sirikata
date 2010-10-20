@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp> // MCB:
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
@@ -155,18 +154,6 @@ int main (int argc, char** argv) {
     // Note: We currently just use the proxy manager for the default space. Not
     // sure if we should do something about handling multiple spaces.
     ProxyManagerPtr proxy_manager = obj->getProxyManager( mainSpace );
-
-    // MCB: seems like a good place to initialize models system
-    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( proxy_manager.get(), "" ) );
-
-    if ( mm )
-    {
-        SILOG(cppoh,info,"Created ModelsSystemFactory ");
-    }
-    else
-    {
-        SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
-    }
 
     typedef std::vector<TimeSteppedSimulation*> SimList;
     SimList sims;

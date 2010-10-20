@@ -49,7 +49,6 @@
 #include "COLLADAFWEffectCommon.h"
 #include "COLLADAFWSkinControllerData.h"
 #include "COLLADAFWSkinController.h"
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/Meshdata.hpp>
 
 /////////////////////////////////////////////////////////////////////
@@ -74,8 +73,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     :   public COLLADAFW::IWriter
 {
     public:
-    explicit ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash, std::tr1::weak_ptr<ProxyMeshObject>pp );
-    explicit ColladaDocumentImporter ( std::vector<Transfer::URI> uriList, std::tr1::weak_ptr<ProxyMeshObject>pp );
+    explicit ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash );
+    explicit ColladaDocumentImporter ( std::vector<Transfer::URI> uriList );
 
         ~ColladaDocumentImporter ();
 
@@ -98,7 +97,6 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         enum State { CANCELLED = -1, IDLE, STARTED, FINISHED };
         State mState;
 
-        std::tr1::weak_ptr<ProxyMeshObject>(mProxyPtr);
         //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
         bool makeTexture (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding * binding,

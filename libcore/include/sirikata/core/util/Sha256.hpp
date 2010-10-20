@@ -69,6 +69,7 @@ public:
      * \returns the std::string filled with mData converted to hex
      */
     std::string convertToHexString()const;
+    std::string toString() const { return convertToHexString(); }
     /**
      * \returns an array filled with mData converted to hex
      */

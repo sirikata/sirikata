@@ -58,53 +58,28 @@ namespace Models {
 class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     :   public ModelsSystem
 {
-    public:
-        virtual ~ColladaSystem ();
+  public:
+    virtual ~ColladaSystem ();
 
-        static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
+    static ColladaSystem* create(String const& options);
 
-//        void loadDocument ( Transfer::URI const& what, ProxyMeshObject* proxy  );
-        void loadDocument(std::tr1::weak_ptr<ProxyMeshObject>(proxy), std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<const Transfer::DenseData> response);
-
-        // documents that have been transfered, parsed, and loaded.
-
-        std::tr1::shared_ptr<Transfer::TransferPool> transferPool();
-
-    protected:
-	void metadataFinished(std::tr1::weak_ptr<ProxyMeshObject> proxy, std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-				     std::tr1::shared_ptr<Transfer::RemoteFileMetadata>response);
-	void chunkFinished(std::tr1::weak_ptr<ProxyMeshObject> proxy, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-				  std::tr1::shared_ptr<const Transfer::DenseData> response);
-	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-	Transfer::TransferMediator *mTransferMediator;
+    // ModelsSystem Interface
+    virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+        std::tr1::shared_ptr<const Transfer::DenseData> data);
+    virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename);
 
   private:
-        ColladaSystem (); // called by create()
-        ColladaSystem ( ColladaSystem const& ); // not implemented
-        ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
+    ColladaSystem (); // called by create()
+    ColladaSystem ( ColladaSystem const& ); // not implemented
+    ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
 
-        bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
+    bool initialize(String const& options);
 
-        // documents that have been transfered, parsed, and loaded.
-        // MCB: make this a map when/if a key becomes useful
+    // documents that have been transfered, parsed, and loaded.
+    // MCB: make this a map when/if a key becomes useful
 
-        typedef std::set< ColladaDocumentPtr > DocumentSet;
-        DocumentSet mDocuments;
-
-    // interface from ModelsSystem
-    public:
-    protected:
-
-    // interface from ProxyCreationListener
-    public:
-        virtual void onCreateProxy ( ProxyObjectPtr object );
-        virtual void onDestroyProxy ( ProxyObjectPtr object );
-
-        virtual MeshdataPtr load(const Transfer::URI& uri, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<const Transfer::DenseData> response);
-        virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename);
-    protected:
+    typedef std::set< ColladaDocumentPtr > DocumentSet;
+    DocumentSet mDocuments;
 
 };
 

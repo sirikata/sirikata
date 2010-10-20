@@ -9,7 +9,7 @@ namespace Sirikata {
 double invert(Matrix4x4f& inv, Matrix4x4f& orig)
 {
   float mat[16];
-  float dst[16];  
+  float dst[16];
 
   int counter = 0;
   for (int i=0; i<4; i++) {
@@ -117,9 +117,9 @@ typedef struct QSlimStruct {
   enum VectorCombination {ONE_TWO, TWO_THREE, ONE_THREE} ;
 
   VectorCombination mCombination;
-  
+
   Vector3f mReplacementVector;
-  
+
   QSlimStruct(float cost, int i, int j, int k, VectorCombination c, Vector3f v) {
     mCost = cost;
     mGeomIdx = i;
@@ -136,11 +136,11 @@ typedef struct QSlimStruct {
 } QSlimStruct;
 
 void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
-  //Go through all the triangles, getting the vertices they consist of. 
+  //Go through all the triangles, getting the vertices they consist of.
   //Calculate the Q for all the vertices.
   std::cout << agg_mesh->uri << " : agg_mesh->uri\n";
 
-  int totalVertices = 0;  
+  int totalVertices = 0;
 
   for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
@@ -150,8 +150,8 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
         curGeometry.positionQs.push_back( Matrix4x4f::nil());
     }
 
-    
-    for (uint j = 0; j < curGeometry.primitives.size(); j++) {      
+
+    for (uint j = 0; j < curGeometry.primitives.size(); j++) {
       for (uint k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
 
         unsigned short idx = curGeometry.primitives[j].indices[k];
@@ -161,7 +161,7 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
         Vector3f& pos1 = curGeometry.positions[idx];
         Vector3f& pos2 = curGeometry.positions[idx2];
         Vector3f& pos3 = curGeometry.positions[idx3];
-        
+
         double A = pos1.y*(pos2.z - pos3.z) + pos2.y*(pos3.z - pos1.z) + pos3.y*(pos1.z - pos2.z);
         double B = pos1.z*(pos2.x - pos3.x) + pos2.z*(pos3.x - pos1.x) + pos3.z*(pos1.x - pos2.x);
         double C = pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y);
@@ -184,9 +184,9 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
         curGeometry.positionQs[idx] += mat;
         curGeometry.positionQs[idx2] += mat;
         curGeometry.positionQs[idx3] += mat;
-      }      
+      }
     }
-  }      
+  }
 
   //Iterate through all vertex pairs. Calculate the cost, v'(Q1+Q2)v, for each vertex pair.
   std::priority_queue<QSlimStruct> vertexPairs;
@@ -197,7 +197,7 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
 
     for (uint j = 0; j < curGeometry.primitives.size(); j++) {
       for (uint k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
-        
+
 
         unsigned short idx = curGeometry.primitives[j].indices[k];
         unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
@@ -214,10 +214,10 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
                         Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
                         Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
 
-        
+
         Matrix4x4f Qbarinv;
         double det = invert(Qbarinv, Qbar);
-        
+
         Vector4f vbar4f ;
         //std::cout << Qbar << " " << Qbarinv << " : inverted?\n";
 
@@ -226,10 +226,10 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
           vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
         }
         else {
-          vbar4f = Qbarinv * Vector4f(0,0,0,1); 
+          vbar4f = Qbarinv * Vector4f(0,0,0,1);
           Vector3f vbar = Vector3f(vbar4f.x, vbar4f.y, vbar4f.z);
           if ( !boundingSphere.contains(vbar) ) {
-            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" <<  Q << "\n";   
+            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" <<  Q << "\n";
             Vector3f vbar = (pos1+pos2)/2;
             vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
           }
@@ -245,13 +245,13 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
                         Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
                         Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
                         Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
-        
-        det = invert(Qbarinv, Qbar);        
-        
+
+        det = invert(Qbarinv, Qbar);
+
         //std::cout << Qbar << " " << Qbarinv << " : inverted?\n";
         if (det == 0 ) {
           Vector3f vbar = (pos1+pos2)/2;
-          vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1); 
+          vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
         }
         else {
           vbar4f = Qbarinv * Vector4f(0,0,0,1);
@@ -272,11 +272,11 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
         Qbar =Matrix4x4f(Vector4f(Q(0,0), Q(0,1), Q(0,2), Q(0,3)),
                         Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
                         Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
-                        Vector4f(0,0,0,1),  Matrix4x4f::ROWS());        
-        
+                        Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
+
         det = invert(Qbarinv, Qbar);
         //std::cout << Qbar << " " << Qbarinv << " : inverted?\n";
-        
+
         if (det == 0 ) {
           Vector3f vbar = (pos1+pos2)/2;
           vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
@@ -292,17 +292,17 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
         }
         cost = 1.0/vbar4f.dot(  Q * vbar4f );
         qs = QSlimStruct(cost, i, j, k, QSlimStruct::ONE_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z));
-        
+
         vertexPairs.push(qs);
       }
     }
   }
 
-  
+
 
   //Remove the least cost pair from the list of vertex pairs. Replace it with a new vertex.
   //Modify all triangles that had either of the two vertices to point to the new vertex.
-  std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;    
+  std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
 
   int remainingVertices = totalVertices;
   while (remainingVertices > numVerticesLeft && vertexPairs.size() > 0) {
@@ -319,13 +319,13 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
       case QSlimStruct::TWO_THREE:
         k2 = k1 + 2;
         k1 = k1 + 1;
-        
+
         break;
 
       case QSlimStruct::ONE_THREE:
         k2 = k1 + 2;
         break;
-      
+
     }
 
     SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
@@ -340,12 +340,12 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
       idx2 = vertexMapping[idx2];
     }
 
-    if (idx != idx2) {    
+    if (idx != idx2) {
       Vector3f& pos1 = curGeometry.positions[idx];
       Vector3f& pos2 = curGeometry.positions[idx2];
       pos1.x = top.mReplacementVector.x;
       pos1.y = top.mReplacementVector.y;
-      pos1.z = top.mReplacementVector.z;     
+      pos1.z = top.mReplacementVector.z;
 
       remainingVertices--;
 
@@ -354,30 +354,30 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
 
       if (idx2 < curGeometry.texUVs.size())
         curGeometry.texUVs.erase(curGeometry.texUVs.begin() + idx2);
-      */      
-      
+      */
+
       vertexMapping[idx2] = idx;
     }
-    
+
 
     if (remainingVertices % 1000 == 0)
       std::cout << remainingVertices << " : remainingVertices\n";
-    
-    vertexPairs.pop();    
+
+    vertexPairs.pop();
   }
 
   //remove unused vertices; get new mapping from previous vertex indices to new vertex indices in vertexMapping2;
-  std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping2;    
+  std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping2;
 
   for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[i];
     std::tr1::unordered_map<int, int>& oldToNewMap = vertexMapping2[i];
-    
+
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
     std::vector<SubMeshGeometry::TextureSet>texUVs;
-     
+
     for (uint j = 0 ; j < curGeometry.positions.size(); j++) {
       if (vertexMapping.find(j) == vertexMapping.end()) {
         oldToNewMap[j] = positions.size();
@@ -391,15 +391,15 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
       }
     }
 
-    curGeometry.positions = positions;    
-    curGeometry.normals = normals;    
-    curGeometry.texUVs = texUVs;   
+    curGeometry.positions = positions;
+    curGeometry.normals = normals;
+    curGeometry.texUVs = texUVs;
   }
 
   //remove degenerate triangles.
   for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
-    std::tr1::unordered_map<int, int>& vertexMapping =  vertexMapping1[i]; 
+    std::tr1::unordered_map<int, int>& vertexMapping =  vertexMapping1[i];
     std::tr1::unordered_map<int, int>& oldToNewMap = vertexMapping2[i];
 
     for (uint j = 0; j < curGeometry.primitives.size(); j++) {
@@ -418,19 +418,19 @@ void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint numVerticesLeft) {
         while (vertexMapping.find(idx3) != vertexMapping.end()) {
           idx3 = vertexMapping[idx3];
         }
-    
+
 
         if (idx!=idx2 && idx2 != idx3 && idx3!=idx){
           newPrimitiveList.push_back( oldToNewMap[idx]);
           newPrimitiveList.push_back( oldToNewMap[idx2]);
-          newPrimitiveList.push_back( oldToNewMap[idx3]); 
+          newPrimitiveList.push_back( oldToNewMap[idx3]);
         }
-        
+
       }
       curGeometry.primitives[j].indices = newPrimitiveList;
     }
   }
-  
+
 }
 
 
@@ -439,7 +439,7 @@ AggregateManager::AggregateManager(SpaceContext* ctx, LocationService* loc) :
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("colladamodels"))
-        mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("colladamodels")(NULL, "");
+        mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("colladamodels")("");
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
@@ -459,7 +459,7 @@ AggregateManager::~AggregateManager() {
 }
 
 void AggregateManager::addAggregate(const UUID& uuid) {
-  std::cout << "addAggregate called: uuid=" << uuid.toString()  << "\n";  
+  std::cout << "addAggregate called: uuid=" << uuid.toString()  << "\n";
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   mAggregateObjects[uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(uuid, UUID::null()));
@@ -490,8 +490,8 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     lock.unlock();
 
     String locationStr  = ( (mLoc->contains(child_uuid)) ? (mLoc->currentPosition(child_uuid).toString()) : " NOT IN LOC ");
-    
-    std::cout << "addChild: generateAggregateMesh called: "  << uuid.toString() 
+
+    std::cout << "addChild: generateAggregateMesh called: "  << uuid.toString()
               << " CHILD " << child_uuid.toString() << " "   << locationStr    << "\n";
     fflush(stdout);
 
@@ -509,8 +509,8 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     children.erase( it );
 
     String locationStr  = ( (mLoc->contains(child_uuid)) ? (mLoc->currentPosition(child_uuid).toString()) : " NOT IN LOC ");
-    
-    //std::cout << "removeChild: " <<  uuid.toString() << " CHILD " << child_uuid.toString() << " "   
+
+    //std::cout << "removeChild: " <<  uuid.toString() << " CHILD " << child_uuid.toString() << " "
     //          <<  locationStr
     //          << " generateAggregateMesh called\n";
 
@@ -521,13 +521,13 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
 void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
   if (mModelsSystem == NULL) return;
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-  if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;  
-  std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];  
+  if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
+  std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
   aggObject->mLastGenerateTime = Timer::now();
 
   //std::cout << "Posted generateAggregateMesh for " << uuid.toString() << "\n";
-  
+
   mContext->mainStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsync, this, uuid, aggObject->mLastGenerateTime)  );
 }
 
@@ -566,7 +566,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   }
 
 
-  if (!mLoc->contains(uuid)) { 
+  if (!mLoc->contains(uuid)) {
     std::cout << "3\n";
     generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
     return;
@@ -576,7 +576,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     UUID child_uuid = children[i];
 
     if (!mLoc->contains(child_uuid)) {
-      generateAggregateMesh(uuid, Duration::milliseconds(10.0f)); 
+      generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
       std::cout << "4\n";
       return;
     }
@@ -584,8 +584,8 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     std::string meshName = mLoc->mesh(child_uuid);
 
     if (meshName == "") {
-      generateAggregateMesh(child_uuid, Duration::milliseconds(10.0f)); 
-      std::cout << "5\n"; 
+      generateAggregateMesh(child_uuid, Duration::milliseconds(10.0f));
+      std::cout << "5\n";
       return;
     }
   }
@@ -593,14 +593,14 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   std::tr1::shared_ptr<Meshdata> agg_mesh =  std::tr1::shared_ptr<Meshdata>( new Meshdata() );
   BoundingSphere3f bnds = mLoc->bounds(uuid);
   std::cout << uuid.toString() << "=uuid, "   << children.size() << " = children.size\n";
-  
+
   uint   numAddedSubMeshGeometries = 0;
   double totalVertices = 0;
   for (uint i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
 
     std::cout << child_uuid.toString() <<"=child_uuid\n";
-    fflush(stdout);    
+    fflush(stdout);
 
     Vector3f location = mLoc->currentPosition(child_uuid);
     Quaternion orientation = mLoc->currentOrientation(child_uuid);
@@ -608,7 +608,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
       continue;
-    }    
+    }
     std::tr1::shared_ptr<Meshdata> m = mAggregateObjects[child_uuid]->mMeshdata;
 
     if (!m) {
@@ -619,7 +619,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         if (mMeshStore.find(meshName) != mMeshStore.end()) {
-          mAggregateObjects[child_uuid]->mMeshdata = m = mMeshStore[meshName];          
+          mAggregateObjects[child_uuid]->mMeshdata = m = mMeshStore[meshName];
         }
         else {
           std::cout << meshName << " = meshName requesting download\n";
@@ -652,13 +652,13 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       {
         agg_mesh->textureMap[tex_it->first+"-"+child_uuid.toString()] = tex_it->second;
       }
-        
+
 
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
     for (uint i = 0; i < m->instances.size(); i++) {
       const GeometryInstance& geomInstance = m->instances[i];
-      SubMeshGeometry smg = m->geometry[geomInstance.geometryIndex];   
+      SubMeshGeometry smg = m->geometry[geomInstance.geometryIndex];
 
       for (uint j = 0; j < smg.positions.size(); j++) {
         Vector4f jth_vertex_4f =  geomInstance.transform*Vector4f(smg.positions[j].x,
@@ -666,7 +666,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                                                                   smg.positions[j].z,
                                                                   1.0f);
         Vector3f jth_vertex(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);
-        jth_vertex = fixUp(m->up_axis, jth_vertex);                
+        jth_vertex = fixUp(m->up_axis, jth_vertex);
 
         if (originalMeshBoundingBox == BoundingBox3f3f::null()) {
           originalMeshBoundingBox = BoundingBox3f3f(jth_vertex, 0);
@@ -685,17 +685,17 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     //std::cout << scalingfactor  << " : scalingfactor\n";
     /** End: find scaling factor **/
 
-    uint geometrySize = agg_mesh->geometry.size(); 
-    
+    uint geometrySize = agg_mesh->geometry.size();
+
     std::vector<GeometryInstance> instances;
     for (uint i = 0; i < m->instances.size(); i++) {
-      GeometryInstance geomInstance = m->instances[i];      
-      
+      GeometryInstance geomInstance = m->instances[i];
+
       assert (geomInstance.geometryIndex < m->geometry.size());
       SubMeshGeometry smg = m->geometry[geomInstance.geometryIndex];
 
       geomInstance.geometryIndex =  numAddedSubMeshGeometries;
-      
+
       smg.aabb = BoundingBox3f3f::null();
 
       for (uint j = 0; j < smg.positions.size(); j++) {
@@ -704,7 +704,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                                                                   smg.positions[j].z,
                                                                   1.0f);
         smg.positions[j] = Vector3f( jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z );
-        smg.positions[j] = fixUp(m->up_axis, smg.positions[j]);   
+        smg.positions[j] = fixUp(m->up_axis, smg.positions[j]);
 
         smg.positions[j] = smg.positions[j] * scalingfactor;
 
@@ -713,7 +713,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         smg.positions[j].x += (location.x - bnds.center().x);
         smg.positions[j].y += (location.y - bnds.center().y);
         smg.positions[j].z += (location.z - bnds.center().z);
-       
+
 
         if (smg.aabb == BoundingBox3f3f::null()) {
           smg.aabb = BoundingBox3f3f(smg.positions[j], 0);
@@ -732,7 +732,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
 
     for (uint i = 0; i < instances.size(); i++) {
-      GeometryInstance geomInstance = instances[i];      
+      GeometryInstance geomInstance = instances[i];
 
       for (GeometryInstance::MaterialBindingMap::iterator mat_it = geomInstance.materialBindingMap.begin();
            mat_it != geomInstance.materialBindingMap.end(); mat_it++)
@@ -773,14 +773,14 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
-  
+
   simplify(agg_mesh, 100000 );
 
   /* Set the mesh for the aggregated object and if it has a parent, schedule
    a task to update the parent's mesh */
-  aggObject->mMeshdata = agg_mesh; 
+  aggObject->mMeshdata = agg_mesh;
   if (aggObject->mParentUUID != UUID::null()) {
-    
+
     generateAggregateMesh(aggObject->mParentUUID, Duration::seconds(10.0));
   }
 
@@ -815,10 +815,9 @@ void AggregateManager::chunkFinished(const UUID uuid, const UUID child_uuid,
 {
   if (response != NULL) {
     if (mAggregateObjects[child_uuid]->mMeshdata == std::tr1::shared_ptr<Meshdata>() ) {
-      
-      //MeshdataPtr m = mModelsSystem->load( request->getURI(), request->getMetadata().getFingerprint() , (const char*)response->data(), response->length() );
-      MeshdataPtr m = mModelsSystem->load(request->getURI(), request, response);
-    
+
+        MeshdataPtr m = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+
       mAggregateObjects[child_uuid]->mMeshdata = m;
 
       {
@@ -827,7 +826,7 @@ void AggregateManager::chunkFinished(const UUID uuid, const UUID child_uuid,
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         mMeshStore[request->getURI().toString()] = m;
       }
- 
+
       //      std::cout << mAggregateObjects[child_uuid]->mMeshdata->materials.size() << " : mAggregateObjects[child_uuid]->mMeshdata->materials.size()\n";
       //std::cout << mAggregateObjects[child_uuid]->mMeshdata->geometry.size() << " : mAggregateObjects[child_uuid]->mMeshdata->geometry.size()\n";
       //std::cout << mAggregateObjects[child_uuid]->mMeshdata->instances.size() << " : mAggregateObjects[child_uuid]->mMeshdata->instances.size()\n";

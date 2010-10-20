@@ -42,26 +42,14 @@ namespace Sirikata {
 
 
 ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor )
-    :   MeshObject (),
-        MeshProvider (),
-        ProxyObject ( man, id, vwobj, owner_sor),
-        mModelObject ()
+ : MeshProvider (),
+   ProxyObject ( man, id, vwobj, owner_sor),
+   mMeshURI(),
+   mScale(1.f, 1.f, 1.f)
 {
 
 
     
-}
-
-void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )
-{
-    if ( ! hasModelObject () )
-    {
-        mModelObject = model;
-    }
-    else
-    {
-        std::cout << "MCB: ProxyMeshObject::setModelObject(" << model << ") attempted reset!" << std::endl;
-    }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -69,82 +57,38 @@ void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )
 
 void ProxyMeshObject::setMesh ( URI const& mesh )
 {
+    mMeshURI = mesh;
     ProxyObjectPtr ptr = getSharedPtr();
     if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
-    //else assert(false);
 }
 
 URI const& ProxyMeshObject::getMesh () const
 {
-    static URI defaultReturn;
-    if (!hasModelObject())
-        return defaultReturn;
-
-    return mModelObject->getMesh ();
-}
-
-void ProxyMeshObject::meshDownloaded(std::tr1::shared_ptr<ChunkRequest>request,
-    std::tr1::shared_ptr<const DenseData> response)
-{
-    if (hasModelObject()){
-        mModelObject->parseFile(request, response);
-    }
+    return mMeshURI;
 }
 
 void ProxyMeshObject::setScale ( Vector3f const& scale )
 {
-    if (hasModelObject())
-        mModelObject->setScale ( scale );
-
+    mScale = scale;
     ProxyObjectPtr ptr = getSharedPtr();
     if (ptr) MeshProvider::notify (&MeshListener::onSetScale, ptr, scale );
 }
 
 Vector3f const& ProxyMeshObject::getScale () const
 {
-    static Vector3f defaultReturn(1.f, 1.f, 1.f);
-    if (!hasModelObject())
-        return defaultReturn;
-
-    return mModelObject->getScale ();
+    return mScale;
 }
 
 void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 {
-    if (hasModelObject())
-        mModelObject->setPhysical ( pp );
-
+    mPhysical = pp;
     ProxyObjectPtr ptr = getSharedPtr();
     if (ptr) MeshProvider::notify (&MeshListener::onSetPhysical, ptr, pp );
 }
 
 PhysicalParameters const& ProxyMeshObject::getPhysical () const
 {
-    static PhysicalParameters defaultReturn;
-    if (!hasModelObject())
-        return defaultReturn;
-
-    return mModelObject->getPhysical ();
+    return mPhysical;
 }
-
-void ProxyMeshObject::meshParsed (String hash, Meshdata* md)
-{
-    ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify (&MeshListener::onMeshParsed, ptr, hash, *md );
-}
-
-
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshProvider
-
-
-/////////////////////////////////////////////////////////////////////
-// overrides from ProxyObject
-
-bool ProxyMeshObject::hasModelObject () const
-{
-    return mModelObject != 0;
-}
-
 
 } // namespace Sirikata

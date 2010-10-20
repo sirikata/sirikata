@@ -44,8 +44,7 @@ namespace Sirikata {
  */
 class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystemFactory
     : public AutoSingleton< ModelsSystemFactory >,
-      public Factory2<  ModelsSystem*,
-                        Provider< ProxyCreationListener* > *,   // the ProxyManager
+      public Factory1<  ModelsSystem*,
                         String const& >                         // option string
 {
     public:
