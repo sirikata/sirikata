@@ -78,6 +78,12 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     // Returns a message to the object host for handling.
     typedef std::tr1::function<void(const UUID&, Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
 
+    // SST stream related typedefs
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef SSTStream::EndpointType SSTEndpoint;
+
+
     SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback);
     ~SessionManager();
 
@@ -112,7 +118,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     // This is used to possibly exchange data between the main and IO strands, so it acquires locks.
     bool send(const UUID& objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
-    boost::shared_ptr<Stream<UUID> > getSpaceStream(const UUID& objectID);
+    SSTStreamPtr getSpaceStream(const ObjectReference& objectID);
 
     // Service Implementation
     virtual void start();
@@ -197,20 +203,6 @@ private:
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     void timeSyncUpdated();
-
-    // Currently the SST code requires an ObjectMessageRouter per connection,
-    // which used to be handled by the Object.  Since SessionManager has no
-    // access to that outside state, we instead construct an ObjectMessageRouter
-    // for the Object.
-    struct ObjectConnectionRouter : public ObjectMessageRouter {
-    public:
-        ObjectConnectionRouter(SessionManager* _parent, const UUID& _uuid);
-        virtual bool route(Sirikata::Protocol::Object::ObjectMessage*);
-
-    private:
-        SessionManager* parent;
-        UUID uuid;
-    };
 
     OptionSet* mStreamOptions;
 
@@ -337,9 +329,8 @@ private:
 
     bool mShuttingDown;
 
-    std::map<UUID, ObjectConnectionRouter*> mObjectConnectionRouters;
-    void spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> > s, UUID obj);
-    std::map<UUID, boost::shared_ptr<Stream<UUID> > > mObjectToSpaceStreams;
+    void spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference obj);
+    std::map<ObjectReference, SSTStreamPtr> mObjectToSpaceStreams;
 }; // class SessionManager
 
 } // namespace Sirikata

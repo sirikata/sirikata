@@ -80,7 +80,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
-      mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
+    mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
+    mForwarder->setODPService(this);
 
       mOSeg->setWriteListener((OSegWriteListener*)this);
 
@@ -106,11 +107,13 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Stream<UUID>::listen( std::tr1::bind(&Server::newStream, this, _1, _2),
-			  EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT) );
+    Stream<SpaceObjectReference>::listen(
+        std::tr1::bind(&Server::newStream, this, _1, _2),
+        EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
+    );
 }
 
-void Server::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
+void Server::newStream(int err, Stream<SpaceObjectReference>::Ptr s) {
   if (err != SST_IMPL_SUCCESS){
     return;
   }
@@ -166,12 +169,13 @@ ODP::DelegatePort* Server::createDelegateODPPort(DelegateService*, const SpaceOb
 
 bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
     // Create new ObjectMessage
-    Sirikata::Protocol::Object::ObjectMessage* msg = new Sirikata::Protocol::Object::ObjectMessage();
-    msg->set_source_object(source_ep.object().getAsUUID());
-    msg->set_source_port(source_ep.port());
-    msg->set_dest_object(dest_ep.object().getAsUUID());
-    msg->set_dest_port(dest_ep.port());
-    msg->set_payload(String((char*)payload.data(), payload.size()));
+    Sirikata::Protocol::Object::ObjectMessage* msg =
+        createObjectMessage(
+            mContext->id(),
+            source_ep.object().getAsUUID(), source_ep.port(),
+            dest_ep.object().getAsUUID(), dest_ep.port(),
+            String((char*)payload.data(), payload.size())
+        );
 
     // This call needs to be thread safe, and we shouldn't be using this
     // ODP::Service to communicate with any non-local objects, so just use the

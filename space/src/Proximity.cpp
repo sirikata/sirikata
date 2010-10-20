@@ -170,7 +170,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
 
-    
+
 
     // Start the processing thread
     mProxThread = new Thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
@@ -397,7 +397,7 @@ void Proximity::invokeAggregateEventHandler() {
 }
 
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
-  
+
 
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
     mAggregateEventHandlers.push(
@@ -417,7 +417,7 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
 }
 
 void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
-  
+
   if (mLocService->contains(objid)) {
     mLocService->updateLocalAggregateLocation(
         objid,
@@ -464,7 +464,7 @@ void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& ob
         )
     );
     scheduleAggregateEventHandler();
-      
+
     if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
       mAggregateManager->generateAggregateMesh(objid, Duration::seconds(2400.0+rand()%2040));
 }
@@ -585,7 +585,7 @@ void Proximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMo
 void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_stream) {
     using std::tr1::placeholders::_1;
 
-    ProxStreamPtr base_stream = mContext->getObjectStream(objid);
+    ProxStreamPtr base_stream = mContext->getObjectStream(ObjectReference(objid));
     if (!base_stream) {
         mContext->mainStrand->post(
             Duration::milliseconds((int64)5),
@@ -717,7 +717,7 @@ void Proximity::poll() {
         mObjectResultsToSend.pop_front();
     }
 
-    
+
 }
 
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {

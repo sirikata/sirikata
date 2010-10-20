@@ -135,8 +135,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             _1, _2, _3
         )
     );
-
-    mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(getUUID(), ctx, this, this);
 }
 
 HostedObject::~HostedObject() {
@@ -315,6 +313,14 @@ void HostedObject::connect(
 }
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds) {
+    // FIXME should be using per presence SST layers
+    mSSTDatagramLayers.push_back(
+        BaseDatagramLayerType::createDatagramLayer(
+            SpaceObjectReference(space, obj),
+            mContext, mDelegateODPService
+        )
+    );
+
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
@@ -351,9 +357,9 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 }
 
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
-    boost::shared_ptr<Stream<UUID> > sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
+    SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
-    if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
+    if (sstStream != SSTStreamPtr() ) {
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
             std::tr1::bind(&HostedObject::handleLocationSubstream, this, spaceobj, _1, _2)
         );
@@ -435,17 +441,17 @@ void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference bo
     sendViaSpace(hdrOrig, body);
 }
 
-void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
+void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
     s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
-void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s) {
+void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
     std::stringstream** prevdataptr = new std::stringstream*;
     *prevdataptr = new std::stringstream();
     s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, prevdataptr, _1, _2) );
 }
 
-void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
     prevdata->write((const char*)buffer, length);
     if (handleLocationMessage(spaceobj, prevdata->str())) {
         // FIXME we should be getting a callback on stream close instead of
@@ -457,7 +463,7 @@ void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& space
     }
 }
 
-void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream** prevdataptr, uint8* buffer, int length) {
+void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdataptr, uint8* buffer, int length) {
     std::stringstream* prevdata = *prevdataptr;
     prevdata->write((const char*)buffer, length);
 
@@ -787,9 +793,9 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const TimedMotionV
 
     std::string payload = serializePBJMessage(container);
 
-    boost::shared_ptr<Stream<UUID> > spaceStream = mObjectHost->getSpaceStream(space, getUUID());
-    if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
-        boost::shared_ptr<Connection<UUID> > conn = spaceStream->connection().lock();
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    if (spaceStream != SSTStreamPtr()) {
+        SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);
 
         conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,

@@ -52,20 +52,23 @@ SpaceContext::~SpaceContext() {
     mObjectStreams.clear();
 }
 
-void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
-  assert(conn);
-  UUID sourceObject = conn->remoteEndPoint().endPoint;
+void SpaceContext::newStream(int err, SSTStreamPtr s) {
+    typedef Connection<SpaceObjectReference> SSTConnection;
+    typedef SSTConnection::Ptr SSTConnectionPtr;
 
-  if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
-    std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";fflush(stdout);
+    SSTConnectionPtr conn = s->connection().lock();
+    assert(conn);
+    SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
 
-    boost::shared_ptr<Connection<UUID> > sstConnection = mObjectStreams[sourceObject]->connection().lock();
-    assert(sstConnection);
-    sstConnection->close(false);
-  }
+    if (mObjectStreams.find(sourceObject.object()) != mObjectStreams.end()) {
+        std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";fflush(stdout);
 
-  mObjectStreams[sourceObject] = s;
+        SSTConnectionPtr sstConnection = mObjectStreams[sourceObject.object()]->connection().lock();
+        assert(sstConnection);
+        sstConnection->close(false);
+    }
+
+    mObjectStreams[sourceObject.object()] = s;
 }
 
 } // namespace Sirikata

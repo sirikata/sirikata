@@ -67,7 +67,14 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
    mQuitting(false),
    mLocUpdateTimer( Network::IOTimer::create(mContext->ioService) )
 {
-  mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(mID, ctx, this, this);
+    mDelegateODPService = new ODP::DelegateService(
+        std::tr1::bind(
+            &Object::createDelegateODPPort, this,
+            _1, _2, _3
+        )
+    );
+
+    mSSTDatagramLayer = BaseDatagramLayerType::createDatagramLayer(SpaceObjectReference(SpaceID::null(), ObjectReference(id)), ctx, mDelegateODPService);
 }
 
 Object::~Object() {
@@ -125,9 +132,9 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
 
         std::string payload = serializePBJMessage(container);
 
-	boost::shared_ptr<Stream<UUID> > spaceStream = mContext->objectHost->getSpaceStream(mID);
-        if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
-          boost::shared_ptr<Connection<UUID> > conn = spaceStream->connection().lock();
+	SSTStreamPtr spaceStream = mContext->objectHost->getSpaceStream(mID);
+        if (spaceStream != SSTStreamPtr()) {
+          SSTConnectionPtr conn = spaceStream->connection().lock();
           assert(conn);
 
           conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
@@ -248,11 +255,11 @@ void Object::handleSpaceMigration(const SpaceID& space, const ObjectReference& o
 }
 
 void Object::handleSpaceStreamCreated() {
-  boost::shared_ptr<Stream<UUID> > sstStream = mContext->objectHost->getSpaceStream(mID);
+    SSTStreamPtr sstStream = mContext->objectHost->getSpaceStream(mID);
   using std::tr1::placeholders::_1;
   using std::tr1::placeholders::_2;
 
-  if (sstStream != boost::shared_ptr<Stream<UUID> >() ) {
+  if (sstStream) {
       sstStream->listenSubstream(OBJECT_PORT_LOCATION,
           std::tr1::bind(&Object::handleLocationSubstream, this, _1, _2)
       );
@@ -275,15 +282,57 @@ void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg
     delete msg;
 }
 
-void Object::handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
+// ODP::Service Interface
+ODP::Port* Object::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) {
+    return mDelegateODPService->bindODPPort(space, objref, port);
+}
+
+ODP::Port* Object::bindODPPort(const SpaceObjectReference& sor, ODP::PortID port) {
+    return mDelegateODPService->bindODPPort(sor, port);
+}
+
+ODP::Port* Object::bindODPPort(const SpaceID& space, const ObjectReference& objref) {
+    return mDelegateODPService->bindODPPort(space, objref);
+}
+
+ODP::Port* Object::bindODPPort(const SpaceObjectReference& sor) {
+    return mDelegateODPService->bindODPPort(sor);
+}
+
+void Object::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+    mDelegateODPService->registerDefaultODPHandler(cb);
+}
+
+void Object::registerDefaultODPHandler(const ODP::OldMessageHandler& cb) {
+    mDelegateODPService->registerDefaultODPHandler(cb);
+}
+
+ODP::DelegatePort* Object::createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port) {
+    ODP::Endpoint port_ep(spaceobj, port);
+    return new ODP::DelegatePort(
+        mDelegateODPService,
+        port_ep,
+        std::tr1::bind(
+            &Object::delegateODPPortSend, this,
+            port_ep, _1, _2
+        )
+    );
+}
+
+bool Object::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
+    assert(source_ep.space() == dest_ep.space());
+    return send((uint16)source_ep.port(), dest_ep.object().getAsUUID(), (uint16)dest_ep.port(), String((const char*)payload.data(), payload.size()));
+}
+
+void Object::handleLocationSubstream(int err, SSTStreamPtr s) {
     s->registerReadCallback( std::tr1::bind(&Object::handleLocationSubstreamRead, this, s, new std::stringstream(), _1, _2) );
 }
 
-void Object::handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s) {
+void Object::handleProximitySubstream(int err, SSTStreamPtr s) {
     s->registerReadCallback( std::tr1::bind(&Object::handleProximitySubstreamRead, this, s, new std::stringstream(), _1, _2) );
 }
 
-void Object::handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+void Object::handleLocationSubstreamRead(SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
     prevdata->write((const char*)buffer, length);
     if (locationMessage(prevdata->str())) {
         // FIXME we should be getting a callback on stream close instead of
@@ -295,7 +344,7 @@ void Object::handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, st
     }
 }
 
-void Object::handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length) {
+void Object::handleProximitySubstreamRead(SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
     prevdata->write((const char*)buffer, length);
     if (proximityMessage(prevdata->str())) {
         // FIXME we should be getting a callback on stream close instead of

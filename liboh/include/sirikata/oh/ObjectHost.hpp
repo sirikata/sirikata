@@ -173,7 +173,9 @@ public:
     HostedObjectPtr getHostedObject(const UUID &id) const;
 
     /** Lookup the SST stream for a particular object. */
-    boost::shared_ptr<Stream<UUID> > getSpaceStream(const SpaceID& space, const UUID& internalID);
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+    SSTStreamPtr getSpaceStream(const SpaceID& space, const UUID& internalID);
 
     /// Returns the SpaceID -> Network::Address lookup map.
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}

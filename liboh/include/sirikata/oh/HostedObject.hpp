@@ -82,7 +82,17 @@ protected:
                     // more flexible selection of proxy type
 
     ODP::DelegateService* mDelegateODPService;
-    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
+
+    typedef EndPoint<SpaceObjectReference> EndPointType;
+    typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
+    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef Connection<SpaceObjectReference> SSTConnection;
+    typedef SSTConnection::Ptr SSTConnectionPtr;
+
+    // FIXME maintain a proper map here or put in per-presence data
+    std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;
 
 //------- Constructors/Destructors
 private:
@@ -257,11 +267,11 @@ public:
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     // Handlers for substreams for space-managed updates
-    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
-    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
+    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
-    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream** prevdata, uint8* buffer, int length);
+    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);

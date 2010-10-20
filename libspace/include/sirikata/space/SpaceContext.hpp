@@ -35,8 +35,9 @@
 
 #include <sirikata/space/Platform.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/space/Trace.hpp>
+#include <sirikata/core/network/SSTImpl.hpp>
 
 namespace Sirikata {
 
@@ -47,9 +48,6 @@ class ObjectMessageDispatcher;
 
 class Forwarder;
 class MockForwarder;
-
-template <class EndPointType>
-class Stream;
 
 class CoordinateSegmentation;
 
@@ -86,17 +84,21 @@ public:
         return mCSeg.read();
     }
 
-    void newStream(int err, boost::shared_ptr< Stream<UUID> > s);
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
 
-    boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
-      if (mObjectStreams.find(uuid) != mObjectStreams.end()) {
-        return mObjectStreams[uuid];
+    void newStream(int err, SSTStreamPtr s);
+
+    SSTStreamPtr getObjectStream(const ObjectReference& objid) {
+      if (mObjectStreams.find(objid) != mObjectStreams.end()) {
+        return mObjectStreams[objid];
       }
 
-      return boost::shared_ptr<Stream<UUID> >();
+      return SSTStreamPtr();
     }
 
     SpaceTrace* spacetrace() const { return mSpaceTrace; }
+
 private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
@@ -111,7 +113,7 @@ private:
 
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
-    std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
+    std::map<ObjectReference, SSTStreamPtr>  mObjectStreams;
 
     SpaceTrace* mSpaceTrace;
 }; // class SpaceContext

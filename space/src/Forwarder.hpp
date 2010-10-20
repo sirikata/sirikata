@@ -69,6 +69,10 @@ class ODPFlowScheduler;
 class LocationService;
 class LocalForwarder;
 
+namespace ODP {
+class DelegateService;
+}
+
 class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
 		    public ServerMessageRouter, public ObjectMessageRouter,
                     public MessageRecipient,
@@ -84,8 +88,14 @@ private:
     ServerMessageReceiver* mServerMessageReceiver;
 
     LocalForwarder* mLocalForwarder;
-    OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
-    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
+    OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of
+                                   //messages that are being looked up in oseg.
+
+    // We maintain a pointer to this Server's DelegateODPService because the
+    // forwarder is the one that actually intercepts messages
+    ODP::DelegateService* mDelegateODPService;
+    // And here we also maintain the core SST datagram layer for the server
+    BaseDatagramLayer<SpaceObjectReference>::Ptr mSSTDatagramLayer;
 
 
     // Object connections, identified by a separate unique ID to handle fast migrations
@@ -127,7 +137,9 @@ private:
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
+
     void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc);
+    void setODPService(ODP::DelegateService* odp);
 
     void setLocalForwarder(LocalForwarder* lf) { mLocalForwarder = lf; }
 

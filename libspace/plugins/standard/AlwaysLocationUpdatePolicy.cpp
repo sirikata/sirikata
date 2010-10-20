@@ -139,7 +139,7 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-static void locSubstreamCallback(int x, boost::shared_ptr<Stream<UUID> > substream) {
+static void locSubstreamCallback(int x, Stream<SpaceObjectReference>::Ptr substream) {
     if (!substream)
         SILOG(always_loc,error,"Unhandled error when opening substream.");
 }
@@ -147,10 +147,10 @@ static void locSubstreamCallback(int x, boost::shared_ptr<Stream<UUID> > substre
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
   std::string bluMsg = serializePBJMessage(blu);
-  boost::shared_ptr<Stream<UUID> > locServiceStream = mLocService->getObjectStream(dest);
+  Stream<SpaceObjectReference>::Ptr locServiceStream = mLocService->getObjectStream(dest);
 
   bool sent = false;
-  if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
+  if (locServiceStream) {
       Sirikata::Protocol::Frame msg_frame;
       msg_frame.set_payload(bluMsg);
       std::string framed_loc_msg = serializePBJMessage(msg_frame);

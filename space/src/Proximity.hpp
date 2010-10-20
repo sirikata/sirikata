@@ -135,7 +135,7 @@ private:
     };
     static const std::string& ObjectClassToString(ObjectClass c);
 
-    typedef boost::shared_ptr<Stream<UUID> > ProxStreamPtr;
+    typedef Stream<SpaceObjectReference>::Ptr ProxStreamPtr;
     struct ProxStreamInfo {
     public:
         ProxStreamInfo()

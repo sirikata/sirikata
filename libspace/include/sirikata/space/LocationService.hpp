@@ -143,19 +143,23 @@ public:
         return mContext;
     }
 
-    virtual void newStream(boost::shared_ptr< Stream<UUID> > s) {
+    virtual void newStream(Stream<SpaceObjectReference>::Ptr s) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-      boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
-      assert(conn);
+        Connection<SpaceObjectReference>::Ptr conn = s->connection().lock();
+        assert(conn);
 
-      UUID sourceObject = conn->remoteEndPoint().endPoint;
+        SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
 
 
-      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
-					  std::tr1::bind(&LocationService::locationUpdate, this, sourceObject, std::tr1::placeholders::_1,std::tr1::placeholders::_2) );
-
+        conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
+            std::tr1::bind(
+                &LocationService::locationUpdate, this,
+                sourceObject.object().getAsUUID(),
+                std::tr1::placeholders::_1,std::tr1::placeholders::_2
+            )
+        );
     }
 
     /** Indicates whether this location service is tracking the given object.  It is only
@@ -218,8 +222,8 @@ public:
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
-    boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
-      return mContext->getObjectStream(uuid);
+    Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
+        return mContext->getObjectStream(ObjectReference(uuid));
     }
 
 protected:
