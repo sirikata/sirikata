@@ -62,7 +62,7 @@ class ObjectScript;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRouter, public ObjectMessageDispatcher {
+class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
 //------- Private inner classes
     class PerSpaceData;
     struct PrivateCallbacks;
@@ -143,9 +143,6 @@ public:
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
 
-    // ObjectMessageRouter Interface
-    WARN_UNUSED
-    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 protected:
 
     struct SendService: public MessageService {

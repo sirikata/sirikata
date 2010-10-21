@@ -42,9 +42,7 @@
 namespace Sirikata {
 
 class ServerMessageRouter;
-class ObjectMessageRouter;
 class ServerMessageDispatcher;
-class ObjectMessageDispatcher;
 
 class Forwarder;
 class MockForwarder;
@@ -69,15 +67,8 @@ public:
         return mServerRouter.read();
     }
 
-    ObjectMessageRouter* objectRouter() const {
-        return mObjectRouter.read();
-    }
-
     ServerMessageDispatcher* serverDispatcher() const {
         return mServerDispatcher.read();
-    }
-    ObjectMessageDispatcher* objectDispatcher() const {
-        return mObjectDispatcher.read();
     }
 
     CoordinateSegmentation* cseg() const {
@@ -107,9 +98,7 @@ private:
     Sirikata::AtomicValue<ServerID> mID;
 
     Sirikata::AtomicValue<ServerMessageRouter*> mServerRouter;
-    Sirikata::AtomicValue<ObjectMessageRouter*> mObjectRouter;
     Sirikata::AtomicValue<ServerMessageDispatcher*> mServerDispatcher;
-    Sirikata::AtomicValue<ObjectMessageDispatcher*> mObjectDispatcher;
 
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 

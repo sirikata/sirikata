@@ -161,20 +161,6 @@ void Object::sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::str
     send(src_port, dest, dest_port, payload);
 }
 
-bool Object::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-    assert(msg->source_object() == mID);
-    mContext->mainStrand->post(std::tr1::bind(
-            &Object::sendNoReturn, this,
-            msg->source_port(),
-            msg->dest_object(), msg->dest_port(),
-            msg->payload())
-    );
-
-    delete msg;
-
-    return true;
-}
-
 const TimedMotionVector3f Object::location() const {
     return mLocation.read();
 }
@@ -209,9 +195,6 @@ void Object::connect() {
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
         );
-
-
-
 }
 
 void Object::disconnect() {
@@ -277,8 +260,11 @@ bool Object::connected() {
 void Object::receiveMessage(const Sirikata::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
-
-    dispatchMessage(*msg);
+    mDelegateODPService->deliver(
+        ODP::Endpoint(SpaceID::null(), ObjectReference(msg->source_object()), msg->source_port()),
+        ODP::Endpoint(SpaceID::null(), ObjectReference(msg->dest_object()), msg->dest_port()),
+        MemoryReference(msg->payload())
+    );
     delete msg;
 }
 

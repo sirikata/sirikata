@@ -101,7 +101,7 @@ struct MaxDistUpdatePredicate {
     }
 };
 
-class Object : public Service, public ObjectMessageRouter, public ObjectMessageDispatcher {
+class Object : public Service {
 public:
     /** Standard constructor. */
     Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
@@ -159,8 +159,6 @@ private:
     // Handle a migration to a new space server
     void handleSpaceMigration(const SpaceID& space, const ObjectReference&, ServerID sid);
     void handleSpaceStreamCreated();
-
-    bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 

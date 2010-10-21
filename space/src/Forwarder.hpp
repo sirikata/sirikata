@@ -73,8 +73,8 @@ namespace ODP {
 class DelegateService;
 }
 
-class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
-		    public ServerMessageRouter, public ObjectMessageRouter,
+class Forwarder : public ServerMessageDispatcher,
+		    public ServerMessageRouter,
                     public MessageRecipient,
                     public ServerMessageQueue::Sender,
                   public ServerMessageReceiver::Listener,
@@ -146,9 +146,6 @@ private:
     // Service Implementation
     void start();
     void stop();
-  protected:
-
-    virtual bool dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
 
   private:
     // Init method: adds an odp routing service to the ForwarderServiceQueue and
@@ -173,9 +170,6 @@ private:
     // cache.
     WARN_UNUSED
     bool tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg);
-
-    WARN_UNUSED
-    bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     // -- Real routing interface + implementation
 
@@ -206,6 +200,9 @@ private:
     void routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
     WARN_UNUSED
     bool routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+
+    // Dispatches a message destined for the space server itself
+    void dispatchMessage(Sirikata::Protocol::Object::ObjectMessage* msg) const;
 
     // Handles the case where OSeg told us we have the object. Post this to the
     // main strand.

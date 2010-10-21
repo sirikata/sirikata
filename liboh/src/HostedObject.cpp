@@ -384,27 +384,11 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     }
 }
 
-bool HostedObject::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-    DEPRECATED(); // We need a SpaceID in here
-    assert( mSpaceData->size() == 1);
-    SpaceID space = mSpaceData->begin()->first;
-    return mObjectHost->send(getSharedPtr(), space, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
-}
-
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
     // Convert to ODP runtime format
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
-    // FIXME to transition to real ODP instead of ObjectMessageRouter +
-    // ObjectMessageDispatcher, we need to allow the old route as well.  First
-    // we check if we can use ObjectMessageDispatcher::dispatchMessage, and if
-    // not, we allow it through to the long term solution, ODP::Service
-    if (ObjectMessageDispatcher::dispatchMessage(*msg)) {
-        // Successfully delivered using old method
-        delete msg;
-        return;
-    }
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
         delete msg;

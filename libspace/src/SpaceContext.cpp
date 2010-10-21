@@ -41,9 +41,7 @@ SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStr
  : Context("Space", ios, strand, _trace, epoch, duration),
    mID(_id),
    mServerRouter(NULL),
-   mObjectRouter(NULL),
    mServerDispatcher(NULL),
-   mObjectDispatcher(NULL),
    mSpaceTrace( new SpaceTrace(_trace) )
 {
 }

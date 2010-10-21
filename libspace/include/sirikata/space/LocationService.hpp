@@ -127,7 +127,7 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService {
 public:
     enum TrackingType {
         NotTracking,
@@ -217,8 +217,6 @@ public:
 
     /** MessageRecipient Interface. */
     virtual void receiveMessage(Message* msg) = 0;
-    /** ObjectMessageRecipient Interface. */
-    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
