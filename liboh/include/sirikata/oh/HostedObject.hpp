@@ -276,10 +276,11 @@ public:
     // Because IOStrand->wrap() can't handle > 5 parameters (because the
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
+
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType);
+
+    bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
 

@@ -385,11 +385,13 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds,scriptFile,scriptType)
     );
 }
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds) {
+
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType)
+{
     if (server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
         return;
@@ -557,6 +559,7 @@ void HostedObject::processInitScriptMessage(MemoryReference& body)
 }
 
 
+
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
     // Convert to ODP runtime format
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
@@ -679,7 +682,8 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     contents.ParseFromString(frame.payload());
 
     SpaceID space = spaceobj.space();
-    ProxyManagerPtr proxy_manager = getProxyManager(space);
+    ObjectReference oref = spaceobj.object();
+    ProxyManagerPtr proxy_manager = getProxyManager(space, oref);
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
@@ -763,10 +767,11 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
             }
             else {
-              ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
-              ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
-                                                                     ObjectReference(addition.object())));
-              if (!proxy_obj) continue;
+                ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
+                ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
+                        ObjectReference(addition.object())));
+
+                if (!proxy_obj) continue;
 
               ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
               if (mesh) {
@@ -778,7 +783,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space());
+            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;
@@ -1114,8 +1119,7 @@ Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& 
 {
     ProxyObjectPtr proxy = getProxy(space, oref);
     assert(proxy);
-    Time tnow = proxy->getProxyManager()->getTimeOffsetManager()->now(*proxy);
-    Location currentLoc = proxy->globalLocation(tnow);
+    Location currentLoc = proxy->globalLocation(currentSpaceTime(space));
     return currentLoc;
 }
 

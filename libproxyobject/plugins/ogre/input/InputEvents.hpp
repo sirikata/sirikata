@@ -499,8 +499,8 @@ public:
     String name;
     std::vector<String> args; // The pointer here is annoying, but necessary to avoid having to include the defintion here, which in turn causes circular includes
 
-    WebViewEvent(Graphics::WebView* _wv, const String &wvName, const String& name, const std::vector<String>& args);
-    WebViewEvent(Graphics::WebView* _wv, const String &wvName, const std::vector<DataReference<const char*> >& args);
+    WebViewEvent(const String &wvName, const String& name, const std::vector<String>& args);
+    WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& args);
     virtual ~WebViewEvent();
 
     virtual EventDescriptor getDescriptor() const;
