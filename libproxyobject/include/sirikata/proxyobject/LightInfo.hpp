@@ -36,10 +36,6 @@
 namespace Sirikata {
 typedef Vector3f Color;
 
-namespace Protocol {
-class LightInfoProperty;
-}
-
 struct SIRIKATA_PROXYOBJECT_EXPORT LightInfo {
     enum LightTypes {
         POINT,SPOTLIGHT,DIRECTIONAL,NUM_TYPES//defaults to point=0?
@@ -146,9 +142,6 @@ struct SIRIKATA_PROXYOBJECT_EXPORT LightInfo {
         mCastsShadow=shouldCastShadow;
         return *this;
     }
-    LightInfo(const Protocol::LightInfoProperty&other);
-
-    void toProtocol(Protocol::LightInfoProperty &msg) const;
 
     LightInfo& operator=(const LightInfo&other) {
         if (other.mWhichFields&DIFFUSE_COLOR) {

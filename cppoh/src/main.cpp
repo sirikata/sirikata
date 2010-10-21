@@ -43,7 +43,6 @@
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <Protocol_Persistence.pbj.hpp>
-#include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
 

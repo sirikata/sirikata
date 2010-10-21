@@ -789,10 +789,6 @@ SET(ProtocolBuffersSources
 
   # Additional internal stuff
   ${ProtocolBuffersRoot}/Persistence
-  ${ProtocolBuffersRoot}/MessageHeader
-  ${ProtocolBuffersRoot}/Sirikata
-  ${ProtocolBuffersRoot}/Time
-  ${ProtocolBuffersRoot}/Subscription
   ${ProtocolBuffersRoot}/Test
 
   ${ProtocolBuffersRoot}/ServerProx
@@ -887,11 +883,7 @@ SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
 # For scripting
 SET(ScriptingProtocolBuffersSources
   Persistence
-  Sirikata
-  Time
-  Subscription
   Test
-  MessageHeader
   Physics
   )
 

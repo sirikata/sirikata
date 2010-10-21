@@ -281,7 +281,7 @@ Vector3f normalFromBullet(const btVector3&bt) {
     return Vector3f(bt.x(),bt.y(),bt.z());
 }
 
-class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
+class BulletObj : public MeshListener, Noncopyable {
     friend class BulletSystem;
     enum shapeID {
         ShapeNull,
@@ -292,8 +292,6 @@ class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
         ShapeCharacter
     };
     BulletSystem* system;
-
-    void requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc);
 
     /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
     btScalar* mBtVertices;//<-- this dude must be aligned on 16 byte boundaries

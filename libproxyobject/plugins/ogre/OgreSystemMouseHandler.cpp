@@ -57,7 +57,6 @@
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
-#include "Protocol_Sirikata.pbj.hpp"
 #include <sirikata/core/util/KnownServices.hpp>
 
 #include <boost/lexical_cast.hpp>

@@ -35,7 +35,6 @@
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/proxyobject/PositionListener.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
-#include "Protocol_Sirikata.pbj.hpp"
 
 namespace Sirikata {
 

@@ -36,7 +36,6 @@
 #include <sirikata/core/util/MotionQuaternion.hpp>
 
 namespace Sirikata {
-namespace Protocol{class ObjLoc;}
 
 class ProxyObject;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
@@ -48,10 +47,5 @@ public:
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient) = 0;
 };
 
-class SIRIKATA_PROXYOBJECT_EXPORT LocationAuthority {
-public:
-    virtual ~LocationAuthority() {}
-    virtual void requestLocation (Time timestamp, const Protocol::ObjLoc& reqLoc) = 0;
-};
 }
 #endif
