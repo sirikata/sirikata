@@ -1456,12 +1456,10 @@ libcore/test/MinitransactionHandlerTest.hpp
 libcore/test/ObjectStorageTest.hpp
 libcore/test/OptionValueListTest.hpp
 libcore/test/OptionTest.hpp
-#libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp
 libcore/test/RoutableMessageTest.hpp
 libcore/test/TCPSSTCloseTest.hpp
 libcore/test/TCPSSTConnectTest.hpp
-libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
 libcore/test/Vector3Test.hpp
