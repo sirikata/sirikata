@@ -279,13 +279,9 @@ class ThreadIdCheck { public:
     unsigned int mThreadId;
 };
 #endif
-class RoutableMessageHeader;
-class RoutableMessage;
-class RoutableMessageBody;
 class OptionSet;
 } // namespace Sirikata
 #include "MemoryReference.hpp"
-#include "MessageService.hpp"
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
 #include "FactoryWithOptions.hpp"

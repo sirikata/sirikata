@@ -35,7 +35,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
-#include <sirikata/core/util/MessageService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
@@ -61,19 +60,17 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
-class SIRIKATA_OH_EXPORT ObjectHost : public MessageService, public ConnectionEventProvider, public Service {
+class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
     ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
     typedef std::tr1::unordered_map<UUID, HostedObjectPtr, UUID::Hasher> HostedObjectMap;
-    typedef std::map<MessagePort, MessageService *> ServicesMap;
 
     SpaceSessionManagerMap mSessionManagers;
 
     HostedObjectMap mHostedObjects;
-    ServicesMap mServices;
     PluginManager *mScriptPlugins;
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
 public:
@@ -131,36 +128,6 @@ public:
     bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
 
 
-    ///ObjectHost does not forward messages to other services, only to objects it owns
-    bool forwardMessagesTo(MessageService*){ assert(false); return false;}
-    ///ObjectHost does not forward messages to other services, only to objects it owns
-    bool endForwardingMessagesTo(MessageService*){ assert(false); return false;}
-
-    /** Register a global space-like service for null Space, null Object.
-        @param port  The service port number (i.e. Services::PERSISTENCE)
-        @param serv  MessageService* -- make sure to unregister before deleting.
-    */
-    void registerService(MessagePort port, MessageService *serv) {
-        mServices.insert(ServicesMap::value_type(port, serv));
-        serv->forwardMessagesTo(this);
-    }
-    /// Unregister a global service. Unnecessary if you delete the ObjectHost first.
-    void unregisterService(MessagePort port) {
-        ServicesMap::iterator iter = mServices.find(port);
-        if (iter != mServices.end()) {
-            iter->second->endForwardingMessagesTo(this);
-            mServices.erase(iter);
-        }
-    }
-    /// Lookup a global service by port number.
-    MessageService *getService(MessagePort port) const {
-        ServicesMap::const_iterator iter = mServices.find(port);
-        if (iter != mServices.end()) {
-            return iter->second;
-        }
-        return NULL;
-    }
-
     /** Register object by private UUID, so that it is possible to
         talk to objects/services which are not part of any space.
         Done automatically by HostedObject::initialize* functions.
@@ -179,10 +146,6 @@ public:
 
     /// Returns the SpaceID -> Network::Address lookup map.
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
-
-    ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
-    void processMessage(const RoutableMessageHeader&header,
-                        MemoryReference message_body);
 
     virtual void start();
     virtual void stop();

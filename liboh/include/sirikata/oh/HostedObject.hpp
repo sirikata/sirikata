@@ -33,7 +33,6 @@
 #define _SIRIKATA_HOSTED_OBJECT_HPP_
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 

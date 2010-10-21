@@ -39,7 +39,6 @@
 #include <Protocol_Sirikata.pbj.hpp>
 #include <Protocol_Subscription.pbj.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
-#include <sirikata/core/util/RoutableMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>

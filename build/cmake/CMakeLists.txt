@@ -1457,7 +1457,6 @@ libcore/test/ObjectStorageTest.hpp
 libcore/test/OptionValueListTest.hpp
 libcore/test/OptionTest.hpp
 libcore/test/QuaternionTest.hpp
-libcore/test/RoutableMessageTest.hpp
 libcore/test/TCPSSTCloseTest.hpp
 libcore/test/TCPSSTConnectTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp

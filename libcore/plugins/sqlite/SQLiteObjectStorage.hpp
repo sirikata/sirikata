@@ -60,7 +60,6 @@ public:
 
     static SQLiteObjectStorage*create(bool transactional,const String&);
 private:
-    std::vector<MessageService*>mInterestedParties;
     OptionSet*mOptions;
     Task::WorkQueue *mDiskWorkQueue;
     Task::ThreadSafeWorkQueue _mLocalWorkQueue;

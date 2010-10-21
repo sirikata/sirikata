@@ -97,16 +97,6 @@ MonoVWObjectScript::~MonoVWObjectScript() {
     //mono_jit_cleanup(mDomain.domain());
 }
 
-bool MonoVWObjectScript::forwardMessagesTo(MessageService*){
-    NOT_IMPLEMENTED(mono);
-    return false;
-}
-
-bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
-    NOT_IMPLEMENTED(mono);
-    return false;
-}
-
 bool MonoVWObjectScript::valid() const {
     return !mObject.null();
 }

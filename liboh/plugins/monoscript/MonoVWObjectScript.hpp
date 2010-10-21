@@ -52,9 +52,6 @@ public:
     MonoVWObjectScript(Mono::MonoSystem*, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args);
     ~MonoVWObjectScript();
 
-    bool forwardMessagesTo(MessageService*);
-    bool endForwardingMessagesTo(MessageService*);
-
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */

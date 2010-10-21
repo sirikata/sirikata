@@ -36,7 +36,6 @@
 #include <boost/thread.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
@@ -158,11 +157,6 @@ bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 sr
 bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     return mSessionManagers[space]->send(obj->getUUID(), src_port, dest, dest_port, payload);
-}
-
-void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryReference message_body) {
-    DEPRECATED(ObjectHost);
-    NOT_IMPLEMENTED(oh);
 }
 
 void ObjectHost::registerHostedObject(const HostedObjectPtr &obj) {
