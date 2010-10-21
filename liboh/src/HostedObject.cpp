@@ -45,7 +45,6 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
-#include <sirikata/core/util/SentMessage.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 
 #include <sirikata/oh/ObjectScriptManager.hpp>
@@ -78,7 +77,6 @@ public:
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
 
-    QueryTracker* tracker;
     ObjectHostProxyManagerPtr proxyManager;
 
     SpaceObjectReference id() const { return SpaceObjectReference(space, object); }
@@ -93,7 +91,6 @@ public:
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       tracker(NULL),
        proxyManager(new ObjectHostProxyManager(_space))
     {
     }
@@ -102,17 +99,6 @@ public:
         object = proxyobj->getObjectReference().object();
 
         mProxyObject = proxyobj;
-
-        // Use any port for tracker
-        tracker = new QueryTracker(parent->bindODPPort(id()), parent->mContext->ioService);
-        tracker->forwardMessagesTo(&parent->mSendService);
-    }
-
-    void destroy(QueryTracker *tracker) const {
-        if (tracker) {
-            tracker->endForwardingMessagesTo(&parent->mSendService);
-            delete tracker;
-        }
     }
 };
 
@@ -127,7 +113,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mNextSubscriptionID = 0;
     mObjectHost=parent;
     mObjectScript=NULL;
-    mSendService.ho = this;
 
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
@@ -151,11 +136,6 @@ void HostedObject::destroy() {
         delete mObjectScript;
         mObjectScript=NULL;
     }
-    for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
-         iter != mSpaceData->end();
-         ++iter) {
-        iter->second.destroy(getTracker(iter->first));
-    }
     mSpaceData->clear();
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
 }
@@ -166,7 +146,6 @@ struct HostedObject::PrivateCallbacks {
         if (thus) {
             SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
             if (where!=thus->mSpaceData->end()) {
-                where->second.destroy(thus->getTracker(sid));
                 thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
             }
         }
@@ -198,18 +177,6 @@ Time HostedObject::currentLocalTime() {
     return mContext->simTime();
 }
 
-
-QueryTracker* HostedObject::getTracker(const SpaceID& space) {
-    SpaceDataMap::iterator it = mSpaceData->find(space);
-    if (it == mSpaceData->end()) return NULL;
-    return it->second.tracker;
-}
-
-const QueryTracker* HostedObject::getTracker(const SpaceID& space) const {
-    SpaceDataMap::const_iterator it = mSpaceData->find(space);
-    if (it == mSpaceData->end()) return NULL;
-    return it->second.tracker;
-}
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
     SpaceDataMap::const_iterator it = mSpaceData->find(space);
@@ -377,7 +344,6 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID) {
     SpaceDataMap::iterator where;
     where=mSpaceData->find(spaceID);
     if (where!=mSpaceData->end()) {
-        where->second.destroy(getTracker(spaceID));
         mSpaceData->erase(where);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
@@ -397,32 +363,6 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
         SILOG(cppoh,debug,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
         delete msg;
     }
-}
-
-void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
-    //DEPRECATED(HostedObject);
-    ///// MessageService::processMessage
-    assert(hdrOrig.has_destination_object());
-    assert(hdrOrig.has_destination_space());
-    SpaceDataMap::iterator where=mSpaceData->find(hdrOrig.destination_space());
-    if (where!=mSpaceData->end()) {
-        mObjectHost->send(getSharedPtr(), hdrOrig.destination_space(), hdrOrig.source_port(), hdrOrig.destination_object().getAsUUID(), hdrOrig.destination_port(), body);
-    }
-    assert(where!=mSpaceData->end());
-}
-
-void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
-    //DEPRECATED(HostedObject);
-    assert(hdrOrig.has_destination_object());
-    if (!hdrOrig.has_destination_space() || hdrOrig.destination_space() == SpaceID::null()) {
-        DEPRECATED(HostedObject); // QueryTracker still causes this case
-        RoutableMessageHeader hdr (hdrOrig);
-        hdr.set_destination_space(SpaceID::null());
-        hdr.set_source_object(ObjectReference(mInternalObjectReference));
-        mObjectHost->processMessage(hdr, body);
-        return;
-    }
-    sendViaSpace(hdrOrig, body);
 }
 
 void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
@@ -631,7 +571,7 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
 // The call to createObject must occur before trying to do any other
 // operations so that any listeners will be set up.
-    proxy_manager->createObject(proxy_obj, getTracker(objref.space()));
+    proxy_manager->createObject(proxy_obj);
     return proxy_obj;
 }
 

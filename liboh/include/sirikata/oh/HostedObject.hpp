@@ -35,7 +35,6 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
@@ -143,17 +142,6 @@ public:
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
 
-protected:
-
-    struct SendService: public MessageService {
-        HostedObject *ho;
-        void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
-            ho->send(hdr, body);
-        }
-        bool forwardMessagesTo(MessageService*) { return false; }
-        bool endForwardingMessagesTo(MessageService*) { return false; }
-    } mSendService;
-
 public:
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
@@ -162,10 +150,6 @@ public:
     const UUID &getUUID() const {
         return mInternalObjectReference;
     }
-    /// Returns QueryTracker object that tracks of message ids awaiting reply.
-    QueryTracker* getTracker(const SpaceID& space);
-    /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
-    const QueryTracker*getTracker(const SpaceID& space) const;
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space);
 
@@ -210,23 +194,6 @@ public:
     /// Receive an ObjectMessage from the space via the ObjectHost. Translate it
     /// to our runtime ODP structure and deliver it.
     void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
-
-  private:
-
-    /** Sends directly via an attached space, without going through the ObjectHost.
-        No messages with a null SpaceId (i.e. for a local object or message service)
-        may be delivered using this path.
-        @see send
-    */
-    void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);
-
-    /** Sends a message from the space hdr.destination_space() to the object
-        hdr.destination_object(). Note that this will properly route locally destined
-        messages via a WorkQueue in the ObjectHost.
-        @param header  A RoutableMessageHeader: must include destination_space/object.
-        @param body  An encoded RoutableMessageBody.
-    */
-    void send(const RoutableMessageHeader &header, MemoryReference body);
 
   public:
 

@@ -52,42 +52,22 @@ ObjectHostProxyManager::~ObjectHostProxyManager() {
 	destroy();
 }
 
-void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer) {
+void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
     ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
     if (iter == mProxyMap.end()) {
         std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
             ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
         iter = result.first;
-        iter->second.viewers.insert(viewer);
         notify(&ProxyCreationListener::onCreateProxy,newObj);
     }
-    else
-        iter->second.viewers.insert(viewer);
 }
-void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer) {
+void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
     ProxyMap::iterator iter = mProxyMap.find(delObj->getObjectReference().object());
     if (iter != mProxyMap.end()) {
-        std::tr1::unordered_multiset<QueryTracker*>::iterator viewiter;
-        viewiter = iter->second.viewers.find(viewer);
-        if (viewiter != iter->second.viewers.end()) {
-            iter->second.viewers.erase(viewiter);
-        }
-        viewiter = iter->second.viewers.find(viewer);
-        if (viewiter == iter->second.viewers.end()) {
-            iter->second.obj->destroy();
-            notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
-            mProxyMap.erase(iter);
-        }
+        iter->second.obj->destroy();
+        notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
+        mProxyMap.erase(iter);
     }
-}
-QueryTracker *ObjectHostProxyManager::getQueryTracker(const SpaceObjectReference &id) {
-    ProxyMap::const_iterator iter = mProxyMap.find(id.object());
-    if (iter != mProxyMap.end()){
-        if (!iter->second.viewers.empty()) {
-            return *(iter->second.viewers.begin());
-        }
-    }
-    return 0;
 }
 
 ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {

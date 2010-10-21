@@ -74,16 +74,6 @@ bool ProxyObject::isStatic() const {
     return mLoc.velocity() == Vector3f::nil() && mOrientation.velocity() == Quaternion::identity();
 }
 
-QueryTracker *ProxyObject::getQueryTracker() const {
-    DEPRECATED(ProxyObject);
-    return mManager->getQueryTracker(getObjectReference());
-}
-
-bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference message) const {
-    ODP::Endpoint dest(getObjectReference().space(), getObjectReference().object(), dest_port);
-    return mDefaultPort->send(dest, message);
-}
-
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
     mLoc = reqloc;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);

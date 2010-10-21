@@ -40,8 +40,6 @@
 
 namespace Sirikata {
 
-class QueryTracker;
-
 /** VWObject is the basic interface that must be provided by virtual world
  *  objects. This interface gives ProxyObjects, related classes, and
  *  ProxyObject-based simulations (such as graphical display) the most basic
@@ -52,9 +50,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>, publi
 public:
     VWObject();
     virtual ~VWObject();
-
-    ///The tracker managing state for outstanding requests this object has made
-    virtual QueryTracker*getTracker(const SpaceID& space)=0;
 
     // Identification
     virtual SpaceObjectReference id(const SpaceID& space) const = 0;

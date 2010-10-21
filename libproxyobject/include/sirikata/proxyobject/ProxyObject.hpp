@@ -38,7 +38,6 @@
 #include "ProxyObjectListener.hpp"
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include "PositionListener.hpp"
-#include <sirikata/core/util/QueryTracker.hpp>
 
 #include <sirikata/core/odp/Service.hpp>
 #include <sirikata/core/odp/Port.hpp>
@@ -108,18 +107,12 @@ public:
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 
-    /// Gets a class that can send messages to this Object.
-    QueryTracker *getQueryTracker() const;
-
     ODP::Service* odp() const {
         DEPRECATED(ProxyObject);
         return mParent.get();
     }
 
     double priority;
-
-    /// Send a message.  FIXME this is temporary to transition from QueryTracker.
-    bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
 
 
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name

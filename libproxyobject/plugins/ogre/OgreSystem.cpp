@@ -709,7 +709,7 @@ OgreSystem::~OgreSystem() {
 
 static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     std::cout << "Killing WebView!"<<std::endl;
-    p->getProxyManager()->destroyObject(p,ogreSystem->getPrimaryCamera()->getProxy().getQueryTracker());
+    p->getProxyManager()->destroyObject(p);
 }
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){

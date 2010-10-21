@@ -609,7 +609,7 @@ private:
             }
             if (hasSubObjects) {
                 parentEnt->setSelected(false);
-                proxyMgr->destroyObject(parentEnt->getProxyPtr(),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
+                proxyMgr->destroyObject(parentEnt->getProxyPtr());
                 parentEnt = NULL; // dies.
                 numUngrouped++;
             }
