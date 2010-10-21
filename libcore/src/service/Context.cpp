@@ -58,6 +58,10 @@ Context::~Context() {
 }
 
 void Context::start() {
+    mSignalHandler = Signal::registerHandler(
+        std::tr1::bind(&Context::handleSignal, this, std::tr1::placeholders::_1)
+    );
+
     if (mSimDuration == Duration::zero())
         return;
 
@@ -73,6 +77,8 @@ void Context::start() {
 }
 
 void Context::shutdown() {
+    Signal::unregisterHandler(mSignalHandler);
+
     this->stop();
     for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
         (*it)->stop();
@@ -85,6 +91,13 @@ void Context::stop() {
 }
 
 
+void Context::handleSignal(Signal::Type stype) {
+    // Try to keep this minimal. Post the shutdown process rather than
+    // actually running it here. This makes the extent of the signal
+    // handling known completely in this method, whereas calling
+    // shutdown can cause a cascade of cleanup.
+    ioService->post( std::tr1::bind(&Context::shutdown, this) );
+}
 
 void Context::cleanup() {
     Network::IOTimerPtr timer = mKillTimer;

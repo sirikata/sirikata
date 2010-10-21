@@ -40,6 +40,7 @@
 #include <sirikata/core/util/Timer.hpp>
 #include "TimeProfiler.hpp"
 #include "Service.hpp"
+#include "Signal.hpp"
 
 #define FORCE_MONOTONIC_CLOCK 1
 
@@ -156,6 +157,9 @@ protected:
         ioService->stop();
     }
 
+    // Signal handling
+    void handleSignal(Signal::Type stype);
+
     Trace::Trace* mTrace;
 
     Sirikata::AtomicValue<Time> mEpoch;
@@ -168,6 +172,8 @@ protected:
     Network::IOTimerPtr mKillTimer;
 
     Sirikata::AtomicValue<bool> mStopRequested;
+
+    Signal::HandlerID mSignalHandler;
 }; // class ObjectHostContext
 
 } // namespace Sirikata
