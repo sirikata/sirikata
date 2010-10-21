@@ -33,7 +33,6 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
 namespace ODP {
@@ -101,32 +100,6 @@ Port* DelegateService::bindODPPort(const SpaceObjectReference& sor) {
 
 void DelegateService::registerDefaultODPHandler(const MessageHandler& cb) {
     mDefaultHandler = cb;
-}
-
-void DelegateService::registerDefaultODPHandler(const OldMessageHandler& cb) {
-    mDefaultOldHandler = cb;
-}
-
-bool DelegateService::deliver(const RoutableMessageHeader& header, MemoryReference data) const {
-    // Check from most to least specific
-    PortMap const* pm = getPortMap( SpaceObjectReference(header.destination_space(), header.destination_object()));
-    if (pm != NULL) {
-        PortMap::const_iterator it = pm->find(header.destination_port());
-        if (it != pm->end()) {
-            DelegatePort* port = it->second;
-            bool delivered = port->deliver(header, data);
-            if (delivered)
-                return true;
-        }
-    }
-
-    // And finally, the default handler
-    if (mDefaultOldHandler != 0) {
-        mDefaultOldHandler(header, data);
-        return true;
-    }
-
-    return false;
 }
 
 bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {

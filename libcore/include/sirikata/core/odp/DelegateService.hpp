@@ -69,16 +69,6 @@ public:
     virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const MessageHandler& cb);
-    virtual void registerDefaultODPHandler(const OldMessageHandler& cb);
-
-    // Delegate delivery duties
-    /** Deliver a message to this subsystem.
-     *  \deprecated
-     *  \param header message header for the received data
-     *  \param data the payload of the message
-     *  \returns true if the message was handled, false otherwise.
-     */
-    bool deliver(const RoutableMessageHeader& header, MemoryReference data) const;
 
     /** Deliver a message to this subsystem.
      *  \param src source endpoint
@@ -106,7 +96,6 @@ private:
     PortCreateFunction mCreator;
     SpacePortMap mSpacePortMap;
     MessageHandler mDefaultHandler;
-    OldMessageHandler mDefaultOldHandler;
 }; // class DelegateService
 
 } // namespace ODP

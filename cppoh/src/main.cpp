@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 

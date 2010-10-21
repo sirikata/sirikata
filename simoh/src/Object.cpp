@@ -289,10 +289,6 @@ void Object::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
 
-void Object::registerDefaultODPHandler(const ODP::OldMessageHandler& cb) {
-    mDelegateODPService->registerDefaultODPHandler(cb);
-}
-
 ODP::DelegatePort* Object::createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port) {
     ODP::Endpoint port_ep(spaceobj, port);
     return new ODP::DelegatePort(

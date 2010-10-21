@@ -248,7 +248,6 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
-    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
 
     // Movement Interface
     virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);

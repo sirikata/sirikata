@@ -37,10 +37,6 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include "Protocol_Sirikata.pbj.hpp"
 
-#include <sirikata/core/util/RoutableMessageBody.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
-#include <sirikata/core/util/KnownServices.hpp>
-
 namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)

@@ -512,8 +512,8 @@ public:
     /**
      * Send a message to another object on this system
      */
-    void sendMessage(const RoutableMessageHeader&,
-                     MemoryReference message_body);
+    //void sendMessage(const RoutableMessageHeader&,
+    //                 MemoryReference message_body);
 
     virtual bool queryRay(const Vector3d& position,
                           const Vector3f& direction,

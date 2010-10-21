@@ -663,10 +663,6 @@ void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
 
-void HostedObject::registerDefaultODPHandler(const ODP::OldMessageHandler& cb) {
-    mDelegateODPService->registerDefaultODPHandler(cb);
-}
-
 ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port) {
     assert(spaceobj.space() != SpaceID::any());
     assert(spaceobj.space() != SpaceID::null());

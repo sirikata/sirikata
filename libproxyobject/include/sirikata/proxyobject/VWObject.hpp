@@ -65,7 +65,6 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor) = 0;
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb) = 0;
-    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb) = 0;
 
     // Timing information
     virtual Time spaceTime(const SpaceID& space, const Time& t) = 0;

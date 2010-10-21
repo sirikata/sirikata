@@ -54,8 +54,6 @@ public:
 
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);
-    bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
-    void processMessage(const RoutableMessageHeader& header, MemoryReference body);
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.

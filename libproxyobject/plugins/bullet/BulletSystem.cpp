@@ -40,8 +40,6 @@
 #include "BulletSystem.hpp"
 #include "Protocol_Sirikata.pbj.hpp"
 #include "Protocol_Physics.pbj.hpp"
-#include <sirikata/core/util/RoutableMessageBody.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 using namespace std;
 using std::tr1::placeholders::_1;
@@ -564,11 +562,12 @@ void BulletSystem::poll() {
             */
 
             /// collision messages
+/* Uses old RoutableMessage interface, needs to use ODP.
             std::map<ObjectReference,RoutableMessageBody> mBeginCollisionMessagesToSend;
             std::map<ObjectReference,RoutableMessageBody> mEndCollisionMessagesToSend;
             BulletObj* anExampleCollidingMesh=NULL;
             for (customDispatch::CollisionPairMap::iterator i=dispatcher->collisionPairs.begin();
-                    i != dispatcher->collisionPairs.end(); /*increment in if*/) {
+                    i != dispatcher->collisionPairs.end(); ) { // increment in if
                 BulletObj* b0=anExampleCollidingMesh=i->first.getLower();
                 BulletObj* b1=i->first.getHigher();
                 ObjectReference b0id=b0->getObjectReference();
@@ -658,6 +657,7 @@ void BulletSystem::poll() {
                     }
                 }
             }
+*/
         }
     }
     DEBUG_OUTPUT(cout << endl;)
@@ -840,9 +840,9 @@ struct  raycastCallback : public btCollisionWorld::RayResultCallback {
         return rayResult.m_hitFraction;
     }
 };
-
+/*
 void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference message_body) {
-/* Note: Both this interface and implementation need to change.  They
+  Note: Both this interface and implementation need to change.  They
     should use ODP::Service and ODP::Port (or something layered on top
     of them).  One-off unreliable messages probably don't even make
     sense for this service.
@@ -850,9 +850,9 @@ void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference m
     for (vector<MessageService*>::iterator i=messageServices.begin(),ie=messageServices.end();i!=ie;++i) {
         (*i)->processMessage(mh,message_body);
     }
-*/
-}
 
+}
+*/
 bool BulletSystem::queryRay(const Vector3d& position,
                             const Vector3f& direction,
                             const double maxDistance,
