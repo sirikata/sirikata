@@ -1587,6 +1587,9 @@ private:
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
 
+
+
+        
         return EventResponse::nop();
     }
 

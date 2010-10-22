@@ -471,14 +471,18 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 
 bool HostedObject::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
     DEPRECATED(); // We need a SpaceID in here
-    //std::cout<<"\n\nThis is the size of mSpaceData:  "<<mSpaceData->size()<<"\n\n\n";
-    //assert( mSpaceData->size() == 1);
     assert(mSpaceData->size() != 0);
-    std::cout<<"\n\nPotentially incorrect: arbitrarily routing through first space in route\n\n";
+
     SpaceID space = mSpaceData->begin()->first.space();
+    
+    // std::cout<<"\n\nPotentially incorrect: arbitrarily routing through first space in route\n\n";
+    // std::cout<<"space size: "<<mSpaceData->size()<<"\n";
+    // SpaceDataMap::iterator it;
+    // for (it = mSpaceData->begin(); it != mSpaceData->end(); ++it)
+    //     std::cout<<"Space:  "<<it->first.space()<<"\n";
+    
     return mObjectHost->send(getSharedPtr(), space, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
 }
-
 
 
 //returns true if this is a script init message.  returns false otherwise
