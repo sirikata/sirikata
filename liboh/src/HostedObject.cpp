@@ -381,7 +381,9 @@ void HostedObject::connect(
 }
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds) {
+
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType)
+{
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
@@ -406,6 +408,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     }
 
 
+    std::cout<<"\n\n\nhandleConnectedIndirect\n\n";
+    
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
@@ -937,8 +941,6 @@ void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectRefer
 {
     Vector3f curVel = requestCurrentVelocity(space,oref);
     TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(pos,curVel));
-//FIXME: re-write the requestLocationUpdate function so that takes in object
-//reference as well
     requestLocationUpdate(space,oref,tmv);
 }
 
@@ -948,10 +950,6 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
 {
     Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
     TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(curPos,vel));
-
-    //FIXME: re-write the requestLocationUpdate function so that takes in object
-    //reference as well
-
     requestLocationUpdate(space,oref,tmv);
 }
 
@@ -1026,27 +1024,6 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
     tUri =  proxy_mesh_obj->getMesh();
     return true;
 }
-
-
-
-//FIXME: may need to do some checking to ensure that actually still connected to
-//this space.
-//should be using id anyways.
-// ObjectReference HostedObject::getObjReference(const SpaceID& space)
-// {
-//     SpaceDataMap::const_iterator space_data_it = mSpaceData->find(space);
-
-//     if (space_data_it == mSpaceData->end())
-//     {
-//         std::cout<<"\n\n";
-//         std::cout<<"Not connected to this space";
-//         std::cout<<"\n\n";
-//         std::cout.flush();
-//         assert(false);
-//     }
-   
-//     return space_data_it->second.object;
-// }
 
 
 Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)

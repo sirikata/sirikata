@@ -172,21 +172,21 @@ void CSVObjectFactory::generate() {
                 String mesh( line_parts[mesh_idx] );
 
                 String scriptFile = "";
-								String scriptType = "";
-								if(script_file_idx != -1)
-								{
-								
-								  std::cout << "\n\nLength of line_parts: " <<line_parts.size();
-									std::cout <<"\n\nIndex: "<<script_file_idx<<"\n\n";
-									std::cout.flush();
-
-									if(script_file_idx < line_parts.size())
-									{
-									  scriptFile = line_parts[script_file_idx];
-										std::cout << "\n\n Gor a script file: " << scriptFile<<"\n\n";
-										scriptType = line_parts[script_file_idx + 1];
-									}
-								}
+                String scriptType = "";
+                if(script_file_idx != -1)
+                {
+                    
+                    std::cout << "\n\nLength of line_parts: " <<line_parts.size();
+                    std::cout <<"\n\nIndex: "<<script_file_idx<<"\n\n";
+                    std::cout.flush();
+                    
+                    if(script_file_idx < line_parts.size())
+                    {
+                        scriptFile = line_parts[script_file_idx];
+                        std::cout << "\n\n Got a script file: " << scriptFile<<"\n\n";
+                        scriptType = line_parts[script_file_idx + 1];
+                    }
+                }
 
                 float scale =
                     scale_idx == -1 ?
