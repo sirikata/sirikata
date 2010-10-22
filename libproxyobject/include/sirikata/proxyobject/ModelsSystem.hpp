@@ -70,8 +70,13 @@ class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
         virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
 
-        /** Convert a Meshdata to the format for this ModelsSystem. */
-        virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename) = 0;
+        /** Convert a Meshdata to the format for this ModelsSystem.
+         *  \param meshdata the Meshdata to save to disk
+         *  \param format format hint (may or may not be used by plugin)
+         *  \param filename the file to save the serialized mesh to
+         *  \returns true if the conversion was successful, false otherwise
+         */
+        virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) = 0;
 
     protected:
 

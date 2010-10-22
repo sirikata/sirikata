@@ -1,7 +1,7 @@
-/*  Sirikata libproxyobject -- Collada Models System
- *  ColladaSystem.hpp
+/*  Sirikata
+ *  AnyModelsSystem.hpp
  *
- *  Copyright (c) 2009, Mark C. Barnes
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_COLLADA_SYSTEM_
-#define _SIRIKATA_COLLADA_SYSTEM_
+#ifndef _SIRIKATA_ANY_MODELS_SYSTEM_
+#define _SIRIKATA_ANY_MODELS_SYSTEM_
 
-#include "ColladaDocument.hpp"
-
-#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ModelsSystem.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/Range.hpp>
-#include <set>
-
-/////////////////////////////////////////////////////////////////////
 
 namespace Sirikata {
 
-class OptionValue;
-
-namespace Models {
-
-/////////////////////////////////////////////////////////////////////
-
-class SIRIKATA_PLUGIN_EXPORT ColladaSystem
-    :   public ModelsSystem
+/** AnyModelsSystem is an implementation of ModelsSystem which uses all other
+ *  available implementations to handle as wide a variety of meshes as
+ *  possible.  It uses all
+ */
+class SIRIKATA_PROXYOBJECT_EXPORT AnyModelsSystem : public ModelsSystem
 {
   public:
-    virtual ~ColladaSystem ();
+    virtual ~AnyModelsSystem();
 
-    static ColladaSystem* create(String const& options);
-
-    // ModelsSystem Interface
+    /** Check if this ModelsSystem will be able to parse the
+     *  data.  This doesn't guarantee successful parsing:
+     *  generally it only checks for magic numbers to see if it is
+     *  likely a supported format.
+     */
     virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data);
+
+    /** Load a mesh into a Meshdata object. */
     virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
         std::tr1::shared_ptr<const Transfer::DenseData> data);
+
+    /** Convert a Meshdata to the format for this ModelsSystem. */
     virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename);
 
+    static ModelsSystem* create(const String& args);
   private:
-    ColladaSystem (); // called by create()
-    ColladaSystem ( ColladaSystem const& ); // not implemented
-    ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
+    AnyModelsSystem();
+    AnyModelsSystem(const AnyModelsSystem& rhs); // Not implemented
+    AnyModelsSystem& operator=(const AnyModelsSystem& rhs); // Not implemented
 
-    bool initialize(String const& options);
-
-    // documents that have been transfered, parsed, and loaded.
-    // MCB: make this a map when/if a key becomes useful
-
-    typedef std::set< ColladaDocumentPtr > DocumentSet;
-    DocumentSet mDocuments;
-
+    typedef std::map<String, ModelsSystem*> SystemsMap;
+    SystemsMap mModelsSystems;
 };
 
-} // namespace Models
 } // namespace Sirikata
 
-#endif // _SIRIKATA_COLLADA_SYSTEM_
+#endif // _SIRIKATA_ANY_MODELS_SYSTEM_

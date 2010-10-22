@@ -81,6 +81,13 @@ public:
     bool hasConstructor(const String&name)const {
         return mConstructors.find(name) != mConstructors.end();
     }
+    typedef std::list<String> ConstructorNameList;
+    ConstructorNameList getNames() const {
+        ConstructorNameList result;
+        for(typename ConstructorMap::const_iterator it = mConstructors.begin(); it != mConstructors.end(); it++)
+            result.push_back(it->first);
+        return result;
+    }
     const Ftype &getConstructor(const String&name)const{
         typename ConstructorMap::const_iterator where=mConstructors.find(name);
         if (where==mConstructors.end()) {

@@ -142,7 +142,7 @@ OgreSystem::OgreSystem(Context* ctx)
    mContext(ctx),
    mLastFrameTime(Task::LocalTime::now()),
     // FIXME need to support multiple parsers, see #124
-   mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( "" ) ),
+   mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
      mQuitRequested(false),
      mFloatingPointOffset(0,0,0),
      mSuspended(false),

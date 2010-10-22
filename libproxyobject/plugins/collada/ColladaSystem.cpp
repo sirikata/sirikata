@@ -129,8 +129,10 @@ MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Finger
       return loader.getMeshdata();
 }
 
-void ColladaSystem::convertMeshdata(const Meshdata& meshdata, const std::string& filename) {
-    meshdataToCollada(meshdata, filename);
+bool ColladaSystem::convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) {
+    // format is ignored, we only know one format
+    int result = meshdataToCollada(meshdata, filename);
+    return (result == 0);
 }
 
 

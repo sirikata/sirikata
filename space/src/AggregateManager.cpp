@@ -438,8 +438,8 @@ AggregateManager::AggregateManager(SpaceContext* ctx, LocationService* loc) :
   mContext(ctx), mLoc(loc), mThreadRunning(true)
 {
     mModelsSystem = NULL;
-    if (ModelsSystemFactory::getSingleton().hasConstructor("colladamodels"))
-        mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("colladamodels")("");
+    if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
+        mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
@@ -876,7 +876,7 @@ void AggregateManager::uploadQueueServiceThread() {
       char localMeshName[MESHNAME_LEN];
       snprintf(localMeshName, MESHNAME_LEN, "aggregate_mesh_%s.dae", uuid.toString().c_str());
       //      std::cout << localMeshName << " = localMeshName\n";
-      mModelsSystem->convertMeshdata(*meshptr, localMeshName);
+      mModelsSystem->convertMeshdata(*meshptr, "colladamodels", localMeshName);
 
 
       //      std::cout << "Uploading mesh for: " << uuid.toString() << "\n";
