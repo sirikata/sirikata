@@ -59,6 +59,13 @@ class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
     public:
         virtual ~ModelsSystem () {}
 
+        /** Check if this ModelsSystem will be able to parse the
+         *  data.  This doesn't guarantee successful parsing:
+         *  generally it only checks for magic numbers to see if it is
+         *  likely a supported format.
+         */
+        virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
+
         /** Load a mesh into a Meshdata object. */
         virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;

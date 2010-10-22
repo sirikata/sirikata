@@ -64,6 +64,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     static ColladaSystem* create(String const& options);
 
     // ModelsSystem Interface
+    virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data);
     virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
         std::tr1::shared_ptr<const Transfer::DenseData> data);
     virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename);

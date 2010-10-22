@@ -92,6 +92,24 @@ bool ColladaSystem::initialize(String const& options)
 /////////////////////////////////////////////////////////////////////
 // overrides from ModelsSystem
 
+bool ColladaSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) {
+    // There's no magic number for collada files. Instead, search for
+    // a <COLLADA> tag (just the beginning since it has other content
+    // in it).  Originally we'd check for the closing tag too, but to
+    // keep this check minimal, we only check the beginning of the
+    // document, so we can't check for the closing tag.
+    if (!data) return false;
+
+    // Create a string out of the first 1K
+    int32 sublen = std::min((int)data->length(), (int)1024);
+    std::string subset((const char*)data->begin(), (std::size_t)sublen);
+
+    if (subset.find("<COLLADA") != subset.npos)
+        return true;
+
+    return false;
+}
+
 MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data)
 {
