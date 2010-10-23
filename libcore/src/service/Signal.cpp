@@ -59,6 +59,7 @@ void handle_signal(int signum) {
       case SIGINT: sigtype = INT; break;
       case SIGHUP: sigtype = HUP; break;
       case SIGABRT: sigtype = ABORT; break;
+      case SIGTERM: sigtype = TERM; break;
       case SIGKILL: sigtype = KILL; break;
       default: break;
     }
@@ -80,6 +81,7 @@ HandlerID registerHandler(Handler handler) {
         signal(SIGINT, handle_signal);
         signal(SIGHUP, handle_signal);
         signal(SIGABRT, handle_signal);
+        signal(SIGTERM, handle_signal);
         signal(SIGKILL, handle_signal);
     }
 #endif
@@ -95,6 +97,7 @@ void unregisterHandler(HandlerID& handler) {
         signal(SIGINT, SIG_DFL);
         signal(SIGHUP, SIG_DFL);
         signal(SIGABRT, SIG_DFL);
+        signal(SIGTERM, SIG_DFL);
         signal(SIGKILL, SIG_DFL);
     }
 #endif

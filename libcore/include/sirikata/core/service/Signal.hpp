@@ -47,6 +47,7 @@ enum Type {
     INT,
     HUP,
     ABORT,
+    TERM,
     KILL
 };
 
