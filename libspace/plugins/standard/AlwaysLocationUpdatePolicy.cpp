@@ -139,25 +139,35 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-static void locSubstreamCallback(int x, Stream<SpaceObjectReference>::Ptr substream) {
-    if (!substream)
-        SILOG(always_loc,error,"Unhandled error when opening substream.");
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(SSTStreamPtr parent_stream, std::string* msg, int count) {
+    parent_stream->createChildStream(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::locSubstreamCallback, this, _1, _2, parent_stream, msg, count+1),
+        (void*)msg->data(), msg->size(),
+        OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
+    );
+}
+
+void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_stream, std::string* msg, int count) {
+    if (substream || count > 5) {
+        SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
+        return;
+    }
+
+    tryCreateChildStream(parent_stream, msg, count);
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
   std::string bluMsg = serializePBJMessage(blu);
-  Stream<SpaceObjectReference>::Ptr locServiceStream = mLocService->getObjectStream(dest);
+  SSTStreamPtr locServiceStream = mLocService->getObjectStream(dest);
 
   bool sent = false;
   if (locServiceStream) {
       Sirikata::Protocol::Frame msg_frame;
       msg_frame.set_payload(bluMsg);
-      std::string framed_loc_msg = serializePBJMessage(msg_frame);
-
-    locServiceStream->createChildStream(locSubstreamCallback, (void*)framed_loc_msg.data(), framed_loc_msg.size(),
-        OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION);
-    sent = true;
+      std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
+      tryCreateChildStream(locServiceStream, framed_loc_msg, 0);
+      sent = true;
   }
 
   return sent;
