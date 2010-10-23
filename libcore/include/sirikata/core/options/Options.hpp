@@ -100,6 +100,7 @@ public:
     ~OptionSet();
     void parse(const std::string&);
     void parse(int, const char * const *);
+    void parseFile(const std::string&, bool required);
     void addOption(OptionValue*v);
     OptionValue* referenceOption(const std::string &option, OptionValue**pointer = NULL);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);
