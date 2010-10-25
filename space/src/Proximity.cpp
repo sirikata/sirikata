@@ -400,6 +400,7 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
 
 
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
+  
     mAggregateEventHandlers.push(
         std::tr1::bind(
             &LocationService::addLocalAggregateObject, mLocService,
@@ -410,13 +411,14 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
             ""
         )
     );
+  
     scheduleAggregateEventHandler();
 
 
     mAggregateManager->addAggregate(objid);
 }
 
-void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+  void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
 
   if (mLocService->contains(objid)) {
     mLocService->updateLocalAggregateLocation(
@@ -431,42 +433,48 @@ void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bn
 }
 
 void Proximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
-    // Loc cares only about this chance to update state of aggregate
-    mAggregateEventHandlers.push(
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+      // Loc cares only about this chance to update state of aggregate
+      mAggregateEventHandlers.push(
         std::tr1::bind(
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
-    );
+      );
+    }
     scheduleAggregateEventHandler();
 
     mAggregateManager->addChild(objid, child);
 }
 
 void Proximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
-    // Loc cares only about this chance to update state of aggregate
-    mAggregateEventHandlers.push(
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+      // Loc cares only about this chance to update state of aggregate
+      mAggregateEventHandlers.push(
         std::tr1::bind(
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
-    );
+      );
+    }
     scheduleAggregateEventHandler();
 
     mAggregateManager->removeChild(objid, child);
 }
 
 void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+  if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
     mAggregateEventHandlers.push(
         std::tr1::bind(
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
-    );
-    scheduleAggregateEventHandler();
-
-    if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
-      mAggregateManager->generateAggregateMesh(objid, Duration::seconds(2400.0+rand()%2040));
+    );   
+  }
+  scheduleAggregateEventHandler();
+      
+  if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
+    mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
 }
 
 void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {

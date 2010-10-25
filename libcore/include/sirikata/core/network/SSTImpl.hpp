@@ -357,6 +357,8 @@ private:
 
   std::tr1::weak_ptr<Connection<EndPointType> > mWeakThis;
 
+  uint mNumInitialRetransmissionAttempts;
+
   google::protobuf::LogSilencer logSilencer;
 
 private:
@@ -367,10 +369,11 @@ private:
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
-      mNumStreams(0), mCwnd(1), mRTOMicroseconds(2000000),
+      mNumStreams(0), mCwnd(1), mRTOMicroseconds(10000000),
       mFirstRTO(true),  MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
-      MAX_QUEUED_SEGMENTS(300),
-      CC_ALPHA(0.8), mLastTransmitTime(Time::null()), inSendingMode(true), numSegmentsSent(0)
+      MAX_QUEUED_SEGMENTS(3000),
+      CC_ALPHA(0.8), mLastTransmitTime(Time::null()), inSendingMode(true), numSegmentsSent(0),
+      mNumInitialRetransmissionAttempts(0)
   {
       mDatagramLayer = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
       mDatagramLayer->listenOn(
@@ -400,14 +403,14 @@ private:
      available channel. */
   static int getAvailableChannel() {
     //TODO: faster implementation.
-    for (uint32 i = sAvailableChannels.size() - 1; i>= 0; i--) {
+    for (uint32 i = sAvailableChannels.size() - 1; i>0; i--) {
       if (!sAvailableChannels.test(i)) {
 	sAvailableChannels.set(i, 1);
 	return i;
       }
     }
 
-    return -1;
+    return 0;
   }
 
   static void releaseChannel(uint16 channel) {
@@ -421,16 +424,16 @@ private:
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
     const Time curTime = Timer::now();
 
-    conn->localEndPoint();
+    if (mState == CONNECTION_PENDING_CONNECT) {
+      mOutstandingSegments.clear();
+    }
 
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) {
-        std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
-        if (thus) {
-            getContext()->mainStrand->post(Duration::seconds(0.01),
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                          thus) );
+      std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+        if (thus) {          
+          cleanup(thus);
         }else {
             SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -443,9 +446,8 @@ private:
         mState = CONNECTION_DISCONNECTED;
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-            getContext()->mainStrand->post(Duration::seconds(0.01),
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                          thus ));
+          cleanup(thus);
+          
         }else {
             SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -468,44 +470,49 @@ private:
 	  sstMsg.set_ack_sequence_number(segment->mAckSequenceNumber);
 
 	  sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
+          
+          /*printf("%s sending packet from data sending loop to %s \n",
+                   mLocalEndPoint.endPoint.toString().c_str()
+                   , mRemoteEndPoint.endPoint.toString().c_str());*/          
 
-	  /*printf("%s sending packet from data sending loop to %s ",
-	    mLocalEndPoint.endPoint.readableHexData().c_str()
-            , mRemoteEndPoint.endPoint.readableHexData().c_str());*/
-
+          
 	  sendSSTChannelPacket(sstMsg);
+
+          if (mState == CONNECTION_PENDING_CONNECT) {
+            mNumInitialRetransmissionAttempts++;
+            
+          }
 
 	  segment->mTransmitTime = curTime;
 	  mOutstandingSegments.push_back(segment);
-
-	  mQueuedSegments.pop_front();
 
 	  numSegmentsSent++;
 
 	  mLastTransmitTime = curTime;
 
-          inSendingMode = false;
+          
+          if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 3) {
+            
+            inSendingMode = false;
+            mQueuedSegments.pop_front();
+          }
       }
 
-      if (!inSendingMode) {
+      if (!inSendingMode || mState == CONNECTION_PENDING_CONNECT) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
                                        std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
       }
     }
     else {
-
-
       if (mState == CONNECTION_PENDING_CONNECT) {
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-
-            getContext()->mainStrand->post(Duration::seconds(0.01),
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                          thus) );
+          cleanup(thus);
+          
         }else {
             SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
-
+        
         return false; //the connection was unable to contact the other endpoint.
       }
 
@@ -585,10 +592,15 @@ private:
       return false;
     }
 
-    std::tr1::shared_ptr<Connection>  conn =  std::tr1::shared_ptr<Connection> (
-						        new Connection(localEndPoint, remoteEndPoint));
-    sConnectionMap[localEndPoint] = conn;
     uint16 availableChannel = getAvailableChannel();
+
+    if (availableChannel == 0) 
+      return false;
+
+    std::tr1::shared_ptr<Connection>  conn =  std::tr1::shared_ptr<Connection> (
+                    new Connection(localEndPoint, remoteEndPoint));
+
+    sConnectionMap[localEndPoint] = conn;
     sConnectionReturnCallbackMap[localEndPoint] = cb;
 
     lock.unlock();
@@ -701,7 +713,8 @@ private:
         pushedIntoQueue = true;
 
         if (inSendingMode) {
-          getContext()->mainStrand->post(Duration::seconds(0.01),
+
+          getContext()->mainStrand->post(Duration::milliseconds(1.0),
                                          std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this, mWeakThis.lock()) );
         }
       }
@@ -1026,8 +1039,9 @@ private:
 
       lock.unlock();
 
-      if (connState == CONNECTION_PENDING_CONNECT && cb != NULL)
+      if (connState == CONNECTION_PENDING_CONNECT && cb ) {
         cb(SST_IMPL_FAILURE, failed_conn);
+      }
     }
   }
 
@@ -1368,7 +1382,6 @@ public:
     bool result = Connection<EndPointType>::createConnection(localEndPoint,
 							     remoteEndPoint,
 							     connectionCreated, cb);
-
     return result;
   }
 
@@ -1640,7 +1653,8 @@ private:
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
     MAX_RECEIVE_WINDOW(10000),
-    mStreamRTOMicroseconds(2000000),
+    mFirstRTO(true),
+    mStreamRTOMicroseconds(10000000),
     FL_ALPHA(0.8),
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
@@ -1767,9 +1781,7 @@ private:
         mState = DISCONNECTED;
 
         if (!retVal) {
-          getContext()->mainStrand->post(Duration::seconds(0.01),
-                                         std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                        conn) );
+          Connection<EndPointType>::cleanup(conn);
         }
 
 	return retVal;
@@ -1883,7 +1895,7 @@ private:
     mNumOutstandingBytes = 0;
 
     if (!mChannelToBufferMap.empty()) {
-      if (mStreamRTOMicroseconds < 2000000) {
+      if (mStreamRTOMicroseconds < 20000000) {
         mStreamRTOMicroseconds *= 2;
       }
       mChannelToBufferMap.clear();
@@ -2041,16 +2053,16 @@ private:
   }
 
   void updateRTO(Time sampleStartTime, Time sampleEndTime) {
-    static bool firstRTO = true;
+    
 
     if (sampleStartTime > sampleEndTime ) {
       std::cout << "Bad sample\n";
       return;
     }
 
-    if (firstRTO) {
+    if (mFirstRTO) {
       mStreamRTOMicroseconds = (sampleEndTime - sampleStartTime).toMicroseconds() ;
-      firstRTO = false;
+      mFirstRTO = false;
     }
     else {
 
@@ -2172,6 +2184,7 @@ private:
 
   boost::mutex mQueueMutex;
 
+  bool mFirstRTO;
   int64 mStreamRTOMicroseconds;
   float FL_ALPHA;
 

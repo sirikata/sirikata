@@ -496,7 +496,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     fflush(stdout);
 
 
-    generateAggregateMesh(uuid, Duration::seconds(2400.0f+rand()%2400));
+    generateAggregateMesh(uuid, Duration::seconds(300.0f+rand()%300));
   }
 }
 
@@ -514,7 +514,7 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     //          <<  locationStr
     //          << " generateAggregateMesh called\n";
 
-    generateAggregateMesh(uuid, Duration::seconds(2400.0f+rand() % 2400));
+    generateAggregateMesh(uuid, Duration::seconds(300.0f+rand() % 300));
   }
 }
 
