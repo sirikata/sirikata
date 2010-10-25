@@ -175,11 +175,6 @@ void CSVObjectFactory::generate() {
                 String scriptType = "";
                 if(script_file_idx != -1)
                 {
-                    
-                    std::cout << "\n\nLength of line_parts: " <<line_parts.size();
-                    std::cout <<"\n\nIndex: "<<script_file_idx<<"\n\n";
-                    std::cout.flush();
-                    
                     if(script_file_idx < line_parts.size())
                     {
                         scriptFile = line_parts[script_file_idx];

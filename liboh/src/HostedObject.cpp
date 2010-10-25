@@ -384,6 +384,7 @@ void HostedObject::connect(
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType)
 {
+
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
@@ -424,7 +425,10 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Special case for camera
     ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
     if (cam)
+    {
+        std::cout<<"\n\nReceived cam object in handleConnectedIndirect\n\n";
         cam->attach(String(), 0, 0);
+    }
 
     //bind an odp port to listen for the begin scripting signal.  if have
     //receive the scripting signal for the first time, that means that we create
@@ -440,7 +444,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     
 }
 
-void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server) {
+void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
+{
     NOT_IMPLEMENTED(ho);
 }
 
