@@ -713,6 +713,8 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 }
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
+    std::cout<<"\n\n\n**********GOT INTO ON CREATE PROXY\n\n\n";
+    
     bool created = false;
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
