@@ -142,20 +142,28 @@ int main (int argc, char** argv) {
     }
 
 
+    typedef std::list<String> StringList;
+    StringList oh_sims(GetOptionValue<StringList>(OPT_OH_SIMS));
+
+    // Note: We currently just use the proxy manager for the default space. Not
+    // sure if we should do something about handling multiple spaces.
+    ProxyManagerPtr proxy_manager;
+
     // FIXME simple test example
     // This is the camera.  We need it early on because other things depend on
     // having its ObjectHostProxyManager.
-    HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
-    obj->init();
-    // Note: We currently just use the proxy manager for the default space. Not
-    // sure if we should do something about handling multiple spaces.
-    ProxyManagerPtr proxy_manager = obj->getProxyManager( mainSpace );
+    // Currently, we only create the "camera" object if there's a simulation
+    // that will want it
+    HostedObjectPtr obj;
+    if (!oh_sims.empty()) {
+        obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
+        obj->init();
+        proxy_manager = obj->getProxyManager( mainSpace );
+    }
 
     typedef std::vector<TimeSteppedSimulation*> SimList;
     SimList sims;
 
-    typedef std::list<String> StringList;
-    StringList oh_sims(GetOptionValue<StringList>(OPT_OH_SIMS));
     for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
         SILOG(cppoh,error,*it);
     for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++) {
@@ -178,13 +186,15 @@ int main (int argc, char** argv) {
     }
 
     // FIXME
-    obj->connect(
-        mainSpace,
-        Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
-        BoundingSphere3f(Vector3f::nil(), 1.f),
-        "",
-        SolidAngle(0.00000001f),
-        UUID::null());
+    if (obj) {
+        obj->connect(
+            mainSpace,
+            Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
+            BoundingSphere3f(Vector3f::nil(), 1.f),
+            "",
+            SolidAngle(0.00000001f),
+            UUID::null());
+    }
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
