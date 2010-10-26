@@ -79,6 +79,10 @@ public:
 
     return this->port < ep.port ;
   }
+
+    std::string toString() const {
+        return endPoint.toString() + boost::lexical_cast<std::string>(port);
+    }
 };
 
 class Mutex {
@@ -148,7 +152,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     }
 
     void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::MessageHandler cb) {
-        ODP::Port* port = getOrAllocatePort(listeningEndPoint);
+        ODP::Port* port = allocatePort(listeningEndPoint);
         port->receive(cb);
     }
 
@@ -432,7 +436,7 @@ private:
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) {
       std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
-        if (thus) {          
+        if (thus) {
           cleanup(thus);
         }else {
             SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
@@ -447,7 +451,7 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
           cleanup(thus);
-          
+
         }else {
             SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -470,17 +474,17 @@ private:
 	  sstMsg.set_ack_sequence_number(segment->mAckSequenceNumber);
 
 	  sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
-          
+
           /*printf("%s sending packet from data sending loop to %s \n",
                    mLocalEndPoint.endPoint.toString().c_str()
-                   , mRemoteEndPoint.endPoint.toString().c_str());*/          
+                   , mRemoteEndPoint.endPoint.toString().c_str());*/
 
-          
+
 	  sendSSTChannelPacket(sstMsg);
 
           if (mState == CONNECTION_PENDING_CONNECT) {
             mNumInitialRetransmissionAttempts++;
-            
+
           }
 
 	  segment->mTransmitTime = curTime;
@@ -490,9 +494,9 @@ private:
 
 	  mLastTransmitTime = curTime;
 
-          
+
           if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 3) {
-            
+
             inSendingMode = false;
             mQueuedSegments.pop_front();
           }
@@ -508,11 +512,11 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
           cleanup(thus);
-          
+
         }else {
             SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
-        
+
         return false; //the connection was unable to contact the other endpoint.
       }
 
@@ -551,7 +555,6 @@ private:
                               // point.
        CONNECTION_PENDING_DISCONNECT=5,  // The connection is in the process of
                               // disconnecting from the remote end point.
-
   };
 
 
@@ -594,7 +597,7 @@ private:
 
     uint16 availableChannel = getAvailableChannel();
 
-    if (availableChannel == 0) 
+    if (availableChannel == 0)
       return false;
 
     std::tr1::shared_ptr<Connection>  conn =  std::tr1::shared_ptr<Connection> (
@@ -1018,9 +1021,11 @@ private:
   }
 
 
+  // This is the version of cleanup is used from all the normal methods in Connection
   static void cleanup(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-    int connState = conn->mState;
+    conn->mDatagramLayer->unlisten(conn->mLocalEndPoint);
 
+    int connState = conn->mState;
     if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
       //Deal with the connection not getting connected with the remote endpoint.
       //This is in contrast to the case where the connection got connected, but
@@ -1042,7 +1047,20 @@ private:
       if (connState == CONNECTION_PENDING_CONNECT && cb ) {
         cb(SST_IMPL_FAILURE, failed_conn);
       }
+
+      conn->mState = CONNECTION_DISCONNECTED;
     }
+  }
+  // This version should only be called by the destructor!
+  void finalCleanup() {
+    if (mState != CONNECTION_DISCONNECTED) {
+        mDatagramLayer->unlisten(mLocalEndPoint);
+
+        close(true);
+        mState = CONNECTION_DISCONNECTED;
+    }
+
+    releaseChannel(mLocalChannelID);
   }
 
   static void closeConnections() {
@@ -1116,16 +1134,8 @@ private:
 public:
 
   virtual ~Connection() {
-      mDatagramLayer->unlisten(mLocalEndPoint);
-
-    if (mState != CONNECTION_DISCONNECTED) {
-      // Setting mState to CONNECTION_DISCONNECTED implies close() is being
-      //called from the destructor.
-      mState = CONNECTION_DISCONNECTED;
-      close(true);
-    }
-
-    releaseChannel(mLocalChannelID);
+      // Make sure we've fully cleaned up
+      finalCleanup();
   }
 
 
@@ -2053,7 +2063,7 @@ private:
   }
 
   void updateRTO(Time sampleStartTime, Time sampleEndTime) {
-    
+
 
     if (sampleStartTime > sampleEndTime ) {
       std::cout << "Bad sample\n";
