@@ -1199,6 +1199,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
+                  ${LIBOH_SOURCE_DIR}/PerPresenceData.cpp
                   ${LIBOH_SOURCE_DIR}/Trace.cpp
                    )
 

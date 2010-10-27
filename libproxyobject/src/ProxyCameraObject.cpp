@@ -40,11 +40,6 @@ ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReferen
 
 }
 
-ProxyCameraObject::ProxyCameraObject()
- : ProxyObject()
-{
-}
-
 
 void ProxyCameraObject::destroy() {
     detach();

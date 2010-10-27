@@ -1,14 +1,16 @@
-#include <sirikata/oh/PerPresenceData.hpp>
+
+#include <sirikata/core/util/Platform.hpp>
+
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/oh/PerPresenceData.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 
 
-
-namespace Sirikata
-{
+namespace Sirikata{
     
     SpaceObjectReference PerPresenceData::id() const
     {
@@ -25,7 +27,6 @@ namespace Sirikata
      : parent(_parent),
        space(_space),
        object(_oref),
-       //object(ObjectReference::null()),
        mUpdatedLocation(
             Duration::seconds(.1),
             TemporalValue<Location>::Time::null(),
@@ -39,7 +40,7 @@ namespace Sirikata
     }
 
 
-    PerPresenceData::PerPresenceData(HostedObject* _parent)
+    PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space)
      : parent(_parent),
        mUpdatedLocation(
             Duration::seconds(.1),
@@ -57,11 +58,11 @@ namespace Sirikata
     void PerPresenceData::populateSpaceObjRef(const SpaceObjectReference& sporef)
     {
         validSpaceObjRef = true;
-        space   = sporef->space();
-        object  = sporef->object();
+        space   = sporef.space();
+        object  = sporef.object();
     }
 
-    ObjectHostProxymanagerPtr PerPresenceData::getProxyManager()
+    ObjectHostProxyManagerPtr PerPresenceData::getProxyManager()
     {
         return proxyManager;
     }
@@ -78,10 +79,12 @@ namespace Sirikata
 
     void PerPresenceData::destroy(QueryTracker *tracker) const
     {
-        if (tracker) {
+        if (tracker) 
+        {
             tracker->endForwardingMessagesTo(&parent->mSendService);
             delete tracker;
         }
     }
 
 }
+

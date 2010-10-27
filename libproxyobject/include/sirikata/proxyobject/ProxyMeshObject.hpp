@@ -52,7 +52,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyMeshObject
 {
     public:
         ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr ptr, const SpaceObjectReference& owner_sor);
-        ProxyMeshObject();
         
     // interface from MeshObject
         virtual void setMesh ( URI const& rhs );

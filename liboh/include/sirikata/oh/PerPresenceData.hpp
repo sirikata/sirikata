@@ -6,15 +6,16 @@
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 
+
 #ifndef _SIRIKATA_PER_PRESENCE_DATA_HPP_
 #define _SIRIKATA_PER_PRESENCE_DATA_HPP_
 
 namespace Sirikata
 {
 
-class PerPresenceData
+class SIRIKATA_EXPORT PerPresenceData
 {
-private:
+public:
     HostedObject* parent;
     SpaceID space;
     ObjectReference object;
@@ -25,13 +26,12 @@ private:
     bool validSpaceObjRef;
     
 
-public:
     PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref);
-    PerPresenceData(HostedObject* _parent);
+    PerPresenceData(HostedObject* _parent, const SpaceID& _space);
 
     void populateSpaceObjRef(const SpaceObjectReference& sporef);
-
-    ObjectHostProxymanagerPtr getProxyManager();
+        
+    ObjectHostProxyManagerPtr getProxyManager();
     
     SpaceObjectReference id() const;    
     void initializeAs(ProxyObjectPtr proxyobj);
@@ -40,4 +40,6 @@ public:
 };
 
 }//end namespace sirikata
+
+
 #endif

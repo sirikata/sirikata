@@ -49,15 +49,6 @@ ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const
 {
 }
 
-ProxyMeshObject::ProxyMeshObject()
- : MeshProvider(),
-   ProxyObject(),
-   mMeshURI(),
-   mScale(1.f,1.f,1.f)
-{
-}
-
-
 
 
 /////////////////////////////////////////////////////////////////////

@@ -953,7 +953,10 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
   //FIXME: may want to start in a different place.
   Location startingLoc = mParent->getLocation(space,oref);
 
-  mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
+  //mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
+
+  std::cout<<"\n\nERROR: Must fix create_presence to use new connect interface\n\n";
+  assert(false);
   
   //FIXME: will need to add this presence to the presences vector.
   //but only want to do so when the function has succeeded.

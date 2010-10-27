@@ -175,7 +175,7 @@ void CSVObjectFactory::generate() {
                 String scriptType = "";
                 if(script_file_idx != -1)
                 {
-                    if(script_file_idx < line_parts.size())
+                    if(script_file_idx < (int)line_parts.size())
                     {
                         scriptFile = line_parts[script_file_idx];
                         std::cout << "\n\n Got a script file: " << scriptFile<<"\n\n";
@@ -222,7 +222,8 @@ void CSVObjectFactory::connectObjects() {
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
-            UUID::null()
+            UUID::null(), NULL,oci.scriptFile,
+            oci.scriptType
         );
     }
 

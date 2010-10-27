@@ -126,7 +126,7 @@ SpaceID ObjectHost::getDefaultSpace()
         assert(false);
     }
 
-    return mSessionManagers->begin().first;
+    return mSessionManagers.begin()->first;
 }
 
 // Primary HostedObject API

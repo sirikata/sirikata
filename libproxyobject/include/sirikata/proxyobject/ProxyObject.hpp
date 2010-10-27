@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_PROXY_OBJECT_HPP_
 #define _SIRIKATA_PROXY_OBJECT_HPP_
 
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "ProxyObjectListener.hpp"
@@ -104,13 +105,6 @@ public:
     */
     ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
 
-    /**
-       If you do not have all of the information for the above constructor, you
-       can use the empty constructor below, and fill in the rest of the
-       information later using the afterConnection function.
-     */
-    ProxyObject();
-    void afterConnection(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
     
     virtual ~ProxyObject();
 

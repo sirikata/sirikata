@@ -62,8 +62,9 @@
 #include <sirikata/core/odp/Exceptions.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
-
-
+#include <list>
+#include <vector>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Frame.pbj.hpp"
 
@@ -109,14 +110,14 @@ void HostedObject::init() {
     mObjectHost->registerHostedObject(getSharedPtr());
 }
 
-void HostedObject::destroy() {
+void HostedObject::destroy()
+{
     if (mObjectScript) {
         delete mObjectScript;
         mObjectScript=NULL;
     }
-    for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
-         iter != mSpaceData->end();
-         ++iter) {
+    for (SpaceDataMap::iterator iter = mSpaceData->begin(); iter != mSpaceData->end(); ++iter)
+    {
         iter->second.destroy(getTracker(iter->first.space(),iter->first.object()));
     }
     mSpaceData->clear();
@@ -286,9 +287,9 @@ void HostedObject::connect(
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const UUID&object_uuid_evidence,
+        PerPresenceData* ppd,
         const String& scriptFile,
-        const String& scriptType,
-        PerPresenceData* ppd)
+        const String& scriptType)
 {
     connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd);
 }
@@ -300,9 +301,9 @@ void HostedObject::connect(
         const String& mesh,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
+        PerPresenceData* ppd,
         const String& scriptFile,
-        const String& scriptType,
-        PerPresenceData* ppd)
+        const String& scriptType)
 {
     if (spaceID == SpaceID::null())
         return;
@@ -320,26 +321,26 @@ void HostedObject::connect(
         queryAngle,
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, scriptFile,scriptType,ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1)
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1) 
     );
 
 }
 
 
 
-void HostedObject::addSimListeners(PerPresenceData*& pd, const StringList& oh_sims)
+void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
 {
     std::cout<<"\n\nFIXME: defaulting objects into first space available in addSimListeners\n\n";
     SpaceID space = mObjectHost->getDefaultSpace();
     
-    for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
+    for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
         SILOG(cppoh,error,*it);
 
+    pd = new PerPresenceData (this,space);
 
-    pd = new PerPresenceData(this);
     ObjectHostProxyManagerPtr proxyManPtr = pd->getProxyManager();
     
-    for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
+    for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
     {
         String simName = *it;
         HO_LOG(info,String("[OH] Initializing ") + simName);
@@ -364,17 +365,17 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const StringList& oh_si
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, HostedObjectProxyManagerPtr pm)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds,scriptFile,scriptType, pm)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds,scriptFile,scriptType, ppd)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, HostedObjectProxyManagerPtr pm)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
     std::cout<<"\n\n\nhandleConnectedIndirect\n\n";
     std::cout.flush();
@@ -386,10 +387,22 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
     SpaceObjectReference self_objref(space, obj);
     
-    if(mSpaceData->find(self_objref) == mSpaceData->end()) {
-        mSpaceData->insert(
-            SpaceDataMap::value_type(self_objref, PerPresenceData(this, space, obj, proxymanager))
-        );
+    if(mSpaceData->find(self_objref) == mSpaceData->end())
+    {
+        if (ppd != NULL)
+        {
+            ppd->populateSpaceObjRef(SpaceObjectReference(space,obj));
+            mSpaceData->insert(
+                SpaceDataMap::value_type(self_objref, *ppd)
+            );
+        }
+        else
+        {
+            PerPresenceData toInsert(this,space,obj);
+            mSpaceData->insert(
+                SpaceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
+            );
+        }
     }
     
     // Convert back to local time

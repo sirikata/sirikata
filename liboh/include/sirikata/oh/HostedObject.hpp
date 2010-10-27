@@ -43,6 +43,7 @@
 #include <sirikata/oh/ObjectScriptManager.hpp>
 
 #include <map>
+#include <list>
 #include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -51,6 +52,8 @@
 #include <sirikata/core/transfer/URI.hpp>
 
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/oh/PerPresenceData.hpp>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
 
 namespace Sirikata {
 class ObjectHostContext;
@@ -64,11 +67,12 @@ typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 
 class ObjectScript;
 class HostedObject;
+class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRouter, public ObjectMessageDispatcher {
 //------- Private inner classes
-    class PerPresenceData;
+
     struct PrivateCallbacks;
 protected:
 
@@ -97,6 +101,7 @@ protected:
 
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
+    friend class PerPresenceData;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid, bool is_camera);
 
@@ -142,6 +147,10 @@ public:
      */
     void init();
 
+    void addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims);
+
+
+    
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
@@ -249,27 +258,33 @@ public:
         @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
         @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
     */
+
     void connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
-        const BoundingSphere3f&meshBounds,
+        const BoundingSphere3f &meshBounds,
         const String& mesh,
-        const SolidAngle& queryAngle,
-        const UUID&evidence,
-        const String& scriptFile="",
-        const String& scriptType="");
+        const UUID&object_uuid_evidence,
+        PerPresenceData* ppd,
+        const String& scriptFile = "",
+        const String& scriptType = "");
+
+
     
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
+
     void connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
-        const BoundingSphere3f&meshBounds,
+        const BoundingSphere3f &meshBounds,
         const String& mesh,
-        const UUID&evidence,
-        const String& scriptFile="",
-        const String& scriptType="");
-
+        const SolidAngle& queryAngle,
+        const UUID&object_uuid_evidence,
+        PerPresenceData* ppd,
+        const String& scriptFile = "",
+        const String& scriptType = "");
+    
     
   private:
 
@@ -277,9 +292,9 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType);
-
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
+    
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
@@ -315,6 +330,7 @@ public:
     //BFTM_FIXME: need to actually write this function.
     void updateAddressable();
 
+    
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
