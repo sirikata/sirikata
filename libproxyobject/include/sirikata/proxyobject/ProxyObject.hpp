@@ -103,6 +103,15 @@ public:
         proximity event was generated for
     */
     ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+
+    /**
+       If you do not have all of the information for the above constructor, you
+       can use the empty constructor below, and fill in the rest of the
+       information later using the afterConnection function.
+     */
+    ProxyObject();
+    void afterConnection(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+    
     virtual ~ProxyObject();
 
     /// Subclasses can do any necessary cleanup first.

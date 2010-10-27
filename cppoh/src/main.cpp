@@ -151,17 +151,28 @@ int main (int argc, char** argv) {
     // having its ObjectHostProxyManager.
     HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
     obj->init();
+
+
+    SimList listSims;
+    obj->getSimList(listSims,GetOptionValue<StringList>(OPT_OH_SIMS));
+
+
+    
     // Note: We currently just use the proxy manager for the default space. Not
     // sure if we should do something about handling multiple spaces.
     ProxyManagerPtr proxy_manager = obj->getDefaultProxyManager( mainSpace );
 
+
+    
     typedef std::vector<TimeSteppedSimulation*> SimList;
     SimList sims;
 
     typedef std::list<String> StringList;
     StringList oh_sims(GetOptionValue<StringList>(OPT_OH_SIMS));
+
     for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
         SILOG(cppoh,error,*it);
+    
     for(StringList::iterator it = oh_sims.begin(); it != oh_sims.end(); it++) {
         String simName = *it;
         SILOG(cppoh,info,String("Initializing ") + simName);
@@ -180,6 +191,9 @@ int main (int argc, char** argv) {
             sims.push_back(sim);
         }
     }
+
+
+    
     String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
 
     // FIXME
@@ -207,6 +221,7 @@ int main (int argc, char** argv) {
     ctx->add(ctx);
     ctx->add(oh);
     ctx->add(sstConnMgr);
+
     for(SimList::iterator it = sims.begin(); it != sims.end(); it++)
         ctx->add(*it);
     ctx->run(1);

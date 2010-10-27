@@ -50,13 +50,31 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
    mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
    mParent(vwobj)
 {
-    Vector3d tmp;
-    Vector3f tmp2 (tmp);
-    
     assert(mParent);
 
     mDefaultPort = mParent->bindODPPort(owner_sor);
 }
+
+//dummy constructor for proxy before connected to world
+ProxyObject::ProxyObject()
+ : mID(SpaceObjectReference(0,0)),
+   mManager(NULL),
+   mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
+   mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
+   mParent(NULL)
+{
+    std::cout<<"\n\nUsing dummy ProxyObject configuration"
+}
+
+void ProxyObject::afterConnection(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
+{
+    mID = id;
+    mManager = man;
+    mParent = vwobj;
+    mDefaultPort = mParent->bindODPPort(owner_sor);
+}
+
+
 
 ProxyObject::~ProxyObject() {
     delete mDefaultPort;

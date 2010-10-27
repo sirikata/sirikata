@@ -47,10 +47,18 @@ ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const
    mMeshURI(),
    mScale(1.f, 1.f, 1.f)
 {
-
-
-    
 }
+
+ProxyMeshObject::ProxyMeshObject()
+ : MeshProvider(),
+   ProxyObject(),
+   mMeshURI(),
+   mScale(1.f,1.f,1.f)
+{
+}
+
+
+
 
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshObject

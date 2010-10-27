@@ -89,6 +89,9 @@ public:
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
+    //FIXME: this call will have to go away sooner or later.
+    SpaceID getDefaultSpace();
+    
     /** Caller is responsible for starting a thread
      *
      * @param spaceIDMap space ID map used to resolve space IDs to servers
