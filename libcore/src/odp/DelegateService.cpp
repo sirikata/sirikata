@@ -53,7 +53,7 @@ DelegateService::~DelegateService() {
         while(!pm->empty()) {
             PortMap::iterator pm_it = pm->begin();
             DelegatePort* prt = pm_it->second;
-            delete prt; // Will remove from pm_it via deallocatePort
+            prt->invalidate(); // Will remove from pm_it via deallocatePort
         }
 
         mSpacePortMap.erase(spm_it);

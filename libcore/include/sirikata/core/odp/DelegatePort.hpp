@@ -69,6 +69,13 @@ public:
      */
     bool deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const;
 
+    /** Invalidate this port. This effectively disables the port. This is used
+     *  by the parent DelegateService to stop the Port from doing anything
+     *  dangerous after the parent is deleted, but doesn't actually delete this
+     *  port since others might still hold a pointer to it.
+     */
+    void invalidate();
+
 private:
     // Worker method for deliver, tries to deliver to the handler for this exact
     // endpoint.
@@ -81,6 +88,7 @@ private:
     Endpoint mEndpoint;
     SendFunction mSendFunc;
     ReceiveFromHandlers mFromHandlers;
+    bool mInvalidated;
 }; // class DelegatePort
 
 } // namespace ODP

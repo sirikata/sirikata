@@ -1064,7 +1064,24 @@ private:
   }
 
   static void closeConnections() {
-    sConnectionMap.clear();
+      // We have to be careful with this function. Because it is going to free
+      // the connections, we have to make sure not to let them get freed where
+      // the deleter will modify sConnectionMap while we're still modifying it.
+      //
+      // Our approach is to just pick out the first connection, make a copy of
+      // its shared_ptr to make sure it doesn't get freed until we want it to,
+      // remove it from sConnectionMap, and then get rid of the shared_ptr to
+      // allow the connection to be freed.
+      //
+      // Note that we don't lock sStaticMembers lock. At this point, that
+      // shouldn't be a problem since we should be the only thread still
+      // modifying this data. If we did lock it, we'd deadlock since the
+      // destructor will also, indirectly, lock it.
+      while(!sConnectionMap.empty()) {
+          ConnectionPtr saved = sConnectionMap.begin()->second;
+          sConnectionMap.erase(sConnectionMap.begin());
+          saved.reset();
+      }
   }
 
   static void handleReceive(EndPoint<EndPointType> remoteEndPoint,

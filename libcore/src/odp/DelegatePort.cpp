@@ -41,12 +41,20 @@ DelegatePort::DelegatePort(DelegateService* parent, const Endpoint& ep, SendFunc
  : mParent(parent),
    mEndpoint(ep),
    mSendFunc(send_func),
-   mFromHandlers()
+   mFromHandlers(),
+   mInvalidated(false)
 {
 }
 
 DelegatePort::~DelegatePort() {
     // Get it out of the parent map to ensure we won't get any more messages
+    if (!mInvalidated)
+        mParent->deallocatePort(this);
+}
+
+void DelegatePort::invalidate() {
+    // Marke and remove from parent
+    mInvalidated = true;
     mParent->deallocatePort(this);
 }
 
@@ -55,6 +63,7 @@ const Endpoint& DelegatePort::endpoint() const {
 }
 
 bool DelegatePort::send(const Endpoint& to, MemoryReference payload) {
+    if (mInvalidated) return false;
     return mSendFunc(to, payload);
 }
 
@@ -63,6 +72,8 @@ void DelegatePort::receiveFrom(const Endpoint& from, const MessageHandler& cb) {
 }
 
 bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const {
+    if (mInvalidated) return false;
+
     // See ODP::Port documentation for details on this ordering.
     if (tryDeliver(src, src, dst, data)) return true;
     if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), src.port()), src, dst, data)) return true;
