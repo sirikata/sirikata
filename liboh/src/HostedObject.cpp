@@ -327,6 +327,10 @@ void HostedObject::connect(
 }
 
 
+void HostedObject::addSimListeners(PerPresenceData*& pd, std::vector<TimeSteppedSimulation*>& sims)
+{
+
+}
 
 void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
 {
