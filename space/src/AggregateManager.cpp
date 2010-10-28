@@ -49,9 +49,9 @@ AggregateManager::AggregateManager(SpaceContext* ctx, LocationService* loc) :
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
-    static std::string x = "_1";
-    mTransferPool = mTransferMediator->registerClient("SpaceAggregator"+x);
-    x="_2";
+    static char x = '1';
+    mTransferPool = mTransferMediator->registerClient("SpaceAggregator_"+x);
+    x++;
 
     boost::thread thrd( boost::bind(&AggregateManager::uploadQueueServiceThread, this) );
 }
@@ -95,14 +95,16 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     }
     lock.unlock();
 
-    String locationStr  = ( (mLoc->contains(child_uuid)) ? (mLoc->currentPosition(child_uuid).toString()) : " NOT IN LOC ");
+    //String locationStr  = ( (mLoc->contains(child_uuid)) ? (mLoc->currentPosition(child_uuid).toString()) : " NOT IN LOC ");
 
     std::cout << "addChild: generateAggregateMesh called: "  << uuid.toString()
-              << " CHILD " << child_uuid.toString() << " "   << locationStr    << "\n";
+              << " CHILD " << child_uuid.toString() << " "   
+              //<< locationStr    
+              << "\n";
     fflush(stdout);
 
 
-    generateAggregateMesh(uuid, Duration::seconds(300.0f+rand()%300));
+    generateAggregateMesh(uuid, Duration::seconds(120.0f+rand()%2));
   }
 }
 
@@ -120,7 +122,7 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     //          <<  locationStr
     //          << " generateAggregateMesh called\n";
 
-    generateAggregateMesh(uuid, Duration::seconds(300.0f+rand() % 300));
+    generateAggregateMesh(uuid, Duration::seconds(120.0f+rand() % 2));
   }
 }
 
@@ -150,31 +152,24 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   /* Get the aggregate object corresponding to UUID 'uuid'.  */
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
-      std::cout << "0\n";
+    //std::cout << "0\n";
     return;
   }
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
   /****/
 
+  
+
   if (postTime < aggObject->mLastGenerateTime) {
     //std::cout << "1\n";fflush(stdout);
     return;
   }
 
-  //  if (aggObject->mMeshdata) return;
-
   std::vector<UUID>& children = aggObject->mChildren;
 
   if (children.size() < 1) {
-    std::cout << "2\n"; fflush(stdout);
-    return;
-  }
-
-
-  if (!mLoc->contains(uuid)) {
-    std::cout << "3\n";
-    generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
+    //std::cout << "2\n"; fflush(stdout);
     return;
   }
 
@@ -183,30 +178,40 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     if (!mLoc->contains(child_uuid)) {
       generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
-      std::cout << "4\n";
+      //std::cout << "4\n";
       return;
     }
 
     std::string meshName = mLoc->mesh(child_uuid);
+    
+    MeshdataPtr childMeshPtr = MeshdataPtr();
 
-    if (meshName == "") {
-      generateAggregateMesh(child_uuid, Duration::milliseconds(10.0f));
-      std::cout << "5\n";
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    if (mAggregateObjects.find(child_uuid) != mAggregateObjects.end()) {
+      childMeshPtr = mAggregateObjects[child_uuid]->mMeshdata;
+    }
+    lock.unlock();   
+
+    if (meshName == "" && !childMeshPtr) {
+      generateAggregateMesh(child_uuid, Duration::microseconds(1.0f));
+      
       return;
     }
   }
 
+  if (!mLoc->contains(uuid)) {   
+    //std::cout << "3\n"; fflush(stdout); 
+    generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
+    return;
+  }
+
   std::tr1::shared_ptr<Meshdata> agg_mesh =  std::tr1::shared_ptr<Meshdata>( new Meshdata() );
   BoundingSphere3f bnds = mLoc->bounds(uuid);
-  std::cout << uuid.toString() << "=uuid, "   << children.size() << " = children.size\n";
 
   uint   numAddedSubMeshGeometries = 0;
   double totalVertices = 0;
   for (uint i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
-
-    std::cout << child_uuid.toString() <<"=child_uuid\n";
-    fflush(stdout);
 
     Vector3f location = mLoc->currentPosition(child_uuid);
     Quaternion orientation = mLoc->currentOrientation(child_uuid);
@@ -215,7 +220,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
       continue;
     }
-    std::tr1::shared_ptr<Meshdata> m = mAggregateObjects[child_uuid]->mMeshdata;
+    std::tr1::shared_ptr<Meshdata> m = mAggregateObjects[child_uuid]->mMeshdata;    
 
     if (!m) {
       //request a download or generation of the mesh
@@ -241,10 +246,10 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         }
       }
     }
+    
 
     lock.unlock();
-
-    //    std::cout << "Aggregating mesh for " << child_uuid.toString() << "\n";
+    
     agg_mesh->up_axis = m->up_axis;
     agg_mesh->lightInstances.insert(agg_mesh->lightInstances.end(),
                                     m->lightInstances.begin(),
@@ -284,7 +289,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
     BoundingSphere3f originalMeshBounds = originalMeshBoundingBox.toBoundingSphere();
     BoundingSphere3f scaledMeshBounds = mLoc->bounds(child_uuid);
-    double scalingfactor = scaledMeshBounds.radius()/(4.0*originalMeshBounds.radius());
+    double scalingfactor = scaledMeshBounds.radius()/(2.0*originalMeshBounds.radius());
 
     //std::cout << mLoc->mesh(child_uuid) << " :mLoc->mesh(child_uuid)\n";
     //std::cout << originalMeshBounds << " , scaled = " << scaledMeshBounds << "\n";
@@ -377,23 +382,25 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
       assert(false);
     }
-    mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
+    
+    MeshdataPtr mptr = mAggregateObjects[child_uuid]->mMeshdata;
+    mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();    
   }
 
+  mMeshSimplifier.simplify(agg_mesh, 20000);
   
-  
+  aggObject->mMeshdata = agg_mesh;    
 
-  mMeshSimplifier.simplify(agg_mesh, 100000);
+  uploadMesh(uuid, agg_mesh);
+
+  std::cout << "Generated another one...\n";
 
   /* Set the mesh for the aggregated object and if it has a parent, schedule
    a task to update the parent's mesh */
-  aggObject->mMeshdata = agg_mesh;
   if (aggObject->mParentUUID != UUID::null()) {
-
-    generateAggregateMesh(aggObject->mParentUUID, Duration::seconds(10.0));
+    generateAggregateMeshAsync(aggObject->mParentUUID, Timer::now());
+    std::cout << "Posted parent generation task...\n";
   }
-
-  uploadMesh(uuid, agg_mesh);
 }
 
 void AggregateManager::metadataFinished(const UUID uuid, const UUID child_uuid, std::string meshName,
@@ -401,8 +408,6 @@ void AggregateManager::metadataFinished(const UUID uuid, const UUID child_uuid, 
                                           std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
   if (response != NULL) {
-    //    std::cout << "metadataFinished: SUCCESS : " << response->getURI().toString()  <<  "\n";
-
     const Transfer::RemoteFileMetadata metadata = *response;
 
     Transfer::TransferRequestPtr req(new Transfer::ChunkRequest(response->getURI(), metadata,
@@ -419,41 +424,39 @@ void AggregateManager::metadataFinished(const UUID uuid, const UUID child_uuid, 
 }
 
 void AggregateManager::chunkFinished(const UUID uuid, const UUID child_uuid,
-                                     std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-                                     std::tr1::shared_ptr<const Transfer::DenseData> response)
+                                       std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+                                       std::tr1::shared_ptr<const Transfer::DenseData> response)
 {
-  if (response != NULL) {
-    if (mAggregateObjects[child_uuid]->mMeshdata == std::tr1::shared_ptr<Meshdata>() ) {
+    if (response != NULL) {
+      boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
+      if (mAggregateObjects[child_uuid]->mMeshdata == std::tr1::shared_ptr<Meshdata>() ) {
 
         MeshdataPtr m = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
 
-      mAggregateObjects[child_uuid]->mMeshdata = m;
+        mAggregateObjects[child_uuid]->mMeshdata = m;
 
-      {
-        std::cout << "STORING MESH: " << request->getURI().toString() << "\n";
+        aggregateObjectsLock.unlock();
 
-        boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
-        mMeshStore[request->getURI().toString()] = m;
+        {
+          boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
+          mMeshStore[request->getURI().toString()] = m;
+        }
+
+        generateAggregateMesh(uuid);
       }
-
-      //      std::cout << mAggregateObjects[child_uuid]->mMeshdata->materials.size() << " : mAggregateObjects[child_uuid]->mMeshdata->materials.size()\n";
-      //std::cout << mAggregateObjects[child_uuid]->mMeshdata->geometry.size() << " : mAggregateObjects[child_uuid]->mMeshdata->geometry.size()\n";
-      //std::cout << mAggregateObjects[child_uuid]->mMeshdata->instances.size() << " : mAggregateObjects[child_uuid]->mMeshdata->instances.size()\n";
-
-      //      std::cout << "ChunkFinished: generateAggregateMesh called\n";
-
-      generateAggregateMesh(uuid);
     }
-  }
-  else {
-    std::cout << "ChunkFinished fail!\n";
-  }
+    else {
+      std::cout << "ChunkFinished fail!\n";
+    }
 }
 
 void AggregateManager::uploadMesh(const UUID& uuid, std::tr1::shared_ptr<Meshdata> meshptr) {
   boost::mutex::scoped_lock lock(mUploadQueueMutex);
 
   mUploadQueue[uuid] = meshptr;
+
+
+  std::cout << mUploadQueue.size() << " : mUploadQueue.size\n";
 
   mCondVar.notify_one();
 }
@@ -471,31 +474,54 @@ void AggregateManager::uploadQueueServiceThread() {
       }
     }
 
-
+    if (mUploadQueue.size() < 40) {
       std::map<UUID, std::tr1::shared_ptr<Meshdata>  >::iterator it = mUploadQueue.begin();
       UUID uuid = it->first;
       std::tr1::shared_ptr<Meshdata> meshptr = it->second;
 
       mUploadQueue.erase(it);
 
-
-      lock.unlock();
+      lock.unlock();   
 
       const int MESHNAME_LEN = 1024;
       char localMeshName[MESHNAME_LEN];
       snprintf(localMeshName, MESHNAME_LEN, "aggregate_mesh_%s.dae", uuid.toString().c_str());
-      //      std::cout << localMeshName << " = localMeshName\n";
-      mModelsSystem->convertMeshdata(*meshptr, "colladamodels", localMeshName);
-
-
-      //      std::cout << "Uploading mesh for: " << uuid.toString() << "\n";
+      
+      mModelsSystem->convertMeshdata(*meshptr, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);      
       //Upload to CDN
-      std::string cmdline = std::string("./upload_to_cdn.sh ") + localMeshName;
-      system( cmdline.c_str()  );
+      std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
+      system( cmdline.c_str()  );    
 
       //Update loc
       std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);    
+    }
+    else {
+      std::map<UUID, std::tr1::shared_ptr<Meshdata>  >::iterator it = mUploadQueue.begin();
+      
+      while (it != mUploadQueue.end()) {
+        UUID uuid = it->first;
+        MeshdataPtr meshptr = it->second;
+
+        const int MESHNAME_LEN = 1024;
+        char localMeshName[MESHNAME_LEN];
+        snprintf(localMeshName, MESHNAME_LEN, "aggregate_mesh_%s.dae", uuid.toString().c_str());
+      
+        mModelsSystem->convertMeshdata(*meshptr, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);        
+      
+        //Upload to CDN
+        std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
+        system( cmdline.c_str()  );    
+
+        //Update loc
+        std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
+        mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);    
+
+        it++;
+      }
+
+      mUploadQueue.clear();
+    }
   }
 }
 

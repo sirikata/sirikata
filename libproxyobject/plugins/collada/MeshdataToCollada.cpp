@@ -114,7 +114,7 @@ namespace Sirikata {
           effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
 
 
-          std::cout << meshdata.materials[i].textures.size() << " : meshdata.materials[i].textures.size()\n";
+          //std::cout << meshdata.materials[i].textures.size() << " : meshdata.materials[i].textures.size()\n";
 
           //dealing with texture.
           for (uint j=0; j<meshdata.materials[i].textures.size(); j++) {
@@ -154,7 +154,7 @@ namespace Sirikata {
 
               colorOrTexture = COLLADASW::ColorOrTexture(colladaTexture);
 
-              std::cout << "TEXTURE.URI=" << texture.uri << "\n";
+              //              std::cout << "TEXTURE.URI=" << texture.uri << "\n";
             }
             else {
               colorOrTexture = COLLADASW::ColorOrTexture( COLLADASW::Color(texture.color.x,
@@ -162,10 +162,10 @@ namespace Sirikata {
                                                                            texture.color.z,
                                                                            texture.color.w));
 
-              printf("COLOR: %f %f %f %f\n", texture.color.x,
+              /*printf("COLOR: %f %f %f %f\n", texture.color.x,
                      texture.color.y,
                      texture.color.z,
-                     texture.color.w);
+                     texture.color.w);*/
             }
 
             switch(texture.affecting) {

@@ -353,19 +353,12 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
       pos1.z = top.mReplacementVector.z;
 
       remainingVertices--;
-
-      /*if (idx2 < curGeometry.normals.size())
-        curGeometry.normals.erase(curGeometry.normals.begin() + idx2);
-
-      if (idx2 < curGeometry.texUVs.size())
-        curGeometry.texUVs.erase(curGeometry.texUVs.begin() + idx2);
-      */
-
+     
       vertexMapping[idx2] = idx;
     }
 
 
-    if (remainingVertices % 1000 == 0)
+    if (remainingVertices % 10000 == 0)
       std::cout << remainingVertices << " : remainingVertices\n";
 
     vertexPairs.pop();
