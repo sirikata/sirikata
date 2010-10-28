@@ -52,7 +52,6 @@ namespace Sirikata{
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(false)
     {
-
     }
 
     void PerPresenceData::populateSpaceObjRef(const SpaceObjectReference& sporef)

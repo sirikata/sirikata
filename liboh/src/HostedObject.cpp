@@ -327,11 +327,6 @@ void HostedObject::connect(
 }
 
 
-void HostedObject::addSimListeners(PerPresenceData*& pd, std::vector<TimeSteppedSimulation*>& sims)
-{
-
-}
-
 void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
 {
     std::cout<<"\n\nFIXME: defaulting objects into first space available in addSimListeners\n\n";
@@ -348,9 +343,8 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
     {
         String simName = *it;
         HO_LOG(info,String("[OH] Initializing ") + simName);
-        TimeSteppedSimulation *sim =
-            SimulationFactory::getSingleton()
-            .getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
+        
+        TimeSteppedSimulation *sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
         if (!sim) {
             HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
             std::cerr << "Press enter to continue" << std::endl;

@@ -226,7 +226,6 @@ void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeStepp
 }
 
 
-
 void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims)
 {
     if (mContext->stopped())
@@ -236,10 +235,10 @@ void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<Tim
         ObjectConnectInfo oci = mIncompleteObjects.front();
         mIncompleteObjects.pop();
 
-        PerPresenceData* pd;
+        PerPresenceData* pd = NULL;
         oci.object->addSimListeners(pd,oh_sims,sims);
         
-        std::cout<<"\n\nPotential memory lead.  Never deleting pd\n\n";
+        std::cout<<"\n\nPotential memory leak.  Never deleting pd\n\n";
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,

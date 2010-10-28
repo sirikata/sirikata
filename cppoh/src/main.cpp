@@ -151,14 +151,17 @@ int main (int argc, char** argv) {
     // FIXME simple test example
     // This is the camera.  We need it early on because other things depend on
     // having its ObjectHostProxyManager.
-    HostedObjectPtr obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
-    obj->init();
-
+    std::list<String> ohOptions( GetOptionValue<std::list<String> >(OPT_OH_SIMS));
+    HostedObjectPtr obj;
+    if (! ohOptions.empty())
+    {
+        obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
+        obj->init();
+    }
 
     
     std::vector<TimeSteppedSimulation*> sims;
-    PerPresenceData* pd;
-    std::list<String> ohOptions = GetOptionValue<std::list<String> >(OPT_OH_SIMS);
+    PerPresenceData* pd = NULL;
     obj->addSimListeners(pd,ohOptions,sims);
 
     String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
