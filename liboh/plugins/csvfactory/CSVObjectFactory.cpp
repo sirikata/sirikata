@@ -31,6 +31,12 @@
  */
 
 #include "CSVObjectFactory.hpp"
+#include <list>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <vector>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+
 
 namespace Sirikata {
 
@@ -56,7 +62,14 @@ T safeLexicalCast(const String& orig) {
     return safeLexicalCast<T>(orig, (T)0);
 }
 
-void CSVObjectFactory::generate() {
+void CSVObjectFactory::generate()
+{
+    std::cout<<"\n\nHave not finished this function\n\n";
+    assert(false);
+}
+
+void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims)
+{
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
@@ -207,22 +220,30 @@ void CSVObjectFactory::generate() {
 
     fp.close();
 
-    connectObjects();
+    connectObjects(oh_sims,sims);
 
     return;
 }
 
-void CSVObjectFactory::connectObjects() {
+
+
+void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims)
+{
     if (mContext->stopped())
         return;
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();
         mIncompleteObjects.pop();
+
+        PerPresenceData* pd;
+        oci.object->addSimListeners(pd,oh_sims,sims);
+        
+        std::cout<<"\n\nPotential memory lead.  Never deleting pd\n\n";
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
-            UUID::null(), NULL,oci.scriptFile,
+            UUID::null(), pd,oci.scriptFile,
             oci.scriptType
         );
     }
@@ -230,7 +251,7 @@ void CSVObjectFactory::connectObjects() {
     if (!mIncompleteObjects.empty())
         mContext->mainStrand->post(
             Duration::seconds(1.f),
-            std::tr1::bind(&CSVObjectFactory::connectObjects, this)
+            std::tr1::bind(&CSVObjectFactory::connectObjects, this,oh_sims,sims)
         );
 }
 

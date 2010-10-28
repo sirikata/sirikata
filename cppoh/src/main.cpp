@@ -158,10 +158,9 @@ int main (int argc, char** argv) {
     
     std::vector<TimeSteppedSimulation*> sims;
     PerPresenceData* pd;
-    obj->addSimListeners(pd,GetOptionValue<std::list<String> >(OPT_OH_SIMS),sims);
+    std::list<String> ohOptions = GetOptionValue<std::list<String> >(OPT_OH_SIMS);
+    obj->addSimListeners(pd,ohOptions,sims);
 
-
-    
     String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
 
     // FIXME
@@ -181,9 +180,10 @@ int main (int argc, char** argv) {
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
     ObjectFactory* obj_factory = NULL;
-    if (!objfactory_type.empty()) {
+    if (!objfactory_type.empty())
+    {
         obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
-        obj_factory->generate();
+        obj_factory->generate(ohOptions,sims);
     }
 
     ///////////Go go go!! start of simulation/////////////////////

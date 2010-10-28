@@ -37,6 +37,10 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/Factory.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
+#include <vector>
+#include <list>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+
 
 namespace Sirikata {
 
@@ -49,6 +53,7 @@ class SIRIKATA_OH_EXPORT ObjectFactory {
 
     /** Generate objects for the scene and connect them to the space. */
     virtual void generate() = 0;
+    virtual void generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims) = 0;
 };
 
 /** ObjectFactoryFactory creates ObjectFactories.  To create an ObjectFactory,

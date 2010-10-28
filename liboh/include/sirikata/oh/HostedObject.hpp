@@ -148,7 +148,7 @@ public:
     void init();
 
     void addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims);
-
+    
 
     
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
