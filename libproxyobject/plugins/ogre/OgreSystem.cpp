@@ -714,6 +714,7 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     p->getProxyManager()->destroyObject(p,ogreSystem->getPrimaryCamera()->getProxy().getQueryTracker());
 }
 
+
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
     std::cout<<"\n\n\n**********GOT INTO ON CREATE PROXY\n\n\n";
     
@@ -724,7 +725,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             CameraEntity *cam=new CameraEntity(this,camera);
             created = true;
         }
-    }
+     }
     {
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
@@ -747,6 +748,10 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
             dlPlanner->addNewObject(p, mesh);
+            //bftm changed
+            std::cout<<"\n\nadd listener to dlPlanner in OgreSystem.cpp\n\n";
+            p->getProxyManager()->addListener(dlPlanner);
+            //bftm changed
         }
     }
     if (!created) {
@@ -996,7 +1001,9 @@ void OgreSystem::screenshot(const String& filename) {
 }
 
 // ConnectionEventListener Interface
-void OgreSystem::onConnected(const Network::Address& addr) {
+void OgreSystem::onConnected(const Network::Address& addr)
+{
+    std::cout<<"\n\nOgre got an onconected event\n\n";
 }
 
 void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, const String& reason) {

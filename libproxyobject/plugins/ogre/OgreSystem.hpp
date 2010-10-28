@@ -246,7 +246,6 @@ public:
     virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
     virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from
                                                    // ProxyCreationListener
-
     // ConnectionEventListener Interface
     virtual void onConnected(const Network::Address& addr);
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);

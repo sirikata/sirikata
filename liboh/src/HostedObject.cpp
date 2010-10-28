@@ -837,15 +837,15 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 // }
 
 
-
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,is_camera);
     returner->setLocation(tmv);
     returner->setOrientation(tmq);
     returner->setBounds(bs);
-
-    if (!is_camera && meshuri) {
+    
+    if (!is_camera && meshuri)
+    {
         ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
         if (mesh) mesh->setMesh(meshuri);
     }
