@@ -359,6 +359,15 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
     }
 }
 
+void HostedObject::addListeners(PerPresenceData*&pd,TimeSteppedSimulation* os)
+{
+    std::cout<<"\n\nFIXME: defaulting objects into first space available in addSimListeners\n\n";
+    SpaceID space = mObjectHost->getDefaultSpace();
+    
+    pd = new PerPresenceData (this,space);
+    pd->getProxyManager()->addListener(os);
+}
+
 
 
 

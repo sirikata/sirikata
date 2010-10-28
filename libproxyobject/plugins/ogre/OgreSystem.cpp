@@ -370,6 +370,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
 
+    
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -510,11 +511,12 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             sRenderTarget=mRenderTarget=rw;
 
         } else if (createWindow->as<bool>()) {
-            Ogre::RenderWindow *rw;
-            mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
-            rw->setVisible(true);
-            if (sRenderTarget==NULL)
-                sRenderTarget=mRenderTarget;
+                Ogre::RenderWindow *rw;
+                //mRenderTarget=rw=sRoot->createRenderWindow(UUID::random().rawHexData(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                rw->setVisible(true);
+                if (sRenderTarget==NULL)
+                    sRenderTarget=mRenderTarget;
         }else {
             mRenderTarget=createRenderTarget(windowTitle->as<String>(),
                                              mWindowWidth->as<uint32>(),

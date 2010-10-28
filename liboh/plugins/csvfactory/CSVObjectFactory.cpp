@@ -68,7 +68,7 @@ void CSVObjectFactory::generate()
     assert(false);
 }
 
-void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims)
+void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims, TimeSteppedSimulation* tss)
 {
     typedef std::vector<String> StringList;
 
@@ -219,14 +219,13 @@ void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeStepp
     }
 
     fp.close();
-
-    connectObjects(oh_sims,sims);
+    connectObjects(oh_sims,sims,tss);
 
     return;
 }
 
 
-void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims)
+void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims, TimeSteppedSimulation* tss)
 {
     if (mContext->stopped())
         return;
@@ -236,7 +235,9 @@ void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<Tim
         mIncompleteObjects.pop();
 
         PerPresenceData* pd = NULL;
-        oci.object->addSimListeners(pd,oh_sims,sims);
+        //oci.object->addSimListeners(pd,oh_sims,sims);
+        oci.object->addListeners(pd,tss);
+
         
         std::cout<<"\n\nPotential memory leak.  Never deleting pd\n\n";
         oci.object->connect(
@@ -250,7 +251,7 @@ void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<Tim
     if (!mIncompleteObjects.empty())
         mContext->mainStrand->post(
             Duration::seconds(1.f),
-            std::tr1::bind(&CSVObjectFactory::connectObjects, this,oh_sims,sims)
+            std::tr1::bind(&CSVObjectFactory::connectObjects, this,oh_sims,sims,tss)
         );
 }
 

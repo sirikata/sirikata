@@ -186,7 +186,7 @@ int main (int argc, char** argv) {
     if (!objfactory_type.empty())
     {
         obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
-        obj_factory->generate(ohOptions,sims);
+        obj_factory->generate(ohOptions,sims,sims[0]);
     }
 
     ///////////Go go go!! start of simulation/////////////////////
