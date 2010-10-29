@@ -799,6 +799,7 @@ SET(ProtocolBuffersSources
   ${ProtocolBuffersRoot}/Migration
   ${ProtocolBuffersRoot}/OSeg
   ${ProtocolBuffersRoot}/Forwarder
+  ${ProtocolBuffersRoot}/CDN
   )
 
 # Based on dependencies, generate arguments for protocol buffers generation
@@ -1855,6 +1856,7 @@ ADD_EXECUTABLE(cdn_nameserver ${CDN_NAMESERVER_SOURCES})
 SET_TARGET_PROPERTIES(cdn_nameserver PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(cdn_nameserver
         ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 

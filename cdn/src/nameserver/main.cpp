@@ -30,6 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/core/options/CommonOptions.hpp>
+
 int main(int argc, char** argv) {
+    using namespace Sirikata;
+
+    InitOptions();
+
     return 0;
 }
