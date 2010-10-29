@@ -864,6 +864,7 @@ private:
 
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
+          stream->mStreamReturnCallback = NULL;
 	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
@@ -1744,6 +1745,8 @@ private:
   }
 
   static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
+    assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
+
     if (errCode != SST_IMPL_SUCCESS) {
 
       StreamReturnCallbackFunction cb = mStreamReturnCallbackMap[c->localEndPoint()];
@@ -1752,9 +1755,7 @@ private:
       cb(SST_IMPL_FAILURE, StreamPtr() );
 
       return;
-    }
-
-    assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
+    }    
 
     c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
 	      c->localEndPoint().port, c->remoteEndPoint().port);
@@ -1789,13 +1790,13 @@ private:
         assert(conn);
 
         mStreamReturnCallbackMap.erase(conn->localEndPoint());
-
-        bool retVal = true;
+        
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
           conn->close(true);
-          retVal = false;
+
+          Connection<EndPointType>::cleanup(conn);
 	}
 
 	//send back an error to the app by calling mStreamReturnCallback
@@ -1807,11 +1808,7 @@ private:
 
         mState = DISCONNECTED;
 
-        if (!retVal) {
-          Connection<EndPointType>::cleanup(conn);
-        }
-
-	return retVal;
+	return false;
       }
       else {
 	mState = CONNECTED;
