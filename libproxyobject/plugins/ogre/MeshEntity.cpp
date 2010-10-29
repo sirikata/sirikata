@@ -317,8 +317,6 @@ void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
 
 void MeshEntity::processMesh(URI const& meshFile)
 {
-
-
     Ogre::Entity * meshObj=getOgreEntity();
 
     if (meshObj && meshFile.filename() == "" ) {
