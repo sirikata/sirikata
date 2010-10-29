@@ -917,6 +917,10 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, D
     else {
         // Otherwise, follow the rest of the normal process.
         MeshdataPtr mesh_data = mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response);
+        if (!mesh_data) {
+            SILOG(ogre,error,"Failed to parse mesh " << mURI.toString() << " --> " << request->getMetadata().getFingerprint().toString());
+            return true;
+        }
         handleMeshParsed(mesh_data);
     }
     return true;
